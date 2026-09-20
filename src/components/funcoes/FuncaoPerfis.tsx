@@ -2,6 +2,14 @@ import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -20,6 +28,7 @@ export function FuncaoPerfis({ funcaoId }: Props) {
 
   const [perfilId, setPerfilId] = useState("");
   const [novoPerfil, setNovoPerfil] = useState("");
+  const [novoOpen, setNovoOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const vinculos = useMemo(
