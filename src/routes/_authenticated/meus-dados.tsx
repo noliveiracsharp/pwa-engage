@@ -15,9 +15,9 @@ function MeusDados() {
   const campos: Array<[string, string | undefined]> = [
     ["Nome", nome],
     ["E-mail", pick<string>(usuario, ["email"], user?.email)],
-    ["Telefone", pick<string>(usuario, ["telefone", "celular", "whatsapp"])],
-    ["CPF", pick<string>(usuario, ["cpf", "documento"])],
-    ["Perfil", pick<string>(usuario, ["perfil", "perfil_descricao", "funcao"])],
+    ["CPF", pick<string>(usuario, ["cpf"])],
+    ["Cargo", pick<string>(usuario, ["cargo"])],
+    ["Perfil", perfilNome],
   ];
 
   return (
