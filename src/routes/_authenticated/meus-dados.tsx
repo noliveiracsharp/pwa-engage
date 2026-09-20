@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
+import { useTableRows, rowId, text } from "@/lib/crud";
 import { pick } from "@/lib/row";
 
 export const Route = createFileRoute("/_authenticated/meus-dados")({
@@ -12,12 +13,17 @@ function MeusDados() {
   const { usuario, user } = useAuth();
   const nome = pick<string>(usuario, ["nome", "nome_completo"], user?.email ?? "");
   const foto = pick<string>(usuario, ["foto", "avatar", "avatar_url"]);
+  const { data: perfis = [] } = useTableRows("perfil");
+  const perfilId = text(pick(usuario, ["perfil_id"]));
+  const perfilNome = perfis.find((p) => text(rowId(p)) === perfilId)
+    ? text(pick(perfis.find((p) => text(rowId(p)) === perfilId), ["descricao"]))
+    : undefined;
   const campos: Array<[string, string | undefined]> = [
     ["Nome", nome],
     ["E-mail", pick<string>(usuario, ["email"], user?.email)],
-    ["Telefone", pick<string>(usuario, ["telefone", "celular", "whatsapp"])],
-    ["CPF", pick<string>(usuario, ["cpf", "documento"])],
-    ["Perfil", pick<string>(usuario, ["perfil", "perfil_descricao", "funcao"])],
+    ["CPF", pick<string>(usuario, ["cpf"])],
+    ["Cargo", pick<string>(usuario, ["cargo"])],
+    ["Perfil", perfilNome],
   ];
 
   return (

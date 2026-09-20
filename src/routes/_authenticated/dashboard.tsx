@@ -40,13 +40,14 @@ function useDashboard(periodo: Periodo) {
   return useQuery({
     queryKey: ["dashboard", periodo],
     queryFn: async () => {
+      void since;
       const [clientes, usuarios, usuariosAtivos, comIA, emAtendimento, encerrados] = await Promise.all([
         countOf("clientes"),
         countOf("usuarios"),
-        countOf("usuarios", (q) => q.eq("online", true)),
-        countOf("atendimentos", (q) => q.eq("status", "ia").gte("created_at", since)),
-        countOf("atendimentos", (q) => q.eq("status", "em_atendimento").gte("created_at", since)),
-        countOf("atendimentos", (q) => q.eq("status", "encerrado").gte("created_at", since)),
+        countOf("usuarios", (q) => q.eq("status", true)),
+        countOf("atendimentos", (q) => q.eq("status", "IA")),
+        countOf("atendimentos", (q) => q.eq("status", "Em atendimento")),
+        countOf("atendimentos", (q) => q.eq("status", "Encerrado")),
       ]);
 
       let porDia: Array<{ label: string; total: number }> = [];
