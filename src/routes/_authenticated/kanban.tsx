@@ -141,6 +141,63 @@ function KanbanPage() {
     onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Não foi possível criar."),
   });
 
+  const updateEtapa = useMutation({
+    mutationFn: async (value: { id: string; descricao: string; status: boolean }) => {
+      const { error } = await supabase
+        .from("kanban_etapas")
+        .update({ descricao: value.descricao.trim(), status: value.status })
+        .eq("id", value.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["table", "kanban_etapas"] });
+      toast.success("Etapa atualizada.");
+      setEditEtapa(null);
+    },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Não foi possível salvar."),
+  });
+
+  const deleteEtapa = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("kanban_etapas").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["table", "kanban_etapas"] });
+      toast.success("Etapa excluída.");
+    },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Não foi possível excluir."),
+  });
+
+  const reorderEtapas = useMutation({
+    mutationFn: async (ordered: Row[]) => {
+      for (let i = 0; i < ordered.length; i += 1) {
+        const { error } = await supabase
+          .from("kanban_etapas")
+          .update({ ordem: i + 1 })
+          .eq("id", ordered[i]!["id"] as string);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["table", "kanban_etapas"] }),
+    onError: (e: unknown) =>
+      toast.error(e instanceof Error ? e.message : "Não foi possível reordenar."),
+  });
+
+  const onDropEtapa = (targetId: string) => {
+    const sourceId = dragEtapaId;
+    setDragEtapaId(null);
+    if (!sourceId || sourceId === targetId) return;
+    const list = [...boardEtapas];
+    const from = list.findIndex((e) => String(e["id"]) === sourceId);
+    const to = list.findIndex((e) => String(e["id"]) === targetId);
+    if (from < 0 || to < 0) return;
+    const [moved] = list.splice(from, 1);
+    if (!moved) return;
+    list.splice(to, 0, moved);
+    reorderEtapas.mutate(list);
+  };
+
   const moveCard = useMutation({
     mutationFn: async ({ id, etapaId, column }: { id: string; etapaId: string; column: string }) => {
       const { error } = await supabase
