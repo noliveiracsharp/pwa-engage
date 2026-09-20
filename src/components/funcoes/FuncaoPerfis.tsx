@@ -2,6 +2,14 @@ import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -20,6 +28,7 @@ export function FuncaoPerfis({ funcaoId }: Props) {
 
   const [perfilId, setPerfilId] = useState("");
   const [novoPerfil, setNovoPerfil] = useState("");
+  const [novoOpen, setNovoOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const vinculos = useMemo(
@@ -44,6 +53,7 @@ export function FuncaoPerfis({ funcaoId }: Props) {
     }
     await queryClient.invalidateQueries({ queryKey: ["table", "perfil"] });
     setNovoPerfil("");
+    setNovoOpen(false);
     setPerfilId(String(rowId(data as Row) ?? ""));
     toast.success("Perfil criado.");
   };
@@ -82,7 +92,7 @@ export function FuncaoPerfis({ funcaoId }: Props) {
         </p>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+      <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto]">
         <div className="space-y-1.5">
           <Label htmlFor="perfil-select">Perfil</Label>
           <Select value={perfilId} onValueChange={setPerfilId}>
@@ -99,28 +109,49 @@ export function FuncaoPerfis({ funcaoId }: Props) {
           </Select>
         </div>
         <div className="flex items-end">
+          <Button type="button" variant="outline" onClick={() => setNovoOpen(true)} disabled={saving}>
+            <Plus className="mr-1 size-4" /> Adicionar
+          </Button>
+        </div>
+        <div className="flex items-end">
           <Button type="button" onClick={vincular} disabled={saving}>
-            <Plus className="mr-1 size-4" /> Liberar
+            Liberar
           </Button>
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
-        <div className="space-y-1.5">
-          <Label htmlFor="perfil-novo">Novo perfil</Label>
-          <Input
-            id="perfil-novo"
-            value={novoPerfil}
-            placeholder="Descrição do perfil"
-            onChange={(e) => setNovoPerfil(e.target.value)}
-          />
-        </div>
-        <div className="flex items-end">
-          <Button type="button" variant="outline" onClick={criarPerfil} disabled={saving || !novoPerfil.trim()}>
-            Cadastrar
-          </Button>
-        </div>
-      </div>
+      <Dialog open={novoOpen} onOpenChange={setNovoOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Novo perfil</DialogTitle>
+            <DialogDescription>Cadastre um novo perfil de usuário para liberar esta função.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1.5">
+            <Label htmlFor="perfil-novo">Descrição</Label>
+            <Input
+              id="perfil-novo"
+              value={novoPerfil}
+              placeholder="Descrição do perfil"
+              autoFocus
+              onChange={(e) => setNovoPerfil(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  criarPerfil();
+                }
+              }}
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setNovoOpen(false)} disabled={saving}>
+              Cancelar
+            </Button>
+            <Button type="button" onClick={criarPerfil} disabled={saving || !novoPerfil.trim()}>
+              Cadastrar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className="space-y-2">
         {!funcaoId ? (
