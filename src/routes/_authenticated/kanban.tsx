@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/hooks/useAuth";
 import { pick, type Row } from "@/lib/row";
 import { text } from "@/lib/crud";
@@ -55,7 +56,7 @@ function KanbanPage() {
   const { empresa } = useAuth();
   const empresaId = empresa?.["id"];
 
-  const { data: kanbans = [], isLoading: loadingKanbans } = useRows("kanban");
+  const { data: kanbans = [], isLoading: loadingKanbans } = useRows("kanban_nome");
   const { data: etapas = [] } = useRows("kanban_etapas");
   const { data: atendimentos = [] } = useRows("atendimentos");
   const { data: clientes = [] } = useRows("clientes");
@@ -64,6 +65,7 @@ function KanbanPage() {
   const [newKanban, setNewKanban] = useState(false);
   const [newEtapa, setNewEtapa] = useState(false);
   const [nome, setNome] = useState("");
+  const [form, setForm] = useState({ nome: "", descricao: "", status: true });
   const [dragId, setDragId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -97,17 +99,21 @@ function KanbanPage() {
   }, [atendimentos]);
 
   const createKanban = useMutation({
-    mutationFn: async (value: string) => {
-      const payload: Row = { nome: value };
+    mutationFn: async (value: { nome: string; descricao: string; status: boolean }) => {
+      const payload: Row = {
+        nome: value.nome.trim(),
+        descricao: value.descricao.trim(),
+        status: value.status,
+      };
       if (empresaId !== undefined) payload["empresa_id"] = empresaId;
-      const { error } = await supabase.from("kanban").insert(payload);
+      const { error } = await supabase.from("kanban_nome").insert(payload);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["table", "kanban"] });
+      queryClient.invalidateQueries({ queryKey: ["table", "kanban_nome"] });
       toast.success("Kanban criado.");
       setNewKanban(false);
-      setNome("");
+      setForm({ nome: "", descricao: "", status: true });
     },
     onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Não foi possível criar."),
   });
@@ -175,7 +181,7 @@ function KanbanPage() {
             size="icon"
             aria-label="Novo kanban"
             onClick={() => {
-              setNome("");
+              setForm({ nome: "", descricao: "", status: true });
               setNewKanban(true);
             }}
           >
@@ -272,19 +278,51 @@ function KanbanPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Novo kanban</DialogTitle>
-            <DialogDescription>Informe um nome para o quadro.</DialogDescription>
+            <DialogDescription>Informe os dados do quadro.</DialogDescription>
           </DialogHeader>
-          <div>
-            <Label htmlFor="kanban-nome" className="mb-1.5 block">
-              Nome
-            </Label>
-            <Input id="kanban-nome" value={nome} onChange={(e) => setNome(e.target.value)} />
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="kanban-nome" className="mb-1.5 block">
+                Nome
+              </Label>
+              <Input
+                id="kanban-nome"
+                value={form.nome}
+                onChange={(e) => setForm({ ...form, nome: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label htmlFor="kanban-descricao" className="mb-1.5 block">
+                Descrição
+              </Label>
+              <Input
+                id="kanban-descricao"
+                value={form.descricao}
+                onChange={(e) => setForm({ ...form, descricao: e.target.value })}
+              />
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <Label htmlFor="kanban-status">Status</Label>
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground text-sm">
+                  {form.status ? "Ativo" : "Inativo"}
+                </span>
+                <Switch
+                  id="kanban-status"
+                  checked={form.status}
+                  onCheckedChange={(v) => setForm({ ...form, status: v })}
+                />
+              </div>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setNewKanban(false)}>
               Cancelar
             </Button>
-            <Button disabled={!nome.trim() || createKanban.isPending} onClick={() => createKanban.mutate(nome)}>
+            <Button
+              disabled={!form.nome.trim() || createKanban.isPending}
+              onClick={() => createKanban.mutate(form)}
+            >
               Criar
             </Button>
           </DialogFooter>
