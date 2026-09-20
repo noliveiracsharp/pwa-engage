@@ -22,8 +22,8 @@ export const Route = createFileRoute("/_authenticated/funcoes")({
 const fields: Field[] = [
   { fields: ["descricao"], label: "Descrição", full: true },
   { fields: ["path"], label: "Caminho (rota)", placeholder: "/clientes" },
-  { fields: ["ordem"], label: "Ordem", type: "number" },
   { fields: ["icone"], label: "Ícone", type: "icon" },
+  { fields: ["ordem"], label: "Ordem", type: "number" },
   { fields: ["menu_ativo"], label: "Exibe no menu", type: "boolean" },
   { fields: ["status"], label: "Status", type: "boolean" },
 ];
