@@ -75,7 +75,10 @@ function KanbanPage() {
   const boardEtapas = useMemo(
     () =>
       etapas
-        .filter((e) => String(pick(e, ["kanban_id", "id_kanban"]) ?? "") === kanbanId)
+        .filter(
+          (e) =>
+            String(pick(e, ["kanban_nome_id", "kanban_id", "id_kanban"]) ?? "") === kanbanId,
+        )
         .sort((a, b) => Number(pick(a, ["ordem"], 0)) - Number(pick(b, ["ordem"], 0))),
     [etapas, kanbanId],
   );
@@ -122,7 +125,7 @@ function KanbanPage() {
     mutationFn: async (value: { descricao: string; status: boolean }) => {
       const payload: Row = {
         descricao: value.descricao.trim(),
-        kanban_id: kanbanId,
+        kanban_nome_id: kanbanId,
         ordem: boardEtapas.length + 1,
         status: value.status,
       };
