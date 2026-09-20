@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { StarRating } from "@/components/data-table/StarRating";
 import { IconPicker } from "@/components/data-table/IconPicker";
 import { findKey, pick, type Row } from "@/lib/row";
@@ -98,15 +99,16 @@ export function RecordSheet({
                     onChange={(icon) => setValues((current) => ({ ...current, [key]: icon }))}
                   />
                 ) : field.type === "boolean" ? (
-                  <Select value={value} onValueChange={(v) => setValues((s) => ({ ...s, [key]: v }))}>
-                    <SelectTrigger id={key}>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="true">Ativo</SelectItem>
-                      <SelectItem value="false">Inativo</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="flex h-10 items-center justify-between gap-3 rounded-md border bg-background px-3 py-2">
+                    <span className="text-sm text-muted-foreground">
+                      {value === "true" ? "Ativo" : "Inativo"}
+                    </span>
+                    <Switch
+                      id={key}
+                      checked={value === "true"}
+                      onCheckedChange={(v) => setValues((s) => ({ ...s, [key]: String(v) }))}
+                    />
+                  </div>
                 ) : field.type === "textarea" ? (
                   <Textarea
                     id={key}
