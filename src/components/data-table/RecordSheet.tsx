@@ -16,7 +16,7 @@ export type Field = {
   /** Possible column names, in order of preference. */
   fields: string[];
   label: string;
-  type?: "text" | "email" | "tel" | "number" | "textarea" | "select" | "rating" | "boolean" | "icon" | "photo";
+  type?: "text" | "email" | "tel" | "number" | "password" | "textarea" | "select" | "rating" | "boolean" | "icon" | "photo";
   options?: Array<{ value: string; label: string }>;
   placeholder?: string;
   full?: boolean;
