@@ -1,0 +1,37 @@
+import * as Icons from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+
+function toPascal(name: string) {
+  return name
+    .replace(/[^a-zA-Z0-9]+/g, " ")
+    .trim()
+    .split(" ")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join("");
+}
+
+const ALIASES: Record<string, string> = {
+  dashboard: "LayoutDashboard",
+  home: "Home",
+  empresa: "Building2",
+  empresas: "Building2",
+  cliente: "Users",
+  clientes: "Users",
+  usuario: "UserCog",
+  usuarios: "UserCog",
+  funcao: "ShieldCheck",
+  funcoes: "ShieldCheck",
+  atendimento: "MessageCircle",
+  atendimentos: "MessageCircle",
+  chat: "MessageCircle",
+  kanban: "Kanban",
+  config: "Settings",
+  configuracoes: "Settings",
+};
+
+export function getIcon(name: string | undefined): LucideIcon {
+  const key = (name ?? "").toLowerCase();
+  const candidate = ALIASES[key] ?? toPascal(key);
+  const registry = Icons as unknown as Record<string, LucideIcon>;
+  return registry[candidate] ?? Icons.Circle;
+}
