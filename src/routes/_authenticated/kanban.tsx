@@ -1,0 +1,318 @@
+import { useEffect, useMemo, useState } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Plus, GripVertical } from "lucide-react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useAuth } from "@/hooks/useAuth";
+import { pick, type Row } from "@/lib/row";
+import { text } from "@/lib/crud";
+import { cn } from "@/lib/utils";
+
+export const Route = createFileRoute("/_authenticated/kanban")({
+  head: () => ({
+    meta: [
+      { title: "Kanban — Atende.ai" },
+      { name: "description", content: "Acompanhe os atendimentos por etapa em um quadro Kanban." },
+      { property: "og:title", content: "Kanban — Atende.ai" },
+      { property: "og:description", content: "Acompanhe os atendimentos por etapa em um quadro Kanban." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
+  component: KanbanPage,
+});
+
+const ETAPA_FIELDS = ["descricao", "nome", "titulo"];
+const KANBAN_NAME_FIELDS = ["nome", "descricao", "titulo"];
+
+function useRows(table: string) {
+  return useQuery({
+    queryKey: ["table", table],
+    queryFn: async (): Promise<Row[]> => {
+      const { data, error } = await supabase.from(table).select("*");
+      if (error) throw error;
+      return (data ?? []) as Row[];
+    },
+  });
+}
+
+function KanbanPage() {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { empresa } = useAuth();
+  const empresaId = empresa?.["id"];
+
+  const { data: kanbans = [], isLoading: loadingKanbans } = useRows("kanban");
+  const { data: etapas = [] } = useRows("kanban_etapas");
+  const { data: atendimentos = [] } = useRows("atendimentos");
+  const { data: clientes = [] } = useRows("clientes");
+
+  const [kanbanId, setKanbanId] = useState<string>("");
+  const [newKanban, setNewKanban] = useState(false);
+  const [newEtapa, setNewEtapa] = useState(false);
+  const [nome, setNome] = useState("");
+  const [dragId, setDragId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!kanbanId && kanbans.length > 0) setKanbanId(String(kanbans[0]!["id"]));
+  }, [kanbans, kanbanId]);
+
+  const boardEtapas = useMemo(
+    () =>
+      etapas
+        .filter((e) => String(pick(e, ["kanban_id", "id_kanban"]) ?? "") === kanbanId)
+        .sort((a, b) => Number(pick(a, ["ordem"], 0)) - Number(pick(b, ["ordem"], 0))),
+    [etapas, kanbanId],
+  );
+
+  const clienteById = useMemo(() => {
+    const map = new Map<string, Row>();
+    for (const c of clientes) map.set(String(c["id"]), c);
+    return map;
+  }, [clientes]);
+
+  const cardsByEtapa = useMemo(() => {
+    const map = new Map<string, Row[]>();
+    for (const a of atendimentos) {
+      const etapaId = String(pick(a, ["kanban_etapa_id", "etapa_id", "id_etapa"]) ?? "");
+      if (!etapaId) continue;
+      const list = map.get(etapaId) ?? [];
+      list.push(a);
+      map.set(etapaId, list);
+    }
+    return map;
+  }, [atendimentos]);
+
+  const createKanban = useMutation({
+    mutationFn: async (value: string) => {
+      const payload: Row = { nome: value };
+      if (empresaId !== undefined) payload["empresa_id"] = empresaId;
+      const { error } = await supabase.from("kanban").insert(payload);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["table", "kanban"] });
+      toast.success("Kanban criado.");
+      setNewKanban(false);
+      setNome("");
+    },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Não foi possível criar."),
+  });
+
+  const createEtapa = useMutation({
+    mutationFn: async (value: string) => {
+      const payload: Row = {
+        descricao: value,
+        kanban_id: kanbanId,
+        ordem: boardEtapas.length + 1,
+      };
+      const { error } = await supabase.from("kanban_etapas").insert(payload);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["table", "kanban_etapas"] });
+      toast.success("Etapa criada.");
+      setNewEtapa(false);
+      setNome("");
+    },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Não foi possível criar."),
+  });
+
+  const moveCard = useMutation({
+    mutationFn: async ({ id, etapaId, column }: { id: string; etapaId: string; column: string }) => {
+      const { error } = await supabase
+        .from("atendimentos")
+        .update({ [column]: etapaId })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["table", "atendimentos"] }),
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Não foi possível mover."),
+  });
+
+  const onDrop = (etapaId: string) => {
+    if (!dragId) return;
+    const card = atendimentos.find((a) => String(a["id"]) === dragId);
+    setDragId(null);
+    if (!card) return;
+    const column =
+      ["kanban_etapa_id", "etapa_id", "id_etapa"].find((k) => k in card) ?? "kanban_etapa_id";
+    if (String(card[column] ?? "") === etapaId) return;
+    moveCard.mutate({ id: dragId, etapaId, column });
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold text-foreground">Kanban</h1>
+        <div className="flex items-center gap-2">
+          <Select value={kanbanId} onValueChange={setKanbanId}>
+            <SelectTrigger className="w-56">
+              <SelectValue placeholder={loadingKanbans ? "Carregando…" : "Selecione um kanban"} />
+            </SelectTrigger>
+            <SelectContent>
+              {kanbans.map((k) => (
+                <SelectItem key={String(k["id"])} value={String(k["id"])}>
+                  {text(pick(k, KANBAN_NAME_FIELDS, "Sem nome"))}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            size="icon"
+            aria-label="Novo kanban"
+            onClick={() => {
+              setNome("");
+              setNewKanban(true);
+            }}
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+      {!kanbanId && !loadingKanbans && (
+        <div className="rounded-lg border border-border bg-card p-10 text-center text-muted-foreground">
+          Nenhum kanban cadastrado. Clique em “+” para criar o primeiro.
+        </div>
+      )}
+
+      {kanbanId && (
+        <div className="flex gap-4 overflow-x-auto pb-4">
+          {boardEtapas.map((etapa) => {
+            const id = String(etapa["id"]);
+            const cards = cardsByEtapa.get(id) ?? [];
+            return (
+              <div
+                key={id}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={() => onDrop(id)}
+                className="flex w-72 shrink-0 flex-col gap-3 rounded-lg border border-border bg-muted/40 p-3"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-foreground">
+                    {text(pick(etapa, ETAPA_FIELDS, "Etapa"))}
+                  </span>
+                  <span className="rounded-full bg-background px-2 py-0.5 text-xs text-muted-foreground">
+                    {cards.length}
+                  </span>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  {cards.length === 0 && (
+                    <p className="rounded-md border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
+                      Arraste atendimentos para cá
+                    </p>
+                  )}
+                  {cards.map((card) => {
+                    const clienteId = String(pick(card, ["cliente_id", "id_cliente"]) ?? "");
+                    const cliente = clienteById.get(clienteId);
+                    return (
+                      <button
+                        key={String(card["id"])}
+                        type="button"
+                        draggable
+                        onDragStart={() => setDragId(String(card["id"]))}
+                        onDragEnd={() => setDragId(null)}
+                        onClick={() =>
+                          navigate({ to: "/atendimentos", search: { id: String(card["id"]) } })
+                        }
+                        className={cn(
+                          "flex w-full items-start gap-2 rounded-md border border-border bg-card p-3 text-left shadow-sm transition hover:border-primary",
+                          dragId === String(card["id"]) && "opacity-50",
+                        )}
+                      >
+                        <GripVertical className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium text-foreground">
+                            {text(pick(cliente, ["nome"], `Atendimento #${text(card["id"])}`))}
+                          </p>
+                          <p className="truncate text-xs text-muted-foreground">
+                            {text(pick(cliente, ["telefone"], "")) ||
+                              text(pick(card, ["status"], "Sem status"))}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+
+          <div className="w-72 shrink-0">
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                setNome("");
+                setNewEtapa(true);
+              }}
+            >
+              <Plus className="mr-1 h-4 w-4" /> Nova etapa
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <Dialog open={newKanban} onOpenChange={setNewKanban}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Novo kanban</DialogTitle>
+            <DialogDescription>Informe um nome para o quadro.</DialogDescription>
+          </DialogHeader>
+          <div>
+            <Label htmlFor="kanban-nome" className="mb-1.5 block">
+              Nome
+            </Label>
+            <Input id="kanban-nome" value={nome} onChange={(e) => setNome(e.target.value)} />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNewKanban(false)}>
+              Cancelar
+            </Button>
+            <Button disabled={!nome.trim() || createKanban.isPending} onClick={() => createKanban.mutate(nome)}>
+              Criar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={newEtapa} onOpenChange={setNewEtapa}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nova etapa</DialogTitle>
+            <DialogDescription>A etapa será adicionada ao final do quadro.</DialogDescription>
+          </DialogHeader>
+          <div>
+            <Label htmlFor="etapa-nome" className="mb-1.5 block">
+              Descrição
+            </Label>
+            <Input id="etapa-nome" value={nome} onChange={(e) => setNome(e.target.value)} />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNewEtapa(false)}>
+              Cancelar
+            </Button>
+            <Button disabled={!nome.trim() || createEtapa.isPending} onClick={() => createEtapa.mutate(nome)}>
+              Criar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
