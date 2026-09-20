@@ -31,9 +31,45 @@ function UsuariosPage() {
   const { data: perfis = [] } = useTableRows("perfil");
   const { data: empresas = [] } = useTableRows("empresas");
   const save = useSaveRecord("usuarios");
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [record, setRecord] = useState<Row | null>(null);
   const [f, setF] = useState({ nome: "", email: "", cpf: "", status: "todos", perfil: "todos" });
+
+  /** New user: creates the auth.users access first, then the usuarios row linked by id. */
+  const createUser = useMutation({
+    mutationFn: async (values: Row) => {
+      const email = text(values["email"]).trim();
+      const password = text(values["senha"]);
+      if (!email) throw new Error("Informe o e-mail do usuário.");
+      if (password.length < 6) throw new Error("A senha deve ter pelo menos 6 caracteres.");
+      const { data, error } = await supabase.auth.signUp({ email, password });
+      if (error) throw error;
+      const uid = data.user?.id;
+      if (!uid) throw new Error("Não foi possível criar o acesso do usuário.");
+      const rest: Row = { ...values };
+      delete rest["senha"];
+      const { error: insertError } = await supabase.from("usuarios").insert({ ...rest, id: uid });
+      if (insertError) throw insertError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["table", "usuarios"] });
+      toast.success("Usuário criado com sucesso.");
+    },
+    onError: (error: unknown) => {
+      toast.error(error instanceof Error ? error.message : "Não foi possível salvar.");
+    },
+  });
+
+  const handleSave = (values: Row) => {
+    if (record) {
+      const rest: Row = { ...values };
+      delete rest["senha"];
+      save.mutate({ values: rest, original: record }, { onSuccess: () => setOpen(false) });
+    } else {
+      createUser.mutate(values, { onSuccess: () => setOpen(false) });
+    }
+  };
 
   const perfilNome = useMemo(() => {
     const map = new Map<string, string>();
