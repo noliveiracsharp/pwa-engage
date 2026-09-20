@@ -1,6 +1,9 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { User } from "lucide-react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { DataTable, type Column } from "@/components/data-table/DataTable";
 import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
 import { RecordSheet, type Field } from "@/components/data-table/RecordSheet";
@@ -31,9 +34,45 @@ function UsuariosPage() {
   const { data: perfis = [] } = useTableRows("perfil");
   const { data: empresas = [] } = useTableRows("empresas");
   const save = useSaveRecord("usuarios");
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [record, setRecord] = useState<Row | null>(null);
   const [f, setF] = useState({ nome: "", email: "", cpf: "", status: "todos", perfil: "todos" });
+
+  /** New user: creates the auth.users access first, then the usuarios row linked by id. */
+  const createUser = useMutation({
+    mutationFn: async (values: Row) => {
+      const email = text(values["email"]).trim();
+      const password = text(values["senha"]);
+      if (!email) throw new Error("Informe o e-mail do usuário.");
+      if (password.length < 6) throw new Error("A senha deve ter pelo menos 6 caracteres.");
+      const { data, error } = await supabase.auth.signUp({ email, password });
+      if (error) throw error;
+      const uid = data.user?.id;
+      if (!uid) throw new Error("Não foi possível criar o acesso do usuário.");
+      const rest: Row = { ...values };
+      delete rest["senha"];
+      const { error: insertError } = await supabase.from("usuarios").insert({ ...rest, id: uid });
+      if (insertError) throw insertError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["table", "usuarios"] });
+      toast.success("Usuário criado com sucesso.");
+    },
+    onError: (error: unknown) => {
+      toast.error(error instanceof Error ? error.message : "Não foi possível salvar.");
+    },
+  });
+
+  const handleSave = (values: Row) => {
+    if (record) {
+      const rest: Row = { ...values };
+      delete rest["senha"];
+      save.mutate({ values: rest, original: record }, { onSuccess: () => setOpen(false) });
+    } else {
+      createUser.mutate(values, { onSuccess: () => setOpen(false) });
+    }
+  };
 
   const perfilNome = useMemo(() => {
     const map = new Map<string, string>();
@@ -51,12 +90,15 @@ function UsuariosPage() {
 
   const fields: Field[] = useMemo(
     () => [
+      { fields: ["foto"], label: "Foto", type: "photo", full: true },
       { fields: ["nome"], label: "Nome", full: true },
       { fields: ["email"], label: "E-mail", type: "email" },
+      ...(!record
+        ? [{ fields: ["senha"], label: "Senha de acesso", type: "password" as const }]
+        : []),
       { fields: ["cpf"], label: "CPF" },
       { fields: ["cargo"], label: "Cargo" },
       { fields: ["status"], label: "Status", type: "boolean" },
-      { fields: ["foto"], label: "Foto", type: "photo", full: true },
       {
         fields: ["perfil_id"],
         label: "Perfil",
@@ -73,7 +115,7 @@ function UsuariosPage() {
         })),
       },
     ],
-    [perfilOptions, empresas],
+    [perfilOptions, empresas, record],
   );
 
   const filtered = useMemo(
@@ -175,11 +217,15 @@ function UsuariosPage() {
         open={open}
         onOpenChange={setOpen}
         title={record ? "Editar usuário" : "Novo usuário"}
-        description="O cadastro depende de um acesso (auth.users) existente — a criação de acesso por e-mail e senha será feita em uma etapa posterior."
+        description={
+          record
+            ? "Altere os dados do usuário."
+            : "Informe e-mail e senha para criar o acesso do usuário automaticamente."
+        }
         fields={fields}
         record={record}
-        saving={save.isPending}
-        onSave={(values) => save.mutate({ values, original: record }, { onSuccess: () => setOpen(false) })}
+        saving={save.isPending || createUser.isPending}
+        onSave={handleSave}
       />
     </>
   );
