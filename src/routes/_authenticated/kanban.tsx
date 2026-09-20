@@ -299,7 +299,7 @@ function KanbanPage() {
                     onClick={() => {
                       setEditForm({
                         descricao: text(pick(etapa, ETAPA_FIELDS, "")),
-                        status: pick(etapa, ["status"]) !== false,
+                        status: String(pick(etapa, ["status"], "true")) !== "false",
                       });
                       setEditEtapa(etapa);
                     }}
