@@ -67,6 +67,9 @@ function KanbanPage() {
   const [form, setForm] = useState({ nome: "", descricao: "", status: true });
   const [etapaForm, setEtapaForm] = useState({ descricao: "", status: true });
   const [dragId, setDragId] = useState<string | null>(null);
+  const [dragEtapaId, setDragEtapaId] = useState<string | null>(null);
+  const [editEtapa, setEditEtapa] = useState<Row | null>(null);
+  const [editForm, setEditForm] = useState({ descricao: "", status: true });
 
   useEffect(() => {
     if (!kanbanId && kanbans.length > 0) setKanbanId(String(kanbans[0]!["id"]));
