@@ -4,7 +4,8 @@ import { DataTable, type Column } from "@/components/data-table/DataTable";
 import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
 import { RecordSheet, type Field } from "@/components/data-table/RecordSheet";
 import { StarRating } from "@/components/data-table/StarRating";
-import { matches, rowId, text, useSaveRecord, useTableRows } from "@/lib/crud";
+import { StatusBadge } from "@/components/data-table/StatusBadge";
+import { matches, rowId, useSaveRecord, useTableRows } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
 
 export const Route = createFileRoute("/_authenticated/clientes")({
@@ -19,24 +20,21 @@ export const Route = createFileRoute("/_authenticated/clientes")({
   component: ClientesPage,
 });
 
-const NOME = ["nome", "cliente_nome", "nome_completo", "razao_social"];
-const EMAIL = ["email", "cliente_email", "e_mail"];
-const TELEFONE = ["telefone", "cliente_telefone", "celular", "whatsapp", "fone"];
-const CPF = ["cpf", "cliente_cpf", "documento", "cpf_cnpj"];
-const STATUS = ["status", "cliente_status", "ativo", "situacao"];
-const NOTA = ["nota", "cliente_nota", "avaliacao", "rating"];
-const OBS = ["observacoes", "observacao", "obs", "cliente_observacoes"];
-const FOTO = ["foto", "avatar", "imagem", "foto_url"];
-
 const fields: Field[] = [
-  { fields: NOME, label: "Nome", full: true },
-  { fields: EMAIL, label: "E-mail", type: "email" },
-  { fields: TELEFONE, label: "Telefone", type: "tel" },
-  { fields: CPF, label: "CPF/CNPJ" },
-  { fields: STATUS, label: "Status" },
-  { fields: FOTO, label: "Foto (URL)", full: true },
-  { fields: NOTA, label: "Nota", type: "rating" },
-  { fields: OBS, label: "Observações", type: "textarea", full: true },
+  { fields: ["nome"], label: "Nome", full: true },
+  { fields: ["email"], label: "E-mail", type: "email" },
+  { fields: ["telefone"], label: "Telefone", type: "tel" },
+  { fields: ["cpf"], label: "CPF" },
+  { fields: ["status"], label: "Status", type: "boolean" },
+  { fields: ["foto"], label: "Foto (URL)", full: true },
+  { fields: ["nota"], label: "Nota", type: "rating" },
+  { fields: ["observacao"], label: "Observações", type: "textarea", full: true },
+];
+
+const STATUS_OPTIONS = [
+  { value: "todos", label: "Todos" },
+  { value: "ativo", label: "Ativo" },
+  { value: "inativo", label: "Inativo" },
 ];
 
 function ClientesPage() {
@@ -50,32 +48,33 @@ function ClientesPage() {
     () =>
       rows.filter(
         (row) =>
-          matches(pick(row, NOME), f.nome) &&
-          matches(pick(row, EMAIL), f.email) &&
-          matches(pick(row, TELEFONE), f.telefone) &&
-          matches(pick(row, CPF), f.cpf) &&
-          (f.status === "todos" || text(pick(row, STATUS)).toLowerCase() === f.status) &&
-          (f.nota === "todas" || String(Number(pick(row, NOTA) ?? 0)) === f.nota),
+          matches(pick(row, ["nome"]), f.nome) &&
+          matches(pick(row, ["email"]), f.email) &&
+          matches(pick(row, ["telefone"]), f.telefone) &&
+          matches(pick(row, ["cpf"]), f.cpf) &&
+          (f.status === "todos" ||
+            (f.status === "ativo" ? row["status"] === true : row["status"] === false)) &&
+          (f.nota === "todas" || String(Number(pick(row, ["nota"]) ?? 0)) === f.nota),
       ),
     [rows, f],
   );
 
-  const statusOptions = useMemo(() => {
-    const set = new Set(rows.map((row) => text(pick(row, STATUS))).filter(Boolean));
-    return [{ value: "todos", label: "Todos" }, ...[...set].map((s) => ({ value: s.toLowerCase(), label: s }))];
-  }, [rows]);
-
   const columns: Column[] = [
-    { key: "nome", header: "Nome", fields: NOME },
-    { key: "email", header: "E-mail", fields: EMAIL },
-    { key: "telefone", header: "Telefone", fields: TELEFONE },
-    { key: "cpf", header: "CPF/CNPJ", fields: CPF },
-    { key: "status", header: "Status", fields: STATUS },
+    { key: "nome", header: "Nome", fields: ["nome"] },
+    { key: "email", header: "E-mail", fields: ["email"] },
+    { key: "telefone", header: "Telefone", fields: ["telefone"] },
+    { key: "cpf", header: "CPF", fields: ["cpf"] },
+    {
+      key: "status",
+      header: "Status",
+      fields: ["status"],
+      render: (row) => <StatusBadge value={row["status"]} />,
+    },
     {
       key: "nota",
       header: "Nota",
-      fields: NOTA,
-      render: (row) => <StarRating size="sm" value={Number(pick(row, NOTA) ?? 0)} />,
+      fields: ["nota"],
+      render: (row) => <StarRating size="sm" value={Number(pick(row, ["nota"]) ?? 0)} />,
     },
   ];
 
@@ -106,7 +105,7 @@ function ClientesPage() {
               label="Status"
               value={f.status}
               onChange={(v) => setF({ ...f, status: v })}
-              options={statusOptions}
+              options={STATUS_OPTIONS}
             />
             <FilterSelect
               label="Nota"
