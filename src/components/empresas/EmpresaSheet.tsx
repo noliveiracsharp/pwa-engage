@@ -84,7 +84,10 @@ function ChildTable({ config, empresa }: { config: ChildConfig; empresa: Row | n
       if (value !== "") payload[col.fields[0]!] = value;
     }
     const { error } = await supabase.from(config.table).insert(payload as never);
-    if (error) return toast.error(error.message);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     setDraft({});
     toast.success("Registro adicionado.");
     refresh();
@@ -93,7 +96,10 @@ function ChildTable({ config, empresa }: { config: ChildConfig; empresa: Row | n
   const remove = async (row: Row) => {
     const key = idColumn(row);
     const { error } = await supabase.from(config.table).delete().eq(key, row[key] as never);
-    if (error) return toast.error(error.message);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     toast.success("Registro removido.");
     refresh();
   };
