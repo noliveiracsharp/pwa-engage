@@ -14,6 +14,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { rowId, text, useDeleteRecord, useTableRows } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
@@ -31,7 +39,7 @@ export function FuncaoPerfis({ funcaoId }: Props) {
   const [novoPerfil, setNovoPerfil] = useState("");
   const [novoOpen, setNovoOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [perms, setPerms] = useState({
+  const [perms] = useState({
     can_create: true,
     can_read: true,
     can_update: true,
@@ -122,8 +130,8 @@ export function FuncaoPerfis({ funcaoId }: Props) {
         </p>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto]">
-        <div className="space-y-1.5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <div className="w-full space-y-1.5 sm:max-w-sm">
           <Label htmlFor="perfil-select">Perfil</Label>
           <Select value={perfilId} onValueChange={setPerfilId}>
             <SelectTrigger id="perfil-select">
@@ -138,31 +146,14 @@ export function FuncaoPerfis({ funcaoId }: Props) {
             </SelectContent>
           </Select>
         </div>
-        <div className="flex items-end">
+        <div className="flex gap-2">
           <Button type="button" variant="outline" onClick={() => setNovoOpen(true)} disabled={saving}>
             <Plus className="mr-1 size-4" /> Adicionar
           </Button>
-        </div>
-        <div className="flex items-end">
           <Button type="button" onClick={vincular} disabled={saving}>
             Liberar
           </Button>
         </div>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-        {PERM_LABELS.map(({ key, label }) => (
-          <div key={key} className="flex items-center gap-2">
-            <Switch
-              id={`perm-${key}`}
-              checked={perms[key]}
-              onCheckedChange={(v) => setPerms((p) => ({ ...p, [key]: v }))}
-            />
-            <Label htmlFor={`perm-${key}`} className="text-sm font-normal">
-              {label}
-            </Label>
-          </div>
-        ))}
       </div>
 
       <Dialog open={novoOpen} onOpenChange={setNovoOpen}>
@@ -198,43 +189,64 @@ export function FuncaoPerfis({ funcaoId }: Props) {
         </DialogContent>
       </Dialog>
 
-      <div className="space-y-2">
-        {!funcaoId ? (
-          <p className="text-muted-foreground text-xs">Salve a função para liberar perfis.</p>
-        ) : vinculos.length === 0 ? (
-          <p className="text-muted-foreground text-xs">Nenhum perfil liberado para esta função.</p>
-        ) : (
-          vinculos.map((row, i) => (
-            <div
-              key={String(rowId(row) ?? i)}
-              className="bg-muted/40 flex flex-wrap items-center justify-between gap-2 rounded-md px-3 py-2 text-sm"
-            >
-              <span className="font-medium">{perfilNome(pick(row, ["perfil_id"]))}</span>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                {PERM_LABELS.map(({ key, label }) => (
-                  <label key={key} className="text-muted-foreground flex items-center gap-1.5 text-xs">
-                    <Switch
-                      className="scale-90"
-                      checked={row[key] === true}
-                      onCheckedChange={(v) => togglePerm(row, key, v)}
-                      aria-label={label}
-                    />
-                    {label}
-                  </label>
-                ))}
-              </div>
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                onClick={() => removeMenu.mutate(row)}
-                aria-label="Remover acesso"
-              >
-                <Trash2 className="size-4" />
-              </Button>
-            </div>
-          ))
-        )}
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[180px]">Perfil</TableHead>
+              {PERM_LABELS.map(({ label }) => (
+                <TableHead key={label} className="w-[100px] text-center">
+                  {label}
+                </TableHead>
+              ))}
+              <TableHead className="w-[80px] text-center">Ações</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {!funcaoId ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-muted-foreground py-4 text-center text-sm">
+                  Salve a função antes de liberar perfis.
+                </TableCell>
+              </TableRow>
+            ) : vinculos.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-muted-foreground py-4 text-center text-sm">
+                  Nenhum perfil liberado para esta função.
+                </TableCell>
+              </TableRow>
+            ) : (
+              vinculos.map((row, i) => (
+                <TableRow key={String(rowId(row) ?? i)}>
+                  <TableCell className="font-medium">
+                    {perfilNome(pick(row, ["perfil_id"]))}
+                  </TableCell>
+                  {PERM_LABELS.map(({ key, label }) => (
+                    <TableCell key={key} className="text-center">
+                      <Switch
+                        className="mx-auto"
+                        checked={row[key] === true}
+                        onCheckedChange={(v) => togglePerm(row, key, v)}
+                        aria-label={label}
+                      />
+                    </TableCell>
+                  ))}
+                  <TableCell className="text-center">
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => removeMenu.mutate(row)}
+                      aria-label="Remover acesso"
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
       </div>
     </div>
   );
