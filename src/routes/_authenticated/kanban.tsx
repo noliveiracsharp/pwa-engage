@@ -64,8 +64,8 @@ function KanbanPage() {
   const [kanbanId, setKanbanId] = useState<string>("");
   const [newKanban, setNewKanban] = useState(false);
   const [newEtapa, setNewEtapa] = useState(false);
-  const [nome, setNome] = useState("");
   const [form, setForm] = useState({ nome: "", descricao: "", status: true });
+  const [etapaForm, setEtapaForm] = useState({ descricao: "", status: true });
   const [dragId, setDragId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -119,11 +119,12 @@ function KanbanPage() {
   });
 
   const createEtapa = useMutation({
-    mutationFn: async (value: string) => {
+    mutationFn: async (value: { descricao: string; status: boolean }) => {
       const payload: Row = {
-        descricao: value,
+        descricao: value.descricao.trim(),
         kanban_id: kanbanId,
         ordem: boardEtapas.length + 1,
+        status: value.status,
       };
       const { error } = await supabase.from("kanban_etapas").insert(payload);
       if (error) throw error;
@@ -132,7 +133,7 @@ function KanbanPage() {
       queryClient.invalidateQueries({ queryKey: ["table", "kanban_etapas"] });
       toast.success("Etapa criada.");
       setNewEtapa(false);
-      setNome("");
+      setEtapaForm({ descricao: "", status: true });
     },
     onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Não foi possível criar."),
   });
