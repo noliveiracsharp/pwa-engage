@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as AuthenticatedAtendimentosRouteImport } from './routes/_authenticated/atendimentos'
 import { Route as AuthenticatedClientesRouteImport } from './routes/_authenticated/clientes'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedEmpresasRouteImport } from './routes/_authenticated/empresas'
@@ -40,6 +41,12 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
   path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAtendimentosRoute =
+  AuthenticatedAtendimentosRouteImport.update({
+    id: '/atendimentos',
+    path: '/atendimentos',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedClientesRoute = AuthenticatedClientesRouteImport.update({
   id: '/clientes',
   path: '/clientes',
@@ -80,6 +87,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/atendimentos': typeof AuthenticatedAtendimentosRoute
   '/clientes': typeof AuthenticatedClientesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/empresas': typeof AuthenticatedEmpresasRoute
@@ -92,6 +100,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/atendimentos': typeof AuthenticatedAtendimentosRoute
   '/clientes': typeof AuthenticatedClientesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/empresas': typeof AuthenticatedEmpresasRoute
@@ -106,6 +115,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/_authenticated/atendimentos': typeof AuthenticatedAtendimentosRoute
   '/_authenticated/clientes': typeof AuthenticatedClientesRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/empresas': typeof AuthenticatedEmpresasRoute
@@ -120,6 +130,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/reset-password'
+    | '/atendimentos'
     | '/clientes'
     | '/dashboard'
     | '/empresas'
@@ -132,6 +143,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/reset-password'
+    | '/atendimentos'
     | '/clientes'
     | '/dashboard'
     | '/empresas'
@@ -145,6 +157,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/login'
     | '/reset-password'
+    | '/_authenticated/atendimentos'
     | '/_authenticated/clientes'
     | '/_authenticated/dashboard'
     | '/_authenticated/empresas'
@@ -190,6 +203,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/atendimentos': {
+      id: '/_authenticated/atendimentos'
+      path: '/atendimentos'
+      fullPath: '/atendimentos'
+      preLoaderRoute: typeof AuthenticatedAtendimentosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/clientes': {
       id: '/_authenticated/clientes'
@@ -244,6 +264,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAtendimentosRoute: typeof AuthenticatedAtendimentosRoute
   AuthenticatedClientesRoute: typeof AuthenticatedClientesRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedEmpresasRoute: typeof AuthenticatedEmpresasRoute
@@ -254,6 +275,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAtendimentosRoute: AuthenticatedAtendimentosRoute,
   AuthenticatedClientesRoute: AuthenticatedClientesRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedEmpresasRoute: AuthenticatedEmpresasRoute,
