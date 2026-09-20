@@ -7,25 +7,31 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { idColumn, text } from "@/lib/crud";
-import { findKey, pick, type Row } from "@/lib/row";
+import { pick, type Row } from "@/lib/row";
 
-export const EMPRESA_FIELDS: Array<{ fields: string[]; label: string; full?: boolean }> = [
-  { fields: ["nome", "empresa_nome", "razao_social", "titulo"], label: "Nome", full: true },
-  { fields: ["documento", "cnpj", "cpf_cnpj"], label: "CNPJ / Documento" },
-  { fields: ["email", "empresa_email"], label: "E-mail" },
-  { fields: ["telefone", "empresa_telefone", "celular", "whatsapp"], label: "Telefone" },
-  { fields: ["status", "empresa_status", "situacao", "ativo"], label: "Status" },
-  { fields: ["logo", "logo_url", "empresa_logo", "imagem"], label: "Logo (URL)", full: true },
-  { fields: ["titulo", "empresa_titulo", "nome_fantasia"], label: "Título exibido", full: true },
+type EmpresaField = { key: string; label: string; full?: boolean; type?: "text" | "boolean" };
+
+export const EMPRESA_FIELDS: EmpresaField[] = [
+  { key: "nome", label: "Nome", full: true },
+  { key: "cnpj_cpf", label: "CNPJ / CPF" },
+  { key: "status", label: "Status", type: "boolean" },
+  { key: "endereco", label: "Endereço", full: true },
+  { key: "telefone1", label: "Telefone 1" },
+  { key: "telefone2", label: "Telefone 2" },
+  { key: "logo", label: "Logo (URL)", full: true },
+  { key: "titulo", label: "Título exibido", full: true },
 ];
+
+type ChildColumn = { key: string; label: string; type?: "text" | "boolean" | "select"; options?: string[] };
 
 type ChildConfig = {
   table: string;
   title: string;
   empty: string;
-  columns: Array<{ fields: string[]; label: string }>;
+  columns: ChildColumn[];
 };
 
 const INSTANCIAS: ChildConfig = {
@@ -33,9 +39,11 @@ const INSTANCIAS: ChildConfig = {
   title: "Instâncias",
   empty: "Nenhuma instância vinculada.",
   columns: [
-    { fields: ["nome", "instancia_nome", "instancia", "descricao"], label: "Nome" },
-    { fields: ["token", "apikey", "chave"], label: "Token" },
-    { fields: ["status", "situacao"], label: "Status" },
+    { key: "nome", label: "Nome" },
+    { key: "telefone", label: "Telefone" },
+    { key: "tipo", label: "Tipo", type: "select", options: ["whatsapp", "instagram", "telegram", "chat"] },
+    { key: "provedor", label: "Provedor" },
+    { key: "status", label: "Status", type: "boolean" },
   ],
 };
 
@@ -44,13 +52,11 @@ const CAMPOS: ChildConfig = {
   title: "Campos personalizados",
   empty: "Nenhum campo personalizado.",
   columns: [
-    { fields: ["campo", "nome", "descricao", "label"], label: "Campo" },
-    { fields: ["tipo", "campo_tipo"], label: "Tipo" },
-    { fields: ["ordem", "sequencia"], label: "Ordem" },
+    { key: "chave", label: "Campo (chave)" },
+    { key: "tipo", label: "Tipo" },
+    { key: "valor", label: "Valor padrão" },
   ],
 };
-
-const EMPRESA_FK = ["empresa_id", "id_empresa", "empresaid"];
 
 function ChildTable({ config, empresa }: { config: ChildConfig; empresa: Row | null }) {
   const queryClient = useQueryClient();
@@ -64,7 +70,7 @@ function ChildTable({ config, empresa }: { config: ChildConfig; empresa: Row | n
     queryFn: async (): Promise<Row[]> => {
       const { data, error } = await supabase.from(config.table).select("*");
       if (error) throw error;
-      return ((data ?? []) as Row[]).filter((row) => text(pick(row, EMPRESA_FK)) === text(empresaId));
+      return ((data ?? []) as Row[]).filter((row) => text(pick(row, ["empresa_id"])) === text(empresaId));
     },
   });
 
@@ -78,10 +84,11 @@ function ChildTable({ config, empresa }: { config: ChildConfig; empresa: Row | n
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["child", config.table, text(empresaId)] });
 
   const add = async () => {
-    const payload: Row = { [EMPRESA_FK[0]!]: empresaId };
+    const payload: Row = { empresa_id: empresaId };
     for (const col of config.columns) {
-      const value = draft[col.fields[0]!] ?? "";
-      if (value !== "") payload[col.fields[0]!] = value;
+      const value = draft[col.key] ?? "";
+      if (value === "") continue;
+      payload[col.key] = col.type === "boolean" ? value === "true" : value;
     }
     const { error } = await supabase.from(config.table).insert(payload as never);
     if (error) {
@@ -110,11 +117,17 @@ function ChildTable({ config, empresa }: { config: ChildConfig; empresa: Row | n
         {rows.length === 0 && <p className="p-3 text-sm text-muted-foreground">{config.empty}</p>}
         {rows.map((row, index) => (
           <div key={text(row[idColumn(row)] ?? index)} className="flex items-center gap-3 p-3 text-sm">
-            <div className="grid flex-1 gap-1 sm:grid-cols-3">
+            <div className="grid flex-1 gap-2 sm:grid-cols-3">
               {config.columns.map((col) => (
-                <div key={col.label}>
+                <div key={col.key}>
                   <p className="text-xs text-muted-foreground">{col.label}</p>
-                  <p className="truncate text-foreground">{text(pick(row, col.fields)) || "—"}</p>
+                  <p className="truncate text-foreground">
+                    {col.type === "boolean"
+                      ? row[col.key] === true
+                        ? "Ativo"
+                        : "Inativo"
+                      : text(pick(row, [col.key])) || "—"}
+                  </p>
                 </div>
               ))}
             </div>
@@ -127,12 +140,43 @@ function ChildTable({ config, empresa }: { config: ChildConfig; empresa: Row | n
 
       <div className="grid gap-3 sm:grid-cols-3">
         {config.columns.map((col) => (
-          <div key={col.label}>
+          <div key={col.key}>
             <Label className="mb-1.5 block text-xs">{col.label}</Label>
-            <Input
-              value={draft[col.fields[0]!] ?? ""}
-              onChange={(e) => setDraft((d) => ({ ...d, [col.fields[0]!]: e.target.value }))}
-            />
+            {col.type === "boolean" ? (
+              <Select
+                value={draft[col.key] ?? ""}
+                onValueChange={(v) => setDraft((d) => ({ ...d, [col.key]: v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Ativo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="true">Ativo</SelectItem>
+                  <SelectItem value="false">Inativo</SelectItem>
+                </SelectContent>
+              </Select>
+            ) : col.type === "select" ? (
+              <Select
+                value={draft[col.key] ?? ""}
+                onValueChange={(v) => setDraft((d) => ({ ...d, [col.key]: v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(col.options ?? []).map((opt) => (
+                    <SelectItem key={opt} value={opt}>
+                      {opt}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <Input
+                value={draft[col.key] ?? ""}
+                onChange={(e) => setDraft((d) => ({ ...d, [col.key]: e.target.value }))}
+              />
+            )}
           </div>
         ))}
       </div>
@@ -157,7 +201,7 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave }: Pr
   useEffect(() => {
     if (!open) return;
     const next: Record<string, string> = {};
-    for (const field of EMPRESA_FIELDS) next[field.fields[0]!] = text(pick(empresa, field.fields, ""));
+    for (const field of EMPRESA_FIELDS) next[field.key] = text(pick(empresa, [field.key], ""));
     setValues(next);
   }, [open, empresa]);
 
@@ -166,10 +210,14 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave }: Pr
   const submit = () => {
     const payload: Row = {};
     for (const field of EMPRESA_FIELDS) {
-      const key = findKey(empresa, field.fields) ?? field.fields[0]!;
-      const raw = values[field.fields[0]!] ?? "";
+      const raw = values[field.key] ?? "";
       if (raw === "" && !empresa) continue;
-      payload[key] = raw;
+      if (field.type === "boolean") {
+        if (raw === "") continue;
+        payload[field.key] = raw === "true";
+      } else {
+        payload[field.key] = raw;
+      }
     }
     onSave(payload);
   };
@@ -189,21 +237,33 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave }: Pr
           </TabsList>
 
           <TabsContent value="dados" className="mt-4 grid gap-4 sm:grid-cols-2">
-            {EMPRESA_FIELDS.map((field) => {
-              const key = field.fields[0]!;
-              return (
-                <div key={key} className={field.full ? "sm:col-span-2" : undefined}>
-                  <Label htmlFor={key} className="mb-1.5 block">
-                    {field.label}
-                  </Label>
+            {EMPRESA_FIELDS.map((field) => (
+              <div key={field.key} className={field.full ? "sm:col-span-2" : undefined}>
+                <Label htmlFor={field.key} className="mb-1.5 block">
+                  {field.label}
+                </Label>
+                {field.type === "boolean" ? (
+                  <Select
+                    value={values[field.key] ?? ""}
+                    onValueChange={(v) => setValues((s) => ({ ...s, [field.key]: v }))}
+                  >
+                    <SelectTrigger id={field.key}>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="true">Ativo</SelectItem>
+                      <SelectItem value="false">Inativo</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
                   <Input
-                    id={key}
-                    value={values[key] ?? ""}
-                    onChange={(e) => setValues((v) => ({ ...v, [key]: e.target.value }))}
+                    id={field.key}
+                    value={values[field.key] ?? ""}
+                    onChange={(e) => setValues((v) => ({ ...v, [field.key]: e.target.value }))}
                   />
-                </div>
-              );
-            })}
+                )}
+              </div>
+            ))}
           </TabsContent>
 
           <TabsContent value="instancias" className="mt-4">

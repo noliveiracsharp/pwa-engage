@@ -13,7 +13,7 @@ export type Field = {
   /** Possible column names, in order of preference. */
   fields: string[];
   label: string;
-  type?: "text" | "email" | "tel" | "number" | "textarea" | "select" | "rating";
+  type?: "text" | "email" | "tel" | "number" | "textarea" | "select" | "rating" | "boolean";
   options?: Array<{ value: string; label: string }>;
   placeholder?: string;
   full?: boolean;
@@ -63,7 +63,12 @@ export function RecordSheet({
       const key = columnFor(record, field.fields);
       const raw = values[field.fields[0]!] ?? "";
       if (raw === "" && !record) continue;
-      payload[key] = field.type === "number" || field.type === "rating" ? Number(raw || 0) : raw;
+      if (field.type === "boolean") {
+        if (raw === "") continue;
+        payload[key] = raw === "true";
+      } else {
+        payload[key] = field.type === "number" || field.type === "rating" ? Number(raw || 0) : raw;
+      }
     }
     onSave(payload);
   };
@@ -85,7 +90,17 @@ export function RecordSheet({
                 <Label htmlFor={key} className="mb-1.5 block">
                   {field.label}
                 </Label>
-                {field.type === "textarea" ? (
+                {field.type === "boolean" ? (
+                  <Select value={value} onValueChange={(v) => setValues((s) => ({ ...s, [key]: v }))}>
+                    <SelectTrigger id={key}>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="true">Ativo</SelectItem>
+                      <SelectItem value="false">Inativo</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : field.type === "textarea" ? (
                   <Textarea
                     id={key}
                     value={value}
