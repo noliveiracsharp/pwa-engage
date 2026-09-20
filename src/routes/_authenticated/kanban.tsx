@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/hooks/useAuth";
 import { pick, type Row } from "@/lib/row";
 import { text } from "@/lib/crud";
@@ -180,7 +181,7 @@ function KanbanPage() {
             size="icon"
             aria-label="Novo kanban"
             onClick={() => {
-              setNome("");
+              setForm({ nome: "", descricao: "", status: true });
               setNewKanban(true);
             }}
           >
@@ -277,19 +278,51 @@ function KanbanPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Novo kanban</DialogTitle>
-            <DialogDescription>Informe um nome para o quadro.</DialogDescription>
+            <DialogDescription>Informe os dados do quadro.</DialogDescription>
           </DialogHeader>
-          <div>
-            <Label htmlFor="kanban-nome" className="mb-1.5 block">
-              Nome
-            </Label>
-            <Input id="kanban-nome" value={nome} onChange={(e) => setNome(e.target.value)} />
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="kanban-nome" className="mb-1.5 block">
+                Nome
+              </Label>
+              <Input
+                id="kanban-nome"
+                value={form.nome}
+                onChange={(e) => setForm({ ...form, nome: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label htmlFor="kanban-descricao" className="mb-1.5 block">
+                Descrição
+              </Label>
+              <Input
+                id="kanban-descricao"
+                value={form.descricao}
+                onChange={(e) => setForm({ ...form, descricao: e.target.value })}
+              />
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <Label htmlFor="kanban-status">Status</Label>
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground text-sm">
+                  {form.status ? "Ativo" : "Inativo"}
+                </span>
+                <Switch
+                  id="kanban-status"
+                  checked={form.status}
+                  onCheckedChange={(v) => setForm({ ...form, status: v })}
+                />
+              </div>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setNewKanban(false)}>
               Cancelar
             </Button>
-            <Button disabled={!nome.trim() || createKanban.isPending} onClick={() => createKanban.mutate(nome)}>
+            <Button
+              disabled={!form.nome.trim() || createKanban.isPending}
+              onClick={() => createKanban.mutate(form)}
+            >
               Criar
             </Button>
           </DialogFooter>
