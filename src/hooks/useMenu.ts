@@ -55,12 +55,7 @@ export function useMenu() {
       if (error || !data || data.length === 0) return FALLBACK;
 
       const rows = (data as Row[]).filter(
-        (row) =>
-          asBool(row["can_read"]) &&
-          asBool(row["menu_ativo"]) &&
-          asBool(row["status"]) &&
-          asBool(row["menu_status"]) &&
-          asBool(row["funcao_status"]),
+        (row) => asBool(row["can_read"]) && asBool(row["funcao_status"]),
       );
 
       const items = rows.map(normalize).sort((a, b) => a.order - b.order);
