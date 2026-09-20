@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { DataTable, type Column } from "@/components/data-table/DataTable";
 import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
 import { RecordSheet, type Field } from "@/components/data-table/RecordSheet";
+import { StatusBadge } from "@/components/data-table/StatusBadge";
 import { matches, rowId, text, useSaveRecord, useTableRows } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
 
@@ -18,89 +19,93 @@ export const Route = createFileRoute("/_authenticated/usuarios")({
   component: UsuariosPage,
 });
 
-const NOME = ["nome", "usuario_nome", "nome_completo"];
-const EMAIL = ["email", "usuario_email", "e_mail"];
-const TELEFONE = ["telefone", "usuario_telefone", "celular", "whatsapp"];
-const CPF = ["cpf", "usuario_cpf", "documento"];
-const STATUS = ["status", "usuario_status", "ativo", "situacao"];
-const PERFIL = ["perfil", "perfil_descricao", "funcao", "funcao_descricao", "funcao_id", "perfil_id"];
-const FOTO = ["foto", "avatar", "avatar_url", "imagem"];
+const STATUS_OPTIONS = [
+  { value: "todos", label: "Todos" },
+  { value: "ativo", label: "Ativo" },
+  { value: "inativo", label: "Inativo" },
+];
 
 function UsuariosPage() {
   const { data: rows = [], isLoading } = useTableRows("usuarios");
-  const { data: funcoes = [] } = useTableRows("funcoes");
+  const { data: perfis = [] } = useTableRows("perfil");
+  const { data: empresas = [] } = useTableRows("empresas");
   const save = useSaveRecord("usuarios");
   const [open, setOpen] = useState(false);
   const [record, setRecord] = useState<Row | null>(null);
-  const [f, setF] = useState({
-    nome: "",
-    email: "",
-    telefone: "",
-    cpf: "",
-    status: "todos",
-    perfil: "todos",
-  });
+  const [f, setF] = useState({ nome: "", email: "", cpf: "", status: "todos", perfil: "todos" });
 
-  const perfilOptions = useMemo(() => {
-    const set = new Set(rows.map((row) => text(pick(row, PERFIL))).filter(Boolean));
-    return [{ value: "todos", label: "Todos" }, ...[...set].map((p) => ({ value: p.toLowerCase(), label: p }))];
-  }, [rows]);
+  const perfilNome = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const p of perfis) map.set(text(rowId(p)), text(pick(p, ["descricao"], "—")));
+    return map;
+  }, [perfis]);
 
-  const statusOptions = useMemo(() => {
-    const set = new Set(rows.map((row) => text(pick(row, STATUS))).filter(Boolean));
-    return [{ value: "todos", label: "Todos" }, ...[...set].map((s) => ({ value: s.toLowerCase(), label: s }))];
-  }, [rows]);
-
-  const funcaoOptions = useMemo(
-    () =>
-      funcoes.map((row) => ({
-        value: text(rowId(row)),
-        label: text(pick(row, ["descricao", "funcao_descricao", "nome", "titulo"], "Função")),
-      })),
-    [funcoes],
+  const perfilOptions = useMemo(
+    () => [
+      { value: "todos", label: "Todos" },
+      ...perfis.map((p) => ({ value: text(rowId(p)), label: text(pick(p, ["descricao"], "Perfil")) })),
+    ],
+    [perfis],
   );
 
-  const fields: Field[] = [
-    { fields: NOME, label: "Nome", full: true },
-    { fields: EMAIL, label: "E-mail", type: "email" },
-    { fields: TELEFONE, label: "Telefone", type: "tel" },
-    { fields: CPF, label: "CPF" },
-    { fields: STATUS, label: "Status" },
-    { fields: FOTO, label: "Foto (URL)", full: true },
-    ...(funcaoOptions.length > 0
-      ? [
-          {
-            fields: ["funcao_id", "perfil_id", "id_funcao", "funcao"],
-            label: "Função / Perfil",
-            type: "select" as const,
-            options: funcaoOptions,
-            full: true,
-          },
-        ]
-      : []),
-  ];
+  const fields: Field[] = useMemo(
+    () => [
+      { fields: ["nome"], label: "Nome", full: true },
+      { fields: ["email"], label: "E-mail", type: "email" },
+      { fields: ["cpf"], label: "CPF" },
+      { fields: ["cargo"], label: "Cargo" },
+      { fields: ["status"], label: "Status", type: "boolean" },
+      { fields: ["foto"], label: "Foto (URL)", full: true },
+      {
+        fields: ["perfil_id"],
+        label: "Perfil",
+        type: "select",
+        options: perfilOptions.filter((o) => o.value !== "todos"),
+      },
+      {
+        fields: ["empresa_id"],
+        label: "Empresa",
+        type: "select",
+        options: empresas.map((e) => ({
+          value: text(rowId(e)),
+          label: text(pick(e, ["nome"], "Empresa")),
+        })),
+      },
+    ],
+    [perfilOptions, empresas],
+  );
 
   const filtered = useMemo(
     () =>
       rows.filter(
         (row) =>
-          matches(pick(row, NOME), f.nome) &&
-          matches(pick(row, EMAIL), f.email) &&
-          matches(pick(row, TELEFONE), f.telefone) &&
-          matches(pick(row, CPF), f.cpf) &&
-          (f.status === "todos" || text(pick(row, STATUS)).toLowerCase() === f.status) &&
-          (f.perfil === "todos" || text(pick(row, PERFIL)).toLowerCase() === f.perfil),
+          matches(pick(row, ["nome"]), f.nome) &&
+          matches(pick(row, ["email"]), f.email) &&
+          matches(pick(row, ["cpf"]), f.cpf) &&
+          (f.status === "todos" ||
+            (f.status === "ativo" ? row["status"] === true : row["status"] === false)) &&
+          (f.perfil === "todos" || text(pick(row, ["perfil_id"])) === f.perfil),
       ),
     [rows, f],
   );
 
   const columns: Column[] = [
-    { key: "nome", header: "Nome", fields: NOME },
-    { key: "email", header: "E-mail", fields: EMAIL },
-    { key: "telefone", header: "Telefone", fields: TELEFONE },
-    { key: "cpf", header: "CPF", fields: CPF },
-    { key: "perfil", header: "Perfil", fields: PERFIL },
-    { key: "status", header: "Status", fields: STATUS },
+    { key: "nome", header: "Nome", fields: ["nome"] },
+    { key: "email", header: "E-mail", fields: ["email"] },
+    { key: "cpf", header: "CPF", fields: ["cpf"] },
+    { key: "cargo", header: "Cargo", fields: ["cargo"] },
+    {
+      key: "perfil",
+      header: "Perfil",
+      fields: ["perfil_id"],
+      render: (row) => perfilNome.get(text(pick(row, ["perfil_id"]))) ?? "—",
+    },
+    {
+      key: "status",
+      header: "Status",
+      fields: ["status"],
+      render: (row) => <StatusBadge value={row["status"]} />,
+    },
   ];
 
   return (
@@ -124,13 +129,12 @@ function UsuariosPage() {
           <>
             <FilterInput label="Nome" value={f.nome} onChange={(v) => setF({ ...f, nome: v })} />
             <FilterInput label="E-mail" value={f.email} onChange={(v) => setF({ ...f, email: v })} />
-            <FilterInput label="Telefone" value={f.telefone} onChange={(v) => setF({ ...f, telefone: v })} />
             <FilterInput label="CPF" value={f.cpf} onChange={(v) => setF({ ...f, cpf: v })} />
             <FilterSelect
               label="Status"
               value={f.status}
               onChange={(v) => setF({ ...f, status: v })}
-              options={statusOptions}
+              options={STATUS_OPTIONS}
             />
             <FilterSelect
               label="Perfil"
@@ -146,7 +150,7 @@ function UsuariosPage() {
         open={open}
         onOpenChange={setOpen}
         title={record ? "Editar usuário" : "Novo usuário"}
-        description="O acesso por e-mail e senha é criado em uma etapa posterior."
+        description="O cadastro depende de um acesso (auth.users) existente — a criação de acesso por e-mail e senha será feita em uma etapa posterior."
         fields={fields}
         record={record}
         saving={save.isPending}
