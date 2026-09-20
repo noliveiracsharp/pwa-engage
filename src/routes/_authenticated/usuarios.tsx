@@ -90,12 +90,15 @@ function UsuariosPage() {
 
   const fields: Field[] = useMemo(
     () => [
+      { fields: ["foto"], label: "Foto", type: "photo", full: true },
       { fields: ["nome"], label: "Nome", full: true },
       { fields: ["email"], label: "E-mail", type: "email" },
+      ...(!record
+        ? [{ fields: ["senha"], label: "Senha de acesso", type: "password" as const }]
+        : []),
       { fields: ["cpf"], label: "CPF" },
       { fields: ["cargo"], label: "Cargo" },
       { fields: ["status"], label: "Status", type: "boolean" },
-      { fields: ["foto"], label: "Foto", type: "photo", full: true },
       {
         fields: ["perfil_id"],
         label: "Perfil",
@@ -112,7 +115,7 @@ function UsuariosPage() {
         })),
       },
     ],
-    [perfilOptions, empresas],
+    [perfilOptions, empresas, record],
   );
 
   const filtered = useMemo(
