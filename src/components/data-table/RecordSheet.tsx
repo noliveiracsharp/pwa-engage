@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StarRating } from "@/components/data-table/StarRating";
+import { IconPicker } from "@/components/data-table/IconPicker";
 import { findKey, pick, type Row } from "@/lib/row";
 import { text } from "@/lib/crud";
 
@@ -13,7 +14,7 @@ export type Field = {
   /** Possible column names, in order of preference. */
   fields: string[];
   label: string;
-  type?: "text" | "email" | "tel" | "number" | "textarea" | "select" | "rating" | "boolean";
+  type?: "text" | "email" | "tel" | "number" | "textarea" | "select" | "rating" | "boolean" | "icon";
   options?: Array<{ value: string; label: string }>;
   placeholder?: string;
   full?: boolean;
@@ -90,7 +91,13 @@ export function RecordSheet({
                 <Label htmlFor={key} className="mb-1.5 block">
                   {field.label}
                 </Label>
-                {field.type === "boolean" ? (
+                {field.type === "icon" ? (
+                  <IconPicker
+                    id={key}
+                    value={value}
+                    onChange={(icon) => setValues((current) => ({ ...current, [key]: icon }))}
+                  />
+                ) : field.type === "boolean" ? (
                   <Select value={value} onValueChange={(v) => setValues((s) => ({ ...s, [key]: v }))}>
                     <SelectTrigger id={key}>
                       <SelectValue placeholder="Selecione" />
