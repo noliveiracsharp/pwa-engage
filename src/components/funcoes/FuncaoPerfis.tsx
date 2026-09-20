@@ -216,21 +216,24 @@ export function FuncaoPerfis({ funcaoId }: Props) {
                 </TableCell>
               </TableRow>
             ) : (
-              vinculos.map((row, i) => (
-                <TableRow key={String(rowId(row) ?? i)}>
-                  <TableCell className="font-medium">
-                    {perfilNome(pick(row, ["perfil_id"]))}
-                  </TableCell>
-                  {PERM_LABELS.map(({ key, label }) => (
-                    <TableCell key={key} className="text-center">
-                      <Switch
-                        className="mx-auto"
-                        checked={row[key] === true}
-                        onCheckedChange={(v) => togglePerm(row, key, v)}
-                        aria-label={label}
-                      />
+              vinculos.map((row, i) => {
+                const vinculoId = String(rowId(row) ?? i);
+                return (
+                  <TableRow key={vinculoId}>
+                    <TableCell className="font-medium">
+                      {perfilNome(pick(row, ["perfil_id"]))}
                     </TableCell>
-                  ))}
+                    {PERM_LABELS.map(({ key, label }) => (
+                      <TableCell key={`${vinculoId}-${key}`} className="text-center">
+                        <Switch
+                          id={`${vinculoId}-${key}`}
+                          className="mx-auto"
+                          checked={row[key] === true}
+                          onCheckedChange={(v) => togglePerm(row, key, v)}
+                          aria-label={label}
+                        />
+                      </TableCell>
+                    ))}
                   <TableCell className="text-center">
                     <Button
                       type="button"
@@ -243,7 +246,8 @@ export function FuncaoPerfis({ funcaoId }: Props) {
                     </Button>
                   </TableCell>
                 </TableRow>
-              ))
+              );
+            })
             )}
           </TableBody>
         </Table>
