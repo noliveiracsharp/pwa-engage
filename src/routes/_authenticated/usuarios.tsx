@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { User } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { createEphemeralAuthClient, supabase } from "@/integrations/supabase/client";
 import { DataTable, type Column } from "@/components/data-table/DataTable";
 import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
 import { RecordSheet, type Field } from "@/components/data-table/RecordSheet";
@@ -46,7 +46,10 @@ function UsuariosPage() {
       const password = text(values["senha"]);
       if (!email) throw new Error("Informe o e-mail do usuário.");
       if (password.length < 6) throw new Error("A senha deve ter pelo menos 6 caracteres.");
-      const { data, error } = await supabase.auth.signUp({ email, password });
+      // Ephemeral client: creates the auth access without replacing the
+      // session of the user who is currently logged in.
+      const authClient = createEphemeralAuthClient();
+      const { data, error } = await authClient.auth.signUp({ email, password });
       if (error) throw error;
       const uid = data.user?.id;
       if (!uid) throw new Error("Não foi possível criar o acesso do usuário.");

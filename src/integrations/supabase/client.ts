@@ -12,3 +12,19 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     storage: typeof window !== "undefined" ? window.localStorage : undefined,
   },
 });
+
+/**
+ * Ephemeral auth client that never persists or broadcasts a session.
+ * Used to create auth users (signUp) without touching the current session.
+ */
+export function createEphemeralAuthClient() {
+  return createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+      storageKey: `atendeai-ephemeral-${crypto.randomUUID()}`,
+      storage: undefined,
+    },
+  });
+}
