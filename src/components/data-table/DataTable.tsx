@@ -91,6 +91,11 @@ export function DataTable({
     }
     const next = [...sorted];
     const [moved] = next.splice(dragIndex, 1);
+    if (!moved) {
+      setDragIndex(null);
+      setDropIndex(null);
+      return;
+    }
     next.splice(target, 0, moved);
     setDragIndex(null);
     setDropIndex(null);
