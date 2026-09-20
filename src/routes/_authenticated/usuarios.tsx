@@ -217,11 +217,15 @@ function UsuariosPage() {
         open={open}
         onOpenChange={setOpen}
         title={record ? "Editar usuário" : "Novo usuário"}
-        description="O cadastro depende de um acesso (auth.users) existente — a criação de acesso por e-mail e senha será feita em uma etapa posterior."
+        description={
+          record
+            ? "Altere os dados do usuário."
+            : "Informe e-mail e senha para criar o acesso do usuário automaticamente."
+        }
         fields={fields}
         record={record}
-        saving={save.isPending}
-        onSave={(values) => save.mutate({ values, original: record }, { onSuccess: () => setOpen(false) })}
+        saving={save.isPending || createUser.isPending}
+        onSave={handleSave}
       />
     </>
   );
