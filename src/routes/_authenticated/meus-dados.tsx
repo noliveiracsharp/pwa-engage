@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
+import { useTableRows, rowId, text } from "@/lib/crud";
 import { pick } from "@/lib/row";
 
 export const Route = createFileRoute("/_authenticated/meus-dados")({
