@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, GripVertical } from "lucide-react";
+import { Plus, GripVertical, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -67,6 +67,9 @@ function KanbanPage() {
   const [form, setForm] = useState({ nome: "", descricao: "", status: true });
   const [etapaForm, setEtapaForm] = useState({ descricao: "", status: true });
   const [dragId, setDragId] = useState<string | null>(null);
+  const [dragEtapaId, setDragEtapaId] = useState<string | null>(null);
+  const [editEtapa, setEditEtapa] = useState<Row | null>(null);
+  const [editForm, setEditForm] = useState({ descricao: "", status: true });
 
   useEffect(() => {
     if (!kanbanId && kanbans.length > 0) setKanbanId(String(kanbans[0]!["id"]));
@@ -141,6 +144,63 @@ function KanbanPage() {
     onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Não foi possível criar."),
   });
 
+  const updateEtapa = useMutation({
+    mutationFn: async (value: { id: string; descricao: string; status: boolean }) => {
+      const { error } = await supabase
+        .from("kanban_etapas")
+        .update({ descricao: value.descricao.trim(), status: value.status })
+        .eq("id", value.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["table", "kanban_etapas"] });
+      toast.success("Etapa atualizada.");
+      setEditEtapa(null);
+    },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Não foi possível salvar."),
+  });
+
+  const deleteEtapa = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("kanban_etapas").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["table", "kanban_etapas"] });
+      toast.success("Etapa excluída.");
+    },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Não foi possível excluir."),
+  });
+
+  const reorderEtapas = useMutation({
+    mutationFn: async (ordered: Row[]) => {
+      for (let i = 0; i < ordered.length; i += 1) {
+        const { error } = await supabase
+          .from("kanban_etapas")
+          .update({ ordem: i + 1 })
+          .eq("id", ordered[i]!["id"] as string);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["table", "kanban_etapas"] }),
+    onError: (e: unknown) =>
+      toast.error(e instanceof Error ? e.message : "Não foi possível reordenar."),
+  });
+
+  const onDropEtapa = (targetId: string) => {
+    const sourceId = dragEtapaId;
+    setDragEtapaId(null);
+    if (!sourceId || sourceId === targetId) return;
+    const list = [...boardEtapas];
+    const from = list.findIndex((e) => String(e["id"]) === sourceId);
+    const to = list.findIndex((e) => String(e["id"]) === targetId);
+    if (from < 0 || to < 0) return;
+    const [moved] = list.splice(from, 1);
+    if (!moved) return;
+    list.splice(to, 0, moved);
+    reorderEtapas.mutate(list);
+  };
+
   const moveCard = useMutation({
     mutationFn: async ({ id, etapaId, column }: { id: string; etapaId: string; column: string }) => {
       const { error } = await supabase
@@ -209,16 +269,54 @@ function KanbanPage() {
               <div
                 key={id}
                 onDragOver={(e) => e.preventDefault()}
-                onDrop={() => onDrop(id)}
-                className="flex w-72 shrink-0 flex-col gap-3 rounded-lg border border-border bg-muted/40 p-3"
+                onDrop={() => (dragEtapaId ? onDropEtapa(id) : onDrop(id))}
+                className={cn(
+                  "flex w-72 shrink-0 flex-col gap-3 rounded-lg border border-border bg-muted/40 p-3",
+                  dragEtapaId === id && "opacity-50",
+                )}
               >
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold text-foreground">
+                <div className="flex items-center gap-1">
+                  <span
+                    draggable
+                    onDragStart={() => setDragEtapaId(id)}
+                    onDragEnd={() => setDragEtapaId(null)}
+                    className="cursor-grab text-muted-foreground"
+                    aria-label="Reordenar etapa"
+                  >
+                    <GripVertical className="h-4 w-4" />
+                  </span>
+                  <span className="min-w-0 flex-1 truncate font-semibold text-foreground">
                     {text(pick(etapa, ETAPA_FIELDS, "Etapa"))}
                   </span>
                   <span className="rounded-full bg-background px-2 py-0.5 text-xs text-muted-foreground">
                     {cards.length}
                   </span>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7"
+                    aria-label="Editar etapa"
+                    onClick={() => {
+                      setEditForm({
+                        descricao: text(pick(etapa, ETAPA_FIELDS, "")),
+                        status: String(pick(etapa, ["status"], "true")) !== "false",
+                      });
+                      setEditEtapa(etapa);
+                    }}
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                  {cards.length === 0 && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 text-destructive"
+                      aria-label="Excluir etapa"
+                      onClick={() => deleteEtapa.mutate(id)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
                 </div>
 
                 <div className="flex flex-col gap-2">
@@ -373,6 +471,54 @@ function KanbanPage() {
               onClick={() => createEtapa.mutate(etapaForm)}
             >
               Criar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editEtapa !== null} onOpenChange={(o) => !o && setEditEtapa(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar etapa</DialogTitle>
+            <DialogDescription>Altere o nome e o status da etapa.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="etapa-edit-nome" className="mb-1.5 block">
+                Descrição
+              </Label>
+              <Input
+                id="etapa-edit-nome"
+                value={editForm.descricao}
+                onChange={(e) => setEditForm({ ...editForm, descricao: e.target.value })}
+              />
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <Label htmlFor="etapa-edit-status">Status</Label>
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground text-sm">
+                  {editForm.status ? "Ativo" : "Inativo"}
+                </span>
+                <Switch
+                  id="etapa-edit-status"
+                  checked={editForm.status}
+                  onCheckedChange={(v) => setEditForm({ ...editForm, status: v })}
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditEtapa(null)}>
+              Cancelar
+            </Button>
+            <Button
+              disabled={!editForm.descricao.trim() || updateEtapa.isPending}
+              onClick={() =>
+                editEtapa &&
+                updateEtapa.mutate({ id: String(editEtapa["id"]), ...editForm })
+              }
+            >
+              Salvar
             </Button>
           </DialogFooter>
         </DialogContent>
