@@ -13,6 +13,11 @@ function MeusDados() {
   const { usuario, user } = useAuth();
   const nome = pick<string>(usuario, ["nome", "nome_completo"], user?.email ?? "");
   const foto = pick<string>(usuario, ["foto", "avatar", "avatar_url"]);
+  const { data: perfis = [] } = useTableRows("perfil");
+  const perfilId = text(pick(usuario, ["perfil_id"]));
+  const perfilNome = perfis.find((p) => text(rowId(p)) === perfilId)
+    ? text(pick(perfis.find((p) => text(rowId(p)) === perfilId), ["descricao"]))
+    : undefined;
   const campos: Array<[string, string | undefined]> = [
     ["Nome", nome],
     ["E-mail", pick<string>(usuario, ["email"], user?.email)],
