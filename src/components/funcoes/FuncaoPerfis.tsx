@@ -13,6 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { rowId, text, useDeleteRecord, useTableRows } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
@@ -30,6 +31,33 @@ export function FuncaoPerfis({ funcaoId }: Props) {
   const [novoPerfil, setNovoPerfil] = useState("");
   const [novoOpen, setNovoOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [perms, setPerms] = useState({
+    can_create: true,
+    can_read: true,
+    can_update: true,
+    can_delete: false,
+    status: true,
+  });
+
+  const PERM_LABELS: { key: keyof typeof perms; label: string }[] = [
+    { key: "can_create", label: "Criar" },
+    { key: "can_read", label: "Ler" },
+    { key: "can_update", label: "Editar" },
+    { key: "can_delete", label: "Excluir" },
+    { key: "status", label: "Ativo" },
+  ];
+
+  const togglePerm = async (row: Row, key: keyof typeof perms, value: boolean) => {
+    const { error } = await supabase
+      .from("menu")
+      .update({ [key]: value })
+      .eq("id", row["id"] as never);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    await queryClient.invalidateQueries({ queryKey: ["table", "menu"] });
+  };
 
   const vinculos = useMemo(
     () => menu.filter((row) => String(pick(row, ["funcoes_id", "funcao_id"]) ?? "") === String(funcaoId ?? "")),
@@ -72,7 +100,9 @@ export function FuncaoPerfis({ funcaoId }: Props) {
       return;
     }
     setSaving(true);
-    const { error } = await supabase.from("menu").insert({ perfil_id: perfilId, funcoes_id: funcaoId });
+    const { error } = await supabase
+      .from("menu")
+      .insert({ perfil_id: perfilId, funcoes_id: funcaoId, ...perms });
     setSaving(false);
     if (error) {
       toast.error(error.message);
@@ -120,6 +150,21 @@ export function FuncaoPerfis({ funcaoId }: Props) {
         </div>
       </div>
 
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+        {PERM_LABELS.map(({ key, label }) => (
+          <div key={key} className="flex items-center gap-2">
+            <Switch
+              id={`perm-${key}`}
+              checked={perms[key]}
+              onCheckedChange={(v) => setPerms((p) => ({ ...p, [key]: v }))}
+            />
+            <Label htmlFor={`perm-${key}`} className="text-sm font-normal">
+              {label}
+            </Label>
+          </div>
+        ))}
+      </div>
+
       <Dialog open={novoOpen} onOpenChange={setNovoOpen}>
         <DialogContent>
           <DialogHeader>
@@ -162,9 +207,22 @@ export function FuncaoPerfis({ funcaoId }: Props) {
           vinculos.map((row, i) => (
             <div
               key={String(rowId(row) ?? i)}
-              className="bg-muted/40 flex items-center justify-between rounded-md px-3 py-2 text-sm"
+              className="bg-muted/40 flex flex-wrap items-center justify-between gap-2 rounded-md px-3 py-2 text-sm"
             >
-              <span>{perfilNome(pick(row, ["perfil_id"]))}</span>
+              <span className="font-medium">{perfilNome(pick(row, ["perfil_id"]))}</span>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                {PERM_LABELS.map(({ key, label }) => (
+                  <label key={key} className="text-muted-foreground flex items-center gap-1.5 text-xs">
+                    <Switch
+                      className="scale-90"
+                      checked={row[key] === true}
+                      onCheckedChange={(v) => togglePerm(row, key, v)}
+                      aria-label={label}
+                    />
+                    {label}
+                  </label>
+                ))}
+              </div>
               <Button
                 type="button"
                 size="icon"
