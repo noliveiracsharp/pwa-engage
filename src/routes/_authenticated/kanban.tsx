@@ -64,8 +64,8 @@ function KanbanPage() {
   const [kanbanId, setKanbanId] = useState<string>("");
   const [newKanban, setNewKanban] = useState(false);
   const [newEtapa, setNewEtapa] = useState(false);
-  const [nome, setNome] = useState("");
   const [form, setForm] = useState({ nome: "", descricao: "", status: true });
+  const [etapaForm, setEtapaForm] = useState({ descricao: "", status: true });
   const [dragId, setDragId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -119,11 +119,12 @@ function KanbanPage() {
   });
 
   const createEtapa = useMutation({
-    mutationFn: async (value: string) => {
+    mutationFn: async (value: { descricao: string; status: boolean }) => {
       const payload: Row = {
-        descricao: value,
+        descricao: value.descricao.trim(),
         kanban_id: kanbanId,
         ordem: boardEtapas.length + 1,
+        status: value.status,
       };
       const { error } = await supabase.from("kanban_etapas").insert(payload);
       if (error) throw error;
@@ -132,7 +133,7 @@ function KanbanPage() {
       queryClient.invalidateQueries({ queryKey: ["table", "kanban_etapas"] });
       toast.success("Etapa criada.");
       setNewEtapa(false);
-      setNome("");
+      setEtapaForm({ descricao: "", status: true });
     },
     onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Não foi possível criar."),
   });
@@ -264,7 +265,7 @@ function KanbanPage() {
               variant="outline"
               className="w-full"
               onClick={() => {
-                setNome("");
+                setEtapaForm({ descricao: "", status: true });
                 setNewEtapa(true);
               }}
             >
@@ -335,17 +336,39 @@ function KanbanPage() {
             <DialogTitle>Nova etapa</DialogTitle>
             <DialogDescription>A etapa será adicionada ao final do quadro.</DialogDescription>
           </DialogHeader>
-          <div>
-            <Label htmlFor="etapa-nome" className="mb-1.5 block">
-              Descrição
-            </Label>
-            <Input id="etapa-nome" value={nome} onChange={(e) => setNome(e.target.value)} />
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="etapa-nome" className="mb-1.5 block">
+                Descrição
+              </Label>
+              <Input
+                id="etapa-nome"
+                value={etapaForm.descricao}
+                onChange={(e) => setEtapaForm({ ...etapaForm, descricao: e.target.value })}
+              />
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <Label htmlFor="etapa-status">Status</Label>
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground text-sm">
+                  {etapaForm.status ? "Ativo" : "Inativo"}
+                </span>
+                <Switch
+                  id="etapa-status"
+                  checked={etapaForm.status}
+                  onCheckedChange={(v) => setEtapaForm({ ...etapaForm, status: v })}
+                />
+              </div>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setNewEtapa(false)}>
               Cancelar
             </Button>
-            <Button disabled={!nome.trim() || createEtapa.isPending} onClick={() => createEtapa.mutate(nome)}>
+            <Button
+              disabled={!etapaForm.descricao.trim() || createEtapa.isPending}
+              onClick={() => createEtapa.mutate(etapaForm)}
+            >
               Criar
             </Button>
           </DialogFooter>
