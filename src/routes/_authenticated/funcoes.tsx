@@ -23,7 +23,7 @@ const fields: Field[] = [
   { fields: ["descricao"], label: "Descrição", full: true },
   { fields: ["path"], label: "Caminho (rota)", placeholder: "/clientes" },
   { fields: ["ordem"], label: "Ordem", type: "number" },
-  { fields: ["icone"], label: "Ícone", placeholder: "users" },
+  { fields: ["icone"], label: "Ícone", type: "icon" },
   { fields: ["menu_ativo"], label: "Exibe no menu", type: "boolean" },
   { fields: ["status"], label: "Status", type: "boolean" },
 ];

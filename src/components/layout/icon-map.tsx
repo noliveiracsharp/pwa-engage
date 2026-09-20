@@ -30,8 +30,11 @@ const ALIASES: Record<string, string> = {
 };
 
 export function getIcon(name: string | undefined): LucideIcon {
+  const registry = Icons as unknown as Record<string, LucideIcon>;
+  const exact = name ? registry[name] : undefined;
+  if (exact) return exact;
+
   const key = (name ?? "").toLowerCase();
   const candidate = ALIASES[key] ?? toPascal(key);
-  const registry = Icons as unknown as Record<string, LucideIcon>;
   return registry[candidate] ?? Icons.Circle;
 }
