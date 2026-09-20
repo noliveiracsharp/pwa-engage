@@ -4,6 +4,7 @@ import { DataTable, type Column } from "@/components/data-table/DataTable";
 import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
 import { RecordSheet, type Field } from "@/components/data-table/RecordSheet";
 import { StatusBadge } from "@/components/data-table/StatusBadge";
+import { FuncaoPerfis } from "@/components/funcoes/FuncaoPerfis";
 import { matches, rowId, useSaveRecord, useTableRows } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
 
@@ -116,10 +117,11 @@ function FuncoesPage() {
         open={open}
         onOpenChange={setOpen}
         title={record ? "Editar função" : "Nova função"}
-        description="A liberação das funções por perfil é feita na tabela menu (perfil_id × funcoes_id)."
+        description="A liberação das Funções é realizada por Perfil de Usuário."
         fields={fields}
         record={record}
         saving={save.isPending}
+        extra={<FuncaoPerfis funcaoId={record ? rowId(record) : undefined} />}
         onSave={(values) => save.mutate({ values, original: record }, { onSuccess: () => setOpen(false) })}
       />
     </>

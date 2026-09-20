@@ -77,18 +77,18 @@ export function RecordSheet({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full overflow-y-auto sm:max-w-xl">
-        <SheetHeader>
+        <SheetHeader className="px-6 pb-2">
           <SheetTitle>{title}</SheetTitle>
           {description && <SheetDescription>{description}</SheetDescription>}
         </SheetHeader>
 
-        <div className="grid gap-4 px-4 sm:grid-cols-2">
+        <div className="grid gap-x-4 gap-y-5 px-6 sm:grid-cols-2">
           {fields.map((field) => {
             const key = field.fields[0]!;
             const value = values[key] ?? "";
             return (
-              <div key={key} className={field.full ? "sm:col-span-2" : undefined}>
-                <Label htmlFor={key} className="mb-1.5 block">
+              <div key={key} className={`space-y-1.5 ${field.full ? "sm:col-span-2" : ""}`}>
+                <Label htmlFor={key} className="block text-sm font-medium">
                   {field.label}
                 </Label>
                 {field.type === "icon" ? (
@@ -146,9 +146,9 @@ export function RecordSheet({
           })}
         </div>
 
-        {extra && <div className="px-4 pt-4">{extra}</div>}
+        {extra && <div className="px-6 pt-6">{extra}</div>}
 
-        <div className="flex justify-end gap-2 p-4">
+        <div className="bg-background sticky bottom-0 mt-2 flex justify-end gap-2 border-t px-6 py-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
