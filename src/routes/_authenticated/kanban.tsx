@@ -269,16 +269,54 @@ function KanbanPage() {
               <div
                 key={id}
                 onDragOver={(e) => e.preventDefault()}
-                onDrop={() => onDrop(id)}
-                className="flex w-72 shrink-0 flex-col gap-3 rounded-lg border border-border bg-muted/40 p-3"
+                onDrop={() => (dragEtapaId ? onDropEtapa(id) : onDrop(id))}
+                className={cn(
+                  "flex w-72 shrink-0 flex-col gap-3 rounded-lg border border-border bg-muted/40 p-3",
+                  dragEtapaId === id && "opacity-50",
+                )}
               >
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold text-foreground">
+                <div className="flex items-center gap-1">
+                  <span
+                    draggable
+                    onDragStart={() => setDragEtapaId(id)}
+                    onDragEnd={() => setDragEtapaId(null)}
+                    className="cursor-grab text-muted-foreground"
+                    aria-label="Reordenar etapa"
+                  >
+                    <GripVertical className="h-4 w-4" />
+                  </span>
+                  <span className="min-w-0 flex-1 truncate font-semibold text-foreground">
                     {text(pick(etapa, ETAPA_FIELDS, "Etapa"))}
                   </span>
                   <span className="rounded-full bg-background px-2 py-0.5 text-xs text-muted-foreground">
                     {cards.length}
                   </span>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7"
+                    aria-label="Editar etapa"
+                    onClick={() => {
+                      setEditForm({
+                        descricao: text(pick(etapa, ETAPA_FIELDS, "")),
+                        status: pick(etapa, ["status"]) !== false,
+                      });
+                      setEditEtapa(etapa);
+                    }}
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                  {cards.length === 0 && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 text-destructive"
+                      aria-label="Excluir etapa"
+                      onClick={() => deleteEtapa.mutate(id)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
                 </div>
 
                 <div className="flex flex-col gap-2">
