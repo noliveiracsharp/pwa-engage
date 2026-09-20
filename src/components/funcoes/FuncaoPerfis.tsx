@@ -246,7 +246,8 @@ export function FuncaoPerfis({ funcaoId }: Props) {
                     </Button>
                   </TableCell>
                 </TableRow>
-              ))
+              );
+            })
             )}
           </TableBody>
         </Table>
