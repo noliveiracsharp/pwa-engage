@@ -68,7 +68,10 @@ export function FuncaoPerfis({ funcaoId }: Props) {
   };
 
   const vinculos = useMemo(
-    () => menu.filter((row) => String(pick(row, ["funcoes_id", "funcao_id"]) ?? "") === String(funcaoId ?? "")),
+    () =>
+      menu
+        .filter((row) => String(pick(row, ["funcoes_id", "funcao_id"]) ?? "") === String(funcaoId ?? ""))
+        .sort((a, b) => String(rowId(a) ?? "").localeCompare(String(rowId(b) ?? ""))),
     [menu, funcaoId],
   );
 
