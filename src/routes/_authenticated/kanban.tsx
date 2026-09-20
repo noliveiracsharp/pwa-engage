@@ -475,6 +475,54 @@ function KanbanPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={editEtapa !== null} onOpenChange={(o) => !o && setEditEtapa(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar etapa</DialogTitle>
+            <DialogDescription>Altere o nome e o status da etapa.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="etapa-edit-nome" className="mb-1.5 block">
+                Descrição
+              </Label>
+              <Input
+                id="etapa-edit-nome"
+                value={editForm.descricao}
+                onChange={(e) => setEditForm({ ...editForm, descricao: e.target.value })}
+              />
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <Label htmlFor="etapa-edit-status">Status</Label>
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground text-sm">
+                  {editForm.status ? "Ativo" : "Inativo"}
+                </span>
+                <Switch
+                  id="etapa-edit-status"
+                  checked={editForm.status}
+                  onCheckedChange={(v) => setEditForm({ ...editForm, status: v })}
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditEtapa(null)}>
+              Cancelar
+            </Button>
+            <Button
+              disabled={!editForm.descricao.trim() || updateEtapa.isPending}
+              onClick={() =>
+                editEtapa &&
+                updateEtapa.mutate({ id: String(editEtapa["id"]), ...editForm })
+              }
+            >
+              Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
