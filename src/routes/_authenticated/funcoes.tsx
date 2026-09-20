@@ -81,7 +81,7 @@ function FuncoesPage() {
   const columns: Column[] = [
     { key: "descricao", header: "Descrição", fields: ["descricao"] },
     { key: "path", header: "Caminho", fields: ["path"] },
-    { key: "ordem", header: "Ordem", fields: ["ordem"] },
+    { key: "ordem", header: "Ordem", fields: ["ordem"], sortable: false },
     {
       key: "menu",
       header: "Menu ativo",
@@ -113,6 +113,7 @@ function FuncoesPage() {
           setRecord(row);
           setOpen(true);
         }}
+        onReorder={(ordered) => reorder.mutate(ordered)}
         filters={
           <>
             <FilterInput
