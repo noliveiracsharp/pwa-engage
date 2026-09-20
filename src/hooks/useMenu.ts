@@ -27,13 +27,16 @@ function asBool(v: unknown, fallback = true): boolean {
   return String(v) === "true" || String(v) === "1";
 }
 
+// Colunas reais da view vw_menu_usuario_perfil:
+// menu_id, perfil_id, funcao_id, can_create, can_read, can_update, can_delete,
+// funcao_descricao, funcao_ordem, funcao_status, path, icone, perfil_descricao
 function normalize(row: Row, index: number): MenuItem {
   return {
-    id: String(pick(row, ["funcoes_id", "menu_id", "id", "id_menu"], `menu-${index}`)),
-    label: String(pick(row, ["funcao_descricao", "menu_descricao", "descricao", "menu_nome", "nome", "label", "titulo"], "Menu")),
-    path: String(pick(row, ["funcao_path", "path", "menu_rota", "rota", "url", "link", "caminho"], "/dashboard")),
-    icon: String(pick(row, ["funcao_icone", "icone", "menu_icone", "icon"], "circle")),
-    order: Number(pick(row, ["funcao_ordem", "ordem", "menu_ordem", "order", "sequencia"], index + 1)),
+    id: String(pick(row, ["funcao_id", "menu_id", "funcoes_id", "id"], `menu-${index}`)),
+    label: String(pick(row, ["funcao_descricao", "descricao", "nome", "label"], "Menu")),
+    path: String(pick(row, ["path", "funcao_path", "rota", "url"], "/dashboard")),
+    icon: String(pick(row, ["icone", "funcao_icone", "icon"], "circle")),
+    order: Number(pick(row, ["funcao_ordem", "ordem", "order"], index + 1)),
   };
 }
 
