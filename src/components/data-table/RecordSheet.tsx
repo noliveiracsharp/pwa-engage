@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { StarRating } from "@/components/data-table/StarRating";
 import { IconPicker } from "@/components/data-table/IconPicker";
+import { PhotoUpload } from "@/components/data-table/PhotoUpload";
 import { findKey, pick, type Row } from "@/lib/row";
 import { text } from "@/lib/crud";
 
@@ -15,7 +16,7 @@ export type Field = {
   /** Possible column names, in order of preference. */
   fields: string[];
   label: string;
-  type?: "text" | "email" | "tel" | "number" | "textarea" | "select" | "rating" | "boolean" | "icon";
+  type?: "text" | "email" | "tel" | "number" | "textarea" | "select" | "rating" | "boolean" | "icon" | "photo";
   options?: Array<{ value: string; label: string }>;
   placeholder?: string;
   full?: boolean;
@@ -75,6 +76,9 @@ export function RecordSheet({
     onSave(payload);
   };
 
+  const photoFields = fields.filter((f) => f.type === "photo");
+  const bodyFields = fields.filter((f) => f.type !== "photo");
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full overflow-y-auto sm:max-w-xl">
@@ -83,8 +87,20 @@ export function RecordSheet({
           {description && <SheetDescription>{description}</SheetDescription>}
         </SheetHeader>
 
-        <div className="grid gap-x-4 gap-y-5 px-6 sm:grid-cols-2">
-          {fields.map((field) => {
+        {photoFields.map((field) => {
+          const key = field.fields[0]!;
+          return (
+            <div key={key} className="px-6 pb-2 pt-4">
+              <PhotoUpload
+                value={values[key] ?? ""}
+                onChange={(url) => setValues((s) => ({ ...s, [key]: url }))}
+              />
+            </div>
+          );
+        })}
+
+        <div className="grid gap-x-4 gap-y-5 px-6 pt-2 sm:grid-cols-2">
+          {bodyFields.map((field) => {
             const key = field.fields[0]!;
             const value = values[key] ?? "";
             return (

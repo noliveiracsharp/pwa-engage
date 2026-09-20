@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { User } from "lucide-react";
 import { DataTable, type Column } from "@/components/data-table/DataTable";
 import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
 import { RecordSheet, type Field } from "@/components/data-table/RecordSheet";
@@ -55,7 +56,7 @@ function UsuariosPage() {
       { fields: ["cpf"], label: "CPF" },
       { fields: ["cargo"], label: "Cargo" },
       { fields: ["status"], label: "Status", type: "boolean" },
-      { fields: ["foto"], label: "Foto (URL)", full: true },
+      { fields: ["foto"], label: "Foto", type: "photo", full: true },
       {
         fields: ["perfil_id"],
         label: "Perfil",
@@ -90,7 +91,31 @@ function UsuariosPage() {
   );
 
   const columns: Column[] = [
-    { key: "nome", header: "Nome", fields: ["nome"] },
+    {
+      key: "nome",
+      header: "Nome",
+      fields: ["nome"],
+      render: (row) => {
+        const foto = text(pick(row, ["foto"]));
+        const nome = text(pick(row, ["nome"], "—"));
+        return (
+          <div className="flex items-center gap-2.5">
+            {foto ? (
+              <img
+                src={foto}
+                alt={nome}
+                className="border-border h-8 w-8 shrink-0 rounded-full border object-cover"
+              />
+            ) : (
+              <span className="bg-muted text-muted-foreground border-border flex h-8 w-8 shrink-0 items-center justify-center rounded-full border">
+                <User className="h-4 w-4" />
+              </span>
+            )}
+            <span>{nome}</span>
+          </div>
+        );
+      },
+    },
     { key: "email", header: "E-mail", fields: ["email"] },
     { key: "cpf", header: "CPF", fields: ["cpf"] },
     { key: "cargo", header: "Cargo", fields: ["cargo"] },
