@@ -53,6 +53,7 @@ export function FuncaoPerfis({ funcaoId }: Props) {
     }
     await queryClient.invalidateQueries({ queryKey: ["table", "perfil"] });
     setNovoPerfil("");
+    setNovoOpen(false);
     setPerfilId(String(rowId(data as Row) ?? ""));
     toast.success("Perfil criado.");
   };
