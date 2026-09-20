@@ -265,7 +265,7 @@ function KanbanPage() {
               variant="outline"
               className="w-full"
               onClick={() => {
-                setNome("");
+                setEtapaForm({ descricao: "", status: true });
                 setNewEtapa(true);
               }}
             >
@@ -336,17 +336,39 @@ function KanbanPage() {
             <DialogTitle>Nova etapa</DialogTitle>
             <DialogDescription>A etapa será adicionada ao final do quadro.</DialogDescription>
           </DialogHeader>
-          <div>
-            <Label htmlFor="etapa-nome" className="mb-1.5 block">
-              Descrição
-            </Label>
-            <Input id="etapa-nome" value={nome} onChange={(e) => setNome(e.target.value)} />
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="etapa-nome" className="mb-1.5 block">
+                Descrição
+              </Label>
+              <Input
+                id="etapa-nome"
+                value={etapaForm.descricao}
+                onChange={(e) => setEtapaForm({ ...etapaForm, descricao: e.target.value })}
+              />
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <Label htmlFor="etapa-status">Status</Label>
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground text-sm">
+                  {etapaForm.status ? "Ativo" : "Inativo"}
+                </span>
+                <Switch
+                  id="etapa-status"
+                  checked={etapaForm.status}
+                  onCheckedChange={(v) => setEtapaForm({ ...etapaForm, status: v })}
+                />
+              </div>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setNewEtapa(false)}>
               Cancelar
             </Button>
-            <Button disabled={!nome.trim() || createEtapa.isPending} onClick={() => createEtapa.mutate(nome)}>
+            <Button
+              disabled={!etapaForm.descricao.trim() || createEtapa.isPending}
+              onClick={() => createEtapa.mutate(etapaForm)}
+            >
               Criar
             </Button>
           </DialogFooter>
