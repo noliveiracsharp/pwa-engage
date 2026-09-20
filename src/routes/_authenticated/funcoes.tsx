@@ -1,11 +1,14 @@
 import { useMemo, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { DataTable, type Column } from "@/components/data-table/DataTable";
 import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
 import { RecordSheet, type Field } from "@/components/data-table/RecordSheet";
 import { StatusBadge } from "@/components/data-table/StatusBadge";
 import { FuncaoPerfis } from "@/components/funcoes/FuncaoPerfis";
-import { matches, rowId, useSaveRecord, useTableRows } from "@/lib/crud";
+import { matches, rowId, idColumn, useSaveRecord, useTableRows } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
 
 export const Route = createFileRoute("/_authenticated/funcoes")({
@@ -24,7 +27,6 @@ const fields: Field[] = [
   { fields: ["descricao"], label: "Descrição", full: true },
   { fields: ["path"], label: "Caminho (rota)", placeholder: "/clientes" },
   { fields: ["icone"], label: "Ícone", type: "icon" },
-  { fields: ["ordem"], label: "Ordem", type: "number" },
   { fields: ["menu_ativo"], label: "Exibe no menu", type: "boolean" },
   { fields: ["status"], label: "Status", type: "boolean" },
 ];
@@ -38,13 +40,34 @@ const BOOL_OPTIONS = [
 function FuncoesPage() {
   const { data: rows = [], isLoading } = useTableRows("funcoes");
   const save = useSaveRecord("funcoes");
+  const queryClient = useQueryClient();
+  const reorder = useMutation({
+    mutationFn: async (ordered: Row[]) => {
+      await Promise.all(
+        ordered.map((row, i) => {
+          const key = idColumn(row);
+          return supabase
+            .from("funcoes")
+            .update({ ordem: i + 1 })
+            .eq(key, row[key] as never)
+            .then(({ error }) => {
+              if (error) throw error;
+            });
+        }),
+      );
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["table", "funcoes"] }),
+    onError: () => toast.error("Não foi possível salvar a nova ordem."),
+  });
   const [open, setOpen] = useState(false);
   const [record, setRecord] = useState<Row | null>(null);
   const [f, setF] = useState({ descricao: "", menu: "todos", status: "todos" });
 
   const filtered = useMemo(
     () =>
-      rows.filter(
+      [...rows]
+        .sort((a, b) => Number(pick(a, ["ordem"]) ?? 0) - Number(pick(b, ["ordem"]) ?? 0))
+        .filter(
         (row) =>
           matches(pick(row, ["descricao"]), f.descricao) &&
           (f.menu === "todos" ||
@@ -58,7 +81,7 @@ function FuncoesPage() {
   const columns: Column[] = [
     { key: "descricao", header: "Descrição", fields: ["descricao"] },
     { key: "path", header: "Caminho", fields: ["path"] },
-    { key: "ordem", header: "Ordem", fields: ["ordem"] },
+    { key: "ordem", header: "Ordem", fields: ["ordem"], sortable: false },
     {
       key: "menu",
       header: "Menu ativo",
@@ -90,6 +113,7 @@ function FuncoesPage() {
           setRecord(row);
           setOpen(true);
         }}
+        onReorder={(ordered) => reorder.mutate(ordered)}
         filters={
           <>
             <FilterInput

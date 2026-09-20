@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { ArrowDown, ArrowUp, ChevronsUpDown, Pencil, Plus } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronsUpDown, GripVertical, Pencil, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -33,6 +33,8 @@ type Props = {
   onAdd: () => void;
   onEdit: (row: Row) => void;
   rowKey: (row: Row, index: number) => string;
+  /** Enables drag-and-drop row reordering (active when no column sort is applied). */
+  onReorder?: (ordered: Row[]) => void;
 };
 
 export function DataTable({
@@ -45,10 +47,13 @@ export function DataTable({
   onAdd,
   onEdit,
   rowKey,
+  onReorder,
 }: Props) {
   const [sort, setSort] = useState<{ key: string; dir: "asc" | "desc" } | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dropIndex, setDropIndex] = useState<number | null>(null);
 
   const sorted = useMemo(() => {
     if (!sort) return rows;
@@ -75,6 +80,27 @@ export function DataTable({
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const current = Math.min(page, totalPages);
   const pageRows = sorted.slice((current - 1) * pageSize, current * pageSize);
+  const colSpan = columns.length + (onReorder ? 2 : 1);
+  const canDrag = Boolean(onReorder) && !sort;
+
+  const handleDrop = (target: number) => {
+    if (dragIndex === null || !onReorder || dragIndex === target) {
+      setDragIndex(null);
+      setDropIndex(null);
+      return;
+    }
+    const next = [...sorted];
+    const [moved] = next.splice(dragIndex, 1);
+    if (!moved) {
+      setDragIndex(null);
+      setDropIndex(null);
+      return;
+    }
+    next.splice(target, 0, moved);
+    setDragIndex(null);
+    setDropIndex(null);
+    onReorder(next);
+  };
 
   return (
     <div className="space-y-4">
@@ -95,6 +121,7 @@ export function DataTable({
         <Table>
           <TableHeader>
             <TableRow>
+              {onReorder && <TableHead className="w-10" />}
               {columns.map((col) => (
                 <TableHead key={col.key} className={col.className}>
                   {col.sortable === false ? (
@@ -131,21 +158,40 @@ export function DataTable({
           <TableBody>
             {loading && (
               <TableRow>
-                <TableCell colSpan={columns.length + 1} className="py-10 text-center text-muted-foreground">
+                <TableCell colSpan={colSpan} className="py-10 text-center text-muted-foreground">
                   Carregando…
                 </TableCell>
               </TableRow>
             )}
             {!loading && pageRows.length === 0 && (
               <TableRow>
-                <TableCell colSpan={columns.length + 1} className="py-10 text-center text-muted-foreground">
+                <TableCell colSpan={colSpan} className="py-10 text-center text-muted-foreground">
                   Nenhum registro encontrado.
                 </TableCell>
               </TableRow>
             )}
             {!loading &&
-              pageRows.map((row, index) => (
-                <TableRow key={rowKey(row, index)}>
+              pageRows.map((row, index) => {
+                const globalIndex = (current - 1) * pageSize + index;
+                return (
+                <TableRow
+                  key={rowKey(row, index)}
+                  draggable={canDrag}
+                  onDragStart={canDrag ? () => setDragIndex(globalIndex) : undefined}
+                  onDragOver={canDrag ? (e) => { e.preventDefault(); setDropIndex(globalIndex); } : undefined}
+                  onDrop={canDrag ? () => handleDrop(globalIndex) : undefined}
+                  onDragEnd={canDrag ? () => { setDragIndex(null); setDropIndex(null); } : undefined}
+                  className={cn(
+                    canDrag && "cursor-grab active:cursor-grabbing",
+                    dragIndex === globalIndex && "opacity-50",
+                    dropIndex === globalIndex && dragIndex !== null && dragIndex !== globalIndex && "border-t-2 border-primary",
+                  )}
+                >
+                  {onReorder && (
+                    <TableCell className="w-10 text-muted-foreground">
+                      <GripVertical className="h-4 w-4" />
+                    </TableCell>
+                  )}
                   {columns.map((col) => (
                     <TableCell key={col.key} className={cn("whitespace-nowrap", col.className)}>
                       {col.render ? col.render(row) : ((getValue(row, col.fields) as ReactNode) ?? "—")}
@@ -157,7 +203,8 @@ export function DataTable({
                     </Button>
                   </TableCell>
                 </TableRow>
-              ))}
+                );
+              })}
           </TableBody>
         </Table>
       </div>
