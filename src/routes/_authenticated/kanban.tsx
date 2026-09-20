@@ -55,7 +55,7 @@ function KanbanPage() {
   const { empresa } = useAuth();
   const empresaId = empresa?.["id"];
 
-  const { data: kanbans = [], isLoading: loadingKanbans } = useRows("kanban");
+  const { data: kanbans = [], isLoading: loadingKanbans } = useRows("kanban_nome");
   const { data: etapas = [] } = useRows("kanban_etapas");
   const { data: atendimentos = [] } = useRows("atendimentos");
   const { data: clientes = [] } = useRows("clientes");
@@ -64,6 +64,7 @@ function KanbanPage() {
   const [newKanban, setNewKanban] = useState(false);
   const [newEtapa, setNewEtapa] = useState(false);
   const [nome, setNome] = useState("");
+  const [form, setForm] = useState({ nome: "", descricao: "", status: true });
   const [dragId, setDragId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -97,17 +98,21 @@ function KanbanPage() {
   }, [atendimentos]);
 
   const createKanban = useMutation({
-    mutationFn: async (value: string) => {
-      const payload: Row = { nome: value };
+    mutationFn: async (value: { nome: string; descricao: string; status: boolean }) => {
+      const payload: Row = {
+        nome: value.nome.trim(),
+        descricao: value.descricao.trim(),
+        status: value.status,
+      };
       if (empresaId !== undefined) payload["empresa_id"] = empresaId;
-      const { error } = await supabase.from("kanban").insert(payload);
+      const { error } = await supabase.from("kanban_nome").insert(payload);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["table", "kanban"] });
+      queryClient.invalidateQueries({ queryKey: ["table", "kanban_nome"] });
       toast.success("Kanban criado.");
       setNewKanban(false);
-      setNome("");
+      setForm({ nome: "", descricao: "", status: true });
     },
     onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Não foi possível criar."),
   });
