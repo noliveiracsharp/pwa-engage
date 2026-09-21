@@ -55,6 +55,7 @@ export function RecordSheet({
   saving,
   onSave,
   extra,
+  extraTabLabel,
 }: Props) {
   const [values, setValues] = useState<Record<string, string>>({});
 
