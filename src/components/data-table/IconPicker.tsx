@@ -1,134 +1,33 @@
-import { useState } from "react";
-import {
-  BarChart3,
-  Bell,
-  Bot,
-  BriefcaseBusiness,
-  Building2,
-  CalendarDays,
-  Check,
-  ChevronDown,
-  CircleDollarSign,
-  ClipboardList,
-  Clock3,
-  Cloud,
-  Contact,
-  Database,
-  FileText,
-  FolderKanban,
-  Gauge,
-  Globe2,
-  Headphones,
-  HeartHandshake,
-  House,
-  Inbox,
-  Kanban,
-  KeyRound,
-  LayoutDashboard,
-  LifeBuoy,
-  Link,
-  ListChecks,
-  LockKeyhole,
-  Mail,
-  MapPin,
-  Megaphone,
-  MessageCircle,
-  MessagesSquare,
-  Package,
-  PanelTop,
-  Phone,
-  PlugZap,
-  Search,
-  Send,
-  Settings,
-  ShieldCheck,
-  ShoppingCart,
-  Smartphone,
-  Sparkles,
-  Star,
-  Tags,
-  TicketCheck,
-  User,
-  UserCog,
-  Users,
-  UsersRound,
-  Wrench,
-  Zap,
-  type LucideIcon,
-} from "lucide-react";
+import { useMemo, useState } from "react";
+import { Check, ChevronDown, icons, Search, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
+import { Command, CommandEmpty, CommandGroup, CommandList } from "@/components/ui/command";
+import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
 type IconOption = {
   value: string;
-  label: string;
+  name: string;
   icon: LucideIcon;
-  keywords?: string;
 };
 
-const ICON_OPTIONS: IconOption[] = [
-  { value: "layout-dashboard", label: "Dashboard", icon: LayoutDashboard, keywords: "painel início" },
-  { value: "house", label: "Início", icon: House, keywords: "home casa" },
-  { value: "building-2", label: "Empresa", icon: Building2, keywords: "organização prédio" },
-  { value: "users", label: "Clientes", icon: Users, keywords: "pessoas grupo" },
-  { value: "user-cog", label: "Usuários", icon: UserCog, keywords: "conta perfil" },
-  { value: "user", label: "Usuário", icon: User, keywords: "pessoa conta" },
-  { value: "users-round", label: "Equipe", icon: UsersRound, keywords: "time pessoas" },
-  { value: "contact", label: "Contato", icon: Contact, keywords: "agenda cliente" },
-  { value: "shield-check", label: "Funções e acesso", icon: ShieldCheck, keywords: "segurança permissão" },
-  { value: "key-round", label: "Chave", icon: KeyRound, keywords: "acesso senha" },
-  { value: "lock-keyhole", label: "Protegido", icon: LockKeyhole, keywords: "segurança bloqueio" },
-  { value: "kanban", label: "Kanban", icon: Kanban, keywords: "quadro etapas" },
-  { value: "folder-kanban", label: "Projetos", icon: FolderKanban, keywords: "quadro pasta" },
-  { value: "message-circle", label: "Atendimento", icon: MessageCircle, keywords: "chat conversa" },
-  { value: "messages-square", label: "Conversas", icon: MessagesSquare, keywords: "chat mensagens" },
-  { value: "headphones", label: "Suporte", icon: Headphones, keywords: "atendimento ajuda" },
-  { value: "life-buoy", label: "Ajuda", icon: LifeBuoy, keywords: "suporte" },
-  { value: "inbox", label: "Caixa de entrada", icon: Inbox, keywords: "mensagens atendimento" },
-  { value: "send", label: "Enviar", icon: Send, keywords: "mensagem" },
-  { value: "mail", label: "E-mail", icon: Mail, keywords: "mensagem carta" },
-  { value: "phone", label: "Telefone", icon: Phone, keywords: "ligação contato" },
-  { value: "smartphone", label: "Celular", icon: Smartphone, keywords: "telefone whatsapp" },
-  { value: "bot", label: "Inteligência artificial", icon: Bot, keywords: "robô ia automação" },
-  { value: "sparkles", label: "Automação", icon: Sparkles, keywords: "ia destaque" },
-  { value: "zap", label: "Ação rápida", icon: Zap, keywords: "raio automação" },
-  { value: "settings", label: "Configurações", icon: Settings, keywords: "ajustes engrenagem" },
-  { value: "wrench", label: "Ferramentas", icon: Wrench, keywords: "ajustes manutenção" },
-  { value: "plug-zap", label: "Integrações", icon: PlugZap, keywords: "conexão" },
-  { value: "database", label: "Dados", icon: Database, keywords: "banco armazenamento" },
-  { value: "cloud", label: "Nuvem", icon: Cloud, keywords: "online" },
-  { value: "globe-2", label: "Web", icon: Globe2, keywords: "internet mundo" },
-  { value: "link", label: "Link", icon: Link, keywords: "conexão endereço" },
-  { value: "bar-chart-3", label: "Relatórios", icon: BarChart3, keywords: "gráfico dados" },
-  { value: "gauge", label: "Indicadores", icon: Gauge, keywords: "velocidade painel" },
-  { value: "file-text", label: "Documento", icon: FileText, keywords: "arquivo texto" },
-  { value: "clipboard-list", label: "Lista", icon: ClipboardList, keywords: "tarefas formulário" },
-  { value: "list-checks", label: "Tarefas", icon: ListChecks, keywords: "lista checklist" },
-  { value: "calendar-days", label: "Agenda", icon: CalendarDays, keywords: "calendário data" },
-  { value: "clock-3", label: "Horários", icon: Clock3, keywords: "tempo relógio" },
-  { value: "bell", label: "Notificações", icon: Bell, keywords: "alerta sino" },
-  { value: "star", label: "Avaliações", icon: Star, keywords: "favorito nota" },
-  { value: "tags", label: "Etiquetas", icon: Tags, keywords: "categorias" },
-  { value: "ticket-check", label: "Chamados", icon: TicketCheck, keywords: "ticket suporte" },
-  { value: "briefcase-business", label: "Negócios", icon: BriefcaseBusiness, keywords: "trabalho empresa" },
-  { value: "circle-dollar-sign", label: "Financeiro", icon: CircleDollarSign, keywords: "dinheiro cobrança" },
-  { value: "shopping-cart", label: "Vendas", icon: ShoppingCart, keywords: "carrinho compras" },
-  { value: "package", label: "Produtos", icon: Package, keywords: "caixa estoque" },
-  { value: "map-pin", label: "Localização", icon: MapPin, keywords: "mapa endereço" },
-  { value: "megaphone", label: "Campanhas", icon: Megaphone, keywords: "marketing anúncio" },
-  { value: "heart-handshake", label: "Relacionamento", icon: HeartHandshake, keywords: "parceria cliente" },
-  { value: "panel-top", label: "Página", icon: PanelTop, keywords: "tela janela" },
-  { value: "search", label: "Pesquisa", icon: Search, keywords: "buscar lupa" },
-];
+const PAGE_SIZE = 120;
+
+function toKebab(name: string) {
+  return name
+    .replace(/([a-z0-9])([A-Z])/g, "$1-$2")
+    .replace(/([A-Z])([A-Z][a-z])/g, "$1-$2")
+    .toLowerCase();
+}
+
+function normalize(value: string) {
+  return value.trim().toLowerCase().replace(/[_\s]+/g, "-");
+}
+
+const ICON_OPTIONS: IconOption[] = Object.entries(icons)
+  .map(([name, icon]) => ({ name, value: toKebab(name), icon }))
+  .sort((a, b) => a.name.localeCompare(b.name));
 
 type IconPickerProps = {
   id?: string;
@@ -138,11 +37,35 @@ type IconPickerProps = {
 
 export function IconPicker({ id, value, onChange }: IconPickerProps) {
   const [open, setOpen] = useState(false);
-  const selected = ICON_OPTIONS.find((option) => option.value === value);
+  const [query, setQuery] = useState("");
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const normalizedValue = normalize(value);
+  const selected = ICON_OPTIONS.find(
+    (option) => option.value === normalizedValue || option.name.toLowerCase() === value.toLowerCase(),
+  );
   const SelectedIcon = selected?.icon;
 
+  const filtered = useMemo(() => {
+    const search = normalize(query);
+    if (!search) return ICON_OPTIONS;
+    return ICON_OPTIONS.filter(
+      (option) => option.value.includes(search) || option.name.toLowerCase().includes(search.replaceAll("-", "")),
+    );
+  }, [query]);
+
+  const visible = filtered.slice(0, visibleCount);
+
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) {
+          setQuery("");
+          setVisibleCount(PAGE_SIZE);
+        }
+      }}
+    >
       <PopoverTrigger asChild>
         <Button
           id={id}
@@ -154,36 +77,71 @@ export function IconPicker({ id, value, onChange }: IconPickerProps) {
         >
           <span className={cn("flex min-w-0 items-center gap-2", !selected && "text-muted-foreground")}>
             {SelectedIcon ? <SelectedIcon aria-hidden="true" /> : <Search aria-hidden="true" />}
-            <span className="truncate">{selected?.label ?? (value || "Selecione um ícone")}</span>
+            <span className="truncate">{selected?.name ?? (value || "Selecione um ícone Lucide")}</span>
           </span>
           <ChevronDown className="opacity-50" aria-hidden="true" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-[min(22rem,var(--radix-popover-trigger-width))] p-0">
-        <Command>
-          <CommandInput placeholder="Buscar ícone…" />
-          <CommandList>
-            <CommandEmpty>Nenhum ícone encontrado.</CommandEmpty>
-            <CommandGroup heading="Ícones">
-              {ICON_OPTIONS.map((option) => {
-                const OptionIcon = option.icon;
-                return (
-                  <CommandItem
-                    key={option.value}
-                    value={`${option.label} ${option.value} ${option.keywords ?? ""}`}
-                    onSelect={() => {
-                      onChange(option.value);
-                      setOpen(false);
-                    }}
-                  >
-                    <OptionIcon aria-hidden="true" />
-                    <span>{option.label}</span>
-                    <Check className={cn("ml-auto", value === option.value ? "opacity-100" : "opacity-0")} />
-                  </CommandItem>
-                );
-              })}
-            </CommandGroup>
+      <PopoverContent align="start" className="w-[min(30rem,var(--radix-popover-trigger-width))] p-0">
+        <Command shouldFilter={false}>
+          <div className="flex items-center border-b px-3">
+            <Search className="mr-2 size-4 shrink-0 opacity-50" aria-hidden="true" />
+            <Input
+              value={query}
+              onChange={(event) => {
+                setQuery(event.target.value);
+                setVisibleCount(PAGE_SIZE);
+              }}
+              placeholder="Buscar nos ícones Lucide…"
+              className="h-10 border-0 px-0 shadow-none focus-visible:ring-0"
+            />
+          </div>
+          <CommandList className="max-h-80">
+            {visible.length === 0 ? (
+              <CommandEmpty>Nenhum ícone encontrado.</CommandEmpty>
+            ) : (
+              <CommandGroup heading={`${filtered.length} ícones Lucide`}>
+                <div className="grid grid-cols-3 gap-1 sm:grid-cols-4">
+                  {visible.map((option) => {
+                    const OptionIcon = option.icon;
+                    return (
+                      <button
+                        key={option.name}
+                        type="button"
+                        title={option.name}
+                        className={cn(
+                          "relative flex min-h-16 min-w-0 flex-col items-center justify-center gap-1 rounded-sm px-1 py-2 text-center text-xs text-foreground hover:bg-accent hover:text-accent-foreground",
+                          selected?.name === option.name && "bg-accent text-accent-foreground",
+                        )}
+                        onClick={() => {
+                          onChange(option.value);
+                          setOpen(false);
+                        }}
+                      >
+                        <OptionIcon className="size-5" aria-hidden="true" />
+                        <span className="w-full truncate">{option.name}</span>
+                        {selected?.name === option.name && (
+                          <Check className="absolute right-1 top-1 size-3" aria-hidden="true" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </CommandGroup>
+            )}
           </CommandList>
+          {visibleCount < filtered.length && (
+            <div className="border-t p-2">
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full"
+                onClick={() => setVisibleCount((count) => count + PAGE_SIZE)}
+              >
+                Mostrar mais ícones
+              </Button>
+            </div>
+          )}
         </Command>
       </PopoverContent>
     </Popover>
