@@ -11,7 +11,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { text } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
 
-type Props = { clienteId?: string | number };
+type Props = { clienteId?: string | number | undefined };
 
 function inputTypeFor(tipo: string) {
   const t = tipo.toLowerCase();
