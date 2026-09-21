@@ -38,7 +38,7 @@ function UsuariosPage() {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [record, setRecord] = useState<Row | null>(null);
-  const [f, setF] = useState({ nome: "", email: "", cpf: "", status: "todos", perfil: "todos" });
+  const [f, setF] = useState({ busca: "", status: "todos", perfil: "todos" });
 
   /** New user: creates the auth.users access first, then the usuarios row linked by id. */
   const createUser = useMutation({
@@ -126,9 +126,10 @@ function UsuariosPage() {
     () =>
       rows.filter(
         (row) =>
-          matches(pick(row, ["nome"]), f.nome) &&
-          matches(pick(row, ["email"]), f.email) &&
-          matchesMaskedValue(pick(row, ["cpf"]), f.cpf) &&
+          matchesAny(
+            [pick(row, ["nome"]), pick(row, ["email"]), pick(row, ["cpf"]), pick(row, ["cargo"])],
+            f.busca,
+          ) &&
           (f.status === "todos" ||
             (f.status === "ativo" ? row["status"] === true : row["status"] === false)) &&
           (f.perfil === "todos" || text(pick(row, ["perfil_id"])) === f.perfil),
@@ -203,9 +204,12 @@ function UsuariosPage() {
         }}
         filters={
           <>
-            <FilterInput label="Nome" value={f.nome} onChange={(v) => setF({ ...f, nome: v })} />
-            <FilterInput label="E-mail" value={f.email} onChange={(v) => setF({ ...f, email: v })} />
-            <FilterInput label="CPF" value={f.cpf} onChange={(v) => setF({ ...f, cpf: v })} />
+            <FilterInput
+              label="Buscar"
+              value={f.busca}
+              onChange={(v) => setF({ ...f, busca: v })}
+              placeholder="Nome, e-mail, CPF ou cargo"
+            />
             <FilterSelect
               label="Status"
               value={f.status}

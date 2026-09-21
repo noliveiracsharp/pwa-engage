@@ -61,7 +61,7 @@ function FuncoesPage() {
   });
   const [open, setOpen] = useState(false);
   const [record, setRecord] = useState<Row | null>(null);
-  const [f, setF] = useState({ descricao: "", menu: "todos", status: "todos" });
+  const [f, setF] = useState({ busca: "", menu: "todos", status: "todos" });
 
   const filtered = useMemo(
     () =>
@@ -69,7 +69,7 @@ function FuncoesPage() {
         .sort((a, b) => Number(pick(a, ["ordem"]) ?? 0) - Number(pick(b, ["ordem"]) ?? 0))
         .filter(
         (row) =>
-          matches(pick(row, ["descricao"]), f.descricao) &&
+          matchesAny([pick(row, ["descricao"]), pick(row, ["path"]), pick(row, ["icone"])], f.busca) &&
           (f.menu === "todos" ||
             (f.menu === "ativo" ? row["menu_ativo"] === true : row["menu_ativo"] === false)) &&
           (f.status === "todos" ||
@@ -117,9 +117,10 @@ function FuncoesPage() {
         filters={
           <>
             <FilterInput
-              label="Descrição"
-              value={f.descricao}
-              onChange={(v) => setF({ ...f, descricao: v })}
+              label="Buscar"
+              value={f.busca}
+              onChange={(v) => setF({ ...f, busca: v })}
+              placeholder="Descrição ou caminho"
             />
             <FilterSelect
               label="Menu ativo"
