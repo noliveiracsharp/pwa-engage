@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { PhotoUpload } from "@/components/data-table/PhotoUpload";
 import { PhoneInput } from "@/components/data-table/PhoneInput";
 import { DocumentInput } from "@/components/data-table/DocumentInput";
+import { IconPicker } from "@/components/data-table/IconPicker";
 import { supabase } from "@/integrations/supabase/client";
 import { idColumn, text } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
@@ -31,7 +32,7 @@ export const EMPRESA_FIELDS: EmpresaField[] = [
   { key: "titulo", label: "Título exibido", full: true },
 ];
 
-type ChildColumn = { key: string; label: string; type?: "text" | "boolean" | "select" | "tel"; options?: string[] };
+type ChildColumn = { key: string; label: string; type?: "text" | "boolean" | "select" | "tel" | "icon"; options?: string[] };
 
 type ChildConfig = {
   table: string;
@@ -49,8 +50,11 @@ const INSTANCIAS: ChildConfig = {
     { key: "telefone", label: "Telefone", type: "tel" },
     { key: "tipo", label: "Tipo", type: "select", options: ["whatsapp", "instagram", "telegram", "chat"] },
     { key: "provedor", label: "Provedor" },
+    { key: "instance_id", label: "ID da instância" },
     { key: "url", label: "URL" },
     { key: "token", label: "Token" },
+    { key: "client_tokem", label: "Client token" },
+    { key: "icone", label: "Ícone", type: "icon" },
     { key: "status", label: "Status", type: "boolean" },
   ],
 };
@@ -130,7 +134,7 @@ function ChildTable({ config, empresa }: { config: ChildConfig; empresa: Row | n
         {rows.length === 0 && <p className="p-3 text-sm text-muted-foreground">{config.empty}</p>}
         {rows.map((row, index) => (
           <div key={text(row[idColumn(row)] ?? index)} className="flex items-center gap-3 p-3 text-sm">
-            <div className="grid flex-1 gap-2 sm:grid-cols-3">
+            <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {config.columns.map((col) => (
                 <div key={col.key}>
                   <p className="text-xs text-muted-foreground">{col.label}</p>
@@ -153,9 +157,9 @@ function ChildTable({ config, empresa }: { config: ChildConfig; empresa: Row | n
         ))}
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2">
         {config.columns.map((col) => (
-          <div key={col.key}>
+          <div key={col.key} className={col.type === "tel" ? "min-w-0 sm:col-span-2" : "min-w-0"}>
             <Label className="mb-1.5 block text-xs">{col.label}</Label>
             {col.type === "boolean" ? (
               <Select
@@ -190,6 +194,11 @@ function ChildTable({ config, empresa }: { config: ChildConfig; empresa: Row | n
               <PhoneInput
                 value={draft[col.key] ?? ""}
                 onChange={(phone) => setDraft((current) => ({ ...current, [col.key]: phone }))}
+              />
+            ) : col.type === "icon" ? (
+              <IconPicker
+                value={draft[col.key] ?? ""}
+                onChange={(icon) => setDraft((current) => ({ ...current, [col.key]: icon }))}
               />
             ) : (
               <Input
@@ -277,7 +286,10 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave }: Pr
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
             {EMPRESA_FIELDS.filter((field) => field.type !== "photo").map((field) => (
-              <div key={field.key} className={field.full ? "sm:col-span-2" : undefined}>
+              <div
+                key={field.key}
+                className={field.full || field.type === "tel" ? "min-w-0 sm:col-span-2" : "min-w-0"}
+              >
                 <Label htmlFor={field.key} className="mb-1.5 block">
                   {field.label}
                 </Label>

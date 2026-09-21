@@ -119,7 +119,10 @@ export function RecordSheet({
             const key = field.fields[0]!;
             const value = values[key] ?? "";
             return (
-              <div key={key} className={`space-y-1.5 ${field.full ? "sm:col-span-2" : ""}`}>
+              <div
+                key={key}
+                className={`min-w-0 space-y-1.5 ${field.full || field.type === "tel" ? "sm:col-span-2" : ""}`}
+              >
                 <Label htmlFor={key} className="block text-sm font-medium">
                   {field.label}
                 </Label>
