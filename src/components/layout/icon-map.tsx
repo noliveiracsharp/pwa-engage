@@ -1,5 +1,4 @@
-import * as Icons from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { Circle, icons, type LucideIcon } from "lucide-react";
 
 function toPascal(name: string) {
   return name
@@ -30,11 +29,11 @@ const ALIASES: Record<string, string> = {
 };
 
 export function getIcon(name: string | undefined): LucideIcon {
-  const registry = Icons as unknown as Record<string, LucideIcon>;
+  const registry = icons as Record<string, LucideIcon>;
   const exact = name ? registry[name] : undefined;
   if (exact) return exact;
 
   const key = (name ?? "").toLowerCase();
   const candidate = ALIASES[key] ?? toPascal(key);
-  return registry[candidate] ?? Icons.Circle;
+  return registry[candidate] ?? Circle;
 }
