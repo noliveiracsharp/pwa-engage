@@ -1,4 +1,20 @@
-import { Circle, icons, type LucideIcon } from "lucide-react";
+import type { ElementType } from "react";
+import { Circle, icons } from "lucide-react";
+import {
+  SiDiscord,
+  SiFacebook,
+  SiInstagram,
+  SiMessenger,
+  SiPinterest,
+  SiSignal,
+  SiSnapchat,
+  SiTelegram,
+  SiThreads,
+  SiTiktok,
+  SiWhatsapp,
+  SiX,
+  SiYoutube,
+} from "@icons-pack/react-simple-icons";
 
 function toPascal(name: string) {
   return name
@@ -28,8 +44,41 @@ const ALIASES: Record<string, string> = {
   configuracoes: "Settings",
 };
 
-export function getIcon(name: string | undefined): LucideIcon {
-  const registry = icons as Record<string, LucideIcon>;
+type IconComponent = ElementType;
+
+const BRAND_ICONS: Record<string, IconComponent> = {
+  "brand-whatsapp": SiWhatsapp,
+  whatsapp: SiWhatsapp,
+  "brand-instagram": SiInstagram,
+  instagram: SiInstagram,
+  "brand-facebook": SiFacebook,
+  facebook: SiFacebook,
+  "brand-messenger": SiMessenger,
+  messenger: SiMessenger,
+  "brand-telegram": SiTelegram,
+  telegram: SiTelegram,
+  "brand-youtube": SiYoutube,
+  youtube: SiYoutube,
+  "brand-tiktok": SiTiktok,
+  tiktok: SiTiktok,
+  "brand-x": SiX,
+  twitter: SiX,
+  "brand-threads": SiThreads,
+  threads: SiThreads,
+  "brand-discord": SiDiscord,
+  discord: SiDiscord,
+  "brand-signal": SiSignal,
+  signal: SiSignal,
+  "brand-pinterest": SiPinterest,
+  pinterest: SiPinterest,
+  "brand-snapchat": SiSnapchat,
+  snapchat: SiSnapchat,
+};
+
+export function getIcon(name: string | undefined): IconComponent {
+  const registry = icons as Record<string, IconComponent>;
+  const brand = BRAND_ICONS[(name ?? "").toLowerCase()];
+  if (brand) return brand;
   const exact = name ? registry[name] : undefined;
   if (exact) return exact;
 

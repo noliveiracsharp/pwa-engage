@@ -1,5 +1,20 @@
-import { useMemo, useState } from "react";
-import { Check, ChevronDown, icons, Search, type LucideIcon } from "lucide-react";
+import { useMemo, useState, type ElementType } from "react";
+import { Check, ChevronDown, icons, Search } from "lucide-react";
+import {
+  SiDiscord,
+  SiFacebook,
+  SiInstagram,
+  SiMessenger,
+  SiPinterest,
+  SiSignal,
+  SiSnapchat,
+  SiTelegram,
+  SiThreads,
+  SiTiktok,
+  SiWhatsapp,
+  SiX,
+  SiYoutube,
+} from "@icons-pack/react-simple-icons";
 import { Button } from "@/components/ui/button";
 import { Command, CommandEmpty, CommandGroup, CommandList } from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
@@ -9,7 +24,7 @@ import { cn } from "@/lib/utils";
 type IconOption = {
   value: string;
   name: string;
-  icon: LucideIcon;
+  icon: ElementType;
 };
 
 const PAGE_SIZE = 120;
@@ -25,9 +40,27 @@ function normalize(value: string) {
   return value.trim().toLowerCase().replace(/[_\s]+/g, "-");
 }
 
-const ICON_OPTIONS: IconOption[] = Object.entries(icons)
+const BRAND_OPTIONS: IconOption[] = [
+  { value: "brand-whatsapp", name: "WhatsApp", icon: SiWhatsapp },
+  { value: "brand-instagram", name: "Instagram", icon: SiInstagram },
+  { value: "brand-facebook", name: "Facebook", icon: SiFacebook },
+  { value: "brand-messenger", name: "Messenger", icon: SiMessenger },
+  { value: "brand-telegram", name: "Telegram", icon: SiTelegram },
+  { value: "brand-youtube", name: "YouTube", icon: SiYoutube },
+  { value: "brand-tiktok", name: "TikTok", icon: SiTiktok },
+  { value: "brand-x", name: "X", icon: SiX },
+  { value: "brand-threads", name: "Threads", icon: SiThreads },
+  { value: "brand-discord", name: "Discord", icon: SiDiscord },
+  { value: "brand-signal", name: "Signal", icon: SiSignal },
+  { value: "brand-pinterest", name: "Pinterest", icon: SiPinterest },
+  { value: "brand-snapchat", name: "Snapchat", icon: SiSnapchat },
+];
+
+const LUCIDE_OPTIONS: IconOption[] = Object.entries(icons)
   .map(([name, icon]) => ({ name, value: toKebab(name), icon }))
   .sort((a, b) => a.name.localeCompare(b.name));
+
+const ICON_OPTIONS = [...BRAND_OPTIONS, ...LUCIDE_OPTIONS];
 
 type IconPickerProps = {
   id?: string;
@@ -100,17 +133,18 @@ export function IconPicker({ id, value, onChange }: IconPickerProps) {
             {visible.length === 0 ? (
               <CommandEmpty>Nenhum ícone encontrado.</CommandEmpty>
             ) : (
-              <CommandGroup heading={`${filtered.length} ícones Lucide`}>
+              <CommandGroup heading={`${filtered.length} ícones disponíveis`}>
                 <div className="grid grid-cols-3 gap-1 sm:grid-cols-4">
                   {visible.map((option) => {
                     const OptionIcon = option.icon;
                     return (
-                      <button
+                      <Button
                         key={option.name}
                         type="button"
+                        variant="ghost"
                         title={option.name}
                         className={cn(
-                          "relative flex min-h-16 min-w-0 flex-col items-center justify-center gap-1 rounded-sm px-1 py-2 text-center text-xs text-foreground hover:bg-accent hover:text-accent-foreground",
+                          "relative h-auto min-h-16 min-w-0 flex-col gap-1 rounded-sm px-1 py-2 text-center text-xs font-normal",
                           selected?.name === option.name && "bg-accent text-accent-foreground",
                         )}
                         onClick={() => {
@@ -123,7 +157,7 @@ export function IconPicker({ id, value, onChange }: IconPickerProps) {
                         {selected?.name === option.name && (
                           <Check className="absolute right-1 top-1 size-3" aria-hidden="true" />
                         )}
-                      </button>
+                      </Button>
                     );
                   })}
                 </div>
