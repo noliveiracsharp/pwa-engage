@@ -197,7 +197,7 @@ export function RecordSheet({
 
         {extra && <div className="px-6 pt-6">{extra}</div>}
 
-        <div className="bg-background sticky bottom-0 mt-4 flex justify-end gap-2 border-t px-6 py-4">
+        <div className="bg-background sticky bottom-0 mt-4 flex justify-end gap-2 px-6 py-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
