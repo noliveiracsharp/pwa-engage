@@ -8,11 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { PhotoUpload } from "@/components/data-table/PhotoUpload";
 import { supabase } from "@/integrations/supabase/client";
 import { idColumn, text } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
 
-type EmpresaField = { key: string; label: string; full?: boolean; type?: "text" | "boolean" };
+type EmpresaField = { key: string; label: string; full?: boolean; type?: "text" | "boolean" | "photo" };
 
 export const EMPRESA_FIELDS: EmpresaField[] = [
   { key: "nome", label: "Nome", full: true },
@@ -21,7 +23,7 @@ export const EMPRESA_FIELDS: EmpresaField[] = [
   { key: "endereco", label: "Endereço", full: true },
   { key: "telefone1", label: "Telefone 1" },
   { key: "telefone2", label: "Telefone 2" },
-  { key: "logo", label: "Logo (URL)", full: true },
+  { key: "logo", label: "Logo", type: "photo", full: true },
   { key: "titulo", label: "Título exibido", full: true },
 ];
 
@@ -236,25 +238,33 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave }: Pr
             <TabsTrigger value="campos">Campos</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="dados" className="mt-4 grid gap-4 sm:grid-cols-2">
-            {EMPRESA_FIELDS.map((field) => (
+          <TabsContent value="dados" className="mt-4">
+            <div className="border-border mb-5 border-b pb-5">
+              <PhotoUpload
+                value={values["logo"] ?? ""}
+                alt={values["nome"] ? `Logo de ${values["nome"]}` : "Logo da empresa"}
+                onChange={(url) => setValues((current) => ({ ...current, logo: url }))}
+              />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+            {EMPRESA_FIELDS.filter((field) => field.type !== "photo").map((field) => (
               <div key={field.key} className={field.full ? "sm:col-span-2" : undefined}>
                 <Label htmlFor={field.key} className="mb-1.5 block">
                   {field.label}
                 </Label>
                 {field.type === "boolean" ? (
-                  <Select
-                    value={values[field.key] ?? ""}
-                    onValueChange={(v) => setValues((s) => ({ ...s, [field.key]: v }))}
-                  >
-                    <SelectTrigger id={field.key}>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="true">Ativo</SelectItem>
-                      <SelectItem value="false">Inativo</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="flex h-10 items-center justify-between gap-3 rounded-md border bg-background px-3 py-2">
+                    <span className="text-sm text-muted-foreground">
+                      {values[field.key] === "true" ? "Ativo" : "Inativo"}
+                    </span>
+                    <Switch
+                      id={field.key}
+                      checked={values[field.key] === "true"}
+                      onCheckedChange={(checked) =>
+                        setValues((current) => ({ ...current, [field.key]: String(checked) }))
+                      }
+                    />
+                  </div>
                 ) : (
                   <Input
                     id={field.key}
@@ -264,6 +274,7 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave }: Pr
                 )}
               </div>
             ))}
+            </div>
           </TabsContent>
 
           <TabsContent value="instancias" className="mt-4">
