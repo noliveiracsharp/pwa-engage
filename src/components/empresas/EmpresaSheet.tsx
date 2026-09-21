@@ -184,18 +184,18 @@ function ChildTable({ config, empresa }: { config: ChildConfig; empresa: Row | n
           <div key={col.key} className={col.type === "tel" ? "min-w-0 sm:col-span-2" : "min-w-0"}>
             <Label className="mb-1.5 block text-xs">{col.label}</Label>
             {col.type === "boolean" ? (
-              <Select
-                value={draft[col.key] ?? ""}
-                onValueChange={(v) => setDraft((d) => ({ ...d, [col.key]: v }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Ativo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="true">Ativo</SelectItem>
-                  <SelectItem value="false">Inativo</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex h-10 items-center justify-between gap-3 rounded-md border bg-background px-3 py-2">
+                <span className="text-sm text-muted-foreground">
+                  {draft[col.key] === "true" ? "Ativo" : "Inativo"}
+                </span>
+                <Switch
+                  id={`${config.table}-${col.key}`}
+                  checked={draft[col.key] === "true"}
+                  onCheckedChange={(checked) =>
+                    setDraft((current) => ({ ...current, [col.key]: String(checked) }))
+                  }
+                />
+              </div>
             ) : col.type === "select" ? (
               <Select
                 value={draft[col.key] ?? ""}
