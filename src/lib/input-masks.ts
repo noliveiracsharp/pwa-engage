@@ -17,6 +17,12 @@ export function matchesMaskedValue(value: unknown, term: string): boolean {
   return queryDigits.length > 0 && digitsOnly(rawValue).includes(queryDigits);
 }
 
+/** True when the term matches ANY of the given values (plain text or masked digits). */
+export function matchesAny(values: unknown[], term: string): boolean {
+  if (!term.trim()) return true;
+  return values.some((v) => matchesMaskedValue(v, term));
+}
+
 export function formatCpfCnpj(value: string): string {
   const digits = digitsOnly(value).slice(0, 14);
   if (digits.length <= 11) {
