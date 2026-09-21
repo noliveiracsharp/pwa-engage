@@ -9,14 +9,18 @@ import { Switch } from "@/components/ui/switch";
 import { StarRating } from "@/components/data-table/StarRating";
 import { IconPicker } from "@/components/data-table/IconPicker";
 import { PhotoUpload } from "@/components/data-table/PhotoUpload";
+import { PhoneInput } from "@/components/data-table/PhoneInput";
+import { DocumentInput } from "@/components/data-table/DocumentInput";
 import { findKey, pick, type Row } from "@/lib/row";
 import { text } from "@/lib/crud";
+import { isCompletePhone, isValidCpfCnpj } from "@/lib/input-masks";
+import { toast } from "sonner";
 
 export type Field = {
   /** Possible column names, in order of preference. */
   fields: string[];
   label: string;
-  type?: "text" | "email" | "tel" | "number" | "password" | "textarea" | "select" | "rating" | "boolean" | "icon" | "photo";
+  type?: "text" | "email" | "tel" | "document" | "number" | "password" | "textarea" | "select" | "rating" | "boolean" | "icon" | "photo";
   options?: Array<{ value: string; label: string }>;
   placeholder?: string;
   full?: boolean;
@@ -61,6 +65,17 @@ export function RecordSheet({
   }, [open, record, fields]);
 
   const submit = () => {
+    for (const field of fields) {
+      const raw = values[field.fields[0]!] ?? "";
+      if (field.type === "tel" && !isCompletePhone(raw)) {
+        toast.error(`${field.label}: informe um telefone válido.`);
+        return;
+      }
+      if (field.type === "document" && raw && !isValidCpfCnpj(raw)) {
+        toast.error(`${field.label}: informe um CPF ou CNPJ válido.`);
+        return;
+      }
+    }
     const payload: Row = {};
     for (const field of fields) {
       const key = columnFor(record, field.fields);
@@ -125,6 +140,19 @@ export function RecordSheet({
                       onCheckedChange={(v) => setValues((s) => ({ ...s, [key]: String(v) }))}
                     />
                   </div>
+                ) : field.type === "tel" ? (
+                  <PhoneInput
+                    id={key}
+                    value={value}
+                    onChange={(phone) => setValues((current) => ({ ...current, [key]: phone }))}
+                  />
+                ) : field.type === "document" ? (
+                  <DocumentInput
+                    id={key}
+                    value={value}
+                    placeholder={field.placeholder}
+                    onChange={(document) => setValues((current) => ({ ...current, [key]: document }))}
+                  />
                 ) : field.type === "textarea" ? (
                   <Textarea
                     id={key}
