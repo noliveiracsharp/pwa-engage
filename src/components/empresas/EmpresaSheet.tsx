@@ -33,7 +33,7 @@ export const EMPRESA_FIELDS: EmpresaField[] = [
   { key: "titulo", label: "Título exibido", full: true },
 ];
 
-type ChildColumn = { key: string; label: string; type?: "text" | "boolean" | "select" | "tel" | "icon"; options?: string[] };
+type ChildColumn = { key: string; label: string; type?: "text" | "boolean" | "select" | "tel" | "icon" | "color"; options?: string[] };
 
 type ChildConfig = {
   table: string;
@@ -68,6 +68,17 @@ const CAMPOS: ChildConfig = {
     { key: "chave", label: "Campo (chave)" },
     { key: "tipo", label: "Tipo" },
     { key: "valor", label: "Valor padrão" },
+  ],
+};
+
+const ETIQUETAS: ChildConfig = {
+  table: "etiquetas",
+  title: "Etiquetas",
+  empty: "Nenhuma etiqueta cadastrada.",
+  columns: [
+    { key: "descricao", label: "Descrição" },
+    { key: "cor_hex", label: "Cor", type: "color" },
+    { key: "status", label: "Status", type: "boolean" },
   ],
 };
 
