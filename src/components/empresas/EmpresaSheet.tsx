@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -74,6 +74,7 @@ function ChildTable({ config, empresa }: { config: ChildConfig; empresa: Row | n
   const queryClient = useQueryClient();
   const empresaId = empresa ? empresa[idColumn(empresa)] : undefined;
   const [draft, setDraft] = useState<Record<string, string>>({});
+  const [editing, setEditing] = useState<Row | null>(null);
 
   const { data: rows = [], isError } = useQuery({
     queryKey: ["child", config.table, text(empresaId)],
@@ -95,25 +96,41 @@ function ChildTable({ config, empresa }: { config: ChildConfig; empresa: Row | n
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["child", config.table, text(empresaId)] });
 
-  const add = async () => {
+  const resetForm = () => {
+    setDraft({});
+    setEditing(null);
+  };
+
+  const startEditing = (row: Row) => {
+    const next: Record<string, string> = {};
+    for (const col of config.columns) next[col.key] = text(pick(row, [col.key], ""));
+    setDraft(next);
+    setEditing(row);
+  };
+
+  const save = async () => {
     const phoneColumn = config.columns.find((column) => column.type === "tel");
     if (phoneColumn && !isCompletePhone(draft[phoneColumn.key] ?? "")) {
       toast.error(`${phoneColumn.label}: informe um telefone válido.`);
       return;
     }
-    const payload: Row = { empresa_id: empresaId };
+    const payload: Row = editing ? {} : { empresa_id: empresaId };
     for (const col of config.columns) {
       const value = draft[col.key] ?? "";
-      if (value === "") continue;
+      if (value === "" && !editing) continue;
       payload[col.key] = col.type === "boolean" ? value === "true" : value;
     }
-    const { error } = await supabase.from(config.table).insert(payload as never);
+    const editingKey = editing ? idColumn(editing) : undefined;
+    const response = editing && editingKey
+      ? await supabase.from(config.table).update(payload as never).eq(editingKey, editing[editingKey] as never)
+      : await supabase.from(config.table).insert(payload as never);
+    const { error } = response;
     if (error) {
       toast.error(error.message);
       return;
     }
-    setDraft({});
-    toast.success("Registro adicionado.");
+    resetForm();
+    toast.success(editing ? "Registro atualizado." : "Registro adicionado.");
     refresh();
   };
 
@@ -150,9 +167,14 @@ function ChildTable({ config, empresa }: { config: ChildConfig; empresa: Row | n
                 </div>
               ))}
             </div>
-            <Button variant="ghost" size="icon" aria-label="Remover" onClick={() => remove(row)}>
-              <Trash2 className="h-4 w-4" />
-            </Button>
+            <div className="flex shrink-0 items-center gap-1">
+              <Button variant="ghost" size="icon" aria-label="Editar" onClick={() => startEditing(row)}>
+                <Pencil className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="icon" aria-label="Remover" onClick={() => remove(row)}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         ))}
       </div>
@@ -209,9 +231,16 @@ function ChildTable({ config, empresa }: { config: ChildConfig; empresa: Row | n
           </div>
         ))}
       </div>
-      <Button variant="outline" onClick={add}>
-        Adicionar
-      </Button>
+      <div className="flex items-center gap-2">
+        <Button variant="outline" onClick={save}>
+          {editing ? "Salvar alterações" : "Adicionar"}
+        </Button>
+        {editing && (
+          <Button variant="ghost" onClick={resetForm}>
+            Cancelar edição
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
