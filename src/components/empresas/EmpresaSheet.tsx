@@ -54,7 +54,7 @@ const INSTANCIAS: ChildConfig = {
     { key: "instance_id", label: "ID da instância" },
     { key: "url", label: "URL" },
     { key: "token", label: "Token" },
-    { key: "client_tokem", label: "Client token" },
+    { key: "client_token", label: "Client token" },
     { key: "icone", label: "Ícone", type: "icon" },
     { key: "status", label: "Status", type: "boolean" },
   ],
