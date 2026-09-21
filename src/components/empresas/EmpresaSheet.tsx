@@ -10,24 +10,28 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { PhotoUpload } from "@/components/data-table/PhotoUpload";
+import { PhoneInput } from "@/components/data-table/PhoneInput";
+import { DocumentInput } from "@/components/data-table/DocumentInput";
 import { supabase } from "@/integrations/supabase/client";
 import { idColumn, text } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
+import { isCompletePhone, isValidCpfCnpj } from "@/lib/input-masks";
+import { formatPhoneDisplay } from "@/lib/input-masks";
 
-type EmpresaField = { key: string; label: string; full?: boolean; type?: "text" | "boolean" | "photo" };
+type EmpresaField = { key: string; label: string; full?: boolean; type?: "text" | "boolean" | "photo" | "tel" | "document" };
 
 export const EMPRESA_FIELDS: EmpresaField[] = [
   { key: "nome", label: "Nome", full: true },
-  { key: "cnpj_cpf", label: "CNPJ / CPF" },
+  { key: "cnpj_cpf", label: "CNPJ / CPF", type: "document" },
   { key: "status", label: "Status", type: "boolean" },
   { key: "endereco", label: "Endereço", full: true },
-  { key: "telefone1", label: "Telefone 1" },
-  { key: "telefone2", label: "Telefone 2" },
+  { key: "telefone1", label: "Telefone 1", type: "tel" },
+  { key: "telefone2", label: "Telefone 2", type: "tel" },
   { key: "logo", label: "Logo", type: "photo", full: true },
   { key: "titulo", label: "Título exibido", full: true },
 ];
 
-type ChildColumn = { key: string; label: string; type?: "text" | "boolean" | "select"; options?: string[] };
+type ChildColumn = { key: string; label: string; type?: "text" | "boolean" | "select" | "tel"; options?: string[] };
 
 type ChildConfig = {
   table: string;
@@ -42,7 +46,7 @@ const INSTANCIAS: ChildConfig = {
   empty: "Nenhuma instância vinculada.",
   columns: [
     { key: "nome", label: "Nome" },
-    { key: "telefone", label: "Telefone" },
+    { key: "telefone", label: "Telefone", type: "tel" },
     { key: "tipo", label: "Tipo", type: "select", options: ["whatsapp", "instagram", "telegram", "chat"] },
     { key: "provedor", label: "Provedor" },
     { key: "status", label: "Status", type: "boolean" },
@@ -86,6 +90,11 @@ function ChildTable({ config, empresa }: { config: ChildConfig; empresa: Row | n
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["child", config.table, text(empresaId)] });
 
   const add = async () => {
+    const phoneColumn = config.columns.find((column) => column.type === "tel");
+    if (phoneColumn && !isCompletePhone(draft[phoneColumn.key] ?? "")) {
+      toast.error(`${phoneColumn.label}: informe um telefone válido.`);
+      return;
+    }
     const payload: Row = { empresa_id: empresaId };
     for (const col of config.columns) {
       const value = draft[col.key] ?? "";
@@ -128,7 +137,9 @@ function ChildTable({ config, empresa }: { config: ChildConfig; empresa: Row | n
                       ? row[col.key] === true
                         ? "Ativo"
                         : "Inativo"
-                      : text(pick(row, [col.key])) || "—"}
+                      : col.type === "tel"
+                        ? formatPhoneDisplay(text(pick(row, [col.key]))) || "—"
+                        : text(pick(row, [col.key])) || "—"}
                   </p>
                 </div>
               ))}
@@ -173,6 +184,11 @@ function ChildTable({ config, empresa }: { config: ChildConfig; empresa: Row | n
                   ))}
                 </SelectContent>
               </Select>
+            ) : col.type === "tel" ? (
+              <PhoneInput
+                value={draft[col.key] ?? ""}
+                onChange={(phone) => setDraft((current) => ({ ...current, [col.key]: phone }))}
+              />
             ) : (
               <Input
                 value={draft[col.key] ?? ""}
@@ -210,6 +226,17 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave }: Pr
   const title = useMemo(() => (empresa ? "Editar empresa" : "Nova empresa"), [empresa]);
 
   const submit = () => {
+    const document = values["cnpj_cpf"] ?? "";
+    if (document && !isValidCpfCnpj(document)) {
+      toast.error("CNPJ / CPF: informe um documento válido.");
+      return;
+    }
+    for (const key of ["telefone1", "telefone2"]) {
+      if (!isCompletePhone(values[key] ?? "")) {
+        toast.error(`${key === "telefone1" ? "Telefone 1" : "Telefone 2"}: informe um telefone válido.`);
+        return;
+      }
+    }
     const payload: Row = {};
     for (const field of EMPRESA_FIELDS) {
       const raw = values[field.key] ?? "";
@@ -265,6 +292,18 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave }: Pr
                       }
                     />
                   </div>
+                ) : field.type === "tel" ? (
+                  <PhoneInput
+                    id={field.key}
+                    value={values[field.key] ?? ""}
+                    onChange={(phone) => setValues((current) => ({ ...current, [field.key]: phone }))}
+                  />
+                ) : field.type === "document" ? (
+                  <DocumentInput
+                    id={field.key}
+                    value={values[field.key] ?? ""}
+                    onChange={(document) => setValues((current) => ({ ...current, [field.key]: document }))}
+                  />
                 ) : (
                   <Input
                     id={field.key}

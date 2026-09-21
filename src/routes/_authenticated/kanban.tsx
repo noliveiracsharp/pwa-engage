@@ -21,6 +21,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { pick, type Row } from "@/lib/row";
 import { text } from "@/lib/crud";
 import { cn } from "@/lib/utils";
+import { formatPhoneDisplay } from "@/lib/input-masks";
 
 export const Route = createFileRoute("/_authenticated/kanban")({
   head: () => ({
@@ -349,7 +350,7 @@ function KanbanPage() {
                             {text(pick(cliente, ["nome"], `Atendimento #${text(card["id"])}`))}
                           </p>
                           <p className="truncate text-xs text-muted-foreground">
-                            {text(pick(cliente, ["telefone"], "")) ||
+                            {formatPhoneDisplay(text(pick(cliente, ["telefone"], ""))) ||
                               text(pick(card, ["status"], "Sem status"))}
                           </p>
                         </div>

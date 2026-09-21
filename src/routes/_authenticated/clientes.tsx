@@ -7,6 +7,7 @@ import { StarRating } from "@/components/data-table/StarRating";
 import { StatusBadge } from "@/components/data-table/StatusBadge";
 import { matches, rowId, useSaveRecord, useTableRows } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
+import { formatCpfCnpj, formatPhoneDisplay, matchesMaskedValue } from "@/lib/input-masks";
 
 export const Route = createFileRoute("/_authenticated/clientes")({
   head: () => ({
@@ -24,7 +25,7 @@ const fields: Field[] = [
   { fields: ["nome"], label: "Nome", full: true },
   { fields: ["email"], label: "E-mail", type: "email" },
   { fields: ["telefone"], label: "Telefone", type: "tel" },
-  { fields: ["cpf"], label: "CPF" },
+  { fields: ["cpf"], label: "CPF", type: "document" },
   { fields: ["status"], label: "Status", type: "boolean" },
   { fields: ["foto"], label: "Foto (URL)", full: true },
   { fields: ["nota"], label: "Nota", type: "rating" },
@@ -50,8 +51,8 @@ function ClientesPage() {
         (row) =>
           matches(pick(row, ["nome"]), f.nome) &&
           matches(pick(row, ["email"]), f.email) &&
-          matches(pick(row, ["telefone"]), f.telefone) &&
-          matches(pick(row, ["cpf"]), f.cpf) &&
+          matchesMaskedValue(pick(row, ["telefone"]), f.telefone) &&
+          matchesMaskedValue(pick(row, ["cpf"]), f.cpf) &&
           (f.status === "todos" ||
             (f.status === "ativo" ? row["status"] === true : row["status"] === false)) &&
           (f.nota === "todas" || String(Number(pick(row, ["nota"]) ?? 0)) === f.nota),
@@ -62,8 +63,18 @@ function ClientesPage() {
   const columns: Column[] = [
     { key: "nome", header: "Nome", fields: ["nome"] },
     { key: "email", header: "E-mail", fields: ["email"] },
-    { key: "telefone", header: "Telefone", fields: ["telefone"] },
-    { key: "cpf", header: "CPF", fields: ["cpf"] },
+    {
+      key: "telefone",
+      header: "Telefone",
+      fields: ["telefone"],
+      render: (row) => formatPhoneDisplay(String(pick(row, ["telefone"], ""))) || "—",
+    },
+    {
+      key: "cpf",
+      header: "CPF",
+      fields: ["cpf"],
+      render: (row) => formatCpfCnpj(String(pick(row, ["cpf"], ""))) || "—",
+    },
     {
       key: "status",
       header: "Status",
