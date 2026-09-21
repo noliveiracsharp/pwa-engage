@@ -49,6 +49,8 @@ const INSTANCIAS: ChildConfig = {
     { key: "telefone", label: "Telefone", type: "tel" },
     { key: "tipo", label: "Tipo", type: "select", options: ["whatsapp", "instagram", "telegram", "chat"] },
     { key: "provedor", label: "Provedor" },
+    { key: "url", label: "URL" },
+    { key: "token", label: "Token" },
     { key: "status", label: "Status", type: "boolean" },
   ],
 };
