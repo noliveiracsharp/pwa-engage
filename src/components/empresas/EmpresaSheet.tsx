@@ -185,11 +185,21 @@ function ChildTable({ config, empresa }: { config: ChildConfig; empresa: Row | n
                             <p className="truncate text-foreground">
                               {row[col.key] === true ? "Ativo" : "Inativo"}
                             </p>
-                          ) : col.type === "tel" ? (
-                            <p className="truncate text-foreground">
-                              {formatPhoneDisplay(colValue) || "—"}
-                            </p>
-                          ) : col.type === "icon" ? (
+                           ) : col.type === "tel" ? (
+                             <p className="truncate text-foreground">
+                               {formatPhoneDisplay(colValue) || "—"}
+                             </p>
+                           ) : col.type === "color" ? (
+                             <div className="flex items-center gap-2 text-foreground">
+                               {colValue ? (
+                                 <span
+                                   className="h-4 w-4 shrink-0 rounded-full border border-border"
+                                   style={{ backgroundColor: colValue }}
+                                 />
+                               ) : null}
+                               <span className="truncate">{colValue || "—"}</span>
+                             </div>
+                           ) : col.type === "icon" ? (
                             <div className="flex items-center gap-2 text-foreground">
                               {colValue && ColIcon ? <ColIcon className="h-4 w-4" /> : null}
                               <span className="truncate">{colValue || "—"}</span>
@@ -253,12 +263,27 @@ function ChildTable({ config, empresa }: { config: ChildConfig; empresa: Row | n
                 value={draft[col.key] ?? ""}
                 onChange={(phone) => setDraft((current) => ({ ...current, [col.key]: phone }))}
               />
-            ) : col.type === "icon" ? (
-              <IconPicker
-                value={draft[col.key] ?? ""}
-                onChange={(icon) => setDraft((current) => ({ ...current, [col.key]: icon }))}
-              />
-            ) : (
+             ) : col.type === "icon" ? (
+               <IconPicker
+                 value={draft[col.key] ?? ""}
+                 onChange={(icon) => setDraft((current) => ({ ...current, [col.key]: icon }))}
+               />
+             ) : col.type === "color" ? (
+               <div className="flex items-center gap-2">
+                 <input
+                   type="color"
+                   aria-label={col.label}
+                   value={/^#[0-9a-fA-F]{6}$/.test(draft[col.key] ?? "") ? draft[col.key] : "#0ea5e9"}
+                   onChange={(e) => setDraft((current) => ({ ...current, [col.key]: e.target.value }))}
+                   className="h-10 w-12 shrink-0 cursor-pointer rounded-md border border-border bg-background p-1"
+                 />
+                 <Input
+                   value={draft[col.key] ?? ""}
+                   placeholder="#0ea5e9"
+                   onChange={(e) => setDraft((d) => ({ ...d, [col.key]: e.target.value }))}
+                 />
+               </div>
+             ) : (
               <Input
                 value={draft[col.key] ?? ""}
                 onChange={(e) => setDraft((d) => ({ ...d, [col.key]: e.target.value }))}
@@ -339,6 +364,7 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave }: Pr
             <TabsTrigger value="dados">Dados</TabsTrigger>
             <TabsTrigger value="instancias">Instâncias</TabsTrigger>
             <TabsTrigger value="campos">Campos</TabsTrigger>
+            <TabsTrigger value="etiquetas">Etiquetas</TabsTrigger>
           </TabsList>
 
           <TabsContent value="dados" className="mt-4">
@@ -401,6 +427,10 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave }: Pr
 
           <TabsContent value="campos" className="mt-4">
             <ChildTable config={CAMPOS} empresa={empresa} />
+          </TabsContent>
+
+          <TabsContent value="etiquetas" className="mt-4">
+            <ChildTable config={ETIQUETAS} empresa={empresa} />
           </TabsContent>
         </Tabs>
 
