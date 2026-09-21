@@ -9,10 +9,11 @@ const BUCKET = "avatars";
 type Props = {
   value: string;
   onChange: (url: string) => void;
+  alt?: string;
 };
 
 /** Avatar photo upload to Supabase Storage, storing the public URL. */
-export function PhotoUpload({ value, onChange }: Props) {
+export function PhotoUpload({ value, onChange, alt = "Foto" }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
@@ -54,7 +55,7 @@ export function PhotoUpload({ value, onChange }: Props) {
         className="border-border bg-muted hover:ring-primary/40 group relative flex h-28 w-28 items-center justify-center overflow-hidden rounded-full border transition hover:ring-2"
       >
         {value ? (
-          <img src={value} alt="Foto do usuário" className="h-full w-full object-cover" />
+          <img src={value} alt={alt} className="h-full w-full object-cover" />
         ) : (
           <User className="text-muted-foreground h-12 w-12" />
         )}
