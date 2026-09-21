@@ -10,7 +10,7 @@ import { RecordSheet, type Field } from "@/components/data-table/RecordSheet";
 import { StatusBadge } from "@/components/data-table/StatusBadge";
 import { matches, rowId, text, useSaveRecord, useTableRows } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
-import { formatCpfCnpj } from "@/lib/input-masks";
+import { formatCpfCnpj, matchesMaskedValue } from "@/lib/input-masks";
 
 export const Route = createFileRoute("/_authenticated/usuarios")({
   head: () => ({
@@ -128,7 +128,7 @@ function UsuariosPage() {
         (row) =>
           matches(pick(row, ["nome"]), f.nome) &&
           matches(pick(row, ["email"]), f.email) &&
-          matches(pick(row, ["cpf"]), f.cpf) &&
+          matchesMaskedValue(pick(row, ["cpf"]), f.cpf) &&
           (f.status === "todos" ||
             (f.status === "ativo" ? row["status"] === true : row["status"] === false)) &&
           (f.perfil === "todos" || text(pick(row, ["perfil_id"])) === f.perfil),

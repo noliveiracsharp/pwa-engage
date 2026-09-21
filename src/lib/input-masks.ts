@@ -8,6 +8,15 @@ import {
 
 export const digitsOnly = (value: string) => value.replace(/\D/g, "");
 
+export function matchesMaskedValue(value: unknown, term: string): boolean {
+  const query = term.trim();
+  if (!query) return true;
+  const rawValue = String(value ?? "").toLowerCase();
+  if (rawValue.includes(query.toLowerCase())) return true;
+  const queryDigits = digitsOnly(query);
+  return queryDigits.length > 0 && digitsOnly(rawValue).includes(queryDigits);
+}
+
 export function formatCpfCnpj(value: string): string {
   const digits = digitsOnly(value).slice(0, 14);
   if (digits.length <= 11) {

@@ -7,7 +7,7 @@ import { StarRating } from "@/components/data-table/StarRating";
 import { StatusBadge } from "@/components/data-table/StatusBadge";
 import { matches, rowId, useSaveRecord, useTableRows } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
-import { formatCpfCnpj, formatPhoneDisplay } from "@/lib/input-masks";
+import { formatCpfCnpj, formatPhoneDisplay, matchesMaskedValue } from "@/lib/input-masks";
 
 export const Route = createFileRoute("/_authenticated/clientes")({
   head: () => ({
@@ -51,8 +51,8 @@ function ClientesPage() {
         (row) =>
           matches(pick(row, ["nome"]), f.nome) &&
           matches(pick(row, ["email"]), f.email) &&
-          matches(pick(row, ["telefone"]), f.telefone) &&
-          matches(pick(row, ["cpf"]), f.cpf) &&
+          matchesMaskedValue(pick(row, ["telefone"]), f.telefone) &&
+          matchesMaskedValue(pick(row, ["cpf"]), f.cpf) &&
           (f.status === "todos" ||
             (f.status === "ativo" ? row["status"] === true : row["status"] === false)) &&
           (f.nota === "todas" || String(Number(pick(row, ["nota"]) ?? 0)) === f.nota),

@@ -6,7 +6,7 @@ import { StatusBadge } from "@/components/data-table/StatusBadge";
 import { EmpresaSheet } from "@/components/empresas/EmpresaSheet";
 import { matches, rowId, useSaveRecord, useTableRows } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
-import { formatCpfCnpj, formatPhoneDisplay } from "@/lib/input-masks";
+import { formatCpfCnpj, formatPhoneDisplay, matchesMaskedValue } from "@/lib/input-masks";
 
 export const Route = createFileRoute("/_authenticated/empresas")({
   head: () => ({
@@ -41,7 +41,7 @@ function EmpresasPage() {
       rows.filter(
         (row) =>
           matches(pick(row, ["nome"]), f.nome) &&
-          matches(pick(row, ["cnpj_cpf"]), f.documento) &&
+          matchesMaskedValue(pick(row, ["cnpj_cpf"]), f.documento) &&
           (f.status === "todos" ||
             (f.status === "ativo" ? row["status"] === true : row["status"] === false)),
       ),
