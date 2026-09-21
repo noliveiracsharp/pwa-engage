@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StarRating } from "@/components/data-table/StarRating";
 import { IconPicker } from "@/components/data-table/IconPicker";
 import { PhotoUpload } from "@/components/data-table/PhotoUpload";
@@ -36,6 +37,8 @@ type Props = {
   saving?: boolean;
   onSave: (values: Row) => void;
   extra?: ReactNode;
+  /** When set together with `extra`, renders the form in tab panels: "Dados" + this label. */
+  extraTabLabel?: string;
 };
 
 export function columnFor(record: Row | null | undefined, fields: string[]) {
