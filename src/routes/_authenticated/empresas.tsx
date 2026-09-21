@@ -4,9 +4,9 @@ import { DataTable, type Column } from "@/components/data-table/DataTable";
 import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
 import { StatusBadge } from "@/components/data-table/StatusBadge";
 import { EmpresaSheet } from "@/components/empresas/EmpresaSheet";
-import { matches, rowId, useSaveRecord, useTableRows } from "@/lib/crud";
+import { rowId, useSaveRecord, useTableRows } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
-import { formatCpfCnpj, formatPhoneDisplay, matchesMaskedValue } from "@/lib/input-masks";
+import { formatCpfCnpj, formatPhoneDisplay, matchesAny } from "@/lib/input-masks";
 
 export const Route = createFileRoute("/_authenticated/empresas")({
   head: () => ({
@@ -34,14 +34,16 @@ function EmpresasPage() {
   const save = useSaveRecord("empresas");
   const [open, setOpen] = useState(false);
   const [record, setRecord] = useState<Row | null>(null);
-  const [f, setF] = useState({ nome: "", documento: "", status: "todos" });
+  const [f, setF] = useState({ busca: "", status: "todos" });
 
   const filtered = useMemo(
     () =>
       rows.filter(
         (row) =>
-          matches(pick(row, ["nome"]), f.nome) &&
-          matchesMaskedValue(pick(row, ["cnpj_cpf"]), f.documento) &&
+          matchesAny(
+            [pick(row, ["nome"]), pick(row, ["cnpj_cpf"]), pick(row, ["telefone1"]), pick(row, ["telefone2"])],
+            f.busca,
+          ) &&
           (f.status === "todos" ||
             (f.status === "ativo" ? row["status"] === true : row["status"] === false)),
       ),
@@ -89,11 +91,11 @@ function EmpresasPage() {
         }}
         filters={
           <>
-            <FilterInput label="Nome" value={f.nome} onChange={(v) => setF({ ...f, nome: v })} />
             <FilterInput
-              label="CNPJ / CPF"
-              value={f.documento}
-              onChange={(v) => setF({ ...f, documento: v })}
+              label="Buscar"
+              value={f.busca}
+              onChange={(v) => setF({ ...f, busca: v })}
+              placeholder="Nome, CNPJ/CPF ou telefone"
             />
             <FilterSelect
               label="Status"
