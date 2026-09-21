@@ -16,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { idColumn, text } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
 import { isCompletePhone, isValidCpfCnpj } from "@/lib/input-masks";
+import { formatPhoneDisplay } from "@/lib/input-masks";
 
 type EmpresaField = { key: string; label: string; full?: boolean; type?: "text" | "boolean" | "photo" | "tel" | "document" };
 
@@ -136,7 +137,9 @@ function ChildTable({ config, empresa }: { config: ChildConfig; empresa: Row | n
                       ? row[col.key] === true
                         ? "Ativo"
                         : "Inativo"
-                      : text(pick(row, [col.key])) || "—"}
+                      : col.type === "tel"
+                        ? formatPhoneDisplay(text(pick(row, [col.key]))) || "—"
+                        : text(pick(row, [col.key])) || "—"}
                   </p>
                 </div>
               ))}

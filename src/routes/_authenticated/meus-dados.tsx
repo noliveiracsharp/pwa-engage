@@ -4,6 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { useTableRows, rowId, text } from "@/lib/crud";
 import { pick } from "@/lib/row";
+import { formatCpfCnpj } from "@/lib/input-masks";
 
 export const Route = createFileRoute("/_authenticated/meus-dados")({
   component: MeusDados,
@@ -21,7 +22,7 @@ function MeusDados() {
   const campos: Array<[string, string | undefined]> = [
     ["Nome", nome],
     ["E-mail", pick<string>(usuario, ["email"], user?.email)],
-    ["CPF", pick<string>(usuario, ["cpf"])],
+    ["CPF", formatCpfCnpj(pick<string>(usuario, ["cpf"], "") ?? "")],
     ["Cargo", pick<string>(usuario, ["cargo"])],
     ["Perfil", perfilNome],
   ];

@@ -31,10 +31,11 @@ export function PhoneInput({ id, value, onChange }: Props) {
   const [nationalNumber, setNationalNumber] = useState(initial.nationalNumber);
 
   useEffect(() => {
+    if (value === joinPhoneValue(country, nationalNumber)) return;
     const parsed = splitPhoneValue(value);
     setCountry(parsed.country);
     setNationalNumber(parsed.nationalNumber);
-  }, [value]);
+  }, [value, country, nationalNumber]);
 
   const changeCountry = (next: string) => {
     const nextCountry = next as CountryCode;

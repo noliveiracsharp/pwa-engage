@@ -6,6 +6,7 @@ import { StatusBadge } from "@/components/data-table/StatusBadge";
 import { EmpresaSheet } from "@/components/empresas/EmpresaSheet";
 import { matches, rowId, useSaveRecord, useTableRows } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
+import { formatCpfCnpj, formatPhoneDisplay } from "@/lib/input-masks";
 
 export const Route = createFileRoute("/_authenticated/empresas")({
   head: () => ({
@@ -49,8 +50,18 @@ function EmpresasPage() {
 
   const columns: Column[] = [
     { key: "nome", header: "Nome", fields: ["nome"] },
-    { key: "documento", header: "CNPJ / CPF", fields: ["cnpj_cpf"] },
-    { key: "telefone", header: "Telefone", fields: ["telefone1"] },
+    {
+      key: "documento",
+      header: "CNPJ / CPF",
+      fields: ["cnpj_cpf"],
+      render: (row) => formatCpfCnpj(String(pick(row, ["cnpj_cpf"], ""))) || "—",
+    },
+    {
+      key: "telefone",
+      header: "Telefone",
+      fields: ["telefone1"],
+      render: (row) => formatPhoneDisplay(String(pick(row, ["telefone1"], ""))) || "—",
+    },
     {
       key: "status",
       header: "Status",
