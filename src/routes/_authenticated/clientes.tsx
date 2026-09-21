@@ -6,6 +6,7 @@ import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
 import { RecordSheet, type Field } from "@/components/data-table/RecordSheet";
 import { StarRating } from "@/components/data-table/StarRating";
 import { StatusBadge } from "@/components/data-table/StatusBadge";
+import { ClienteCampos } from "@/components/clientes/ClienteCampos";
 import { rowId, useSaveRecord, useTableRows } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
 import { formatCpfCnpj, formatPhoneDisplay, matchesAny } from "@/lib/input-masks";
@@ -171,6 +172,7 @@ function ClientesPage() {
         fields={fields}
         record={record}
         saving={save.isPending}
+        extra={<ClienteCampos clienteId={record ? rowId(record) : undefined} />}
         onSave={(values) =>
           save.mutate(
             { values, original: record },
