@@ -181,7 +181,7 @@ export function FuncaoPerfis({ funcaoId }: Props) {
               }}
             />
           </div>
-          <DialogFooter>
+          <DialogFooter className="border-t pt-4 mt-4">
             <Button type="button" variant="outline" onClick={() => setNovoOpen(false)} disabled={saving}>
               Cancelar
             </Button>
