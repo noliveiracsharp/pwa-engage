@@ -13,6 +13,7 @@ import { PhotoUpload } from "@/components/data-table/PhotoUpload";
 import { PhoneInput } from "@/components/data-table/PhoneInput";
 import { DocumentInput } from "@/components/data-table/DocumentInput";
 import { IconPicker } from "@/components/data-table/IconPicker";
+import { getIcon } from "@/components/layout/icon-map";
 import { supabase } from "@/integrations/supabase/client";
 import { idColumn, text } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
