@@ -8,9 +8,9 @@ import { DataTable, type Column } from "@/components/data-table/DataTable";
 import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
 import { RecordSheet, type Field } from "@/components/data-table/RecordSheet";
 import { StatusBadge } from "@/components/data-table/StatusBadge";
-import { matches, rowId, text, useSaveRecord, useTableRows } from "@/lib/crud";
+import { rowId, text, useSaveRecord, useTableRows } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
-import { formatCpfCnpj, matchesMaskedValue } from "@/lib/input-masks";
+import { formatCpfCnpj, matchesAny } from "@/lib/input-masks";
 
 export const Route = createFileRoute("/_authenticated/usuarios")({
   head: () => ({

@@ -5,9 +5,9 @@ import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
 import { RecordSheet, type Field } from "@/components/data-table/RecordSheet";
 import { StarRating } from "@/components/data-table/StarRating";
 import { StatusBadge } from "@/components/data-table/StatusBadge";
-import { matches, rowId, useSaveRecord, useTableRows } from "@/lib/crud";
+import { rowId, useSaveRecord, useTableRows } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
-import { formatCpfCnpj, formatPhoneDisplay, matchesMaskedValue } from "@/lib/input-masks";
+import { formatCpfCnpj, formatPhoneDisplay, matchesAny } from "@/lib/input-masks";
 
 export const Route = createFileRoute("/_authenticated/clientes")({
   head: () => ({

@@ -4,9 +4,9 @@ import { DataTable, type Column } from "@/components/data-table/DataTable";
 import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
 import { StatusBadge } from "@/components/data-table/StatusBadge";
 import { EmpresaSheet } from "@/components/empresas/EmpresaSheet";
-import { matches, rowId, useSaveRecord, useTableRows } from "@/lib/crud";
+import { rowId, useSaveRecord, useTableRows } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
-import { formatCpfCnpj, formatPhoneDisplay, matchesMaskedValue } from "@/lib/input-masks";
+import { formatCpfCnpj, formatPhoneDisplay, matchesAny } from "@/lib/input-masks";
 
 export const Route = createFileRoute("/_authenticated/empresas")({
   head: () => ({

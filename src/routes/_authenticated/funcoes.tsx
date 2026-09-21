@@ -8,7 +8,8 @@ import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
 import { RecordSheet, type Field } from "@/components/data-table/RecordSheet";
 import { StatusBadge } from "@/components/data-table/StatusBadge";
 import { FuncaoPerfis } from "@/components/funcoes/FuncaoPerfis";
-import { matches, rowId, idColumn, useSaveRecord, useTableRows } from "@/lib/crud";
+import { rowId, idColumn, useSaveRecord, useTableRows } from "@/lib/crud";
+import { matchesAny } from "@/lib/input-masks";
 import { pick, type Row } from "@/lib/row";
 
 export const Route = createFileRoute("/_authenticated/funcoes")({
