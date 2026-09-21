@@ -97,7 +97,7 @@ export function RecordSheet({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full overflow-y-auto sm:max-w-xl">
-        <SheetHeader className="px-6 border-b border-border pb-6">
+        <SheetHeader className="px-6 pb-4">
           <SheetTitle>{title}</SheetTitle>
           {description && <SheetDescription>{description}</SheetDescription>}
         </SheetHeader>
