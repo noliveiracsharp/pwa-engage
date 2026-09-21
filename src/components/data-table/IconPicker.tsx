@@ -1,4 +1,4 @@
-import { useMemo, useState, type ComponentType, type SVGProps } from "react";
+import { useMemo, useState, type ElementType } from "react";
 import { Check, ChevronDown, icons, Search } from "lucide-react";
 import {
   SiDiscord,
@@ -24,7 +24,7 @@ import { cn } from "@/lib/utils";
 type IconOption = {
   value: string;
   name: string;
-  icon: ComponentType<SVGProps<SVGSVGElement>>;
+  icon: ElementType;
 };
 
 const PAGE_SIZE = 120;

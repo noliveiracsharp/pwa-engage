@@ -1,4 +1,4 @@
-import type { ComponentType, SVGProps } from "react";
+import type { ElementType } from "react";
 import { Circle, icons } from "lucide-react";
 import {
   SiDiscord,
@@ -44,7 +44,7 @@ const ALIASES: Record<string, string> = {
   configuracoes: "Settings",
 };
 
-type IconComponent = ComponentType<SVGProps<SVGSVGElement>>;
+type IconComponent = ElementType;
 
 const BRAND_ICONS: Record<string, IconComponent> = {
   "brand-whatsapp": SiWhatsapp,
