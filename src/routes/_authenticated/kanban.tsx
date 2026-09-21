@@ -418,7 +418,7 @@ function KanbanPage() {
               </div>
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="border-t pt-4 mt-4">
             <Button variant="outline" onClick={() => setNewKanban(false)}>
               Cancelar
             </Button>
@@ -463,7 +463,7 @@ function KanbanPage() {
               </div>
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="border-t pt-4 mt-4">
             <Button variant="outline" onClick={() => setNewEtapa(false)}>
               Cancelar
             </Button>
@@ -508,7 +508,7 @@ function KanbanPage() {
               </div>
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="border-t pt-4 mt-4">
             <Button variant="outline" onClick={() => setEditEtapa(null)}>
               Cancelar
             </Button>
