@@ -173,6 +173,7 @@ function ClientesPage() {
         record={record}
         saving={save.isPending}
         extra={<ClienteCampos clienteId={record ? rowId(record) : undefined} />}
+        extraTabLabel="Campos personalizados"
         onSave={(values) =>
           save.mutate(
             { values, original: record },
