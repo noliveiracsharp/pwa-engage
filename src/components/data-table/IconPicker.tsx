@@ -1,14 +1,12 @@
-import { useMemo, useState } from "react";
-import { Check, ChevronDown, icons, Search, type LucideIcon } from "lucide-react";
+import { useMemo, useState, type ComponentType, type SVGProps } from "react";
+import { Check, ChevronDown, icons, Search } from "lucide-react";
 import {
   SiDiscord,
   SiFacebook,
   SiInstagram,
-  SiLinkedin,
   SiMessenger,
   SiPinterest,
   SiSignal,
-  SiSlack,
   SiSnapchat,
   SiTelegram,
   SiThreads,
@@ -26,7 +24,7 @@ import { cn } from "@/lib/utils";
 type IconOption = {
   value: string;
   name: string;
-  icon: LucideIcon;
+  icon: ComponentType<SVGProps<SVGSVGElement>>;
 };
 
 const PAGE_SIZE = 120;
@@ -48,13 +46,11 @@ const BRAND_OPTIONS: IconOption[] = [
   { value: "brand-facebook", name: "Facebook", icon: SiFacebook },
   { value: "brand-messenger", name: "Messenger", icon: SiMessenger },
   { value: "brand-telegram", name: "Telegram", icon: SiTelegram },
-  { value: "brand-linkedin", name: "LinkedIn", icon: SiLinkedin },
   { value: "brand-youtube", name: "YouTube", icon: SiYoutube },
   { value: "brand-tiktok", name: "TikTok", icon: SiTiktok },
   { value: "brand-x", name: "X", icon: SiX },
   { value: "brand-threads", name: "Threads", icon: SiThreads },
   { value: "brand-discord", name: "Discord", icon: SiDiscord },
-  { value: "brand-slack", name: "Slack", icon: SiSlack },
   { value: "brand-signal", name: "Signal", icon: SiSignal },
   { value: "brand-pinterest", name: "Pinterest", icon: SiPinterest },
   { value: "brand-snapchat", name: "Snapchat", icon: SiSnapchat },

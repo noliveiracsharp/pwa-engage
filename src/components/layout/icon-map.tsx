@@ -1,13 +1,12 @@
-import { Circle, icons, type LucideIcon } from "lucide-react";
+import type { ComponentType, SVGProps } from "react";
+import { Circle, icons } from "lucide-react";
 import {
   SiDiscord,
   SiFacebook,
   SiInstagram,
-  SiLinkedin,
   SiMessenger,
   SiPinterest,
   SiSignal,
-  SiSlack,
   SiSnapchat,
   SiTelegram,
   SiThreads,
@@ -45,7 +44,9 @@ const ALIASES: Record<string, string> = {
   configuracoes: "Settings",
 };
 
-const BRAND_ICONS: Record<string, LucideIcon> = {
+type IconComponent = ComponentType<SVGProps<SVGSVGElement>>;
+
+const BRAND_ICONS: Record<string, IconComponent> = {
   "brand-whatsapp": SiWhatsapp,
   whatsapp: SiWhatsapp,
   "brand-instagram": SiInstagram,
@@ -56,8 +57,6 @@ const BRAND_ICONS: Record<string, LucideIcon> = {
   messenger: SiMessenger,
   "brand-telegram": SiTelegram,
   telegram: SiTelegram,
-  "brand-linkedin": SiLinkedin,
-  linkedin: SiLinkedin,
   "brand-youtube": SiYoutube,
   youtube: SiYoutube,
   "brand-tiktok": SiTiktok,
@@ -68,8 +67,6 @@ const BRAND_ICONS: Record<string, LucideIcon> = {
   threads: SiThreads,
   "brand-discord": SiDiscord,
   discord: SiDiscord,
-  "brand-slack": SiSlack,
-  slack: SiSlack,
   "brand-signal": SiSignal,
   signal: SiSignal,
   "brand-pinterest": SiPinterest,
@@ -78,8 +75,8 @@ const BRAND_ICONS: Record<string, LucideIcon> = {
   snapchat: SiSnapchat,
 };
 
-export function getIcon(name: string | undefined): LucideIcon {
-  const registry = icons as Record<string, LucideIcon>;
+export function getIcon(name: string | undefined): IconComponent {
+  const registry = icons as Record<string, IconComponent>;
   const brand = BRAND_ICONS[(name ?? "").toLowerCase()];
   if (brand) return brand;
   const exact = name ? registry[name] : undefined;
