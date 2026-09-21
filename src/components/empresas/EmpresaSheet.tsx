@@ -166,7 +166,7 @@ function ChildTable({ config, empresa }: { config: ChildConfig; empresa: Row | n
                     .filter((col) => col.key !== "nome" && col.key !== "icone")
                     .map((col) => {
                       const colValue = text(pick(row, [col.key]));
-                      const colIcon = col.type === "icon" ? getIcon(colValue) : undefined;
+                      const ColIcon = col.type === "icon" ? getIcon(colValue) : undefined;
                       return (
                         <div key={col.key}>
                           <p className="text-xs text-muted-foreground">{col.label}</p>
@@ -180,7 +180,7 @@ function ChildTable({ config, empresa }: { config: ChildConfig; empresa: Row | n
                             </p>
                           ) : col.type === "icon" ? (
                             <div className="flex items-center gap-2 text-foreground">
-                              {colValue ? <colIcon className="h-4 w-4" /> : null}
+                              {colValue && ColIcon ? <ColIcon className="h-4 w-4" /> : null}
                               <span className="truncate">{colValue || "—"}</span>
                             </div>
                           ) : (
