@@ -434,7 +434,7 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave }: Pr
           </TabsContent>
         </Tabs>
 
-        <div className="flex justify-end gap-2 p-4">
+        <div className="bg-background sticky bottom-0 mt-4 flex justify-end gap-2 border-t px-6 py-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
