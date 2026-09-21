@@ -355,7 +355,7 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave }: Pr
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full overflow-y-auto sm:max-w-2xl">
-        <SheetHeader>
+        <SheetHeader className="border-b border-border px-4 pb-6">
           <SheetTitle>{title}</SheetTitle>
         </SheetHeader>
 
