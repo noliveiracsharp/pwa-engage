@@ -106,19 +106,40 @@ export function RecordSheet({
           {description && <SheetDescription>{description}</SheetDescription>}
         </SheetHeader>
 
-        {photoFields.map((field) => {
-          const key = field.fields[0]!;
-          return (
-            <div key={key} className="px-6 pb-2 pt-4">
-              <PhotoUpload
-                value={values[key] ?? ""}
-                onChange={(url) => setValues((s) => ({ ...s, [key]: url }))}
-              />
-            </div>
-          );
-        })}
+        {extra && extraTabLabel ? (
+          <Tabs defaultValue="dados" className="px-6 pt-2">
+            <TabsList className="w-full">
+              <TabsTrigger value="dados" className="flex-1">Dados</TabsTrigger>
+              <TabsTrigger value="extra" className="flex-1">{extraTabLabel}</TabsTrigger>
+            </TabsList>
+            <TabsContent value="dados">
+              {photoBlock}
+              {fieldsGrid}
+            </TabsContent>
+            <TabsContent value="extra" className="pt-4">
+              {extra}
+            </TabsContent>
+          </Tabs>
+        ) : (
+          <>
+            {photoBlock}
+            {fieldsGrid}
+            {extra && <div className="px-6 pt-6">{extra}</div>}
+          </>
+        )}
 
-        <div className="grid gap-x-4 gap-y-5 px-6 pt-2 sm:grid-cols-2">
+        <div className="bg-background sticky bottom-0 mt-4 flex justify-end gap-2 px-6 py-4">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
+          <Button onClick={submit} disabled={saving}>
+            {saving ? "Salvando…" : "Salvar"}
+          </Button>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
           {bodyFields.map((field) => {
             const key = field.fields[0]!;
             const value = values[key] ?? "";
