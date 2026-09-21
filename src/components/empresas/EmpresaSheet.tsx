@@ -150,34 +150,58 @@ function ChildTable({ config, empresa }: { config: ChildConfig; empresa: Row | n
     <div className="space-y-4">
       <div className="divide-y divide-border rounded-md border border-border">
         {rows.length === 0 && <p className="p-3 text-sm text-muted-foreground">{config.empty}</p>}
-        {rows.map((row, index) => (
-          <div key={text(row[idColumn(row)] ?? index)} className="flex items-center gap-3 p-3 text-sm">
-            <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {config.columns.map((col) => (
-                <div key={col.key}>
-                  <p className="text-xs text-muted-foreground">{col.label}</p>
-                  <p className="truncate text-foreground">
-                    {col.type === "boolean"
-                      ? row[col.key] === true
-                        ? "Ativo"
-                        : "Inativo"
-                      : col.type === "tel"
-                        ? formatPhoneDisplay(text(pick(row, [col.key]))) || "—"
-                        : text(pick(row, [col.key])) || "—"}
-                  </p>
+        {rows.map((row, index) => {
+          const iconValue = text(pick(row, ["icone"], ""));
+          const Icon = getIcon(iconValue);
+          const nomeValue = text(pick(row, ["nome"], ""));
+          return (
+            <div key={text(row[idColumn(row)] ?? index)} className="flex items-start gap-3 p-3 text-sm">
+              <div className="grid min-w-0 flex-1 gap-2">
+                <div className="flex items-center gap-2">
+                  {iconValue && <Icon className="h-5 w-5 shrink-0 text-primary" />}
+                  {nomeValue && <p className="truncate font-semibold text-foreground">{nomeValue}</p>}
                 </div>
-              ))}
+                <div className="grid min-w-0 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {config.columns
+                    .filter((col) => col.key !== "nome" && col.key !== "icone")
+                    .map((col) => {
+                      const colValue = text(pick(row, [col.key]));
+                      const colIcon = col.type === "icon" ? getIcon(colValue) : undefined;
+                      return (
+                        <div key={col.key}>
+                          <p className="text-xs text-muted-foreground">{col.label}</p>
+                          {col.type === "boolean" ? (
+                            <p className="truncate text-foreground">
+                              {row[col.key] === true ? "Ativo" : "Inativo"}
+                            </p>
+                          ) : col.type === "tel" ? (
+                            <p className="truncate text-foreground">
+                              {formatPhoneDisplay(colValue) || "—"}
+                            </p>
+                          ) : col.type === "icon" ? (
+                            <div className="flex items-center gap-2 text-foreground">
+                              {colValue ? <colIcon className="h-4 w-4" /> : null}
+                              <span className="truncate">{colValue || "—"}</span>
+                            </div>
+                          ) : (
+                            <p className="truncate text-foreground">{colValue || "—"}</p>
+                          )}
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+              <div className="flex shrink-0 items-center gap-1">
+                <Button variant="ghost" size="icon" aria-label="Editar" onClick={() => startEditing(row)}>
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" aria-label="Remover" onClick={() => remove(row)}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
-            <div className="flex shrink-0 items-center gap-1">
-              <Button variant="ghost" size="icon" aria-label="Editar" onClick={() => startEditing(row)}>
-                <Pencil className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" aria-label="Remover" onClick={() => remove(row)}>
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
