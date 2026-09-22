@@ -47,12 +47,15 @@ function FuncoesPage() {
   const queryClient = useQueryClient();
   const reorder = useMutation({
     mutationFn: async (ordered: Row[]) => {
+      let n = 0;
       await Promise.all(
-        ordered.map((row, i) => {
+        ordered.map((row) => {
           const key = idColumn(row);
+          const isChild = !!pick(row, ["funcoes_pai_id"]);
+          const ordem = isChild ? null : ++n;
           return supabase
             .from("funcoes")
-            .update({ ordem: i + 1 })
+            .update({ ordem })
             .eq(key, row[key] as never)
             .then(({ error }) => {
               if (error) throw error;
