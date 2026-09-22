@@ -234,9 +234,11 @@ function FuncoesPage() {
         extra={<FuncaoPerfis funcaoId={record ? rowId(record) : undefined} />}
         onSave={(values) => {
           const pai = values["funcoes_pai_id"];
+          const isChild = !(pai === NONE || pai === "" || pai === undefined);
           const payload: Row = {
             ...values,
-            funcoes_pai_id: pai === NONE || pai === "" || pai === undefined ? null : pai,
+            funcoes_pai_id: isChild ? pai : null,
+            ordem: isChild ? null : values["ordem"],
           };
           save.mutate({ values: payload, original: record }, { onSuccess: () => setOpen(false) });
         }}
