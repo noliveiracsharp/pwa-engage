@@ -47,12 +47,15 @@ function FuncoesPage() {
   const queryClient = useQueryClient();
   const reorder = useMutation({
     mutationFn: async (ordered: Row[]) => {
+      let n = 0;
       await Promise.all(
-        ordered.map((row, i) => {
+        ordered.map((row) => {
           const key = idColumn(row);
+          const isChild = !!pick(row, ["funcoes_pai_id"]);
+          const ordem = isChild ? null : ++n;
           return supabase
             .from("funcoes")
-            .update({ ordem: i + 1 })
+            .update({ ordem })
             .eq(key, row[key] as never)
             .then(({ error }) => {
               if (error) throw error;
@@ -234,9 +237,11 @@ function FuncoesPage() {
         extra={<FuncaoPerfis funcaoId={record ? rowId(record) : undefined} />}
         onSave={(values) => {
           const pai = values["funcoes_pai_id"];
+          const isChild = !(pai === NONE || pai === "" || pai === undefined);
           const payload: Row = {
             ...values,
-            funcoes_pai_id: pai === NONE || pai === "" || pai === undefined ? null : pai,
+            funcoes_pai_id: isChild ? pai : null,
+            ordem: isChild ? null : values["ordem"],
           };
           save.mutate({ values: payload, original: record }, { onSuccess: () => setOpen(false) });
         }}
