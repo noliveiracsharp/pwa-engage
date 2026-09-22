@@ -24,13 +24,16 @@ export const Route = createFileRoute("/_authenticated/funcoes")({
   component: FuncoesPage,
 });
 
-const fields: Field[] = [
+const NONE = "__none__";
+
+const baseFields: Field[] = [
   { fields: ["descricao"], label: "Descrição", full: true },
   { fields: ["path"], label: "Caminho (rota)", placeholder: "/clientes" },
   { fields: ["icone"], label: "Ícone", type: "icon" },
   { fields: ["menu_ativo"], label: "Exibe no menu", type: "boolean" },
   { fields: ["status"], label: "Status", type: "boolean" },
 ];
+
 
 const BOOL_OPTIONS = [
   { value: "todos", label: "Todos" },
@@ -79,9 +82,50 @@ function FuncoesPage() {
     [rows, f],
   );
 
+  const nameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const row of rows) {
+      const id = rowId(row);
+      if (id !== undefined) map.set(String(id), String(pick(row, ["descricao"]) ?? ""));
+    }
+    return map;
+  }, [rows]);
+
+  const fields: Field[] = useMemo(() => {
+    const currentId = record ? String(rowId(record) ?? "") : "";
+    const options = [
+      { value: NONE, label: "Nenhuma (função pai)" },
+      ...rows
+        .filter((row) => String(rowId(row) ?? "") !== currentId)
+        .map((row) => ({
+          value: String(rowId(row) ?? ""),
+          label: String(pick(row, ["descricao"]) ?? "—"),
+        }))
+        .sort((a, b) => a.label.localeCompare(b.label)),
+    ];
+    return [
+      baseFields[0]!,
+      {
+        fields: ["funcoes_pai_id"],
+        label: "Função pai",
+        type: "select",
+        options,
+        full: true,
+      },
+      ...baseFields.slice(1),
+    ];
+  }, [rows, record]);
+
   const columns: Column[] = [
     { key: "descricao", header: "Descrição", fields: ["descricao"] },
+    {
+      key: "pai",
+      header: "Função pai",
+      fields: ["funcoes_pai_id"],
+      render: (row) => <>{nameById.get(String(row["funcoes_pai_id"] ?? "")) ?? "—"}</>,
+    },
     { key: "path", header: "Caminho", fields: ["path"] },
+
     { key: "ordem", header: "Ordem", fields: ["ordem"], sortable: false },
     {
       key: "menu",
@@ -148,7 +192,15 @@ function FuncoesPage() {
         record={record}
         saving={save.isPending}
         extra={<FuncaoPerfis funcaoId={record ? rowId(record) : undefined} />}
-        onSave={(values) => save.mutate({ values, original: record }, { onSuccess: () => setOpen(false) })}
+        onSave={(values) => {
+          const pai = values["funcoes_pai_id"];
+          const payload: Row = {
+            ...values,
+            funcoes_pai_id: pai === NONE || pai === "" || pai === undefined ? null : pai,
+          };
+          save.mutate({ values: payload, original: record }, { onSuccess: () => setOpen(false) });
+        }}
+
       />
     </>
   );
