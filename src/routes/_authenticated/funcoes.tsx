@@ -24,13 +24,16 @@ export const Route = createFileRoute("/_authenticated/funcoes")({
   component: FuncoesPage,
 });
 
-const fields: Field[] = [
+const NONE = "__none__";
+
+const baseFields: Field[] = [
   { fields: ["descricao"], label: "Descrição", full: true },
   { fields: ["path"], label: "Caminho (rota)", placeholder: "/clientes" },
   { fields: ["icone"], label: "Ícone", type: "icon" },
   { fields: ["menu_ativo"], label: "Exibe no menu", type: "boolean" },
   { fields: ["status"], label: "Status", type: "boolean" },
 ];
+
 
 const BOOL_OPTIONS = [
   { value: "todos", label: "Todos" },
