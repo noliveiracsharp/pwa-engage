@@ -82,14 +82,6 @@ function FuncoesPage() {
     [rows, f],
   );
 
-  const nameById = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const row of rows) {
-      const id = rowId(row);
-      if (id !== undefined) map.set(String(id), String(pick(row, ["descricao"]) ?? ""));
-    }
-    return map;
-  }, [rows]);
 
   const fields: Field[] = useMemo(() => {
     const currentId = record ? String(rowId(record) ?? "") : "";
@@ -118,15 +110,7 @@ function FuncoesPage() {
 
   const columns: Column[] = [
     { key: "descricao", header: "Descrição", fields: ["descricao"] },
-    {
-      key: "pai",
-      header: "Função pai",
-      fields: ["funcoes_pai_id"],
-      render: (row) => <>{nameById.get(String(row["funcoes_pai_id"] ?? "")) ?? "—"}</>,
-    },
     { key: "path", header: "Caminho", fields: ["path"] },
-
-    { key: "ordem", header: "Ordem", fields: ["ordem"], sortable: false },
     {
       key: "menu",
       header: "Menu ativo",
