@@ -82,14 +82,6 @@ function FuncoesPage() {
     [rows, f],
   );
 
-  const nameById = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const row of rows) {
-      const id = rowId(row);
-      if (id !== undefined) map.set(String(id), String(pick(row, ["descricao"]) ?? ""));
-    }
-    return map;
-  }, [rows]);
 
   const fields: Field[] = useMemo(() => {
     const currentId = record ? String(rowId(record) ?? "") : "";
