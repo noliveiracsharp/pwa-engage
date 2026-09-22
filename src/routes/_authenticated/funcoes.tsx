@@ -123,7 +123,6 @@ function FuncoesPage() {
       const parentId = String(pick(row, ["funcoes_pai_id"]) ?? "");
       if (!parentId || !byId.has(parentId)) append(row, 0, new Set());
     }
-    for (const row of ordered) append(row, 0, new Set());
 
     return { visible, children, depthById, hasActiveFilter };
   }, [rows, f, collapsedIds]);
