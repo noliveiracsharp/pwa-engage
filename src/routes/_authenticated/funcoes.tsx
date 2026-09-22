@@ -192,7 +192,15 @@ function FuncoesPage() {
         record={record}
         saving={save.isPending}
         extra={<FuncaoPerfis funcaoId={record ? rowId(record) : undefined} />}
-        onSave={(values) => save.mutate({ values, original: record }, { onSuccess: () => setOpen(false) })}
+        onSave={(values) => {
+          const pai = values["funcoes_pai_id"];
+          const payload: Row = {
+            ...values,
+            funcoes_pai_id: pai === NONE || pai === "" || pai === undefined ? null : pai,
+          };
+          save.mutate({ values: payload, original: record }, { onSuccess: () => setOpen(false) });
+        }}
+
       />
     </>
   );
