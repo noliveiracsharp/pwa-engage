@@ -118,15 +118,7 @@ function FuncoesPage() {
 
   const columns: Column[] = [
     { key: "descricao", header: "Descrição", fields: ["descricao"] },
-    {
-      key: "pai",
-      header: "Função pai",
-      fields: ["funcoes_pai_id"],
-      render: (row) => <>{nameById.get(String(row["funcoes_pai_id"] ?? "")) ?? "—"}</>,
-    },
     { key: "path", header: "Caminho", fields: ["path"] },
-
-    { key: "ordem", header: "Ordem", fields: ["ordem"], sortable: false },
     {
       key: "menu",
       header: "Menu ativo",
