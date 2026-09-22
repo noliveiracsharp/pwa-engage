@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { ArrowDown, ArrowUp, ChevronsUpDown, GripVertical, Pencil, Plus } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, ChevronsUpDown, GripVertical, Pencil, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -35,6 +35,10 @@ type Props = {
   rowKey: (row: Row, index: number) => string;
   /** Enables drag-and-drop row reordering (active when no column sort is applied). */
   onReorder?: (ordered: Row[]) => void;
+  rowDepth?: (row: Row) => number;
+  rowHasChildren?: (row: Row) => boolean;
+  rowExpanded?: (row: Row) => boolean;
+  onToggleRow?: (row: Row) => void;
 };
 
 export function DataTable({
@@ -48,6 +52,10 @@ export function DataTable({
   onEdit,
   rowKey,
   onReorder,
+  rowDepth,
+  rowHasChildren,
+  rowExpanded,
+  onToggleRow,
 }: Props) {
   const [sort, setSort] = useState<{ key: string; dir: "asc" | "desc" } | null>(null);
   const [page, setPage] = useState(1);
@@ -192,11 +200,41 @@ export function DataTable({
                       <GripVertical className="h-4 w-4" />
                     </TableCell>
                   )}
-                  {columns.map((col) => (
-                    <TableCell key={col.key} className={cn("whitespace-nowrap", col.className)}>
-                      {col.render ? col.render(row) : ((getValue(row, col.fields) as ReactNode) ?? "—")}
-                    </TableCell>
-                  ))}
+                  {columns.map((col, columnIndex) => {
+                    const content = col.render ? col.render(row) : ((getValue(row, col.fields) as ReactNode) ?? "—");
+                    const depth = rowDepth?.(row) ?? 0;
+                    const hasChildren = rowHasChildren?.(row) ?? false;
+                    return (
+                      <TableCell key={col.key} className={cn("whitespace-nowrap", col.className)}>
+                        {columnIndex === 0 && rowDepth ? (
+                          <div className="flex items-center" style={{ paddingInlineStart: `${depth * 24}px` }}>
+                            {hasChildren && onToggleRow ? (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="mr-1 h-7 w-7 shrink-0"
+                                aria-label={rowExpanded?.(row) ? "Recolher itens filhos" : "Expandir itens filhos"}
+                                aria-expanded={rowExpanded?.(row) ?? false}
+                                onClick={() => onToggleRow(row)}
+                              >
+                                {rowExpanded?.(row) ? (
+                                  <ChevronDown className="h-4 w-4" />
+                                ) : (
+                                  <ChevronRight className="h-4 w-4" />
+                                )}
+                              </Button>
+                            ) : (
+                              <span className="mr-1 block h-7 w-7 shrink-0" />
+                            )}
+                            <span>{content}</span>
+                          </div>
+                        ) : (
+                          content
+                        )}
+                      </TableCell>
+                    );
+                  })}
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" aria-label="Editar" onClick={() => onEdit(row)}>
                       <Pencil className="h-4 w-4" />
