@@ -66,21 +66,64 @@ function FuncoesPage() {
   const [open, setOpen] = useState(false);
   const [record, setRecord] = useState<Row | null>(null);
   const [f, setF] = useState({ busca: "", menu: "todos", status: "todos" });
+  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(() => new Set());
 
-  const filtered = useMemo(
-    () =>
-      [...rows]
-        .sort((a, b) => Number(pick(a, ["ordem"]) ?? 0) - Number(pick(b, ["ordem"]) ?? 0))
-        .filter(
-        (row) =>
-          matchesAny([pick(row, ["descricao"]), pick(row, ["path"]), pick(row, ["icone"])], f.busca) &&
-          (f.menu === "todos" ||
-            (f.menu === "ativo" ? row["menu_ativo"] === true : row["menu_ativo"] === false)) &&
-          (f.status === "todos" ||
-            (f.status === "ativo" ? row["status"] === true : row["status"] === false)),
-      ),
-    [rows, f],
-  );
+  const hierarchy = useMemo(() => {
+    const ordered = [...rows].sort(
+      (a, b) =>
+        Number(pick(a, ["ordem"]) ?? 0) - Number(pick(b, ["ordem"]) ?? 0) ||
+        String(pick(a, ["descricao"]) ?? "").localeCompare(String(pick(b, ["descricao"]) ?? ""), "pt-BR"),
+    );
+    const byId = new Map(ordered.map((row) => [String(rowId(row) ?? ""), row]));
+    const children = new Map<string, Row[]>();
+    for (const row of ordered) {
+      const parentId = String(pick(row, ["funcoes_pai_id"]) ?? "");
+      if (parentId && byId.has(parentId) && parentId !== String(rowId(row) ?? "")) {
+        children.set(parentId, [...(children.get(parentId) ?? []), row]);
+      }
+    }
+
+    const matches = ordered.filter(
+      (row) =>
+        matchesAny([pick(row, ["descricao"]), pick(row, ["path"]), pick(row, ["icone"])], f.busca) &&
+        (f.menu === "todos" || (f.menu === "ativo" ? row["menu_ativo"] === true : row["menu_ativo"] === false)) &&
+        (f.status === "todos" || (f.status === "ativo" ? row["status"] === true : row["status"] === false)),
+    );
+    const included = new Set(matches.map((row) => String(rowId(row) ?? "")));
+    for (const row of matches) {
+      let parentId = String(pick(row, ["funcoes_pai_id"]) ?? "");
+      const ancestors = new Set<string>();
+      while (parentId && byId.has(parentId) && !ancestors.has(parentId)) {
+        ancestors.add(parentId);
+        included.add(parentId);
+        parentId = String(pick(byId.get(parentId) ?? {}, ["funcoes_pai_id"]) ?? "");
+      }
+    }
+
+    const depthById = new Map<string, number>();
+    const visible: Row[] = [];
+    const visited = new Set<string>();
+    const hasActiveFilter = f.busca.trim() !== "" || f.menu !== "todos" || f.status !== "todos";
+    const append = (row: Row, depth: number, ancestors: Set<string>) => {
+      const id = String(rowId(row) ?? "");
+      if (!id || visited.has(id) || ancestors.has(id) || !included.has(id)) return;
+      visited.add(id);
+      depthById.set(id, depth);
+      visible.push(row);
+      if (!hasActiveFilter && collapsedIds.has(id)) return;
+      const nextAncestors = new Set(ancestors);
+      nextAncestors.add(id);
+      for (const child of children.get(id) ?? []) append(child, depth + 1, nextAncestors);
+    };
+
+    for (const row of ordered) {
+      const parentId = String(pick(row, ["funcoes_pai_id"]) ?? "");
+      if (!parentId || !byId.has(parentId)) append(row, 0, new Set());
+    }
+    for (const row of ordered) append(row, 0, new Set());
+
+    return { visible, children, depthById, hasActiveFilter };
+  }, [rows, f, collapsedIds]);
 
 
   const fields: Field[] = useMemo(() => {
@@ -130,10 +173,23 @@ function FuncoesPage() {
       <DataTable
         title="Funções"
         columns={columns}
-        rows={filtered}
+        rows={hierarchy.visible}
         loading={isLoading}
         getValue={(row, keys) => pick(row, keys)}
         rowKey={(row, i) => String(rowId(row) ?? i)}
+        rowDepth={(row) => hierarchy.depthById.get(String(rowId(row) ?? "")) ?? 0}
+        rowHasChildren={(row) => (hierarchy.children.get(String(rowId(row) ?? ""))?.length ?? 0) > 0}
+        rowExpanded={(row) => hierarchy.hasActiveFilter || !collapsedIds.has(String(rowId(row) ?? ""))}
+        onToggleRow={(row) => {
+          const id = String(rowId(row) ?? "");
+          if (!id || hierarchy.hasActiveFilter) return;
+          setCollapsedIds((current) => {
+            const next = new Set(current);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+          });
+        }}
         onAdd={() => {
           setRecord(null);
           setOpen(true);
