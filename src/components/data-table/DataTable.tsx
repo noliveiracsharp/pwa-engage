@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, ChevronsUpDown, GripVertical, Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, ChevronsUpDown, Eye, GripVertical, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -34,6 +34,7 @@ type Props = {
   onAdd?: (() => void) | undefined;
   /** Omit to hide the edit button (no can_update). */
   onEdit?: ((row: Row) => void) | undefined;
+  editReadOnly?: boolean;
   /** When set, shows a delete button per row (can_delete). */
   onDelete?: ((row: Row) => void) | undefined;
   rowKey: (row: Row, index: number) => string;
@@ -54,6 +55,7 @@ export function DataTable({
   getValue,
   onAdd,
   onEdit,
+  editReadOnly,
   onDelete,
   rowKey,
   onReorder,
@@ -245,8 +247,8 @@ export function DataTable({
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
                       {onEdit && (
-                        <Button variant="ghost" size="icon" aria-label="Editar" onClick={() => onEdit(row)}>
-                          <Pencil className="h-4 w-4" />
+                        <Button variant="ghost" size="icon" aria-label={editReadOnly ? "Visualizar" : "Editar"} title={editReadOnly ? "Visualizar" : "Editar"} onClick={() => onEdit(row)}>
+                          {editReadOnly ? <Eye className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
                         </Button>
                       )}
                       {onDelete && (

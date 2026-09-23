@@ -207,7 +207,7 @@ export function RecordSheet({
   const tabList = tabs ?? (extra && extraTabLabel ? [{ key: "extra", label: extraTabLabel, content: extra }] : null);
   const allTabs = tabList
     ? [
-        ...(hideDataTab ? [] : [{ key: "dados", label: dataTabLabel ?? "Dados", content: <>{photoBlock}{fieldsGrid}</> }]),
+        ...(hideDataTab ? [] : [{ key: "dados", label: dataTabLabel ?? "Dados", content: <fieldset disabled={readOnly} className="min-w-0 disabled:opacity-70">{photoBlock}{fieldsGrid}</fieldset> }]),
         ...tabList,
       ]
     : null;
@@ -235,8 +235,10 @@ export function RecordSheet({
           </Tabs>
         ) : (
           <div className="px-6">
-            {photoBlock}
-            {fieldsGrid}
+            <fieldset disabled={readOnly} className="min-w-0 disabled:opacity-70">
+              {photoBlock}
+              {fieldsGrid}
+            </fieldset>
             {extra && <div className="pt-6">{extra}</div>}
           </div>
         )}

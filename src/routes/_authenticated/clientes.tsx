@@ -141,14 +141,11 @@ function ClientesPage() {
               }
             : undefined
         }
-        onEdit={
-          perms.canUpdate
-            ? (row) => {
-                setRecord(row);
-                setOpen(true);
-              }
-            : undefined
-        }
+        onEdit={(row) => {
+          setRecord(row);
+          setOpen(true);
+        }}
+        editReadOnly={!perms.canUpdate}
         onDelete={perms.canDelete ? (row) => remove.mutate(row) : undefined}
         filters={
           <>
