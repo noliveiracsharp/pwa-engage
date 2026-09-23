@@ -181,7 +181,11 @@ function ClientesPage() {
         fields={fields}
         record={record}
         saving={save.isPending}
-        readOnly={record ? !perms.canUpdate : !perms.canCreate}
+        readOnly={(() => {
+          const d = perms.subtabs.find((t) => subtabKind(t) === "dados");
+          const ok = record ? perms.canUpdate && (!d || d.canUpdate) : perms.canCreate && (!d || d.canCreate);
+          return !ok;
+        })()}
         {...(() => {
           const campos = <ClienteCampos clienteId={record ? rowId(record) : undefined} />;
           if (perms.subtabs.length === 0) return { extra: campos, extraTabLabel: "Campos personalizados" };
