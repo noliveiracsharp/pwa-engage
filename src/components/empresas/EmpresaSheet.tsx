@@ -248,7 +248,15 @@ function ChildTable({ config, empresa, perms = FULL }: { config: ChildConfig; em
         })}
       </div>
 
-      {(editing ? perms.canUpdate : perms.canCreate) && (
+      {!editing && !adding && perms.canCreate && (
+        <div className="flex justify-end">
+          <Button variant="outline" onClick={() => setAdding(true)}>
+            <Plus className="mr-1 h-4 w-4" /> Adicionar
+          </Button>
+        </div>
+      )}
+
+      {((editing && perms.canUpdate) || (!editing && adding && perms.canCreate)) && (
       <>
       <div className="grid gap-3 sm:grid-cols-2">
         {config.columns.map((col) => (
