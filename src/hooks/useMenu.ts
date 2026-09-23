@@ -37,7 +37,7 @@ function normalize(row: Row, index: number): MenuItem {
     label: String(pick(row, ["funcao_descricao", "descricao", "nome", "label"], "Menu")),
     path: String(pick(row, ["path", "funcao_path", "rota", "url"], "/dashboard")),
     icon: String(pick(row, ["icone", "funcao_icone", "icon"], "circle")),
-    order: Number(pick(row, ["funcao_ordem", "ordem", "order"], index + 1)),
+    order: Number(pick(row, ["ordem_hierarquia", "funcao_ordem", "ordem", "order"], index + 1)),
   };
 }
 
@@ -57,7 +57,8 @@ export function useMenu() {
       const { data, error } = await supabase
         .from("vw_menu_usuario_perfil")
         .select("*")
-        .eq("perfil_id", perfilId as string);
+        .eq("perfil_id", perfilId as string)
+        .order("ordem_hierarquia");
       if (error || !data || data.length === 0) return FALLBACK;
 
       // Menu lateral: somente funcao_status = true e menu_ativo = true (da view, com fallback na tabela funcoes).
