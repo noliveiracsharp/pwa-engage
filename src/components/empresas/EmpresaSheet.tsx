@@ -326,11 +326,9 @@ function ChildTable({ config, empresa, perms = FULL }: { config: ChildConfig; em
         ))}
       </div>
       <div className="flex items-center justify-end gap-2 border-t pt-4">
-        {editing && (
-          <Button variant="ghost" onClick={resetForm}>
-            Cancelar edição
-          </Button>
-        )}
+        <Button variant="ghost" onClick={resetForm}>
+          Cancelar
+        </Button>
         <Button variant="outline" onClick={save}>
           {editing ? "Salvar alterações" : "Adicionar"}
         </Button>
