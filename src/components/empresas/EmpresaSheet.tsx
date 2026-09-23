@@ -82,6 +82,13 @@ const ETIQUETAS: ChildConfig = {
   ],
 };
 
+const NOTAS: ChildConfig = {
+  table: "empresas_notasrapidas",
+  title: "Notas rápidas",
+  empty: "Nenhuma nota rápida cadastrada.",
+  columns: [{ key: "descricao", label: "Descrição" }],
+};
+
 type ChildPerms = { canCreate: boolean; canUpdate: boolean; canDelete: boolean };
 const FULL: ChildPerms = { canCreate: true, canUpdate: true, canDelete: true };
 
