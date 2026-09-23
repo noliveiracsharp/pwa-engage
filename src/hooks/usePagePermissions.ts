@@ -67,25 +67,60 @@ export function usePagePermissions(path: string) {
 
     const page: Perms = unrestricted ? ALL : viewRows === undefined ? NONE : permsOf(viewPageRow);
 
-    const subtabs: SubTab[] = funcoes
-      .filter(
-        (f) =>
-          pageId !== "" &&
-          String(pick(f, ["funcoes_pai_id"]) ?? "") === pageId &&
-          f["menu_ativo"] === false &&
-          f["status"] !== false,
-      )
-      .sort(
-        (a, b) =>
-          Number(pick(a, ["ordem"]) ?? 0) - Number(pick(b, ["ordem"]) ?? 0) ||
-          String(a["descricao"] ?? "").localeCompare(String(b["descricao"] ?? ""), "pt-BR"),
-      )
-      .map((f) => {
-        const id = String(rowId(f) ?? "");
-        const p = unrestricted ? ALL : permsOf(byFuncao.get(id));
-        return { id, descricao: String(f["descricao"] ?? ""), ...p };
-      })
-      .filter((t) => t.canRead);
+    const funcById = new Map<string, Row>();
+    for (const f of funcoes) funcById.set(String(rowId(f) ?? ""), f);
+    const parentOf = (id: string, r?: Row) =>
+      String(
+        (r && pick(r, ["funcoes_pai_id", "funcao_pai_id"])) ??
+          pick(funcById.get(id) ?? {}, ["funcoes_pai_id"]) ??
+          "",
+      );
+    const isSubmenu = (id: string, r?: Row) => {
+      const v = r ? pick(r, ["menu_ativo", "funcao_menu_ativo"]) : undefined;
+      if (v !== undefined) return !asBool(v);
+      return funcById.get(id)?.["menu_ativo"] === false;
+    };
+
+    let subtabs: SubTab[];
+    if (!unrestricted && viewRows) {
+      // Submenus vindos da view (perfil logado): menu_ativo = false, pai = página, funcao_status = true.
+      subtabs = viewRows
+        .map((r) => ({ r, id: String(pick(r, ["funcao_id", "funcoes_id"]) ?? "") }))
+        .filter(
+          ({ r, id }) =>
+            pageId !== "" &&
+            parentOf(id, r) === pageId &&
+            isSubmenu(id, r) &&
+            asBool(r["funcao_status"]),
+        )
+        .sort(
+          (a, b) =>
+            Number(pick(a.r, ["funcao_ordem"]) ?? pick(funcById.get(a.id) ?? {}, ["ordem"]) ?? 0) -
+              Number(pick(b.r, ["funcao_ordem"]) ?? pick(funcById.get(b.id) ?? {}, ["ordem"]) ?? 0) ||
+            String(a.r["funcao_descricao"] ?? "").localeCompare(String(b.r["funcao_descricao"] ?? ""), "pt-BR"),
+        )
+        .map(({ r, id }) => ({
+          id,
+          descricao: String(pick(r, ["funcao_descricao"]) ?? funcById.get(id)?.["descricao"] ?? ""),
+          ...permsOf(r),
+        }))
+        .filter((t) => t.canRead);
+    } else {
+      subtabs = funcoes
+        .filter(
+          (f) =>
+            pageId !== "" &&
+            String(pick(f, ["funcoes_pai_id"]) ?? "") === pageId &&
+            f["menu_ativo"] === false &&
+            f["status"] !== false,
+        )
+        .sort(
+          (a, b) =>
+            Number(pick(a, ["ordem"]) ?? 0) - Number(pick(b, ["ordem"]) ?? 0) ||
+            String(a["descricao"] ?? "").localeCompare(String(b["descricao"] ?? ""), "pt-BR"),
+        )
+        .map((f) => ({ id: String(rowId(f) ?? ""), descricao: String(f["descricao"] ?? ""), ...ALL }));
+    }
 
     return { ...page, loading: isLoading, subtabs, hasSubtabDefinitions: funcoes.some((f) => pageId && String(pick(f, ["funcoes_pai_id"]) ?? "") === pageId && f["menu_ativo"] === false) };
   }, [viewRows, funcoes, path, isLoading]);
