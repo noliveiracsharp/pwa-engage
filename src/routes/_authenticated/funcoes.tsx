@@ -8,9 +8,10 @@ import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
 import { RecordSheet, type Field } from "@/components/data-table/RecordSheet";
 import { StatusBadge } from "@/components/data-table/StatusBadge";
 import { FuncaoPerfis } from "@/components/funcoes/FuncaoPerfis";
-import { rowId, idColumn, useSaveRecord, useTableRows } from "@/lib/crud";
+import { rowId, idColumn, useDeleteRecord, useSaveRecord, useTableRows } from "@/lib/crud";
 import { matchesAny } from "@/lib/input-masks";
 import { pick, type Row } from "@/lib/row";
+import { usePagePermissions, subtabKind } from "@/hooks/usePagePermissions";
 
 export const Route = createFileRoute("/_authenticated/funcoes")({
   head: () => ({
@@ -44,6 +45,8 @@ const BOOL_OPTIONS = [
 function FuncoesPage() {
   const { data: rows = [], isLoading } = useTableRows("funcoes");
   const save = useSaveRecord("funcoes");
+  const perms = usePagePermissions("/funcoes");
+  const remove = useDeleteRecord("funcoes");
   const queryClient = useQueryClient();
   const reorder = useMutation({
     mutationFn: async (ordered: Row[]) => {
@@ -192,14 +195,23 @@ function FuncoesPage() {
             return next;
           });
         }}
-        onAdd={() => {
-          setRecord(null);
-          setOpen(true);
-        }}
-        onEdit={(row) => {
-          setRecord(row);
-          setOpen(true);
-        }}
+        onAdd={
+          perms.canCreate
+            ? () => {
+                setRecord(null);
+                setOpen(true);
+              }
+            : undefined
+        }
+        onEdit={
+          perms.canUpdate
+            ? (row) => {
+                setRecord(row);
+                setOpen(true);
+              }
+            : undefined
+        }
+        onDelete={perms.canDelete ? (row) => remove.mutate(row) : undefined}
         onReorder={(ordered) => reorder.mutate(ordered)}
         filters={
           <>
