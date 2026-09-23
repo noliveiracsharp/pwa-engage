@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -97,6 +97,7 @@ function ChildTable({ config, empresa, perms = FULL }: { config: ChildConfig; em
   const empresaId = empresa ? empresa[idColumn(empresa)] : undefined;
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [editing, setEditing] = useState<Row | null>(null);
+  const [adding, setAdding] = useState(false);
 
   const { data: rows = [], isError } = useQuery({
     queryKey: ["child", config.table, text(empresaId)],
@@ -121,6 +122,7 @@ function ChildTable({ config, empresa, perms = FULL }: { config: ChildConfig; em
   const resetForm = () => {
     setDraft({});
     setEditing(null);
+    setAdding(false);
   };
 
   const startEditing = (row: Row) => {
@@ -246,7 +248,15 @@ function ChildTable({ config, empresa, perms = FULL }: { config: ChildConfig; em
         })}
       </div>
 
-      {(editing ? perms.canUpdate : perms.canCreate) && (
+      {!editing && !adding && perms.canCreate && (
+        <div className="flex justify-end">
+          <Button variant="outline" onClick={() => setAdding(true)}>
+            <Plus className="mr-1 h-4 w-4" /> Adicionar
+          </Button>
+        </div>
+      )}
+
+      {((editing && perms.canUpdate) || (!editing && adding && perms.canCreate)) && (
       <>
       <div className="grid gap-3 sm:grid-cols-2">
         {config.columns.map((col) => (
@@ -316,11 +326,9 @@ function ChildTable({ config, empresa, perms = FULL }: { config: ChildConfig; em
         ))}
       </div>
       <div className="flex items-center justify-end gap-2 border-t pt-4">
-        {editing && (
-          <Button variant="ghost" onClick={resetForm}>
-            Cancelar edição
-          </Button>
-        )}
+        <Button variant="ghost" onClick={resetForm}>
+          Cancelar
+        </Button>
         <Button variant="outline" onClick={save}>
           {editing ? "Salvar alterações" : "Adicionar"}
         </Button>
