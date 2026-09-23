@@ -97,6 +97,7 @@ function ChildTable({ config, empresa, perms = FULL }: { config: ChildConfig; em
   const empresaId = empresa ? empresa[idColumn(empresa)] : undefined;
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [editing, setEditing] = useState<Row | null>(null);
+  const [adding, setAdding] = useState(false);
 
   const { data: rows = [], isError } = useQuery({
     queryKey: ["child", config.table, text(empresaId)],
