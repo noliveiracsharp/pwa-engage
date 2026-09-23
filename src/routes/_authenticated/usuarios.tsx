@@ -10,7 +10,7 @@ import { RecordSheet, type Field } from "@/components/data-table/RecordSheet";
 import { StatusBadge } from "@/components/data-table/StatusBadge";
 import { rowId, text, useDeleteRecord, useSaveRecord, useTableRows } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
-import { usePagePermissions, subtabKind } from "@/hooks/usePagePermissions";
+import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { formatCpfCnpj, matchesAny } from "@/lib/input-masks";
 
 export const Route = createFileRoute("/_authenticated/usuarios")({

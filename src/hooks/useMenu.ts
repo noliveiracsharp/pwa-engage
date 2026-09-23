@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { pick, type Row } from "@/lib/row";
 import { useAuth } from "@/hooks/useAuth";
+import { useTableRows } from "@/lib/crud";
 
 export type MenuItem = {
   id: string;
@@ -44,7 +45,12 @@ export function useMenu() {
   const { usuario, user } = useAuth();
   const perfilId = usuario ? pick<string | number>(usuario, ["perfil_id", "id_perfil"]) : undefined;
 
-  return useQuery({
+  const { data: funcoes } = useTableRows("funcoes");
+  const submenuIds = new Set(
+    (funcoes ?? []).filter((f) => f["menu_ativo"] === false).map((f) => String(f["id"])),
+  );
+
+  const query = useQuery({
     queryKey: ["menu", String(perfilId ?? usuario?.["id"] ?? user?.id ?? null)],
     enabled: Boolean(user && perfilId !== undefined),
     queryFn: async (): Promise<MenuItem[]> => {
@@ -71,4 +77,7 @@ export function useMenu() {
       return unique.length > 0 ? unique : FALLBACK;
     },
   });
+  // Itens com menu_ativo = false são submenus (abas dentro da página), não aparecem no menu lateral.
+  const data = query.data?.filter((item) => !submenuIds.has(item.id));
+  return { ...query, data };
 }

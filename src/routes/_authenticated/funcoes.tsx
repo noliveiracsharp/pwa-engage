@@ -11,7 +11,7 @@ import { FuncaoPerfis } from "@/components/funcoes/FuncaoPerfis";
 import { rowId, idColumn, useDeleteRecord, useSaveRecord, useTableRows } from "@/lib/crud";
 import { matchesAny } from "@/lib/input-masks";
 import { pick, type Row } from "@/lib/row";
-import { usePagePermissions, subtabKind } from "@/hooks/usePagePermissions";
+import { usePagePermissions } from "@/hooks/usePagePermissions";
 
 export const Route = createFileRoute("/_authenticated/funcoes")({
   head: () => ({
