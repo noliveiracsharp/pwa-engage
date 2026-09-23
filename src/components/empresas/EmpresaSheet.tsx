@@ -351,7 +351,7 @@ const DEFAULT_SECTIONS = [
 
 export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sections, readOnly }: Props) {
   const tabs = sections && sections.length > 0 ? sections : DEFAULT_SECTIONS;
-  const configFor: Record<string, ChildConfig> = { instancias: INSTANCIAS, campos: CAMPOS, etiquetas: ETIQUETAS };
+  const configFor: Record<string, ChildConfig> = { instancias: INSTANCIAS, campos: CAMPOS, etiquetas: ETIQUETAS, notas: NOTAS };
   const [values, setValues] = useState<Record<string, string>>({});
   const dadosPerms = tabs.find((t) => t.kind === "dados")?.perms;
   const dadosLocked =
