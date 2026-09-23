@@ -60,9 +60,13 @@ export function useMenu() {
         .eq("perfil_id", perfilId as string);
       if (error || !data || data.length === 0) return FALLBACK;
 
-      const rows = (data as Row[]).filter(
-        (row) => asBool(row["can_read"]) && asBool(row["funcao_status"]),
-      );
+      // Menu lateral: somente funcao_status = true e menu_ativo = true (da view, com fallback na tabela funcoes).
+      const rows = (data as Row[]).filter((row) => {
+        const menuAtivo = pick(row, ["menu_ativo", "funcao_menu_ativo"]);
+        const idFn = String(pick(row, ["funcao_id", "funcoes_id"]) ?? "");
+        const isMenu = menuAtivo !== undefined ? asBool(menuAtivo) : !submenuIds.has(idFn);
+        return asBool(row["can_read"]) && asBool(row["funcao_status"]) && isMenu;
+      });
 
       const items = rows.map(normalize).sort((a, b) => a.order - b.order);
 
