@@ -122,6 +122,7 @@ function ChildTable({ config, empresa, perms = FULL }: { config: ChildConfig; em
   const resetForm = () => {
     setDraft({});
     setEditing(null);
+    setAdding(false);
   };
 
   const startEditing = (row: Row) => {
