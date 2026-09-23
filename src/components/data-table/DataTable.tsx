@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, ChevronsUpDown, GripVertical, Pencil, Plus } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, ChevronsUpDown, GripVertical, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -30,8 +30,12 @@ type Props = {
   loading?: boolean;
   filters?: ReactNode;
   getValue: (row: Row, fields: string[]) => unknown;
-  onAdd: () => void;
-  onEdit: (row: Row) => void;
+  /** Omit to hide the "Adicionar" button (no can_create). */
+  onAdd?: () => void;
+  /** Omit to hide the edit button (no can_update). */
+  onEdit?: (row: Row) => void;
+  /** When set, shows a delete button per row (can_delete). */
+  onDelete?: (row: Row) => void;
   rowKey: (row: Row, index: number) => string;
   /** Enables drag-and-drop row reordering (active when no column sort is applied). */
   onReorder?: (ordered: Row[]) => void;
@@ -50,6 +54,7 @@ export function DataTable({
   getValue,
   onAdd,
   onEdit,
+  onDelete,
   rowKey,
   onReorder,
   rowDepth,
@@ -114,9 +119,11 @@ export function DataTable({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-foreground">{title}</h1>
-        <Button onClick={onAdd}>
-          <Plus className="mr-1 h-4 w-4" /> Adicionar
-        </Button>
+        {onAdd && (
+          <Button onClick={onAdd}>
+            <Plus className="mr-1 h-4 w-4" /> Adicionar
+          </Button>
+        )}
       </div>
 
       {filters && (
@@ -160,7 +167,7 @@ export function DataTable({
                   )}
                 </TableHead>
               ))}
-              <TableHead className="w-16 text-right">Ações</TableHead>
+              <TableHead className="w-24 text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -236,9 +243,25 @@ export function DataTable({
                     );
                   })}
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" aria-label="Editar" onClick={() => onEdit(row)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
+                    <div className="flex justify-end gap-1">
+                      {onEdit && (
+                        <Button variant="ghost" size="icon" aria-label="Editar" onClick={() => onEdit(row)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {onDelete && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label="Excluir"
+                          onClick={() => {
+                            if (window.confirm("Deseja realmente excluir este registro?")) onDelete(row);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
                 );
