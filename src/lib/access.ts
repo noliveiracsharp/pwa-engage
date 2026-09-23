@@ -49,7 +49,8 @@ export async function getAllowedPaths(userId: string, email?: string): Promise<s
     const { data, error } = await supabase
       .from("vw_menu_usuario_perfil")
       .select("*")
-      .eq("perfil_id", perfilId as string);
+      .eq("perfil_id", perfilId as string)
+      .order("ordem_hierarquia");
     if (error) return null;
 
     const rows = ((data ?? []) as Row[]).filter(
