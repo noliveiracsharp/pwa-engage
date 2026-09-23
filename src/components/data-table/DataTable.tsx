@@ -31,11 +31,11 @@ type Props = {
   filters?: ReactNode;
   getValue: (row: Row, fields: string[]) => unknown;
   /** Omit to hide the "Adicionar" button (no can_create). */
-  onAdd?: () => void;
+  onAdd?: (() => void) | undefined;
   /** Omit to hide the edit button (no can_update). */
-  onEdit?: (row: Row) => void;
+  onEdit?: ((row: Row) => void) | undefined;
   /** When set, shows a delete button per row (can_delete). */
-  onDelete?: (row: Row) => void;
+  onDelete?: ((row: Row) => void) | undefined;
   rowKey: (row: Row, index: number) => string;
   /** Enables drag-and-drop row reordering (active when no column sort is applied). */
   onReorder?: (ordered: Row[]) => void;

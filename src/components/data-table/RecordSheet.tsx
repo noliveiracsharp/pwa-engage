@@ -36,14 +36,14 @@ type Props = {
   record: Row | null;
   saving?: boolean;
   onSave: (values: Row) => void;
-  extra?: ReactNode;
+  extra?: ReactNode | undefined;
   /** When set together with `extra`, renders the form in tab panels: "Dados" + this label. */
-  extraTabLabel?: string;
+  extraTabLabel?: string | undefined;
   /** Tab panels (submenus). When set, "dataTabLabel" names the main data tab. */
-  tabs?: Array<{ key: string; label: string; content: ReactNode }>;
-  dataTabLabel?: string;
+  tabs?: Array<{ key: string; label: string; content: ReactNode }> | undefined;
+  dataTabLabel?: string | undefined;
   /** Hide the data tab (no read permission on it). */
-  hideDataTab?: boolean;
+  hideDataTab?: boolean | undefined;
   /** Disable saving (no can_update / can_create). */
   readOnly?: boolean;
 };
