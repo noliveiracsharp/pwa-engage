@@ -346,6 +346,9 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
   const tabs = sections && sections.length > 0 ? sections : DEFAULT_SECTIONS;
   const configFor: Record<string, ChildConfig> = { instancias: INSTANCIAS, campos: CAMPOS, etiquetas: ETIQUETAS };
   const [values, setValues] = useState<Record<string, string>>({});
+  const dadosPerms = tabs.find((t) => t.kind === "dados")?.perms;
+  const dadosLocked =
+    !!readOnly || (dadosPerms ? !(empresa ? dadosPerms.canUpdate : dadosPerms.canCreate) : false);
 
   useEffect(() => {
     if (!open) return;
@@ -399,7 +402,7 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
           {tabs.map((t) =>
             t.kind === "dados" ? (
           <TabsContent key={t.key} value={t.key} className="mt-4">
-            <fieldset disabled={readOnly} className="min-w-0 disabled:opacity-70">
+            <fieldset disabled={dadosLocked} className="min-w-0 disabled:opacity-70">
             <div className="border-border mb-5 border-b pb-5">
               <PhotoUpload
                 value={values["logo"] ?? ""}
@@ -469,7 +472,7 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={submit} disabled={saving || readOnly}>
+          <Button onClick={submit} disabled={saving || dadosLocked}>
             {saving ? "Salvando…" : "Salvar"}
           </Button>
         </div>
