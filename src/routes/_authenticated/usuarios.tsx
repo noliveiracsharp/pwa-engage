@@ -205,14 +205,11 @@ function UsuariosPage() {
               }
             : undefined
         }
-        onEdit={
-          perms.canUpdate
-            ? (row) => {
-                setRecord(row);
-                setOpen(true);
-              }
-            : undefined
-        }
+        onEdit={(row) => {
+          setRecord(row);
+          setOpen(true);
+        }}
+        editReadOnly={!perms.canUpdate}
         onDelete={perms.canDelete ? (row) => remove.mutate(row) : undefined}
         filters={
           <>
@@ -249,6 +246,7 @@ function UsuariosPage() {
         }
         fields={fields}
         record={record}
+        readOnly={record ? !perms.canUpdate : !perms.canCreate}
         saving={save.isPending || createUser.isPending}
         onSave={handleSave}
       />

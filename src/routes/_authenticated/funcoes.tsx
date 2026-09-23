@@ -203,14 +203,11 @@ function FuncoesPage() {
               }
             : undefined
         }
-        onEdit={
-          perms.canUpdate
-            ? (row) => {
-                setRecord(row);
-                setOpen(true);
-              }
-            : undefined
-        }
+        onEdit={(row) => {
+          setRecord(row);
+          setOpen(true);
+        }}
+        editReadOnly={!perms.canUpdate}
         onDelete={perms.canDelete ? (row) => remove.mutate(row) : undefined}
         onReorder={(ordered) => reorder.mutate(ordered)}
         filters={
@@ -244,6 +241,7 @@ function FuncoesPage() {
         description="A liberação das Funções é realizada por Perfil de Usuário."
         fields={fields}
         record={record}
+        readOnly={record ? !perms.canUpdate : !perms.canCreate}
         saving={save.isPending}
         extra={<FuncaoPerfis funcaoId={record ? rowId(record) : undefined} />}
         onSave={(values) => {

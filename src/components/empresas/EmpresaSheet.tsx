@@ -399,6 +399,7 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
           {tabs.map((t) =>
             t.kind === "dados" ? (
           <TabsContent key={t.key} value={t.key} className="mt-4">
+            <fieldset disabled={readOnly} className="min-w-0 disabled:opacity-70">
             <div className="border-border mb-5 border-b pb-5">
               <PhotoUpload
                 value={values["logo"] ?? ""}
@@ -450,6 +451,7 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
               </div>
             ))}
             </div>
+            </fieldset>
           </TabsContent>
             ) : (
               <TabsContent key={t.key} value={t.key} className="mt-4">
