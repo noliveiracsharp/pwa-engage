@@ -82,7 +82,10 @@ const ETIQUETAS: ChildConfig = {
   ],
 };
 
-function ChildTable({ config, empresa }: { config: ChildConfig; empresa: Row | null }) {
+type ChildPerms = { canCreate: boolean; canUpdate: boolean; canDelete: boolean };
+const FULL: ChildPerms = { canCreate: true, canUpdate: true, canDelete: true };
+
+function ChildTable({ config, empresa, perms = FULL }: { config: ChildConfig; empresa: Row | null; perms?: ChildPerms }) {
   const queryClient = useQueryClient();
   const empresaId = empresa ? empresa[idColumn(empresa)] : undefined;
   const [draft, setDraft] = useState<Record<string, string>>({});
@@ -213,18 +216,31 @@ function ChildTable({ config, empresa }: { config: ChildConfig; empresa: Row | n
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-1">
-                <Button variant="ghost" size="icon" aria-label="Editar" onClick={() => startEditing(row)}>
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon" aria-label="Remover" onClick={() => remove(row)}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                {perms.canUpdate && (
+                  <Button variant="ghost" size="icon" aria-label="Editar" onClick={() => startEditing(row)}>
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                )}
+                {perms.canDelete && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Remover"
+                    onClick={() => {
+                      if (window.confirm("Deseja realmente excluir este registro?")) remove(row);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                )}
               </div>
             </div>
           );
         })}
       </div>
 
+      {(editing ? perms.canUpdate : perms.canCreate) && (
+      <>
       <div className="grid gap-3 sm:grid-cols-2">
         {config.columns.map((col) => (
           <div key={col.key} className={col.type === "tel" ? "min-w-0 sm:col-span-2" : "min-w-0"}>
@@ -302,6 +318,8 @@ function ChildTable({ config, empresa }: { config: ChildConfig; empresa: Row | n
           {editing ? "Salvar alterações" : "Adicionar"}
         </Button>
       </div>
+      </>
+      )}
     </div>
   );
 }
@@ -312,9 +330,21 @@ type Props = {
   empresa: Row | null;
   saving?: boolean;
   onSave: (values: Row) => void;
+  /** Submenus (funções filhas) na ordem e com o título da tabela funcoes. */
+  sections?: Array<{ key: string; kind: string; label: string; perms: ChildPerms }>;
+  readOnly?: boolean;
 };
 
-export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave }: Props) {
+const DEFAULT_SECTIONS = [
+  { key: "dados", kind: "dados", label: "Dados", perms: FULL },
+  { key: "instancias", kind: "instancias", label: "Instâncias", perms: FULL },
+  { key: "campos", kind: "campos", label: "Campos", perms: FULL },
+  { key: "etiquetas", kind: "etiquetas", label: "Etiquetas", perms: FULL },
+];
+
+export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sections, readOnly }: Props) {
+  const tabs = sections && sections.length > 0 ? sections : DEFAULT_SECTIONS;
+  const configFor: Record<string, ChildConfig> = { instancias: INSTANCIAS, campos: CAMPOS, etiquetas: ETIQUETAS };
   const [values, setValues] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -359,15 +389,16 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave }: Pr
           <SheetTitle>{title}</SheetTitle>
         </SheetHeader>
 
-        <Tabs defaultValue="dados" className="px-4">
-          <TabsList>
-            <TabsTrigger value="dados">Dados</TabsTrigger>
-            <TabsTrigger value="instancias">Instâncias</TabsTrigger>
-            <TabsTrigger value="campos">Campos</TabsTrigger>
-            <TabsTrigger value="etiquetas">Etiquetas</TabsTrigger>
+        <Tabs key={tabs[0]!.key} defaultValue={tabs[0]!.key} className="px-4">
+          <TabsList className="h-auto flex-wrap">
+            {tabs.map((t) => (
+              <TabsTrigger key={t.key} value={t.key}>{t.label}</TabsTrigger>
+            ))}
           </TabsList>
 
-          <TabsContent value="dados" className="mt-4">
+          {tabs.map((t) =>
+            t.kind === "dados" ? (
+          <TabsContent key={t.key} value={t.key} className="mt-4">
             <div className="border-border mb-5 border-b pb-5">
               <PhotoUpload
                 value={values["logo"] ?? ""}
@@ -420,25 +451,23 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave }: Pr
             ))}
             </div>
           </TabsContent>
-
-          <TabsContent value="instancias" className="mt-4">
-            <ChildTable config={INSTANCIAS} empresa={empresa} />
-          </TabsContent>
-
-          <TabsContent value="campos" className="mt-4">
-            <ChildTable config={CAMPOS} empresa={empresa} />
-          </TabsContent>
-
-          <TabsContent value="etiquetas" className="mt-4">
-            <ChildTable config={ETIQUETAS} empresa={empresa} />
-          </TabsContent>
+            ) : (
+              <TabsContent key={t.key} value={t.key} className="mt-4">
+                {configFor[t.kind] ? (
+                  <ChildTable config={configFor[t.kind]!} empresa={empresa} perms={t.perms} />
+                ) : (
+                  <p className="text-sm text-muted-foreground">Em breve.</p>
+                )}
+              </TabsContent>
+            ),
+          )}
         </Tabs>
 
         <div className="bg-background sticky bottom-0 mt-4 flex justify-end gap-2 border-t px-6 py-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={submit} disabled={saving}>
+          <Button onClick={submit} disabled={saving || readOnly}>
             {saving ? "Salvando…" : "Salvar"}
           </Button>
         </div>

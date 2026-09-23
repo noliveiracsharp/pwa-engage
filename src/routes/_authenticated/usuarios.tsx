@@ -8,8 +8,9 @@ import { DataTable, type Column } from "@/components/data-table/DataTable";
 import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
 import { RecordSheet, type Field } from "@/components/data-table/RecordSheet";
 import { StatusBadge } from "@/components/data-table/StatusBadge";
-import { rowId, text, useSaveRecord, useTableRows } from "@/lib/crud";
+import { rowId, text, useDeleteRecord, useSaveRecord, useTableRows } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
+import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { formatCpfCnpj, matchesAny } from "@/lib/input-masks";
 
 export const Route = createFileRoute("/_authenticated/usuarios")({
@@ -35,6 +36,8 @@ function UsuariosPage() {
   const { data: perfis = [] } = useTableRows("perfil");
   const { data: empresas = [] } = useTableRows("empresas");
   const save = useSaveRecord("usuarios");
+  const perms = usePagePermissions("/usuarios");
+  const remove = useDeleteRecord("usuarios");
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [record, setRecord] = useState<Row | null>(null);
@@ -194,14 +197,23 @@ function UsuariosPage() {
         loading={isLoading}
         getValue={(row, keys) => pick(row, keys)}
         rowKey={(row, i) => String(rowId(row) ?? i)}
-        onAdd={() => {
-          setRecord(null);
-          setOpen(true);
-        }}
-        onEdit={(row) => {
-          setRecord(row);
-          setOpen(true);
-        }}
+        onAdd={
+          perms.canCreate
+            ? () => {
+                setRecord(null);
+                setOpen(true);
+              }
+            : undefined
+        }
+        onEdit={
+          perms.canUpdate
+            ? (row) => {
+                setRecord(row);
+                setOpen(true);
+              }
+            : undefined
+        }
+        onDelete={perms.canDelete ? (row) => remove.mutate(row) : undefined}
         filters={
           <>
             <FilterInput

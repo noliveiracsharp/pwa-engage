@@ -7,8 +7,9 @@ import { RecordSheet, type Field } from "@/components/data-table/RecordSheet";
 import { StarRating } from "@/components/data-table/StarRating";
 import { StatusBadge } from "@/components/data-table/StatusBadge";
 import { ClienteCampos } from "@/components/clientes/ClienteCampos";
-import { rowId, useSaveRecord, useTableRows } from "@/lib/crud";
+import { rowId, useDeleteRecord, useSaveRecord, useTableRows } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
+import { usePagePermissions, subtabKind } from "@/hooks/usePagePermissions";
 import { formatCpfCnpj, formatPhoneDisplay, matchesAny } from "@/lib/input-masks";
 
 export const Route = createFileRoute("/_authenticated/clientes")({
@@ -43,6 +44,8 @@ const STATUS_OPTIONS = [
 function ClientesPage() {
   const { data: rows = [], isLoading } = useTableRows("clientes");
   const save = useSaveRecord("clientes");
+  const perms = usePagePermissions("/clientes");
+  const remove = useDeleteRecord("clientes");
   const [open, setOpen] = useState(false);
   const [record, setRecord] = useState<Row | null>(null);
   const [f, setF] = useState({ busca: "", status: "todos", nota: "todas" });
@@ -130,14 +133,23 @@ function ClientesPage() {
         loading={isLoading}
         getValue={(row, keys) => pick(row, keys)}
         rowKey={(row, i) => String(rowId(row) ?? i)}
-        onAdd={() => {
-          setRecord(null);
-          setOpen(true);
-        }}
-        onEdit={(row) => {
-          setRecord(row);
-          setOpen(true);
-        }}
+        onAdd={
+          perms.canCreate
+            ? () => {
+                setRecord(null);
+                setOpen(true);
+              }
+            : undefined
+        }
+        onEdit={
+          perms.canUpdate
+            ? (row) => {
+                setRecord(row);
+                setOpen(true);
+              }
+            : undefined
+        }
+        onDelete={perms.canDelete ? (row) => remove.mutate(row) : undefined}
         filters={
           <>
             <FilterInput
@@ -172,8 +184,23 @@ function ClientesPage() {
         fields={fields}
         record={record}
         saving={save.isPending}
-        extra={<ClienteCampos clienteId={record ? rowId(record) : undefined} />}
-        extraTabLabel="Campos personalizados"
+        readOnly={record ? !perms.canUpdate : !perms.canCreate}
+        {...(() => {
+          const campos = <ClienteCampos clienteId={record ? rowId(record) : undefined} />;
+          if (perms.subtabs.length === 0) return { extra: campos, extraTabLabel: "Campos personalizados" };
+          const dados = perms.subtabs.find((t) => subtabKind(t) === "dados");
+          return {
+            dataTabLabel: dados?.descricao ?? "Dados",
+            hideDataTab: !dados,
+            tabs: perms.subtabs
+              .filter((t) => subtabKind(t) !== "dados")
+              .map((t) => ({
+                key: t.id,
+                label: t.descricao,
+                content: subtabKind(t) === "campos" ? campos : <p className="text-sm text-muted-foreground">Em breve.</p>,
+              })),
+          };
+        })()}
         onSave={(values) =>
           save.mutate(
             { values, original: record },

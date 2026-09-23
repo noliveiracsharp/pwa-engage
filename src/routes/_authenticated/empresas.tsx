@@ -4,8 +4,9 @@ import { DataTable, type Column } from "@/components/data-table/DataTable";
 import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
 import { StatusBadge } from "@/components/data-table/StatusBadge";
 import { EmpresaSheet } from "@/components/empresas/EmpresaSheet";
-import { rowId, useSaveRecord, useTableRows } from "@/lib/crud";
+import { rowId, useDeleteRecord, useSaveRecord, useTableRows } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
+import { usePagePermissions, subtabKind } from "@/hooks/usePagePermissions";
 import { formatCpfCnpj, formatPhoneDisplay, matchesAny } from "@/lib/input-masks";
 
 export const Route = createFileRoute("/_authenticated/empresas")({
@@ -32,6 +33,8 @@ const STATUS_OPTIONS = [
 function EmpresasPage() {
   const { data: rows = [], isLoading } = useTableRows("empresas");
   const save = useSaveRecord("empresas");
+  const perms = usePagePermissions("/empresas");
+  const remove = useDeleteRecord("empresas");
   const [open, setOpen] = useState(false);
   const [record, setRecord] = useState<Row | null>(null);
   const [f, setF] = useState({ busca: "", status: "todos" });
@@ -81,14 +84,23 @@ function EmpresasPage() {
         loading={isLoading}
         getValue={(row, keys) => pick(row, keys)}
         rowKey={(row, i) => String(rowId(row) ?? i)}
-        onAdd={() => {
-          setRecord(null);
-          setOpen(true);
-        }}
-        onEdit={(row) => {
-          setRecord(row);
-          setOpen(true);
-        }}
+        onAdd={
+          perms.canCreate
+            ? () => {
+                setRecord(null);
+                setOpen(true);
+              }
+            : undefined
+        }
+        onEdit={
+          perms.canUpdate
+            ? (row) => {
+                setRecord(row);
+                setOpen(true);
+              }
+            : undefined
+        }
+        onDelete={perms.canDelete ? (row) => remove.mutate(row) : undefined}
         filters={
           <>
             <FilterInput
@@ -112,6 +124,13 @@ function EmpresasPage() {
         onOpenChange={setOpen}
         empresa={record}
         saving={save.isPending}
+        readOnly={record ? !perms.canUpdate : !perms.canCreate}
+        sections={perms.subtabs.map((t) => ({
+          key: t.id,
+          kind: subtabKind(t),
+          label: t.descricao,
+          perms: { canCreate: t.canCreate, canUpdate: t.canUpdate, canDelete: t.canDelete },
+        }))}
         onSave={(values) => save.mutate({ values, original: record }, { onSuccess: () => setOpen(false) })}
       />
     </>

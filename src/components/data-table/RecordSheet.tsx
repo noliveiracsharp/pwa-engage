@@ -36,9 +36,16 @@ type Props = {
   record: Row | null;
   saving?: boolean;
   onSave: (values: Row) => void;
-  extra?: ReactNode;
+  extra?: ReactNode | undefined;
   /** When set together with `extra`, renders the form in tab panels: "Dados" + this label. */
-  extraTabLabel?: string;
+  extraTabLabel?: string | undefined;
+  /** Tab panels (submenus). When set, "dataTabLabel" names the main data tab. */
+  tabs?: Array<{ key: string; label: string; content: ReactNode }> | undefined;
+  dataTabLabel?: string | undefined;
+  /** Hide the data tab (no read permission on it). */
+  hideDataTab?: boolean | undefined;
+  /** Disable saving (no can_update / can_create). */
+  readOnly?: boolean;
 };
 
 export function columnFor(record: Row | null | undefined, fields: string[]) {
@@ -56,6 +63,10 @@ export function RecordSheet({
   onSave,
   extra,
   extraTabLabel,
+  tabs,
+  dataTabLabel,
+  hideDataTab,
+  readOnly,
 }: Props) {
   const [values, setValues] = useState<Record<string, string>>({});
 
@@ -193,7 +204,13 @@ export function RecordSheet({
     </div>
   );
 
-  const withTabs = Boolean(extra && extraTabLabel);
+  const tabList = tabs ?? (extra && extraTabLabel ? [{ key: "extra", label: extraTabLabel, content: extra }] : null);
+  const allTabs = tabList
+    ? [
+        ...(hideDataTab ? [] : [{ key: "dados", label: dataTabLabel ?? "Dados", content: <>{photoBlock}{fieldsGrid}</> }]),
+        ...tabList,
+      ]
+    : null;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -203,19 +220,18 @@ export function RecordSheet({
           {description && <SheetDescription>{description}</SheetDescription>}
         </SheetHeader>
 
-        {withTabs ? (
-          <Tabs defaultValue="dados" className="px-6 pt-2">
-            <TabsList className="w-full">
-              <TabsTrigger value="dados" className="flex-1">Dados</TabsTrigger>
-              <TabsTrigger value="extra" className="flex-1">{extraTabLabel}</TabsTrigger>
+        {allTabs && allTabs.length > 0 ? (
+          <Tabs key={allTabs[0]!.key} defaultValue={allTabs[0]!.key} className="px-6 pt-2">
+            <TabsList className="h-auto w-full flex-wrap">
+              {allTabs.map((t) => (
+                <TabsTrigger key={t.key} value={t.key} className="flex-1">{t.label}</TabsTrigger>
+              ))}
             </TabsList>
-            <TabsContent value="dados">
-              {photoBlock}
-              {fieldsGrid}
-            </TabsContent>
-            <TabsContent value="extra" className="pt-4">
-              {extra}
-            </TabsContent>
+            {allTabs.map((t) => (
+              <TabsContent key={t.key} value={t.key} className={t.key === "dados" ? undefined : "pt-4"}>
+                {t.content}
+              </TabsContent>
+            ))}
           </Tabs>
         ) : (
           <div className="px-6">
@@ -229,7 +245,7 @@ export function RecordSheet({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={submit} disabled={saving}>
+          <Button onClick={submit} disabled={saving || readOnly}>
             {saving ? "Salvando…" : "Salvar"}
           </Button>
         </div>
