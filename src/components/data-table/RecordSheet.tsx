@@ -74,7 +74,12 @@ export function RecordSheet({
     if (!open) return;
     const next: Record<string, string> = {};
     for (const field of fields) {
-      next[field.fields[0]!] = text(pick(record, field.fields, ""));
+      const raw = text(pick(record, field.fields, ""));
+      // Select com opção "Todos" (__all__): valor vazio/nulo aparece como "Todos".
+      next[field.fields[0]!] =
+        field.type === "select" && raw === "" && field.options?.some((o) => o.value === "__all__")
+          ? "__all__"
+          : raw;
     }
     setValues(next);
   }, [open, record, fields]);
