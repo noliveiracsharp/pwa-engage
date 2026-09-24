@@ -12,6 +12,7 @@ import { rowId, text, useDeleteRecord, useSaveRecord, useTableRows } from "@/lib
 import { pick, type Row } from "@/lib/row";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { formatCpfCnpj, matchesAny } from "@/lib/input-masks";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export const Route = createFileRoute("/_authenticated/usuarios")({
   head: () => ({
@@ -36,13 +37,39 @@ function UsuariosPage() {
   const { data: perfis = [] } = useTableRows("perfil");
   const { data: empresas = [] } = useTableRows("empresas");
   const { data: kanbans = [] } = useTableRows("kanban_nome");
+  const { data: vinculos = [] } = useTableRows("usuario_kanban");
   const save = useSaveRecord("usuarios");
   const perms = usePagePermissions("/usuarios");
   const remove = useDeleteRecord("usuarios");
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [record, setRecord] = useState<Row | null>(null);
+  const [kanbanSel, setKanbanSel] = useState<string[]>([]);
   const [f, setF] = useState({ busca: "", status: "todos", perfil: "todos" });
+
+  const openRecord = (row: Row | null) => {
+    setRecord(row);
+    const uid = row ? text(rowId(row)) : "";
+    setKanbanSel(
+      row
+        ? vinculos.filter((v) => text(v["usuario_id"]) === uid).map((v) => text(v["kanban_nome_id"]))
+        : [],
+    );
+    setOpen(true);
+  };
+
+  /** Replaces all usuario_kanban rows of the user with the current selection. */
+  const syncKanbans = async (uid: string, ids: string[]) => {
+    const { error: delError } = await supabase.from("usuario_kanban").delete().eq("usuario_id", uid);
+    if (delError) throw delError;
+    if (ids.length) {
+      const { error } = await supabase
+        .from("usuario_kanban")
+        .insert(ids.map((kanban_nome_id) => ({ usuario_id: uid, kanban_nome_id })));
+      if (error) throw error;
+    }
+    queryClient.invalidateQueries({ queryKey: ["table", "usuario_kanban"] });
+  };
 
   /** New user: creates the auth.users access first, then the usuarios row linked by id. */
   const createUser = useMutation({
@@ -62,6 +89,7 @@ function UsuariosPage() {
       delete rest["senha"];
       const { error: insertError } = await supabase.from("usuarios").insert({ ...rest, id: uid });
       if (insertError) throw insertError;
+      await syncKanbans(uid, kanbanSel);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["table", "usuarios"] });
@@ -72,21 +100,56 @@ function UsuariosPage() {
     },
   });
 
-  /** "Todos" (ou vazio) grava null no kanban_id. */
-  const withKanban = (values: Row): Row => ({
-    ...values,
-    kanban_id: values["kanban_id"] && values["kanban_id"] !== "__all__" ? values["kanban_id"] : null,
-  });
-
   const handleSave = (values: Row) => {
     if (record) {
-      const rest: Row = withKanban(values);
+      const rest: Row = { ...values };
       delete rest["senha"];
-      save.mutate({ values: rest, original: record }, { onSuccess: () => setOpen(false) });
+      const uid = text(rowId(record));
+      save.mutate(
+        { values: rest, original: record },
+        {
+          onSuccess: async () => {
+            try {
+              await syncKanbans(uid, kanbanSel);
+              setOpen(false);
+            } catch (e) {
+              toast.error(e instanceof Error ? e.message : "Não foi possível salvar os kanbans.");
+            }
+          },
+        },
+      );
     } else {
-      createUser.mutate(withKanban(values), { onSuccess: () => setOpen(false) });
+      createUser.mutate(values, { onSuccess: () => setOpen(false) });
     }
   };
+
+  const readOnlySheet = record ? !perms.canUpdate : !perms.canCreate;
+  const kanbanPicker = (
+    <div className="space-y-1.5">
+      <p className="text-sm font-medium">Kanbans</p>
+      <p className="text-muted-foreground text-xs">Nenhum marcado = acesso a todos.</p>
+      <div className="border-border grid gap-2 rounded-md border p-3 sm:grid-cols-2">
+        {kanbans.length === 0 && (
+          <span className="text-muted-foreground text-sm">Nenhum kanban cadastrado.</span>
+        )}
+        {kanbans.map((k) => {
+          const id = text(rowId(k));
+          return (
+            <label key={id} className="flex cursor-pointer items-center gap-2 text-sm">
+              <Checkbox
+                checked={kanbanSel.includes(id)}
+                disabled={readOnlySheet}
+                onCheckedChange={(c) =>
+                  setKanbanSel((s) => (c ? [...s, id] : s.filter((x) => x !== id)))
+                }
+              />
+              {text(pick(k, ["nome"], "Kanban"))}
+            </label>
+          );
+        })}
+      </div>
+    </div>
+  );
 
   const perfilNome = useMemo(() => {
     const map = new Map<string, string>();
@@ -128,20 +191,8 @@ function UsuariosPage() {
           label: text(pick(e, ["nome"], "Empresa")),
         })),
       },
-      {
-        fields: ["kanban_id"],
-        label: "Kanban",
-        type: "select",
-        options: [
-          { value: "__all__", label: "Todos" },
-          ...kanbans.map((k) => ({
-            value: text(rowId(k)),
-            label: text(pick(k, ["nome"], "Kanban")),
-          })),
-        ],
-      },
     ],
-    [perfilOptions, empresas, kanbans, record],
+    [perfilOptions, empresas, record],
   );
 
   const filtered = useMemo(
@@ -218,16 +269,10 @@ function UsuariosPage() {
         rowKey={(row, i) => String(rowId(row) ?? i)}
         onAdd={
           perms.canCreate
-            ? () => {
-                setRecord(null);
-                setOpen(true);
-              }
+            ? () => openRecord(null)
             : undefined
         }
-        onEdit={(row) => {
-          setRecord(row);
-          setOpen(true);
-        }}
+        onEdit={(row) => openRecord(row)}
         editReadOnly={!perms.canUpdate}
         onDelete={perms.canDelete ? (row) => remove.mutate(row) : undefined}
         filters={
@@ -265,7 +310,8 @@ function UsuariosPage() {
         }
         fields={fields}
         record={record}
-        readOnly={record ? !perms.canUpdate : !perms.canCreate}
+        readOnly={readOnlySheet}
+        extra={kanbanPicker}
         saving={save.isPending || createUser.isPending}
         onSave={handleSave}
       />
