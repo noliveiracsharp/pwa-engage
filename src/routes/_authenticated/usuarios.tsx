@@ -35,6 +35,7 @@ function UsuariosPage() {
   const { data: rows = [], isLoading } = useTableRows("usuarios");
   const { data: perfis = [] } = useTableRows("perfil");
   const { data: empresas = [] } = useTableRows("empresas");
+  const { data: kanbans = [] } = useTableRows("kanban_nome");
   const save = useSaveRecord("usuarios");
   const perms = usePagePermissions("/usuarios");
   const remove = useDeleteRecord("usuarios");
