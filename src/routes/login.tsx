@@ -16,6 +16,8 @@ export const Route = createFileRoute("/login")({
       { name: "description", content: "Acesse o Atende.ai, sua central de suporte e atendimento multicanal." },
       { property: "og:title", content: "Entrar — Atende.ai" },
       { property: "og:description", content: "Acesse o Atende.ai, sua central de suporte e atendimento multicanal." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: LoginPage,
@@ -59,9 +61,9 @@ function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <div className="relative hidden w-1/2 overflow-hidden lg:block">
-        <img src={loginHero} alt="Atendimento multicanal" width={1024} height={1536} className="h-full w-full object-cover" />
+    <div className="flex h-dvh overflow-hidden bg-background">
+      <div className="relative hidden h-full min-h-0 w-1/2 overflow-hidden lg:block">
+        <img src={loginHero} alt="Atendimento multicanal" width={1024} height={1536} className="absolute inset-0 h-full w-full object-cover" />
         <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-primary/80 to-transparent p-10">
           <h2 className="text-3xl font-bold text-primary-foreground">Atende.ai</h2>
           <p className="mt-2 max-w-md text-primary-foreground/90">
@@ -70,7 +72,7 @@ function LoginPage() {
         </div>
       </div>
 
-      <div className="flex w-full items-center justify-center p-6 lg:w-1/2">
+      <div className="flex h-full min-h-0 w-full items-center justify-center overflow-y-auto p-6 lg:w-1/2">
         <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-5">
           <div className="space-y-1 text-center lg:text-left">
             <h1 className="text-2xl font-bold text-foreground">Bem-vindo de volta</h1>
