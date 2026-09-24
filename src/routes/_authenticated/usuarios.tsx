@@ -35,6 +35,7 @@ function UsuariosPage() {
   const { data: rows = [], isLoading } = useTableRows("usuarios");
   const { data: perfis = [] } = useTableRows("perfil");
   const { data: empresas = [] } = useTableRows("empresas");
+  const { data: kanbans = [] } = useTableRows("kanban_nome");
   const save = useSaveRecord("usuarios");
   const perms = usePagePermissions("/usuarios");
   const remove = useDeleteRecord("usuarios");
@@ -71,13 +72,19 @@ function UsuariosPage() {
     },
   });
 
+  /** "Todos" (ou vazio) grava null no kanban_id. */
+  const withKanban = (values: Row): Row => ({
+    ...values,
+    kanban_id: values["kanban_id"] && values["kanban_id"] !== "__all__" ? values["kanban_id"] : null,
+  });
+
   const handleSave = (values: Row) => {
     if (record) {
-      const rest: Row = { ...values };
+      const rest: Row = withKanban(values);
       delete rest["senha"];
       save.mutate({ values: rest, original: record }, { onSuccess: () => setOpen(false) });
     } else {
-      createUser.mutate(values, { onSuccess: () => setOpen(false) });
+      createUser.mutate(withKanban(values), { onSuccess: () => setOpen(false) });
     }
   };
 
@@ -121,8 +128,20 @@ function UsuariosPage() {
           label: text(pick(e, ["nome"], "Empresa")),
         })),
       },
+      {
+        fields: ["kanban_id"],
+        label: "Kanban",
+        type: "select",
+        options: [
+          { value: "__all__", label: "Todos" },
+          ...kanbans.map((k) => ({
+            value: text(rowId(k)),
+            label: text(pick(k, ["nome"], "Kanban")),
+          })),
+        ],
+      },
     ],
-    [perfilOptions, empresas, record],
+    [perfilOptions, empresas, kanbans, record],
   );
 
   const filtered = useMemo(
