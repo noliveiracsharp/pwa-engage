@@ -269,16 +269,10 @@ function UsuariosPage() {
         rowKey={(row, i) => String(rowId(row) ?? i)}
         onAdd={
           perms.canCreate
-            ? () => {
-                setRecord(null);
-                setOpen(true);
-              }
+            ? () => openRecord(null)
             : undefined
         }
-        onEdit={(row) => {
-          setRecord(row);
-          setOpen(true);
-        }}
+        onEdit={(row) => openRecord(row)}
         editReadOnly={!perms.canUpdate}
         onDelete={perms.canDelete ? (row) => remove.mutate(row) : undefined}
         filters={
@@ -316,7 +310,8 @@ function UsuariosPage() {
         }
         fields={fields}
         record={record}
-        readOnly={record ? !perms.canUpdate : !perms.canCreate}
+        readOnly={readOnlySheet}
+        extra={kanbanPicker}
         saving={save.isPending || createUser.isPending}
         onSave={handleSave}
       />
