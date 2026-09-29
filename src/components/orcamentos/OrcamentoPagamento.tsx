@@ -144,7 +144,11 @@ export function OrcamentoPagamento({ value, parcelas, totalLiquido, readOnly, on
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value.tem_juros, qtdParcelas, totalLiquido, coeficienteGlobal]);
 
-  const temConfig = Boolean(configComercial && configComercial.fator_markup > 0);
+  // Configuração completa o suficiente para o cálculo (markup precisa ser > 0).
+  const cfg =
+    configComercial && configComercial.fator_markup > 0 && configComercial.taxa_juros_mensal >= 0
+      ? configComercial
+      : null;
 
   return (
     <div className="space-y-4">
@@ -262,8 +266,8 @@ export function OrcamentoPagamento({ value, parcelas, totalLiquido, readOnly, on
                 className="bg-muted/50"
               />
               <p className="text-muted-foreground text-xs">
-                {temConfig
-                  ? `Calculado com a taxa da empresa (${fmtPct(configComercial!.taxa_juros_mensal)}% a.m. pela Tabela Price), o custo operacional de ${formatBRL(configComercial!.custo_operacional_mensal)} e o markup de ${fmtPct(configComercial!.fator_markup)}%. Valor da parcela = total líquido × coeficiente.`
+                {cfg
+                  ? `Calculado com a taxa da empresa (${fmtPct(cfg.taxa_juros_mensal)}% a.m. pela Tabela Price), o custo operacional de ${formatBRL(cfg.custo_operacional_mensal)} e o markup de ${fmtPct(cfg.fator_markup)}%. Valor da parcela = total líquido × coeficiente.`
                   : "Cadastre taxa de juros, custo operacional e fator de markup nas configurações da empresa para calcular automaticamente."}
               </p>
             </div>
