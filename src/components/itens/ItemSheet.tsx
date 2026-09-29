@@ -266,7 +266,15 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, canCre
               <Label htmlFor="tipo" className="block text-sm font-medium">
                 Tipo
               </Label>
-              <Select value={v.tipo} onValueChange={(value) => setV((s) => ({ ...s, tipo: value }))}>
+              <Select
+                value={v.tipo}
+                onValueChange={(value) =>
+                  setV((s) => {
+                    const auto = /^[PS]\d{5,}$/i.test(s.codigo) || s.codigo === "";
+                    return { ...s, tipo: value, codigo: !record && auto ? nextCodigoFor(value) : s.codigo };
+                  })
+                }
+              >
                 <SelectTrigger id="tipo">
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
