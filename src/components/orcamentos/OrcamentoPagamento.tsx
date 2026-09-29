@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { CalendarClock, ReceiptText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { num } from "@/lib/orcamentos";
@@ -22,6 +22,60 @@ import {
 } from "@/lib/orcamentos";
 
 const NONE = "__none__";
+
+/** Parâmetros financeiros da empresa (empresas_configuracao). */
+type ConfigComercial = {
+  taxa_juros_mensal: number;
+  custo_operacional_mensal: number;
+  fator_markup: number;
+};
+
+/**
+ * Cálculo financeiro composto do parcelamento:
+ *  1. coeficiente da Tabela Price com a taxa mensal da empresa;
+ *  2. parcela-base = total líquido × coeficiente Price;
+ *  3. embute o custo operacional fixo e aplica o fator de markup;
+ *  4. coeficiente global = parcela final / total líquido (exibido em tela).
+ */
+function calcularParcelamentoComJuros(
+  totalLiquidoBase: number,
+  parcelas: number,
+  config: ConfigComercial | null,
+): { parcelaFinal: number; coeficienteGlobal: number } {
+  if (!config || parcelas <= 0 || totalLiquidoBase <= 0) {
+    return { parcelaFinal: 0, coeficienteGlobal: 0 };
+  }
+
+  // Conversão de segurança para números
+  const i = Number(config.taxa_juros_mensal); // Ex: 0.015
+  const custo = Number(config.custo_operacional_mensal); // Ex: 400
+  const markup = Number(config.fator_markup); // Ex: 0.65
+
+  // 1. Coeficiente da Tabela Price
+  const coefPrice = i / (1 - Math.pow(1 + i, -parcelas));
+
+  // 2. Valor da parcela apenas com os juros (Base)
+  const parcelaBase = totalLiquidoBase * coefPrice;
+
+  // 3. Embutindo o custo operacional e aplicando a margem (Markup)
+  const parcelaFinal = (parcelaBase + custo) / markup;
+
+  // 4. Coeficiente Global gerado (para exibição em tela)
+  const coeficienteGlobal = parcelaFinal / totalLiquidoBase;
+
+  if (!Number.isFinite(parcelaFinal) || !Number.isFinite(coeficienteGlobal)) {
+    return { parcelaFinal: 0, coeficienteGlobal: 0 };
+  }
+
+  return { parcelaFinal: parcelaFinal, coeficienteGlobal: coeficienteGlobal };
+}
+
+/** Coeficiente em texto (7 casas, separador decimal brasileiro). */
+const fmtCoef = (v: number) => v.toFixed(7).replace(".", ",");
+
+/** Percentual legível (0.015 → "1,5"). */
+const fmtPct = (v: number) =>
+  (v * 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 4 });
 
 export type PagamentoState = {
   obs_nota_fiscal: string;
