@@ -1,0 +1,108 @@
+import { useMemo, useState } from "react";
+import { createFileRoute } from "@tanstack/react-router";
+import { Badge } from "@/components/ui/badge";
+import { DataTable, type Column } from "@/components/data-table/DataTable";
+import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
+import { StatusBadge } from "@/components/data-table/StatusBadge";
+import { ParceiroSheet } from "@/components/parceiros/ParceiroSheet";
+import { rowId, useDeleteRecord, useSaveRecord, useTableRows } from "@/lib/crud";
+import { pick, type Row } from "@/lib/row";
+import { usePagePermissions } from "@/hooks/usePagePermissions";
+import { useAudit } from "@/lib/audit";
+import { formatCpfCnpj, formatPhoneDisplay, matchesAny } from "@/lib/input-masks";
+
+export const Route = createFileRoute("/_authenticated/parceiros")({
+  head: () => ({
+    meta: [
+      { title: "Parceiros de Negócios — Atende.ai" },
+      { name: "description", content: "Cadastro de clientes e fornecedores para financeiro e faturamento." },
+      { property: "og:title", content: "Parceiros de Negócios — Atende.ai" },
+      { property: "og:description", content: "Cadastro de clientes e fornecedores para financeiro e faturamento." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
+  component: ParceirosPage,
+});
+
+function ParceirosPage() {
+  const { data: all = [], isLoading } = useTableRows("parceiros");
+  const save = useSaveRecord("parceiros");
+  const remove = useDeleteRecord("parceiros");
+  const perms = usePagePermissions("/parceiros");
+  const { empresaId, stamp } = useAudit();
+  const [open, setOpen] = useState(false);
+  const [record, setRecord] = useState<Row | null>(null);
+  const [f, setF] = useState({ busca: "", papel: "todos", status: "todos" });
+
+  const rows = useMemo(
+    () =>
+      all
+        .filter((r) => empresaId === undefined || !r["empresa_id"] || String(r["empresa_id"]) === String(empresaId))
+        .filter(
+          (r) =>
+            matchesAny([r["razao_social"], r["nome_fantasia"], r["documento"], r["telefone"], r["cidade"]], f.busca) &&
+            (f.papel === "todos" || (f.papel === "cliente" ? r["is_cliente"] === true : r["is_fornecedor"] === true)) &&
+            (f.status === "todos" || (f.status === "ativo" ? r["status"] !== false : r["status"] === false)),
+        )
+        .sort((a, b) => String(a["razao_social"] ?? "").localeCompare(String(b["razao_social"] ?? ""), "pt-BR")),
+    [all, f, empresaId],
+  );
+
+  const columns: Column[] = [
+    {
+      key: "razao_social",
+      header: "Nome/Razão Social",
+      fields: ["razao_social"],
+      render: (r) => (
+        <div className="flex flex-wrap items-center gap-2">
+          <div>
+            <div>{String(pick(r, ["razao_social"], "—"))}</div>
+            {pick(r, ["nome_fantasia"]) && <div className="text-muted-foreground text-xs">{String(r["nome_fantasia"])}</div>}
+          </div>
+          {r["is_cliente"] === true && <Badge>Cliente</Badge>}
+          {r["is_fornecedor"] === true && <Badge variant="secondary">Fornecedor</Badge>}
+        </div>
+      ),
+    },
+    { key: "documento", header: "Documento", fields: ["documento"], render: (r) => formatCpfCnpj(String(r["documento"] ?? "")) || "—" },
+    { key: "telefone", header: "Telefone", fields: ["telefone"], render: (r) => formatPhoneDisplay(String(r["telefone"] ?? "")) || "—" },
+    { key: "status", header: "Status", fields: ["status"], render: (r) => <StatusBadge value={r["status"]} /> },
+  ];
+
+  return (
+    <>
+      <DataTable
+        title="Parceiros de Negócios"
+        columns={columns}
+        rows={rows}
+        loading={isLoading}
+        getValue={(row, keys) => pick(row, keys)}
+        rowKey={(row, i) => String(rowId(row) ?? i)}
+        onAdd={perms.canCreate ? () => { setRecord(null); setOpen(true); } : undefined}
+        onEdit={(row) => { setRecord(row); setOpen(true); }}
+        editReadOnly={!perms.canUpdate}
+        onDelete={perms.canDelete ? (row) => remove.mutate(row) : undefined}
+        filters={
+          <>
+            <FilterInput label="Buscar" value={f.busca} onChange={(v) => setF({ ...f, busca: v })} placeholder="Nome, documento, telefone ou cidade" />
+            <FilterSelect label="Tipo" value={f.papel} onChange={(v) => setF({ ...f, papel: v })}
+              options={[{ value: "todos", label: "Todos" }, { value: "cliente", label: "Clientes" }, { value: "fornecedor", label: "Fornecedores" }]} />
+            <FilterSelect label="Status" value={f.status} onChange={(v) => setF({ ...f, status: v })}
+              options={[{ value: "todos", label: "Todos" }, { value: "ativo", label: "Ativo" }, { value: "inativo", label: "Inativo" }]} />
+          </>
+        }
+      />
+      <ParceiroSheet
+        open={open}
+        onOpenChange={setOpen}
+        record={record}
+        readOnly={record ? !perms.canUpdate : !perms.canCreate}
+        saving={save.isPending}
+        onSave={(values) =>
+          save.mutate({ values: stamp(values, !record), original: record }, { onSuccess: () => setOpen(false) })
+        }
+      />
+    </>
+  );
+}

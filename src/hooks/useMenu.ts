@@ -24,6 +24,7 @@ const FALLBACK: MenuItem[] = [
   { id: "marcas", label: "Marcas", path: "/marcas", icon: "tag", order: 9 },
   { id: "unid_medida", label: "Unidades de Medida", path: "/unid_medida", icon: "ruler", order: 10 },
   { id: "centro_custos", label: "Centros de Custo", path: "/centro_custos", icon: "landmark", order: 11 },
+  { id: "parceiros", label: "Parceiros", path: "/parceiros", icon: "handshake", order: 12 },
 ];
 
 
