@@ -40,14 +40,21 @@ export function useSaveOrcamento() {
   const { stamp, usuarioId } = useAudit();
 
   return useMutation({
-    mutationFn: async ({ header, linhas, original }: SaveOrcamentoInput): Promise<{ id: string; numero: string }> => {
+    mutationFn: async ({
+      header,
+      linhas,
+      original,
+    }: SaveOrcamentoInput): Promise<{ id: string; numero: string }> => {
       let id: string;
       let numero = String(original?.["numero"] ?? "");
 
       if (original) {
         const key = idColumn(original);
         id = String(original[key]);
-        const { error } = await supabase.from("orcamentos").update(stamp(header, false)).eq(key, id);
+        const { error } = await supabase
+          .from("orcamentos")
+          .update(stamp(header, false))
+          .eq(key, id);
         if (error) throw error;
       } else {
         const { data, error } = await supabase
@@ -63,13 +70,21 @@ export function useSaveOrcamento() {
         if (!numero) {
           // Fallback: gatilho ausente — numera pelo maior sequencial do ano/empresa.
           const ano = yearOf(created["dt_orcamento"]) ?? new Date().getFullYear();
-          let q = supabase.from("orcamentos").select("sequencia").eq("ano", ano).order("sequencia", { ascending: false }).limit(1);
+          let q = supabase
+            .from("orcamentos")
+            .select("sequencia")
+            .eq("ano", ano)
+            .order("sequencia", { ascending: false })
+            .limit(1);
           if (created["empresa_id"]) q = q.eq("empresa_id", String(created["empresa_id"]));
           const { data: last } = await q;
           const seqAtual = Number((last?.[0] as Row | undefined)?.["sequencia"] ?? 0) || 0;
           const sequencia = seqAtual + 1;
           numero = formatNumero(ano, sequencia);
-          const { error: numErr } = await supabase.from("orcamentos").update({ numero, ano, sequencia }).eq("id", id);
+          const { error: numErr } = await supabase
+            .from("orcamentos")
+            .update({ numero, ano, sequencia })
+            .eq("id", id);
           if (numErr) throw numErr;
         }
       }
@@ -82,7 +97,9 @@ export function useSaveOrcamento() {
       if (readErr) throw readErr;
 
       const manter = new Set(linhas.map((l) => l.id).filter((v): v is string => Boolean(v)));
-      const remover = ((existentes ?? []) as Row[]).map((r) => String(r["id"])).filter((rid) => !manter.has(rid));
+      const remover = ((existentes ?? []) as Row[])
+        .map((r) => String(r["id"]))
+        .filter((rid) => !manter.has(rid));
       if (remover.length) {
         const { error } = await supabase.from("orcamento_itens").delete().in("id", remover);
         if (error) throw error;
@@ -103,7 +120,9 @@ export function useSaveOrcamento() {
       if (inserir.length) {
         const { error } = await supabase
           .from("orcamento_itens")
-          .insert(inserir.map(({ id: _omit, ...rest }) => ({ ...rest, orcamento_id: id, ...auditoria })));
+          .insert(
+            inserir.map(({ id: _omit, ...rest }) => ({ ...rest, orcamento_id: id, ...auditoria })),
+          );
         if (error) throw error;
       }
 
@@ -112,7 +131,9 @@ export function useSaveOrcamento() {
     onSuccess: ({ numero }) => {
       queryClient.invalidateQueries({ queryKey: ["table", "orcamentos"] });
       queryClient.invalidateQueries({ queryKey: ["table", "orcamento_itens"] });
-      toast.success(numero ? `Orçamento ${numero} salvo com sucesso.` : "Orçamento salvo com sucesso.");
+      toast.success(
+        numero ? `Orçamento ${numero} salvo com sucesso.` : "Orçamento salvo com sucesso.",
+      );
     },
     onError: (error: unknown) => {
       toast.error(error instanceof Error ? error.message : "Não foi possível salvar o orçamento.");

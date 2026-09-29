@@ -60,7 +60,11 @@ export function SearchSelect({
           role="combobox"
           aria-expanded={open}
           disabled={disabled}
-          className={cn("h-10 w-full justify-between px-3 font-normal", !selected && "text-muted-foreground", className)}
+          className={cn(
+            "h-10 w-full justify-between px-3 font-normal",
+            !selected && "text-muted-foreground",
+            className,
+          )}
         >
           <span className="truncate">{selected ? selected.label : placeholder}</span>
           <span className="ml-2 flex shrink-0 items-center gap-1">
@@ -98,9 +102,16 @@ export function SearchSelect({
                     setOpen(false);
                   }}
                 >
-                  <Check className={cn("mr-2 h-4 w-4 shrink-0", opt.value === value ? "opacity-100" : "opacity-0")} />
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4 shrink-0",
+                      opt.value === value ? "opacity-100" : "opacity-0",
+                    )}
+                  />
                   <span className="min-w-0 flex-1 truncate">{opt.label}</span>
-                  {opt.hint && <span className="text-muted-foreground ml-2 shrink-0 text-xs">{opt.hint}</span>}
+                  {opt.hint && (
+                    <span className="text-muted-foreground ml-2 shrink-0 text-xs">{opt.hint}</span>
+                  )}
                 </CommandItem>
               ))}
             </CommandGroup>
