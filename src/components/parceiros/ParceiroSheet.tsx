@@ -73,6 +73,7 @@ type Form = Record<TextKey, string> & {
   opcao_pelo_mei: boolean;
   cnaes_secundarios: Cnae[];
   qsa: Socio[];
+  parceiro_pai_id: string;
 };
 
 function arr<T>(v: unknown): T[] {
