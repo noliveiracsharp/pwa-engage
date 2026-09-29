@@ -6,6 +6,7 @@
 ## Em andamento
 - [x] Orçamentos: observações complementares da nota fiscal, forma de pagamento + parcelamento automático, edição respeitando permissões do menu e visualização/PDF para o cliente.
 - [x] Orçamentos: exibir logo, nome, CNPJ, endereço e telefone da empresa no PDF; marca nos itens do formulário e do PDF.
+- [x] Orçamentos: itens em tabela compacta com "Adicionar item" ao final, botão Salvar item e Cancelar edição (descarta a linha nova ou restaura os valores anteriores).
 
 ## Próximos
 - [ ] Duplicar orçamento (gera novo número com os mesmos itens).
