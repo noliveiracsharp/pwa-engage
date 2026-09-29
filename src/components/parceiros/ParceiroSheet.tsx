@@ -109,9 +109,10 @@ type Props = {
   readOnly: boolean;
   saving: boolean;
   onSave: (values: Row) => void;
+  parceiros?: Row[];
 };
 
-export function ParceiroSheet({ open, onOpenChange, record, readOnly, saving, onSave }: Props) {
+export function ParceiroSheet({ open, onOpenChange, record, readOnly, saving, onSave, parceiros = [] }: Props) {
   const [f, setF] = useState<Form>(() => toForm(record));
   const [tab, setTab] = useState("gerais");
   const [cepLoading, setCepLoading] = useState(false);
