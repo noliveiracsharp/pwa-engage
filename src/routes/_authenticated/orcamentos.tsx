@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, FileText } from "lucide-react";
 import { DataTable, type Column } from "@/components/data-table/DataTable";
 import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,9 +11,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { OrcamentoSheet } from "@/components/orcamentos/OrcamentoSheet";
+import { OrcamentoPDF } from "@/components/orcamentos/OrcamentoPDF";
 import { SituacaoBadge } from "@/components/orcamentos/SituacaoBadge";
 import { useAlterarSituacao, useSaveOrcamento } from "@/hooks/useSaveOrcamento";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
+import { useAuth } from "@/hooks/useAuth";
 import { rowId, useDeleteRecord, useTableRows } from "@/lib/crud";
 import { useAudit } from "@/lib/audit";
 import { matchesAny } from "@/lib/input-masks";
@@ -56,6 +59,7 @@ function mesmaEmpresa(row: Row, empresaId: string | number | undefined) {
 function OrcamentosPage() {
   const perms = usePagePermissions("/orcamentos");
   const { empresaId, usuarioId } = useAudit();
+  const { empresa } = useAuth();
   const { data: todos = [], isLoading } = useTableRows("orcamentos");
   const { data: todasLinhas = [] } = useTableRows("orcamento_itens");
   const { data: parceiros = [] } = useTableRows("parceiros");
@@ -68,6 +72,8 @@ function OrcamentosPage() {
 
   const [open, setOpen] = useState(false);
   const [record, setRecord] = useState<Row | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [preview, setPreview] = useState<Row | null>(null);
   const [f, setF] = useState({ busca: "", situacao: "todos", vendedor: "todos", ano: "todos" });
 
   const escopo = useMemo(() => todos.filter((r) => mesmaEmpresa(r, empresaId)), [todos, empresaId]);
@@ -110,6 +116,12 @@ function OrcamentosPage() {
     const id = String(rowId(record) ?? "");
     return todasLinhas.filter((l) => String(l["orcamento_id"] ?? "") === id);
   }, [todasLinhas, record]);
+
+  const linhasPreview = useMemo(() => {
+    if (!preview) return [] as Row[];
+    const id = String(rowId(preview) ?? "");
+    return todasLinhas.filter((l) => String(l["orcamento_id"] ?? "") === id);
+  }, [todasLinhas, preview]);
 
   const nomeCliente = (r: Row) => {
     const p = parceiroById.get(String(pick(r, ["parceiro_id", "parceiros_id"]) ?? ""));
@@ -269,6 +281,25 @@ function OrcamentosPage() {
           <SituacaoBadge value={r["situacao"]} />
         ),
     },
+    {
+      key: "pdf",
+      header: "Proposta",
+      fields: [],
+      render: (r) => (
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Visualizar proposta em PDF"
+          title="Visualizar proposta em PDF"
+          onClick={() => {
+            setPreview(r);
+            setPreviewOpen(true);
+          }}
+        >
+          <FileText className="h-4 w-4" />
+        </Button>
+      ),
+    },
   ];
 
   if (!perms.loading && !perms.canRead) {
@@ -351,9 +382,33 @@ function OrcamentosPage() {
         itens={itensEmpresa}
         unidades={unidadesEmpresa}
         vendedorPadraoId={usuarioId !== undefined ? String(usuarioId) : undefined}
+        onPreview={
+          record
+            ? () => {
+                setPreview(record);
+                setPreviewOpen(true);
+              }
+            : undefined
+        }
         onSave={({ header, linhas }) =>
           save.mutate({ header, linhas, original: record }, { onSuccess: () => setOpen(false) })
         }
+      />
+
+      <OrcamentoPDF
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        orcamento={preview}
+        linhas={linhasPreview}
+        empresa={empresa}
+        cliente={parceiroById.get(
+          String(preview ? (pick(preview, ["parceiro_id", "parceiros_id"]) ?? "") : ""),
+        )}
+        vendedor={usuarioById.get(
+          String(preview ? (pick(preview, ["usuario_id", "vendedor_id"]) ?? "") : ""),
+        )}
+        itens={itens}
+        unidades={unidades}
       />
     </>
   );

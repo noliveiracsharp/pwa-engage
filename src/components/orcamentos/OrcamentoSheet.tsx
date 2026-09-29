@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { FileText } from "lucide-react";
 import { toast } from "sonner";
 import {
   Sheet,
@@ -21,6 +22,10 @@ import {
 import { SearchSelect, type SearchOption } from "@/components/data-table/SearchSelect";
 import { OrcamentoLinhas } from "@/components/orcamentos/OrcamentoLinhas";
 import { OrcamentoTotais } from "@/components/orcamentos/OrcamentoTotais";
+import {
+  OrcamentoPagamento,
+  type PagamentoState,
+} from "@/components/orcamentos/OrcamentoPagamento";
 import { SituacaoBadge } from "@/components/orcamentos/SituacaoBadge";
 import { dateOrNull, type LinhaPayload } from "@/hooks/useSaveOrcamento";
 import { rowId } from "@/lib/crud";
@@ -31,9 +36,11 @@ import {
   calcLinha,
   calcTotais,
   formatBRL,
+  gerarParcelas,
   linhaFromRow,
   novaLinha,
   num,
+  parcelasFromValue,
   situacaoOf,
   SITUACOES,
   toISODate,
@@ -60,7 +67,7 @@ type Header = {
   desconto: string;
   frete: string;
   valores_adicionais: string;
-};
+} & PagamentoState;
 
 const emptyHeader = (vendedorId: string): Header => {
   const hoje = todayISO();
@@ -75,21 +82,39 @@ const emptyHeader = (vendedorId: string): Header => {
     desconto: "",
     frete: "",
     valores_adicionais: "",
+    obs_nota_fiscal: "",
+    forma_pagamento: "",
+    forma_pagamento_obs: "",
+    qtd_parcelas: "1",
+    tem_juros: false,
+    coeficiente_juros: "",
+    primeira_parcela: hoje,
   };
 };
 
-const headerFromRecord = (r: Row): Header => ({
-  situacao: situacaoOf(r["situacao"]),
-  dt_orcamento: toISODate(r["dt_orcamento"]) || todayISO(),
-  validade_orcamento: toISODate(r["validade_orcamento"]),
-  parceiro_id: String(pick(r, ["parceiro_id", "parceiros_id"]) ?? ""),
-  usuario_id: String(pick(r, ["usuario_id", "vendedor_id"]) ?? ""),
-  descricao: String(pick(r, ["descricao"]) ?? ""),
-  desconto_tipo: String(r["desconto_tipo"] ?? "") === "percentual" ? "percentual" : "valor",
-  desconto: num(r["desconto"]) ? String(num(r["desconto"])) : "",
-  frete: num(r["frete"]) ? String(num(r["frete"])) : "",
-  valores_adicionais: num(r["valores_adicionais"]) ? String(num(r["valores_adicionais"])) : "",
-});
+const headerFromRecord = (r: Row): Header => {
+  const parcelas = parcelasFromValue(r["parcelas"]);
+  const dt = toISODate(r["dt_orcamento"]) || todayISO();
+  return {
+    situacao: situacaoOf(r["situacao"]),
+    dt_orcamento: dt,
+    validade_orcamento: toISODate(r["validade_orcamento"]),
+    parceiro_id: String(pick(r, ["parceiro_id", "parceiros_id"]) ?? ""),
+    usuario_id: String(pick(r, ["usuario_id", "vendedor_id"]) ?? ""),
+    descricao: String(pick(r, ["descricao"]) ?? ""),
+    desconto_tipo: String(r["desconto_tipo"] ?? "") === "percentual" ? "percentual" : "valor",
+    desconto: num(r["desconto"]) ? String(num(r["desconto"])) : "",
+    frete: num(r["frete"]) ? String(num(r["frete"])) : "",
+    valores_adicionais: num(r["valores_adicionais"]) ? String(num(r["valores_adicionais"])) : "",
+    obs_nota_fiscal: String(pick(r, ["obs_nota_fiscal"]) ?? ""),
+    forma_pagamento: String(pick(r, ["forma_pagamento"]) ?? ""),
+    forma_pagamento_obs: String(pick(r, ["forma_pagamento_obs"]) ?? ""),
+    qtd_parcelas: String(num(r["qtd_parcelas"]) || parcelas.length || 1),
+    tem_juros: r["tem_juros"] === true,
+    coeficiente_juros: num(r["coeficiente_juros"]) ? String(num(r["coeficiente_juros"])) : "",
+    primeira_parcela: parcelas[0]?.vencimento || dt,
+  };
+};
 
 type Props = {
   open: boolean;
@@ -104,6 +129,8 @@ type Props = {
   itens: Row[];
   unidades: Row[];
   vendedorPadraoId?: string | undefined;
+  /** Abre a pré-visualização/PDF do orçamento em edição. */
+  onPreview?: (() => void) | undefined;
   onSave: (input: { header: Row; linhas: LinhaPayload[] }) => void;
 };
 
@@ -119,6 +146,7 @@ export function OrcamentoSheet({
   itens,
   unidades,
   vendedorPadraoId,
+  onPreview,
   onSave,
 }: Props) {
   const [h, setH] = useState<Header>(() => emptyHeader(vendedorPadraoId ?? ""));
@@ -262,6 +290,20 @@ export function OrcamentoSheet({
   );
   const itensSemCusto = linhasValidas.filter((l) => l.item_id !== "" && l.preco_custo <= 0).length;
 
+  /* ----------------------------- parcelas ----------------------------- */
+
+  const parcelas = useMemo(
+    () =>
+      gerarParcelas({
+        total: totais.total_liquido,
+        quantidade: num(h.qtd_parcelas) || 1,
+        primeiraData: h.primeira_parcela,
+        comJuros: h.tem_juros,
+        coeficiente: h.coeficiente_juros,
+      }),
+    [totais.total_liquido, h.qtd_parcelas, h.primeira_parcela, h.tem_juros, h.coeficiente_juros],
+  );
+
   /* ------------------------------ salvar ------------------------------ */
 
   const submit = () => {
@@ -305,6 +347,13 @@ export function OrcamentoSheet({
       total_imposto: totais.total_imposto,
       total_lucro: totais.total_lucro,
       margem_pct: totais.margem_pct,
+      obs_nota_fiscal: h.obs_nota_fiscal.trim() || null,
+      forma_pagamento: h.forma_pagamento || null,
+      forma_pagamento_obs: h.forma_pagamento_obs.trim() || null,
+      qtd_parcelas: Math.max(1, Math.floor(num(h.qtd_parcelas) || 1)),
+      tem_juros: h.tem_juros,
+      coeficiente_juros: h.tem_juros ? num(h.coeficiente_juros) : 0,
+      parcelas,
     };
 
     const payloadLinhas: LinhaPayload[] = linhasValidas.map((l, index) => {
@@ -486,9 +535,24 @@ export function OrcamentoSheet({
             itensSemCusto={itensSemCusto}
             onChange={(patch) => patchHeader(patch)}
           />
+
+          {/* ---------------- pagamento e nota fiscal ------------------ */}
+          <OrcamentoPagamento
+            value={h}
+            parcelas={parcelas}
+            totalLiquido={totais.total_liquido}
+            readOnly={readOnly}
+            onChange={(patch) => patchHeader(patch)}
+          />
         </fieldset>
 
-        <div className="bg-background sticky bottom-0 mt-4 flex justify-end gap-2 px-6 py-4">
+        <div className="bg-background sticky bottom-0 mt-4 flex flex-wrap justify-end gap-2 px-6 py-4">
+          {record && onPreview && (
+            <Button variant="secondary" onClick={onPreview} className="mr-auto">
+              <FileText className="mr-2 h-4 w-4" />
+              Visualizar / PDF
+            </Button>
+          )}
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
