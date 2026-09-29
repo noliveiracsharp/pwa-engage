@@ -91,8 +91,8 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, canCre
   );
 
   /** Próximo código sequencial por tipo: Produto → P00001…, Serviço → S00001… */
-  const nextCodigo = useMemo(() => {
-    const prefixo = v.tipo === "Serviço" ? "S" : "P";
+  const nextCodigoFor = (tipo: string) => {
+    const prefixo = tipo === "Serviço" ? "S" : "P";
     let max = 0;
     for (const r of itens) {
       const c = String(pick(r, ["codigo"]) ?? "");
@@ -100,7 +100,8 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, canCre
       if (m) max = Math.max(max, Number(m[1]));
     }
     return `${prefixo}${String(max + 1).padStart(5, "0")}`;
-  }, [itens, v.tipo]);
+  };
+  const nextCodigo = useMemo(() => nextCodigoFor(v.tipo), [itens, v.tipo]);
 
   useEffect(() => {
     if (!open) return;
