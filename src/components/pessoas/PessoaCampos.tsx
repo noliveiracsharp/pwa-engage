@@ -11,7 +11,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { text } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
 
-type Props = { clienteId?: string | number | undefined };
+type Props = { pessoaId?: string | number | undefined };
 
 function inputTypeFor(tipo: string) {
   const t = tipo.toLowerCase();
@@ -23,7 +23,7 @@ function inputTypeFor(tipo: string) {
   return "text";
 }
 
-export function ClienteCampos({ clienteId }: Props) {
+export function PessoaCampos({ pessoaId }: Props) {
   const queryClient = useQueryClient();
   const { empresa } = useAuth();
   const empresaId = empresa ? pick(empresa, ["id"]) : undefined;
@@ -40,12 +40,12 @@ export function ClienteCampos({ clienteId }: Props) {
   });
 
   const { data: valores = [] } = useQuery({
-    queryKey: ["table", "clientes_camposperson", text(clienteId)],
-    enabled: Boolean(clienteId),
+    queryKey: ["table", "pessoas_camposperson", text(pessoaId)],
+    enabled: Boolean(pessoaId),
     queryFn: async (): Promise<Row[]> => {
-      const { data, error } = await supabase.from("clientes_camposperson").select("*");
+      const { data, error } = await supabase.from("pessoas_camposperson").select("*");
       if (error) throw error;
-      return ((data ?? []) as Row[]).filter((row) => text(pick(row, ["cliente_id"])) === text(clienteId));
+      return ((data ?? []) as Row[]).filter((row) => text(pick(row, ["pessoa_id"])) === text(pessoaId));
     },
   });
 
@@ -77,7 +77,7 @@ export function ClienteCampos({ clienteId }: Props) {
   if (campos.length === 0) return null;
 
   const save = async () => {
-    if (!clienteId) return;
+    if (!pessoaId) return;
     setSaving(true);
     try {
       for (const campo of campos) {
@@ -86,18 +86,18 @@ export function ClienteCampos({ clienteId }: Props) {
         const existente = valores.find((row) => text(pick(row, ["chave"])) === chave);
         if (existente) {
           const { error } = await supabase
-            .from("clientes_camposperson")
+            .from("pessoas_camposperson")
             .update({ valor })
             .eq("id", pick(existente, ["id"]) as never);
           if (error) throw error;
         } else if (valor !== "") {
           const { error } = await supabase
-            .from("clientes_camposperson")
-            .insert({ cliente_id: clienteId, chave, valor });
+            .from("pessoas_camposperson")
+            .insert({ pessoa_id: pessoaId, chave, valor });
           if (error) throw error;
         }
       }
-      queryClient.invalidateQueries({ queryKey: ["table", "clientes_camposperson"] });
+      queryClient.invalidateQueries({ queryKey: ["table", "pessoas_camposperson"] });
       toast.success("Campos personalizados salvos.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Não foi possível salvar os campos.");
@@ -115,8 +115,8 @@ export function ClienteCampos({ clienteId }: Props) {
         </p>
       </div>
 
-      {!clienteId ? (
-        <p className="text-muted-foreground text-sm">Salve o cliente para preencher os campos personalizados.</p>
+      {!pessoaId ? (
+        <p className="text-muted-foreground text-sm">Salve a pessoa para preencher os campos personalizados.</p>
       ) : (
         <>
           <div className="grid gap-x-4 gap-y-5 sm:grid-cols-2">

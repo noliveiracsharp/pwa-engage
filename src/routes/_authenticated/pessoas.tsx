@@ -6,22 +6,22 @@ import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
 import { RecordSheet, type Field } from "@/components/data-table/RecordSheet";
 import { StarRating } from "@/components/data-table/StarRating";
 import { StatusBadge } from "@/components/data-table/StatusBadge";
-import { ClienteCampos } from "@/components/clientes/ClienteCampos";
+import { PessoaCampos } from "@/components/pessoas/PessoaCampos";
 import { rowId, useDeleteRecord, useSaveRecord, useTableRows } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
 import { usePagePermissions, subtabKind } from "@/hooks/usePagePermissions";
 import { formatCpfCnpj, formatPhoneDisplay, matchesAny } from "@/lib/input-masks";
 
-export const Route = createFileRoute("/_authenticated/clientes")({
+export const Route = createFileRoute("/_authenticated/pessoas")({
   head: () => ({
     meta: [
-      { title: "Clientes — Atende.ai" },
-      { name: "description", content: "Cadastro e gestão dos clientes atendidos pela empresa." },
-      { property: "og:title", content: "Clientes — Atende.ai" },
-      { property: "og:description", content: "Cadastro e gestão dos clientes atendidos pela empresa." },
+      { title: "Pessoas — Atende.ai" },
+      { name: "description", content: "Cadastro e gestão das pessoas atendidas pela empresa." },
+      { property: "og:title", content: "Pessoas — Atende.ai" },
+      { property: "og:description", content: "Cadastro e gestão das pessoas atendidas pela empresa." },
     ],
   }),
-  component: ClientesPage,
+  component: PessoasPage,
 });
 
 const fields: Field[] = [
@@ -41,11 +41,11 @@ const STATUS_OPTIONS = [
   { value: "inativo", label: "Inativo" },
 ];
 
-function ClientesPage() {
-  const { data: rows = [], isLoading } = useTableRows("clientes");
-  const save = useSaveRecord("clientes");
-  const perms = usePagePermissions("/clientes");
-  const remove = useDeleteRecord("clientes");
+function PessoasPage() {
+  const { data: rows = [], isLoading } = useTableRows("pessoas");
+  const save = useSaveRecord("pessoas");
+  const perms = usePagePermissions("/pessoas");
+  const remove = useDeleteRecord("pessoas");
   const [open, setOpen] = useState(false);
   const [record, setRecord] = useState<Row | null>(null);
   const [f, setF] = useState({ busca: "", status: "todos", nota: "todas" });
@@ -127,7 +127,7 @@ function ClientesPage() {
   return (
     <>
       <DataTable
-        title="Clientes"
+        title="Pessoas"
         columns={columns}
         rows={filtered}
         loading={isLoading}
@@ -177,7 +177,7 @@ function ClientesPage() {
       <RecordSheet
         open={open}
         onOpenChange={setOpen}
-        title={record ? "Editar cliente" : "Novo cliente"}
+        title={record ? "Editar pessoa" : "Nova pessoa"}
         fields={fields}
         record={record}
         saving={save.isPending}
@@ -187,7 +187,7 @@ function ClientesPage() {
           return !ok;
         })()}
         {...(() => {
-          const campos = <ClienteCampos clienteId={record ? rowId(record) : undefined} />;
+          const campos = <PessoaCampos pessoaId={record ? rowId(record) : undefined} />;
           if (perms.subtabs.length === 0) return { extra: campos, extraTabLabel: "Campos personalizados" };
           const dados = perms.subtabs.find((t) => subtabKind(t) === "dados");
           return {

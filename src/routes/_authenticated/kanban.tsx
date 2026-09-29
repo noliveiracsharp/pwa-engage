@@ -60,7 +60,7 @@ function KanbanPage() {
   const { data: kanbans = [], isLoading: loadingKanbans } = useRows("kanban_nome");
   const { data: etapas = [] } = useRows("kanban_etapas");
   const { data: atendimentos = [] } = useRows("atendimentos");
-  const { data: clientes = [] } = useRows("clientes");
+  const { data: pessoas = [] } = useRows("pessoas");
 
   const [kanbanId, setKanbanId] = useState<string>("");
   const [newKanban, setNewKanban] = useState(false);
@@ -87,11 +87,11 @@ function KanbanPage() {
     [etapas, kanbanId],
   );
 
-  const clienteById = useMemo(() => {
+  const pessoaById = useMemo(() => {
     const map = new Map<string, Row>();
-    for (const c of clientes) map.set(String(c["id"]), c);
+    for (const c of pessoas) map.set(String(c["id"]), c);
     return map;
-  }, [clientes]);
+  }, [pessoas]);
 
   const cardsByEtapa = useMemo(() => {
     const map = new Map<string, Row[]>();
@@ -327,8 +327,8 @@ function KanbanPage() {
                     </p>
                   )}
                   {cards.map((card) => {
-                    const clienteId = String(pick(card, ["cliente_id", "id_cliente"]) ?? "");
-                    const cliente = clienteById.get(clienteId);
+                    const pessoaId = String(pick(card, ["pessoas_id", "pessoa_id", "clientes_id", "cliente_id"]) ?? "");
+                    const pessoa = pessoaById.get(pessoaId);
                     return (
                       <button
                         key={String(card["id"])}
@@ -347,10 +347,10 @@ function KanbanPage() {
                         <GripVertical className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                         <div className="min-w-0">
                           <p className="truncate text-sm font-medium text-foreground">
-                            {text(pick(cliente, ["nome"], `Atendimento #${text(card["id"])}`))}
+                            {text(pick(pessoa, ["nome"], `Atendimento #${text(card["id"])}`))}
                           </p>
                           <p className="truncate text-xs text-muted-foreground">
-                            {formatPhoneDisplay(text(pick(cliente, ["telefone"], ""))) ||
+                            {formatPhoneDisplay(text(pick(pessoa, ["telefone"], ""))) ||
                               text(pick(card, ["status"], "Sem status"))}
                           </p>
                         </div>
