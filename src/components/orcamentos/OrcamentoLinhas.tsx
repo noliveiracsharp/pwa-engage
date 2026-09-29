@@ -19,8 +19,7 @@ import { cn } from "@/lib/utils";
 const NONE = "__none__";
 
 /** Colunas da tabela compacta (desktop). */
-const GRID =
-  "sm:grid sm:grid-cols-[1.75rem_minmax(0,1fr)_4.5rem_7rem_8rem_5.5rem] sm:gap-3";
+const GRID = "sm:grid sm:grid-cols-[1.75rem_minmax(0,1fr)_4.5rem_7rem_8rem_5.5rem] sm:gap-3";
 
 const formatQtd = (v: string) => num(v).toLocaleString("pt-BR", { maximumFractionDigits: 3 });
 
@@ -174,11 +173,7 @@ export function OrcamentoLinhas({
                     title={aberta ? "Recolher" : "Editar"}
                     onClick={() => toggleAberta(l.key)}
                   >
-                    {aberta ? (
-                      <ChevronUp className="h-4 w-4" />
-                    ) : (
-                      <Pencil className="h-4 w-4" />
-                    )}
+                    {aberta ? <ChevronUp className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
                   </Button>
                 )}
                 {!readOnly && (
@@ -219,7 +214,9 @@ export function OrcamentoLinhas({
                         emptyText="Nenhum item ativo encontrado."
                         disabled={Boolean(readOnly)}
                       />
-                      {nomeMarca && <p className="text-muted-foreground text-xs">Marca: {nomeMarca}</p>}
+                      {nomeMarca && (
+                        <p className="text-muted-foreground text-xs">Marca: {nomeMarca}</p>
+                      )}
                     </div>
                     <div className="flex shrink-0 gap-0.5">
                       {!readOnly && (
@@ -283,7 +280,9 @@ export function OrcamentoLinhas({
                       </Label>
                       <Select
                         value={l.unidade_medida_id || NONE}
-                        onValueChange={(v) => onChange(l.key, { unidade_medida_id: v === NONE ? "" : v })}
+                        onValueChange={(v) =>
+                          onChange(l.key, { unidade_medida_id: v === NONE ? "" : v })
+                        }
                         disabled={Boolean(readOnly)}
                       >
                         <SelectTrigger id={`unid-${l.key}`}>
@@ -324,8 +323,12 @@ export function OrcamentoLinhas({
                   <div className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 pl-7 text-xs">
                     <span>
                       Custo:{" "}
-                      <strong className="text-foreground font-medium">{formatBRL(c.custo_total)}</strong>
-                      {l.preco_custo > 0 && <span className="ml-1">({formatBRL(l.preco_custo)}/un)</span>}
+                      <strong className="text-foreground font-medium">
+                        {formatBRL(c.custo_total)}
+                      </strong>
+                      {l.preco_custo > 0 && (
+                        <span className="ml-1">({formatBRL(l.preco_custo)}/un)</span>
+                      )}
                     </span>
                     <span>
                       Imposto ({formatPct(l.imposto_pct)}):{" "}
@@ -336,7 +339,10 @@ export function OrcamentoLinhas({
                     <span>
                       Lucro:{" "}
                       <strong
-                        className={cn("font-medium", c.lucro < 0 ? "text-destructive" : "text-success")}
+                        className={cn(
+                          "font-medium",
+                          c.lucro < 0 ? "text-destructive" : "text-success",
+                        )}
                       >
                         {formatBRL(c.lucro)}
                       </strong>{" "}
@@ -379,8 +385,12 @@ export function OrcamentoLinhas({
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{nomeItem || "—"}</p>
-                    {nomeMarca && <p className="text-muted-foreground truncate text-xs">Marca: {nomeMarca}</p>}
-                    {l.detalhe && <p className="text-muted-foreground truncate text-xs">{l.detalhe}</p>}
+                    {nomeMarca && (
+                      <p className="text-muted-foreground truncate text-xs">Marca: {nomeMarca}</p>
+                    )}
+                    {l.detalhe && (
+                      <p className="text-muted-foreground truncate text-xs">{l.detalhe}</p>
+                    )}
                     <p className="text-muted-foreground text-xs">
                       {formatQtd(l.quantidade)} {unidadeLabel} × {formatBRL(num(l.valor_unitario))}
                     </p>
@@ -397,17 +407,16 @@ export function OrcamentoLinhas({
                 </div>
 
                 {/* Linha compacta — desktop */}
-                <div
-                  className={cn(
-                    "hidden items-center px-3 py-2 sm:grid",
-                    GRID,
-                  )}
-                >
+                <div className={cn("hidden items-center px-3 py-2 sm:grid", GRID)}>
                   <span className="text-muted-foreground text-xs tabular-nums">{index + 1}.</span>
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium">{nomeItem || "—"}</p>
-                    {nomeMarca && <p className="text-muted-foreground truncate text-xs">Marca: {nomeMarca}</p>}
-                    {l.detalhe && <p className="text-muted-foreground truncate text-xs">{l.detalhe}</p>}
+                    {nomeMarca && (
+                      <p className="text-muted-foreground truncate text-xs">Marca: {nomeMarca}</p>
+                    )}
+                    {l.detalhe && (
+                      <p className="text-muted-foreground truncate text-xs">{l.detalhe}</p>
+                    )}
                   </div>
                   <span className="text-right text-sm tabular-nums">
                     {formatQtd(l.quantidade)}
@@ -418,7 +427,9 @@ export function OrcamentoLinhas({
                   <span className="text-right text-sm tabular-nums">
                     {formatBRL(num(l.valor_unitario))}
                   </span>
-                  <span className="text-sm font-semibold tabular-nums">{formatBRL(c.total_linha)}</span>
+                  <span className="text-sm font-semibold tabular-nums">
+                    {formatBRL(c.total_linha)}
+                  </span>
                   {acoes}
                 </div>
               </div>
