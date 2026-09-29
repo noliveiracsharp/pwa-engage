@@ -221,6 +221,7 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly, saving, on
       opcao_pelo_mei: f.opcao_pelo_mei,
       cnaes_secundarios: f.cnaes_secundarios,
       qsa: f.qsa,
+      [PARENT_KEY]: f.parceiro_pai_id || null,
     };
     for (const k of TEXT_KEYS) values[k] = f[k].trim() || null;
     values["documento"] = doc || null;
