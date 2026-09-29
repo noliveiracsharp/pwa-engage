@@ -173,14 +173,26 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly, saving, on
           </div>
 
           <div className="grid gap-x-4 gap-y-5 sm:grid-cols-2">
-            {field("razao_social", pf ? "Nome Completo" : "Razão Social", "sm:col-span-2")}
-            {!pf && field("nome_fantasia", "Nome Fantasia", "sm:col-span-2")}
             <div>
               <Label htmlFor="p-doc" className="mb-1.5 block text-sm font-medium">{pf ? "CPF" : "CNPJ"}</Label>
-              <DocumentInput id="p-doc" value={f.documento} placeholder={pf ? "000.000.000-00" : "00.000.000/0000-00"}
-                onChange={(v) => set("documento", v.slice(0, pf ? 11 : 14))} />
+              <div className="flex gap-2">
+                <DocumentInput id="p-doc" value={f.documento} placeholder={pf ? "000.000.000-00" : "00.000.000/0000-00"}
+                  onChange={(v) => {
+                    const d = v.slice(0, pf ? 11 : 14);
+                    set("documento", d);
+                    if (!pf && d.length === 14 && !readOnly) void lookupCnpj(d);
+                  }} />
+                {!pf && (
+                  <Button type="button" variant="outline" size="icon" disabled={readOnly || cnpjLoading}
+                    title="Buscar dados na Receita Federal" onClick={() => void lookupCnpj(f.documento)}>
+                    {cnpjLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                  </Button>
+                )}
+              </div>
             </div>
             {!pf && field("inscricao_estadual", "Inscrição Estadual")}
+            {field("razao_social", pf ? "Nome Completo" : "Razão Social", "sm:col-span-2")}
+            {!pf && field("nome_fantasia", "Nome Fantasia", "sm:col-span-2")}
             <div className="sm:col-span-2">
               <Label className="mb-1.5 block text-sm font-medium">Telefone</Label>
               <PhoneInput value={f.telefone} onChange={(v) => set("telefone", v)} />
