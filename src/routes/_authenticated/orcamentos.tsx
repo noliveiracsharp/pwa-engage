@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, FileText } from "lucide-react";
 import { DataTable, type Column } from "@/components/data-table/DataTable";
 import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,9 +11,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { OrcamentoSheet } from "@/components/orcamentos/OrcamentoSheet";
+import { OrcamentoPDF } from "@/components/orcamentos/OrcamentoPDF";
 import { SituacaoBadge } from "@/components/orcamentos/SituacaoBadge";
 import { useAlterarSituacao, useSaveOrcamento } from "@/hooks/useSaveOrcamento";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
+import { useAuth } from "@/hooks/useAuth";
 import { rowId, useDeleteRecord, useTableRows } from "@/lib/crud";
 import { useAudit } from "@/lib/audit";
 import { matchesAny } from "@/lib/input-masks";
