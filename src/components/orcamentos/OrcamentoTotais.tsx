@@ -177,16 +177,31 @@ export function OrcamentoTotais({
           )})`}
         />
         <Linha label="Desconto concedido" value={`− ${formatBRL(totais.desconto_valor)}`} />
+        {comJuros && (
+          <>
+            <Separator />
+            <Linha
+              label="Lucro à vista"
+              value={`${formatBRL(totais.total_lucro)} (${formatPct(totais.margem_pct)})`}
+            />
+            <Linha
+              label="Acréscimo do parcelamento (juros)"
+              value={`+ ${formatBRL(acrescimoJuros)}`}
+            />
+          </>
+        )}
         <Separator />
         <Linha
-          label="Lucro líquido"
-          value={`${formatBRL(totais.total_lucro)} (${formatPct(totais.margem_pct)})`}
+          label={comJuros ? "Lucro final (com juros)" : "Lucro líquido"}
+          value={`${formatBRL(lucroFinal)} (${formatPct(margemFinal)})`}
           strong
           className={prejuizo ? "text-destructive" : "text-success"}
         />
         <p className="text-muted-foreground text-xs">
           Fórmula por linha: lucro = preço de venda − custo − imposto. Frete e valores adicionais
           não entram na lucratividade.
+          {comJuros &&
+            " Com juros, o acréscimo do parcelamento (juros + custo operacional embutidos na parcela) soma ao lucro."}
         </p>
         {prejuizo && (
           <p className="text-destructive flex items-center gap-1.5 text-xs font-medium">
