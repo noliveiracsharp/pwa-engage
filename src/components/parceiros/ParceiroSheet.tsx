@@ -312,6 +312,22 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly, saving, on
                   {!pf && field("inscricao_estadual", "Inscrição Estadual")}
                   {field("razao_social", pf ? "Nome Completo" : "Razão Social", "sm:col-span-2")}
                   {!pf && field("nome_fantasia", "Nome Fantasia", "sm:col-span-2")}
+                  <div className="sm:col-span-2">
+                    <Label className="mb-1.5 block text-sm font-medium">Parceiro Principal / Matriz</Label>
+                    <Select value={f.parceiro_pai_id || "none"} disabled={readOnly}
+                      onValueChange={(v) => set("parceiro_pai_id", v === "none" ? "" : v)}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Nenhum (Matriz / Registro Principal)</SelectItem>
+                        {paiOptions.map(({ row, depth }) => (
+                          <SelectItem key={String(rowId(row))} value={String(rowId(row))}>
+                            {`${"\u00A0\u00A0".repeat(depth)}${depth ? "↳ " : ""}${parceiroLabel(row)}`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-muted-foreground mt-1.5 text-xs">Deixe em branco para matriz; escolha uma matriz para cadastrar como filial.</p>
+                  </div>
                 </div>
               </div>
 
