@@ -269,6 +269,25 @@ function OrcamentosPage() {
           <SituacaoBadge value={r["situacao"]} />
         ),
     },
+    {
+      key: "pdf",
+      header: "Proposta",
+      fields: [],
+      render: (r) => (
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Visualizar proposta em PDF"
+          title="Visualizar proposta em PDF"
+          onClick={() => {
+            setPreview(r);
+            setPreviewOpen(true);
+          }}
+        >
+          <FileText className="h-4 w-4" />
+        </Button>
+      ),
+    },
   ];
 
   if (!perms.loading && !perms.canRead) {
