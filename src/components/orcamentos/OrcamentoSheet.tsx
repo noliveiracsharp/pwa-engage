@@ -37,6 +37,7 @@ import {
   calcTotais,
   formatBRL,
   gerarParcelas,
+  somaParcelas,
   linhaFromRow,
   novaLinha,
   num,
@@ -306,6 +307,11 @@ export function OrcamentoSheet({
     [totais.total_liquido, h.qtd_parcelas, h.primeira_parcela, h.tem_juros, h.coeficiente_juros],
   );
 
+  // Acréscimo financeiro quando o parcelamento é "Com juros".
+  const acrescimoJuros = h.tem_juros
+    ? Math.max(0, somaParcelas(parcelas) - totais.total_liquido)
+    : 0;
+
   /* ------------------------------ salvar ------------------------------ */
 
   const submit = () => {
@@ -537,6 +543,7 @@ export function OrcamentoSheet({
             valoresAdicionais={h.valores_adicionais}
             readOnly={readOnly}
             itensSemCusto={itensSemCusto}
+            acrescimoJuros={acrescimoJuros}
             onChange={(patch) => patchHeader(patch)}
           />
 
