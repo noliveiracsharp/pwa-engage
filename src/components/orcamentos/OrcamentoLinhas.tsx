@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { ChevronUp, Eye, Pencil, Plus, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Check, ChevronUp, Eye, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -59,6 +59,20 @@ export function OrcamentoLinhas({
       return next;
     });
 
+  // Linhas recém-adicionadas abrem automaticamente em modo de edição.
+  const keysRef = useRef<Set<string>>(new Set(linhas.map((l) => l.key)));
+  useEffect(() => {
+    const novos = linhas.filter((l) => !keysRef.current.has(l.key));
+    keysRef.current = new Set(linhas.map((l) => l.key));
+    if (novos.length > 0) {
+      setAbertas((prev) => {
+        const next = new Set(prev);
+        for (const l of novos) next.add(l.key);
+        return next;
+      });
+    }
+  }, [linhas]);
+
   const itemById = new Map(itens.map((item) => [String(rowId(item) ?? ""), item]));
   const marcaById = new Map(marcas.map((marca) => [String(rowId(marca) ?? ""), marca]));
   const unidadeById = new Map(unidadeOptions.map((o) => [o.value, o.label]));
@@ -108,10 +122,8 @@ export function OrcamentoLinhas({
             const nomeItem = codigo ? `${codigo} — ${descricao}` : descricao;
             const unidadeLabel =
               (l.unidade_medida_id && unidadeById.get(l.unidade_medida_id)) || "";
-            // Linhas em branco (recém-adicionadas) ficam sempre abertas;
-            // em leitura todas aparecem abertas com os dados desabilitados.
-            const aberta =
-              Boolean(readOnly) || abertas.has(l.key) || (l.item_id === "" && l.detalhe.trim() === "");
+            // Em leitura todas aparecem abertas com os dados desabilitados.
+            const aberta = Boolean(readOnly) || abertas.has(l.key);
 
             const acoes = (
               <div className="flex items-center justify-end gap-0.5">
@@ -301,6 +313,14 @@ export function OrcamentoLinhas({
                       </span>
                     )}
                   </div>
+
+                  {!readOnly && (
+                    <div className="flex justify-end pl-7">
+                      <Button type="button" size="sm" onClick={() => toggleAberta(l.key)}>
+                        <Check className="mr-1 h-4 w-4" /> Salvar item
+                      </Button>
+                    </div>
+                  )}
                 </div>
               );
             }
