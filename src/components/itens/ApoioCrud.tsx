@@ -49,6 +49,7 @@ export function ApoioCrud({
   const [open, setOpen] = useState(false);
   const [record, setRecord] = useState<Row | null>(null);
   const [f, setF] = useState({ busca: "", status: "todos" });
+  const [expanded, setExpanded] = useState<Map<string, boolean>>(new Map());
 
   const scoped = useMemo(
     () =>
@@ -59,19 +60,38 @@ export function ApoioCrud({
   );
   const tree = useMemo(() => (hierarchy ? buildTree(scoped, hierarchy.parentKey) : null), [scoped, hierarchy]);
   const depthMap = useMemo(() => new Map((tree ?? []).map((n) => [String(rowId(n.row)), n.depth])), [tree]);
+  const { ancestors, parentsWithChildren } = useMemo(() => {
+    const ancestors = new Map<string, string[]>();
+    const parentsWithChildren = new Set<string>();
+    const stack: string[] = [];
+    for (const node of tree ?? []) {
+      stack.length = node.depth;
+      const id = String(rowId(node.row));
+      ancestors.set(id, [...stack]);
+      if (stack.length) parentsWithChildren.add(stack[stack.length - 1]);
+      stack.push(id);
+    }
+    return { ancestors, parentsWithChildren };
+  }, [tree]);
+  const filtering = Boolean(f.busca.trim()) || f.status !== "todos";
 
-  const filtered = useMemo(
-    () =>
-      (tree ? tree.map((n) => n.row) : rows).filter(
-        (row) =>
-          matchesAny(
-            searchFields.map((key) => pick(row, [key])),
-            f.busca,
-          ) &&
-          (f.status === "todos" || (f.status === "ativo" ? row["status"] === true : row["status"] === false)),
-      ),
-    [rows, tree, f, searchFields],
-  );
+  const filtered = useMemo(() => {
+    const source = tree ? tree.map((n) => n.row) : rows;
+    const matching = source.filter(
+      (row) =>
+        matchesAny(searchFields.map((key) => pick(row, [key])), f.busca) &&
+        (f.status === "todos" || (f.status === "ativo" ? row["status"] === true : row["status"] === false)),
+    );
+    if (!tree) return matching;
+    const relevant = new Set(matching.map((row) => String(rowId(row))));
+    if (filtering) {
+      for (const id of [...relevant]) for (const ancestor of ancestors.get(id) ?? []) relevant.add(ancestor);
+    }
+    return source.filter((row) => {
+      const id = String(rowId(row));
+      return relevant.has(id) && (ancestors.get(id) ?? []).every((parent) => (expanded.get(parent) ?? filtering));
+    });
+  }, [rows, tree, f, searchFields, filtering, ancestors, expanded]);
 
   const allColumns = useMemo<Column[]>(() => {
     if (!hierarchy) return columns;
@@ -80,13 +100,14 @@ export function ApoioCrud({
       key: hierarchy.parentKey,
       header: "Pai",
       fields: [hierarchy.parentKey],
+      sortable: false,
       render: (row) => {
         const p = pick(row, [hierarchy.parentKey]);
         return p ? (names.get(String(p)) ?? "—") : <span className="text-muted-foreground">Grupo principal</span>;
       },
     };
     const [first, ...rest] = columns;
-    return first ? [first, ...rest.slice(0, 1), parentCol, ...rest.slice(1)] : columns;
+    return first ? [first, ...rest.slice(0, 1), parentCol, ...rest.slice(1)].map((col) => ({ ...col, sortable: false })) : columns;
   }, [columns, hierarchy, scoped]);
 
   const allFields = useMemo<Field[]>(() => {
@@ -111,6 +132,14 @@ export function ApoioCrud({
         title={title}
         columns={allColumns}
         {...(hierarchy ? { rowDepth: (row: Row) => depthMap.get(String(rowId(row))) ?? 0 } : {})}
+        {...(hierarchy ? {
+          rowHasChildren: (row: Row) => parentsWithChildren.has(String(rowId(row))),
+          rowExpanded: (row: Row) => expanded.get(String(rowId(row))) ?? filtering,
+          onToggleRow: (row: Row) => {
+            const id = String(rowId(row));
+            setExpanded((current) => new Map(current).set(id, !(current.get(id) ?? filtering)));
+          },
+        } : {})}
         rows={filtered}
         loading={isLoading}
         getValue={(row, keys) => pick(row, keys)}
@@ -134,13 +163,13 @@ export function ApoioCrud({
             <FilterInput
               label="Buscar"
               value={f.busca}
-              onChange={(v) => setF({ ...f, busca: v })}
+              onChange={(v) => { setF({ ...f, busca: v }); setExpanded(new Map()); }}
               placeholder={searchPlaceholder}
             />
             <FilterSelect
               label="Status"
               value={f.status}
-              onChange={(v) => setF({ ...f, status: v })}
+              onChange={(v) => { setF({ ...f, status: v }); setExpanded(new Map()); }}
               options={STATUS_OPTIONS}
             />
           </>
