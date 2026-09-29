@@ -382,9 +382,33 @@ function OrcamentosPage() {
         itens={itensEmpresa}
         unidades={unidadesEmpresa}
         vendedorPadraoId={usuarioId !== undefined ? String(usuarioId) : undefined}
+        onPreview={
+          record
+            ? () => {
+                setPreview(record);
+                setPreviewOpen(true);
+              }
+            : undefined
+        }
         onSave={({ header, linhas }) =>
           save.mutate({ header, linhas, original: record }, { onSuccess: () => setOpen(false) })
         }
+      />
+
+      <OrcamentoPDF
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        orcamento={preview}
+        linhas={linhasPreview}
+        empresa={empresa}
+        cliente={parceiroById.get(
+          String(preview ? (pick(preview, ["parceiro_id", "parceiros_id"]) ?? "") : ""),
+        )}
+        vendedor={usuarioById.get(
+          String(preview ? (pick(preview, ["usuario_id", "vendedor_id"]) ?? "") : ""),
+        )}
+        itens={itens}
+        unidades={unidades}
       />
     </>
   );
