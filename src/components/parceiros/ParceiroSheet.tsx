@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,6 +48,7 @@ type Props = {
 export function ParceiroSheet({ open, onOpenChange, record, readOnly, saving, onSave }: Props) {
   const [f, setF] = useState<Form>(() => toForm(record));
   const [cepLoading, setCepLoading] = useState(false);
+  const [cnpjLoading, setCnpjLoading] = useState(false);
   useEffect(() => { if (open) setF(toForm(record)); }, [open, record]);
 
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setF((p) => ({ ...p, [k]: v }));
@@ -73,6 +74,39 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly, saving, on
       toast.error("Não foi possível consultar o CEP.");
     } finally {
       setCepLoading(false);
+    }
+  }
+
+  async function lookupCnpj(value: string) {
+    const cnpj = digitsOnly(value);
+    if (cnpj.length !== 14) { toast.error("Informe os 14 dígitos do CNPJ."); return; }
+    if (!isValidCpfCnpj(cnpj)) { toast.error("CNPJ inválido."); return; }
+    setCnpjLoading(true);
+    try {
+      const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`);
+      if (!res.ok) { toast.error("CNPJ não encontrado na Receita Federal."); return; }
+      const d = await res.json();
+      const ddd = digitsOnly(String(d.ddd_telefone_1 ?? ""));
+      setF((p) => ({
+        ...p,
+        razao_social: d.razao_social || p.razao_social,
+        nome_fantasia: d.nome_fantasia || p.nome_fantasia,
+        telefone: ddd.length >= 10 ? `+55${ddd}` : p.telefone,
+        cep: digitsOnly(String(d.cep ?? "")) || p.cep,
+        endereco: [d.descricao_tipo_de_logradouro, d.logradouro].filter(Boolean).join(" ").trim() || p.endereco,
+        numero: d.numero || p.numero,
+        complemento: d.complemento || p.complemento,
+        bairro: d.bairro || p.bairro,
+        cidade: d.municipio || p.cidade,
+        uf: d.uf || p.uf,
+      }));
+      const situacao = String(d.descricao_situacao_cadastral ?? "");
+      if (situacao && situacao.toUpperCase() !== "ATIVA") toast.warning(`Situação cadastral: ${situacao}.`);
+      else toast.success("Dados encontrados na Receita Federal.");
+    } catch {
+      toast.error("Não foi possível consultar o CNPJ.");
+    } finally {
+      setCnpjLoading(false);
     }
   }
 
@@ -139,14 +173,26 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly, saving, on
           </div>
 
           <div className="grid gap-x-4 gap-y-5 sm:grid-cols-2">
-            {field("razao_social", pf ? "Nome Completo" : "Razão Social", "sm:col-span-2")}
-            {!pf && field("nome_fantasia", "Nome Fantasia", "sm:col-span-2")}
             <div>
               <Label htmlFor="p-doc" className="mb-1.5 block text-sm font-medium">{pf ? "CPF" : "CNPJ"}</Label>
-              <DocumentInput id="p-doc" value={f.documento} placeholder={pf ? "000.000.000-00" : "00.000.000/0000-00"}
-                onChange={(v) => set("documento", v.slice(0, pf ? 11 : 14))} />
+              <div className="flex gap-2">
+                <DocumentInput id="p-doc" value={f.documento} placeholder={pf ? "000.000.000-00" : "00.000.000/0000-00"}
+                  onChange={(v) => {
+                    const d = v.slice(0, pf ? 11 : 14);
+                    set("documento", d);
+                    if (!pf && d.length === 14 && !readOnly) void lookupCnpj(d);
+                  }} />
+                {!pf && (
+                  <Button type="button" variant="outline" size="icon" disabled={readOnly || cnpjLoading}
+                    title="Buscar dados na Receita Federal" onClick={() => void lookupCnpj(f.documento)}>
+                    {cnpjLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                  </Button>
+                )}
+              </div>
             </div>
             {!pf && field("inscricao_estadual", "Inscrição Estadual")}
+            {field("razao_social", pf ? "Nome Completo" : "Razão Social", "sm:col-span-2")}
+            {!pf && field("nome_fantasia", "Nome Fantasia", "sm:col-span-2")}
             <div className="sm:col-span-2">
               <Label className="mb-1.5 block text-sm font-medium">Telefone</Label>
               <PhoneInput value={f.telefone} onChange={(v) => set("telefone", v)} />
