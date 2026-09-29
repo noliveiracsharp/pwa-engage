@@ -48,6 +48,7 @@ type Props = {
 export function ParceiroSheet({ open, onOpenChange, record, readOnly, saving, onSave }: Props) {
   const [f, setF] = useState<Form>(() => toForm(record));
   const [cepLoading, setCepLoading] = useState(false);
+  const [cnpjLoading, setCnpjLoading] = useState(false);
   useEffect(() => { if (open) setF(toForm(record)); }, [open, record]);
 
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setF((p) => ({ ...p, [k]: v }));
