@@ -1,0 +1,217 @@
+import { useMemo, useState } from "react";
+import { Package } from "lucide-react";
+import { createFileRoute } from "@tanstack/react-router";
+import { DataTable, type Column } from "@/components/data-table/DataTable";
+import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
+import { StatusBadge } from "@/components/data-table/StatusBadge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ApoioCrud } from "@/components/itens/ApoioCrud";
+import { centroCustoConfig, marcaConfig, unidadeConfig } from "@/components/itens/apoio-config";
+import { ItemSheet } from "@/components/itens/ItemSheet";
+import { rowId, useDeleteRecord, useSaveRecord, useTableRows } from "@/lib/crud";
+import { matchesAny } from "@/lib/input-masks";
+import { useAudit } from "@/lib/audit";
+import { pick, type Row } from "@/lib/row";
+import { usePagePermissions } from "@/hooks/usePagePermissions";
+
+export const Route = createFileRoute("/_authenticated/itens")({
+  head: () => ({
+    meta: [
+      { title: "Produtos e Serviços — Atende.ai" },
+      { name: "description", content: "Cadastro de produtos e serviços com formação automática de preço de venda." },
+      { property: "og:title", content: "Produtos e Serviços — Atende.ai" },
+      {
+        property: "og:description",
+        content: "Cadastro de produtos e serviços com formação automática de preço de venda.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
+  component: ItensPage,
+});
+
+const brl = (value: unknown) => {
+  const n = Number(value);
+  if (!Number.isFinite(n) || value === null || value === undefined || value === "") return "—";
+  return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+};
+
+const STATUS_OPTIONS = [
+  { value: "todos", label: "Todos" },
+  { value: "ativo", label: "Ativo" },
+  { value: "inativo", label: "Inativo" },
+];
+
+const TIPO_OPTIONS = [
+  { value: "todos", label: "Todos" },
+  { value: "Produto", label: "Produto" },
+  { value: "Serviço", label: "Serviço" },
+];
+
+function ItensPage() {
+  const perms = usePagePermissions("/itens");
+  const { data: rows = [], isLoading } = useTableRows("itens");
+  const { data: marcas = [] } = useTableRows("itens_marcas");
+  const save = useSaveRecord("itens");
+  const remove = useDeleteRecord("itens");
+  const { stamp } = useAudit();
+  const [open, setOpen] = useState(false);
+  const [record, setRecord] = useState<Row | null>(null);
+  const [f, setF] = useState({ busca: "", tipo: "todos", status: "todos" });
+
+  const marcaById = useMemo(() => {
+    const map = new Map<string, Row>();
+    for (const m of marcas) map.set(String(rowId(m) ?? ""), m);
+    return map;
+  }, [marcas]);
+
+  const filtered = useMemo(
+    () =>
+      rows.filter((row) => {
+        const marca = marcaById.get(String(pick(row, ["itens_marcas_id"]) ?? ""));
+        return (
+          matchesAny(
+            [pick(row, ["codigo"]), pick(row, ["descricao"]), pick(row, ["tipo"]), pick(marca ?? {}, ["descricao"])],
+            f.busca,
+          ) &&
+          (f.tipo === "todos" || String(pick(row, ["tipo"]) ?? "") === f.tipo) &&
+          (f.status === "todos" || (f.status === "ativo" ? row["status"] === true : row["status"] === false))
+        );
+      }),
+    [rows, f, marcaById],
+  );
+
+  const columns: Column[] = [
+    { key: "codigo", header: "Código", fields: ["codigo"] },
+    { key: "descricao", header: "Descrição", fields: ["descricao"] },
+    { key: "tipo", header: "Tipo", fields: ["tipo"] },
+    {
+      key: "marca",
+      header: "Marca",
+      fields: ["itens_marcas_id"],
+      render: (row) => {
+        const marca = marcaById.get(String(pick(row, ["itens_marcas_id"]) ?? ""));
+        if (!marca) return "—";
+        const foto = pick(marca, ["foto"]);
+        const nome = String(pick(marca, ["descricao"]) ?? "—");
+        return (
+          <div className="flex items-center gap-2.5">
+            {foto ? (
+              <img src={foto} alt={nome} className="border-border h-7 w-7 rounded-full border object-cover" />
+            ) : (
+              <span className="bg-muted text-muted-foreground border-border flex h-7 w-7 items-center justify-center rounded-full border">
+                <Package className="h-3.5 w-3.5" />
+              </span>
+            )}
+            <span>{nome}</span>
+          </div>
+        );
+      },
+    },
+    {
+      key: "preco_venda",
+      header: "Preço de Venda",
+      fields: ["preco_venda"],
+      render: (row) => brl(pick(row, ["preco_venda"])),
+    },
+    {
+      key: "status",
+      header: "Status",
+      fields: ["status"],
+      render: (row) => <StatusBadge value={row["status"]} />,
+    },
+  ];
+
+  if (!perms.loading && !perms.canRead) {
+    return <p className="text-muted-foreground text-sm">Você não tem acesso a esta página.</p>;
+  }
+
+  return (
+    <Tabs defaultValue="itens" className="space-y-4">
+      <TabsList className="h-auto w-full flex-wrap">
+        <TabsTrigger value="itens" className="flex-1">
+          Produtos e Serviços
+        </TabsTrigger>
+        <TabsTrigger value="marcas" className="flex-1">
+          Marcas
+        </TabsTrigger>
+        <TabsTrigger value="unidades" className="flex-1">
+          Unidades de Medida
+        </TabsTrigger>
+        <TabsTrigger value="centros" className="flex-1">
+          Centros de Custo
+        </TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="itens">
+        <DataTable
+          title="Produtos e Serviços"
+          columns={columns}
+          rows={filtered}
+          loading={isLoading}
+          getValue={(row, keys) => pick(row, keys)}
+          rowKey={(row, i) => String(rowId(row) ?? i)}
+          onAdd={
+            perms.canCreate
+              ? () => {
+                  setRecord(null);
+                  setOpen(true);
+                }
+              : undefined
+          }
+          onEdit={(row) => {
+            setRecord(row);
+            setOpen(true);
+          }}
+          editReadOnly={!perms.canUpdate}
+          onDelete={perms.canDelete ? (row) => remove.mutate(row) : undefined}
+          filters={
+            <>
+              <FilterInput
+                label="Buscar"
+                value={f.busca}
+                onChange={(v) => setF({ ...f, busca: v })}
+                placeholder="Código, descrição ou marca"
+              />
+              <FilterSelect
+                label="Tipo"
+                value={f.tipo}
+                onChange={(v) => setF({ ...f, tipo: v })}
+                options={TIPO_OPTIONS}
+              />
+              <FilterSelect
+                label="Status"
+                value={f.status}
+                onChange={(v) => setF({ ...f, status: v })}
+                options={STATUS_OPTIONS}
+              />
+            </>
+          }
+        />
+      </TabsContent>
+
+      <TabsContent value="marcas">
+        <ApoioCrud {...marcaConfig} />
+      </TabsContent>
+      <TabsContent value="unidades">
+        <ApoioCrud {...unidadeConfig} />
+      </TabsContent>
+      <TabsContent value="centros">
+        <ApoioCrud {...centroCustoConfig} />
+      </TabsContent>
+
+      <ItemSheet
+        open={open}
+        onOpenChange={setOpen}
+        record={record}
+        saving={save.isPending}
+        readOnly={record ? !perms.canUpdate : !perms.canCreate}
+        canCreateApoio={perms.canCreate}
+        onSave={(values) =>
+          save.mutate({ values: stamp(values, !record), original: record }, { onSuccess: () => setOpen(false) })
+        }
+      />
+    </Tabs>
+  );
+}

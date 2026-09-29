@@ -20,7 +20,12 @@ const FALLBACK: MenuItem[] = [
   { id: "funcoes", label: "Funções", path: "/funcoes", icon: "shield-check", order: 5 },
   { id: "kanban", label: "Kanban", path: "/kanban", icon: "kanban", order: 6 },
   { id: "atendimentos", label: "Atendimentos", path: "/atendimentos", icon: "message-circle", order: 7 },
+  { id: "itens", label: "Produtos e Serviços", path: "/itens", icon: "package", order: 8 },
+  { id: "marcas", label: "Marcas", path: "/marcas", icon: "tag", order: 9 },
+  { id: "unid_medida", label: "Unidades de Medida", path: "/unid_medida", icon: "ruler", order: 10 },
+  { id: "centro_custos", label: "Centros de Custo", path: "/centro_custos", icon: "landmark", order: 11 },
 ];
+
 
 function asBool(v: unknown, fallback = true): boolean {
   if (v === undefined || v === null) return fallback;

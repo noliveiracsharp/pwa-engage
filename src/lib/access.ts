@@ -13,7 +13,12 @@ const FALLBACK_PATHS = [
   "/funcoes",
   "/kanban",
   "/atendimentos",
+  "/itens",
+  "/marcas",
+  "/unid_medida",
+  "/centro_custos",
 ];
+
 
 function asBool(v: unknown, fallback = true): boolean {
   if (v === undefined || v === null) return fallback;
