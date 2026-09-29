@@ -22,6 +22,7 @@ import { Route as AuthenticatedItensRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedKanbanRouteImport } from './routes/_authenticated/kanban'
 import { Route as AuthenticatedMarcasRouteImport } from './routes/_authenticated/marcas'
 import { Route as AuthenticatedMeusDadosRouteImport } from './routes/_authenticated/meus-dados'
+import { Route as AuthenticatedParceirosRouteImport } from './routes/_authenticated/parceiros'
 import { Route as AuthenticatedPessoasRouteImport } from './routes/_authenticated/pessoas'
 import { Route as AuthenticatedUnid_medidaRouteImport } from './routes/_authenticated/unid_medida'
 import { Route as AuthenticatedUsuariosRouteImport } from './routes/_authenticated/usuarios'
@@ -92,6 +93,11 @@ const AuthenticatedMeusDadosRoute = AuthenticatedMeusDadosRouteImport.update({
   path: '/meus-dados',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedParceirosRoute = AuthenticatedParceirosRouteImport.update({
+  id: '/parceiros',
+  path: '/parceiros',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedPessoasRoute = AuthenticatedPessoasRouteImport.update({
   id: '/pessoas',
   path: '/pessoas',
@@ -122,6 +128,7 @@ export interface FileRoutesByFullPath {
   '/kanban': typeof AuthenticatedKanbanRoute
   '/marcas': typeof AuthenticatedMarcasRoute
   '/meus-dados': typeof AuthenticatedMeusDadosRoute
+  '/parceiros': typeof AuthenticatedParceirosRoute
   '/pessoas': typeof AuthenticatedPessoasRoute
   '/unid_medida': typeof AuthenticatedUnid_medidaRoute
   '/usuarios': typeof AuthenticatedUsuariosRoute
@@ -139,6 +146,7 @@ export interface FileRoutesByTo {
   '/kanban': typeof AuthenticatedKanbanRoute
   '/marcas': typeof AuthenticatedMarcasRoute
   '/meus-dados': typeof AuthenticatedMeusDadosRoute
+  '/parceiros': typeof AuthenticatedParceirosRoute
   '/pessoas': typeof AuthenticatedPessoasRoute
   '/unid_medida': typeof AuthenticatedUnid_medidaRoute
   '/usuarios': typeof AuthenticatedUsuariosRoute
@@ -158,6 +166,7 @@ export interface FileRoutesById {
   '/_authenticated/kanban': typeof AuthenticatedKanbanRoute
   '/_authenticated/marcas': typeof AuthenticatedMarcasRoute
   '/_authenticated/meus-dados': typeof AuthenticatedMeusDadosRoute
+  '/_authenticated/parceiros': typeof AuthenticatedParceirosRoute
   '/_authenticated/pessoas': typeof AuthenticatedPessoasRoute
   '/_authenticated/unid_medida': typeof AuthenticatedUnid_medidaRoute
   '/_authenticated/usuarios': typeof AuthenticatedUsuariosRoute
@@ -177,6 +186,7 @@ export interface FileRouteTypes {
     | '/kanban'
     | '/marcas'
     | '/meus-dados'
+    | '/parceiros'
     | '/pessoas'
     | '/unid_medida'
     | '/usuarios'
@@ -194,6 +204,7 @@ export interface FileRouteTypes {
     | '/kanban'
     | '/marcas'
     | '/meus-dados'
+    | '/parceiros'
     | '/pessoas'
     | '/unid_medida'
     | '/usuarios'
@@ -212,6 +223,7 @@ export interface FileRouteTypes {
     | '/_authenticated/kanban'
     | '/_authenticated/marcas'
     | '/_authenticated/meus-dados'
+    | '/_authenticated/parceiros'
     | '/_authenticated/pessoas'
     | '/_authenticated/unid_medida'
     | '/_authenticated/usuarios'
@@ -317,6 +329,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMeusDadosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/parceiros': {
+      id: '/_authenticated/parceiros'
+      path: '/parceiros'
+      fullPath: '/parceiros'
+      preLoaderRoute: typeof AuthenticatedParceirosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/pessoas': {
       id: '/_authenticated/pessoas'
       path: '/pessoas'
@@ -351,6 +370,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedKanbanRoute: typeof AuthenticatedKanbanRoute
   AuthenticatedMarcasRoute: typeof AuthenticatedMarcasRoute
   AuthenticatedMeusDadosRoute: typeof AuthenticatedMeusDadosRoute
+  AuthenticatedParceirosRoute: typeof AuthenticatedParceirosRoute
   AuthenticatedPessoasRoute: typeof AuthenticatedPessoasRoute
   AuthenticatedUnid_medidaRoute: typeof AuthenticatedUnid_medidaRoute
   AuthenticatedUsuariosRoute: typeof AuthenticatedUsuariosRoute
@@ -366,6 +386,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedKanbanRoute: AuthenticatedKanbanRoute,
   AuthenticatedMarcasRoute: AuthenticatedMarcasRoute,
   AuthenticatedMeusDadosRoute: AuthenticatedMeusDadosRoute,
+  AuthenticatedParceirosRoute: AuthenticatedParceirosRoute,
   AuthenticatedPessoasRoute: AuthenticatedPessoasRoute,
   AuthenticatedUnid_medidaRoute: AuthenticatedUnid_medidaRoute,
   AuthenticatedUsuariosRoute: AuthenticatedUsuariosRoute,
