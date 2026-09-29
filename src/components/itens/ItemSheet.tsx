@@ -79,6 +79,7 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, canCre
   const { data: unidades = [] } = useTableRows("unidade_medida");
   const { data: centros = [] } = useTableRows("centro_custo");
   const { data: marcas = [] } = useTableRows("itens_marcas");
+  const { data: itens = [] } = useTableRows("itens");
   const { empresaId } = useAudit();
   const centroTree = useMemo(
     () =>
@@ -89,10 +90,23 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, canCre
     [centros, empresaId],
   );
 
+  /** Próximo código sequencial por tipo: Produto → P00001…, Serviço → S00001… */
+  const nextCodigoFor = (tipo: string) => {
+    const prefixo = tipo === "Serviço" ? "S" : "P";
+    let max = 0;
+    for (const r of itens) {
+      const c = String(pick(r, ["codigo"]) ?? "");
+      const m = new RegExp(`^${prefixo}(\\d{5,})$`, "i").exec(c);
+      if (m) max = Math.max(max, Number(m[1]));
+    }
+    return `${prefixo}${String(max + 1).padStart(5, "0")}`;
+  };
+  const nextCodigo = useMemo(() => nextCodigoFor(v.tipo), [itens, v.tipo]);
+
   useEffect(() => {
     if (!open) return;
     if (!record) {
-      setV(EMPTY);
+      setV({ ...EMPTY, codigo: nextCodigo });
       return;
     }
     setV({
@@ -253,7 +267,15 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, canCre
               <Label htmlFor="tipo" className="block text-sm font-medium">
                 Tipo
               </Label>
-              <Select value={v.tipo} onValueChange={(value) => setV((s) => ({ ...s, tipo: value }))}>
+              <Select
+                value={v.tipo}
+                onValueChange={(value) =>
+                  setV((s) => {
+                    const auto = /^[PS]\d{5,}$/i.test(s.codigo) || s.codigo === "";
+                    return { ...s, tipo: value, codigo: !record && auto ? nextCodigoFor(value) : s.codigo };
+                  })
+                }
+              >
                 <SelectTrigger id="tipo">
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
