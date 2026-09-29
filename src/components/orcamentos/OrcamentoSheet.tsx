@@ -350,6 +350,13 @@ export function OrcamentoSheet({
       total_imposto: totais.total_imposto,
       total_lucro: totais.total_lucro,
       margem_pct: totais.margem_pct,
+      obs_nota_fiscal: h.obs_nota_fiscal.trim() || null,
+      forma_pagamento: h.forma_pagamento || null,
+      forma_pagamento_obs: h.forma_pagamento_obs.trim() || null,
+      qtd_parcelas: Math.max(1, Math.floor(num(h.qtd_parcelas) || 1)),
+      tem_juros: h.tem_juros,
+      coeficiente_juros: h.tem_juros ? num(h.coeficiente_juros) : 0,
+      parcelas,
     };
 
     const payloadLinhas: LinhaPayload[] = linhasValidas.map((l, index) => {
