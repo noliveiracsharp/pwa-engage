@@ -538,9 +538,24 @@ export function OrcamentoSheet({
             itensSemCusto={itensSemCusto}
             onChange={(patch) => patchHeader(patch)}
           />
+
+          {/* ---------------- pagamento e nota fiscal ------------------ */}
+          <OrcamentoPagamento
+            value={h}
+            parcelas={parcelas}
+            totalLiquido={totais.total_liquido}
+            readOnly={readOnly}
+            onChange={(patch) => patchHeader(patch)}
+          />
         </fieldset>
 
-        <div className="bg-background sticky bottom-0 mt-4 flex justify-end gap-2 px-6 py-4">
+        <div className="bg-background sticky bottom-0 mt-4 flex flex-wrap justify-end gap-2 px-6 py-4">
+          {record && onPreview && (
+            <Button variant="secondary" onClick={onPreview} className="mr-auto">
+              <FileText className="mr-2 h-4 w-4" />
+              Visualizar / PDF
+            </Button>
+          )}
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
