@@ -76,13 +76,13 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly, saving, on
     }
   }
 
-  function submit() {
-    if (!f.razao_social.trim()) return toast.error(pf ? "Informe o nome completo." : "Informe a razão social.");
-    if (!f.is_cliente && !f.is_fornecedor) return toast.error("Marque se é Cliente e/ou Fornecedor.");
+  function submit(): void {
+    if (!f.razao_social.trim()) { toast.error(pf ? "Informe o nome completo." : "Informe a razão social."); return; }
+    if (!f.is_cliente && !f.is_fornecedor) { toast.error("Marque se é Cliente e/ou Fornecedor."); return; }
     const doc = digitsOnly(f.documento);
     if (doc && (doc.length !== (pf ? 11 : 14) || !isValidCpfCnpj(doc)))
-      return toast.error(pf ? "CPF inválido." : "CNPJ inválido.");
-    if (!isCompletePhone(f.telefone)) return toast.error("Telefone incompleto.");
+      { toast.error(pf ? "CPF inválido." : "CNPJ inválido."); return; }
+    if (!isCompletePhone(f.telefone)) { toast.error("Telefone incompleto."); return; }
     const values: Row = {
       is_cliente: f.is_cliente,
       is_fornecedor: f.is_fornecedor,
