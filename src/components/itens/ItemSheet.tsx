@@ -11,6 +11,7 @@ import { rowId, text, useTableRows } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
 import { buildTree } from "@/lib/hierarchy";
 import { useAudit } from "@/lib/audit";
+import { ImageGallery } from "@/components/itens/ImageGallery";
 
 const NONE = "__none__";
 
@@ -26,6 +27,7 @@ type Values = {
   imposto: string;
   preco_venda: string;
   status: string;
+  imagens: string[];
 };
 
 const EMPTY: Values = {
@@ -40,6 +42,7 @@ const EMPTY: Values = {
   imposto: "",
   preco_venda: "",
   status: "true",
+  imagens: [],
 };
 
 const num = (v: string) => {
@@ -104,6 +107,7 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, canCre
       imposto: text(pick(record, ["imposto"], "")),
       preco_venda: text(pick(record, ["preco_venda"], "")),
       status: record["status"] === false ? "false" : "true",
+      imagens: Array.isArray(record["imagens"]) ? (record["imagens"] as unknown[]).map(String).filter(Boolean) : [],
     });
   }, [open, record]);
 
@@ -149,12 +153,13 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, canCre
       imposto: v.imposto === "" ? null : num(v.imposto),
       preco_venda: v.preco_venda === "" ? null : num(v.preco_venda),
       status: v.status === "true",
+      imagens: v.imagens,
     };
     onSave(payload);
   };
 
   const selectRow = (
-    id: keyof Values,
+    id: "unidade_medida_id" | "centro_custo_id" | "itens_marcas_id",
     label: string,
     list: Array<{ value: string; label: string }>,
     quickKey: "unidade" | "centro" | "marca",
@@ -236,6 +241,14 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, canCre
 
         <fieldset disabled={readOnly} className="min-w-0 px-6 disabled:opacity-70">
           <div className="grid gap-x-4 gap-y-5 pt-2 sm:grid-cols-2">
+            <div className="min-w-0 space-y-1.5 sm:col-span-2">
+              <Label className="block text-sm font-medium">Galeria de imagens</Label>
+              <ImageGallery
+                value={v.imagens}
+                disabled={readOnly}
+                onChange={(imagens) => setV((s) => ({ ...s, imagens }))}
+              />
+            </div>
             <div className="min-w-0 space-y-1.5">
               <Label htmlFor="tipo" className="block text-sm font-medium">
                 Tipo

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Package } from "lucide-react";
+import { ImageIcon, Package } from "lucide-react";
 import { createFileRoute } from "@tanstack/react-router";
 import { DataTable, type Column } from "@/components/data-table/DataTable";
 import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
@@ -83,6 +83,23 @@ function ItensPage() {
   );
 
   const columns: Column[] = [
+    {
+      key: "imagem",
+      header: "Imagem",
+      fields: ["imagens"],
+      sortable: false,
+      render: (row) => {
+        const imgs = row["imagens"];
+        const first = Array.isArray(imgs) && imgs.length ? String(imgs[0]) : "";
+        return first ? (
+          <img src={first} alt="" className="border-border h-10 w-10 rounded-md border object-cover" />
+        ) : (
+          <span className="bg-muted text-muted-foreground border-border flex h-10 w-10 items-center justify-center rounded-md border">
+            <ImageIcon className="h-4 w-4" />
+          </span>
+        );
+      },
+    },
     { key: "codigo", header: "Código", fields: ["codigo"] },
     { key: "descricao", header: "Descrição", fields: ["descricao"] },
     { key: "tipo", header: "Tipo", fields: ["tipo"] },
