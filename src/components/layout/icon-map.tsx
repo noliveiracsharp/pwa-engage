@@ -44,6 +44,8 @@ const ALIASES: Record<string, string> = {
   kanban: "Kanban",
   config: "Settings",
   configuracoes: "Settings",
+  orcamento: "FileText",
+  orcamentos: "FileText",
 };
 
 type IconComponent = ElementType;

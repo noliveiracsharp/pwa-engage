@@ -17,6 +17,8 @@ const TABLES = [
   "empresas_camposperson",
   "empresas_notasrapidas",
   "parceiros",
+  "orcamentos",
+  "orcamento_itens",
 ];
 
 /**
