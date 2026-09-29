@@ -415,19 +415,21 @@
     size: A4;
     margin: 12mm;
   }
-  body * {
-    visibility: hidden !important;
+  html.orc-printing,
+  html.orc-printing body {
+    height: auto !important;
+    overflow: visible !important;
+    background: #fff !important;
   }
-  #orcamento-print,
-  #orcamento-print * {
-    visibility: visible !important;
+  html.orc-printing body > *:not(.orc-print-host) {
+    display: none !important;
   }
-  #orcamento-print {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    padding: 0;
+  .orc-print-host {
+    display: block !important;
+  }
+  .orc-print-host .orc-doc {
+    padding: 0 !important;
+    box-shadow: none !important;
   }
   .orc-tabela thead th,
   .orc-total-final,
