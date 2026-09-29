@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -8,12 +8,50 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { DocumentInput } from "@/components/data-table/DocumentInput";
 import { PhoneInput } from "@/components/data-table/PhoneInput";
-import { digitsOnly, isCompletePhone, isValidCpfCnpj } from "@/lib/input-masks";
+import { digitsOnly, formatCpfCnpj, isCompletePhone, isValidCpfCnpj } from "@/lib/input-masks";
+import { descendantIds } from "@/lib/hierarchy";
+import { rowId } from "@/lib/crud";
 import type { Row } from "@/lib/row";
+
+export const PARENT_KEY = "parceiro_pai_id";
+
+/** Rótulo do parceiro na árvore de matriz/filial. */
+export function parceiroLabel(r: Row): string {
+  const nome = String(r["razao_social"] ?? r["nome_fantasia"] ?? "—");
+  const doc = formatCpfCnpj(String(r["documento"] ?? ""));
+  return doc ? `${nome} (${doc})` : nome;
+}
+
+/** Ordena os parceiros em árvore (matriz seguida das filiais). */
+export function parceiroTree(rows: Row[]): { row: Row; depth: number }[] {
+  const ids = new Set(rows.map((r) => String(rowId(r))));
+  const byParent = new Map<string, Row[]>();
+  for (const r of rows) {
+    const p = r[PARENT_KEY];
+    const key = p != null && ids.has(String(p)) ? String(p) : "";
+    byParent.set(key, [...(byParent.get(key) ?? []), r]);
+  }
+  const out: { row: Row; depth: number }[] = [];
+  const seen = new Set<string>();
+  const walk = (key: string, depth: number) => {
+    for (const r of [...(byParent.get(key) ?? [])].sort((a, b) => parceiroLabel(a).localeCompare(parceiroLabel(b), "pt-BR"))) {
+      const id = String(rowId(r));
+      if (seen.has(id)) continue;
+      seen.add(id);
+      out.push({ row: r, depth });
+      walk(id, depth + 1);
+    }
+  };
+  walk("", 0);
+  for (const r of rows) if (!seen.has(String(rowId(r)))) out.push({ row: r, depth: 0 });
+  return out;
+}
+
 
 const TEXT_KEYS = [
   "razao_social", "nome_fantasia", "documento", "inscricao_estadual", "telefone", "telefone2", "email",
@@ -35,6 +73,7 @@ type Form = Record<TextKey, string> & {
   opcao_pelo_mei: boolean;
   cnaes_secundarios: Cnae[];
   qsa: Socio[];
+  parceiro_pai_id: string;
 };
 
 function arr<T>(v: unknown): T[] {
@@ -55,6 +94,7 @@ function toForm(r: Row | null): Form {
   f.opcao_pelo_mei = r?.["opcao_pelo_mei"] === true;
   f.cnaes_secundarios = arr<Cnae>(r?.["cnaes_secundarios"]);
   f.qsa = arr<Socio>(r?.["qsa"]);
+  f.parceiro_pai_id = r?.[PARENT_KEY] == null ? "" : String(r[PARENT_KEY]);
   return f;
 }
 
@@ -69,9 +109,10 @@ type Props = {
   readOnly: boolean;
   saving: boolean;
   onSave: (values: Row) => void;
+  parceiros?: Row[];
 };
 
-export function ParceiroSheet({ open, onOpenChange, record, readOnly, saving, onSave }: Props) {
+export function ParceiroSheet({ open, onOpenChange, record, readOnly, saving, onSave, parceiros = [] }: Props) {
   const [f, setF] = useState<Form>(() => toForm(record));
   const [tab, setTab] = useState("gerais");
   const [cepLoading, setCepLoading] = useState(false);
@@ -80,6 +121,11 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly, saving, on
 
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setF((p) => ({ ...p, [k]: v }));
   const pf = f.tipo_pessoa === "Física";
+
+  const paiOptions = useMemo(() => {
+    const blocked = record ? descendantIds(parceiros, PARENT_KEY, String(rowId(record))) : new Set<string>();
+    return parceiroTree(parceiros).filter(({ row }) => !blocked.has(String(rowId(row))));
+  }, [parceiros, record]);
 
   async function lookupCep(value: string) {
     const cep = digitsOnly(value);
@@ -175,6 +221,7 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly, saving, on
       opcao_pelo_mei: f.opcao_pelo_mei,
       cnaes_secundarios: f.cnaes_secundarios,
       qsa: f.qsa,
+      [PARENT_KEY]: f.parceiro_pai_id || null,
     };
     for (const k of TEXT_KEYS) values[k] = f[k].trim() || null;
     values["documento"] = doc || null;
@@ -265,6 +312,22 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly, saving, on
                   {!pf && field("inscricao_estadual", "Inscrição Estadual")}
                   {field("razao_social", pf ? "Nome Completo" : "Razão Social", "sm:col-span-2")}
                   {!pf && field("nome_fantasia", "Nome Fantasia", "sm:col-span-2")}
+                  <div className="sm:col-span-2">
+                    <Label className="mb-1.5 block text-sm font-medium">Parceiro Principal / Matriz</Label>
+                    <Select value={f.parceiro_pai_id || "none"} disabled={readOnly}
+                      onValueChange={(v) => set("parceiro_pai_id", v === "none" ? "" : v)}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Nenhum (Matriz / Registro Principal)</SelectItem>
+                        {paiOptions.map(({ row, depth }) => (
+                          <SelectItem key={String(rowId(row))} value={String(rowId(row))}>
+                            {`${"\u00A0\u00A0".repeat(depth)}${depth ? "↳ " : ""}${parceiroLabel(row)}`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-muted-foreground mt-1.5 text-xs">Deixe em branco para matriz; escolha uma matriz para cadastrar como filial.</p>
+                  </div>
                 </div>
               </div>
 

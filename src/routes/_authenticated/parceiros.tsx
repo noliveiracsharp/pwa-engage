@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { DataTable, type Column } from "@/components/data-table/DataTable";
 import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
 import { StatusBadge } from "@/components/data-table/StatusBadge";
-import { ParceiroSheet } from "@/components/parceiros/ParceiroSheet";
+import { PARENT_KEY, ParceiroSheet } from "@/components/parceiros/ParceiroSheet";
 import { rowId, useDeleteRecord, useSaveRecord, useTableRows } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
@@ -33,20 +33,33 @@ function ParceirosPage() {
   const { empresaId, stamp } = useAudit();
   const [open, setOpen] = useState(false);
   const [record, setRecord] = useState<Row | null>(null);
-  const [f, setF] = useState({ busca: "", papel: "todos", status: "todos" });
+  const [f, setF] = useState({ busca: "", papel: "todos", status: "todos", estrutura: "todos" });
+
+  const escopo = useMemo(
+    () => all.filter((r) => empresaId === undefined || !r["empresa_id"] || String(r["empresa_id"]) === String(empresaId)),
+    [all, empresaId],
+  );
+
+  const porId = useMemo(() => new Map(escopo.map((r) => [String(rowId(r)), r])), [escopo]);
+  const comFilhos = useMemo(
+    () => new Set(escopo.map((r) => String(r[PARENT_KEY] ?? "")).filter(Boolean)),
+    [escopo],
+  );
 
   const rows = useMemo(
     () =>
-      all
-        .filter((r) => empresaId === undefined || !r["empresa_id"] || String(r["empresa_id"]) === String(empresaId))
-        .filter(
-          (r) =>
-            matchesAny([r["razao_social"], r["nome_fantasia"], r["documento"], r["telefone"], r["cidade"]], f.busca) &&
+      escopo
+        .filter((r) => {
+          const pai = r[PARENT_KEY] ? porId.get(String(r[PARENT_KEY])) : undefined;
+          return (
+            matchesAny([r["razao_social"], r["nome_fantasia"], r["documento"], r["telefone"], r["cidade"], pai?.["razao_social"]], f.busca) &&
             (f.papel === "todos" || (f.papel === "cliente" ? r["is_cliente"] === true : r["is_fornecedor"] === true)) &&
-            (f.status === "todos" || (f.status === "ativo" ? r["status"] !== false : r["status"] === false)),
-        )
+            (f.status === "todos" || (f.status === "ativo" ? r["status"] !== false : r["status"] === false)) &&
+            (f.estrutura === "todos" || (f.estrutura === "matriz" ? !r[PARENT_KEY] : !!r[PARENT_KEY]))
+          );
+        })
         .sort((a, b) => String(a["razao_social"] ?? "").localeCompare(String(b["razao_social"] ?? ""), "pt-BR")),
-    [all, f, empresaId],
+    [escopo, porId, f],
   );
 
   const columns: Column[] = [
@@ -64,6 +77,17 @@ function ParceirosPage() {
           {r["is_fornecedor"] === true && <Badge variant="secondary">Fornecedor</Badge>}
         </div>
       ),
+    },
+    {
+      key: PARENT_KEY,
+      header: "Estrutura",
+      fields: [PARENT_KEY],
+      render: (r) => {
+        const pai = r[PARENT_KEY] ? porId.get(String(r[PARENT_KEY])) : undefined;
+        if (pai) return <Badge variant="outline">Filial de {String(pai["razao_social"] ?? "—")}</Badge>;
+        if (comFilhos.has(String(rowId(r)))) return <Badge variant="outline">Matriz</Badge>;
+        return <span className="text-muted-foreground">—</span>;
+      },
     },
     { key: "documento", header: "Documento", fields: ["documento"], render: (r) => formatCpfCnpj(String(r["documento"] ?? "")) || "—" },
     { key: "telefone", header: "Telefone", fields: ["telefone"], render: (r) => formatPhoneDisplay(String(r["telefone"] ?? "")) || "—" },
@@ -90,6 +114,8 @@ function ParceirosPage() {
               options={[{ value: "todos", label: "Todos" }, { value: "cliente", label: "Clientes" }, { value: "fornecedor", label: "Fornecedores" }]} />
             <FilterSelect label="Status" value={f.status} onChange={(v) => setF({ ...f, status: v })}
               options={[{ value: "todos", label: "Todos" }, { value: "ativo", label: "Ativo" }, { value: "inativo", label: "Inativo" }]} />
+            <FilterSelect label="Estrutura" value={f.estrutura} onChange={(v) => setF({ ...f, estrutura: v })}
+              options={[{ value: "todos", label: "Todas" }, { value: "matriz", label: "Matrizes / Principais" }, { value: "filial", label: "Filiais" }]} />
           </>
         }
       />
@@ -97,6 +123,7 @@ function ParceirosPage() {
         open={open}
         onOpenChange={setOpen}
         record={record}
+        parceiros={escopo}
         readOnly={record ? !perms.canUpdate : !perms.canCreate}
         saving={save.isPending}
         onSave={(values) =>
