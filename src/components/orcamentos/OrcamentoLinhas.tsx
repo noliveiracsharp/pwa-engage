@@ -10,7 +10,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SearchSelect, type SearchOption } from "@/components/data-table/SearchSelect";
+import { rowId } from "@/lib/crud";
 import { calcLinha, formatBRL, formatPct, type Linha } from "@/lib/orcamentos";
+import { pick, type Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
 
 const NONE = "__none__";
@@ -19,6 +21,8 @@ type Props = {
   linhas: Linha[];
   itemOptions: SearchOption[];
   unidadeOptions: Array<{ value: string; label: string }>;
+  itens: Row[];
+  marcas: Row[];
   readOnly?: boolean | undefined;
   onChange: (key: string, patch: Partial<Linha>) => void;
   onSelectItem: (key: string, itemId: string) => void;
@@ -31,12 +35,16 @@ export function OrcamentoLinhas({
   linhas,
   itemOptions,
   unidadeOptions,
+  itens,
+  marcas,
   readOnly,
   onChange,
   onSelectItem,
   onAdd,
   onRemove,
 }: Props) {
+  const itemById = new Map(itens.map((item) => [String(rowId(item) ?? ""), item]));
+  const marcaById = new Map(marcas.map((marca) => [String(rowId(marca) ?? ""), marca]));
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-3">
@@ -57,6 +65,9 @@ export function OrcamentoLinhas({
       {linhas.map((l, index) => {
         const c = calcLinha(l);
         const semCusto = l.item_id !== "" && l.preco_custo <= 0;
+        const item = itemById.get(l.item_id);
+        const marca = marcaById.get(String(pick(item ?? {}, ["itens_marcas_id"]) ?? ""));
+        const nomeMarca = String(pick(marca ?? {}, ["descricao"]) ?? "").trim();
         return (
           <div key={l.key} className="bg-card space-y-3 rounded-lg border p-3">
             <div className="flex items-start gap-2">
@@ -77,6 +88,7 @@ export function OrcamentoLinhas({
                   emptyText="Nenhum item ativo encontrado."
                   disabled={Boolean(readOnly)}
                 />
+                {nomeMarca && <p className="text-muted-foreground text-xs">Marca: {nomeMarca}</p>}
               </div>
               {!readOnly && (
                 <Button

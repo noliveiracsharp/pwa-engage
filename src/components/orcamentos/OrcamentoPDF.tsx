@@ -2,7 +2,7 @@ import { Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { rowId } from "@/lib/crud";
-import { formatCpfCnpj } from "@/lib/input-masks";
+import { formatCpfCnpj, formatPhoneDisplay } from "@/lib/input-masks";
 import {
   formatBRL,
   formatDate,
@@ -23,6 +23,7 @@ type Props = {
   vendedor: Row | undefined;
   itens: Row[];
   unidades: Row[];
+  marcas: Row[];
 };
 
 const txt = (v: unknown) => {
@@ -66,11 +67,13 @@ export function OrcamentoPDF({
   vendedor,
   itens,
   unidades,
+  marcas,
 }: Props) {
   if (!orcamento) return null;
 
   const itemById = new Map(itens.map((i) => [String(rowId(i) ?? ""), i]));
   const unidadeById = new Map(unidades.map((u) => [String(rowId(u) ?? ""), u]));
+  const marcaById = new Map(marcas.map((m) => [String(rowId(m) ?? ""), m]));
 
   const numero = txt(orcamento["numero"]) || "Orçamento";
   const situacao = situacaoOf(orcamento["situacao"]);
@@ -82,7 +85,7 @@ export function OrcamentoPDF({
   const totalLiquido = num(orcamento["total_liquido"]);
 
   const empresaNome =
-    txt(pick(empresa ?? {}, ["nome_fantasia", "razao_social", "nome", "titulo"])) ||
+    txt(pick(empresa ?? {}, ["nome", "razao_social", "nome_fantasia", "titulo"])) ||
     "Minha empresa";
   const empresaLogo = txt(pick(empresa ?? {}, ["logo", "logo_url", "logotipo", "imagem"]));
   const clienteNome = txt(pick(cliente ?? {}, ["razao_social", "nome_fantasia", "nome"])) || "—";
@@ -117,11 +120,11 @@ export function OrcamentoPDF({
                   txt(pick(empresa ?? {}, ["razao_social"])) !== empresaNome && (
                     <div>{txt(pick(empresa ?? {}, ["razao_social"]))}</div>
                   )}
-                {txt(pick(empresa ?? {}, ["documento", "cnpj"])) && (
-                  <div>CNPJ {formatCpfCnpj(txt(pick(empresa ?? {}, ["documento", "cnpj"])))}</div>
+                {txt(pick(empresa ?? {}, ["cnpj_cpf", "cnpj", "documento"])) && (
+                  <div>CNPJ {formatCpfCnpj(txt(pick(empresa ?? {}, ["cnpj_cpf", "cnpj", "documento"])))}</div>
                 )}
-                {txt(pick(empresa ?? {}, ["telefone", "fone", "celular"])) && (
-                  <div>{txt(pick(empresa ?? {}, ["telefone", "fone", "celular"]))}</div>
+                {txt(pick(empresa ?? {}, ["telefone1", "telefone", "fone", "celular"])) && (
+                  <div>{formatPhoneDisplay(txt(pick(empresa ?? {}, ["telefone1", "telefone", "fone", "celular"])))}</div>
                 )}
                 {txt(pick(empresa ?? {}, ["email"])) && (
                   <div>{txt(pick(empresa ?? {}, ["email"]))}</div>
@@ -206,6 +209,8 @@ export function OrcamentoPDF({
             <tbody>
               {linhasOrdenadas.map((l, i) => {
                 const item = itemById.get(String(pick(l, ["item_id"]) ?? ""));
+                const marca = marcaById.get(String(pick(item ?? {}, ["itens_marcas_id"]) ?? ""));
+                const nomeMarca = txt(pick(marca ?? {}, ["descricao"]));
                 const unidade = unidadeById.get(String(pick(l, ["unidade_medida_id"]) ?? ""));
                 const descricao =
                   txt(pick(item ?? {}, ["descricao"])) || txt(l["detalhe"]) || "Item";
@@ -215,6 +220,7 @@ export function OrcamentoPDF({
                     <td className="orc-col-num">{i + 1}</td>
                     <td>
                       <strong>{descricao}</strong>
+                       {nomeMarca && <div className="orc-detalhe">Marca: {nomeMarca}</div>}
                       {detalhe && detalhe !== descricao && (
                         <div className="orc-detalhe">{detalhe}</div>
                       )}

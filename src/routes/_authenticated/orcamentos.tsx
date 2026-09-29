@@ -66,6 +66,8 @@ function OrcamentosPage() {
   const { data: usuarios = [] } = useTableRows("usuarios");
   const { data: itens = [] } = useTableRows("itens");
   const { data: unidades = [] } = useTableRows("unidade_medida");
+  const { data: marcas = [] } = useTableRows("itens_marcas");
+  const { data: empresas = [] } = useTableRows("empresas");
   const save = useSaveOrcamento();
   const alterarSituacao = useAlterarSituacao();
   const remove = useDeleteRecord("orcamentos");
@@ -92,6 +94,10 @@ function OrcamentosPage() {
   const unidadesEmpresa = useMemo(
     () => unidades.filter((u) => mesmaEmpresa(u, empresaId)),
     [unidades, empresaId],
+  );
+  const marcasEmpresa = useMemo(
+    () => marcas.filter((m) => mesmaEmpresa(m, empresaId)),
+    [marcas, empresaId],
   );
 
   const parceiroById = useMemo(
@@ -381,6 +387,7 @@ function OrcamentosPage() {
         vendedores={vendedores}
         itens={itensEmpresa}
         unidades={unidadesEmpresa}
+        marcas={marcasEmpresa}
         vendedorPadraoId={usuarioId !== undefined ? String(usuarioId) : undefined}
         onPreview={
           record
@@ -400,7 +407,7 @@ function OrcamentosPage() {
         onOpenChange={setPreviewOpen}
         orcamento={preview}
         linhas={linhasPreview}
-        empresa={empresa}
+        empresa={empresas.find((e) => String(rowId(e) ?? "") === String(preview?.["empresa_id"] ?? empresaId ?? "")) ?? empresa}
         cliente={parceiroById.get(
           String(preview ? (pick(preview, ["parceiro_id", "parceiros_id"]) ?? "") : ""),
         )}
@@ -409,6 +416,7 @@ function OrcamentosPage() {
         )}
         itens={itens}
         unidades={unidades}
+        marcas={marcas}
       />
     </>
   );

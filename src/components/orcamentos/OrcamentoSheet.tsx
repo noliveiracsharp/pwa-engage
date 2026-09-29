@@ -128,6 +128,7 @@ type Props = {
   vendedores: Row[];
   itens: Row[];
   unidades: Row[];
+  marcas: Row[];
   vendedorPadraoId?: string | undefined;
   /** Abre a pré-visualização/PDF do orçamento em edição. */
   onPreview?: (() => void) | undefined;
@@ -145,6 +146,7 @@ export function OrcamentoSheet({
   vendedores,
   itens,
   unidades,
+  marcas,
   vendedorPadraoId,
   onPreview,
   onSave,
@@ -517,6 +519,8 @@ export function OrcamentoSheet({
             linhas={linhas}
             itemOptions={itemOptions}
             unidadeOptions={unidadeOptions}
+            itens={itens}
+            marcas={marcas}
             readOnly={readOnly}
             onChange={updateLinha}
             onSelectItem={selectItem}
