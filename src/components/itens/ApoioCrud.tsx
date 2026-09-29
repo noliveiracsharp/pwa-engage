@@ -110,7 +110,7 @@ export function ApoioCrud({
       <DataTable
         title={title}
         columns={allColumns}
-        rowDepth={hierarchy ? (row) => depthMap.get(String(rowId(row))) ?? 0 : undefined}
+        {...(hierarchy ? { rowDepth: (row: Row) => depthMap.get(String(rowId(row))) ?? 0 } : {})}
         rows={filtered}
         loading={isLoading}
         getValue={(row, keys) => pick(row, keys)}
