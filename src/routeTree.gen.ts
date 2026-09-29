@@ -13,7 +13,6 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
-import { Route as TmpOrcPreviewRouteImport } from './routes/tmp-orc-preview'
 import { Route as AuthenticatedAtendimentosRouteImport } from './routes/_authenticated/atendimentos'
 import { Route as AuthenticatedCentro_custosRouteImport } from './routes/_authenticated/centro_custos'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
@@ -46,11 +45,6 @@ const LoginRoute = LoginRouteImport.update({
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TmpOrcPreviewRoute = TmpOrcPreviewRouteImport.update({
-  id: '/tmp-orc-preview',
-  path: '/tmp-orc-preview',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedAtendimentosRoute =
@@ -131,7 +125,6 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
-  '/tmp-orc-preview': typeof TmpOrcPreviewRoute
   '/atendimentos': typeof AuthenticatedAtendimentosRoute
   '/centro_custos': typeof AuthenticatedCentro_custosRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -151,7 +144,6 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
-  '/tmp-orc-preview': typeof TmpOrcPreviewRoute
   '/atendimentos': typeof AuthenticatedAtendimentosRoute
   '/centro_custos': typeof AuthenticatedCentro_custosRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -173,7 +165,6 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
-  '/tmp-orc-preview': typeof TmpOrcPreviewRoute
   '/_authenticated/atendimentos': typeof AuthenticatedAtendimentosRoute
   '/_authenticated/centro_custos': typeof AuthenticatedCentro_custosRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
@@ -195,7 +186,6 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/reset-password'
-    | '/tmp-orc-preview'
     | '/atendimentos'
     | '/centro_custos'
     | '/dashboard'
@@ -215,7 +205,6 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/reset-password'
-    | '/tmp-orc-preview'
     | '/atendimentos'
     | '/centro_custos'
     | '/dashboard'
@@ -236,7 +225,6 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/login'
     | '/reset-password'
-    | '/tmp-orc-preview'
     | '/_authenticated/atendimentos'
     | '/_authenticated/centro_custos'
     | '/_authenticated/dashboard'
@@ -258,7 +246,6 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   LoginRoute: typeof LoginRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
-  TmpOrcPreviewRoute: typeof TmpOrcPreviewRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -289,13 +276,6 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/tmp-orc-preview': {
-      id: '/tmp-orc-preview'
-      path: '/tmp-orc-preview'
-      fullPath: '/tmp-orc-preview'
-      preLoaderRoute: typeof TmpOrcPreviewRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/atendimentos': {
@@ -441,7 +421,6 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   LoginRoute: LoginRoute,
   ResetPasswordRoute: ResetPasswordRoute,
-  TmpOrcPreviewRoute: TmpOrcPreviewRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
