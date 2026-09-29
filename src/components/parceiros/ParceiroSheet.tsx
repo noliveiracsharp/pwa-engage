@@ -94,6 +94,7 @@ function toForm(r: Row | null): Form {
   f.opcao_pelo_mei = r?.["opcao_pelo_mei"] === true;
   f.cnaes_secundarios = arr<Cnae>(r?.["cnaes_secundarios"]);
   f.qsa = arr<Socio>(r?.["qsa"]);
+  f.parceiro_pai_id = r?.[PARENT_KEY] == null ? "" : String(r[PARENT_KEY]);
   return f;
 }
 
