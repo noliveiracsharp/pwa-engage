@@ -31,12 +31,13 @@ export type DescontoTipo = "valor" | "percentual";
 /* Números e formatação                                                */
 /* ------------------------------------------------------------------ */
 
-/** Converte texto digitado (aceita vírgula) em número; inválido = 0. */
+/** Converte texto digitado (aceita "1.234,56", "12,5" ou "12.5") em número; inválido = 0. */
 export function num(value: unknown): number {
   if (typeof value === "number") return Number.isFinite(value) ? value : 0;
   const s = String(value ?? "").trim();
   if (!s) return 0;
-  const n = Number(s.replace(/\./g, (m, i, str) => (str.includes(",") ? "" : m)).replace(",", "."));
+  const normalized = s.includes(",") ? s.replace(/\./g, "").replace(",", ".") : s;
+  const n = Number(normalized);
   return Number.isFinite(n) ? n : 0;
 }
 
