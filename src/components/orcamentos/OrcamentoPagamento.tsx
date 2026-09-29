@@ -275,12 +275,13 @@ export function OrcamentoPagamento({ value, parcelas, totalLiquido, readOnly, on
 
           {value.tem_juros && cfg && parcelaFinal > 0 && (
             <div className="bg-muted/30 space-y-1 rounded-md border p-3 text-xs sm:col-span-2 lg:col-span-4">
-              <p className="text-muted-foreground font-medium">Memória de cálculo do parcelamento</p>
+              <p className="text-muted-foreground font-medium">
+                Memória de cálculo do parcelamento
+              </p>
               <p className="text-muted-foreground leading-relaxed">
                 Taxa {fmtPct(cfg.taxa_juros_mensal)}% a.m. · custo operacional{" "}
-                {formatBRL(cfg.custo_operacional_mensal)} · markup{" "}
-                {fmtPct(cfg.fator_markup)}% · coeficiente global{" "}
-                {coeficienteGlobal.toFixed(7)} → parcela de{" "}
+                {formatBRL(cfg.custo_operacional_mensal)} · markup {fmtPct(cfg.fator_markup)}% ·
+                coeficiente global {coeficienteGlobal.toFixed(7)} → parcela de{" "}
                 <span className="text-foreground font-semibold tabular-nums">
                   {formatBRL(parcelaFinal)}
                 </span>{" "}
