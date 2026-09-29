@@ -128,6 +128,8 @@ type Props = {
   itens: Row[];
   unidades: Row[];
   vendedorPadraoId?: string | undefined;
+  /** Abre a pré-visualização/PDF do orçamento em edição. */
+  onPreview?: (() => void) | undefined;
   onSave: (input: { header: Row; linhas: LinhaPayload[] }) => void;
 };
 
