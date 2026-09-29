@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, ChevronUp, Eye, Pencil, Plus, Trash2 } from "lucide-react";
+import { Check, ChevronUp, Eye, Pencil, Plus, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -51,13 +51,46 @@ export function OrcamentoLinhas({
   onRemove,
 }: Props) {
   const [abertas, setAbertas] = useState<Set<string>>(() => new Set());
-  const toggleAberta = (key: string) =>
+
+  // Estado da linha no momento em que a edição abriu, usado pelo "Cancelar".
+  const linhasRef = useRef(linhas);
+  linhasRef.current = linhas;
+  const snapshots = useRef(new Map<string, Linha>());
+  const novas = useRef(new Set<string>());
+
+  const setAberta = (key: string, abrir: boolean) =>
     setAbertas((prev) => {
       const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
+      if (abrir) next.add(key);
+      else next.delete(key);
       return next;
     });
+
+  /** Abre a linha guardando o estado atual; recolher confirma a edição. */
+  const toggleAberta = (key: string) => {
+    const abrir = !abertas.has(key);
+    if (abrir) {
+      const atual = linhasRef.current.find((l) => l.key === key);
+      if (atual) snapshots.current.set(key, { ...atual });
+    } else {
+      snapshots.current.delete(key);
+      novas.current.delete(key);
+    }
+    setAberta(key, abrir);
+  };
+
+  /** Descarta a edição: apaga a linha recém-criada ou restaura os valores anteriores. */
+  const cancelar = (key: string) => {
+    if (novas.current.has(key)) {
+      onRemove(key);
+    } else {
+      const snapshot = snapshots.current.get(key);
+      if (snapshot) onChange(key, snapshot);
+    }
+    snapshots.current.delete(key);
+    novas.current.delete(key);
+    setAberta(key, false);
+  };
 
   // Linhas recém-adicionadas abrem automaticamente em modo de edição.
   const keysRef = useRef<Set<string>>(new Set(linhas.map((l) => l.key)));
@@ -65,6 +98,10 @@ export function OrcamentoLinhas({
     const novos = linhas.filter((l) => !keysRef.current.has(l.key));
     keysRef.current = new Set(linhas.map((l) => l.key));
     if (novos.length > 0) {
+      for (const l of novos) {
+        snapshots.current.set(l.key, { ...l });
+        if (!l.id) novas.current.add(l.key);
+      }
       setAbertas((prev) => {
         const next = new Set(prev);
         for (const l of novos) next.add(l.key);
@@ -315,7 +352,15 @@ export function OrcamentoLinhas({
                   </div>
 
                   {!readOnly && (
-                    <div className="flex justify-end pl-7">
+                    <div className="flex flex-wrap items-center justify-end gap-2 pl-7">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => cancelar(l.key)}
+                      >
+                        <X className="mr-1 h-4 w-4" /> Cancelar edição
+                      </Button>
                       <Button type="button" size="sm" onClick={() => toggleAberta(l.key)}>
                         <Check className="mr-1 h-4 w-4" /> Salvar item
                       </Button>
