@@ -8,3 +8,5 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+Centro de custo usa `buildTree` e o `DataTable` compartilhado com expansão por ID em `ApoioCrud`; isso mantém a árvore estável nas telas de gestão e na aba de Itens sem alterar as demais tabelas.
