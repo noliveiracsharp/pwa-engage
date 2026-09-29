@@ -52,9 +52,15 @@ export function OrcamentoTotais({
   valoresAdicionais,
   readOnly,
   itensSemCusto,
+  acrescimoJuros = 0,
   onChange,
 }: Props) {
-  const prejuizo = totais.total_lucro < 0 && totais.total_itens > 0;
+  const comJuros = acrescimoJuros >= 0.01;
+  // Com juros, o cliente paga o acréscimo do parcelamento — ele entra no lucro final.
+  const lucroFinal = totais.total_lucro + (comJuros ? acrescimoJuros : 0);
+  const baseFinal = totais.total_liquido + (comJuros ? acrescimoJuros : 0);
+  const margemFinal = baseFinal > 0 ? (lucroFinal / baseFinal) * 100 : 0;
+  const prejuizo = lucroFinal < 0 && totais.total_itens > 0;
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
