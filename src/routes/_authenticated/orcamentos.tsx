@@ -117,6 +117,12 @@ function OrcamentosPage() {
     return todasLinhas.filter((l) => String(l["orcamento_id"] ?? "") === id);
   }, [todasLinhas, record]);
 
+  const linhasPreview = useMemo(() => {
+    if (!preview) return [] as Row[];
+    const id = String(rowId(preview) ?? "");
+    return todasLinhas.filter((l) => String(l["orcamento_id"] ?? "") === id);
+  }, [todasLinhas, preview]);
+
   const nomeCliente = (r: Row) => {
     const p = parceiroById.get(String(pick(r, ["parceiro_id", "parceiros_id"]) ?? ""));
     return p ? String(p["razao_social"] ?? p["nome_fantasia"] ?? "—") : "";
