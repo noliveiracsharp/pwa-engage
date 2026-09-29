@@ -60,7 +60,7 @@ type Header = {
   desconto: string;
   frete: string;
   valores_adicionais: string;
-};
+} & PagamentoState;
 
 const emptyHeader = (vendedorId: string): Header => {
   const hoje = todayISO();
@@ -75,21 +75,39 @@ const emptyHeader = (vendedorId: string): Header => {
     desconto: "",
     frete: "",
     valores_adicionais: "",
+    obs_nota_fiscal: "",
+    forma_pagamento: "",
+    forma_pagamento_obs: "",
+    qtd_parcelas: "1",
+    tem_juros: false,
+    coeficiente_juros: "",
+    primeira_parcela: hoje,
   };
 };
 
-const headerFromRecord = (r: Row): Header => ({
-  situacao: situacaoOf(r["situacao"]),
-  dt_orcamento: toISODate(r["dt_orcamento"]) || todayISO(),
-  validade_orcamento: toISODate(r["validade_orcamento"]),
-  parceiro_id: String(pick(r, ["parceiro_id", "parceiros_id"]) ?? ""),
-  usuario_id: String(pick(r, ["usuario_id", "vendedor_id"]) ?? ""),
-  descricao: String(pick(r, ["descricao"]) ?? ""),
-  desconto_tipo: String(r["desconto_tipo"] ?? "") === "percentual" ? "percentual" : "valor",
-  desconto: num(r["desconto"]) ? String(num(r["desconto"])) : "",
-  frete: num(r["frete"]) ? String(num(r["frete"])) : "",
-  valores_adicionais: num(r["valores_adicionais"]) ? String(num(r["valores_adicionais"])) : "",
-});
+const headerFromRecord = (r: Row): Header => {
+  const parcelas = parcelasFromValue(r["parcelas"]);
+  const dt = toISODate(r["dt_orcamento"]) || todayISO();
+  return {
+    situacao: situacaoOf(r["situacao"]),
+    dt_orcamento: dt,
+    validade_orcamento: toISODate(r["validade_orcamento"]),
+    parceiro_id: String(pick(r, ["parceiro_id", "parceiros_id"]) ?? ""),
+    usuario_id: String(pick(r, ["usuario_id", "vendedor_id"]) ?? ""),
+    descricao: String(pick(r, ["descricao"]) ?? ""),
+    desconto_tipo: String(r["desconto_tipo"] ?? "") === "percentual" ? "percentual" : "valor",
+    desconto: num(r["desconto"]) ? String(num(r["desconto"])) : "",
+    frete: num(r["frete"]) ? String(num(r["frete"])) : "",
+    valores_adicionais: num(r["valores_adicionais"]) ? String(num(r["valores_adicionais"])) : "",
+    obs_nota_fiscal: String(pick(r, ["obs_nota_fiscal"]) ?? ""),
+    forma_pagamento: String(pick(r, ["forma_pagamento"]) ?? ""),
+    forma_pagamento_obs: String(pick(r, ["forma_pagamento_obs"]) ?? ""),
+    qtd_parcelas: String(Number(pick(r, ["qtd_parcelas"]) ?? parcelas.length || 1) || 1),
+    tem_juros: pick(r, ["tem_juros"]) === true,
+    coeficiente_juros: num(r["coeficiente_juros"]) ? String(num(r["coeficiente_juros"])) : "",
+    primeira_parcela: parcelas[0]?.vencimento || dt,
+  };
+};
 
 type Props = {
   open: boolean;
