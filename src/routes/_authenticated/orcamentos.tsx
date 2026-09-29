@@ -59,6 +59,7 @@ function mesmaEmpresa(row: Row, empresaId: string | number | undefined) {
 function OrcamentosPage() {
   const perms = usePagePermissions("/orcamentos");
   const { empresaId, usuarioId } = useAudit();
+  const { empresa } = useAuth();
   const { data: todos = [], isLoading } = useTableRows("orcamentos");
   const { data: todasLinhas = [] } = useTableRows("orcamento_itens");
   const { data: parceiros = [] } = useTableRows("parceiros");
@@ -71,6 +72,8 @@ function OrcamentosPage() {
 
   const [open, setOpen] = useState(false);
   const [record, setRecord] = useState<Row | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [preview, setPreview] = useState<Row | null>(null);
   const [f, setF] = useState({ busca: "", situacao: "todos", vendedor: "todos", ano: "todos" });
 
   const escopo = useMemo(() => todos.filter((r) => mesmaEmpresa(r, empresaId)), [todos, empresaId]);
