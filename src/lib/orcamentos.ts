@@ -287,3 +287,96 @@ export function calcTotais(
 export function formatNumero(ano: number, sequencia: number): string {
   return `#${ano}-${String(sequencia).padStart(4, "0")}`;
 }
+
+/* ------------------------------------------------------------------ */
+/* Pagamento e parcelamento                                            */
+/* ------------------------------------------------------------------ */
+
+export const FORMAS_PAGAMENTO = [
+  "Pix",
+  "Boleto bancário",
+  "Cartão de crédito",
+  "Cartão de débito",
+  "Transferência bancária",
+  "Dinheiro",
+  "Faturado",
+  "A combinar",
+] as const;
+
+export type Parcela = {
+  /** Número da parcela (1, 2, 3…). */
+  numero: number;
+  /** Data de vencimento (yyyy-mm-dd). */
+  vencimento: string;
+  valor: number;
+};
+
+/** Soma meses preservando o dia (ajusta para o último dia quando o mês é menor). */
+export function addMonthsISO(iso: string, months: number): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  if (!y || !m || !d) return iso;
+  const alvo = new Date(y, m - 1 + months, 1);
+  const ultimoDia = new Date(alvo.getFullYear(), alvo.getMonth() + 1, 0).getDate();
+  const dia = Math.min(d, ultimoDia);
+  return `${alvo.getFullYear()}-${String(alvo.getMonth() + 1).padStart(2, "0")}-${String(dia).padStart(2, "0")}`;
+}
+
+/**
+ * Gera o cronograma de parcelas mensais.
+ *  - Sem juros: valor total dividido pela quantidade.
+ *  - Com juros: valor de cada parcela = total × coeficiente (tabela de coeficientes).
+ * A diferença de centavos do arredondamento é ajustada na última parcela.
+ */
+export function gerarParcelas(opts: {
+  total: number;
+  quantidade: number;
+  primeiraData: string;
+  comJuros: boolean;
+  coeficiente?: unknown;
+}): Parcela[] {
+  const qtd = Math.max(1, Math.floor(num(opts.quantidade)));
+  const total = round2(Math.max(0, num(opts.total)));
+  const primeira = toISODate(opts.primeiraData);
+  if (!primeira || total <= 0) return [];
+
+  const coef = round2(num(opts.coeficiente) * 100000) / 100000;
+  const valorParcela =
+    opts.comJuros && coef > 0 ? round2(total * num(opts.coeficiente)) : round2(total / qtd);
+  const totalParcelado = round2(valorParcela * qtd);
+
+  const parcelas: Parcela[] = [];
+  let acumulado = 0;
+  for (let i = 0; i < qtd; i += 1) {
+    const ultima = i === qtd - 1;
+    const valor = ultima ? round2(totalParcelado - acumulado) : valorParcela;
+    acumulado = round2(acumulado + valor);
+    parcelas.push({ numero: i + 1, vencimento: addMonthsISO(primeira, i), valor });
+  }
+  return parcelas;
+}
+
+export const somaParcelas = (parcelas: Parcela[]) =>
+  round2(parcelas.reduce((s, p) => s + p.valor, 0));
+
+/** Lê o cronograma gravado no banco (jsonb ou texto). */
+export function parcelasFromValue(value: unknown): Parcela[] {
+  let raw: unknown = value;
+  if (typeof raw === "string") {
+    try {
+      raw = JSON.parse(raw);
+    } catch {
+      return [];
+    }
+  }
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((p, i) => {
+      const o = (p ?? {}) as Record<string, unknown>;
+      return {
+        numero: Number(o["numero"] ?? i + 1) || i + 1,
+        vencimento: toISODate(o["vencimento"]),
+        valor: num(o["valor"]),
+      };
+    })
+    .filter((p) => p.vencimento !== "");
+}
