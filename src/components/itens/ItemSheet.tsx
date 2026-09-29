@@ -79,6 +79,7 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, canCre
   const { data: unidades = [] } = useTableRows("unidade_medida");
   const { data: centros = [] } = useTableRows("centro_custo");
   const { data: marcas = [] } = useTableRows("itens_marcas");
+  const { data: itens = [] } = useTableRows("itens");
   const { empresaId } = useAudit();
   const centroTree = useMemo(
     () =>
