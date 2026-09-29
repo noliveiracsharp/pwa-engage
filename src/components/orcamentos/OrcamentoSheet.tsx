@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { FileText } from "lucide-react";
 import { toast } from "sonner";
 import {
   Sheet,
