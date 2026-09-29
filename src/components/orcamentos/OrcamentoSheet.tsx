@@ -301,15 +301,8 @@ export function OrcamentoSheet({
         comJuros: h.tem_juros,
         coeficiente: h.coeficiente_juros,
       }),
-    [
-      totais.total_liquido,
-      h.qtd_parcelas,
-      h.primeira_parcela,
-      h.tem_juros,
-      h.coeficiente_juros,
-    ],
+    [totais.total_liquido, h.qtd_parcelas, h.primeira_parcela, h.tem_juros, h.coeficiente_juros],
   );
-
 
   /* ------------------------------ salvar ------------------------------ */
 

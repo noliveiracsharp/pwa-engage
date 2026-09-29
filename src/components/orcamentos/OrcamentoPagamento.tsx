@@ -53,8 +53,8 @@ export function OrcamentoPagamento({ value, parcelas, totalLiquido, readOnly, on
         </div>
         <p className="text-muted-foreground text-xs leading-relaxed">
           Inclua informações relevantes para seu cliente. Elas aparecerão na nota fiscal, nos campos
-          “Descrição do serviço” ou “Informações Complementares Contribuinte”, visíveis no XML, PDF e
-          DANFE.
+          “Descrição do serviço” ou “Informações Complementares Contribuinte”, visíveis no XML, PDF
+          e DANFE.
         </p>
         <Textarea
           id="obs_nota_fiscal"

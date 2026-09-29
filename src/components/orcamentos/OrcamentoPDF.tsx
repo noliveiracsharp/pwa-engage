@@ -32,7 +32,10 @@ const txt = (v: unknown) => {
 
 function enderecoDe(r: Row | undefined | null): string {
   if (!r) return "";
-  const rua = [txt(pick(r, ["endereco", "logradouro"])), txt(pick(r, ["numero_endereco", "numero"]))]
+  const rua = [
+    txt(pick(r, ["endereco", "logradouro"])),
+    txt(pick(r, ["numero_endereco", "numero"])),
+  ]
     .filter(Boolean)
     .join(", ");
   const local = [txt(pick(r, ["bairro"])), txt(pick(r, ["cidade", "municipio"]))]
@@ -79,7 +82,8 @@ export function OrcamentoPDF({
   const totalLiquido = num(orcamento["total_liquido"]);
 
   const empresaNome =
-    txt(pick(empresa ?? {}, ["nome_fantasia", "razao_social", "nome", "titulo"])) || "Minha empresa";
+    txt(pick(empresa ?? {}, ["nome_fantasia", "razao_social", "nome", "titulo"])) ||
+    "Minha empresa";
   const empresaLogo = txt(pick(empresa ?? {}, ["logo", "logo_url", "logotipo", "imagem"]));
   const clienteNome = txt(pick(cliente ?? {}, ["razao_social", "nome_fantasia", "nome"])) || "—";
 
@@ -119,7 +123,9 @@ export function OrcamentoPDF({
                 {txt(pick(empresa ?? {}, ["telefone", "fone", "celular"])) && (
                   <div>{txt(pick(empresa ?? {}, ["telefone", "fone", "celular"]))}</div>
                 )}
-                {txt(pick(empresa ?? {}, ["email"])) && <div>{txt(pick(empresa ?? {}, ["email"]))}</div>}
+                {txt(pick(empresa ?? {}, ["email"])) && (
+                  <div>{txt(pick(empresa ?? {}, ["email"]))}</div>
+                )}
                 {enderecoDe(empresa) && <div>{enderecoDe(empresa)}</div>}
               </div>
             </div>
@@ -127,7 +133,9 @@ export function OrcamentoPDF({
             <div className="orc-identificacao">
               <span className="orc-rotulo">Orçamento</span>
               <span className="orc-numero">{numero}</span>
-              <span className={`orc-situacao orc-situacao-${situacao.replace(/\s+/g, "-").toLowerCase()}`}>
+              <span
+                className={`orc-situacao orc-situacao-${situacao.replace(/\s+/g, "-").toLowerCase()}`}
+              >
                 {situacao}
               </span>
               <div className="orc-datas">
@@ -157,7 +165,9 @@ export function OrcamentoPDF({
               {txt(pick(cliente ?? {}, ["telefone", "celular"])) && (
                 <div>{txt(pick(cliente ?? {}, ["telefone", "celular"]))}</div>
               )}
-              {txt(pick(cliente ?? {}, ["email"])) && <div>{txt(pick(cliente ?? {}, ["email"]))}</div>}
+              {txt(pick(cliente ?? {}, ["email"])) && (
+                <div>{txt(pick(cliente ?? {}, ["email"]))}</div>
+              )}
               {enderecoDe(cliente) && <div>{enderecoDe(cliente)}</div>}
             </Bloco>
 
@@ -166,7 +176,9 @@ export function OrcamentoPDF({
                 <span className="orc-label">Consultor</span>
                 <strong>{txt(pick(vendedor ?? {}, ["nome", "email"])) || "—"}</strong>
               </div>
-              {txt(pick(vendedor ?? {}, ["email"])) && <div>{txt(pick(vendedor ?? {}, ["email"]))}</div>}
+              {txt(pick(vendedor ?? {}, ["email"])) && (
+                <div>{txt(pick(vendedor ?? {}, ["email"]))}</div>
+              )}
               {txt(pick(vendedor ?? {}, ["telefone", "celular"])) && (
                 <div>{txt(pick(vendedor ?? {}, ["telefone", "celular"]))}</div>
               )}
@@ -203,7 +215,9 @@ export function OrcamentoPDF({
                     <td className="orc-col-num">{i + 1}</td>
                     <td>
                       <strong>{descricao}</strong>
-                      {detalhe && detalhe !== descricao && <div className="orc-detalhe">{detalhe}</div>}
+                      {detalhe && detalhe !== descricao && (
+                        <div className="orc-detalhe">{detalhe}</div>
+                      )}
                     </td>
                     <td className="orc-right">{formatQtd(l["quantidade"])}</td>
                     <td>{txt(pick(unidade ?? {}, ["sigla", "descricao"])) || "—"}</td>
@@ -306,7 +320,8 @@ export function OrcamentoPDF({
           </div>
 
           <footer className="orc-rodape">
-            {empresaNome} · Proposta {numero} · Válida até {formatDate(orcamento["validade_orcamento"])}
+            {empresaNome} · Proposta {numero} · Válida até{" "}
+            {formatDate(orcamento["validade_orcamento"])}
           </footer>
         </div>
       </DialogContent>
