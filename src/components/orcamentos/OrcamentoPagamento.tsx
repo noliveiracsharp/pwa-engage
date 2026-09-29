@@ -190,12 +190,16 @@ export function OrcamentoPagamento({ value, parcelas, totalLiquido, readOnly, on
               <Input
                 id="coeficiente_juros"
                 inputMode="decimal"
-                placeholder="Ex.: 0,35690"
+                placeholder="Calculado automaticamente"
                 value={value.coeficiente_juros}
-                onChange={(e) => onChange({ coeficiente_juros: e.target.value })}
+                readOnly
+                disabled
+                className="bg-muted/50"
               />
               <p className="text-muted-foreground text-xs">
-                Valor de cada parcela = total líquido × coeficiente (tabela de coeficientes).
+                {taxaJuros > 0
+                  ? `Calculado pela Tabela Price com a taxa da empresa (${(taxaJuros * 100).toLocaleString("pt-BR", { maximumFractionDigits: 4 })}% a.m.). Valor da parcela = total líquido × coeficiente.`
+                  : "Cadastre a taxa de juros mensal nas configurações da empresa para calcular automaticamente."}
               </p>
             </div>
           )}
