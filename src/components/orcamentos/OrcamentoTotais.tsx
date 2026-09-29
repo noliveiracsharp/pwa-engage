@@ -44,6 +44,7 @@ export function OrcamentoTotais({ totais, descontoTipo, desconto, frete, valores
             </Label>
             <ToggleGroup
               type="single"
+              variant="outline"
               size="sm"
               value={descontoTipo}
               onValueChange={(v) => v && onChange({ desconto_tipo: v as DescontoTipo })}

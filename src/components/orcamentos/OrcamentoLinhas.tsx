@@ -126,7 +126,7 @@ export function OrcamentoLinhas({ linhas, itemOptions, unidadeOptions, readOnly,
               </div>
               <div className="space-y-1.5 sm:col-span-2">
                 <Label htmlFor={`vu-${l.key}`} className="block text-xs font-medium">
-                  Valor unitário (R$)
+                  Unitário (R$)
                 </Label>
                 <Input
                   id={`vu-${l.key}`}
