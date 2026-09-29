@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { CalendarClock, ReceiptText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { num } from "@/lib/orcamentos";
@@ -23,6 +23,60 @@ import {
 
 const NONE = "__none__";
 
+/** Parâmetros financeiros da empresa (empresas_configuracao). */
+type ConfigComercial = {
+  taxa_juros_mensal: number;
+  custo_operacional_mensal: number;
+  fator_markup: number;
+};
+
+/**
+ * Cálculo financeiro composto do parcelamento:
+ *  1. coeficiente da Tabela Price com a taxa mensal da empresa;
+ *  2. parcela-base = total líquido × coeficiente Price;
+ *  3. embute o custo operacional fixo e aplica o fator de markup;
+ *  4. coeficiente global = parcela final / total líquido (exibido em tela).
+ */
+function calcularParcelamentoComJuros(
+  totalLiquidoBase: number,
+  parcelas: number,
+  config: ConfigComercial | null,
+): { parcelaFinal: number; coeficienteGlobal: number } {
+  if (!config || parcelas <= 0 || totalLiquidoBase <= 0) {
+    return { parcelaFinal: 0, coeficienteGlobal: 0 };
+  }
+
+  // Conversão de segurança para números
+  const i = Number(config.taxa_juros_mensal); // Ex: 0.015
+  const custo = Number(config.custo_operacional_mensal); // Ex: 400
+  const markup = Number(config.fator_markup); // Ex: 0.65
+
+  // 1. Coeficiente da Tabela Price
+  const coefPrice = i / (1 - Math.pow(1 + i, -parcelas));
+
+  // 2. Valor da parcela apenas com os juros (Base)
+  const parcelaBase = totalLiquidoBase * coefPrice;
+
+  // 3. Embutindo o custo operacional e aplicando a margem (Markup)
+  const parcelaFinal = (parcelaBase + custo) / markup;
+
+  // 4. Coeficiente Global gerado (para exibição em tela)
+  const coeficienteGlobal = parcelaFinal / totalLiquidoBase;
+
+  if (!Number.isFinite(parcelaFinal) || !Number.isFinite(coeficienteGlobal)) {
+    return { parcelaFinal: 0, coeficienteGlobal: 0 };
+  }
+
+  return { parcelaFinal: parcelaFinal, coeficienteGlobal: coeficienteGlobal };
+}
+
+/** Coeficiente em texto (7 casas, separador decimal brasileiro). */
+const fmtCoef = (v: number) => v.toFixed(7).replace(".", ",");
+
+/** Percentual legível (0.015 → "1,5"). */
+const fmtPct = (v: number) =>
+  (v * 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+
 export type PagamentoState = {
   obs_nota_fiscal: string;
   forma_pagamento: string;
@@ -46,40 +100,55 @@ export function OrcamentoPagamento({ value, parcelas, totalLiquido, readOnly, on
   const total = somaParcelas(parcelas);
   const acrescimo = total - totalLiquido;
 
-  // Taxa de juros mensal da empresa (empresas_configuracao.taxa_juros_mensal).
-  const [taxaJuros, setTaxaJuros] = useState<number>(0);
+  const qtdParcelas = Math.max(0, Math.floor(num(value.qtd_parcelas)));
+
+  // Parâmetros comerciais da empresa (taxa de juros, custo operacional, markup).
+  const [configComercial, setConfigComercial] = useState<ConfigComercial | null>(null);
   useEffect(() => {
     let ativo = true;
     supabase
       .from("empresas_configuracao")
-      .select("taxa_juros_mensal")
+      .select("taxa_juros_mensal, custo_operacional_mensal, fator_markup")
       .eq("ativo", true)
       .single()
       .then(({ data }) => {
-        if (ativo) setTaxaJuros(num(data?.taxa_juros_mensal));
+        if (!ativo || !data) return;
+        const row = data as Record<string, unknown>;
+        setConfigComercial({
+          taxa_juros_mensal: num(row["taxa_juros_mensal"]),
+          custo_operacional_mensal: num(row["custo_operacional_mensal"]),
+          fator_markup: num(row["fator_markup"]),
+        });
       });
     return () => {
       ativo = false;
     };
   }, []);
 
-  // Tabela Price: coeficiente = i / (1 - (1 + i)^-n). Preenche e trava o campo
-  // quando "Com juros"; limpa quando volta para "Sem juros".
-  const ultimoAuto = useRef("");
+  // Recalcula o coeficiente global sempre que o total líquido, a quantidade de
+  // parcelas ou o toggle "Com juros" mudarem. Preenche e trava o campo quando
+  // "Com juros"; limpa quando volta para "Sem juros" (divisão simples).
+  const { parcelaFinal, coeficienteGlobal } = calcularParcelamentoComJuros(
+    totalLiquido,
+    qtdParcelas,
+    configComercial,
+  );
   useEffect(() => {
-    const n = Math.max(0, Math.floor(num(value.qtd_parcelas)));
-    if (value.tem_juros && n > 0 && taxaJuros > 0) {
-      const coef = taxaJuros / (1 - Math.pow(1 + taxaJuros, -n));
-      const texto = coef.toFixed(7).replace(".", ",");
-      ultimoAuto.current = texto;
+    if (value.tem_juros) {
+      if (coeficienteGlobal <= 0) return;
+      const texto = fmtCoef(coeficienteGlobal);
       if (value.coeficiente_juros !== texto) onChange({ coeficiente_juros: texto });
-    } else if (!value.tem_juros && value.coeficiente_juros) {
-      // Limpa apenas se o valor atual era o automático (ou sempre que voltar a "Sem juros").
-      ultimoAuto.current = "";
+    } else if (value.coeficiente_juros) {
       onChange({ coeficiente_juros: "" });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value.tem_juros, value.qtd_parcelas, taxaJuros]);
+  }, [value.tem_juros, qtdParcelas, totalLiquido, coeficienteGlobal]);
+
+  // Configuração completa o suficiente para o cálculo (markup precisa ser > 0).
+  const cfg =
+    configComercial && configComercial.fator_markup > 0 && configComercial.taxa_juros_mensal >= 0
+      ? configComercial
+      : null;
 
   return (
     <div className="space-y-4">
@@ -197,9 +266,26 @@ export function OrcamentoPagamento({ value, parcelas, totalLiquido, readOnly, on
                 className="bg-muted/50"
               />
               <p className="text-muted-foreground text-xs">
-                {taxaJuros > 0
-                  ? `Calculado pela Tabela Price com a taxa da empresa (${(taxaJuros * 100).toLocaleString("pt-BR", { maximumFractionDigits: 4 })}% a.m.). Valor da parcela = total líquido × coeficiente.`
-                  : "Cadastre a taxa de juros mensal nas configurações da empresa para calcular automaticamente."}
+                {cfg
+                  ? `Calculado com a taxa da empresa (${fmtPct(cfg.taxa_juros_mensal)}% a.m. pela Tabela Price), o custo operacional de ${formatBRL(cfg.custo_operacional_mensal)} e o markup de ${fmtPct(cfg.fator_markup)}%. Valor da parcela = total líquido × coeficiente.`
+                  : "Cadastre taxa de juros, custo operacional e fator de markup nas configurações da empresa para calcular automaticamente."}
+              </p>
+            </div>
+          )}
+
+          {value.tem_juros && cfg && parcelaFinal > 0 && (
+            <div className="bg-muted/30 space-y-1 rounded-md border p-3 text-xs sm:col-span-2 lg:col-span-4">
+              <p className="text-muted-foreground font-medium">
+                Memória de cálculo do parcelamento
+              </p>
+              <p className="text-muted-foreground leading-relaxed">
+                Taxa {fmtPct(cfg.taxa_juros_mensal)}% a.m. · custo operacional{" "}
+                {formatBRL(cfg.custo_operacional_mensal)} · markup {fmtPct(cfg.fator_markup)}% ·
+                coeficiente global {coeficienteGlobal.toFixed(7)} → parcela de{" "}
+                <span className="text-foreground font-semibold tabular-nums">
+                  {formatBRL(parcelaFinal)}
+                </span>{" "}
+                × {qtdParcelas}.
               </p>
             </div>
           )}
