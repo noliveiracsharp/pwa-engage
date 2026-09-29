@@ -11,7 +11,7 @@ const MAX_BYTES = 280 * 1024;
 type Props = {
   value: string[];
   onChange: (urls: string[]) => void;
-  disabled?: boolean;
+  disabled?: boolean | undefined;
 };
 
 function pathFromUrl(url: string) {
@@ -45,7 +45,10 @@ export function ImageGallery({ value, onChange, disabled }: Props) {
 
   const handleFiles = async (files: FileList | File[]) => {
     const list = Array.from(files).filter((f) => f.type.startsWith("image/"));
-    if (!list.length) return toast.error("Selecione arquivos de imagem.");
+    if (!list.length) {
+      toast.error("Selecione arquivos de imagem.");
+      return;
+    }
     setBusy(true);
     const urls: string[] = [];
     for (const file of list) {
@@ -73,7 +76,10 @@ export function ImageGallery({ value, onChange, disabled }: Props) {
     const path = pathFromUrl(url);
     if (path) {
       const { error } = await supabase.storage.from(BUCKET).remove([path]);
-      if (error) return toast.error(`Não foi possível excluir: ${error.message}`);
+      if (error) {
+        toast.error(`Não foi possível excluir: ${error.message}`);
+        return;
+      }
     }
     onChange(value.filter((u) => u !== url));
   };

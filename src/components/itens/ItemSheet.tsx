@@ -159,7 +159,7 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, canCre
   };
 
   const selectRow = (
-    id: keyof Values,
+    id: "unidade_medida_id" | "centro_custo_id" | "itens_marcas_id",
     label: string,
     list: Array<{ value: string; label: string }>,
     quickKey: "unidade" | "centro" | "marca",
