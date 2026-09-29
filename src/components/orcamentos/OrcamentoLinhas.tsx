@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, ChevronUp, Eye, Pencil, Plus, Trash2 } from "lucide-react";
+import { Check, ChevronUp, Eye, Pencil, Plus, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,8 +19,7 @@ import { cn } from "@/lib/utils";
 const NONE = "__none__";
 
 /** Colunas da tabela compacta (desktop). */
-const GRID =
-  "sm:grid sm:grid-cols-[1.75rem_minmax(0,1fr)_4.5rem_7rem_8rem_5.5rem] sm:gap-3";
+const GRID = "sm:grid sm:grid-cols-[1.75rem_minmax(0,1fr)_4.5rem_7rem_8rem_5.5rem] sm:gap-3";
 
 const formatQtd = (v: string) => num(v).toLocaleString("pt-BR", { maximumFractionDigits: 3 });
 
@@ -51,13 +50,46 @@ export function OrcamentoLinhas({
   onRemove,
 }: Props) {
   const [abertas, setAbertas] = useState<Set<string>>(() => new Set());
-  const toggleAberta = (key: string) =>
+
+  // Estado da linha no momento em que a edição abriu, usado pelo "Cancelar".
+  const linhasRef = useRef(linhas);
+  linhasRef.current = linhas;
+  const snapshots = useRef(new Map<string, Linha>());
+  const novas = useRef(new Set<string>());
+
+  const setAberta = (key: string, abrir: boolean) =>
     setAbertas((prev) => {
       const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
+      if (abrir) next.add(key);
+      else next.delete(key);
       return next;
     });
+
+  /** Abre a linha guardando o estado atual; recolher confirma a edição. */
+  const toggleAberta = (key: string) => {
+    const abrir = !abertas.has(key);
+    if (abrir) {
+      const atual = linhasRef.current.find((l) => l.key === key);
+      if (atual) snapshots.current.set(key, { ...atual });
+    } else {
+      snapshots.current.delete(key);
+      novas.current.delete(key);
+    }
+    setAberta(key, abrir);
+  };
+
+  /** Descarta a edição: apaga a linha recém-criada ou restaura os valores anteriores. */
+  const cancelar = (key: string) => {
+    if (novas.current.has(key)) {
+      onRemove(key);
+    } else {
+      const snapshot = snapshots.current.get(key);
+      if (snapshot) onChange(key, snapshot);
+    }
+    snapshots.current.delete(key);
+    novas.current.delete(key);
+    setAberta(key, false);
+  };
 
   // Linhas recém-adicionadas abrem automaticamente em modo de edição.
   const keysRef = useRef<Set<string>>(new Set(linhas.map((l) => l.key)));
@@ -65,6 +97,10 @@ export function OrcamentoLinhas({
     const novos = linhas.filter((l) => !keysRef.current.has(l.key));
     keysRef.current = new Set(linhas.map((l) => l.key));
     if (novos.length > 0) {
+      for (const l of novos) {
+        snapshots.current.set(l.key, { ...l });
+        if (!l.id) novas.current.add(l.key);
+      }
       setAbertas((prev) => {
         const next = new Set(prev);
         for (const l of novos) next.add(l.key);
@@ -137,11 +173,7 @@ export function OrcamentoLinhas({
                     title={aberta ? "Recolher" : "Editar"}
                     onClick={() => toggleAberta(l.key)}
                   >
-                    {aberta ? (
-                      <ChevronUp className="h-4 w-4" />
-                    ) : (
-                      <Pencil className="h-4 w-4" />
-                    )}
+                    {aberta ? <ChevronUp className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
                   </Button>
                 )}
                 {!readOnly && (
@@ -182,7 +214,9 @@ export function OrcamentoLinhas({
                         emptyText="Nenhum item ativo encontrado."
                         disabled={Boolean(readOnly)}
                       />
-                      {nomeMarca && <p className="text-muted-foreground text-xs">Marca: {nomeMarca}</p>}
+                      {nomeMarca && (
+                        <p className="text-muted-foreground text-xs">Marca: {nomeMarca}</p>
+                      )}
                     </div>
                     <div className="flex shrink-0 gap-0.5">
                       {!readOnly && (
@@ -246,7 +280,9 @@ export function OrcamentoLinhas({
                       </Label>
                       <Select
                         value={l.unidade_medida_id || NONE}
-                        onValueChange={(v) => onChange(l.key, { unidade_medida_id: v === NONE ? "" : v })}
+                        onValueChange={(v) =>
+                          onChange(l.key, { unidade_medida_id: v === NONE ? "" : v })
+                        }
                         disabled={Boolean(readOnly)}
                       >
                         <SelectTrigger id={`unid-${l.key}`}>
@@ -287,8 +323,12 @@ export function OrcamentoLinhas({
                   <div className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 pl-7 text-xs">
                     <span>
                       Custo:{" "}
-                      <strong className="text-foreground font-medium">{formatBRL(c.custo_total)}</strong>
-                      {l.preco_custo > 0 && <span className="ml-1">({formatBRL(l.preco_custo)}/un)</span>}
+                      <strong className="text-foreground font-medium">
+                        {formatBRL(c.custo_total)}
+                      </strong>
+                      {l.preco_custo > 0 && (
+                        <span className="ml-1">({formatBRL(l.preco_custo)}/un)</span>
+                      )}
                     </span>
                     <span>
                       Imposto ({formatPct(l.imposto_pct)}):{" "}
@@ -299,7 +339,10 @@ export function OrcamentoLinhas({
                     <span>
                       Lucro:{" "}
                       <strong
-                        className={cn("font-medium", c.lucro < 0 ? "text-destructive" : "text-success")}
+                        className={cn(
+                          "font-medium",
+                          c.lucro < 0 ? "text-destructive" : "text-success",
+                        )}
                       >
                         {formatBRL(c.lucro)}
                       </strong>{" "}
@@ -315,7 +358,15 @@ export function OrcamentoLinhas({
                   </div>
 
                   {!readOnly && (
-                    <div className="flex justify-end pl-7">
+                    <div className="flex flex-wrap items-center justify-end gap-2 pl-7">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => cancelar(l.key)}
+                      >
+                        <X className="mr-1 h-4 w-4" /> Cancelar edição
+                      </Button>
                       <Button type="button" size="sm" onClick={() => toggleAberta(l.key)}>
                         <Check className="mr-1 h-4 w-4" /> Salvar item
                       </Button>
@@ -334,8 +385,12 @@ export function OrcamentoLinhas({
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{nomeItem || "—"}</p>
-                    {nomeMarca && <p className="text-muted-foreground truncate text-xs">Marca: {nomeMarca}</p>}
-                    {l.detalhe && <p className="text-muted-foreground truncate text-xs">{l.detalhe}</p>}
+                    {nomeMarca && (
+                      <p className="text-muted-foreground truncate text-xs">Marca: {nomeMarca}</p>
+                    )}
+                    {l.detalhe && (
+                      <p className="text-muted-foreground truncate text-xs">{l.detalhe}</p>
+                    )}
                     <p className="text-muted-foreground text-xs">
                       {formatQtd(l.quantidade)} {unidadeLabel} × {formatBRL(num(l.valor_unitario))}
                     </p>
@@ -352,17 +407,16 @@ export function OrcamentoLinhas({
                 </div>
 
                 {/* Linha compacta — desktop */}
-                <div
-                  className={cn(
-                    "hidden items-center px-3 py-2 sm:grid",
-                    GRID,
-                  )}
-                >
+                <div className={cn("hidden items-center px-3 py-2 sm:grid", GRID)}>
                   <span className="text-muted-foreground text-xs tabular-nums">{index + 1}.</span>
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium">{nomeItem || "—"}</p>
-                    {nomeMarca && <p className="text-muted-foreground truncate text-xs">Marca: {nomeMarca}</p>}
-                    {l.detalhe && <p className="text-muted-foreground truncate text-xs">{l.detalhe}</p>}
+                    {nomeMarca && (
+                      <p className="text-muted-foreground truncate text-xs">Marca: {nomeMarca}</p>
+                    )}
+                    {l.detalhe && (
+                      <p className="text-muted-foreground truncate text-xs">{l.detalhe}</p>
+                    )}
                   </div>
                   <span className="text-right text-sm tabular-nums">
                     {formatQtd(l.quantidade)}
@@ -373,7 +427,9 @@ export function OrcamentoLinhas({
                   <span className="text-right text-sm tabular-nums">
                     {formatBRL(num(l.valor_unitario))}
                   </span>
-                  <span className="text-sm font-semibold tabular-nums">{formatBRL(c.total_linha)}</span>
+                  <span className="text-sm font-semibold tabular-nums">
+                    {formatBRL(c.total_linha)}
+                  </span>
                   {acoes}
                 </div>
               </div>
