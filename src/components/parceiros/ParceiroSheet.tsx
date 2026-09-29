@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -8,12 +8,50 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { DocumentInput } from "@/components/data-table/DocumentInput";
 import { PhoneInput } from "@/components/data-table/PhoneInput";
-import { digitsOnly, isCompletePhone, isValidCpfCnpj } from "@/lib/input-masks";
+import { digitsOnly, formatCpfCnpj, isCompletePhone, isValidCpfCnpj } from "@/lib/input-masks";
+import { descendantIds } from "@/lib/hierarchy";
+import { rowId } from "@/lib/crud";
 import type { Row } from "@/lib/row";
+
+export const PARENT_KEY = "parceiro_pai_id";
+
+/** Rótulo do parceiro na árvore de matriz/filial. */
+export function parceiroLabel(r: Row): string {
+  const nome = String(r["razao_social"] ?? r["nome_fantasia"] ?? "—");
+  const doc = formatCpfCnpj(String(r["documento"] ?? ""));
+  return doc ? `${nome} (${doc})` : nome;
+}
+
+/** Ordena os parceiros em árvore (matriz seguida das filiais). */
+export function parceiroTree(rows: Row[]): { row: Row; depth: number }[] {
+  const ids = new Set(rows.map((r) => String(rowId(r))));
+  const byParent = new Map<string, Row[]>();
+  for (const r of rows) {
+    const p = r[PARENT_KEY];
+    const key = p != null && ids.has(String(p)) ? String(p) : "";
+    byParent.set(key, [...(byParent.get(key) ?? []), r]);
+  }
+  const out: { row: Row; depth: number }[] = [];
+  const seen = new Set<string>();
+  const walk = (key: string, depth: number) => {
+    for (const r of [...(byParent.get(key) ?? [])].sort((a, b) => parceiroLabel(a).localeCompare(parceiroLabel(b), "pt-BR"))) {
+      const id = String(rowId(r));
+      if (seen.has(id)) continue;
+      seen.add(id);
+      out.push({ row: r, depth });
+      walk(id, depth + 1);
+    }
+  };
+  walk("", 0);
+  for (const r of rows) if (!seen.has(String(rowId(r)))) out.push({ row: r, depth: 0 });
+  return out;
+}
+
 
 const TEXT_KEYS = [
   "razao_social", "nome_fantasia", "documento", "inscricao_estadual", "telefone", "telefone2", "email",
