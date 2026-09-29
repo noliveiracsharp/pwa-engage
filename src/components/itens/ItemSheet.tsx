@@ -90,10 +90,22 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, canCre
     [centros, empresaId],
   );
 
+  /** Próximo código sequencial por tipo: Produto → P00001…, Serviço → S00001… */
+  const nextCodigo = useMemo(() => {
+    const prefixo = v.tipo === "Serviço" ? "S" : "P";
+    let max = 0;
+    for (const r of itens) {
+      const c = String(pick(r, ["codigo"]) ?? "");
+      const m = new RegExp(`^${prefixo}(\\d{5,})$`, "i").exec(c);
+      if (m) max = Math.max(max, Number(m[1]));
+    }
+    return `${prefixo}${String(max + 1).padStart(5, "0")}`;
+  }, [itens, v.tipo]);
+
   useEffect(() => {
     if (!open) return;
     if (!record) {
-      setV(EMPTY);
+      setV({ ...EMPTY, codigo: nextCodigo });
       return;
     }
     setV({
