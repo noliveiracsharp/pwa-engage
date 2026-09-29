@@ -21,6 +21,10 @@ import {
 import { SearchSelect, type SearchOption } from "@/components/data-table/SearchSelect";
 import { OrcamentoLinhas } from "@/components/orcamentos/OrcamentoLinhas";
 import { OrcamentoTotais } from "@/components/orcamentos/OrcamentoTotais";
+import {
+  OrcamentoPagamento,
+  type PagamentoState,
+} from "@/components/orcamentos/OrcamentoPagamento";
 import { SituacaoBadge } from "@/components/orcamentos/SituacaoBadge";
 import { dateOrNull, type LinhaPayload } from "@/hooks/useSaveOrcamento";
 import { rowId } from "@/lib/crud";
@@ -31,9 +35,11 @@ import {
   calcLinha,
   calcTotais,
   formatBRL,
+  gerarParcelas,
   linhaFromRow,
   novaLinha,
   num,
+  parcelasFromValue,
   situacaoOf,
   SITUACOES,
   toISODate,
