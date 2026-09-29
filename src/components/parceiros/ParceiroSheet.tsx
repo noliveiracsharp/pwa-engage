@@ -122,6 +122,11 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly, saving, on
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setF((p) => ({ ...p, [k]: v }));
   const pf = f.tipo_pessoa === "Física";
 
+  const paiOptions = useMemo(() => {
+    const blocked = record ? descendantIds(parceiros, PARENT_KEY, String(rowId(record))) : new Set<string>();
+    return parceiroTree(parceiros).filter(({ row }) => !blocked.has(String(rowId(row))));
+  }, [parceiros, record]);
+
   async function lookupCep(value: string) {
     const cep = digitsOnly(value);
     if (cep.length !== 8) return;
