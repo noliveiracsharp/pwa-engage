@@ -145,6 +145,7 @@ export function OrcamentoSheet({
   itens,
   unidades,
   vendedorPadraoId,
+  onPreview,
   onSave,
 }: Props) {
   const [h, setH] = useState<Header>(() => emptyHeader(vendedorPadraoId ?? ""));
