@@ -37,6 +37,7 @@ import {
   calcTotais,
   formatBRL,
   gerarParcelas,
+  somaParcelas,
   linhaFromRow,
   novaLinha,
   num,

@@ -14,6 +14,8 @@ type Props = {
   valoresAdicionais: string;
   readOnly?: boolean | undefined;
   itensSemCusto: number;
+  /** Acréscimo financeiro do parcelamento com juros (0 quando sem juros). */
+  acrescimoJuros?: number;
   onChange: (patch: {
     desconto_tipo?: DescontoTipo;
     desconto?: string;
