@@ -32,6 +32,7 @@ export const centroCustoConfig = {
   singular: "centro de custo",
   searchFields: ["codigo", "descricao"],
   searchPlaceholder: "Código ou descrição",
+  hierarchy: { parentKey: "centro_custo_pai_id", label: "Centro de Custo Pai" },
   columns: [
     { key: "codigo", header: "Código", fields: ["codigo"] },
     { key: "descricao", header: "Descrição", fields: ["descricao"] },

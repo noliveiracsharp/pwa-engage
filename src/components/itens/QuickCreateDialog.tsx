@@ -7,11 +7,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PhotoUpload } from "@/components/data-table/PhotoUpload";
 import { useAudit } from "@/lib/audit";
 import type { Row } from "@/lib/row";
 
-export type QuickField = { key: string; label: string; type?: "text" | "photo" | "boolean" };
+export type QuickField = { key: string; label: string; type?: "text" | "photo" | "boolean" | "select";
+  options?: Array<{ value: string; label: string }>;
+};
 
 type Props = {
   open: boolean;
@@ -32,7 +35,7 @@ export function QuickCreateDialog({ open, onOpenChange, title, table, fields, on
   useEffect(() => {
     if (!open) return;
     const next: Record<string, string> = {};
-    for (const field of fields) next[field.key] = field.type === "boolean" ? "true" : "";
+    for (const field of fields) next[field.key] = field.type === "boolean" ? "true" : field.type === "select" ? "__none__" : "";
     setValues(next);
   }, [open, fields]);
 
@@ -41,6 +44,7 @@ export function QuickCreateDialog({ open, onOpenChange, title, table, fields, on
     for (const field of fields) {
       const raw = values[field.key] ?? "";
       if (field.type === "boolean") payload[field.key] = raw === "true";
+      else if (field.type === "select") payload[field.key] = raw && raw !== "__none__" ? raw : null;
       else if (raw !== "") payload[field.key] = raw;
     }
     if (!payload["descricao"]) {
@@ -85,7 +89,21 @@ export function QuickCreateDialog({ open, onOpenChange, title, table, fields, on
                 <Label htmlFor={`quick-${field.key}`} className="block text-sm font-medium">
                   {field.label}
                 </Label>
-                {field.type === "boolean" ? (
+                {field.type === "select" ? (
+                  <Select value={value || "__none__"} onValueChange={(v) => setValues((s) => ({ ...s, [field.key]: v }))}>
+                    <SelectTrigger id={`quick-${field.key}`}>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">Nenhum (grupo principal)</SelectItem>
+                      {(field.options ?? []).map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : field.type === "boolean" ? (
                   <div className="bg-background flex h-10 items-center justify-between gap-3 rounded-md border px-3 py-2">
                     <span className="text-muted-foreground text-sm">{value === "true" ? "Ativo" : "Inativo"}</span>
                     <Switch

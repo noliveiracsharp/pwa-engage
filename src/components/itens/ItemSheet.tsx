@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { QuickCreateDialog, type QuickField } from "@/components/itens/QuickCreateDialog";
 import { rowId, text, useTableRows } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
+import { buildTree } from "@/lib/hierarchy";
+import { useAudit } from "@/lib/audit";
 
 const NONE = "__none__";
 
@@ -74,6 +76,15 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, canCre
   const { data: unidades = [] } = useTableRows("unidade_medida");
   const { data: centros = [] } = useTableRows("centro_custo");
   const { data: marcas = [] } = useTableRows("itens_marcas");
+  const { empresaId } = useAudit();
+  const centroTree = useMemo(
+    () =>
+      buildTree(
+        centros.filter((r) => empresaId === undefined || r["empresa_id"] == null || String(r["empresa_id"]) === String(empresaId)),
+        "centro_custo_pai_id",
+      ),
+    [centros, empresaId],
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -99,13 +110,10 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, canCre
   const options = useMemo(
     () => ({
       unidade: unidades.map((r) => ({ value: String(rowId(r) ?? ""), label: String(pick(r, ["descricao"]) ?? "—") })),
-      centro: centros.map((r) => ({
-        value: String(rowId(r) ?? ""),
-        label: [pick(r, ["codigo"]), pick(r, ["descricao"])].filter(Boolean).join(" — ") || "—",
-      })),
+      centro: centroTree.map((n) => ({ value: String(rowId(n.row) ?? ""), label: n.path })),
       marca: marcas.map((r) => ({ value: String(rowId(r) ?? ""), label: String(pick(r, ["descricao"]) ?? "—") })),
     }),
-    [unidades, centros, marcas],
+    [unidades, centroTree, marcas],
   );
 
   /** Recalcula o preço de venda a partir de custo, margem e imposto. */
@@ -200,6 +208,7 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, canCre
       table: "centro_custo",
       field: "centro_custo_id",
       fields: [
+        { key: "centro_custo_pai_id", label: "Centro de Custo Pai", type: "select", options: options.centro },
         { key: "codigo", label: "Código" },
         { key: "descricao", label: "Descrição" },
         { key: "status", label: "Status", type: "boolean" },
