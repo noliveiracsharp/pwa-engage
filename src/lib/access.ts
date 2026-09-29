@@ -18,6 +18,7 @@ const FALLBACK_PATHS = [
   "/unid_medida",
   "/centro_custos",
   "/parceiros",
+  "/orcamentos",
 ];
 
 
