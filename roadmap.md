@@ -1,7 +1,7 @@
 # Roadmap
 
-## Em andamento
-- [ ] Módulo de Orçamentos (/orcamentos): tabelas `orcamentos` + `orcamento_itens`, numeração automática #ano-seq, situação com cores, itens com memória de cálculo (custo, imposto, lucro), desconto R$/%, frete, adicionais e total líquido.
+## Concluído
+- [x] Módulo de Orçamentos (/orcamentos): tabelas `orcamentos` + `orcamento_itens`, numeração automática #ano-seq, situação com cores, itens com memória de cálculo (custo, imposto, lucro), desconto R$/%, frete, adicionais e total líquido. (Aguarda o usuário rodar `atendeai-orcamentos.sql` e liberar a função /orcamentos ao perfil.)
 
 ## Próximos
 - [ ] Impressão/PDF do orçamento para envio ao cliente (sem a memória de cálculo interna).
