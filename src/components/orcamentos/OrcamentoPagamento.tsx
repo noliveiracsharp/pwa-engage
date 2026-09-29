@@ -1,4 +1,7 @@
+import { useEffect, useRef, useState } from "react";
 import { CalendarClock, ReceiptText } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { num } from "@/lib/orcamentos";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -42,6 +45,41 @@ type Props = {
 export function OrcamentoPagamento({ value, parcelas, totalLiquido, readOnly, onChange }: Props) {
   const total = somaParcelas(parcelas);
   const acrescimo = total - totalLiquido;
+
+  // Taxa de juros mensal da empresa (empresas_configuracao.taxa_juros_mensal).
+  const [taxaJuros, setTaxaJuros] = useState<number>(0);
+  useEffect(() => {
+    let ativo = true;
+    supabase
+      .from("empresas_configuracao")
+      .select("taxa_juros_mensal")
+      .eq("ativo", true)
+      .single()
+      .then(({ data }) => {
+        if (ativo) setTaxaJuros(num(data?.taxa_juros_mensal));
+      });
+    return () => {
+      ativo = false;
+    };
+  }, []);
+
+  // Tabela Price: coeficiente = i / (1 - (1 + i)^-n). Preenche e trava o campo
+  // quando "Com juros"; limpa quando volta para "Sem juros".
+  const ultimoAuto = useRef("");
+  useEffect(() => {
+    const n = Math.max(0, Math.floor(num(value.qtd_parcelas)));
+    if (value.tem_juros && n > 0 && taxaJuros > 0) {
+      const coef = taxaJuros / (1 - Math.pow(1 + taxaJuros, -n));
+      const texto = coef.toFixed(7).replace(".", ",");
+      ultimoAuto.current = texto;
+      if (value.coeficiente_juros !== texto) onChange({ coeficiente_juros: texto });
+    } else if (!value.tem_juros && value.coeficiente_juros) {
+      // Limpa apenas se o valor atual era o automático (ou sempre que voltar a "Sem juros").
+      ultimoAuto.current = "";
+      onChange({ coeficiente_juros: "" });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value.tem_juros, value.qtd_parcelas, taxaJuros]);
 
   return (
     <div className="space-y-4">
@@ -152,12 +190,16 @@ export function OrcamentoPagamento({ value, parcelas, totalLiquido, readOnly, on
               <Input
                 id="coeficiente_juros"
                 inputMode="decimal"
-                placeholder="Ex.: 0,35690"
+                placeholder="Calculado automaticamente"
                 value={value.coeficiente_juros}
-                onChange={(e) => onChange({ coeficiente_juros: e.target.value })}
+                readOnly
+                disabled
+                className="bg-muted/50"
               />
               <p className="text-muted-foreground text-xs">
-                Valor de cada parcela = total líquido × coeficiente (tabela de coeficientes).
+                {taxaJuros > 0
+                  ? `Calculado pela Tabela Price com a taxa da empresa (${(taxaJuros * 100).toLocaleString("pt-BR", { maximumFractionDigits: 4 })}% a.m.). Valor da parcela = total líquido × coeficiente.`
+                  : "Cadastre a taxa de juros mensal nas configurações da empresa para calcular automaticamente."}
               </p>
             </div>
           )}
