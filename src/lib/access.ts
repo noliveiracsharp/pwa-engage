@@ -8,7 +8,7 @@ const ALWAYS_ALLOWED = ["/dashboard", "/meus-dados"];
 const FALLBACK_PATHS = [
   "/dashboard",
   "/empresas",
-  "/clientes",
+  "/pessoas",
   "/usuarios",
   "/funcoes",
   "/kanban",

@@ -15,7 +15,7 @@ export type MenuItem = {
 const FALLBACK: MenuItem[] = [
   { id: "dashboard", label: "Dashboard", path: "/dashboard", icon: "layout-dashboard", order: 1 },
   { id: "empresas", label: "Empresas", path: "/empresas", icon: "building-2", order: 2 },
-  { id: "clientes", label: "Clientes", path: "/clientes", icon: "users", order: 3 },
+  { id: "pessoas", label: "Pessoas", path: "/pessoas", icon: "users", order: 3 },
   { id: "usuarios", label: "Usuários", path: "/usuarios", icon: "user-cog", order: 4 },
   { id: "funcoes", label: "Funções", path: "/funcoes", icon: "shield-check", order: 5 },
   { id: "kanban", label: "Kanban", path: "/kanban", icon: "kanban", order: 6 },

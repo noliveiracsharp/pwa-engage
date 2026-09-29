@@ -4,7 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 
 const TABLES = [
   "empresas",
-  "clientes",
+  "pessoas",
+  "pessoas_camposperson",
   "usuarios",
   "funcoes",
   "perfil",

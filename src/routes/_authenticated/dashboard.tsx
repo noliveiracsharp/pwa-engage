@@ -41,8 +41,8 @@ function useDashboard(periodo: Periodo) {
     queryKey: ["dashboard", periodo],
     queryFn: async () => {
       void since;
-      const [clientes, usuarios, usuariosAtivos, comIA, emAtendimento, encerrados] = await Promise.all([
-        countOf("clientes"),
+      const [pessoas, usuarios, usuariosAtivos, comIA, emAtendimento, encerrados] = await Promise.all([
+        countOf("pessoas"),
         countOf("usuarios"),
         countOf("usuarios", (q) => q.eq("status", true)),
         countOf("atendimentos", (q) => q.eq("status", "IA")),
@@ -74,7 +74,7 @@ function useDashboard(periodo: Periodo) {
         /* sem dados */
       }
 
-      return { clientes, usuarios, usuariosAtivos, comIA, emAtendimento, encerrados, porDia, porMes };
+      return { pessoas, usuarios, usuariosAtivos, comIA, emAtendimento, encerrados, porDia, porMes };
     },
   });
 }
@@ -98,7 +98,7 @@ function Dashboard() {
   const { data } = useDashboard(periodo);
 
   const cards = [
-    { title: "Clientes", value: data?.clientes ?? 0, icon: Users },
+    { title: "Pessoas", value: data?.pessoas ?? 0, icon: Users },
     { title: "Usuários", value: data?.usuarios ?? 0, icon: UsersRound },
     { title: "Usuários ativos", value: data?.usuariosAtivos ?? 0, icon: UserCheck },
     { title: "Atendimentos com IA", value: data?.comIA ?? 0, icon: Bot },

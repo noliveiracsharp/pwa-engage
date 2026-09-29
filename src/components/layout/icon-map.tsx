@@ -32,6 +32,8 @@ const ALIASES: Record<string, string> = {
   empresas: "Building2",
   cliente: "Users",
   clientes: "Users",
+  pessoa: "Users",
+  pessoas: "Users",
   usuario: "UserCog",
   usuarios: "UserCog",
   funcao: "ShieldCheck",
