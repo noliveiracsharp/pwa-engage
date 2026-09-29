@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { DataTable, type Column } from "@/components/data-table/DataTable";
 import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
 import { StatusBadge } from "@/components/data-table/StatusBadge";
-import { ParceiroSheet } from "@/components/parceiros/ParceiroSheet";
+import { PARENT_KEY, ParceiroSheet } from "@/components/parceiros/ParceiroSheet";
 import { rowId, useDeleteRecord, useSaveRecord, useTableRows } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
