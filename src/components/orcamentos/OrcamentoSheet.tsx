@@ -519,6 +519,8 @@ export function OrcamentoSheet({
             linhas={linhas}
             itemOptions={itemOptions}
             unidadeOptions={unidadeOptions}
+            itens={itens}
+            marcas={marcas}
             readOnly={readOnly}
             onChange={updateLinha}
             onSelectItem={selectItem}
