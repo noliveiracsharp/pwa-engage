@@ -68,7 +68,8 @@ export function ApoioCrud({
       stack.length = node.depth;
       const id = String(rowId(node.row));
       ancestors.set(id, [...stack]);
-      if (stack.length) parentsWithChildren.add(stack[stack.length - 1]);
+      const parent = stack[stack.length - 1];
+      if (parent) parentsWithChildren.add(parent);
       stack.push(id);
     }
     return { ancestors, parentsWithChildren };
