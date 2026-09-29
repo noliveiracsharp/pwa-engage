@@ -24,11 +24,16 @@ export const Route = createFileRoute("/_authenticated/orcamentos")({
   head: () => ({
     meta: [
       { title: "Orçamentos — Atende.ai" },
-      { name: "description", content: "Orçamentos de produtos e serviços com numeração automática, situação e memória de cálculo de lucratividade." },
+      {
+        name: "description",
+        content:
+          "Orçamentos de produtos e serviços com numeração automática, situação e memória de cálculo de lucratividade.",
+      },
       { property: "og:title", content: "Orçamentos — Atende.ai" },
       {
         property: "og:description",
-        content: "Orçamentos de produtos e serviços com numeração automática, situação e memória de cálculo de lucratividade.",
+        content:
+          "Orçamentos de produtos e serviços com numeração automática, situação e memória de cálculo de lucratividade.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -37,10 +42,15 @@ export const Route = createFileRoute("/_authenticated/orcamentos")({
   component: OrcamentosPage,
 });
 
-const SITUACAO_FILTRO = [{ value: "todos", label: "Todas" }, ...SITUACOES.map((s) => ({ value: s.value, label: s.label }))];
+const SITUACAO_FILTRO = [
+  { value: "todos", label: "Todas" },
+  ...SITUACOES.map((s) => ({ value: s.value, label: s.label })),
+];
 
 function mesmaEmpresa(row: Row, empresaId: string | number | undefined) {
-  return empresaId === undefined || !row["empresa_id"] || String(row["empresa_id"]) === String(empresaId);
+  return (
+    empresaId === undefined || !row["empresa_id"] || String(row["empresa_id"]) === String(empresaId)
+  );
 }
 
 function OrcamentosPage() {
@@ -65,12 +75,27 @@ function OrcamentosPage() {
     () => parceiros.filter((p) => mesmaEmpresa(p, empresaId) && p["is_cliente"] === true),
     [parceiros, empresaId],
   );
-  const vendedores = useMemo(() => usuarios.filter((u) => mesmaEmpresa(u, empresaId)), [usuarios, empresaId]);
-  const itensEmpresa = useMemo(() => itens.filter((i) => mesmaEmpresa(i, empresaId)), [itens, empresaId]);
-  const unidadesEmpresa = useMemo(() => unidades.filter((u) => mesmaEmpresa(u, empresaId)), [unidades, empresaId]);
+  const vendedores = useMemo(
+    () => usuarios.filter((u) => mesmaEmpresa(u, empresaId)),
+    [usuarios, empresaId],
+  );
+  const itensEmpresa = useMemo(
+    () => itens.filter((i) => mesmaEmpresa(i, empresaId)),
+    [itens, empresaId],
+  );
+  const unidadesEmpresa = useMemo(
+    () => unidades.filter((u) => mesmaEmpresa(u, empresaId)),
+    [unidades, empresaId],
+  );
 
-  const parceiroById = useMemo(() => new Map(parceiros.map((p) => [String(rowId(p) ?? ""), p])), [parceiros]);
-  const usuarioById = useMemo(() => new Map(usuarios.map((u) => [String(rowId(u) ?? ""), u])), [usuarios]);
+  const parceiroById = useMemo(
+    () => new Map(parceiros.map((p) => [String(rowId(p) ?? ""), p])),
+    [parceiros],
+  );
+  const usuarioById = useMemo(
+    () => new Map(usuarios.map((u) => [String(rowId(u) ?? ""), u])),
+    [usuarios],
+  );
   const qtdItensPorOrcamento = useMemo(() => {
     const map = new Map<string, number>();
     for (const l of todasLinhas) {
@@ -111,7 +136,8 @@ function OrcamentosPage() {
           (r) =>
             matchesAny([r["numero"], nomeCliente(r), nomeVendedor(r), r["descricao"]], f.busca) &&
             (f.situacao === "todos" || situacaoOf(r["situacao"]) === f.situacao) &&
-            (f.vendedor === "todos" || String(pick(r, ["usuario_id", "vendedor_id"]) ?? "") === f.vendedor) &&
+            (f.vendedor === "todos" ||
+              String(pick(r, ["usuario_id", "vendedor_id"]) ?? "") === f.vendedor) &&
             (f.ano === "todos" || String(yearOf(r["dt_orcamento"]) ?? "") === f.ano),
         )
         .sort((a, b) => {
@@ -133,12 +159,18 @@ function OrcamentosPage() {
         <div>
           <div className="font-semibold tabular-nums">{String(r["numero"] ?? "—")}</div>
           <div className="text-muted-foreground text-xs">
-            {qtdItensPorOrcamento.get(String(rowId(r) ?? "")) ?? 0} {qtdItensPorOrcamento.get(String(rowId(r) ?? "")) === 1 ? "item" : "itens"}
+            {qtdItensPorOrcamento.get(String(rowId(r) ?? "")) ?? 0}{" "}
+            {qtdItensPorOrcamento.get(String(rowId(r) ?? "")) === 1 ? "item" : "itens"}
           </div>
         </div>
       ),
     },
-    { key: "dt_orcamento", header: "Data", fields: ["dt_orcamento"], render: (r) => formatDate(r["dt_orcamento"]) },
+    {
+      key: "dt_orcamento",
+      header: "Data",
+      fields: ["dt_orcamento"],
+      render: (r) => formatDate(r["dt_orcamento"]),
+    },
     {
       key: "cliente",
       header: "Cliente",
@@ -148,7 +180,9 @@ function OrcamentosPage() {
         return (
           <div className="max-w-64 truncate" title={nome || undefined}>
             {nome || <span className="text-muted-foreground">—</span>}
-            {r["descricao"] ? <div className="text-muted-foreground truncate text-xs">{String(r["descricao"])}</div> : null}
+            {r["descricao"] ? (
+              <div className="text-muted-foreground truncate text-xs">{String(r["descricao"])}</div>
+            ) : null}
           </div>
         );
       },
@@ -170,8 +204,21 @@ function OrcamentosPage() {
           <div>
             <div>{formatDate(r["validade_orcamento"])}</div>
             {emAndamento && dias !== null && (
-              <div className={cn("text-xs", dias < 0 ? "text-destructive font-medium" : dias <= 3 ? "text-warning-foreground" : "text-muted-foreground")}>
-                {dias < 0 ? `Vencido há ${Math.abs(dias)} ${Math.abs(dias) === 1 ? "dia" : "dias"}` : dias === 0 ? "Vence hoje" : `Vence em ${dias} ${dias === 1 ? "dia" : "dias"}`}
+              <div
+                className={cn(
+                  "text-xs",
+                  dias < 0
+                    ? "text-destructive font-medium"
+                    : dias <= 3
+                      ? "text-warning-foreground"
+                      : "text-muted-foreground",
+                )}
+              >
+                {dias < 0
+                  ? `Vencido há ${Math.abs(dias)} ${Math.abs(dias) === 1 ? "dia" : "dias"}`
+                  : dias === 0
+                    ? "Vence hoje"
+                    : `Vence em ${dias} ${dias === 1 ? "dia" : "dias"}`}
               </div>
             )}
           </div>
@@ -183,7 +230,9 @@ function OrcamentosPage() {
       header: "Total líquido",
       fields: ["total_liquido"],
       className: "text-right",
-      render: (r) => <span className="font-semibold tabular-nums">{formatBRL(r["total_liquido"])}</span>,
+      render: (r) => (
+        <span className="font-semibold tabular-nums">{formatBRL(r["total_liquido"])}</span>
+      ),
     },
     {
       key: "situacao",
@@ -257,7 +306,12 @@ function OrcamentosPage() {
               onChange={(v) => setF({ ...f, busca: v })}
               placeholder="Número, cliente, vendedor ou descrição"
             />
-            <FilterSelect label="Situação" value={f.situacao} onChange={(v) => setF({ ...f, situacao: v })} options={SITUACAO_FILTRO} />
+            <FilterSelect
+              label="Situação"
+              value={f.situacao}
+              onChange={(v) => setF({ ...f, situacao: v })}
+              options={SITUACAO_FILTRO}
+            />
             <FilterSelect
               label="Vendedor"
               value={f.vendedor}
@@ -265,7 +319,10 @@ function OrcamentosPage() {
               options={[
                 { value: "todos", label: "Todos" },
                 ...vendedores
-                  .map((u) => ({ value: String(rowId(u) ?? ""), label: String(pick(u, ["nome", "email"]) ?? "—") }))
+                  .map((u) => ({
+                    value: String(rowId(u) ?? ""),
+                    label: String(pick(u, ["nome", "email"]) ?? "—"),
+                  }))
                   .sort((a, b) => a.label.localeCompare(b.label, "pt-BR")),
               ]}
             />
@@ -273,7 +330,10 @@ function OrcamentosPage() {
               label="Ano"
               value={f.ano}
               onChange={(v) => setF({ ...f, ano: v })}
-              options={[{ value: "todos", label: "Todos" }, ...anos.map((y) => ({ value: String(y), label: String(y) }))]}
+              options={[
+                { value: "todos", label: "Todos" },
+                ...anos.map((y) => ({ value: String(y), label: String(y) })),
+              ]}
             />
           </>
         }

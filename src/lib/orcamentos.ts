@@ -8,13 +8,30 @@ import { pick, type Row } from "@/lib/row";
 export type Situacao = "Em andamento" | "Aprovado" | "Reprovado";
 
 export const SITUACOES: Array<{ value: Situacao; label: string; badge: string; dot: string }> = [
-  { value: "Em andamento", label: "Em andamento", badge: "bg-warning text-warning-foreground", dot: "bg-warning" },
-  { value: "Aprovado", label: "Aprovado", badge: "bg-success text-success-foreground", dot: "bg-success" },
-  { value: "Reprovado", label: "Reprovado", badge: "bg-destructive text-destructive-foreground", dot: "bg-destructive" },
+  {
+    value: "Em andamento",
+    label: "Em andamento",
+    badge: "bg-warning text-warning-foreground",
+    dot: "bg-warning",
+  },
+  {
+    value: "Aprovado",
+    label: "Aprovado",
+    badge: "bg-success text-success-foreground",
+    dot: "bg-success",
+  },
+  {
+    value: "Reprovado",
+    label: "Reprovado",
+    badge: "bg-destructive text-destructive-foreground",
+    dot: "bg-destructive",
+  },
 ];
 
 export function situacaoOf(value: unknown): Situacao {
-  const v = String(value ?? "").trim().toLowerCase();
+  const v = String(value ?? "")
+    .trim()
+    .toLowerCase();
   if (v.startsWith("aprov")) return "Aprovado";
   if (v.startsWith("reprov") || v.startsWith("rejeit")) return "Reprovado";
   return "Em andamento";
@@ -111,7 +128,7 @@ export type Linha = {
   /** Chave local (React). */
   key: string;
   /** id em orcamento_itens quando já gravada. */
-  id?: string;
+  id?: string | undefined;
   item_id: string;
   detalhe: string;
   quantidade: string;
@@ -183,7 +200,9 @@ export function aplicarItem(linha: Linha, item: Row | undefined): Linha {
  *  imposto_valor = total_linha × imposto% / 100
  *  lucro         = total_linha − custo_total − imposto_valor
  */
-export function calcLinha(l: Pick<Linha, "quantidade" | "valor_unitario" | "preco_custo" | "imposto_pct">): LinhaCalc {
+export function calcLinha(
+  l: Pick<Linha, "quantidade" | "valor_unitario" | "preco_custo" | "imposto_pct">,
+): LinhaCalc {
   const quantidade = round3(Math.max(0, num(l.quantidade)));
   const valor_unitario = round2(Math.max(0, num(l.valor_unitario)));
   const total_linha = round2(quantidade * valor_unitario);
@@ -217,7 +236,12 @@ export type Totais = {
 
 export function calcTotais(
   linhas: LinhaCalc[],
-  opts: { desconto_tipo: DescontoTipo; desconto: unknown; frete: unknown; valores_adicionais: unknown },
+  opts: {
+    desconto_tipo: DescontoTipo;
+    desconto: unknown;
+    frete: unknown;
+    valores_adicionais: unknown;
+  },
 ): Totais {
   const total_itens = round2(linhas.reduce((s, l) => s + l.total_linha, 0));
   const total_custo = round2(linhas.reduce((s, l) => s + l.custo_total, 0));

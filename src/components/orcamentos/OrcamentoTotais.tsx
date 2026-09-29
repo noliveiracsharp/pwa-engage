@@ -14,10 +14,25 @@ type Props = {
   valoresAdicionais: string;
   readOnly?: boolean | undefined;
   itensSemCusto: number;
-  onChange: (patch: { desconto_tipo?: DescontoTipo; desconto?: string; frete?: string; valores_adicionais?: string }) => void;
+  onChange: (patch: {
+    desconto_tipo?: DescontoTipo;
+    desconto?: string;
+    frete?: string;
+    valores_adicionais?: string;
+  }) => void;
 };
 
-function Linha({ label, value, strong, className }: { label: string; value: string; strong?: boolean; className?: string }) {
+function Linha({
+  label,
+  value,
+  strong,
+  className,
+}: {
+  label: string;
+  value: string;
+  strong?: boolean;
+  className?: string;
+}) {
   return (
     <div className={cn("flex items-center justify-between gap-3 text-sm", className)}>
       <span className={strong ? "font-semibold" : "text-muted-foreground"}>{label}</span>
@@ -27,7 +42,16 @@ function Linha({ label, value, strong, className }: { label: string; value: stri
 }
 
 /** Totais comerciais (esquerda) e memória de cálculo interna (direita). */
-export function OrcamentoTotais({ totais, descontoTipo, desconto, frete, valoresAdicionais, readOnly, itensSemCusto, onChange }: Props) {
+export function OrcamentoTotais({
+  totais,
+  descontoTipo,
+  desconto,
+  frete,
+  valoresAdicionais,
+  readOnly,
+  itensSemCusto,
+  onChange,
+}: Props) {
   const prejuizo = totais.total_lucro < 0 && totais.total_itens > 0;
 
   return (
@@ -44,16 +68,25 @@ export function OrcamentoTotais({ totais, descontoTipo, desconto, frete, valores
             </Label>
             <ToggleGroup
               type="single"
+              variant="outline"
               size="sm"
               value={descontoTipo}
               onValueChange={(v) => v && onChange({ desconto_tipo: v as DescontoTipo })}
-              disabled={readOnly}
+              disabled={Boolean(readOnly)}
               aria-label="Tipo de desconto"
             >
-              <ToggleGroupItem value="valor" aria-label="Desconto em reais" className="h-7 px-2.5 text-xs">
+              <ToggleGroupItem
+                value="valor"
+                aria-label="Desconto em reais"
+                className="h-7 px-2.5 text-xs"
+              >
                 R$
               </ToggleGroupItem>
-              <ToggleGroupItem value="percentual" aria-label="Desconto em percentual" className="h-7 px-2.5 text-xs">
+              <ToggleGroupItem
+                value="percentual"
+                aria-label="Desconto em percentual"
+                className="h-7 px-2.5 text-xs"
+              >
                 %
               </ToggleGroupItem>
             </ToggleGroup>
@@ -114,7 +147,9 @@ export function OrcamentoTotais({ totais, descontoTipo, desconto, frete, valores
         <Separator />
         <div className="flex items-center justify-between gap-3">
           <span className="font-semibold">Total líquido</span>
-          <span className="text-primary text-xl font-bold tabular-nums">{formatBRL(totais.total_liquido)}</span>
+          <span className="text-primary text-xl font-bold tabular-nums">
+            {formatBRL(totais.total_liquido)}
+          </span>
         </div>
       </div>
 
@@ -142,18 +177,22 @@ export function OrcamentoTotais({ totais, descontoTipo, desconto, frete, valores
           className={prejuizo ? "text-destructive" : "text-success"}
         />
         <p className="text-muted-foreground text-xs">
-          Fórmula por linha: lucro = preço de venda − custo − imposto. Frete e valores adicionais não entram na lucratividade.
+          Fórmula por linha: lucro = preço de venda − custo − imposto. Frete e valores adicionais
+          não entram na lucratividade.
         </p>
         {prejuizo && (
           <p className="text-destructive flex items-center gap-1.5 text-xs font-medium">
-            <TriangleAlert className="h-3.5 w-3.5" /> Atenção: com este desconto o orçamento fica com prejuízo.
+            <TriangleAlert className="h-3.5 w-3.5" /> Atenção: com este desconto o orçamento fica
+            com prejuízo.
           </p>
         )}
         {itensSemCusto > 0 && (
           <p className="text-warning-foreground flex items-center gap-1.5 text-xs">
             <TriangleAlert className="h-3.5 w-3.5" />
-            {itensSemCusto === 1 ? "1 item sem preço de custo cadastrado" : `${itensSemCusto} itens sem preço de custo cadastrado`} — o
-            lucro pode estar superestimado.
+            {itensSemCusto === 1
+              ? "1 item sem preço de custo cadastrado"
+              : `${itensSemCusto} itens sem preço de custo cadastrado`}{" "}
+            — o lucro pode estar superestimado.
           </p>
         )}
       </div>

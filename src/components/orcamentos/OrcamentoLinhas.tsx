@@ -2,7 +2,13 @@ import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { SearchSelect, type SearchOption } from "@/components/data-table/SearchSelect";
 import { calcLinha, formatBRL, formatPct, type Linha } from "@/lib/orcamentos";
 import { cn } from "@/lib/utils";
@@ -21,7 +27,16 @@ type Props = {
 };
 
 /** Editor das linhas do orçamento com a memória de cálculo por linha. */
-export function OrcamentoLinhas({ linhas, itemOptions, unidadeOptions, readOnly, onChange, onSelectItem, onAdd, onRemove }: Props) {
+export function OrcamentoLinhas({
+  linhas,
+  itemOptions,
+  unidadeOptions,
+  readOnly,
+  onChange,
+  onSelectItem,
+  onAdd,
+  onRemove,
+}: Props) {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-3">
@@ -35,7 +50,7 @@ export function OrcamentoLinhas({ linhas, itemOptions, unidadeOptions, readOnly,
 
       {linhas.length === 0 && (
         <div className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm">
-          Nenhum item adicionado. {readOnly ? "" : "Clique em \"Adicionar item\" para começar."}
+          Nenhum item adicionado. {readOnly ? "" : 'Clique em "Adicionar item" para começar.'}
         </div>
       )}
 
@@ -45,7 +60,9 @@ export function OrcamentoLinhas({ linhas, itemOptions, unidadeOptions, readOnly,
         return (
           <div key={l.key} className="bg-card space-y-3 rounded-lg border p-3">
             <div className="flex items-start gap-2">
-              <span className="text-muted-foreground mt-2.5 w-5 shrink-0 text-right text-xs tabular-nums">{index + 1}.</span>
+              <span className="text-muted-foreground mt-2.5 w-5 shrink-0 text-right text-xs tabular-nums">
+                {index + 1}.
+              </span>
               <div className="min-w-0 flex-1 space-y-1.5">
                 <Label htmlFor={`item-${l.key}`} className="block text-xs font-medium">
                   Item (produto ou serviço)
@@ -58,7 +75,7 @@ export function OrcamentoLinhas({ linhas, itemOptions, unidadeOptions, readOnly,
                   placeholder="Selecione o item"
                   searchPlaceholder="Código ou descrição…"
                   emptyText="Nenhum item ativo encontrado."
-                  disabled={readOnly}
+                  disabled={Boolean(readOnly)}
                 />
               </div>
               {!readOnly && (
@@ -109,7 +126,7 @@ export function OrcamentoLinhas({ linhas, itemOptions, unidadeOptions, readOnly,
                 <Select
                   value={l.unidade_medida_id || NONE}
                   onValueChange={(v) => onChange(l.key, { unidade_medida_id: v === NONE ? "" : v })}
-                  disabled={readOnly}
+                  disabled={Boolean(readOnly)}
                 >
                   <SelectTrigger id={`unid-${l.key}`}>
                     <SelectValue placeholder="Unid." />
@@ -126,7 +143,7 @@ export function OrcamentoLinhas({ linhas, itemOptions, unidadeOptions, readOnly,
               </div>
               <div className="space-y-1.5 sm:col-span-2">
                 <Label htmlFor={`vu-${l.key}`} className="block text-xs font-medium">
-                  Valor unitário (R$)
+                  Unitário (R$)
                 </Label>
                 <Input
                   id={`vu-${l.key}`}
@@ -148,21 +165,32 @@ export function OrcamentoLinhas({ linhas, itemOptions, unidadeOptions, readOnly,
 
             <div className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 pl-7 text-xs">
               <span>
-                Custo: <strong className="text-foreground font-medium">{formatBRL(c.custo_total)}</strong>
+                Custo:{" "}
+                <strong className="text-foreground font-medium">{formatBRL(c.custo_total)}</strong>
                 {l.preco_custo > 0 && <span className="ml-1">({formatBRL(l.preco_custo)}/un)</span>}
               </span>
               <span>
                 Imposto ({formatPct(l.imposto_pct)}):{" "}
-                <strong className="text-foreground font-medium">{formatBRL(c.imposto_valor)}</strong>
+                <strong className="text-foreground font-medium">
+                  {formatBRL(c.imposto_valor)}
+                </strong>
               </span>
               <span>
                 Lucro:{" "}
-                <strong className={cn("font-medium", c.lucro < 0 ? "text-destructive" : "text-success")}>
+                <strong
+                  className={cn("font-medium", c.lucro < 0 ? "text-destructive" : "text-success")}
+                >
                   {formatBRL(c.lucro)}
                 </strong>{" "}
-                <span className={cn(c.lucro < 0 ? "text-destructive" : "")}>({formatPct(c.margem_pct)})</span>
+                <span className={cn(c.lucro < 0 ? "text-destructive" : "")}>
+                  ({formatPct(c.margem_pct)})
+                </span>
               </span>
-              {semCusto && <span className="text-warning-foreground bg-warning/40 rounded px-1.5">Item sem custo cadastrado</span>}
+              {semCusto && (
+                <span className="text-warning-foreground bg-warning/40 rounded px-1.5">
+                  Item sem custo cadastrado
+                </span>
+              )}
             </div>
           </div>
         );
