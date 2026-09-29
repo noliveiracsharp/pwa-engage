@@ -114,6 +114,8 @@ function ParceirosPage() {
               options={[{ value: "todos", label: "Todos" }, { value: "cliente", label: "Clientes" }, { value: "fornecedor", label: "Fornecedores" }]} />
             <FilterSelect label="Status" value={f.status} onChange={(v) => setF({ ...f, status: v })}
               options={[{ value: "todos", label: "Todos" }, { value: "ativo", label: "Ativo" }, { value: "inativo", label: "Inativo" }]} />
+            <FilterSelect label="Estrutura" value={f.estrutura} onChange={(v) => setF({ ...f, estrutura: v })}
+              options={[{ value: "todos", label: "Todas" }, { value: "matriz", label: "Matrizes / Principais" }, { value: "filial", label: "Filiais" }]} />
           </>
         }
       />
@@ -121,6 +123,7 @@ function ParceirosPage() {
         open={open}
         onOpenChange={setOpen}
         record={record}
+        parceiros={escopo}
         readOnly={record ? !perms.canUpdate : !perms.canCreate}
         saving={save.isPending}
         onSave={(values) =>
