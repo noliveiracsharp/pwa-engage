@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -74,6 +74,39 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly, saving, on
       toast.error("Não foi possível consultar o CEP.");
     } finally {
       setCepLoading(false);
+    }
+  }
+
+  async function lookupCnpj(value: string) {
+    const cnpj = digitsOnly(value);
+    if (cnpj.length !== 14) { toast.error("Informe os 14 dígitos do CNPJ."); return; }
+    if (!isValidCpfCnpj(cnpj)) { toast.error("CNPJ inválido."); return; }
+    setCnpjLoading(true);
+    try {
+      const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`);
+      if (!res.ok) { toast.error("CNPJ não encontrado na Receita Federal."); return; }
+      const d = await res.json();
+      const ddd = digitsOnly(String(d.ddd_telefone_1 ?? ""));
+      setF((p) => ({
+        ...p,
+        razao_social: d.razao_social || p.razao_social,
+        nome_fantasia: d.nome_fantasia || p.nome_fantasia,
+        telefone: ddd.length >= 10 ? `+55${ddd}` : p.telefone,
+        cep: digitsOnly(String(d.cep ?? "")) || p.cep,
+        endereco: [d.descricao_tipo_de_logradouro, d.logradouro].filter(Boolean).join(" ").trim() || p.endereco,
+        numero: d.numero || p.numero,
+        complemento: d.complemento || p.complemento,
+        bairro: d.bairro || p.bairro,
+        cidade: d.municipio || p.cidade,
+        uf: d.uf || p.uf,
+      }));
+      const situacao = String(d.descricao_situacao_cadastral ?? "");
+      if (situacao && situacao.toUpperCase() !== "ATIVA") toast.warning(`Situação cadastral: ${situacao}.`);
+      else toast.success("Dados encontrados na Receita Federal.");
+    } catch {
+      toast.error("Não foi possível consultar o CNPJ.");
+    } finally {
+      setCnpjLoading(false);
     }
   }
 
