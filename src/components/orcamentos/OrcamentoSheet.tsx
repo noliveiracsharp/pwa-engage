@@ -286,6 +286,27 @@ export function OrcamentoSheet({
   );
   const itensSemCusto = linhasValidas.filter((l) => l.item_id !== "" && l.preco_custo <= 0).length;
 
+  /* ----------------------------- parcelas ----------------------------- */
+
+  const parcelas = useMemo(
+    () =>
+      gerarParcelas({
+        total: totais.total_liquido,
+        quantidade: num(h.qtd_parcelas) || 1,
+        primeiraData: h.primeira_parcela,
+        comJuros: h.tem_juros,
+        coeficiente: h.coeficiente_juros,
+      }),
+    [
+      totais.total_liquido,
+      h.qtd_parcelas,
+      h.primeira_parcela,
+      h.tem_juros,
+      h.coeficiente_juros,
+    ],
+  );
+
+
   /* ------------------------------ salvar ------------------------------ */
 
   const submit = () => {
