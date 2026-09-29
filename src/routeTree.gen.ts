@@ -14,12 +14,15 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthenticatedAtendimentosRouteImport } from './routes/_authenticated/atendimentos'
+import { Route as AuthenticatedCentro_custosRouteImport } from './routes/_authenticated/centro_custos'
 import { Route as AuthenticatedClientesRouteImport } from './routes/_authenticated/clientes'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedEmpresasRouteImport } from './routes/_authenticated/empresas'
 import { Route as AuthenticatedFuncoesRouteImport } from './routes/_authenticated/funcoes'
 import { Route as AuthenticatedKanbanRouteImport } from './routes/_authenticated/kanban'
+import { Route as AuthenticatedMarcasRouteImport } from './routes/_authenticated/marcas'
 import { Route as AuthenticatedMeusDadosRouteImport } from './routes/_authenticated/meus-dados'
+import { Route as AuthenticatedUnid_medidaRouteImport } from './routes/_authenticated/unid_medida'
 import { Route as AuthenticatedUsuariosRouteImport } from './routes/_authenticated/usuarios'
 
 const IndexRoute = IndexRouteImport.update({
@@ -47,6 +50,12 @@ const AuthenticatedAtendimentosRoute =
     path: '/atendimentos',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedCentro_custosRoute =
+  AuthenticatedCentro_custosRouteImport.update({
+    id: '/centro_custos',
+    path: '/centro_custos',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedClientesRoute = AuthenticatedClientesRouteImport.update({
   id: '/clientes',
   path: '/clientes',
@@ -72,11 +81,22 @@ const AuthenticatedKanbanRoute = AuthenticatedKanbanRouteImport.update({
   path: '/kanban',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedMarcasRoute = AuthenticatedMarcasRouteImport.update({
+  id: '/marcas',
+  path: '/marcas',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedMeusDadosRoute = AuthenticatedMeusDadosRouteImport.update({
   id: '/meus-dados',
   path: '/meus-dados',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedUnid_medidaRoute =
+  AuthenticatedUnid_medidaRouteImport.update({
+    id: '/unid_medida',
+    path: '/unid_medida',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedUsuariosRoute = AuthenticatedUsuariosRouteImport.update({
   id: '/usuarios',
   path: '/usuarios',
@@ -88,12 +108,15 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
   '/atendimentos': typeof AuthenticatedAtendimentosRoute
+  '/centro_custos': typeof AuthenticatedCentro_custosRoute
   '/clientes': typeof AuthenticatedClientesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/empresas': typeof AuthenticatedEmpresasRoute
   '/funcoes': typeof AuthenticatedFuncoesRoute
   '/kanban': typeof AuthenticatedKanbanRoute
+  '/marcas': typeof AuthenticatedMarcasRoute
   '/meus-dados': typeof AuthenticatedMeusDadosRoute
+  '/unid_medida': typeof AuthenticatedUnid_medidaRoute
   '/usuarios': typeof AuthenticatedUsuariosRoute
 }
 export interface FileRoutesByTo {
@@ -101,12 +124,15 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
   '/atendimentos': typeof AuthenticatedAtendimentosRoute
+  '/centro_custos': typeof AuthenticatedCentro_custosRoute
   '/clientes': typeof AuthenticatedClientesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/empresas': typeof AuthenticatedEmpresasRoute
   '/funcoes': typeof AuthenticatedFuncoesRoute
   '/kanban': typeof AuthenticatedKanbanRoute
+  '/marcas': typeof AuthenticatedMarcasRoute
   '/meus-dados': typeof AuthenticatedMeusDadosRoute
+  '/unid_medida': typeof AuthenticatedUnid_medidaRoute
   '/usuarios': typeof AuthenticatedUsuariosRoute
 }
 export interface FileRoutesById {
@@ -116,12 +142,15 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
   '/_authenticated/atendimentos': typeof AuthenticatedAtendimentosRoute
+  '/_authenticated/centro_custos': typeof AuthenticatedCentro_custosRoute
   '/_authenticated/clientes': typeof AuthenticatedClientesRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/empresas': typeof AuthenticatedEmpresasRoute
   '/_authenticated/funcoes': typeof AuthenticatedFuncoesRoute
   '/_authenticated/kanban': typeof AuthenticatedKanbanRoute
+  '/_authenticated/marcas': typeof AuthenticatedMarcasRoute
   '/_authenticated/meus-dados': typeof AuthenticatedMeusDadosRoute
+  '/_authenticated/unid_medida': typeof AuthenticatedUnid_medidaRoute
   '/_authenticated/usuarios': typeof AuthenticatedUsuariosRoute
 }
 export interface FileRouteTypes {
@@ -131,12 +160,15 @@ export interface FileRouteTypes {
     | '/login'
     | '/reset-password'
     | '/atendimentos'
+    | '/centro_custos'
     | '/clientes'
     | '/dashboard'
     | '/empresas'
     | '/funcoes'
     | '/kanban'
+    | '/marcas'
     | '/meus-dados'
+    | '/unid_medida'
     | '/usuarios'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -144,12 +176,15 @@ export interface FileRouteTypes {
     | '/login'
     | '/reset-password'
     | '/atendimentos'
+    | '/centro_custos'
     | '/clientes'
     | '/dashboard'
     | '/empresas'
     | '/funcoes'
     | '/kanban'
+    | '/marcas'
     | '/meus-dados'
+    | '/unid_medida'
     | '/usuarios'
   id:
     | '__root__'
@@ -158,12 +193,15 @@ export interface FileRouteTypes {
     | '/login'
     | '/reset-password'
     | '/_authenticated/atendimentos'
+    | '/_authenticated/centro_custos'
     | '/_authenticated/clientes'
     | '/_authenticated/dashboard'
     | '/_authenticated/empresas'
     | '/_authenticated/funcoes'
     | '/_authenticated/kanban'
+    | '/_authenticated/marcas'
     | '/_authenticated/meus-dados'
+    | '/_authenticated/unid_medida'
     | '/_authenticated/usuarios'
   fileRoutesById: FileRoutesById
 }
@@ -211,6 +249,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAtendimentosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/centro_custos': {
+      id: '/_authenticated/centro_custos'
+      path: '/centro_custos'
+      fullPath: '/centro_custos'
+      preLoaderRoute: typeof AuthenticatedCentro_custosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/clientes': {
       id: '/_authenticated/clientes'
       path: '/clientes'
@@ -246,11 +291,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedKanbanRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/marcas': {
+      id: '/_authenticated/marcas'
+      path: '/marcas'
+      fullPath: '/marcas'
+      preLoaderRoute: typeof AuthenticatedMarcasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/meus-dados': {
       id: '/_authenticated/meus-dados'
       path: '/meus-dados'
       fullPath: '/meus-dados'
       preLoaderRoute: typeof AuthenticatedMeusDadosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/unid_medida': {
+      id: '/_authenticated/unid_medida'
+      path: '/unid_medida'
+      fullPath: '/unid_medida'
+      preLoaderRoute: typeof AuthenticatedUnid_medidaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/usuarios': {
@@ -265,23 +324,29 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAtendimentosRoute: typeof AuthenticatedAtendimentosRoute
+  AuthenticatedCentro_custosRoute: typeof AuthenticatedCentro_custosRoute
   AuthenticatedClientesRoute: typeof AuthenticatedClientesRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedEmpresasRoute: typeof AuthenticatedEmpresasRoute
   AuthenticatedFuncoesRoute: typeof AuthenticatedFuncoesRoute
   AuthenticatedKanbanRoute: typeof AuthenticatedKanbanRoute
+  AuthenticatedMarcasRoute: typeof AuthenticatedMarcasRoute
   AuthenticatedMeusDadosRoute: typeof AuthenticatedMeusDadosRoute
+  AuthenticatedUnid_medidaRoute: typeof AuthenticatedUnid_medidaRoute
   AuthenticatedUsuariosRoute: typeof AuthenticatedUsuariosRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAtendimentosRoute: AuthenticatedAtendimentosRoute,
+  AuthenticatedCentro_custosRoute: AuthenticatedCentro_custosRoute,
   AuthenticatedClientesRoute: AuthenticatedClientesRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedEmpresasRoute: AuthenticatedEmpresasRoute,
   AuthenticatedFuncoesRoute: AuthenticatedFuncoesRoute,
   AuthenticatedKanbanRoute: AuthenticatedKanbanRoute,
+  AuthenticatedMarcasRoute: AuthenticatedMarcasRoute,
   AuthenticatedMeusDadosRoute: AuthenticatedMeusDadosRoute,
+  AuthenticatedUnid_medidaRoute: AuthenticatedUnid_medidaRoute,
   AuthenticatedUsuariosRoute: AuthenticatedUsuariosRoute,
 }
 
