@@ -109,8 +109,8 @@ const headerFromRecord = (r: Row): Header => {
     obs_nota_fiscal: String(pick(r, ["obs_nota_fiscal"]) ?? ""),
     forma_pagamento: String(pick(r, ["forma_pagamento"]) ?? ""),
     forma_pagamento_obs: String(pick(r, ["forma_pagamento_obs"]) ?? ""),
-    qtd_parcelas: String(Number(pick(r, ["qtd_parcelas"]) ?? parcelas.length || 1) || 1),
-    tem_juros: pick(r, ["tem_juros"]) === true,
+    qtd_parcelas: String(num(r["qtd_parcelas"]) || parcelas.length || 1),
+    tem_juros: r["tem_juros"] === true,
     coeficiente_juros: num(r["coeficiente_juros"]) ? String(num(r["coeficiente_juros"])) : "",
     primeira_parcela: parcelas[0]?.vencimento || dt,
   };
