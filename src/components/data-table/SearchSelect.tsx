@@ -16,22 +16,22 @@ export type SearchOption = {
   value: string;
   label: string;
   /** Texto secundário à direita (ex.: preço, documento). */
-  hint?: string;
+  hint?: string | undefined;
   /** Termos extras para a busca (código, documento…). */
-  keywords?: string[];
+  keywords?: string[] | undefined;
 };
 
 type Props = {
-  id?: string;
+  id?: string | undefined;
   value: string;
   onChange: (value: string) => void;
   options: SearchOption[];
   placeholder?: string;
   searchPlaceholder?: string;
   emptyText?: string;
-  disabled?: boolean;
+  disabled?: boolean | undefined;
   allowClear?: boolean;
-  className?: string;
+  className?: string | undefined;
 };
 
 /** Select com busca (Popover + Command) para listas grandes: clientes, itens… */

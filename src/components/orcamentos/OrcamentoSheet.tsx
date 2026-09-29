@@ -324,7 +324,7 @@ export function OrcamentoSheet({
           </SheetDescription>
         </SheetHeader>
 
-        <fieldset disabled={readOnly} className="min-w-0 space-y-6 px-6 disabled:opacity-70">
+        <fieldset disabled={Boolean(readOnly)} className="min-w-0 space-y-6 px-6 disabled:opacity-70">
           {/* ------------------------ cabeçalho ------------------------ */}
           <div className="grid gap-x-4 gap-y-5 pt-2 sm:grid-cols-2 lg:grid-cols-4">
             <div className="min-w-0 space-y-1.5">
@@ -338,7 +338,7 @@ export function OrcamentoSheet({
               <Label htmlFor="situacao" className="block text-sm font-medium">
                 Situação
               </Label>
-              <Select value={h.situacao} onValueChange={(v) => patchHeader({ situacao: v as Situacao })} disabled={readOnly}>
+              <Select value={h.situacao} onValueChange={(v) => patchHeader({ situacao: v as Situacao })} disabled={Boolean(readOnly)}>
                 <SelectTrigger id="situacao">
                   <SelectValue />
                 </SelectTrigger>
@@ -392,7 +392,7 @@ export function OrcamentoSheet({
                 placeholder="Selecione o cliente"
                 searchPlaceholder="Nome, documento ou e-mail…"
                 emptyText="Nenhum cliente encontrado. Cadastre em Parceiros marcando “É Cliente?”."
-                disabled={readOnly}
+                disabled={Boolean(readOnly)}
               />
             </div>
 
@@ -403,7 +403,7 @@ export function OrcamentoSheet({
               <Select
                 value={h.usuario_id || NONE}
                 onValueChange={(v) => patchHeader({ usuario_id: v === NONE ? "" : v })}
-                disabled={readOnly}
+                disabled={Boolean(readOnly)}
               >
                 <SelectTrigger id="usuario_id">
                   <SelectValue placeholder="Selecione" />

@@ -47,7 +47,7 @@ export function OrcamentoTotais({ totais, descontoTipo, desconto, frete, valores
               size="sm"
               value={descontoTipo}
               onValueChange={(v) => v && onChange({ desconto_tipo: v as DescontoTipo })}
-              disabled={readOnly}
+              disabled={Boolean(readOnly)}
               aria-label="Tipo de desconto"
             >
               <ToggleGroupItem value="valor" aria-label="Desconto em reais" className="h-7 px-2.5 text-xs">

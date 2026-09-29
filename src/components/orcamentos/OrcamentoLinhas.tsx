@@ -58,7 +58,7 @@ export function OrcamentoLinhas({ linhas, itemOptions, unidadeOptions, readOnly,
                   placeholder="Selecione o item"
                   searchPlaceholder="Código ou descrição…"
                   emptyText="Nenhum item ativo encontrado."
-                  disabled={readOnly}
+                  disabled={Boolean(readOnly)}
                 />
               </div>
               {!readOnly && (
@@ -109,7 +109,7 @@ export function OrcamentoLinhas({ linhas, itemOptions, unidadeOptions, readOnly,
                 <Select
                   value={l.unidade_medida_id || NONE}
                   onValueChange={(v) => onChange(l.key, { unidade_medida_id: v === NONE ? "" : v })}
-                  disabled={readOnly}
+                  disabled={Boolean(readOnly)}
                 >
                   <SelectTrigger id={`unid-${l.key}`}>
                     <SelectValue placeholder="Unid." />

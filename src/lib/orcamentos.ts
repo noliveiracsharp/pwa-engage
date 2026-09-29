@@ -111,7 +111,7 @@ export type Linha = {
   /** Chave local (React). */
   key: string;
   /** id em orcamento_itens quando já gravada. */
-  id?: string;
+  id?: string | undefined;
   item_id: string;
   detalhe: string;
   quantidade: string;
