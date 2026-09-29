@@ -262,9 +262,25 @@ export function OrcamentoPagamento({ value, parcelas, totalLiquido, readOnly, on
                 className="bg-muted/50"
               />
               <p className="text-muted-foreground text-xs">
-                {taxaJuros > 0
-                  ? `Calculado pela Tabela Price com a taxa da empresa (${(taxaJuros * 100).toLocaleString("pt-BR", { maximumFractionDigits: 4 })}% a.m.). Valor da parcela = total líquido × coeficiente.`
-                  : "Cadastre a taxa de juros mensal nas configurações da empresa para calcular automaticamente."}
+                {temConfig
+                  ? `Calculado com a taxa da empresa (${fmtPct(configComercial!.taxa_juros_mensal)}% a.m. pela Tabela Price), o custo operacional de ${formatBRL(configComercial!.custo_operacional_mensal)} e o markup de ${fmtPct(configComercial!.fator_markup)}%. Valor da parcela = total líquido × coeficiente.`
+                  : "Cadastre taxa de juros, custo operacional e fator de markup nas configurações da empresa para calcular automaticamente."}
+              </p>
+            </div>
+          )}
+
+          {value.tem_juros && temConfig && parcelaFinal > 0 && (
+            <div className="bg-muted/30 sm:col-span-2 lg:col-span-4 space-y-1 rounded-md border p-3 text-xs">
+              <p className="text-muted-foreground font-medium">Memória de cálculo do parcelamento</p>
+              <p className="text-muted-foreground leading-relaxed">
+                Taxa {fmtPct(configComercial!.taxa_juros_mensal)}% a.m. · custo operacional{" "}
+                {formatBRL(configComercial!.custo_operacional_mensal)} · markup{" "}
+                {fmtPct(configComercial!.fator_markup)}% · coeficiente global{" "}
+                {coeficienteGlobal.toFixed(7)} → parcela de{" "}
+                <span className="text-foreground font-semibold tabular-nums">
+                  {formatBRL(parcelaFinal)}
+                </span>{" "}
+                × {qtdParcelas}.
               </p>
             </div>
           )}
