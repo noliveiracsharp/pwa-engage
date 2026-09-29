@@ -100,40 +100,51 @@ export function OrcamentoPagamento({ value, parcelas, totalLiquido, readOnly, on
   const total = somaParcelas(parcelas);
   const acrescimo = total - totalLiquido;
 
-  // Taxa de juros mensal da empresa (empresas_configuracao.taxa_juros_mensal).
-  const [taxaJuros, setTaxaJuros] = useState<number>(0);
+  const qtdParcelas = Math.max(0, Math.floor(num(value.qtd_parcelas)));
+
+  // Parâmetros comerciais da empresa (taxa de juros, custo operacional, markup).
+  const [configComercial, setConfigComercial] = useState<ConfigComercial | null>(null);
   useEffect(() => {
     let ativo = true;
     supabase
       .from("empresas_configuracao")
-      .select("taxa_juros_mensal")
+      .select("taxa_juros_mensal, custo_operacional_mensal, fator_markup")
       .eq("ativo", true)
       .single()
       .then(({ data }) => {
-        if (ativo) setTaxaJuros(num(data?.taxa_juros_mensal));
+        if (!ativo || !data) return;
+        const row = data as Record<string, unknown>;
+        setConfigComercial({
+          taxa_juros_mensal: num(row["taxa_juros_mensal"]),
+          custo_operacional_mensal: num(row["custo_operacional_mensal"]),
+          fator_markup: num(row["fator_markup"]),
+        });
       });
     return () => {
       ativo = false;
     };
   }, []);
 
-  // Tabela Price: coeficiente = i / (1 - (1 + i)^-n). Preenche e trava o campo
-  // quando "Com juros"; limpa quando volta para "Sem juros".
-  const ultimoAuto = useRef("");
+  // Recalcula o coeficiente global sempre que o total líquido, a quantidade de
+  // parcelas ou o toggle "Com juros" mudarem. Preenche e trava o campo quando
+  // "Com juros"; limpa quando volta para "Sem juros" (divisão simples).
+  const { parcelaFinal, coeficienteGlobal } = calcularParcelamentoComJuros(
+    totalLiquido,
+    qtdParcelas,
+    configComercial,
+  );
   useEffect(() => {
-    const n = Math.max(0, Math.floor(num(value.qtd_parcelas)));
-    if (value.tem_juros && n > 0 && taxaJuros > 0) {
-      const coef = taxaJuros / (1 - Math.pow(1 + taxaJuros, -n));
-      const texto = coef.toFixed(7).replace(".", ",");
-      ultimoAuto.current = texto;
+    if (value.tem_juros) {
+      if (coeficienteGlobal <= 0) return;
+      const texto = fmtCoef(coeficienteGlobal);
       if (value.coeficiente_juros !== texto) onChange({ coeficiente_juros: texto });
-    } else if (!value.tem_juros && value.coeficiente_juros) {
-      // Limpa apenas se o valor atual era o automático (ou sempre que voltar a "Sem juros").
-      ultimoAuto.current = "";
+    } else if (value.coeficiente_juros) {
       onChange({ coeficiente_juros: "" });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value.tem_juros, value.qtd_parcelas, taxaJuros]);
+  }, [value.tem_juros, qtdParcelas, totalLiquido, coeficienteGlobal]);
+
+  const temConfig = Boolean(configComercial && configComercial.fator_markup > 0);
 
   return (
     <div className="space-y-4">
