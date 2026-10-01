@@ -44,10 +44,28 @@ export async function vincularKanban(header: Row, original: Row | null): Promise
   let kanbanId = original?.["kanban_nome_id"] ? String(original["kanban_nome_id"]) : null;
   if (!kanbanId) kanbanId = await kanbanDoModuloOrcamentos();
   if (!kanbanId) return header;
+  if (header["kanban_etapa_id"]) return { ...header, kanban_nome_id: kanbanId };
   const etapaId = await etapaPorDescricao(kanbanId, situacao);
   return {
     ...header,
     kanban_nome_id: kanbanId,
     ...(etapaId ? { kanban_etapa_id: etapaId } : {}),
   };
+}
+
+export type EtapaKanban = { id: string; descricao: string };
+
+/** Etapas do kanban (ordem ascendente) — opções dinâmicas da Situação. */
+export async function etapasDoKanban(kanbanNomeId: string | null): Promise<EtapaKanban[]> {
+  if (!kanbanNomeId) return [];
+  const { data, error } = await supabase
+    .from("kanban_etapas")
+    .select("*")
+    .eq("kanban_nome_id", kanbanNomeId)
+    .order("ordem", { ascending: true });
+  if (error) return [];
+  return ((data ?? []) as Row[]).map((r) => ({
+    id: String(r["id"]),
+    descricao: String(r["descricao"] ?? ""),
+  }));
 }

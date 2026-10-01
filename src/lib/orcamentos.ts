@@ -38,6 +38,12 @@ export function situacaoOf(value: unknown): Situacao {
 }
 
 export function situacaoMeta(value: unknown) {
+  const raw = String(value ?? "").trim();
+  const v = raw.toLowerCase();
+  const known = v.startsWith("aprov") || v.startsWith("reprov") || v.startsWith("rejeit") || v === "em andamento" || !raw;
+  if (!known) {
+    return { value: raw as Situacao, label: raw, badge: "bg-secondary text-secondary-foreground", dot: "bg-primary" };
+  }
   const s = situacaoOf(value);
   return SITUACOES.find((o) => o.value === s) ?? SITUACOES[0]!;
 }

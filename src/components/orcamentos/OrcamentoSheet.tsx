@@ -43,6 +43,7 @@ import {
   num,
   parcelasFromValue,
   situacaoOf,
+  situacaoMeta,
   SITUACOES,
   toISODate,
   todayISO,
@@ -51,6 +52,8 @@ import {
   type Situacao,
 } from "@/lib/orcamentos";
 import { pick, type Row } from "@/lib/row";
+import { useQuery } from "@tanstack/react-query";
+import { etapasDoKanban, kanbanDoModuloOrcamentos } from "@/lib/orcamento-kanban";
 import { cn } from "@/lib/utils";
 
 const NONE = "__none__";
@@ -58,7 +61,8 @@ const NONE = "__none__";
 const VALIDADE_PADRAO_DIAS = 15;
 
 type Header = {
-  situacao: Situacao;
+  situacao: string;
+  kanban_etapa_id: string;
   dt_orcamento: string;
   validade_orcamento: string;
   parceiro_id: string;
@@ -74,6 +78,7 @@ const emptyHeader = (vendedorId: string): Header => {
   const hoje = todayISO();
   return {
     situacao: "Em andamento",
+    kanban_etapa_id: "",
     dt_orcamento: hoje,
     validade_orcamento: addDaysISO(hoje, VALIDADE_PADRAO_DIAS),
     parceiro_id: "",
@@ -97,7 +102,8 @@ const headerFromRecord = (r: Row): Header => {
   const parcelas = parcelasFromValue(r["parcelas"]);
   const dt = toISODate(r["dt_orcamento"]) || todayISO();
   return {
-    situacao: situacaoOf(r["situacao"]),
+    situacao: String(r["situacao"] ?? "") || "Em andamento",
+    kanban_etapa_id: String(r["kanban_etapa_id"] ?? ""),
     dt_orcamento: dt,
     validade_orcamento: toISODate(r["validade_orcamento"]),
     parceiro_id: String(pick(r, ["parceiro_id", "parceiros_id"]) ?? ""),
@@ -339,6 +345,7 @@ export function OrcamentoSheet({
 
     const header: Row = {
       situacao: h.situacao,
+      ...(h.kanban_etapa_id ? { kanban_etapa_id: h.kanban_etapa_id } : {}),
       dt_orcamento: h.dt_orcamento,
       validade_orcamento: dateOrNull(h.validade_orcamento),
       parceiro_id: h.parceiro_id || null,
@@ -422,19 +429,22 @@ export function OrcamentoSheet({
                 Situação
               </Label>
               <Select
-                value={h.situacao}
-                onValueChange={(v) => patchHeader({ situacao: v as Situacao })}
-                disabled={Boolean(readOnly)}
+                value={h.kanban_etapa_id || (etapaAtual?.id ?? "")}
+                onValueChange={(v) => {
+                  const e = etapas.find((x) => x.id === v);
+                  if (e) patchHeader({ kanban_etapa_id: e.id, situacao: e.descricao });
+                }}
+                disabled={Boolean(readOnly) || etapas.length === 0}
               >
                 <SelectTrigger id="situacao">
-                  <SelectValue />
+                  <SelectValue placeholder={h.situacao || "Sem etapas no Kanban"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {SITUACOES.map((s) => (
-                    <SelectItem key={s.value} value={s.value}>
+                  {etapas.map((e) => (
+                    <SelectItem key={e.id} value={e.id}>
                       <span className="flex items-center gap-2">
-                        <span className={cn("h-2.5 w-2.5 rounded-full", s.dot)} />
-                        {s.label}
+                        <span className={cn("h-2.5 w-2.5 rounded-full", situacaoMeta(e.descricao).dot)} />
+                        {e.descricao}
                       </span>
                     </SelectItem>
                   ))}
