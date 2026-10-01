@@ -412,6 +412,8 @@ function KanbanPage() {
         }
         empresaId={empresaId}
         canDelete={kanbanPerms.canDelete}
+        kanbans={kanbans}
+        todasEtapas={etapas}
         onDeleted={() => setKanbanId("")}
         onCreated={(id) => {
           setKanbanId(id);

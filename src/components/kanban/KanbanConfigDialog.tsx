@@ -69,6 +69,8 @@ type Props = {
   empresaId: unknown;
   onCreated: (id: string) => void;
   canDelete?: boolean;
+  kanbans?: Row[];
+  todasEtapas?: Row[];
   onDeleted?: () => void;
 };
 
@@ -81,6 +83,8 @@ export function KanbanConfigDialog({
   empresaId,
   onCreated,
   canDelete = false,
+  kanbans = [],
+  todasEtapas = [],
   onDeleted,
 }: Props) {
   const qc = useQueryClient();
@@ -274,14 +278,57 @@ export function KanbanConfigDialog({
   });
 
   const temCards = etapas.some((e) => etapasComCards.has(String(e["id"])));
+  const [transfer, setTransfer] = useState(false);
+  const [destKanban, setDestKanban] = useState("");
+  const [destEtapa, setDestEtapa] = useState("");
+  useEffect(() => {
+    if (!open) setTransfer(false);
+  }, [open]);
+  const outrosKanbans = kanbans.filter((k) => String(k["id"]) !== kanbanId);
+  const etapasDest = todasEtapas
+    .filter((e) => String(e["kanban_nome_id"] ?? "") === destKanban)
+    .sort((x, y) => Number(x["ordem"] ?? 0) - Number(y["ordem"] ?? 0));
+
+  const contarOrcamentos = async () => {
+    const { count } = await supabase
+      .from("orcamentos")
+      .select("id", { count: "exact", head: true })
+      .eq("kanban_nome_id" as never, kanbanId as never);
+    return count ?? 0;
+  };
+
   const delKanban = useMutation({
     mutationFn: async () => {
-      const { count } = await supabase
-        .from("orcamentos")
-        .select("id", { count: "exact", head: true })
-        .eq("kanban_nome_id" as never, kanbanId as never);
-      if (temCards || (count ?? 0) > 0)
-        throw new Error("Há cards vinculados a este quadro. Mova ou exclua-os antes.");
+      const etapaIds = etapas.map((e) => String(e["id"]));
+      if (transfer) {
+        if (!destKanban || !destEtapa) throw new Error("Escolha o quadro e a etapa de destino.");
+        const patch = { kanban_nome_id: destKanban, kanban_etapa_id: destEtapa };
+        const { error: eo } = await supabase
+          .from("orcamentos")
+          .update(patch as never)
+          .eq("kanban_nome_id" as never, kanbanId as never);
+        if (eo) throw eo;
+        if (etapaIds.length) {
+          const { error: eo2 } = await supabase
+            .from("orcamentos")
+            .update(patch as never)
+            .in("kanban_etapa_id" as never, etapaIds as never);
+          if (eo2) throw eo2;
+          const { error: ea } = await supabase
+            .from("atendimentos")
+            .update(patch as never)
+            .in("kanban_etapa_id" as never, etapaIds as never);
+          if (ea) {
+            const { error: ea2 } = await supabase
+              .from("atendimentos")
+              .update({ kanban_etapa_id: destEtapa } as never)
+              .in("kanban_etapa_id" as never, etapaIds as never);
+            if (ea2) throw ea2;
+          }
+        }
+      } else if (temCards || (await contarOrcamentos()) > 0) {
+        throw new Error("Há cards vinculados. Escolha para onde transferi-los.");
+      }
       await supabase.from("funcoes_kanban" as never).delete().eq("kanban_nome_id", kanbanId as never);
       await supabase.from("usuario_kanban" as never).delete().eq("kanban_nome_id", kanbanId as never);
       const { error: e1 } = await supabase.from("kanban_etapas").delete().eq("kanban_nome_id", kanbanId);
@@ -291,12 +338,25 @@ export function KanbanConfigDialog({
     },
     onSuccess: () => {
       invalidate();
-      toast.success("Quadro excluído.");
+      qc.invalidateQueries({ queryKey: ["table", "orcamentos"] });
+      qc.invalidateQueries({ queryKey: ["table", "atendimentos"] });
+      toast.success(transfer ? "Itens transferidos e quadro excluído." : "Quadro excluído.");
       onOpenChange(false);
       onDeleted?.();
     },
     onError: (e) => toast.error(errMsg(e, "Não foi possível excluir.")),
   });
+
+  const pedirExclusao = async () => {
+    const precisa = temCards || (await contarOrcamentos()) > 0;
+    if (precisa) {
+      setDestKanban("");
+      setDestEtapa("");
+      setTransfer(true);
+      return;
+    }
+    if (confirm("Excluir este quadro e todas as suas etapas?")) delKanban.mutate();
+  };
 
   const toggle = (c: { key: string; tipo: string }, on: boolean) =>
     setSel((s) =>
@@ -359,16 +419,70 @@ export function KanbanConfigDialog({
                 />
               </div>
             </div>
+            {transfer && (
+              <div className="space-y-3 rounded-md border border-destructive/50 p-3">
+                <p className="text-sm">
+                  Este quadro tem itens vinculados. Para onde devem ser transferidos?
+                </p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Select
+                    value={destKanban}
+                    onValueChange={(v) => {
+                      setDestKanban(v);
+                      setDestEtapa("");
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Quadro de destino" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {outrosKanbans.map((k) => (
+                        <SelectItem key={String(k["id"])} value={String(k["id"])}>
+                          {String(k["nome"] ?? "")}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={destEtapa} onValueChange={setDestEtapa} disabled={!destKanban}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Etapa de destino" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {etapasDest.map((e) => (
+                        <SelectItem key={String(e["id"])} value={String(e["id"])}>
+                          {String(e["descricao"] ?? "")}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {outrosKanbans.length === 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Não há outro quadro. Crie um antes de excluir este.
+                  </p>
+                )}
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setTransfer(false)}>
+                    Cancelar
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    disabled={!destEtapa || delKanban.isPending}
+                    onClick={() => delKanban.mutate()}
+                  >
+                    Transferir e excluir
+                  </Button>
+                </div>
+              </div>
+            )}
             <DialogFooter className="border-t pt-4">
               {canDelete && kanbanId && (
                 <Button
                   variant="destructive"
                   className="sm:mr-auto"
-                  disabled={temCards || delKanban.isPending}
-                  title={temCards ? "Há cards vinculados a este quadro" : "Excluir quadro e etapas"}
-                  onClick={() =>
-                    confirm("Excluir este quadro e todas as suas etapas?") && delKanban.mutate()
-                  }
+                  disabled={delKanban.isPending || transfer}
+                  onClick={() => void pedirExclusao()}
                 >
                   <Trash2 className="mr-1 h-4 w-4" /> Excluir quadro
                 </Button>
