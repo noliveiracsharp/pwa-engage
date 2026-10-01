@@ -35,8 +35,15 @@ export async function kanbanDoModuloOrcamentos(): Promise<string | null> {
     })
     .map((f) => String(f["id"]));
   if (!ids.length) return null;
-  const { data: vinculos } = await supabase.from("funcoes_kanban").select("*");
-  const linhas = (vinculos ?? []) as Row[];
+  // A tabela de vínculo pode se chamar `kanban_funcoes` ou `funcoes_kanban`.
+  let linhas: Row[] = [];
+  for (const tabela of ["kanban_funcoes", "funcoes_kanban"]) {
+    const { data, error } = await supabase.from(tabela as never).select("*");
+    if (!error && data?.length) {
+      linhas = data as Row[];
+      break;
+    }
+  }
   const v =
     linhas.find((r) => ids.includes(String(colunaCom(r, ["func"]) ?? ""))) ?? null;
   if (!v) return null;
