@@ -13,6 +13,7 @@ import { pick, type Row } from "@/lib/row";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { formatCpfCnpj, matchesAny } from "@/lib/input-masks";
 import { Checkbox } from "@/components/ui/checkbox";
+import { PasswordFields } from "@/components/usuarios/PasswordFields";
 
 export const Route = createFileRoute("/_authenticated/usuarios")({
   head: () => ({
@@ -45,10 +46,12 @@ function UsuariosPage() {
   const [open, setOpen] = useState(false);
   const [record, setRecord] = useState<Row | null>(null);
   const [kanbanSel, setKanbanSel] = useState<string[]>([]);
+  const [pw, setPw] = useState({ senha: "", confirma: "" });
   const [f, setF] = useState({ busca: "", status: "todos", perfil: "todos" });
 
   const openRecord = (row: Row | null) => {
     setRecord(row);
+    setPw({ senha: "", confirma: "" });
     const uid = row ? text(rowId(row)) : "";
     setKanbanSel(
       row
@@ -75,7 +78,7 @@ function UsuariosPage() {
   const createUser = useMutation({
     mutationFn: async (values: Row) => {
       const email = text(values["email"]).trim();
-      const password = text(values["senha"]);
+      const password = pw.senha;
       if (!email) throw new Error("Informe o e-mail do usuário.");
       if (password.length < 6) throw new Error("A senha deve ter pelo menos 6 caracteres.");
       // Ephemeral client: creates the auth access without replacing the
@@ -101,6 +104,14 @@ function UsuariosPage() {
   });
 
   const handleSave = (values: Row) => {
+    if (pw.senha !== pw.confirma) {
+      toast.error("As senhas não conferem.");
+      return;
+    }
+    if (pw.senha && pw.senha.length < 6) {
+      toast.error("A senha deve ter pelo menos 6 caracteres.");
+      return;
+    }
     if (record) {
       const rest: Row = { ...values };
       delete rest["senha"];
@@ -111,6 +122,14 @@ function UsuariosPage() {
           onSuccess: async () => {
             try {
               await syncKanbans(uid, kanbanSel);
+              if (pw.senha) {
+                const { error } = await supabase.rpc("admin_set_user_password", {
+                  p_user_id: uid,
+                  p_password: pw.senha,
+                });
+                if (error) throw new Error("Senha não alterada: " + error.message);
+                toast.success("Senha alterada.");
+              }
               setOpen(false);
             } catch (e) {
               toast.error(e instanceof Error ? e.message : "Não foi possível salvar os kanbans.");
@@ -125,6 +144,15 @@ function UsuariosPage() {
 
   const readOnlySheet = record ? !perms.canUpdate : !perms.canCreate;
   const kanbanPicker = (
+    <div className="space-y-6">
+    {(record ? perms.canUpdate : perms.canCreate) && (
+      <PasswordFields
+        senha={pw.senha}
+        confirma={pw.confirma}
+        required={!record}
+        onChange={(senha, confirma) => setPw({ senha, confirma })}
+      />
+    )}
     <div className="space-y-1.5">
       <p className="text-sm font-medium">Kanbans</p>
       <p className="text-muted-foreground text-xs">Nenhum marcado = acesso a todos.</p>
@@ -149,6 +177,7 @@ function UsuariosPage() {
         })}
       </div>
     </div>
+    </div>
   );
 
   const perfilNome = useMemo(() => {
@@ -170,9 +199,6 @@ function UsuariosPage() {
       { fields: ["foto"], label: "Foto", type: "photo", full: true },
       { fields: ["nome"], label: "Nome", full: true },
       { fields: ["email"], label: "E-mail", type: "email" },
-      ...(!record
-        ? [{ fields: ["senha"], label: "Senha de acesso", type: "password" as const }]
-        : []),
       { fields: ["cpf"], label: "CPF", type: "document" },
       { fields: ["cargo"], label: "Cargo" },
       { fields: ["status"], label: "Status", type: "boolean" },
