@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select";
 import { SearchSelect, type SearchOption } from "@/components/data-table/SearchSelect";
 import { rowId } from "@/lib/crud";
+import { QuickItemDialog } from "./QuickItemDialog";
 import { calcLinha, formatBRL, formatPct, num, type Linha } from "@/lib/orcamentos";
 import { pick, type Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
@@ -49,6 +50,7 @@ export function OrcamentoLinhas({
   onAdd,
   onRemove,
 }: Props) {
+  const [quickFor, setQuickFor] = useState<string | null>(null);
   const [abertas, setAbertas] = useState<Set<string>>(() => new Set());
 
   // Estado da linha no momento em que a edição abriu, usado pelo "Cancelar".
@@ -204,7 +206,9 @@ export function OrcamentoLinhas({
                       <Label htmlFor={`item-${l.key}`} className="block text-xs font-medium">
                         Item (produto ou serviço)
                       </Label>
+                      <div className="flex gap-1.5">
                       <SearchSelect
+                        className="min-w-0 flex-1"
                         id={`item-${l.key}`}
                         value={l.item_id}
                         onChange={(id) => onSelectItem(l.key, id)}
@@ -214,6 +218,12 @@ export function OrcamentoLinhas({
                         emptyText="Nenhum item ativo encontrado."
                         disabled={Boolean(readOnly)}
                       />
+                      {!readOnly && (
+                        <Button type="button" variant="outline" size="icon" className="shrink-0" aria-label="Cadastrar novo item" title="Cadastrar novo item" onClick={() => setQuickFor(l.key)}>
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      )}
+                      </div>
                       {nomeMarca && (
                         <p className="text-muted-foreground text-xs">Marca: {nomeMarca}</p>
                       )}
