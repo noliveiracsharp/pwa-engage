@@ -104,3 +104,61 @@ export async function etapasDoKanban(kanbanNomeId: string | null): Promise<Etapa
     descricao: String(r["descricao"] ?? ""),
   }));
 }
+
+export type CampoCard = { key: string; label: string };
+
+/** Campos disponíveis para o card de Orçamentos no Kanban. */
+export const CAMPOS_CARD_ORCAMENTO: CampoCard[] = [
+  { key: "numero", label: "Número" },
+  { key: "parceiro_id", label: "Cliente" },
+  { key: "total_liquido", label: "Total Líquido" },
+  { key: "dt_orcamento", label: "Data do Orçamento" },
+  { key: "usuario_id", label: "Vendedor" },
+];
+
+export const CAMPOS_CARD_PADRAO: CampoCard[] = [
+  CAMPOS_CARD_ORCAMENTO[0]!,
+  CAMPOS_CARD_ORCAMENTO[2]!,
+];
+
+export type VinculoKanban = { tabela: string; row: Row };
+
+/** Linha de vínculo Função↔Kanban para o kanban informado. */
+export async function vinculoDoKanban(kanbanNomeId: string): Promise<VinculoKanban | null> {
+  for (const tabela of ["funcoes_kanban", "kanban_funcoes"]) {
+    const { data, error } = await supabase.from(tabela as never).select("*");
+    if (error || !data) continue;
+    const row = (data as Row[]).find(
+      (r) =>
+        String(pick(r, ["kanban_nome_id", "kanban_id", "id_kanban"]) ?? colunaCom(r, ["kanban"], ["func", "campos"]) ?? "") ===
+        kanbanNomeId,
+    );
+    if (row) return { tabela, row };
+  }
+  return null;
+}
+
+export function parseCamposCard(v: unknown): CampoCard[] | null {
+  let val = v;
+  if (typeof val === "string") {
+    try { val = JSON.parse(val); } catch { return null; }
+  }
+  if (!Array.isArray(val)) return null;
+  return val
+    .filter((c) => c && typeof c === "object" && typeof (c as Row)["key"] === "string")
+    .map((c) => ({ key: String((c as Row)["key"]), label: String((c as Row)["label"] ?? (c as Row)["key"]) }));
+}
+
+/** Grava `campos_card` na linha de vínculo. */
+export async function salvarCamposCard(v: VinculoKanban, campos: CampoCard[]) {
+  let q = supabase.from(v.tabela as never).update({ campos_card: campos } as never);
+  if (v.row["id"] !== undefined) q = q.eq("id", v.row["id"] as never);
+  else {
+    for (const [k, val] of Object.entries(v.row)) {
+      if (k === "campos_card" || val === null || typeof val === "object") continue;
+      q = q.eq(k, val as never);
+    }
+  }
+  const { error } = await q;
+  if (error) throw error;
+}
