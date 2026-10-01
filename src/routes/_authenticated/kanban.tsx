@@ -5,7 +5,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   CAMPOS_CARD_ORCAMENTO,
   CAMPOS_CARD_PADRAO,
-  parseCamposCard,
+  camposDisponiveisDoVinculo,
+  formatarValorCard,
+  parseCamposCardTipado,
+  type CampoCardTipado,
   salvarCamposCard,
   vinculoDoKanban,
 } from "@/lib/orcamento-kanban";
@@ -133,17 +136,25 @@ function KanbanPage() {
     queryFn: () => vinculoDoKanban(kanbanId),
   });
   const camposCard = useMemo(
-    () => parseCamposCard(vinculo?.row["campos_card"]) ?? CAMPOS_CARD_PADRAO,
+    () => (parseCamposCardTipado(vinculo?.row["campos_card"]) ?? CAMPOS_CARD_PADRAO) as CampoCardTipado[],
     [vinculo],
   );
   const [cardCfgOpen, setCardCfgOpen] = useState(false);
   const [camposSel, setCamposSel] = useState<string[]>([]);
+  const { data: disponiveis, isLoading: loadingDisp, error: erroDisp } = useQuery({
+    queryKey: ["kanban-campos-disponiveis", kanbanId],
+    enabled: !!vinculo && cardCfgOpen,
+    queryFn: () => camposDisponiveisDoVinculo(vinculo!),
+  });
+  const opcoesCampos: CampoCardTipado[] = disponiveis?.campos.length ? disponiveis.campos : CAMPOS_CARD_ORCAMENTO;
   const saveCampos = useMutation({
     mutationFn: async () => {
       if (!vinculo) throw new Error("Este kanban não está ligado a uma função.");
       await salvarCamposCard(
         vinculo,
-        CAMPOS_CARD_ORCAMENTO.filter((c) => camposSel.includes(c.key)),
+        camposSel
+          .map((k) => opcoesCampos.find((c) => c.key === k) ?? camposCard.find((c) => c.key === k))
+          .filter((c): c is CampoCardTipado => !!c),
       );
     },
     onSuccess: () => {
@@ -154,26 +165,20 @@ function KanbanPage() {
     onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Não foi possível salvar."),
   });
 
-  const valorCampo = (o: Row, key: string): string => {
-    const v = o[key];
-    if (v === null || v === undefined || v === "") return "—";
-    if (key === "total_liquido") return formatBRL(v);
-    if (key === "dt_orcamento") {
-      const [y, m, d] = String(v).slice(0, 10).split("-");
-      return d ? `${d}/${m}/${y}` : String(v);
-    }
-    if (key === "parceiro_id") {
+  const resolverFk = (key: string, v: unknown): string | null => {
+    if (key === "parceiro_id" || key === "parceiros_id") {
       const p = parceiros.find((r) => String(r["id"]) === String(v));
-      return p ? text(pick(p, ["nome_fantasia", "razao_social", "nome"], "—")) : "—";
+      return p ? text(pick(p, ["nome_fantasia", "razao_social", "nome"], "")) || null : null;
     }
-    if (key === "usuario_id") {
+    if (key === "usuario_id" || key === "vendedor_id") {
       const u = usuarios.find((r) =>
         ["id", "usuario_id", "user_id", "auth_id"].some((k) => String(r[k] ?? "") === String(v)),
       );
-      return u ? text(pick(u, ["nome", "email"], "—")) : "—";
+      return u ? text(pick(u, ["nome", "email"], "")) || null : null;
     }
-    return text(v);
+    return null;
   };
+  const valorCampo = (o: Row, c: CampoCardTipado): string => formatarValorCard(o[c.key], c, resolverFk);
 
   const createKanban = useMutation({
     mutationFn: async (value: { nome: string; descricao: string; status: boolean }) => {
@@ -364,10 +369,19 @@ function KanbanPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Personalização do card</DialogTitle>
-            <DialogDescription>Escolha as informações que aparecem nos cartões de Orçamentos.</DialogDescription>
+            <DialogDescription>
+              Escolha as informações que aparecem nos cartões
+              {disponiveis?.tabela ? ` (tabela ${disponiveis.tabela})` : ""}.
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
-            {CAMPOS_CARD_ORCAMENTO.map((c) => (
+          {loadingDisp && <p className="text-sm text-muted-foreground">Carregando campos…</p>}
+          {!loadingDisp && (erroDisp || !disponiveis?.campos.length) && (
+            <p className="text-sm text-muted-foreground">
+              {erroDisp ? "Não foi possível listar as colunas da tabela." : "A função ligada a este kanban não tem tabela base definida."} Mostrando os campos padrão.
+            </p>
+          )}
+          <div className="grid max-h-[50vh] gap-3 overflow-y-auto sm:grid-cols-2">
+            {opcoesCampos.map((c) => (
               <label key={c.key} className="flex items-center gap-3 text-sm">
                 <Checkbox
                   checked={camposSel.includes(c.key)}
@@ -482,7 +496,7 @@ function KanbanPage() {
                             {camposCard.map((c) => (
                               <p key={c.key} className="truncate text-xs text-foreground">
                                 <span className="text-muted-foreground">{c.label}: </span>
-                                {valorCampo(card, c.key)}
+                                {valorCampo(card, c)}
                               </p>
                             ))}
                             <SituacaoBadge value={card["situacao"]} />
