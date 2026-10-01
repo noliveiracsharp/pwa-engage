@@ -113,10 +113,10 @@ function Painel({ d, perms, onOpen }: { d: D; perms: Perms; onOpen: (id: string)
 
   async function excluir(p: Row) {
     const id = String(rowId(p));
-    if (d.tarefas.some((t) => String(t[d.tc.projeto]) === id)) return toast.error("Exclua as tarefas do projeto antes.");
+    if (d.tarefas.some((t) => String(t[d.tc.projeto]) === id)) { toast.error("Exclua as tarefas do projeto antes."); return; }
     if (!confirm(`Excluir o projeto "${p[d.pc.nome]}"?`)) return;
     const { error } = await supabase.from("projetos").delete().eq(idColumn(p), rowId(p) as never);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     qc.invalidateQueries({ queryKey: ["table", "projetos"] });
   }
 
@@ -197,14 +197,14 @@ function ProjetoDialog({ d, original, onClose }: { d: D; original: Row | null; o
   const clientes = d.parceiros.filter((p) => p["is_cliente"] !== false);
 
   async function salvar() {
-    if (!String(f[d.pc.nome] ?? "").trim()) return toast.error("Informe o nome do projeto.");
+    if (!String(f[d.pc.nome] ?? "").trim()) { toast.error("Informe o nome do projeto."); return; }
     const v: Row = { [d.pc.nome]: f[d.pc.nome], [d.pc.status]: f[d.pc.status] || null, [d.pc.parceiro]: f[d.pc.parceiro] || null, [d.pc.ini]: f[d.pc.ini] || null, [d.pc.fim]: f[d.pc.fim] || null };
     if (d.pc.descricao !== d.pc.nome) v[d.pc.descricao] = f[d.pc.descricao] ?? null;
     const payload = filterPayload(stamp(v, !original), d.pCols);
     const { error } = original
       ? await supabase.from("projetos").update(payload).eq(idColumn(original), rowId(original) as never)
       : await supabase.from("projetos").insert(payload);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success("Projeto salvo.");
     qc.invalidateQueries({ queryKey: ["table", "projetos"] });
     onClose();
@@ -265,13 +265,13 @@ function Detalhe({ projeto, d, perms, onBack }: { projeto: Row; d: D; perms: Per
 
   async function patch(t: Row, v: Row) {
     const { error } = await supabase.from("projetos_tarefas").update(filterPayload(v, d.tCols)).eq(idColumn(t), rowId(t) as never);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     refresh();
   }
   async function excluir(t: Row) {
     if (!confirm(`Excluir a tarefa "${t[d.tc.nome]}"?`)) return;
     const { error } = await supabase.from("projetos_tarefas").delete().eq(idColumn(t), rowId(t) as never);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     refresh();
   }
 

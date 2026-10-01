@@ -159,17 +159,17 @@ function Checklist({ tarefaId, readOnly }: { tarefaId: string; readOnly: boolean
   async function add() {
     if (!txt.trim()) return;
     const { error } = await supabase.from(T).insert(filterPayload(stamp({ [tC]: tarefaId, [dC]: txt.trim(), [okC]: doneValue(okC, false) }, true), cols));
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     setTxt(""); refresh();
   }
   async function toggle(r: Row, v: boolean) {
     const { error } = await supabase.from(T).update({ [okC]: doneValue(okC, v) }).eq(idColumn(r), rowId(r) as never);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     refresh();
   }
   async function del(r: Row) {
     const { error } = await supabase.from(T).delete().eq(idColumn(r), rowId(r) as never);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     refresh();
   }
   return (
@@ -219,7 +219,7 @@ function Dependencias({ tarefaId, tarefas, nomeCol, readOnly }: { tarefaId: stri
     const { error } = existing
       ? await supabase.from(T).delete().eq(idColumn(existing), rowId(existing) as never)
       : await supabase.from(T).insert(filterPayload(stamp({ [tC]: tarefaId, [dC]: id }, true), cols));
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     qc.invalidateQueries({ queryKey: ["table", T] });
   }
   return (
@@ -279,7 +279,7 @@ function Anexos({ tarefaId, projetoId, readOnly }: { tarefaId: string; projetoId
     for (const f of Array.from(files)) {
       const safe = f.name.normalize("NFD").replace(/[^\w.-]+/g, "_");
       const path = `${projetoId}/${tarefaId}/${Date.now()}-${safe}`;
-      const up = await supabase.storage.from(BUCKET).upload(path, f, { contentType: f.type || undefined });
+      const up = await supabase.storage.from(BUCKET).upload(path, f, f.type ? { contentType: f.type } : {});
       if (up.error) { toast.error(`${f.name}: ${up.error.message}`); continue; }
       const url = supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
       const { error } = await supabase.from(T).insert(filterPayload(stamp({ [c.t]: tarefaId, [c.nome]: f.name, [c.url]: url, [c.path]: path, [c.tam]: f.size, [c.tipo]: f.type }, true), cols));
@@ -293,14 +293,14 @@ function Anexos({ tarefaId, projetoId, readOnly }: { tarefaId: string; projetoId
     const path = String(r[c.path] ?? "") || String(r[c.url] ?? "").split(`/${BUCKET}/`)[1] || "";
     if (path) await supabase.storage.from(BUCKET).remove([path]);
     const { error } = await supabase.from(T).delete().eq(idColumn(r), rowId(r) as never);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     qc.invalidateQueries({ queryKey: ["table", T] });
   }
   async function abrir(r: Row) {
     const path = String(r[c.path] ?? "");
     if (path) {
       const { data } = await supabase.storage.from(BUCKET).createSignedUrl(path, 300);
-      if (data?.signedUrl) return window.open(data.signedUrl, "_blank");
+      if (data?.signedUrl) { window.open(data.signedUrl, "_blank"); return; }
     }
     if (r[c.url]) window.open(String(r[c.url]), "_blank");
   }
