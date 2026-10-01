@@ -49,7 +49,7 @@ export function QuickItemDialog({ open, onOpenChange, itens, unidadeOptions, onC
   const codigo = nextCodigo(itens, tipo);
 
   const salvar = async () => {
-    if (!descricao.trim()) return toast.error("Informe a descrição.");
+    if (!descricao.trim()) { toast.error("Informe a descrição."); return; }
     setSaving(true);
     const values = stamp(
       { tipo, codigo, descricao: descricao.trim(), unidade_medida_id: unidade || null, status: true },
@@ -57,7 +57,7 @@ export function QuickItemDialog({ open, onOpenChange, itens, unidadeOptions, onC
     );
     const { data, error } = await supabase.from("itens").insert(values).select().single();
     setSaving(false);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     await qc.invalidateQueries({ queryKey: ["table", "itens"] });
     toast.success("Item cadastrado.");
     if (data && rowId(data as Row) !== undefined) onCreated(data as Row);
