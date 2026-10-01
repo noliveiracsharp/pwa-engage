@@ -4,7 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, ChevronDown, ChevronRight, Pencil, Plus, Settings, Share2, Trash2 } from "lucide-react";
 
 async function compartilhar(projeto: Row) {
-  let token = projeto.token_compartilhamento as string | null | undefined;
+  let token = projeto["token_compartilhamento"] as string | null | undefined;
   if (!token) {
     token = crypto.randomUUID();
     const { error } = await supabase.from("projetos").update({ token_compartilhamento: token } as never).eq(idColumn(projeto), rowId(projeto) as never);
