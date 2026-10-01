@@ -189,6 +189,15 @@ export function OrcamentoSheet({
     }
   }, [open, record, recordId, linhasRecord, vendedorPadraoId]);
 
+  const kanbanNomeIdRecord = record?.["kanban_nome_id"] ? String(record["kanban_nome_id"]) : null;
+  const { data: etapas = [] } = useQuery({
+    queryKey: ["orcamento-etapas", kanbanNomeIdRecord],
+    queryFn: async () => etapasDoKanban(kanbanNomeIdRecord ?? (await kanbanDoModuloOrcamentos())),
+  });
+  const etapaAtual =
+    etapas.find((e) => e.id === h.kanban_etapa_id) ??
+    etapas.find((e) => e.descricao.trim().toLowerCase() === h.situacao.trim().toLowerCase());
+
   const patchHeader = (patch: Partial<Header>) => {
     dirty.current = true;
     setH((s) => ({ ...s, ...patch }));
