@@ -198,6 +198,13 @@ export function OrcamentoSheet({
     etapas.find((e) => e.id === h.kanban_etapa_id) ??
     etapas.find((e) => e.descricao.trim().toLowerCase() === h.situacao.trim().toLowerCase());
 
+  // Etapa gravada manda: se o Kanban moveu o card, o rótulo segue a etapa.
+  useEffect(() => {
+    if (!h.kanban_etapa_id) return;
+    const e = etapas.find((x) => x.id === h.kanban_etapa_id);
+    if (e && e.descricao !== h.situacao) setH((p) => ({ ...p, situacao: e.descricao }));
+  }, [etapas, h.kanban_etapa_id, h.situacao]);
+
   const patchHeader = (patch: Partial<Header>) => {
     dirty.current = true;
     setH((s) => ({ ...s, ...patch }));
@@ -411,7 +418,7 @@ export function OrcamentoSheet({
         <SheetHeader className="px-6 pb-4">
           <SheetTitle className="flex flex-wrap items-center gap-2">
             {record ? `Orçamento ${numero || ""}`.trim() : "Novo orçamento"}
-            {record && <SituacaoBadge value={h.situacao} />}
+            {record && <SituacaoBadge value={etapaAtual?.descricao ?? h.situacao} />}
           </SheetTitle>
           <SheetDescription>
             {record

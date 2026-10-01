@@ -1,7 +1,7 @@
 import { FileText } from "lucide-react";
 import { SituacaoBadge } from "@/components/orcamentos/SituacaoBadge";
 import { formatBRL } from "@/lib/orcamentos";
-import { isSituacaoValida } from "@/lib/orcamento-kanban";
+
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -231,7 +231,7 @@ function KanbanPage() {
       const etapa = etapas.find((e) => String(e["id"]) === etapaId);
       const desc = String(etapa?.["descricao"] ?? "").trim();
       const patch: Row = { kanban_etapa_id: etapaId };
-      if (isSituacaoValida(desc)) patch["situacao"] = desc;
+      if (String(desc ?? "").trim()) patch["situacao"] = String(desc).trim();
       const { error } = await supabase.from("orcamentos").update(patch).eq("id", id);
       if (error) throw error;
     },
