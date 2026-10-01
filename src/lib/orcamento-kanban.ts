@@ -182,7 +182,7 @@ export function labelAmigavel(key: string): string {
 }
 
 /** Normaliza o retorno da RPC `listar_colunas_tabela` em [{key, tipo}]. */
-function normalizarColunas(data: unknown): { key: string; tipo: string }[] {
+export function normalizarColunas(data: unknown): { key: string; tipo: string }[] {
   let v = data;
   if (typeof v === "string") {
     try { v = JSON.parse(v); } catch { return []; }

@@ -19,6 +19,7 @@ const TABLES = [
   "parceiros",
   "orcamentos",
   "orcamento_itens",
+  "relatorios",
 ];
 
 /**
