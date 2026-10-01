@@ -1,4 +1,5 @@
 import { FileText, Settings2 } from "lucide-react";
+import { KanbanConfigDialog } from "@/components/kanban/KanbanConfigDialog";
 import { SituacaoBadge } from "@/components/orcamentos/SituacaoBadge";
 import { formatBRL } from "@/lib/orcamentos";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -30,7 +31,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/hooks/useAuth";
 import { pick, type Row } from "@/lib/row";
@@ -44,7 +51,10 @@ export const Route = createFileRoute("/_authenticated/kanban")({
       { title: "Kanban — Atende.ai" },
       { name: "description", content: "Acompanhe os atendimentos por etapa em um quadro Kanban." },
       { property: "og:title", content: "Kanban — Atende.ai" },
-      { property: "og:description", content: "Acompanhe os atendimentos por etapa em um quadro Kanban." },
+      {
+        property: "og:description",
+        content: "Acompanhe os atendimentos por etapa em um quadro Kanban.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -96,8 +106,7 @@ function KanbanPage() {
     () =>
       etapas
         .filter(
-          (e) =>
-            String(pick(e, ["kanban_nome_id", "kanban_id", "id_kanban"]) ?? "") === kanbanId,
+          (e) => String(pick(e, ["kanban_nome_id", "kanban_id", "id_kanban"]) ?? "") === kanbanId,
         )
         .sort((a, b) => Number(pick(a, ["ordem"], 0)) - Number(pick(b, ["ordem"], 0))),
     [etapas, kanbanId],
@@ -136,17 +145,27 @@ function KanbanPage() {
     queryFn: () => vinculoDoKanban(kanbanId),
   });
   const camposCard = useMemo(
-    () => (parseCamposCardTipado(vinculo?.row["campos_card"]) ?? CAMPOS_CARD_PADRAO) as CampoCardTipado[],
+    () =>
+      (parseCamposCardTipado(vinculo?.row["campos_card"]) ??
+        CAMPOS_CARD_PADRAO) as CampoCardTipado[],
     [vinculo],
   );
   const [cardCfgOpen, setCardCfgOpen] = useState(false);
   const [camposSel, setCamposSel] = useState<string[]>([]);
-  const { data: disponiveis, isLoading: loadingDisp, error: erroDisp } = useQuery({
+  const [cfgOpen, setCfgOpen] = useState(false);
+  const [cfgNovo, setCfgNovo] = useState(false);
+  const {
+    data: disponiveis,
+    isLoading: loadingDisp,
+    error: erroDisp,
+  } = useQuery({
     queryKey: ["kanban-campos-disponiveis", kanbanId],
     enabled: !!vinculo && cardCfgOpen,
     queryFn: () => camposDisponiveisDoVinculo(vinculo!),
   });
-  const opcoesCampos: CampoCardTipado[] = disponiveis?.campos.length ? disponiveis.campos : CAMPOS_CARD_ORCAMENTO;
+  const opcoesCampos: CampoCardTipado[] = disponiveis?.campos.length
+    ? disponiveis.campos
+    : CAMPOS_CARD_ORCAMENTO;
   const saveCampos = useMutation({
     mutationFn: async () => {
       if (!vinculo) throw new Error("Este kanban não está ligado a uma função.");
@@ -162,7 +181,8 @@ function KanbanPage() {
       toast.success("Personalização salva.");
       setCardCfgOpen(false);
     },
-    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Não foi possível salvar."),
+    onError: (e: unknown) =>
+      toast.error(e instanceof Error ? e.message : "Não foi possível salvar."),
   });
 
   const resolverFk = (key: string, v: unknown): string | null => {
@@ -178,7 +198,8 @@ function KanbanPage() {
     }
     return null;
   };
-  const valorCampo = (o: Row, c: CampoCardTipado): string => formatarValorCard(o[c.key], c, resolverFk);
+  const valorCampo = (o: Row, c: CampoCardTipado): string =>
+    formatarValorCard(o[c.key], c, resolverFk);
 
   const createKanban = useMutation({
     mutationFn: async (value: { nome: string; descricao: string; status: boolean }) => {
@@ -197,7 +218,8 @@ function KanbanPage() {
       setNewKanban(false);
       setForm({ nome: "", descricao: "", status: true });
     },
-    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Não foi possível criar."),
+    onError: (e: unknown) =>
+      toast.error(e instanceof Error ? e.message : "Não foi possível criar."),
   });
 
   const createEtapa = useMutation({
@@ -217,7 +239,8 @@ function KanbanPage() {
       setNewEtapa(false);
       setEtapaForm({ descricao: "", status: true });
     },
-    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Não foi possível criar."),
+    onError: (e: unknown) =>
+      toast.error(e instanceof Error ? e.message : "Não foi possível criar."),
   });
 
   const updateEtapa = useMutation({
@@ -233,7 +256,8 @@ function KanbanPage() {
       toast.success("Etapa atualizada.");
       setEditEtapa(null);
     },
-    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Não foi possível salvar."),
+    onError: (e: unknown) =>
+      toast.error(e instanceof Error ? e.message : "Não foi possível salvar."),
   });
 
   const deleteEtapa = useMutation({
@@ -245,7 +269,8 @@ function KanbanPage() {
       queryClient.invalidateQueries({ queryKey: ["table", "kanban_etapas"] });
       toast.success("Etapa excluída.");
     },
-    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Não foi possível excluir."),
+    onError: (e: unknown) =>
+      toast.error(e instanceof Error ? e.message : "Não foi possível excluir."),
   });
 
   const reorderEtapas = useMutation({
@@ -278,7 +303,15 @@ function KanbanPage() {
   };
 
   const moveCard = useMutation({
-    mutationFn: async ({ id, etapaId, column }: { id: string; etapaId: string; column: string }) => {
+    mutationFn: async ({
+      id,
+      etapaId,
+      column,
+    }: {
+      id: string;
+      etapaId: string;
+      column: string;
+    }) => {
       const { error } = await supabase
         .from("atendimentos")
         .update({ [column]: etapaId })
@@ -286,7 +319,8 @@ function KanbanPage() {
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["table", "atendimentos"] }),
-    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Não foi possível mover."),
+    onError: (e: unknown) =>
+      toast.error(e instanceof Error ? e.message : "Não foi possível mover."),
   });
 
   const moveOrcamento = useMutation({
@@ -299,7 +333,8 @@ function KanbanPage() {
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["table", "orcamentos"] }),
-    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Não foi possível mover."),
+    onError: (e: unknown) =>
+      toast.error(e instanceof Error ? e.message : "Não foi possível mover."),
   });
 
   const onDrop = (etapaId: string) => {
@@ -338,15 +373,15 @@ function KanbanPage() {
               ))}
             </SelectContent>
           </Select>
-          {vinculo && (
+          {kanbanId && (
             <Button
               size="icon"
               variant="outline"
-              aria-label="Personalização do card"
-              title="Personalização do card"
+              aria-label="Configurar quadro"
+              title="Configurar quadro"
               onClick={() => {
-                setCamposSel(camposCard.map((c) => c.key));
-                setCardCfgOpen(true);
+                setCfgNovo(false);
+                setCfgOpen(true);
               }}
             >
               <Settings2 className="h-4 w-4" />
@@ -356,8 +391,8 @@ function KanbanPage() {
             size="icon"
             aria-label="Novo kanban"
             onClick={() => {
-              setForm({ nome: "", descricao: "", status: true });
-              setNewKanban(true);
+              setCfgNovo(true);
+              setCfgOpen(true);
             }}
           >
             <Plus className="h-4 w-4" />
@@ -365,44 +400,20 @@ function KanbanPage() {
         </div>
       </div>
 
-      <Dialog open={cardCfgOpen} onOpenChange={setCardCfgOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Personalização do card</DialogTitle>
-            <DialogDescription>
-              Escolha as informações que aparecem nos cartões
-              {disponiveis?.tabela ? ` (tabela ${disponiveis.tabela})` : ""}.
-            </DialogDescription>
-          </DialogHeader>
-          {loadingDisp && <p className="text-sm text-muted-foreground">Carregando campos…</p>}
-          {!loadingDisp && (erroDisp || !disponiveis?.campos.length) && (
-            <p className="text-sm text-muted-foreground">
-              {erroDisp ? "Não foi possível listar as colunas da tabela." : "A função ligada a este kanban não tem tabela base definida."} Mostrando os campos padrão.
-            </p>
-          )}
-          <div className="grid max-h-[50vh] gap-3 overflow-y-auto sm:grid-cols-2">
-            {opcoesCampos.map((c) => (
-              <label key={c.key} className="flex items-center gap-3 text-sm">
-                <Checkbox
-                  checked={camposSel.includes(c.key)}
-                  onCheckedChange={(v) =>
-                    setCamposSel((s) => (v ? [...s, c.key] : s.filter((k) => k !== c.key)))
-                  }
-                />
-                {c.label}
-              </label>
-            ))}
-          </div>
-          <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => setCardCfgOpen(false)}>
-              Cancelar
-            </Button>
-            <Button disabled={saveCampos.isPending} onClick={() => saveCampos.mutate()}>
-              Salvar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <KanbanConfigDialog
+        open={cfgOpen}
+        onOpenChange={setCfgOpen}
+        kanban={cfgNovo ? null : (kanbans.find((k) => String(k["id"]) === kanbanId) ?? null)}
+        etapas={cfgNovo ? [] : boardEtapas}
+        etapasComCards={
+          new Set([...cardsByEtapa.entries()].filter(([, l]) => l.length > 0).map(([k]) => k))
+        }
+        empresaId={empresaId}
+        onCreated={(id) => {
+          setKanbanId(id);
+          setCfgNovo(false);
+        }}
+      />
 
       {!kanbanId && !loadingKanbans && (
         <div className="rounded-lg border border-border bg-card p-10 text-center text-muted-foreground">
@@ -504,7 +515,9 @@ function KanbanPage() {
                         </button>
                       );
                     }
-                    const pessoaId = String(pick(card, ["pessoas_id", "pessoa_id", "clientes_id", "cliente_id"]) ?? "");
+                    const pessoaId = String(
+                      pick(card, ["pessoas_id", "pessoa_id", "clientes_id", "cliente_id"]) ?? "",
+                    );
                     const pessoa = pessoaById.get(pessoaId);
                     return (
                       <button
@@ -692,8 +705,7 @@ function KanbanPage() {
             <Button
               disabled={!editForm.descricao.trim() || updateEtapa.isPending}
               onClick={() =>
-                editEtapa &&
-                updateEtapa.mutate({ id: String(editEtapa["id"]), ...editForm })
+                editEtapa && updateEtapa.mutate({ id: String(editEtapa["id"]), ...editForm })
               }
             >
               Salvar
