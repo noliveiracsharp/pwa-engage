@@ -1,6 +1,14 @@
-import { FileText } from "lucide-react";
+import { FileText, Settings2 } from "lucide-react";
 import { SituacaoBadge } from "@/components/orcamentos/SituacaoBadge";
 import { formatBRL } from "@/lib/orcamentos";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  CAMPOS_CARD_ORCAMENTO,
+  CAMPOS_CARD_PADRAO,
+  parseCamposCard,
+  salvarCamposCard,
+  vinculoDoKanban,
+} from "@/lib/orcamento-kanban";
 
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
@@ -116,6 +124,56 @@ function KanbanPage() {
     }
     return map;
   }, [atendimentos, orcamentos]);
+
+  const { data: parceiros = [] } = useRows("parceiros");
+  const { data: usuarios = [] } = useRows("usuarios");
+  const { data: vinculo = null } = useQuery({
+    queryKey: ["kanban-vinculo", kanbanId],
+    enabled: !!kanbanId,
+    queryFn: () => vinculoDoKanban(kanbanId),
+  });
+  const camposCard = useMemo(
+    () => parseCamposCard(vinculo?.row["campos_card"]) ?? CAMPOS_CARD_PADRAO,
+    [vinculo],
+  );
+  const [cardCfgOpen, setCardCfgOpen] = useState(false);
+  const [camposSel, setCamposSel] = useState<string[]>([]);
+  const saveCampos = useMutation({
+    mutationFn: async () => {
+      if (!vinculo) throw new Error("Este kanban não está ligado a uma função.");
+      await salvarCamposCard(
+        vinculo,
+        CAMPOS_CARD_ORCAMENTO.filter((c) => camposSel.includes(c.key)),
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["kanban-vinculo"] });
+      toast.success("Personalização salva.");
+      setCardCfgOpen(false);
+    },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Não foi possível salvar."),
+  });
+
+  const valorCampo = (o: Row, key: string): string => {
+    const v = o[key];
+    if (v === null || v === undefined || v === "") return "—";
+    if (key === "total_liquido") return formatBRL(v);
+    if (key === "dt_orcamento") {
+      const [y, m, d] = String(v).slice(0, 10).split("-");
+      return d ? `${d}/${m}/${y}` : String(v);
+    }
+    if (key === "parceiro_id") {
+      const p = parceiros.find((r) => String(r["id"]) === String(v));
+      return p ? text(pick(p, ["nome_fantasia", "razao_social", "nome"], "—")) : "—";
+    }
+    if (key === "usuario_id") {
+      const u = usuarios.find((r) =>
+        ["id", "usuario_id", "user_id", "auth_id"].some((k) => String(r[k] ?? "") === String(v)),
+      );
+      return u ? text(pick(u, ["nome", "email"], "—")) : "—";
+    }
+    return text(v);
+  };
 
   const createKanban = useMutation({
     mutationFn: async (value: { nome: string; descricao: string; status: boolean }) => {
@@ -275,6 +333,20 @@ function KanbanPage() {
               ))}
             </SelectContent>
           </Select>
+          {vinculo && (
+            <Button
+              size="icon"
+              variant="outline"
+              aria-label="Personalização do card"
+              title="Personalização do card"
+              onClick={() => {
+                setCamposSel(camposCard.map((c) => c.key));
+                setCardCfgOpen(true);
+              }}
+            >
+              <Settings2 className="h-4 w-4" />
+            </Button>
+          )}
           <Button
             size="icon"
             aria-label="Novo kanban"
@@ -287,6 +359,36 @@ function KanbanPage() {
           </Button>
         </div>
       </div>
+
+      <Dialog open={cardCfgOpen} onOpenChange={setCardCfgOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Personalização do card</DialogTitle>
+            <DialogDescription>Escolha as informações que aparecem nos cartões de Orçamentos.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            {CAMPOS_CARD_ORCAMENTO.map((c) => (
+              <label key={c.key} className="flex items-center gap-3 text-sm">
+                <Checkbox
+                  checked={camposSel.includes(c.key)}
+                  onCheckedChange={(v) =>
+                    setCamposSel((s) => (v ? [...s, c.key] : s.filter((k) => k !== c.key)))
+                  }
+                />
+                {c.label}
+              </label>
+            ))}
+          </div>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setCardCfgOpen(false)}>
+              Cancelar
+            </Button>
+            <Button disabled={saveCampos.isPending} onClick={() => saveCampos.mutate()}>
+              Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {!kanbanId && !loadingKanbans && (
         <div className="rounded-lg border border-border bg-card p-10 text-center text-muted-foreground">
@@ -376,13 +478,13 @@ function KanbanPage() {
                           )}
                         >
                           <FileText className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                          <div className="min-w-0 space-y-1">
-                            <p className="truncate text-sm font-medium text-foreground">
-                              Orçamento {text(card["numero"] ?? "")}
-                            </p>
-                            <p className="truncate text-xs text-muted-foreground">
-                              {formatBRL(card["total_liquido"])}
-                            </p>
+                          <div className="min-w-0 flex-1 space-y-1">
+                            {camposCard.map((c) => (
+                              <p key={c.key} className="truncate text-xs text-foreground">
+                                <span className="text-muted-foreground">{c.label}: </span>
+                                {valorCampo(card, c.key)}
+                              </p>
+                            ))}
                             <SituacaoBadge value={card["situacao"]} />
                           </div>
                         </button>
