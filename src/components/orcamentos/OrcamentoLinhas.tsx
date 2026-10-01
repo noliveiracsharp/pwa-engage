@@ -453,6 +453,13 @@ export function OrcamentoLinhas({
           <Plus className="mr-1 h-4 w-4" /> Adicionar item
         </Button>
       )}
+      <QuickItemDialog
+        open={quickFor !== null}
+        onOpenChange={(o) => !o && setQuickFor(null)}
+        itens={itens}
+        unidadeOptions={unidadeOptions}
+        onCreated={(item) => quickFor && onSelectItem(quickFor, String(rowId(item)))}
+      />
     </div>
   );
 }
