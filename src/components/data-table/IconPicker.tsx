@@ -143,6 +143,7 @@ export function IconPicker({ id, value, onChange }: IconPickerProps) {
 
   return (
     <Popover
+      modal
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
