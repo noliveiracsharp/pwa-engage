@@ -9,7 +9,13 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -28,7 +34,11 @@ const funcaoKey = (f: Row) => String(pick(f, ["funcao_id", "id"]) ?? "");
 function colunasDaRpc(data: unknown): { key: string; tipo: string }[] {
   let v = data;
   if (typeof v === "string") {
-    try { v = JSON.parse(v); } catch { return []; }
+    try {
+      v = JSON.parse(v);
+    } catch {
+      return [];
+    }
   }
   if (Array.isArray(v) && v.length === 1 && v[0] && typeof v[0] === "object") {
     const inner = Object.values(v[0] as Row)[0];
@@ -40,7 +50,12 @@ function colunasDaRpc(data: unknown): { key: string; tipo: string }[] {
       if (typeof c === "string") return { key: c, tipo: "" };
       const r = c as Row;
       const key = pick<string>(r, ["key", "column_name", "coluna", "nome", "name"]);
-      return key ? { key: String(key), tipo: String(pick(r, ["tipo", "data_type", "type", "udt_name"], "") ?? "") } : null;
+      return key
+        ? {
+            key: String(key),
+            tipo: String(pick(r, ["tipo", "data_type", "type", "udt_name"], "") ?? ""),
+          }
+        : null;
     })
     .filter((c): c is { key: string; tipo: string } => !!c);
 }
@@ -55,7 +70,15 @@ type Props = {
   onCreated: (id: string) => void;
 };
 
-export function KanbanConfigDialog({ open, onOpenChange, kanban, etapas, etapasComCards, empresaId, onCreated }: Props) {
+export function KanbanConfigDialog({
+  open,
+  onOpenChange,
+  kanban,
+  etapas,
+  etapasComCards,
+  empresaId,
+  onCreated,
+}: Props) {
   const qc = useQueryClient();
   const kanbanId = kanban ? String(kanban["id"]) : "";
   const [tab, setTab] = useState("dados");
@@ -82,7 +105,10 @@ export function KanbanConfigDialog({ open, onOpenChange, kanban, etapas, etapasC
     queryKey: ["funcoes-com-tabela-base"],
     enabled: open,
     queryFn: async () => {
-      const { data, error } = await supabase.from("funcoes").select("*").not("tabela_base", "is", null);
+      const { data, error } = await supabase
+        .from("funcoes")
+        .select("*")
+        .not("tabela_base", "is", null);
       if (error) throw error;
       return ((data ?? []) as Row[]).filter((f) => String(f["tabela_base"] ?? "").trim());
     },
@@ -93,7 +119,10 @@ export function KanbanConfigDialog({ open, onOpenChange, kanban, etapas, etapasC
     queryKey: ["kanban-vinculo-cfg", kanbanId],
     enabled: open && !!kanbanId,
     queryFn: async () => {
-      const { data, error } = await supabase.from("funcoes_kanban" as never).select("*").eq("kanban_nome_id", kanbanId);
+      const { data, error } = await supabase
+        .from("funcoes_kanban" as never)
+        .select("*")
+        .eq("kanban_nome_id", kanbanId);
       if (error) return null;
       return ((data ?? []) as Row[])[0] ?? null;
     },
@@ -108,11 +137,18 @@ export function KanbanConfigDialog({ open, onOpenChange, kanban, etapas, etapasC
   const funcaoSel = funcoes.find((f) => funcaoKey(f) === funcaoId);
   const tabelaBase = funcaoSel ? String(funcaoSel["tabela_base"]).trim() : "";
 
-  const { data: colunas = [], isLoading: loadingCols, error: erroCols } = useQuery({
+  const {
+    data: colunas = [],
+    isLoading: loadingCols,
+    error: erroCols,
+  } = useQuery({
     queryKey: ["listar-colunas", tabelaBase],
     enabled: open && !!tabelaBase,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("listar_colunas_tabela" as never, { nome_tabela: tabelaBase } as never);
+      const { data, error } = await supabase.rpc(
+        "listar_colunas_tabela" as never,
+        { nome_tabela: tabelaBase } as never,
+      );
       if (error) throw error;
       return colunasDaRpc(data);
     },
@@ -127,14 +163,22 @@ export function KanbanConfigDialog({ open, onOpenChange, kanban, etapas, etapasC
 
   const saveDados = useMutation({
     mutationFn: async () => {
-      const payload: Row = { nome: form.nome.trim(), descricao: form.descricao.trim(), status: form.status };
+      const payload: Row = {
+        nome: form.nome.trim(),
+        descricao: form.descricao.trim(),
+        status: form.status,
+      };
       if (kanbanId) {
         const { error } = await supabase.from("kanban_nome").update(payload).eq("id", kanbanId);
         if (error) throw error;
         return kanbanId;
       }
       if (empresaId !== undefined) payload["empresa_id"] = empresaId;
-      const { data, error } = await supabase.from("kanban_nome").insert(payload).select("id").single();
+      const { data, error } = await supabase
+        .from("kanban_nome")
+        .insert(payload)
+        .select("id")
+        .single();
       if (error) throw error;
       return String((data as Row)["id"]);
     },
@@ -159,7 +203,10 @@ export function KanbanConfigDialog({ open, onOpenChange, kanban, etapas, etapasC
       });
       if (error) throw error;
     },
-    onSuccess: () => { invalidate(); setNovaEtapa(""); },
+    onSuccess: () => {
+      invalidate();
+      setNovaEtapa("");
+    },
     onError: (e) => toast.error(errMsg(e, "Não foi possível criar.")),
   });
 
@@ -168,7 +215,10 @@ export function KanbanConfigDialog({ open, onOpenChange, kanban, etapas, etapasC
       const { error } = await supabase.from("kanban_etapas").update(v.patch).eq("id", v.id);
       if (error) throw error;
     },
-    onSuccess: () => { invalidate(); setEditId(null); },
+    onSuccess: () => {
+      invalidate();
+      setEditId(null);
+    },
     onError: (e) => toast.error(errMsg(e, "Não foi possível salvar.")),
   });
 
@@ -188,7 +238,10 @@ export function KanbanConfigDialog({ open, onOpenChange, kanban, etapas, etapasC
       if (!m) return;
       list.splice(to, 0, m);
       for (let i = 0; i < list.length; i += 1) {
-        const { error } = await supabase.from("kanban_etapas").update({ ordem: i + 1 }).eq("id", list[i]!["id"] as string);
+        const { error } = await supabase
+          .from("kanban_etapas")
+          .update({ ordem: i + 1 })
+          .eq("id", list[i]!["id"] as string);
         if (error) throw error;
       }
     },
@@ -209,12 +262,19 @@ export function KanbanConfigDialog({ open, onOpenChange, kanban, etapas, etapasC
         : await t.insert(payload as never);
       if (error) throw error;
     },
-    onSuccess: () => { invalidate(); toast.success("Integração salva."); },
+    onSuccess: () => {
+      invalidate();
+      toast.success("Integração salva.");
+    },
     onError: (e) => toast.error(errMsg(e, "Não foi possível salvar.")),
   });
 
   const toggle = (c: { key: string; tipo: string }, on: boolean) =>
-    setSel((s) => (on ? [...s, { key: c.key, label: labelAmigavel(c.key), tipo: c.tipo || "text" }] : s.filter((x) => x.key !== c.key)));
+    setSel((s) =>
+      on
+        ? [...s, { key: c.key, label: labelAmigavel(c.key), tipo: c.tipo || "text" }]
+        : s.filter((x) => x.key !== c.key),
+    );
 
   const selKeys = useMemo(() => new Set(sel.map((s) => s.key)), [sel]);
 
@@ -228,63 +288,141 @@ export function KanbanConfigDialog({ open, onOpenChange, kanban, etapas, etapasC
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="dados">Dados do Quadro</TabsTrigger>
-            <TabsTrigger value="etapas" disabled={!kanbanId}>Etapas</TabsTrigger>
-            <TabsTrigger value="integracao" disabled={!kanbanId}>Integração e Cards</TabsTrigger>
+            <TabsTrigger value="etapas" disabled={!kanbanId}>
+              Etapas
+            </TabsTrigger>
+            <TabsTrigger value="integracao" disabled={!kanbanId}>
+              Integração e Cards
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="dados" className="space-y-4 pt-4">
             <div>
-              <Label htmlFor="kb-nome" className="mb-1.5 block">Nome</Label>
-              <Input id="kb-nome" value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} />
+              <Label htmlFor="kb-nome" className="mb-1.5 block">
+                Nome
+              </Label>
+              <Input
+                id="kb-nome"
+                value={form.nome}
+                onChange={(e) => setForm({ ...form, nome: e.target.value })}
+              />
             </div>
             <div>
-              <Label htmlFor="kb-desc" className="mb-1.5 block">Descrição</Label>
-              <Input id="kb-desc" value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} />
+              <Label htmlFor="kb-desc" className="mb-1.5 block">
+                Descrição
+              </Label>
+              <Input
+                id="kb-desc"
+                value={form.descricao}
+                onChange={(e) => setForm({ ...form, descricao: e.target.value })}
+              />
             </div>
             <div className="flex items-center justify-between gap-4">
               <Label htmlFor="kb-status">Status</Label>
               <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">{form.status ? "Ativo" : "Inativo"}</span>
-                <Switch id="kb-status" checked={form.status} onCheckedChange={(v) => setForm({ ...form, status: v })} />
+                <span className="text-sm text-muted-foreground">
+                  {form.status ? "Ativo" : "Inativo"}
+                </span>
+                <Switch
+                  id="kb-status"
+                  checked={form.status}
+                  onCheckedChange={(v) => setForm({ ...form, status: v })}
+                />
               </div>
             </div>
             <DialogFooter className="border-t pt-4">
-              <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-              <Button disabled={!form.nome.trim() || saveDados.isPending} onClick={() => saveDados.mutate()}>Salvar</Button>
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancelar
+              </Button>
+              <Button
+                disabled={!form.nome.trim() || saveDados.isPending}
+                onClick={() => saveDados.mutate()}
+              >
+                Salvar
+              </Button>
             </DialogFooter>
           </TabsContent>
 
           <TabsContent value="etapas" className="space-y-3 pt-4">
             <div className="max-h-[45vh] space-y-2 overflow-y-auto">
-              {etapas.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma etapa cadastrada.</p>}
+              {etapas.length === 0 && (
+                <p className="text-sm text-muted-foreground">Nenhuma etapa cadastrada.</p>
+              )}
               {etapas.map((e, i) => {
                 const id = String(e["id"]);
                 const ativo = String(e["status"] ?? "true") !== "false";
                 return (
-                  <div key={id} className="flex items-center gap-2 rounded-md border border-border p-2">
+                  <div
+                    key={id}
+                    className="flex items-center gap-2 rounded-md border border-border p-2"
+                  >
                     <div className="flex flex-col">
-                      <button type="button" aria-label="Subir" disabled={i === 0 || mover.isPending} onClick={() => mover.mutate({ from: i, to: i - 1 })} className="text-muted-foreground hover:text-foreground disabled:opacity-30">
+                      <button
+                        type="button"
+                        aria-label="Subir"
+                        disabled={i === 0 || mover.isPending}
+                        onClick={() => mover.mutate({ from: i, to: i - 1 })}
+                        className="text-muted-foreground hover:text-foreground disabled:opacity-30"
+                      >
                         <ArrowUp className="h-3.5 w-3.5" />
                       </button>
-                      <button type="button" aria-label="Descer" disabled={i === etapas.length - 1 || mover.isPending} onClick={() => mover.mutate({ from: i, to: i + 1 })} className="text-muted-foreground hover:text-foreground disabled:opacity-30">
+                      <button
+                        type="button"
+                        aria-label="Descer"
+                        disabled={i === etapas.length - 1 || mover.isPending}
+                        onClick={() => mover.mutate({ from: i, to: i + 1 })}
+                        className="text-muted-foreground hover:text-foreground disabled:opacity-30"
+                      >
                         <ArrowDown className="h-3.5 w-3.5" />
                       </button>
                     </div>
                     {editId === id ? (
                       <>
-                        <Input className="h-8 flex-1" value={editDesc} autoFocus onChange={(ev) => setEditDesc(ev.target.value)} />
-                        <Button size="icon" variant="ghost" aria-label="Salvar etapa" disabled={!editDesc.trim()} onClick={() => updEtapa.mutate({ id, patch: { descricao: editDesc.trim() } })}>
+                        <Input
+                          className="h-8 flex-1"
+                          value={editDesc}
+                          autoFocus
+                          onChange={(ev) => setEditDesc(ev.target.value)}
+                        />
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          aria-label="Salvar etapa"
+                          disabled={!editDesc.trim()}
+                          onClick={() =>
+                            updEtapa.mutate({ id, patch: { descricao: editDesc.trim() } })
+                          }
+                        >
                           <Check className="h-4 w-4" />
                         </Button>
-                        <Button size="icon" variant="ghost" aria-label="Cancelar" onClick={() => setEditId(null)}>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          aria-label="Cancelar"
+                          onClick={() => setEditId(null)}
+                        >
                           <X className="h-4 w-4" />
                         </Button>
                       </>
                     ) : (
                       <>
-                        <span className="flex-1 truncate text-sm">{String(e["descricao"] ?? "")}</span>
-                        <Switch checked={ativo} aria-label="Status" onCheckedChange={(v) => updEtapa.mutate({ id, patch: { status: v } })} />
-                        <Button size="icon" variant="ghost" aria-label="Editar etapa" onClick={() => { setEditId(id); setEditDesc(String(e["descricao"] ?? "")); }}>
+                        <span className="flex-1 truncate text-sm">
+                          {String(e["descricao"] ?? "")}
+                        </span>
+                        <Switch
+                          checked={ativo}
+                          aria-label="Status"
+                          onCheckedChange={(v) => updEtapa.mutate({ id, patch: { status: v } })}
+                        />
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          aria-label="Editar etapa"
+                          onClick={() => {
+                            setEditId(id);
+                            setEditDesc(String(e["descricao"] ?? ""));
+                          }}
+                        >
                           <Pencil className="h-4 w-4" />
                         </Button>
                         <Button
@@ -292,7 +430,9 @@ export function KanbanConfigDialog({ open, onOpenChange, kanban, etapas, etapasC
                           variant="ghost"
                           aria-label="Excluir etapa"
                           disabled={etapasComCards.has(id)}
-                          title={etapasComCards.has(id) ? "Há cards vinculados a esta etapa" : "Excluir"}
+                          title={
+                            etapasComCards.has(id) ? "Há cards vinculados a esta etapa" : "Excluir"
+                          }
                           onClick={() => confirm("Excluir esta etapa?") && delEtapa.mutate(id)}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -304,8 +444,16 @@ export function KanbanConfigDialog({ open, onOpenChange, kanban, etapas, etapasC
               })}
             </div>
             <div className="flex gap-2">
-              <Input placeholder="Nova etapa (ex.: Em análise)" value={novaEtapa} onChange={(e) => setNovaEtapa(e.target.value)} onKeyDown={(e) => e.key === "Enter" && novaEtapa.trim() && addEtapa.mutate()} />
-              <Button disabled={!novaEtapa.trim() || addEtapa.isPending} onClick={() => addEtapa.mutate()}>
+              <Input
+                placeholder="Nova etapa (ex.: Em análise)"
+                value={novaEtapa}
+                onChange={(e) => setNovaEtapa(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && novaEtapa.trim() && addEtapa.mutate()}
+              />
+              <Button
+                disabled={!novaEtapa.trim() || addEtapa.isPending}
+                onClick={() => addEtapa.mutate()}
+              >
                 <Plus className="mr-1 h-4 w-4" /> Adicionar
               </Button>
             </div>
@@ -314,27 +462,49 @@ export function KanbanConfigDialog({ open, onOpenChange, kanban, etapas, etapasC
           <TabsContent value="integracao" className="space-y-4 pt-4">
             <div>
               <Label className="mb-1.5 block">Função</Label>
-              <Select value={funcaoId} onValueChange={(v) => { setFuncaoId(v); setSel([]); }}>
-                <SelectTrigger><SelectValue placeholder="Selecione a função" /></SelectTrigger>
+              <Select
+                value={funcaoId}
+                onValueChange={(v) => {
+                  setFuncaoId(v);
+                  setSel([]);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a função" />
+                </SelectTrigger>
                 <SelectContent>
                   {funcoes.map((f) => (
                     <SelectItem key={funcaoKey(f)} value={funcaoKey(f)}>
-                      {String(pick(f, ["descricao", "nome"], "") ?? "")} ({String(f["tabela_base"])})
+                      {String(pick(f, ["descricao", "nome"], "") ?? "")} ({String(f["tabela_base"])}
+                      )
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              {funcoes.length === 0 && <p className="mt-1 text-xs text-muted-foreground">Nenhuma função com tabela base preenchida.</p>}
+              {funcoes.length === 0 && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Nenhuma função com tabela base preenchida.
+                </p>
+              )}
             </div>
             {tabelaBase && (
               <div>
                 <Label className="mb-2 block">Campos exibidos no card</Label>
-                {loadingCols && <p className="text-sm text-muted-foreground">Carregando colunas…</p>}
-                {erroCols && <p className="text-sm text-destructive">Não foi possível ler as colunas de {tabelaBase}.</p>}
+                {loadingCols && (
+                  <p className="text-sm text-muted-foreground">Carregando colunas…</p>
+                )}
+                {erroCols && (
+                  <p className="text-sm text-destructive">
+                    Não foi possível ler as colunas de {tabelaBase}.
+                  </p>
+                )}
                 <div className="grid max-h-[40vh] gap-3 overflow-y-auto rounded-md border border-border p-3 sm:grid-cols-2">
                   {colunas.map((c) => (
                     <label key={c.key} className="flex items-center gap-3 text-sm">
-                      <Checkbox checked={selKeys.has(c.key)} onCheckedChange={(v) => toggle(c, !!v)} />
+                      <Checkbox
+                        checked={selKeys.has(c.key)}
+                        onCheckedChange={(v) => toggle(c, !!v)}
+                      />
                       {labelAmigavel(c.key)}
                     </label>
                   ))}
@@ -342,8 +512,15 @@ export function KanbanConfigDialog({ open, onOpenChange, kanban, etapas, etapasC
               </div>
             )}
             <DialogFooter className="border-t pt-4">
-              <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-              <Button disabled={!funcaoId || saveIntegracao.isPending} onClick={() => saveIntegracao.mutate()}>Salvar</Button>
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancelar
+              </Button>
+              <Button
+                disabled={!funcaoId || saveIntegracao.isPending}
+                onClick={() => saveIntegracao.mutate()}
+              >
+                Salvar
+              </Button>
             </DialogFooter>
           </TabsContent>
         </Tabs>
