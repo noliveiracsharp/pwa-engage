@@ -1,3 +1,7 @@
+import { FileText } from "lucide-react";
+import { SituacaoBadge } from "@/components/orcamentos/SituacaoBadge";
+import { formatBRL } from "@/lib/orcamentos";
+import { isSituacaoValida } from "@/lib/orcamento-kanban";
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -61,6 +65,7 @@ function KanbanPage() {
   const { data: etapas = [] } = useRows("kanban_etapas");
   const { data: atendimentos = [] } = useRows("atendimentos");
   const { data: pessoas = [] } = useRows("pessoas");
+  const { data: orcamentos = [] } = useRows("orcamentos");
 
   const [kanbanId, setKanbanId] = useState<string>("");
   const [newKanban, setNewKanban] = useState(false);
@@ -102,8 +107,15 @@ function KanbanPage() {
       list.push(a);
       map.set(etapaId, list);
     }
+    for (const o of orcamentos) {
+      const etapaId = String(o["kanban_etapa_id"] ?? "");
+      if (!etapaId) continue;
+      const list = map.get(etapaId) ?? [];
+      list.push({ ...o, __orc: true });
+      map.set(etapaId, list);
+    }
     return map;
-  }, [atendimentos]);
+  }, [atendimentos, orcamentos]);
 
   const createKanban = useMutation({
     mutationFn: async (value: { nome: string; descricao: string; status: boolean }) => {
@@ -214,8 +226,29 @@ function KanbanPage() {
     onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Não foi possível mover."),
   });
 
+  const moveOrcamento = useMutation({
+    mutationFn: async ({ id, etapaId }: { id: string; etapaId: string }) => {
+      const etapa = etapas.find((e) => String(e["id"]) === etapaId);
+      const desc = String(etapa?.["descricao"] ?? "").trim();
+      const patch: Row = { kanban_etapa_id: etapaId };
+      if (isSituacaoValida(desc)) patch["situacao"] = desc;
+      const { error } = await supabase.from("orcamentos").update(patch).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["table", "orcamentos"] }),
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Não foi possível mover."),
+  });
+
   const onDrop = (etapaId: string) => {
     if (!dragId) return;
+    if (dragId.startsWith("orc:")) {
+      const id = dragId.slice(4);
+      setDragId(null);
+      const o = orcamentos.find((r) => String(r["id"]) === id);
+      if (!o || String(o["kanban_etapa_id"] ?? "") === etapaId) return;
+      moveOrcamento.mutate({ id, etapaId });
+      return;
+    }
     const card = atendimentos.find((a) => String(a["id"]) === dragId);
     setDragId(null);
     if (!card) return;
@@ -327,6 +360,34 @@ function KanbanPage() {
                     </p>
                   )}
                   {cards.map((card) => {
+                    if (card["__orc"]) {
+                      const dk = `orc:${String(card["id"])}`;
+                      return (
+                        <button
+                          key={dk}
+                          type="button"
+                          draggable
+                          onDragStart={() => setDragId(dk)}
+                          onDragEnd={() => setDragId(null)}
+                          onClick={() => navigate({ to: "/orcamentos" })}
+                          className={cn(
+                            "flex w-full items-start gap-2 rounded-md border border-border bg-card p-3 text-left shadow-sm transition hover:border-primary",
+                            dragId === dk && "opacity-50",
+                          )}
+                        >
+                          <FileText className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                          <div className="min-w-0 space-y-1">
+                            <p className="truncate text-sm font-medium text-foreground">
+                              Orçamento {text(card["numero"] ?? "")}
+                            </p>
+                            <p className="truncate text-xs text-muted-foreground">
+                              {formatBRL(card["total_liquido"])}
+                            </p>
+                            <SituacaoBadge value={card["situacao"]} />
+                          </div>
+                        </button>
+                      );
+                    }
                     const pessoaId = String(pick(card, ["pessoas_id", "pessoa_id", "clientes_id", "cliente_id"]) ?? "");
                     const pessoa = pessoaById.get(pessoaId);
                     return (
