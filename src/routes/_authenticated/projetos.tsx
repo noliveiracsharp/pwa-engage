@@ -1,7 +1,19 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, ChevronDown, ChevronRight, Pencil, Plus, Settings, Trash2 } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronRight, Pencil, Plus, Settings, Share2, Trash2 } from "lucide-react";
+
+async function compartilhar(projeto: Row) {
+  let token = projeto.token_compartilhamento as string | null | undefined;
+  if (!token) {
+    token = crypto.randomUUID();
+    const { error } = await supabase.from("projetos").update({ token_compartilhamento: token } as never).eq(idColumn(projeto), rowId(projeto) as never);
+    if (error) { toast.error(error.message); return; }
+  }
+  const url = `${window.location.origin}/compartilhado/${token}`;
+  try { await navigator.clipboard.writeText(url); toast.success("Link do cliente copiado!", { description: url }); }
+  catch { window.prompt("Copie o link do cliente:", url); }
+}
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -283,6 +295,7 @@ function Detalhe({ projeto, d, perms, onBack }: { projeto: Row; d: D; perms: Per
           <h1 className="truncate text-2xl font-bold text-foreground">{String(projeto[d.pc.nome] ?? "Projeto")}</h1>
           <p className="text-sm text-muted-foreground">{cli ? nomePessoa(cli) : "Sem cliente"} · {fmtDate(projeto[d.pc.ini])} a {fmtDate(projeto[d.pc.fim])}</p>
         </div>
+        <Button variant="outline" onClick={() => compartilhar(projeto)}><Share2 className="mr-1 h-4 w-4" />Compartilhar</Button>
         {perms.canCreate && <Button onClick={() => setNova(true)}><Plus className="mr-1 h-4 w-4" />Nova tarefa</Button>}
       </div>
       <div className="flex items-center gap-3">
