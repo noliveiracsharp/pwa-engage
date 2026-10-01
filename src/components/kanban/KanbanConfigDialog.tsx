@@ -68,6 +68,8 @@ type Props = {
   etapasComCards: Set<string>;
   empresaId: unknown;
   onCreated: (id: string) => void;
+  canDelete?: boolean;
+  onDeleted?: () => void;
 };
 
 export function KanbanConfigDialog({
@@ -78,6 +80,8 @@ export function KanbanConfigDialog({
   etapasComCards,
   empresaId,
   onCreated,
+  canDelete = false,
+  onDeleted,
 }: Props) {
   const qc = useQueryClient();
   const kanbanId = kanban ? String(kanban["id"]) : "";
@@ -269,6 +273,31 @@ export function KanbanConfigDialog({
     onError: (e) => toast.error(errMsg(e, "Não foi possível salvar.")),
   });
 
+  const temCards = etapas.some((e) => etapasComCards.has(String(e["id"])));
+  const delKanban = useMutation({
+    mutationFn: async () => {
+      const { count } = await supabase
+        .from("orcamentos")
+        .select("id", { count: "exact", head: true })
+        .eq("kanban_nome_id" as never, kanbanId as never);
+      if (temCards || (count ?? 0) > 0)
+        throw new Error("Há cards vinculados a este quadro. Mova ou exclua-os antes.");
+      await supabase.from("funcoes_kanban" as never).delete().eq("kanban_nome_id", kanbanId as never);
+      await supabase.from("usuario_kanban" as never).delete().eq("kanban_nome_id", kanbanId as never);
+      const { error: e1 } = await supabase.from("kanban_etapas").delete().eq("kanban_nome_id", kanbanId);
+      if (e1) throw e1;
+      const { error } = await supabase.from("kanban_nome").delete().eq("id", kanbanId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      invalidate();
+      toast.success("Quadro excluído.");
+      onOpenChange(false);
+      onDeleted?.();
+    },
+    onError: (e) => toast.error(errMsg(e, "Não foi possível excluir.")),
+  });
+
   const toggle = (c: { key: string; tipo: string }, on: boolean) =>
     setSel((s) =>
       on
@@ -331,6 +360,19 @@ export function KanbanConfigDialog({
               </div>
             </div>
             <DialogFooter className="border-t pt-4">
+              {canDelete && kanbanId && (
+                <Button
+                  variant="destructive"
+                  className="sm:mr-auto"
+                  disabled={temCards || delKanban.isPending}
+                  title={temCards ? "Há cards vinculados a este quadro" : "Excluir quadro e etapas"}
+                  onClick={() =>
+                    confirm("Excluir este quadro e todas as suas etapas?") && delKanban.mutate()
+                  }
+                >
+                  <Trash2 className="mr-1 h-4 w-4" /> Excluir quadro
+                </Button>
+              )}
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Cancelar
               </Button>
@@ -425,7 +467,7 @@ export function KanbanConfigDialog({
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
-                        <Button
+                        {canDelete && <Button
                           size="icon"
                           variant="ghost"
                           aria-label="Excluir etapa"
@@ -436,7 +478,7 @@ export function KanbanConfigDialog({
                           onClick={() => confirm("Excluir esta etapa?") && delEtapa.mutate(id)}
                         >
                           <Trash2 className="h-4 w-4" />
-                        </Button>
+                        </Button>}
                       </>
                     )}
                   </div>

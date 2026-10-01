@@ -1,3 +1,4 @@
+import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { FileText, Settings2 } from "lucide-react";
 import { KanbanConfigDialog } from "@/components/kanban/KanbanConfigDialog";
 import { SituacaoBadge } from "@/components/orcamentos/SituacaoBadge";
@@ -81,6 +82,7 @@ function KanbanPage() {
   const queryClient = useQueryClient();
   const { empresa } = useAuth();
   const empresaId = empresa?.["id"];
+  const kanbanPerms = usePagePermissions("/kanban");
 
   const { data: kanbans = [], isLoading: loadingKanbans } = useRows("kanban_nome");
   const { data: etapas = [] } = useRows("kanban_etapas");
@@ -409,6 +411,8 @@ function KanbanPage() {
           new Set([...cardsByEtapa.entries()].filter(([, l]) => l.length > 0).map(([k]) => k))
         }
         empresaId={empresaId}
+        canDelete={kanbanPerms.canDelete}
+        onDeleted={() => setKanbanId("")}
         onCreated={(id) => {
           setKanbanId(id);
           setCfgNovo(false);
