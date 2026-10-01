@@ -162,3 +162,115 @@ export async function salvarCamposCard(v: VinculoKanban, campos: CampoCard[]) {
   const { error } = await q;
   if (error) throw error;
 }
+
+// ================= Motor universal de cards =================
+
+export type CampoCardTipado = CampoCard & { tipo?: string };
+
+const LABELS_MANUAIS: Record<string, string> = Object.fromEntries(
+  CAMPOS_CARD_ORCAMENTO.map((c) => [c.key, c.label]),
+);
+
+/** "dt_orcamento" → "Dt Orcamento" (usa label manual quando existir). */
+export function labelAmigavel(key: string): string {
+  if (LABELS_MANUAIS[key]) return LABELS_MANUAIS[key]!;
+  return key
+    .split(/[_\s]+/)
+    .filter(Boolean)
+    .map((p) => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase())
+    .join(" ");
+}
+
+/** Normaliza o retorno da RPC `listar_colunas_tabela` em [{key, tipo}]. */
+function normalizarColunas(data: unknown): { key: string; tipo: string }[] {
+  let v = data;
+  if (typeof v === "string") {
+    try { v = JSON.parse(v); } catch { return []; }
+  }
+  if (Array.isArray(v) && v.length === 1 && v[0] && typeof v[0] === "object" && !Array.isArray(v[0])) {
+    const only = v[0] as Row;
+    const inner = Object.values(only)[0];
+    if (Object.keys(only).length === 1 && (Array.isArray(inner) || (inner && typeof inner === "object"))) v = inner;
+  }
+  if (Array.isArray(v)) {
+    return v
+      .map((c) => {
+        if (typeof c === "string") return { key: c, tipo: "" };
+        const r = c as Row;
+        const key = pick<string>(r, ["key", "column_name", "coluna", "nome", "name"]);
+        const tipo = pick<string>(r, ["tipo", "data_type", "type", "udt_name"], "");
+        return key ? { key: String(key), tipo: String(tipo ?? "") } : null;
+      })
+      .filter((c): c is { key: string; tipo: string } => !!c);
+  }
+  if (v && typeof v === "object") {
+    return Object.entries(v as Row).map(([key, tipo]) => ({ key, tipo: String(tipo ?? "") }));
+  }
+  return [];
+}
+
+/** Colunas disponíveis para o card, a partir de `funcoes.tabela_base` da função vinculada. */
+export async function camposDisponiveisDoVinculo(
+  v: VinculoKanban,
+): Promise<{ tabela: string | null; campos: CampoCardTipado[] }> {
+  const funcaoId = pick(v.row, ["funcao_id", "funcoes_id", "id_funcao"]) ?? colunaCom(v.row, ["func"]);
+  if (funcaoId === undefined || funcaoId === null) return { tabela: null, campos: [] };
+  let funcao: Row | null = null;
+  for (const k of ["funcao_id", "id"]) {
+    const { data, error } = await supabase.from("funcoes").select("*").eq(k, funcaoId as never).maybeSingle();
+    if (!error && data) { funcao = data as Row; break; }
+  }
+  const tabela = funcao?.["tabela_base"] ? String(funcao["tabela_base"]).trim() : null;
+  if (!tabela) return { tabela: null, campos: [] };
+  const { data, error } = await supabase.rpc("listar_colunas_tabela" as never, { nome_tabela: tabela } as never);
+  if (error) throw error;
+  const campos = normalizarColunas(data).map((c) => ({ key: c.key, label: labelAmigavel(c.key), tipo: c.tipo }));
+  return { tabela, campos };
+}
+
+/** Lê `campos_card` preservando o `tipo`. */
+export function parseCamposCardTipado(v: unknown): CampoCardTipado[] | null {
+  let val = v;
+  if (typeof val === "string") {
+    try { val = JSON.parse(val); } catch { return null; }
+  }
+  if (!Array.isArray(val)) return null;
+  return val
+    .filter((c) => c && typeof c === "object" && typeof (c as Row)["key"] === "string")
+    .map((c) => {
+      const r = c as Row;
+      return {
+        key: String(r["key"]),
+        label: String(r["label"] ?? labelAmigavel(String(r["key"]))),
+        ...(r["tipo"] ? { tipo: String(r["tipo"]) } : {}),
+      };
+    });
+}
+
+/** Formatador universal de valores do card. `resolverFk` devolve o nome da entidade relacionada. */
+export function formatarValorCard(
+  valor: unknown,
+  campo: CampoCardTipado,
+  resolverFk?: (key: string, valor: unknown) => string | null | undefined,
+): string {
+  if (valor === null || valor === undefined || valor === "") return "—";
+  const key = campo.key.toLowerCase();
+  const tipo = (campo.tipo ?? "").toLowerCase();
+  if (tipo === "boolean" || tipo === "bool" || typeof valor === "boolean") return valor === true || valor === "true" ? "Sim" : "Não";
+  if (tipo.startsWith("date") || tipo.startsWith("timestamp") || key.startsWith("dt_") || key.startsWith("data_")) {
+    const [y, m, d] = String(valor).slice(0, 10).split("-");
+    if (d) return `${d}/${m}/${y}`;
+  }
+  if (key.endsWith("_id") || key === "id") {
+    const nome = resolverFk?.(campo.key, valor);
+    if (nome) return nome;
+    const s = String(valor);
+    return s.length > 8 ? `${s.slice(0, 8)}…` : s;
+  }
+  if (key.startsWith("total_") || key.startsWith("valor_") || tipo === "numeric" || tipo === "money" || tipo === "decimal") {
+    const n = Number(valor);
+    if (!Number.isNaN(n)) return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  }
+  if (typeof valor === "object") return JSON.stringify(valor);
+  return String(valor);
+}
