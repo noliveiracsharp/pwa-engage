@@ -1,4 +1,5 @@
 import { FileText, Settings2 } from "lucide-react";
+import { KanbanConfigDialog } from "@/components/kanban/KanbanConfigDialog";
 import { SituacaoBadge } from "@/components/orcamentos/SituacaoBadge";
 import { formatBRL } from "@/lib/orcamentos";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -141,6 +142,8 @@ function KanbanPage() {
   );
   const [cardCfgOpen, setCardCfgOpen] = useState(false);
   const [camposSel, setCamposSel] = useState<string[]>([]);
+  const [cfgOpen, setCfgOpen] = useState(false);
+  const [cfgNovo, setCfgNovo] = useState(false);
   const { data: disponiveis, isLoading: loadingDisp, error: erroDisp } = useQuery({
     queryKey: ["kanban-campos-disponiveis", kanbanId],
     enabled: !!vinculo && cardCfgOpen,
@@ -338,15 +341,15 @@ function KanbanPage() {
               ))}
             </SelectContent>
           </Select>
-          {vinculo && (
+          {kanbanId && (
             <Button
               size="icon"
               variant="outline"
-              aria-label="Personalização do card"
-              title="Personalização do card"
+              aria-label="Configurar quadro"
+              title="Configurar quadro"
               onClick={() => {
-                setCamposSel(camposCard.map((c) => c.key));
-                setCardCfgOpen(true);
+                setCfgNovo(false);
+                setCfgOpen(true);
               }}
             >
               <Settings2 className="h-4 w-4" />
@@ -356,8 +359,8 @@ function KanbanPage() {
             size="icon"
             aria-label="Novo kanban"
             onClick={() => {
-              setForm({ nome: "", descricao: "", status: true });
-              setNewKanban(true);
+              setCfgNovo(true);
+              setCfgOpen(true);
             }}
           >
             <Plus className="h-4 w-4" />
@@ -365,44 +368,18 @@ function KanbanPage() {
         </div>
       </div>
 
-      <Dialog open={cardCfgOpen} onOpenChange={setCardCfgOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Personalização do card</DialogTitle>
-            <DialogDescription>
-              Escolha as informações que aparecem nos cartões
-              {disponiveis?.tabela ? ` (tabela ${disponiveis.tabela})` : ""}.
-            </DialogDescription>
-          </DialogHeader>
-          {loadingDisp && <p className="text-sm text-muted-foreground">Carregando campos…</p>}
-          {!loadingDisp && (erroDisp || !disponiveis?.campos.length) && (
-            <p className="text-sm text-muted-foreground">
-              {erroDisp ? "Não foi possível listar as colunas da tabela." : "A função ligada a este kanban não tem tabela base definida."} Mostrando os campos padrão.
-            </p>
-          )}
-          <div className="grid max-h-[50vh] gap-3 overflow-y-auto sm:grid-cols-2">
-            {opcoesCampos.map((c) => (
-              <label key={c.key} className="flex items-center gap-3 text-sm">
-                <Checkbox
-                  checked={camposSel.includes(c.key)}
-                  onCheckedChange={(v) =>
-                    setCamposSel((s) => (v ? [...s, c.key] : s.filter((k) => k !== c.key)))
-                  }
-                />
-                {c.label}
-              </label>
-            ))}
-          </div>
-          <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => setCardCfgOpen(false)}>
-              Cancelar
-            </Button>
-            <Button disabled={saveCampos.isPending} onClick={() => saveCampos.mutate()}>
-              Salvar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <KanbanConfigDialog
+        open={cfgOpen}
+        onOpenChange={setCfgOpen}
+        kanban={cfgNovo ? null : (kanbans.find((k) => String(k["id"]) === kanbanId) ?? null)}
+        etapas={cfgNovo ? [] : boardEtapas}
+        etapasComCards={new Set([...cardsByEtapa.entries()].filter(([, l]) => l.length > 0).map(([k]) => k))}
+        empresaId={empresaId}
+        onCreated={(id) => {
+          setKanbanId(id);
+          setCfgNovo(false);
+        }}
+      />
 
       {!kanbanId && !loadingKanbans && (
         <div className="rounded-lg border border-border bg-card p-10 text-center text-muted-foreground">
