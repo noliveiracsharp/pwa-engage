@@ -5,6 +5,7 @@ import { idColumn } from "@/lib/crud";
 import { useAudit } from "@/lib/audit";
 import { formatNumero, toISODate, yearOf } from "@/lib/orcamentos";
 import type { Row } from "@/lib/row";
+import { vincularKanban } from "@/lib/orcamento-kanban";
 
 export type LinhaPayload = {
   id?: string | undefined;
@@ -45,6 +46,7 @@ export function useSaveOrcamento() {
       linhas,
       original,
     }: SaveOrcamentoInput): Promise<{ id: string; numero: string }> => {
+      header = await vincularKanban(header, original);
       let id: string;
       let numero = String(original?.["numero"] ?? "");
 
@@ -148,9 +150,10 @@ export function useAlterarSituacao() {
   return useMutation({
     mutationFn: async ({ row, situacao }: { row: Row; situacao: string }) => {
       const key = idColumn(row);
+      const patch = await vincularKanban({ situacao }, row);
       const { error } = await supabase
         .from("orcamentos")
-        .update(stamp({ situacao }, false))
+        .update(stamp(patch, false))
         .eq(key, row[key] as never);
       if (error) throw error;
     },
