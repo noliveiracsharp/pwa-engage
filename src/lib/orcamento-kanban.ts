@@ -9,16 +9,38 @@ export function isSituacaoValida(v: unknown): v is string {
   return SITUACOES.some((s) => s.value === String(v ?? "").trim());
 }
 
+const norm = (v: unknown) =>
+  String(v ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+
+/** Valor da primeira coluna cujo nome contenha todos os trechos (ex.: "func"). */
+function colunaCom(r: Row, partes: string[], excluir: string[] = []): unknown {
+  const k = Object.keys(r).find(
+    (c) => partes.every((p) => c.toLowerCase().includes(p)) && !excluir.some((e) => c.toLowerCase().includes(e)),
+  );
+  return k ? r[k] : undefined;
+}
+
 /** Descobre o kanban vinculado ao módulo de Orçamentos via `funcoes_kanban`. */
 export async function kanbanDoModuloOrcamentos(): Promise<string | null> {
-  const { data: funcoes } = await supabase.from("funcoes").select("*").eq("path", "/orcamentos");
-  const ids = ((funcoes ?? []) as Row[]).map((f) => String(f["id"]));
+  const { data: funcoes } = await supabase.from("funcoes").select("*");
+  const ids = ((funcoes ?? []) as Row[])
+    .filter((f) => {
+      const path = norm(f["path"]).replace(/^\/+|\/+$/g, "");
+      const desc = norm(pick(f, ["descricao", "nome"]));
+      return path === "orcamentos" || path.endsWith("/orcamentos") || desc.startsWith("orcamento");
+    })
+    .map((f) => String(f["id"]));
   if (!ids.length) return null;
   const { data: vinculos } = await supabase.from("funcoes_kanban").select("*");
-  const v = ((vinculos ?? []) as Row[]).find((r) =>
-    ids.includes(String(pick(r, ["funcoes_id", "funcao_id", "id_funcao"]) ?? "")),
-  );
-  const k = v ? pick(v, ["kanban_nome_id", "kanban_id"]) : undefined;
+  const linhas = (vinculos ?? []) as Row[];
+  const v =
+    linhas.find((r) => ids.includes(String(colunaCom(r, ["func"]) ?? ""))) ?? null;
+  if (!v) return null;
+  const k = pick(v, ["kanban_nome_id", "kanban_id", "id_kanban"]) ?? colunaCom(v, ["kanban"], ["func"]);
   return k ? String(k) : null;
 }
 
