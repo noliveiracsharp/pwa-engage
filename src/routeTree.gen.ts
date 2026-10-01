@@ -25,6 +25,7 @@ import { Route as AuthenticatedMeusDadosRouteImport } from './routes/_authentica
 import { Route as AuthenticatedOrcamentosRouteImport } from './routes/_authenticated/orcamentos'
 import { Route as AuthenticatedParceirosRouteImport } from './routes/_authenticated/parceiros'
 import { Route as AuthenticatedPessoasRouteImport } from './routes/_authenticated/pessoas'
+import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authenticated/relatorios'
 import { Route as AuthenticatedUnid_medidaRouteImport } from './routes/_authenticated/unid_medida'
 import { Route as AuthenticatedUsuariosRouteImport } from './routes/_authenticated/usuarios'
 
@@ -109,6 +110,11 @@ const AuthenticatedPessoasRoute = AuthenticatedPessoasRouteImport.update({
   path: '/pessoas',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedRelatoriosRoute = AuthenticatedRelatoriosRouteImport.update({
+  id: '/relatorios',
+  path: '/relatorios',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedUnid_medidaRoute =
   AuthenticatedUnid_medidaRouteImport.update({
     id: '/unid_medida',
@@ -137,6 +143,7 @@ export interface FileRoutesByFullPath {
   '/orcamentos': typeof AuthenticatedOrcamentosRoute
   '/parceiros': typeof AuthenticatedParceirosRoute
   '/pessoas': typeof AuthenticatedPessoasRoute
+  '/relatorios': typeof AuthenticatedRelatoriosRoute
   '/unid_medida': typeof AuthenticatedUnid_medidaRoute
   '/usuarios': typeof AuthenticatedUsuariosRoute
 }
@@ -156,6 +163,7 @@ export interface FileRoutesByTo {
   '/orcamentos': typeof AuthenticatedOrcamentosRoute
   '/parceiros': typeof AuthenticatedParceirosRoute
   '/pessoas': typeof AuthenticatedPessoasRoute
+  '/relatorios': typeof AuthenticatedRelatoriosRoute
   '/unid_medida': typeof AuthenticatedUnid_medidaRoute
   '/usuarios': typeof AuthenticatedUsuariosRoute
 }
@@ -177,6 +185,7 @@ export interface FileRoutesById {
   '/_authenticated/orcamentos': typeof AuthenticatedOrcamentosRoute
   '/_authenticated/parceiros': typeof AuthenticatedParceirosRoute
   '/_authenticated/pessoas': typeof AuthenticatedPessoasRoute
+  '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRoute
   '/_authenticated/unid_medida': typeof AuthenticatedUnid_medidaRoute
   '/_authenticated/usuarios': typeof AuthenticatedUsuariosRoute
 }
@@ -198,6 +207,7 @@ export interface FileRouteTypes {
     | '/orcamentos'
     | '/parceiros'
     | '/pessoas'
+    | '/relatorios'
     | '/unid_medida'
     | '/usuarios'
   fileRoutesByTo: FileRoutesByTo
@@ -217,6 +227,7 @@ export interface FileRouteTypes {
     | '/orcamentos'
     | '/parceiros'
     | '/pessoas'
+    | '/relatorios'
     | '/unid_medida'
     | '/usuarios'
   id:
@@ -237,6 +248,7 @@ export interface FileRouteTypes {
     | '/_authenticated/orcamentos'
     | '/_authenticated/parceiros'
     | '/_authenticated/pessoas'
+    | '/_authenticated/relatorios'
     | '/_authenticated/unid_medida'
     | '/_authenticated/usuarios'
   fileRoutesById: FileRoutesById
@@ -362,6 +374,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPessoasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/relatorios': {
+      id: '/_authenticated/relatorios'
+      path: '/relatorios'
+      fullPath: '/relatorios'
+      preLoaderRoute: typeof AuthenticatedRelatoriosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/unid_medida': {
       id: '/_authenticated/unid_medida'
       path: '/unid_medida'
@@ -392,6 +411,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedOrcamentosRoute: typeof AuthenticatedOrcamentosRoute
   AuthenticatedParceirosRoute: typeof AuthenticatedParceirosRoute
   AuthenticatedPessoasRoute: typeof AuthenticatedPessoasRoute
+  AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRoute
   AuthenticatedUnid_medidaRoute: typeof AuthenticatedUnid_medidaRoute
   AuthenticatedUsuariosRoute: typeof AuthenticatedUsuariosRoute
 }
@@ -409,6 +429,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedOrcamentosRoute: AuthenticatedOrcamentosRoute,
   AuthenticatedParceirosRoute: AuthenticatedParceirosRoute,
   AuthenticatedPessoasRoute: AuthenticatedPessoasRoute,
+  AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRoute,
   AuthenticatedUnid_medidaRoute: AuthenticatedUnid_medidaRoute,
   AuthenticatedUsuariosRoute: AuthenticatedUsuariosRoute,
 }
