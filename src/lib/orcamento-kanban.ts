@@ -33,7 +33,13 @@ export async function kanbanDoModuloOrcamentos(): Promise<string | null> {
       const desc = norm(pick(f, ["descricao", "nome"]));
       return path === "orcamentos" || path.endsWith("/orcamentos") || desc.startsWith("orcamento");
     })
-    .map((f) => String(f["id"]));
+    // A chave de `funcoes` pode ser `funcao_id` (não `id`).
+    .flatMap((f) =>
+      ["funcao_id", "funcoes_id", "id"]
+        .map((k) => f[k])
+        .filter((v) => v !== undefined && v !== null && v !== "")
+        .map(String),
+    );
   if (!ids.length) return null;
   // A tabela de vínculo pode se chamar `kanban_funcoes` ou `funcoes_kanban`.
   let linhas: Row[] = [];
