@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil, Plus, QrCode, Trash2, Unplug } from "lucide-react";
+import { Loader2, Pencil, Plus, QrCode, Search, Trash2, Unplug } from "lucide-react";
+import { digitsOnly } from "@/lib/input-masks";
 import { useServerFn } from "@tanstack/react-start";
 import { QrCodeDialog } from "@/components/empresas/QrCodeDialog";
 import { desconectarWhatsApp } from "@/lib/zapi.functions";
@@ -425,7 +426,45 @@ const DEFAULT_SECTIONS = [
 ];
 
 export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sections, readOnly }: Props) {
-  const tabs = sections && sections.length > 0 ? sections : DEFAULT_SECTIONS;
+  const baseTabs = sections && sections.length > 0 ? sections : DEFAULT_SECTIONS;
+  const tabs = [...baseTabs.filter((t) => t.kind === "dados"), ...baseTabs.filter((t) => t.kind !== "dados")];
+  const [cnpjLoading, setCnpjLoading] = useState(false);
+
+  async function lookupCnpj(value: string) {
+    const cnpj = digitsOnly(value);
+    if (cnpj.length !== 14) { toast.error("Informe os 14 dígitos do CNPJ."); return; }
+    if (!isValidCpfCnpj(cnpj)) { toast.error("CNPJ inválido."); return; }
+    setCnpjLoading(true);
+    try {
+      const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`);
+      if (!res.ok) { toast.error("CNPJ não encontrado na Receita Federal."); return; }
+      const d = await res.json();
+      const tel = (v: unknown) => { const n = digitsOnly(String(v ?? "")); return n.length >= 10 ? `+55${n}` : ""; };
+      const cep = digitsOnly(String(d.cep ?? "")).replace(/^(\d{5})(\d{3})$/, "$1-$2");
+      const rua = [d.descricao_tipo_de_logradouro, d.logradouro].filter(Boolean).join(" ").trim();
+      const endereco = [
+        [rua, d.numero].filter(Boolean).join(", "),
+        d.complemento, d.bairro,
+        [d.municipio, d.uf].filter(Boolean).join("/"),
+        cep && `CEP ${cep}`,
+      ].filter(Boolean).join(" - ");
+      setValues((p) => ({
+        ...p,
+        nome: d.razao_social || p["nome"] || "",
+        titulo: d.nome_fantasia || d.razao_social || p["titulo"] || "",
+        endereco: endereco || p["endereco"] || "",
+        telefone1: tel(d.ddd_telefone_1) || p["telefone1"] || "",
+        telefone2: tel(d.ddd_telefone_2) || p["telefone2"] || "",
+      }));
+      const sit = String(d.descricao_situacao_cadastral ?? "");
+      if (sit && sit.toUpperCase() !== "ATIVA") toast.warning(`Situação cadastral: ${sit}.`);
+      else toast.success("Dados encontrados na Receita Federal.");
+    } catch {
+      toast.error("Não foi possível consultar o CNPJ.");
+    } finally {
+      setCnpjLoading(false);
+    }
+  }
   const configFor: Record<string, ChildConfig> = { instancias: INSTANCIAS, campos: CAMPOS, etiquetas: ETIQUETAS, notas: NOTAS };
   const [values, setValues] = useState<Record<string, string>>({});
   const dadosPerms = tabs.find((t) => t.kind === "dados")?.perms;
@@ -521,11 +560,22 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
                     onChange={(phone) => setValues((current) => ({ ...current, [field.key]: phone }))}
                   />
                 ) : field.type === "document" ? (
-                  <DocumentInput
-                    id={field.key}
-                    value={values[field.key] ?? ""}
-                    onChange={(document) => setValues((current) => ({ ...current, [field.key]: document }))}
-                  />
+                  <div className="flex gap-2">
+                    <DocumentInput
+                      id={field.key}
+                      value={values[field.key] ?? ""}
+                      onChange={(document) => {
+                        const prev = digitsOnly(values[field.key] ?? "");
+                        setValues((current) => ({ ...current, [field.key]: document }));
+                        const d = digitsOnly(document);
+                        if (d.length === 14 && prev !== d && !dadosLocked) void lookupCnpj(d);
+                      }}
+                    />
+                    <Button type="button" variant="outline" size="icon" disabled={dadosLocked || cnpjLoading}
+                      title="Buscar dados na Receita Federal" onClick={() => void lookupCnpj(values[field.key] ?? "")}>
+                      {cnpjLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                    </Button>
+                  </div>
                 ) : (
                   <Input
                     id={field.key}
