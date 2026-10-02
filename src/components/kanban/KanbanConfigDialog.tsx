@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, Check, Pencil, Plus, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Bot, Check, Pencil, Plus, Trash2, Users, X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -94,6 +95,8 @@ export function KanbanConfigDialog({
   const [novaEtapa, setNovaEtapa] = useState("");
   const [editId, setEditId] = useState<string | null>(null);
   const [editDesc, setEditDesc] = useState("");
+  const [editIA, setEditIA] = useState(false);
+  const [editHum, setEditHum] = useState(false);
   const [funcaoId, setFuncaoId] = useState("");
   const [sel, setSel] = useState<CampoCardTipado[]>([]);
 
@@ -208,7 +211,9 @@ export function KanbanConfigDialog({
         kanban_nome_id: kanbanId,
         ordem: etapas.length + 1,
         status: true,
-      });
+        is_default_ia: false,
+        is_default_humano: false,
+      } as never);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -220,7 +225,15 @@ export function KanbanConfigDialog({
 
   const updEtapa = useMutation({
     mutationFn: async (v: { id: string; patch: Row }) => {
-      const { error } = await supabase.from("kanban_etapas").update(v.patch).eq("id", v.id);
+      // Só uma etapa padrão (IA / Equipe) por quadro.
+      for (const k of ["is_default_ia", "is_default_humano"]) {
+        if (v.patch[k] === true) {
+          const { error: e0 } = await supabase.from("kanban_etapas").update({ [k]: false } as never)
+            .eq("kanban_nome_id", kanbanId as never).neq("id", v.id);
+          if (e0) throw e0;
+        }
+      }
+      const { error } = await supabase.from("kanban_etapas").update(v.patch as never).eq("id", v.id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -540,13 +553,19 @@ export function KanbanConfigDialog({
                           autoFocus
                           onChange={(ev) => setEditDesc(ev.target.value)}
                         />
+                        <label className="flex items-center gap-1 text-xs whitespace-nowrap">
+                          <Switch checked={editIA} onCheckedChange={setEditIA} /> Etapa Padrão da IA
+                        </label>
+                        <label className="flex items-center gap-1 text-xs whitespace-nowrap">
+                          <Switch checked={editHum} onCheckedChange={setEditHum} /> Etapa Padrão da Equipe
+                        </label>
                         <Button
                           size="icon"
                           variant="ghost"
                           aria-label="Salvar etapa"
                           disabled={!editDesc.trim()}
                           onClick={() =>
-                            updEtapa.mutate({ id, patch: { descricao: editDesc.trim() } })
+                            updEtapa.mutate({ id, patch: { descricao: editDesc.trim(), is_default_ia: editIA, is_default_humano: editHum } })
                           }
                         >
                           <Check className="h-4 w-4" />
@@ -565,6 +584,8 @@ export function KanbanConfigDialog({
                         <span className="flex-1 truncate text-sm">
                           {String(e["descricao"] ?? "")}
                         </span>
+                        {e["is_default_ia"] === true && <Badge variant="secondary" className="gap-1 text-[10px]"><Bot className="h-3 w-3" /> Padrão IA</Badge>}
+                        {e["is_default_humano"] === true && <Badge variant="secondary" className="gap-1 text-[10px]"><Users className="h-3 w-3" /> Padrão Equipe</Badge>}
                         <Switch
                           checked={ativo}
                           aria-label="Status"
@@ -577,6 +598,8 @@ export function KanbanConfigDialog({
                           onClick={() => {
                             setEditId(id);
                             setEditDesc(String(e["descricao"] ?? ""));
+                            setEditIA(e["is_default_ia"] === true);
+                            setEditHum(e["is_default_humano"] === true);
                           }}
                         >
                           <Pencil className="h-4 w-4" />
