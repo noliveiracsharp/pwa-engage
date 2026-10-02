@@ -33,7 +33,7 @@ export const EMPRESA_FIELDS: EmpresaField[] = [
   { key: "titulo", label: "Título exibido", full: true },
 ];
 
-type ChildColumn = { key: string; label: string; type?: "text" | "boolean" | "select" | "tel" | "icon" | "color"; options?: string[] };
+type ChildColumn = { key: string; label: string; type?: "text" | "boolean" | "select" | "tel" | "icon" | "color"; options?: string[]; optionLabels?: Record<string, string>; showIf?: (d: Record<string, string>) => boolean; required?: boolean };
 
 type ChildConfig = {
   table: string;
@@ -55,6 +55,14 @@ const INSTANCIAS: ChildConfig = {
     { key: "url", label: "URL" },
     { key: "token", label: "Token" },
     { key: "client_token", label: "Client token" },
+    {
+      key: "tipo_envio",
+      label: "Tipo de envio",
+      type: "select",
+      options: ["zapi_direto", "n8n_webhook"],
+      optionLabels: { zapi_direto: "Enviar diretamente via API da Z-API", n8n_webhook: "Rotear envio via Webhook do n8n / Workflow" },
+    },
+    { key: "n8n_webhook_url", label: "URL Webhook n8n", showIf: (d) => d["tipo_envio"] === "n8n_webhook", required: true },
     { key: "icone", label: "Ícone", type: "icon" },
     { key: "status", label: "Status", type: "boolean" },
   ],
@@ -138,6 +146,12 @@ function ChildTable({ config, empresa, perms = FULL }: { config: ChildConfig; em
       toast.error(`${phoneColumn.label}: informe um telefone válido.`);
       return;
     }
+    for (const col of config.columns) {
+      if (col.required && (!col.showIf || col.showIf(draft)) && !(draft[col.key] ?? "").trim()) {
+        toast.error(`${col.label}: campo obrigatório.`);
+        return;
+      }
+    }
     const payload: Row = editing ? {} : { empresa_id: empresaId };
     for (const col of config.columns) {
       const value = draft[col.key] ?? "";
@@ -217,7 +231,7 @@ function ChildTable({ config, empresa, perms = FULL }: { config: ChildConfig; em
                               <span className="truncate">{colValue || "—"}</span>
                             </div>
                           ) : (
-                            <p className="truncate text-foreground">{colValue || "—"}</p>
+                            <p className="truncate text-foreground">{(col.optionLabels?.[colValue] ?? colValue) || "—"}</p>
                           )}
                         </div>
                       );
@@ -259,7 +273,7 @@ function ChildTable({ config, empresa, perms = FULL }: { config: ChildConfig; em
       {((editing && perms.canUpdate) || (!editing && adding && perms.canCreate)) && (
       <>
       <div className="grid gap-3 sm:grid-cols-2">
-        {config.columns.map((col) => (
+        {config.columns.filter((col) => !col.showIf || col.showIf(draft)).map((col) => (
           <div key={col.key} className={col.type === "tel" ? "min-w-0 sm:col-span-2" : "min-w-0"}>
             <Label className="mb-1.5 block text-xs">{col.label}</Label>
             {col.type === "boolean" ? (
@@ -286,7 +300,7 @@ function ChildTable({ config, empresa, perms = FULL }: { config: ChildConfig; em
                 <SelectContent>
                   {(col.options ?? []).map((opt) => (
                     <SelectItem key={opt} value={opt}>
-                      {opt}
+                      {col.optionLabels?.[opt] ?? opt}
                     </SelectItem>
                   ))}
                 </SelectContent>
