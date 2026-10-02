@@ -60,7 +60,7 @@ export function TarefaSheet({ tarefa, tarefasDoProjeto, projetoId, perms, onClos
       ({ error } = await supabase.from("projetos_tarefas").update(filterPayload(stamp(base, false), tCols)).eq(idColumn(tarefa), rowId(tarefa) as never));
     } else {
       base[tc.projeto] = projetoId;
-      ({ error } = await supabase.from("projetos_tarefas").insert(filterPayload(stamp(base, true), tCols)));
+      ({ error } = await supabase.from("projetos_tarefas").insert(filterPayload(stamp({ ...base, ordem: tarefasDoProjeto.reduce((mx, t) => Math.max(mx, Number(t["ordem"] ?? -1) || 0), -1) + 1 }, true), tCols)));
     }
     if (error) { toast.error(error.message); return; }
     toast.success("Tarefa salva.");
