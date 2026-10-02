@@ -137,9 +137,10 @@ export function GestaoClientes() {
   );
 }
 
-function AssinaturaSheet({ empresa, onClose, planos, assinatura, usuariosAtivos }: {
+function AssinaturaSheet({ empresa, onClose, planos, assinatura, usuariosAtivos: usuariosAtivos0 }: {
   empresa: Row | null; onClose: () => void; planos: Row[]; assinatura: Row | null; usuariosAtivos: number;
 }) {
+  const usuariosAtivosContados = usuariosAtivos0;
   const queryClient = useQueryClient();
   const [planoId, setPlanoId] = useState("");
   const [estado, setEstado] = useState("trial");
@@ -164,15 +165,23 @@ function AssinaturaSheet({ empresa, onClose, planos, assinatura, usuariosAtivos 
       return (data ?? []) as Row[];
     },
   });
-  const ativos = new Set(contratados.map((c) => text(c["modulo_id"])));
+  // Estado local dos switches: a soma reage imediatamente ao ligar/desligar.
+  const [ativos, setAtivos] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    setAtivos(new Set(contratados.map((c) => text(c["modulo_id"]))));
+  }, [contratados]);
+  const valorModulo = (m: Row) => num(m["valor_mensal_fixo"] ?? m["valor_mensal"]);
 
   const plano = planos.find((p) => text(rowId(p)) === planoId);
-  const qtd = assinatura?.["qtd_usuarios_ativos"] != null ? num(assinatura["qtd_usuarios_ativos"]) : usuariosAtivos;
-  const limite = plano ? num(plano["usuarios_incluidos"]) : 0;
-  const pct = limite > 0 ? Math.min(100, (qtd / limite) * 100) : 0;
-  const excedentes = Math.max(0, qtd - limite);
-  const totalModulos = modulos.filter((m) => ativos.has(text(rowId(m)))).reduce((s, m) => s + num(m["valor_mensal"]), 0);
-  const mensal = plano ? num(plano["valor_mensal"]) + excedentes * num(plano["valor_usuario_adicional"]) + totalModulos : totalModulos;
+  const usuariosAtivos = assinatura?.["qtd_usuarios_ativos"] != null ? num(assinatura["qtd_usuarios_ativos"]) : usuariosAtivosContados;
+  const limite = plano ? num(plano["usuarios_inclusos"]) : 0;
+  const pct = limite > 0 ? Math.min(100, (usuariosAtivos / limite) * 100) : 0;
+  const usuariosExtras = plano ? Math.max(0, usuariosAtivos - limite) : 0;
+  const valorExtras = usuariosExtras > 0 ? usuariosExtras * num(plano?.["valor_usuario_adicional"]) : 0;
+  const somaModulos = modulos
+    .filter((m) => ativos.has(text(rowId(m))))
+    .reduce((s, m) => s + valorModulo(m), 0);
+  const mensal = num(plano?.["valor_mensal"]) + valorExtras + somaModulos;
 
   async function salvar() {
     if (!empresa) return;
@@ -197,10 +206,12 @@ function AssinaturaSheet({ empresa, onClose, planos, assinatura, usuariosAtivos 
 
   async function toggleModulo(moduloId: string, on: boolean) {
     if (!assId) { toast.error("Salve o plano vigente antes de contratar módulos."); return; }
+    const anterior = new Set(ativos);
+    setAtivos((s) => { const n = new Set(s); if (on) n.add(moduloId); else n.delete(moduloId); return n; });
     const { error } = on
       ? await supabase.from("empresas_assinaturas_modulos").insert({ assinatura_id: assId, modulo_id: moduloId })
       : await supabase.from("empresas_assinaturas_modulos").delete().eq("assinatura_id", assId).eq("modulo_id", moduloId);
-    if (error) { toast.error(error.message); return; }
+    if (error) { console.error(error); setAtivos(anterior); toast.error(`Não foi possível alterar o módulo: ${error.message}`); return; }
     queryClient.invalidateQueries({ queryKey: ["admin-ass-modulos", assId] });
   }
 
@@ -248,15 +259,15 @@ function AssinaturaSheet({ empresa, onClose, planos, assinatura, usuariosAtivos 
             <h3 className="font-semibold text-foreground">Métricas</h3>
             <div className="flex items-baseline justify-between text-sm">
               <span className="text-muted-foreground">Utilizadores ativos</span>
-              <span className="text-lg font-bold text-foreground">{qtd} / {limite || "—"}</span>
+              <span className="text-lg font-bold text-foreground">{usuariosAtivos} / {plano ? limite : "—"}</span>
             </div>
             <Progress value={pct} />
-            {excedentes > 0 ? (
+            {usuariosExtras > 0 ? (
               <p className="text-xs text-warning">
-                {excedentes} acima do limite (+{formatBRL(excedentes * num(plano?.["valor_usuario_adicional"]))}/mês)
+                {usuariosExtras} acima do limite (+{formatBRL(valorExtras)}/mês)
               </p>
             ) : (
-              <p className="text-xs text-muted-foreground">{limite ? `${Math.max(0, limite - qtd)} vaga(s) disponível(is) no plano.` : "Selecione um plano."}</p>
+              <p className="text-xs text-muted-foreground">{plano ? `${Math.max(0, limite - usuariosAtivos)} vaga(s) disponível(is) no plano.` : "Selecione um plano."}</p>
             )}
             <div className="flex justify-between border-t border-border pt-2 text-sm">
               <span className="text-muted-foreground">Mensalidade estimada</span>
@@ -275,7 +286,7 @@ function AssinaturaSheet({ empresa, onClose, planos, assinatura, usuariosAtivos 
                   <label key={id} className="flex items-center gap-3 rounded px-2 py-2 hover:bg-muted">
                     <div className="flex-1">
                       <div className="text-sm font-medium text-foreground">{text(m["nome"])}</div>
-                      <div className="text-xs text-muted-foreground">{formatBRL(m["valor_mensal"])}/mês</div>
+                      <div className="text-xs text-muted-foreground">{formatBRL(valorModulo(m))}/mês</div>
                     </div>
                     <Switch checked={ativos.has(id)} disabled={!assId} onCheckedChange={(v) => toggleModulo(id, v)} />
                   </label>
