@@ -268,6 +268,15 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
             <Button size="sm" onClick={assumir}><Hand className="mr-1 h-4 w-4" /> Assumir atendimento</Button>
           </div>
         )}
+        {encerrado ? (
+          <div className="flex items-center justify-between gap-2 rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">
+            <span>Atendimento encerrado. Mova para outra etapa para reabrir a conversa.</span>
+            <Button size="sm" variant="outline" onClick={() => setMoverAberto(true)}>
+              <MoveRight className="mr-1 h-4 w-4" /> Reabrir
+            </Button>
+          </div>
+        ) : (
+        <>
         {sugestoes.length > 0 && (
           <div className="mb-2 max-h-48 overflow-y-auto rounded-md border border-border bg-popover">
             {sugestoes.map((n) => (
@@ -334,6 +343,8 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
             <Lock className="h-3 w-3" /> Nota interna (apenas equipe)
           </Label>
         </div>
+        </>
+        )}
       </footer>
 
       <MoverDialog

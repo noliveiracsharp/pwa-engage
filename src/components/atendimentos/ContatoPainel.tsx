@@ -80,7 +80,7 @@ export function ContatoPainel({ atendimento, pessoa, usuarios, participantes, et
   const kanban = kanbans.find((k) => text(rowId(k)) === text(pick(atendimento, A.kanban)));
   const etapa = etapas.find((e) => text(rowId(e)) === text(pick(atendimento, A.etapa)));
   async function mudarEtapa(etId: string) {
-    const { error } = await supabase.from("atendimentos").update(filterPayload(etapaPayload(etId), colsAt)).eq("id", atId);
+    const { error } = await supabase.from("atendimentos").update(filterPayload(etapaPayload(etId, etapas), colsAt)).eq("id", atId);
     if (error) { toast.error(error.message); return; }
     qc.invalidateQueries({ queryKey: ["table", "atendimentos"] });
     toast.success("Etapa atualizada.");

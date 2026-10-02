@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ChatPainel } from "@/components/atendimentos/ChatPainel";
 import { ContatoPainel } from "@/components/atendimentos/ContatoPainel";
 import {
-  A, M, corEtiqueta, dataDe, fotoPessoa, horaCurta, iniciais, isIA, nomePessoa, statusDe, telefonePessoa,
+  A, M, corEtiqueta, dataDe, fotoPessoa, horaCurta, iniciais, isEncerrado, isIA, nomePessoa, telefonePessoa,
 } from "@/lib/atendimentos";
 import { useNotificacoesChat } from "@/hooks/useNotificacoesChat";
 
@@ -125,9 +125,9 @@ function AtendimentosPage() {
       .filter((a) => depFiltro === "todos" || text(pick(a, A.kanban)) === depFiltro)
       .filter((a) => parcFiltro === "todos" || text(pessoasMap.get(text(pick(a, A.pessoa)))?.["parceiro_id"]) === parcFiltro)
       .filter((a) => {
-        const s = statusDe(a);
-        if (rapido === "encerrados") return s === "encerrado";
-        if (rapido !== "todos" && s === "encerrado") return false;
+        const enc = isEncerrado(a, etapas);
+        if (rapido === "encerrados") return enc;
+        if (rapido !== "todos" && enc) return false;
         if (rapido === "minhas") return !!usuarioId && text(pick(a, A.responsavel)) === usuarioId;
         if (rapido === "aguardando") return !isIA(a) && !text(pick(a, A.responsavel));
         if (rapido === "ia") return isIA(a);
@@ -143,7 +143,7 @@ function AtendimentosPage() {
         return { a, ult, quando: dataDe(ult, M.data) ?? dataDe(a, A.data) };
       })
       .sort((x, y) => (y.quando?.getTime() ?? 0) - (x.quando?.getTime() ?? 0));
-  }, [atendimentos, kanbans, isMaster, usuarioId, instFiltro, depFiltro, parcFiltro, rapido, busca, pessoasMap, participantes, ultimas]);
+  }, [atendimentos, etapas, kanbans, isMaster, usuarioId, instFiltro, depFiltro, parcFiltro, rapido, busca, pessoasMap, participantes, ultimas]);
 
   const ativo = atendimentos.find((a) => text(rowId(a)) === id);
   useEffect(() => {
