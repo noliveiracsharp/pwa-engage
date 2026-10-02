@@ -8,7 +8,17 @@ import { DataTable, type Column } from "@/components/data-table/DataTable";
 import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
 import { RecordSheet, type Field } from "@/components/data-table/RecordSheet";
 import { StatusBadge } from "@/components/data-table/StatusBadge";
-import { rowId, text, useDeleteRecord, useSaveRecord, useTableRows } from "@/lib/crud";
+import { rowId, text, useSaveRecord, useTableRows } from "@/lib/crud";
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { pick, type Row } from "@/lib/row";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { formatCpfCnpj, matchesAny } from "@/lib/input-masks";
@@ -41,13 +51,55 @@ function UsuariosPage() {
   const { data: vinculos = [] } = useTableRows("usuario_kanban");
   const save = useSaveRecord("usuarios");
   const perms = usePagePermissions("/usuarios");
-  const remove = useDeleteRecord("usuarios");
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [record, setRecord] = useState<Row | null>(null);
   const [kanbanSel, setKanbanSel] = useState<string[]>([]);
   const [pw, setPw] = useState({ senha: "", confirma: "" });
   const [f, setF] = useState({ busca: "", status: "todos", perfil: "todos" });
+  const [toDelete, setToDelete] = useState<Row | null>(null);
+  const [removing, setRemoving] = useState(false);
+
+  const inativar = async () => {
+    if (!toDelete) return;
+    setRemoving(true);
+    const { error } = await supabase.from("usuarios").update({ status: false }).eq("id", rowId(toDelete) as never);
+    setRemoving(false);
+    if (error) {
+      console.error(error);
+      toast.error(error.message);
+      return;
+    }
+    queryClient.invalidateQueries({ queryKey: ["table", "usuarios"] });
+    toast.success("Usuário inativado.");
+    setToDelete(null);
+  };
+
+  const excluir = async () => {
+    if (!toDelete) return;
+    setRemoving(true);
+    try {
+      const uid = rowId(toDelete) as never;
+      await supabase.from("usuario_kanban").delete().eq("usuario_id", uid);
+      const { error } = await supabase.from("usuarios").delete().eq("id", uid);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["table", "usuarios"] });
+      queryClient.invalidateQueries({ queryKey: ["table", "usuario_kanban"] });
+      toast.success("Usuário excluído.");
+      setToDelete(null);
+    } catch (e) {
+      console.error(e);
+      const err = e as { code?: string; message?: string };
+      const fk = err.code === "23503" || /foreign key|violates|viola/i.test(err.message ?? "");
+      toast.error(
+        fk
+          ? "Este usuário possui registros associados no sistema (tarefas, atendimentos ou orçamentos) e não pode ser excluído fisicamente. Recomendamos inativá-lo."
+          : err.message || "Não foi possível excluir.",
+      );
+    } finally {
+      setRemoving(false);
+    }
+  };
 
   const openRecord = (row: Row | null) => {
     setRecord(row);
@@ -300,7 +352,8 @@ function UsuariosPage() {
         }
         onEdit={(row) => openRecord(row)}
         editReadOnly={!perms.canUpdate}
-        onDelete={perms.canDelete ? (row) => remove.mutate(row) : undefined}
+        onDelete={perms.canDelete ? (row) => setToDelete(row) : undefined}
+        skipDeleteConfirm
         filters={
           <>
             <FilterInput
@@ -341,6 +394,27 @@ function UsuariosPage() {
         saving={save.isPending || createUser.isPending}
         onSave={handleSave}
       />
+
+      <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover usuário</AlertDialogTitle>
+            <AlertDialogDescription>
+              Deseja inativar este usuário ou excluí-lo permanentemente?
+              {toDelete && <strong className="block pt-2">{text(pick(toDelete, ["nome", "email"], ""))}</strong>}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <Button variant="outline" disabled={removing} onClick={inativar}>
+              Inativar
+            </Button>
+            <Button variant="destructive" disabled={removing} onClick={excluir}>
+              Excluir permanentemente
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
