@@ -28,9 +28,9 @@ import { formatPhoneDisplay } from "@/lib/input-masks";
 type EmpresaField = { key: string; label: string; full?: boolean; type?: "text" | "boolean" | "photo" | "tel" | "document" };
 
 export const EMPRESA_FIELDS: EmpresaField[] = [
-  { key: "nome", label: "Nome", full: true },
   { key: "cnpj_cpf", label: "CNPJ / CPF", type: "document" },
   { key: "status", label: "Status", type: "boolean" },
+  { key: "nome", label: "Nome", full: true },
   { key: "endereco", label: "Endereço", full: true },
   { key: "telefone1", label: "Telefone 1", type: "tel" },
   { key: "telefone2", label: "Telefone 2", type: "tel" },
