@@ -13,33 +13,49 @@ export function qrCodeUrl(inst: Row): string {
   return `https://api.z-api.io/instances/${id}/token/${token}/qr-code/image`;
 }
 
-export function QrCodeDialog({ instancia, onOpenChange }: { instancia: Row | null; onOpenChange: (o: boolean) => void }) {
+export function QrCodeDialog({
+  instancia,
+  onOpenChange,
+  onConnected,
+}: {
+  instancia: Row | null;
+  onOpenChange: (o: boolean) => void;
+  onConnected?: (inst: Row) => void | Promise<void>;
+}) {
   const [src, setSrc] = useState("");
   const [aviso, setAviso] = useState("");
   const [loading, setLoading] = useState(false);
   const buscar = useServerFn(buscarQrCode);
 
-  const carregar = useCallback(async () => {
+  const carregar = useCallback(async (silencioso = false) => {
     if (!instancia) return;
     const instanceId = text(pick(instancia, ["instance_id"]));
     const clientToken = text(pick(instancia, ["client_token"]));
     const token = text(pick(instancia, ["token"])) || clientToken;
-    setLoading(true);
-    setAviso("");
+    if (!silencioso) {
+      setLoading(true);
+      setAviso("");
+    }
     try {
       const r = await buscar({ data: { instanceId, token, clientToken: clientToken || undefined } });
       if (r.status === "qr") setSrc(r.image);
-      else {
+      else if (r.status === "connected") {
         setSrc("");
-        setAviso(r.status === "connected" ? "Esta instância já está conectada ao WhatsApp!" : `Não foi possível gerar o QR Code: ${r.message}. Verifique o ID e o Token da instância.`);
+        setAviso("Esta instância já está conectada ao WhatsApp!");
+        await onConnected?.(instancia);
+      } else if (!silencioso) {
+        setSrc("");
+        setAviso(`Não foi possível gerar o QR Code: ${r.message}. Verifique o ID e o Token da instância.`);
       }
     } catch (e) {
-      setSrc("");
-      setAviso(e instanceof Error ? e.message : "Erro ao buscar o QR Code.");
+      if (!silencioso) {
+        setSrc("");
+        setAviso(e instanceof Error ? e.message : "Erro ao buscar o QR Code.");
+      }
     } finally {
-      setLoading(false);
+      if (!silencioso) setLoading(false);
     }
-  }, [instancia, buscar]);
+  }, [instancia, buscar, onConnected]);
 
   useEffect(() => {
     if (instancia) void carregar();
@@ -48,6 +64,13 @@ export function QrCodeDialog({ instancia, onOpenChange }: { instancia: Row | nul
       setAviso("");
     }
   }, [instancia, carregar]);
+
+  // Enquanto o QR estiver na tela, verifica a cada 5s se o celular já conectou.
+  useEffect(() => {
+    if (!instancia || !src) return;
+    const t = window.setInterval(() => void carregar(true), 5000);
+    return () => window.clearInterval(t);
+  }, [instancia, src, carregar]);
 
   return (
     <Dialog open={Boolean(instancia)} onOpenChange={onOpenChange}>
@@ -70,7 +93,7 @@ export function QrCodeDialog({ instancia, onOpenChange }: { instancia: Row | nul
             <li>2. Aparelhos Conectados.</li>
             <li>3. Aponte a câmera para este QR Code.</li>
           </ol>
-          <Button variant="outline" onClick={() => void carregar()} disabled={loading}>
+          <Button variant="outline" onClick={() => void carregar(false)} disabled={loading}>
             <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} /> Atualizar QR Code
           </Button>
         </div>

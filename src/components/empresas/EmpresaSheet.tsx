@@ -384,7 +384,24 @@ function ChildTable({ config, empresa, perms = FULL }: { config: ChildConfig; em
       </div>
       </>
       )}
-      <QrCodeDialog instancia={qrInst} onOpenChange={(o) => !o && setQrInst(null)} />
+      <QrCodeDialog
+        instancia={qrInst}
+        onOpenChange={(o) => !o && setQrInst(null)}
+        onConnected={async (inst) => {
+          const key = idColumn(inst);
+          const { error } = await supabase
+            .from(config.table)
+            .update({ status_conexao: "conectado" } as never)
+            .eq(key, inst[key] as never);
+          if (error) {
+            toast.error(`Não foi possível salvar a conexão: ${error.message}`);
+            return;
+          }
+          toast.success("WhatsApp conectado!");
+          setQrInst(null);
+          refresh();
+        }}
+      />
     </div>
   );
 }
