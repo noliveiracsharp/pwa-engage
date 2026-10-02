@@ -41,7 +41,7 @@ export function ContatoPainel({ atendimento, pessoa, usuarios, participantes, et
   async function salvarPessoa(values: Row) {
     if (pessoaId === undefined) return;
     const { error } = await supabase.from("pessoas").update(values).eq("id", pessoaId as never);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     qc.invalidateQueries({ queryKey: ["table", "pessoas"] });
   }
 
@@ -52,13 +52,13 @@ export function ContatoPainel({ atendimento, pessoa, usuarios, participantes, et
 
   async function convidar(usuarioId: string) {
     const { error } = await supabase.from("atendimentos_participantes").insert({ atendimento_id: atId, usuario_id: usuarioId });
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     qc.invalidateQueries({ queryKey: ["table", "atendimentos_participantes"] });
     toast.success("Atendente convidado.");
   }
   async function removerPart(usuarioId: string) {
     const { error } = await supabase.from("atendimentos_participantes").delete().eq("atendimento_id", atId).eq("usuario_id", usuarioId);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     qc.invalidateQueries({ queryKey: ["table", "atendimentos_participantes"] });
   }
 
@@ -70,7 +70,7 @@ export function ContatoPainel({ atendimento, pessoa, usuarios, participantes, et
       ? supabase.from("atendimentos_etiqueta").delete().eq("atendimento_id", atId).eq("etiqueta_id", etId)
       : supabase.from("atendimentos_etiqueta").insert({ atendimento_id: atId, etiqueta_id: etId });
     const { error } = await q;
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     qc.invalidateQueries({ queryKey: ["table", "atendimentos_etiqueta"] });
   }
 
