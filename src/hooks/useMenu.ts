@@ -74,7 +74,8 @@ export function useMenu() {
             order: Number(pick(f, ["ordem_hierarquia", "ordem"], i + 1)),
           }))
           .sort((a, b) => a.order - b.order);
-        return all.length > 0 ? all : FALLBACK;
+        const base = all.length > 0 ? all : FALLBACK;
+        return [...base, { id: "catalogo-saas", label: "Catálogo SaaS", path: "/admin/planos", icon: "store", order: 9999 }];
       }
       const { data, error } = await supabase
         .from("vw_menu_usuario_perfil")
