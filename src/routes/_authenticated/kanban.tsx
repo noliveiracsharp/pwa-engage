@@ -126,7 +126,7 @@ function KanbanPage() {
   const [dragId, setDragId] = useState<string | null>(null);
   const [dragEtapaId, setDragEtapaId] = useState<string | null>(null);
   const [editEtapa, setEditEtapa] = useState<Row | null>(null);
-  const [editForm, setEditForm] = useState({ descricao: "", status: true });
+  const [editForm, setEditForm] = useState({ descricao: "", status: true, is_default_ia: false, is_default_humano: false });
 
   useEffect(() => {
     const valido = kanbans.some((k) => String(k["id"]) === kanbanId);
@@ -275,10 +275,15 @@ function KanbanPage() {
   });
 
   const updateEtapa = useMutation({
-    mutationFn: async (value: { id: string; descricao: string; status: boolean }) => {
+    mutationFn: async (value: { id: string; descricao: string; status: boolean; is_default_ia: boolean; is_default_humano: boolean }) => {
       const { error } = await supabase
         .from("kanban_etapas")
-        .update({ descricao: value.descricao.trim(), status: value.status })
+        .update({
+          descricao: value.descricao.trim(),
+          status: value.status,
+          is_default_ia: value.is_default_ia === true,
+          is_default_humano: value.is_default_humano === true,
+        } as never)
         .eq("id", value.id);
       if (error) throw error;
     },
@@ -496,6 +501,8 @@ function KanbanPage() {
                       setEditForm({
                         descricao: text(pick(etapa, ETAPA_FIELDS, "")),
                         status: String(pick(etapa, ["status"], "true")) !== "false",
+                        is_default_ia: etapa["is_default_ia"] === true,
+                        is_default_humano: etapa["is_default_humano"] === true,
                       });
                       setEditEtapa(etapa);
                     }}
