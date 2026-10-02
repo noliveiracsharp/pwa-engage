@@ -4,12 +4,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { pick, type Row } from "@/lib/row";
 
 /** Reads every row of a table (schema-tolerant: no column names assumed). */
-export function useTableRows(table: string, enabled = true) {
+export function useTableRows(table: string, enabled = true, orderBy?: string) {
   return useQuery({
     queryKey: ["table", table],
     enabled,
     queryFn: async (): Promise<Row[]> => {
-      const { data, error } = await supabase.from(table).select("*");
+      let q = supabase.from(table).select("*");
+      if (orderBy) q = q.order(orderBy, { ascending: true }) as typeof q;
+      const { data, error } = await q;
       if (error) throw error;
       return (data ?? []) as Row[];
     },
