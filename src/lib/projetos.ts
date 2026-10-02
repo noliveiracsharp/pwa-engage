@@ -51,7 +51,8 @@ export const C = {
     dtInicio: ["dt_inicio", "data_inicio"],
     dtFim: ["dt_fim", "data_fim", "dt_prazo"],
     prioridade: ["prioridade"],
-    concluida: ["concluida", "concluido", "finalizada", "status"],
+    concluida: ["situacao", "concluida", "concluido", "finalizada", "status"],
+    progresso: ["progresso"],
   },
   check: {
     tarefa: ["tarefa_id", "projetos_tarefas_id", "projeto_tarefa_id"],
@@ -90,6 +91,7 @@ export function isDone(v: unknown): boolean {
 
 /** Valor a gravar para "concluído", respeitando coluna texto ou booleana. */
 export function doneValue(col: string, done: boolean): unknown {
+  if (col === "situacao") return done ? "Concluída" : "Em andamento";
   return col === "status" ? (done ? "Concluída" : "Pendente") : done;
 }
 
@@ -102,4 +104,19 @@ export function fmtDate(v: unknown): string {
 
 export function nomePessoa(r: Row | undefined): string {
   return String(pick(r, ["nome_fantasia", "razao_social", "nome", "email"]) ?? "—");
+}
+
+/** Progresso 0-100 da tarefa: usa a coluna progresso; sem ela, concluída = 100. */
+export function tarefaPct(t: Row, doneCol?: string): number {
+  const n = Number(t["progresso"]);
+  if (t["progresso"] !== null && t["progresso"] !== undefined && !isNaN(n)) return Math.max(0, Math.min(100, Math.round(n)));
+  return isDone(doneCol ? t[doneCol] : pick(t, C.tarefa.concluida)) ? 100 : 0;
+}
+
+/** Payload de progresso com automação da situação (100 → Concluída; saiu de 100 → Em andamento). */
+export function progressoPayload(pct: number, anterior: number): Row {
+  const p: Row = { progresso: pct };
+  if (pct >= 100) p["situacao"] = "Concluída";
+  else if (anterior >= 100) p["situacao"] = "Em andamento";
+  return p;
 }

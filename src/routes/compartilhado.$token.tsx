@@ -4,7 +4,7 @@ import { CheckCircle2, Circle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { C, fmtDate, isDone, prioridadeClass } from "@/lib/projetos";
+import { C, fmtDate, isDone, prioridadeClass, tarefaPct } from "@/lib/projetos";
 import { pick, type Row } from "@/lib/row";
 
 export const Route = createFileRoute("/compartilhado/$token")({
@@ -52,13 +52,15 @@ function Compartilhado() {
       fim: toTime(first(t, C.tarefa.dtFim)),
       iniRaw: first(t, C.tarefa.dtInicio), fimRaw: first(t, C.tarefa.dtFim),
       prio: first(t, C.tarefa.prioridade),
-      done: isDone(first(t, C.tarefa.concluida)),
+      pct: tarefaPct(t),
+      done: tarefaPct(t) >= 100 || isDone(first(t, C.tarefa.concluida)),
     })).sort((a, b) => (a.ini || Infinity) - (b.ini || Infinity));
     const ts = lista.flatMap((x) => [x.ini, x.fim]).filter((n) => !isNaN(n));
     const min = ts.length ? Math.min(...ts) : 0;
     const max = ts.length ? Math.max(...ts) + DAY : 1;
     const ok = lista.filter((x) => x.done).length;
-    return { lista, min, span: Math.max(max - min, DAY), ok, pct: lista.length ? Math.round((ok / lista.length) * 100) : 0 };
+    const soma = lista.reduce((a, x) => a + (x.done ? 100 : x.pct), 0);
+    return { lista, min, span: Math.max(max - min, DAY), ok, pct: lista.length ? Math.round(soma / lista.length) : 0 };
   }, [tarefas]);
 
   if (estado === "carregando") return <div className="grid min-h-dvh place-items-center text-muted-foreground">Carregando…</div>;
@@ -109,7 +111,9 @@ function Compartilhado() {
                     <div className="relative h-12 border-l border-border">
                       {hojePct >= 0 && hojePct <= 100 && <div className="absolute inset-y-0 w-px bg-destructive/60" style={{ left: `${hojePct}%` }} />}
                       {temData && (
-                        <div className={`absolute top-1/2 h-5 -translate-y-1/2 rounded ${t.done ? "bg-success" : "bg-primary"}`} style={{ left: `${left}%`, width: `${width}%` }} />
+                        <div className="absolute top-1/2 h-5 -translate-y-1/2 overflow-hidden rounded bg-primary/25" style={{ left: `${left}%`, width: `${width}%` }} title={`${t.done ? 100 : t.pct}%`}>
+                          <div className={`h-full ${t.done ? "bg-success" : "bg-primary"}`} style={{ width: `${t.done ? 100 : t.pct}%` }} />
+                        </div>
                       )}
                     </div>
                   </div>
