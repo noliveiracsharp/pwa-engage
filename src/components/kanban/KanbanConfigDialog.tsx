@@ -225,14 +225,7 @@ export function KanbanConfigDialog({
 
   const updEtapa = useMutation({
     mutationFn: async (v: { id: string; patch: Row }) => {
-      // Só uma etapa padrão (IA / Equipe) por quadro.
-      for (const k of ["is_default_ia", "is_default_humano"]) {
-        if (v.patch[k] === true) {
-          const { error: e0 } = await supabase.from("kanban_etapas").update({ [k]: false } as never)
-            .eq("kanban_nome_id", kanbanId as never).neq("id", v.id);
-          if (e0) throw e0;
-        }
-      }
+      // Campos independentes: grava exatamente o que está na tela.
       const { error } = await supabase.from("kanban_etapas").update(v.patch as never).eq("id", v.id);
       if (error) throw error;
     },
