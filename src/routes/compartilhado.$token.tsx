@@ -111,8 +111,9 @@ function Compartilhado() {
                     <div className="relative h-12 border-l border-border">
                       {hojePct >= 0 && hojePct <= 100 && <div className="absolute inset-y-0 w-px bg-destructive/60" style={{ left: `${hojePct}%` }} />}
                       {temData && (
-                        <div className="absolute top-1/2 h-5 -translate-y-1/2 overflow-hidden rounded bg-primary/25" style={{ left: `${left}%`, width: `${width}%` }} title={`${t.done ? 100 : t.pct}%`}>
-                          <div className={`h-full ${t.done ? "bg-success" : "bg-primary"}`} style={{ width: `${t.done ? 100 : t.pct}%` }} />
+                        <div className="absolute top-1/2 h-5 -translate-y-1/2 overflow-hidden rounded bg-muted" style={{ left: `${left}%`, width: `${width}%` }} title={`${t.done ? 100 : t.pct}%${t.prio ? ` · ${String(t.prio)}` : ""}`}>
+                          <div className="h-full" style={{ width: `${t.done ? 100 : t.pct}%`, backgroundColor: progressoCor(t.done ? 100 : t.pct) }} />
+                          {t.prio ? <div className={`absolute inset-y-0 left-0 w-1.5 ${prioridadeClass(t.prio)}`} /> : null}
                         </div>
                       )}
                     </div>
