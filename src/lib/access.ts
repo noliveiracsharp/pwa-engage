@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { pick, type Row } from "@/lib/row";
+import { isPerfilMaster } from "@/hooks/useAuth";
 
 /** Paths that every authenticated user may open, regardless of menu grants. */
 const ALWAYS_ALLOWED = ["/dashboard", "/meus-dados"];
@@ -49,6 +50,8 @@ export async function getAllowedPaths(userId: string, email?: string): Promise<s
     if (!usuario) return null;
 
     const perfilId = pick<string | number>(usuario, ["perfil_id", "id_perfil"]);
+    // Master (perfil.ordem = 0): acesso total a todas as rotas.
+    if (await isPerfilMaster(perfilId)) return null;
     if (perfilId === undefined || perfilId === null || String(perfilId) === "") {
       return [...ALWAYS_ALLOWED];
     }

@@ -29,12 +29,14 @@ function permsOf(row: Row | undefined): Perms {
 
 /** Linhas da view vw_menu_usuario_perfil para o perfil logado (null = não verificável). */
 export function usePerfilMenuRows() {
-  const { usuario, user } = useAuth();
+  const { usuario, user, isMaster } = useAuth();
   const perfilId = usuario ? pick<string | number>(usuario, ["perfil_id", "id_perfil"]) : undefined;
   return useQuery({
-    queryKey: ["table", "menu", "perfil-view", String(perfilId ?? "")],
+    queryKey: ["table", "menu", "perfil-view", String(perfilId ?? ""), isMaster],
     enabled: Boolean(user && perfilId !== undefined && perfilId !== null),
     queryFn: async (): Promise<Row[] | null> => {
+      // Master: null = sem restrição (leitura, criação, edição e exclusão em tudo).
+      if (isMaster) return null;
       const { data, error } = await supabase
         .from("vw_menu_usuario_perfil")
         .select("*")
