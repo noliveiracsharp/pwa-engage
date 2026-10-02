@@ -190,7 +190,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
 
   async function assumir() {
     const ok = await atualizarAtendimento(
-      { modo: "Humano", modo_atendimento: "Humano", usuario_responsavel_id: usuarioId, status_atendimento: "Em atendimento", situacao: "Em atendimento" },
+      { modo: "Humano", modo_atendimento: "Humano", usuario_responsavel_id: usuarioId, status_atendimento: "Em atendimento", situacao: "Em atendimento", status: "Em atendimento" },
       "Você assumiu o atendimento.",
     );
     if (ok && usuarioId !== undefined) {
@@ -230,7 +230,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
             variant="ghost"
             size="sm"
             className="hidden lg:inline-flex"
-            onClick={() => atualizarAtendimento({ status_atendimento: "Encerrado", situacao: "Encerrado", status: "encerrado" }, "Atendimento encerrado.")}
+            onClick={() => atualizarAtendimento({ status_atendimento: "Encerrado", situacao: "Encerrado", status: "Encerrado" }, "Atendimento encerrado.")}
           >
             <CheckCircle2 className="mr-1 h-4 w-4" /> Encerrar
           </Button>
