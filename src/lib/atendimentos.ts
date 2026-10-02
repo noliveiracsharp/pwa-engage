@@ -94,3 +94,20 @@ export function horaCurta(d: Date | null) {
 export function corEtiqueta(e: Row | undefined) {
   return pick<string>(e, ["cor_hex", "cor"], "#64748b") ?? "#64748b";
 }
+
+/** Etapas de um kanban, ordenadas. */
+export function etapasDoKanban(etapas: Row[], kanbanId: string) {
+  return etapas
+    .filter((e) => text(pick(e, ["kanban_nome_id", "kanban_id"])) === kanbanId)
+    .sort((a, b) => Number(pick(a, ["ordem", "posicao"]) ?? 0) - Number(pick(b, ["ordem", "posicao"]) ?? 0));
+}
+/** Etapa marcada com is_default_humano no kanban (ou a primeira, como fallback). */
+export function etapaHumano(etapas: Row[], kanbanId: string) {
+  const lista = etapasDoKanban(etapas, kanbanId);
+  return lista.find((e) => e["is_default_humano"] === true) ?? lista[0];
+}
+/** Payload com todas as variações da coluna de etapa (filterPayload mantém a real). */
+export function etapaPayload(etapaId: unknown) {
+  const v = etapaId ?? null;
+  return { kanban_etapa_id: v, kanban_etapas_id: v, etapa_id: v };
+}

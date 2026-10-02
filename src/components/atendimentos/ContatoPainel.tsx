@@ -11,7 +11,9 @@ import { StarRating } from "@/components/data-table/StarRating";
 import { PessoaCampos } from "@/components/pessoas/PessoaCampos";
 import { rowId, text } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
-import { A, corEtiqueta, fotoPessoa, iniciais, nomePessoa, telefonePessoa } from "@/lib/atendimentos";
+import { A, corEtiqueta, etapaPayload, etapasDoKanban, fotoPessoa, iniciais, nomePessoa, telefonePessoa } from "@/lib/atendimentos";
+import { filterPayload, useCols } from "@/lib/projetos";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type Props = {
   atendimento: Row;
@@ -30,6 +32,7 @@ const nomeUsuario = (u: Row | undefined) => pick<string>(u, ["nome", "nome_compl
 
 export function ContatoPainel({ atendimento, pessoa, usuarios, participantes, etiquetas, vinculosEtiqueta, kanbans, etapas, orcamentos, onFechar }: Props) {
   const qc = useQueryClient();
+  const { data: colsAt } = useCols("atendimentos");
   const atId = text(rowId(atendimento));
   const pessoaId = pessoa ? rowId(pessoa) : undefined;
   const nome = nomePessoa(pessoa);
@@ -76,6 +79,12 @@ export function ContatoPainel({ atendimento, pessoa, usuarios, participantes, et
 
   const kanban = kanbans.find((k) => text(rowId(k)) === text(pick(atendimento, A.kanban)));
   const etapa = etapas.find((e) => text(rowId(e)) === text(pick(atendimento, A.etapa)));
+  async function mudarEtapa(etId: string) {
+    const { error } = await supabase.from("atendimentos").update(filterPayload(etapaPayload(etId), colsAt)).eq("id", atId);
+    if (error) { toast.error(error.message); return; }
+    qc.invalidateQueries({ queryKey: ["table", "atendimentos"] });
+    toast.success("Etapa atualizada.");
+  }
   const orcamento = orcamentos.find(
     (o) => text(o["atendimento_id"]) === atId || (pessoaId !== undefined && text(pick(o, ["pessoa_id"])) === text(pessoaId)),
   );
@@ -165,7 +174,14 @@ export function ContatoPainel({ atendimento, pessoa, usuarios, participantes, et
         <section className="space-y-2 rounded-lg border border-border p-3">
           <p className="flex items-center gap-1 text-xs font-medium uppercase text-muted-foreground"><KanbanSquare className="h-3 w-3" /> Kanban</p>
           <p className="text-sm text-foreground">{kanban ? text(pick(kanban, ["nome", "descricao"])) : "Sem departamento"}</p>
-          <p className="text-sm text-muted-foreground">Etapa: {etapa ? text(pick(etapa, ["descricao", "nome"])) : "—"}</p>
+          <Select value={etapa ? text(rowId(etapa)) : ""} onValueChange={mudarEtapa} disabled={!kanban}>
+            <SelectTrigger className="h-9"><SelectValue placeholder="Selecione a etapa" /></SelectTrigger>
+            <SelectContent>
+              {etapasDoKanban(etapas, text(pick(atendimento, A.kanban))).map((e) => (
+                <SelectItem key={text(rowId(e))} value={text(rowId(e))}>{text(pick(e, ["descricao", "nome"]))}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           {orcamento && (
             <p className="text-sm text-muted-foreground">
               Orçamento {text(orcamento["numero"])} · {text(orcamento["situacao"])}

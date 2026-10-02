@@ -6,7 +6,7 @@ import { rowId, text } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
 import { filterPayload, useCols } from "@/lib/projetos";
 import { useAudit } from "@/lib/audit";
-import { nomePessoa, telefonePessoa } from "@/lib/atendimentos";
+import { etapaHumano, etapaPayload, nomePessoa, telefonePessoa } from "@/lib/atendimentos";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -85,15 +85,13 @@ export function NovoAtendimentoDialog({ open, onOpenChange, instancias, kanbans,
         }
       }
       // 2. Atendimento
-      const primeira = etapas
-        .filter((e) => text(pick(e, ["kanban_nome_id", "kanban_id"])) === kanban)
-        .sort((a, b) => Number(pick(a, ["ordem", "posicao"]) ?? 0) - Number(pick(b, ["ordem", "posicao"]) ?? 0))[0];
+      const primeira = etapaHumano(etapas, kanban);
       const at: Row = {
         pessoas_id: pid,
         pessoa_id: pid,
         instancia_id: inst,
         kanban_nome_id: kanban,
-        kanban_etapa_id: primeira ? rowId(primeira) : null,
+        ...etapaPayload(primeira ? rowId(primeira) : null),
         status: "Em atendimento",
         status_atendimento: "Em atendimento",
         modo_atendimento: "Humano",

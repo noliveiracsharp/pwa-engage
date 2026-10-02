@@ -123,9 +123,8 @@ function AtendimentosPage() {
         const s = statusDe(a);
         if (rapido === "encerrados") return s === "encerrado";
         if (rapido !== "todos" && s === "encerrado") return false;
-        if (rapido === "minhas")
-          return text(pick(a, A.responsavel)) === usuarioId || participantes.some((p) => text(p["atendimento_id"]) === text(rowId(a)) && text(p["usuario_id"]) === usuarioId);
-        if (rapido === "aguardando") return s === "aguardando" && !isIA(a);
+        if (rapido === "minhas") return !!usuarioId && text(pick(a, A.responsavel)) === usuarioId;
+        if (rapido === "aguardando") return !isIA(a) && !text(pick(a, A.responsavel));
         if (rapido === "ia") return isIA(a);
         return true;
       })
