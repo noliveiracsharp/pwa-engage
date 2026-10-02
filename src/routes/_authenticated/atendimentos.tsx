@@ -18,6 +18,7 @@ import { ContatoPainel } from "@/components/atendimentos/ContatoPainel";
 import {
   A, M, corEtiqueta, dataDe, fotoPessoa, horaCurta, iniciais, isIA, nomePessoa, statusDe, telefonePessoa,
 } from "@/lib/atendimentos";
+import { useNotificacoesChat } from "@/hooks/useNotificacoesChat";
 
 export const Route = createFileRoute("/_authenticated/atendimentos")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -65,6 +66,9 @@ function AtendimentosPage() {
   const { data: usuarios = [] } = useTableRows("usuarios");
   const { data: notas = [] } = useTableRows("empresas_notasrapidas");
   const { data: orcamentos = [] } = useTableRows("orcamentos");
+  const { data: parceiros = [] } = useTableRows("parceiros");
+  const [parcFiltro, setParcFiltro] = useState("todos");
+  useNotificacoesChat();
 
   const { data: meusKanbans = [] } = useQuery({
     queryKey: ["table", "usuario_kanban", usuarioId],
@@ -119,6 +123,7 @@ function AtendimentosPage() {
       .filter((a) => isMaster || permitidos.has(text(pick(a, A.kanban))) || text(pick(a, A.responsavel)) === usuarioId)
       .filter((a) => instFiltro === "todas" || text(pick(a, A.instancia)) === instFiltro)
       .filter((a) => depFiltro === "todos" || text(pick(a, A.kanban)) === depFiltro)
+      .filter((a) => parcFiltro === "todos" || text(pessoasMap.get(text(pick(a, A.pessoa)))?.["parceiro_id"]) === parcFiltro)
       .filter((a) => {
         const s = statusDe(a);
         if (rapido === "encerrados") return s === "encerrado";
@@ -138,7 +143,7 @@ function AtendimentosPage() {
         return { a, ult, quando: dataDe(ult, M.data) ?? dataDe(a, A.data) };
       })
       .sort((x, y) => (y.quando?.getTime() ?? 0) - (x.quando?.getTime() ?? 0));
-  }, [atendimentos, kanbans, isMaster, usuarioId, instFiltro, depFiltro, rapido, busca, pessoasMap, participantes, ultimas]);
+  }, [atendimentos, kanbans, isMaster, usuarioId, instFiltro, depFiltro, parcFiltro, rapido, busca, pessoasMap, participantes, ultimas]);
 
   const ativo = atendimentos.find((a) => text(rowId(a)) === id);
   useEffect(() => {
@@ -188,6 +193,17 @@ function AtendimentosPage() {
               </SelectContent>
             </Select>
           </div>
+          {parceiros.length > 0 && (
+            <Select value={parcFiltro} onValueChange={setParcFiltro}>
+              <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Parceiro" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos os parceiros</SelectItem>
+                {parceiros.map((p) => (
+                  <SelectItem key={text(rowId(p))} value={text(rowId(p))}>{text(p["razao_social"]) || text(p["nome_fantasia"]) || "—"}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar por nome ou telefone" className="h-9 pl-8" />

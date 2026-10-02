@@ -49,6 +49,18 @@ function PessoasPage() {
   const [open, setOpen] = useState(false);
   const [record, setRecord] = useState<Row | null>(null);
   const [f, setF] = useState({ busca: "", status: "todos", nota: "todas" });
+  const { data: parceiros = [] } = useTableRows("parceiros");
+  const formFields = useMemo<Field[]>(() => {
+    const opts = [
+      { value: "__none__", label: "Nenhum" },
+      ...parceiros
+        .map((p) => ({ value: String(rowId(p)), label: String(p["razao_social"] || p["nome_fantasia"] || "—") }))
+        .sort((a, b) => a.label.localeCompare(b.label, "pt-BR")),
+    ];
+    const out = [...fields];
+    out.splice(4, 0, { fields: ["parceiro_id"], label: "Parceiro", type: "select", options: opts });
+    return out;
+  }, [parceiros]);
 
   const filtered = useMemo(
     () =>
@@ -178,7 +190,7 @@ function PessoasPage() {
         open={open}
         onOpenChange={setOpen}
         title={record ? "Editar pessoa" : "Nova pessoa"}
-        fields={fields}
+        fields={formFields}
         record={record}
         saving={save.isPending}
         readOnly={(() => {
@@ -202,12 +214,13 @@ function PessoasPage() {
               })),
           };
         })()}
-        onSave={(values) =>
+        onSave={(values) => {
+          if (values["parceiro_id"] === "__none__" || values["parceiro_id"] === "") values["parceiro_id"] = null;
           save.mutate(
             { values, original: record },
             { onSuccess: () => setOpen(false) },
-          )
-        }
+          );
+        }}
       />
     </>
   );
