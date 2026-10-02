@@ -1,27 +1,17 @@
-# Produtos e Serviços, Unidades de Medida e Centros de Custo
+# Arrastar e soltar para reordenar tarefas
 
-## O que será entregue
-1. **/itens – Produtos e Serviços**
-   - Tabela padrão (busca única, paginação 10/50/100, ordenação) com Código, Descrição, Tipo, Preço de Venda (R$) e Status.
-   - Formulário: Tipo (Produto/Serviço), Código, Descrição, Unidade de Medida, Centro de Custo, Preço de Custo, Margem %, Imposto %, Preço de Venda, Status.
-   - Cálculo automático: Venda = Custo / (1 − Margem/100 − Imposto/100). Se o Preço de Venda for editado à mão, a Margem é recalculada. Aviso quando Margem + Imposto chegarem a 100% ou mais.
-   - Ao salvar, grava a empresa e o usuário que alterou (`empresa_id`, `alterado_por`).
-2. **Cadastro rápido dentro do Item**
-   - Botão "+" ao lado de Unidade e de Centro de Custo, abrindo uma pequena janela (Unidade: Descrição + Status; Centro: Código + Descrição + Status).
-   - Ao salvar, a lista atualiza e o novo registro já fica selecionado.
-   - O "+" só aparece com permissão de criar na tela correspondente.
-3. **/unid_medida** e **/centro_custos**: tabelas padrão com adicionar, editar (Status deslizante) e excluir.
-4. **Permissões** nas três telas, igual às demais: sem leitura → aviso "Você não tem acesso a esta página." e volta ao Dashboard; Adicionar, lápis e lixeira seguem criar/editar/apagar; somente leitura abre o formulário bloqueado (olho).
-5. Listas filtradas pela empresa do usuário logado.
-
-## Passo seu no Supabase
-- Cadastrar em Funções os caminhos `/itens`, `/unid_medida`, `/centro_custos` e liberar ao perfil (posso fazer isso pela própria tela Funções).
-- Rodar o bloco novo do script de permissões (itens, unidade_medida, centro_custo) que será adicionado ao arquivo SQL.
+## O que muda para o usuário
+- **Tarefas Padrão** (janela) e **tarefas do projeto**: cada linha ganha uma alça (seis pontinhos) para arrastar e soltar em outra posição.
+- A nova ordem aparece na hora e é salva sozinha; ao reabrir, as tarefas continuam na ordem escolhida.
+- **Importar Tarefas Padrão** cria as tarefas no projeto na mesma ordem do modelo.
+- Arrastar só fica liberado para quem pode editar Projetos e enquanto a busca estiver vazia (com filtro, a ordem ficaria confusa).
 
 ## Detalhes técnicos
-- Novas rotas `src/routes/_authenticated/{itens,unid_medida,centro_custos}.tsx` usando `DataTable`, `RecordSheet` e `usePagePermissions(path)`; o bloqueio por URL já existe em `_authenticated/route.tsx`.
-- `alterado_por` = `usuarios.id` do logado (FK para usuarios, conforme o modelo guardado); `empresa_id` do `useAuth().empresa`.
-- Novo componente `QuickCreateSelect` (Select + botão "+" + Dialog) usado no formulário de itens; após insert, invalida `["table", tabela]` e seta o id retornado (`insert().select().single()`).
-- Preços em campos numéricos com formatação BRL na tabela; cálculo feito em estado local do formulário (componente próprio de formulário de itens, pois exige campos interdependentes).
-- Fallback do menu/rotas ganha os três novos caminhos; ícones Lucide (package, ruler, landmark).
-- Bloco SQL idempotente (GRANT, RLS "auth_all", realtime) anexado a `/mnt/documents/atendeai-rls-policies.sql`.
+- Instalar `@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/utilities`.
+- `src/lib/crud.ts`: `useTableRows(table, enabled, orderBy?)` — quando informado, aplica `.order(orderBy, { ascending: true })`. Usar `"ordem"` para `projetos_tarefas` (em `projetos.tsx`) e `projetos_tarefas_default` (no diálogo). Remover a ordenação por nome do diálogo.
+- Novo helper `src/lib/reorder.ts`: `salvarOrdem(table, rows)` — recalcula `ordem` 0..n e dispara `update({ ordem })` em paralelo (`Promise.all`) apenas nas linhas cuja ordem mudou.
+- Componente `SortableRow` reutilizável (dnd-kit `useSortable`) com alça; `DndContext` + `SortableContext` (verticalListSortingStrategy) na lista do diálogo (`<li>`) e na tabela de tarefas do projeto (`<TableRow>`).
+- onDragEnd: `arrayMove` → `queryClient.setQueryData(["table", tabela], ...)` (otimista) → `salvarOrdem`; em erro, toast e `invalidateQueries` para voltar ao estado do banco.
+- Projeto: a lista do projeto é um recorte da tabela inteira; o cache otimista substitui só as linhas daquele projeto, mantendo as demais.
+- Novas tarefas (manual e Tarefas Padrão novas) recebem `ordem = maior + 1`.
+- `importarPadrao`: buscar modelos com `.order('ordem')` e incluir `ordem: m["ordem"] ?? índice` no payload (passa por `filterPayload`).
