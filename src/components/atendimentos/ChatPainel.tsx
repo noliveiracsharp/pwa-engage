@@ -174,15 +174,17 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
   async function anexar(file: File) {
     setEnviando(true);
     const path = `${empresaId ?? "geral"}/${id}/${Date.now()}-${file.name.replace(/[^\w.-]/g, "_")}`;
-    const up = await supabase.storage.from("atendimentos").upload(path, file);
+    const up = await supabase.storage.from("chat_media").upload(path, file, { contentType: file.type || undefined });
     setEnviando(false);
     if (up.error) {
       toast.error(`Não foi possível enviar o arquivo: ${up.error.message}`);
       return;
     }
-    const url = supabase.storage.from("atendimentos").getPublicUrl(path).data.publicUrl;
+    const url = supabase.storage.from("chat_media").getPublicUrl(path).data.publicUrl;
     const tipo = file.type.startsWith("image/") ? "imagem" : file.type.startsWith("audio/") ? "audio" : file.type.startsWith("video/") ? "video" : "documento";
-    await enviar(texto || file.name, { midia_url: url, url, tipo, nome_arquivo: file.name });
+    await enviar(texto.trim() || file.name, {
+      url_midia: url, midia_url: url, tipo_midia: tipo, tipo, nome_arquivo: file.name,
+    });
   }
 
   async function assumir() {

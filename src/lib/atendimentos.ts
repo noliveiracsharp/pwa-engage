@@ -17,7 +17,7 @@ export const A = {
 export const M = {
   atendimento: ["atendimento_id", "atendimentos_id"],
   texto: ["mensagem", "conteudo", "texto", "body", "descricao"],
-  tipo: ["tipo", "tipo_mensagem", "message_type"],
+  tipo: ["tipo_midia", "tipo", "tipo_mensagem", "message_type"],
   midia: ["midia_url", "url_midia", "url", "arquivo_url", "media_url"],
   interna: ["msg_interna", "interna", "nota_interna"],
   usuario: ["usuario_id", "enviado_por", "alterado_por"],
