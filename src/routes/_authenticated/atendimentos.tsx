@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Bot, MessageSquare, Search } from "lucide-react";
+import { Bot, MessageSquare, Plus, Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { NovoAtendimentoDialog } from "@/components/atendimentos/NovoAtendimentoDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useTableRows, rowId, text } from "@/lib/crud";
@@ -104,6 +106,7 @@ function AtendimentosPage() {
   const [rapido, setRapido] = useState<Rapido>("todos");
   const [busca, setBusca] = useState("");
   const [painel, setPainel] = useState(true);
+  const [novoAberto, setNovoAberto] = useState(false);
 
   const pessoasMap = useMemo(() => byId(pessoas), [pessoas]);
   const instMap = useMemo(() => byId(instancias), [instancias]);
@@ -149,6 +152,18 @@ function AtendimentosPage() {
       {/* Coluna 1 */}
       <aside className={cn("flex w-full flex-col border-r border-border md:w-80 lg:w-96", ativo && "hidden md:flex")}>
         <div className="space-y-2 border-b border-border p-3">
+          <Button className="w-full" onClick={() => setNovoAberto(true)}>
+            <Plus className="mr-1 h-4 w-4" /> Iniciar Atendimento
+          </Button>
+          <NovoAtendimentoDialog
+            open={novoAberto}
+            onOpenChange={setNovoAberto}
+            instancias={instanciasAtivas}
+            kanbans={kanbans}
+            etapas={etapas}
+            pessoas={pessoas}
+            onCriado={(aid) => abrir(aid)}
+          />
           <div className="grid grid-cols-2 gap-2">
             <Select value={instFiltro} onValueChange={setInstFiltro}>
               <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Instância" /></SelectTrigger>
