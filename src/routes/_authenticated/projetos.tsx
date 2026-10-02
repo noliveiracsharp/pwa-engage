@@ -126,17 +126,60 @@ function Painel({ d, perms, onOpen }: { d: D; perms: Perms; onOpen: (id: string)
   }, [d, busca]);
 
   const [padraoOpen, setPadraoOpen] = useState(false);
-  async function excluir(p: Row) {
-    const id = String(rowId(p));
-    if (d.tarefas.some((t) => String(t[d.tc.projeto]) === id)) { toast.error("Exclua as tarefas do projeto antes."); return; }
-    if (!confirm(`Excluir o projeto "${p[d.pc.nome]}"?`)) return;
-    const { error } = await supabase.from("projetos").delete().eq(idColumn(p), rowId(p) as never);
-    if (error) { toast.error(error.message); return; }
-    qc.invalidateQueries({ queryKey: ["table", "projetos"] });
+  const [apagar, setApagar] = useState<Row | null>(null);
+  const [confirmaNome, setConfirmaNome] = useState("");
+  const [apagando, setApagando] = useState(false);
+  function excluir(p: Row) { setApagar(p); setConfirmaNome(""); }
+  async function confirmarExclusao() {
+    if (!apagar) return;
+    setApagando(true);
+    try {
+      const id = String(rowId(apagar));
+      const tIds = d.tarefas.filter((t) => String(t[d.tc.projeto]) === id).map((t) => rowId(t));
+      if (tIds.length) {
+        const filhos: [string, string[]][] = [
+          ["projetos_tarefas_checklists", C.check.tarefa],
+          ["projetos_tarefas_dependencias", [...C.dep.tarefa, ...C.dep.depende]],
+          ["projetos_tarefas_anexos", C.anexo.tarefa],
+        ];
+        for (const [tab, cols] of filhos) {
+          for (const col of cols) {
+            await supabase.from(tab).delete().in(col, tIds as never[]);
+          }
+        }
+        const { error } = await supabase.from("projetos_tarefas").delete().in(d.tc.projeto, [rowId(apagar)] as never[]);
+        if (error) { toast.error(error.message); return; }
+      }
+      const { error } = await supabase.from("projetos").delete().eq(idColumn(apagar), rowId(apagar) as never);
+      if (error) { toast.error(error.message); return; }
+      toast.success("Projeto excluído.");
+      setApagar(null);
+      qc.invalidateQueries({ queryKey: ["table", "projetos"] });
+      qc.invalidateQueries({ queryKey: ["table", "projetos_tarefas"] });
+    } finally { setApagando(false); }
   }
+  const nomeApagar = apagar ? String(apagar[d.pc.nome] ?? "") : "";
 
   return (
     <div className="space-y-4">
+      <Dialog open={!!apagar} onOpenChange={(v) => { if (!v) setApagar(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Excluir projeto</DialogTitle>
+            <DialogDescription>
+              Esta ação apaga o projeto e todas as suas tarefas, checklists, dependências e anexos. Não pode ser desfeita.
+              Para confirmar, digite o nome do projeto: <strong className="text-foreground">{nomeApagar}</strong>
+            </DialogDescription>
+          </DialogHeader>
+          <Input autoFocus value={confirmaNome} onChange={(e) => setConfirmaNome(e.target.value)} placeholder="Nome do projeto" aria-label="Nome do projeto" />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setApagar(null)}>Cancelar</Button>
+            <Button variant="destructive" disabled={apagando || confirmaNome.trim() !== nomeApagar.trim()} onClick={confirmarExclusao}>
+              {apagando ? "Excluindo…" : "Excluir projeto"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-foreground">Projetos</h1>
         <div className="flex gap-2">
