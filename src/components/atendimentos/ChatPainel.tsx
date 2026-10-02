@@ -147,7 +147,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
         await marcarEnvio(mid, "enviado");
       } catch (e) {
         console.error(e);
-        await marcarEnvio(mid, "erro");
+        await marcarEnvio(mid, "falha");
         toast.error(`Mensagem salva, mas o envio falhou: ${(e as Error).message}`);
       }
     }
