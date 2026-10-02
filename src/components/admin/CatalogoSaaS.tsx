@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useTableRows, useSaveRecord, rowId, text, matches } from "@/lib/crud";
 import { formatBRL, num } from "@/lib/orcamentos";
 import { type Row } from "@/lib/row";
+import { normalizarColunas } from "@/lib/orcamento-kanban";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -37,13 +38,13 @@ export const planosConfig: CatalogoConfig = {
     { key: "nome", label: "Nome do Plano", type: "text" },
     { key: "descricao", label: "Descrição", type: "textarea" },
     { key: "valor_mensal", label: "Valor Mensal (R$)", type: "money" },
-    { key: "usuarios_incluidos", label: "Utilizadores Incluídos", type: "int" },
+    { key: "usuarios_inclusos", label: "Utilizadores Incluídos", type: "int" },
     { key: "valor_usuario_adicional", label: "Valor por Utilizador Adicional (R$)", type: "money" },
   ],
   resumo: (r) => (
     <>
       <div className="text-2xl font-bold text-foreground">{formatBRL(r["valor_mensal"])}<span className="text-sm font-normal text-muted-foreground">/mês</span></div>
-      <div className="text-sm text-muted-foreground">{num(r["usuarios_incluidos"])} utilizadores incluídos</div>
+      <div className="text-sm text-muted-foreground">{num(r["usuarios_inclusos"])} utilizadores incluídos</div>
       <div className="text-sm text-muted-foreground">+ {formatBRL(r["valor_usuario_adicional"])} por utilizador adicional</div>
     </>
   ),
@@ -56,15 +57,52 @@ export const modulosConfig: CatalogoConfig = {
   fields: [
     { key: "nome", label: "Nome do Módulo", type: "text" },
     { key: "descricao", label: "Descrição", type: "textarea" },
-    { key: "valor_mensal", label: "Valor Mensal Fixo (R$)", type: "money" },
+    { key: "valor_mensal_fixo", label: "Valor Mensal Fixo (R$)", type: "money" },
   ],
   resumo: (r) => (
-    <div className="text-2xl font-bold text-foreground">{formatBRL(r["valor_mensal"])}<span className="text-sm font-normal text-muted-foreground">/mês</span></div>
+    <div className="text-2xl font-bold text-foreground">{formatBRL(r["valor_mensal_fixo"] ?? r["valor_mensal"])}<span className="text-sm font-normal text-muted-foreground">/mês</span></div>
   ),
   funcoesLiberadas: true,
 };
 
-const ativo = (r: Row) => r["status"] !== false;
+const ativo = (r: Row) => r["status"] !== false && r["ativo"] !== false;
+
+/** Colunas reais da tabela (via RPC); null se não for possível ler. */
+async function colunasDaTabela(table: string): Promise<Set<string> | null> {
+  try {
+    const { data, error } = await supabase.rpc("listar_colunas_tabela" as never, { nome_tabela: table } as never);
+    if (error) return null;
+    const cols = normalizarColunas(data).map((c) => c.key);
+    return cols.length ? new Set(cols) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Nome da coluna de estado ativo/inativo. */
+function colunaStatus(cols: Set<string> | null, sample?: Row | null): string | null {
+  for (const k of ["status", "ativo"]) if (cols ? cols.has(k) : sample ? k in sample : k === "status") return k;
+  return null;
+}
+
+/** Converte campos numéricos e remove chaves que não existem na tabela. */
+function montarPayload(config: CatalogoConfig, values: Record<string, string>, status: boolean, cols: Set<string> | null, sample?: Row | null): Row {
+  const payload: Row = {};
+  for (const f of config.fields) {
+    const raw = (values[f.key] ?? "").trim();
+    if (f.type === "money" || f.type === "int") {
+      const n = raw === "" ? 0 : Number(raw.replace(/\./g, "").replace(",", ".").replace(/[^0-9.-]/g, "")) ;
+      const val = Number.isFinite(n) ? n : 0;
+      payload[f.key] = f.type === "int" ? Math.trunc(val) : val;
+    } else {
+      payload[f.key] = raw === "" ? null : raw;
+    }
+  }
+  const sc = colunaStatus(cols, sample);
+  if (sc) payload[sc] = status;
+  if (cols) for (const k of Object.keys(payload)) if (!cols.has(k)) delete payload[k];
+  return payload;
+}
 
 export function CatalogoSaaS({ config, aba }: { config: CatalogoConfig; aba: "planos" | "modulos" }) {
   const { isMaster } = useAuth();
@@ -128,7 +166,10 @@ export function CatalogoSaaS({ config, aba }: { config: CatalogoConfig; aba: "pl
               <CardContent className="space-y-1">{config.resumo(r)}</CardContent>
               <CardFooter className="flex items-center justify-between">
                 <label className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Switch checked={ativo(r)} onCheckedChange={(v) => save.mutate({ values: { status: v }, original: r })} />
+                  <Switch checked={ativo(r)} onCheckedChange={async (v) => {
+                    const sc = colunaStatus(await colunasDaTabela(config.table), r) ?? "status";
+                    save.mutate({ values: { [sc]: v }, original: r });
+                  }} />
                   {ativo(r) ? "Ativo" : "Inativo"}
                 </label>
                 <Button variant="outline" size="sm" onClick={() => { setRecord(r); setOpen(true); }}>
@@ -186,11 +227,9 @@ function CatalogoSheet({ open, onOpenChange, config, record }: { open: boolean; 
     if (!values["nome"]?.trim()) { toast.error("Informe o nome."); return; }
     setSaving(true);
     try {
-      const payload: Row = { status };
-      for (const f of config.fields) {
-        const raw = values[f.key] ?? "";
-        payload[f.key] = f.type === "money" ? num(raw.replace(",", ".")) : f.type === "int" ? Math.trunc(num(raw)) : raw.trim() || null;
-      }
+      const cols = await colunasDaTabela(config.table);
+      const payload = montarPayload(config, values, status, cols, record);
+      if (!payload["nome"]) { toast.error("Informe o nome."); return; }
       let id = moduloId;
       if (record) {
         const { error } = await supabase.from(config.table).update(payload).eq("id", moduloId);
@@ -218,7 +257,9 @@ function CatalogoSheet({ open, onOpenChange, config, record }: { open: boolean; 
       toast.success("Registro salvo com sucesso.");
       onOpenChange(false);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Não foi possível salvar.");
+      console.error(e);
+      const msg = e && typeof e === "object" && "message" in e ? String((e as { message: unknown }).message) : "";
+      toast.error(msg ? `Não foi possível salvar: ${msg}` : "Não foi possível salvar.");
     } finally {
       setSaving(false);
     }
