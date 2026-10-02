@@ -361,6 +361,7 @@ function ChildTable({ config, empresa, perms = FULL }: { config: ChildConfig; em
       </div>
       </>
       )}
+      <QrCodeDialog instancia={qrInst} onOpenChange={(o) => !o && setQrInst(null)} />
     </div>
   );
 }
