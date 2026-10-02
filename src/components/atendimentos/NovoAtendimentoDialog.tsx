@@ -11,7 +11,9 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { corEtiqueta } from "@/lib/atendimentos";
+import { X } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SearchSelect } from "@/components/data-table/SearchSelect";
 import { PhoneInput } from "@/components/data-table/PhoneInput";
@@ -23,29 +25,13 @@ type Props = {
   kanbans: Row[];
   etapas: Row[];
   pessoas: Row[];
+  etiquetas: Row[];
   onCriado: (id: string) => void;
 };
 
 const digitos = (v: unknown) => text(v).replace(/\D/g, "");
 
-/** Envio best-effort para a Z-API/n8n com a url e token da instância. */
-async function dispararZapi(inst: Row | undefined, telefone: string, mensagem: string) {
-  const url = text(pick(inst, ["url", "url_api", "webhook_url", "endpoint"]));
-  if (!url) return;
-  const token = text(pick(inst, ["token"]));
-  const clientToken = text(pick(inst, ["client_token"]));
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (clientToken) headers["Client-Token"] = clientToken;
-  if (token) headers["token"] = token;
-  const destino = /send-text|webhook/i.test(url) ? url : `${url.replace(/\/$/, "")}/send-text`;
-  await fetch(destino, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ phone: digitos(telefone), message: mensagem, instancia_id: rowId(inst ?? {}) }),
-  });
-}
-
-export function NovoAtendimentoDialog({ open, onOpenChange, instancias, kanbans, etapas, pessoas, onCriado }: Props) {
+export function NovoAtendimentoDialog({ open, onOpenChange, instancias, kanbans, etapas, pessoas, etiquetas, onCriado }: Props) {
   const qc = useQueryClient();
   const { usuarioId, empresaId } = useAudit();
   const { data: colsAt } = useCols("atendimentos");
@@ -58,7 +44,7 @@ export function NovoAtendimentoDialog({ open, onOpenChange, instancias, kanbans,
   const [novo, setNovo] = useState(false);
   const [nome, setNome] = useState("");
   const [fone, setFone] = useState("");
-  const [msg, setMsg] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
   const [salvando, setSalvando] = useState(false);
 
   const opcoes = useMemo(
@@ -73,24 +59,21 @@ export function NovoAtendimentoDialog({ open, onOpenChange, instancias, kanbans,
   );
 
   function reset() {
-    setInst(""); setKanban(""); setPessoaId(""); setNovo(false); setNome(""); setFone(""); setMsg("");
+    setInst(""); setKanban(""); setPessoaId(""); setNovo(false); setNome(""); setFone(""); setTags([]);
   }
 
   async function confirmar() {
     if (!inst || !kanban) { toast.error("Escolha a instância e o departamento."); return; }
     if (!novo && !pessoaId) { toast.error("Selecione ou cadastre o contato."); return; }
     if (novo && (!nome.trim() || digitos(fone).length < 10)) { toast.error("Informe nome e telefone com DDD."); return; }
-    if (!msg.trim()) { toast.error("Digite a primeira mensagem."); return; }
     setSalvando(true);
     try {
       // 1. Pessoa
       let pid = pessoaId;
-      let telefone = telefonePessoa(pessoas.find((p) => text(rowId(p)) === pessoaId));
       if (novo) {
         const existente = pessoas.find((p) => digitos(telefonePessoa(p)).endsWith(digitos(fone).slice(-10)));
         if (existente) {
           pid = text(rowId(existente));
-          telefone = telefonePessoa(existente);
         } else {
           const { data, error } = await supabase
             .from("pessoas")
@@ -99,7 +82,6 @@ export function NovoAtendimentoDialog({ open, onOpenChange, instancias, kanbans,
             .single();
           if (error) throw error;
           pid = text(rowId(data as Row));
-          telefone = fone;
         }
       }
       // 2. Atendimento
@@ -121,31 +103,12 @@ export function NovoAtendimentoDialog({ open, onOpenChange, instancias, kanbans,
       const { data: novoAt, error: eAt } = await supabase.from("atendimentos").insert(filterPayload(at, colsAt)).select().single();
       if (eAt) throw eAt;
       const aid = text(rowId(novoAt as Row));
-      // 3. Primeira mensagem
-      const { error: eMsg } = await supabase.from("atendimentos_mensagem").insert(
-        filterPayload(
-          {
-            atendimento_id: aid,
-            mensagem: msg,
-            remetente_tipo: "atendente",
-            tipo: "texto",
-            msg_interna: false,
-            from_me: true,
-            direcao: "saida",
-            usuario_id: usuarioId,
-            instancia_id: inst,
-            empresa_id: empresaId,
-          },
-          colsMsg,
-        ),
-      );
-      if (eMsg) throw eMsg;
-      // 4. Disparo
-      try {
-        await dispararZapi(instancias.find((i) => text(rowId(i)) === inst), telefone, msg);
-      } catch (e) {
-        console.error(e);
-        toast.warning("Atendimento criado, mas o envio pela instância falhou.");
+      // 3. Etiquetas iniciais
+      if (tags.length) {
+        const { error: eEt } = await supabase
+          .from("atendimentos_etiqueta")
+          .insert(tags.map((t) => ({ atendimento_id: aid, etiqueta_id: t })) as never);
+        if (eEt) toast.warning(`Atendimento criado, mas as etiquetas falharam: ${eEt.message}`);
       }
       qc.invalidateQueries({ queryKey: ["table"] });
       toast.success("Atendimento iniciado.");
@@ -214,13 +177,37 @@ export function NovoAtendimentoDialog({ open, onOpenChange, instancias, kanbans,
             )}
           </div>
           <div className="space-y-1.5">
-            <Label>Primeira mensagem</Label>
-            <Textarea value={msg} onChange={(e) => setMsg(e.target.value)} rows={3} placeholder="Olá! Tudo bem?" />
+            <Label>Etiquetas iniciais (opcional)</Label>
+            <SearchSelect
+              value=""
+              onChange={(v) => v && setTags((t) => (t.includes(v) ? t : [...t, v]))}
+              options={etiquetas
+                .filter((e) => e["status"] !== false && !tags.includes(text(rowId(e))))
+                .map((e) => ({ value: text(rowId(e)), label: text(pick(e, ["descricao", "nome"])) }))}
+              placeholder="Adicionar etiqueta"
+              searchPlaceholder="Buscar etiqueta…"
+              emptyText="Nenhuma etiqueta."
+            />
+            {tags.length > 0 && (
+              <div className="flex flex-wrap gap-1 pt-1">
+                {tags.map((t) => {
+                  const e = etiquetas.find((x) => text(rowId(x)) === t);
+                  return (
+                    <Badge key={t} className="gap-1 border-0 text-white" style={{ backgroundColor: corEtiqueta(e) }}>
+                      {text(pick(e, ["descricao", "nome"]))}
+                      <button type="button" aria-label="Remover" onClick={() => setTags((l) => l.filter((x) => x !== t))}>
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={confirmar} disabled={salvando}>{salvando ? "Enviando…" : "Iniciar e enviar"}</Button>
+          <Button onClick={confirmar} disabled={salvando}>{salvando ? "Criando…" : "Iniciar atendimento"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

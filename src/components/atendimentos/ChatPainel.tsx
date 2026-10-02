@@ -21,7 +21,9 @@ import { filterPayload, useCols } from "@/lib/projetos";
 import { useAudit } from "@/lib/audit";
 import {
   A, M, STATUS_LABEL, dataDe, fotoPessoa, iniciais, isCliente, isIA, nomePessoa, statusDe, tipoMidia,
+  telefonePessoa,
 } from "@/lib/atendimentos";
+import { dispararMensagem, marcarEnvio } from "@/lib/atendimentos-envio";
 
 const EMOJIS = "😀 😃 😄 😁 😅 😂 🙂 😉 😊 😍 😘 🤔 😐 😴 😢 😭 😡 👍 👎 👏 🙏 💪 👋 🤝 ✅ ❌ ⚠️ ❤️ 🔥 🎉 ⭐ 📦 📄 📞 💰 🕐 🚀 💬 📍 🙌".split(" ");
 
@@ -120,14 +122,36 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
     };
     // Notas internas nunca vão para a Z-API: não levam instância.
     if (!interna) payload["instancia_id"] = pick(atendimento, A.instancia);
-    const { error } = await supabase.from("atendimentos_mensagem").insert(filterPayload(payload, colsMsg));
-    setEnviando(false);
+    if (!interna) payload["status_envio"] = "pendente";
+    const { data: salva, error } = await supabase.from("atendimentos_mensagem").insert(filterPayload(payload, colsMsg)).select().single();
     if (error) {
+      setEnviando(false);
       console.error(error);
       toast.error(error.message);
       return;
     }
     setTexto("");
+    if (!interna) {
+      const mid = (salva as Row | null)?.["id"];
+      try {
+        await dispararMensagem({
+          instancia,
+          mensagemId: mid,
+          atendimentoId: id,
+          telefone: telefonePessoa(pessoa),
+          texto: conteudo,
+          midiaUrl: extra["midia_url"] as string | undefined,
+          tipo: extra["tipo"] as string | undefined,
+          nomeArquivo: extra["nome_arquivo"] as string | undefined,
+        });
+        await marcarEnvio(mid, "enviado");
+      } catch (e) {
+        console.error(e);
+        await marcarEnvio(mid, "erro");
+        toast.error(`Mensagem salva, mas o envio falhou: ${(e as Error).message}`);
+      }
+    }
+    setEnviando(false);
     qc.invalidateQueries({ queryKey: ["table", "atendimentos_mensagem"] });
   }
 

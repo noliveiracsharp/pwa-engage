@@ -162,6 +162,7 @@ function AtendimentosPage() {
             kanbans={kanbans}
             etapas={etapas}
             pessoas={pessoas}
+            etiquetas={etiquetas}
             onCriado={(aid) => abrir(aid)}
           />
           <div className="grid grid-cols-2 gap-2">
