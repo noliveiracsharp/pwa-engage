@@ -24,6 +24,7 @@ import {
   telefonePessoa,
 } from "@/lib/atendimentos";
 import { dispararMensagem, marcarEnvio } from "@/lib/atendimentos-envio";
+import { etapaHumano, etapaPayload } from "@/lib/atendimentos";
 
 const EMOJIS = "😀 😃 😄 😁 😅 😂 🙂 😉 😊 😍 😘 🤔 😐 😴 😢 😭 😡 👍 👎 👏 🙏 💪 👋 🤝 ✅ ❌ ⚠️ ❤️ 🔥 🎉 ⭐ 📦 📄 📞 💰 🕐 🚀 💬 📍 🙌".split(" ");
 
