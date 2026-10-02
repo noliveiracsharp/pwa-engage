@@ -32,6 +32,7 @@ import { StatusDialog } from "@/components/projetos/StatusDialog";
 import { TAREFAS_PADRAO, diasDoModelo } from "@/components/projetos/TarefasPadraoDialog";
 import { EspacosSidebar, ESPACOS, cadeiaEspaco, espacoEDescendentes } from "@/components/projetos/EspacosSidebar";
 import { TarefaSheet } from "@/components/projetos/TarefaSheet";
+import { EspacoDashboard } from "@/components/projetos/EspacoDashboard";
 import { useTableRows, rowId, idColumn, matches } from "@/lib/crud";
 import { SortableList, salvarOrdem, useSortableRow } from "@/lib/reorder";
 import { useAudit } from "@/lib/audit";
@@ -99,10 +100,16 @@ function ProjetosPage() {
   const [selId, setSelId] = useState<string | null>(null);
   const sel = d.projetos.find((p) => String(rowId(p)) === selId);
   if (sel) return <Detalhe projeto={sel} d={d} perms={perms} onBack={() => setSelId(null)} />;
+  const espAtual = espacoId ? d.espacos.find((e) => String(rowId(e)) === espacoId) : undefined;
+  const ir = (id: string | null) => navigate({ search: id ? { espaco: id } : {} });
   return (
     <div className="flex flex-col gap-4 md:flex-row md:items-start">
-      <EspacosSidebar espacos={d.espacos} ativo={espacoId} perms={perms} onSelect={(id) => navigate({ search: id ? { espaco: id } : {} })} />
-      <div className="min-w-0 flex-1"><Painel d={d} perms={perms} espacoId={espacoId} onOpen={(id) => setSelId(id)} /></div>
+      <EspacosSidebar espacos={d.espacos} ativo={espacoId} perms={perms} onSelect={ir} />
+      <div className="min-w-0 flex-1">
+        {espAtual && !espAtual["espaco_pai_id"]
+          ? <EspacoDashboard espaco={espAtual} espacos={d.espacos} projetos={d.projetos} tarefas={d.tarefas} status={d.status} pc={d.pc} tc={d.tc} onAcessar={ir} />
+          : <Painel d={d} perms={perms} espacoId={espacoId} onOpen={(id) => setSelId(id)} />}
+      </div>
     </div>
   );
 }
