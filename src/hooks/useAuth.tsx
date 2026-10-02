@@ -1,13 +1,21 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { pick, type Row } from "@/lib/row";
+
+const CTX_KEY = "atendeai.empresaContexto";
 
 type AuthContextValue = {
   session: Session | null;
   user: User | null;
   usuario: Row | null;
+  /** Empresa efetiva: para o Master, a escolhida no "Contexto da Empresa". */
   empresa: Row | null;
+  /** Empresa original do usuário logado. */
+  empresaOriginal: Row | null;
+  isMaster: boolean;
+  empresaContextoId: string | null;
+  setEmpresaContexto: (id: string | null) => void;
   loading: boolean;
   signOut: () => Promise<void>;
 };
@@ -17,11 +25,15 @@ const AuthContext = createContext<AuthContextValue>({
   user: null,
   usuario: null,
   empresa: null,
+  empresaOriginal: null,
+  isMaster: false,
+  empresaContextoId: null,
+  setEmpresaContexto: () => {},
   loading: true,
   signOut: async () => {},
 });
 
-async function loadUsuario(user: User) {
+export async function loadUsuario(user: User) {
   const byAuth = await supabase.from("usuarios").select("*").eq("auth_user_id", user.id).maybeSingle();
   if (byAuth.data) return byAuth.data as Row;
   const byId = await supabase.from("usuarios").select("*").eq("id", user.id).maybeSingle();
@@ -34,18 +46,32 @@ async function loadUsuario(user: User) {
   return (byEmail.data as Row) ?? null;
 }
 
+/** Master = perfil com ordem 0 (ou descrição contendo "Master"). */
+export async function isPerfilMaster(perfilId: unknown): Promise<boolean> {
+  if (perfilId === undefined || perfilId === null || String(perfilId) === "") return false;
+  const { data } = await supabase.from("perfil").select("*").eq("id", perfilId as never).maybeSingle();
+  if (!data) return false;
+  const p = data as Row;
+  return Number(p["ordem"]) === 0 || /master/i.test(String(p["descricao"] ?? ""));
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [usuario, setUsuario] = useState<Row | null>(null);
-  const [empresa, setEmpresa] = useState<Row | null>(null);
+  const [empresaOriginal, setEmpresaOriginal] = useState<Row | null>(null);
+  const [isMaster, setIsMaster] = useState(false);
+  const [ctxId, setCtxId] = useState<string | null>(null);
+  const [ctxEmpresa, setCtxEmpresa] = useState<Row | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    setCtxId(localStorage.getItem(CTX_KEY));
     const { data: sub } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession);
       if (!nextSession) {
         setUsuario(null);
-        setEmpresa(null);
+        setEmpresaOriginal(null);
+        setIsMaster(false);
       }
     });
     supabase.auth.getSession().then(({ data }) => {
@@ -64,13 +90,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const u = await loadUsuario(user);
         if (cancelled) return;
         setUsuario(u);
+        const master = await isPerfilMaster(pick(u, ["perfil_id", "id_perfil"]));
+        if (!cancelled) setIsMaster(master);
         const empresaId = pick<string | number>(u, ["empresa_id", "id_empresa", "empresaid"]);
         if (empresaId !== undefined) {
           const { data } = await supabase.from("empresas").select("*").eq("id", empresaId).maybeSingle();
-          if (!cancelled) setEmpresa((data as Row) ?? null);
+          if (!cancelled) setEmpresaOriginal((data as Row) ?? null);
         } else {
           const { data } = await supabase.from("empresas").select("*").limit(1).maybeSingle();
-          if (!cancelled) setEmpresa((data as Row) ?? null);
+          if (!cancelled) setEmpresaOriginal((data as Row) ?? null);
         }
       } catch {
         /* schema tolerante: segue sem dados complementares */
@@ -81,18 +109,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [session]);
 
+  useEffect(() => {
+    if (!isMaster || !ctxId) {
+      setCtxEmpresa(null);
+      return;
+    }
+    let cancelled = false;
+    supabase
+      .from("empresas")
+      .select("*")
+      .eq("id", ctxId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancelled) setCtxEmpresa((data as Row) ?? null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isMaster, ctxId]);
+
+  const setEmpresaContexto = useCallback((id: string | null) => {
+    setCtxId(id);
+    if (id) localStorage.setItem(CTX_KEY, id);
+    else localStorage.removeItem(CTX_KEY);
+  }, []);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       session,
       user: session?.user ?? null,
       usuario,
-      empresa,
+      empresa: (isMaster && ctxEmpresa) || empresaOriginal,
+      empresaOriginal,
+      isMaster,
+      empresaContextoId: isMaster ? ctxId : null,
+      setEmpresaContexto,
       loading,
       signOut: async () => {
         await supabase.auth.signOut();
       },
     }),
-    [session, usuario, empresa, loading],
+    [session, usuario, empresaOriginal, isMaster, ctxEmpresa, ctxId, setEmpresaContexto, loading],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

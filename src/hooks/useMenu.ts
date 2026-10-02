@@ -50,7 +50,7 @@ function normalize(row: Row, index: number): MenuItem {
 }
 
 export function useMenu() {
-  const { usuario, user } = useAuth();
+  const { usuario, user, isMaster } = useAuth();
   const perfilId = usuario ? pick<string | number>(usuario, ["perfil_id", "id_perfil"]) : undefined;
 
   const { data: funcoes } = useTableRows("funcoes");
@@ -59,9 +59,23 @@ export function useMenu() {
   );
 
   const query = useQuery({
-    queryKey: ["menu", String(perfilId ?? usuario?.["id"] ?? user?.id ?? null)],
+    queryKey: ["menu", String(perfilId ?? usuario?.["id"] ?? user?.id ?? null), isMaster, (funcoes ?? []).length],
     enabled: Boolean(user && perfilId !== undefined),
     queryFn: async (): Promise<MenuItem[]> => {
+      // Master: todas as funções ativas que são menu, ignorando planos/módulos/menu.
+      if (isMaster) {
+        const all = (funcoes ?? [])
+          .filter((f) => asBool(f["status"]) && f["menu_ativo"] !== false && pick(f, ["path"]))
+          .map((f, i) => ({
+            id: String(pick(f, ["id"], `menu-${i}`)),
+            label: String(pick(f, ["descricao", "nome"], "Menu")),
+            path: String(pick(f, ["path"], "/dashboard")),
+            icon: String(pick(f, ["icone", "icon"], "circle")),
+            order: Number(pick(f, ["ordem_hierarquia", "ordem"], i + 1)),
+          }))
+          .sort((a, b) => a.order - b.order);
+        return all.length > 0 ? all : FALLBACK;
+      }
       const { data, error } = await supabase
         .from("vw_menu_usuario_perfil")
         .select("*")
