@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
 import { User } from "lucide-react";
 import { toast } from "sonner";
 import { createEphemeralAuthClient, supabase } from "@/integrations/supabase/client";
@@ -51,6 +52,7 @@ function UsuariosPage() {
   const { data: vinculos = [] } = useTableRows("usuario_kanban");
   const save = useSaveRecord("usuarios");
   const perms = usePagePermissions("/usuarios");
+  const { usuario, isMaster } = useAuth();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [record, setRecord] = useState<Row | null>(null);
@@ -238,12 +240,34 @@ function UsuariosPage() {
     return map;
   }, [perfis]);
 
+  /** Ordem de todos os perfis (inclui Master) para hierarquia. */
+  const { data: ordemPerfil = new Map<string, number>() } = useQuery({
+    queryKey: ["perfil-ordens"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("perfil").select("id, ordem");
+      if (error) throw error;
+      return new Map((data ?? []).map((p: Row) => [text(p["id"]), Number(p["ordem"])]));
+    },
+  });
+  const userPerfilOrdem = ordemPerfil.get(text(pick(usuario, ["perfil_id", "id_perfil"])));
+
+  const perfisPermitidos = useMemo(
+    () =>
+      perfis.filter((p) => {
+        const o = Number(p["ordem"]);
+        if (!(o > 0)) return false;
+        if (isMaster) return true;
+        return userPerfilOrdem !== undefined && o >= userPerfilOrdem;
+      }),
+    [perfis, isMaster, userPerfilOrdem],
+  );
+
   const perfilOptions = useMemo(
     () => [
       { value: "todos", label: "Todos" },
-      ...perfis.map((p) => ({ value: text(rowId(p)), label: text(pick(p, ["descricao"], "Perfil")) })),
+      ...perfisPermitidos.map((p) => ({ value: text(rowId(p)), label: text(pick(p, ["descricao"], "Perfil")) })),
     ],
-    [perfis],
+    [perfisPermitidos],
   );
 
   const fields: Field[] = useMemo(
@@ -277,6 +301,7 @@ function UsuariosPage() {
     () =>
       rows.filter(
         (row) =>
+          (isMaster || ordemPerfil.get(text(pick(row, ["perfil_id"]))) !== 0) &&
           matchesAny(
             [pick(row, ["nome"]), pick(row, ["email"]), pick(row, ["cpf"]), pick(row, ["cargo"])],
             f.busca,
@@ -285,7 +310,7 @@ function UsuariosPage() {
             (f.status === "ativo" ? row["status"] === true : row["status"] === false)) &&
           (f.perfil === "todos" || text(pick(row, ["perfil_id"])) === f.perfil),
       ),
-    [rows, f],
+    [rows, f, isMaster, ordemPerfil],
   );
 
   const columns: Column[] = [
