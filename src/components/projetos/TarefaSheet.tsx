@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { useTableRows, rowId, idColumn } from "@/lib/crud";
 import { useAudit } from "@/lib/audit";
-import { C, PRIORIDADES, doneValue, filterPayload, isDone, nomePessoa, prioridadeClass, resolveCol, useCols } from "@/lib/projetos";
+import { C, PRIORIDADES, doneValue, filterPayload, isDone, nomePessoa, prioridadeClass, progressoPayload, resolveCol, tarefaPct, useCols } from "@/lib/projetos";
 import type { Row } from "@/lib/row";
 import type { Perms } from "@/hooks/usePagePermissions";
 
@@ -78,6 +78,7 @@ export function TarefaSheet({ tarefa, tarefasDoProjeto, projetoId, perms, onClos
           <SheetDescription>Detalhes, checklist, dependências e anexos da tarefa.</SheetDescription>
         </SheetHeader>
         <div className="flex-1 space-y-6 overflow-y-auto p-4">
+          {tarefa && <ProgressoTarefa tarefa={tarefa} tarefaId={tid} doneCol={tc.done} tCols={tCols} readOnly={!perms.canUpdate} />}
           <section className="grid gap-3 sm:grid-cols-2">
             <div className="sm:col-span-2 space-y-1">
               <Label>Nome da tarefa</Label>
@@ -139,6 +140,52 @@ export function TarefaSheet({ tarefa, tarefasDoProjeto, projetoId, perms, onClos
         </div>
       </SheetContent>
     </Sheet>
+  );
+}
+
+function ProgressoTarefa({ tarefa, tarefaId, doneCol, tCols, readOnly }: { tarefa: Row; tarefaId: string; doneCol: string; tCols: string[] | undefined; readOnly: boolean }) {
+  const T = "projetos_tarefas_checklists";
+  const qc = useQueryClient();
+  const { data: all = [] } = useTableRows(T);
+  const { data: cols } = useCols(T);
+  const tC = resolveCol(cols, all, C.check.tarefa);
+  const okC = resolveCol(cols, all, C.check.concluido);
+  const items = all.filter((r) => String(r[tC]) === tarefaId);
+  const temChecklist = items.length > 0;
+  const auto = temChecklist ? Math.round((items.filter((i) => isDone(i[okC])).length / items.length) * 100) : null;
+  const [pct, setPct] = useState(() => tarefaPct(tarefa, doneCol));
+  const salvo = useRef(pct);
+  useEffect(() => { const v = tarefaPct(tarefa, doneCol); setPct(v); salvo.current = v; }, [tarefa, doneCol]);
+
+  async function gravar(novo: number) {
+    const anterior = salvo.current;
+    if (novo === anterior) return;
+    setPct(novo); salvo.current = novo;
+    const payload = progressoPayload(novo, anterior);
+    if (doneCol !== "situacao" && (novo >= 100 || anterior >= 100)) payload[doneCol] = doneValue(doneCol, novo >= 100);
+    const { error } = await supabase.from("projetos_tarefas").update(filterPayload(payload, tCols?.length ? [...tCols, "progresso"] : tCols)).eq(idColumn(tarefa), rowId(tarefa) as never);
+    if (error) { toast.error(error.message); salvo.current = anterior; setPct(anterior); return; }
+    qc.invalidateQueries({ queryKey: ["table", "projetos_tarefas"] });
+  }
+  // Com checklist: progresso automático, gravado sempre que a proporção muda.
+  useEffect(() => { if (auto !== null && !readOnly) void gravar(auto); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [auto]);
+
+  const mostrado = auto ?? pct;
+  const travado = readOnly || temChecklist;
+  return (
+    <section className="space-y-2 rounded-lg border border-border p-3">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-foreground">Progresso</h3>
+        <span className="text-sm font-semibold text-foreground">{mostrado}%</span>
+      </div>
+      <Progress value={mostrado} className="h-2.5" />
+      <div className="flex flex-wrap gap-2">
+        {[0, 25, 50, 75, 100].map((v) => (
+          <Button key={v} size="sm" variant={mostrado === v ? "default" : "outline"} disabled={travado} onClick={() => gravar(v)}>{v}%</Button>
+        ))}
+      </div>
+      {temChecklist && <p className="text-xs text-muted-foreground">Calculado automaticamente pelo checklist.</p>}
+    </section>
   );
 }
 

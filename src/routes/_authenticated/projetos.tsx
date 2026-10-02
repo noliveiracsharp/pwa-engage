@@ -448,7 +448,7 @@ function Detalhe({ projeto, d, perms, onBack }: { projeto: Row; d: D; perms: Per
               return (
                 <SortRow key={id} id={id} disabled={!podeArrastar} onClick={() => setAberta(id)}>
                   <TableCell onClick={(e) => e.stopPropagation()}>
-                    <Checkbox disabled={!perms.canUpdate} checked={done} onCheckedChange={(v) => patch(t, { [d.tc.done]: doneValue(d.tc.done, v === true) })} aria-label="Concluída" />
+                    <Checkbox disabled={!perms.canUpdate} checked={done} onCheckedChange={(v) => patch(t, { [d.tc.done]: doneValue(d.tc.done, v === true), progresso: v === true ? 100 : 0 })} aria-label="Concluída" />
                   </TableCell>
                   <TableCell className={done ? "text-muted-foreground line-through" : "font-medium"}>
                     {String(t[d.tc.nome] ?? "")}
