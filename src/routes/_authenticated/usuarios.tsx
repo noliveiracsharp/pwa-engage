@@ -52,7 +52,18 @@ function UsuariosPage() {
   const { data: vinculos = [] } = useTableRows("usuario_kanban");
   const save = useSaveRecord("usuarios");
   const perms = usePagePermissions("/usuarios");
-  const { usuario, isMaster } = useAuth();
+  const { usuario, isMaster, empresa: empresaAtual } = useAuth();
+  const userEmpresaId = text(
+    pick(usuario, ["empresa_id", "id_empresa"]) ?? (empresaAtual ? rowId(empresaAtual) : ""),
+  );
+  const empresasPermitidas = useMemo(() => {
+    const ativas = empresas.filter((e) => e["status"] !== false && e["ativo"] !== false);
+    if (isMaster) return ativas;
+    if (!userEmpresaId) return [];
+    return empresas.filter(
+      (e) => text(rowId(e)) === userEmpresaId || text(e["empresa_pai_id"]) === userEmpresaId,
+    );
+  }, [empresas, isMaster, userEmpresaId]);
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [record, setRecord] = useState<Row | null>(null);
@@ -157,7 +168,20 @@ function UsuariosPage() {
     },
   });
 
-  const handleSave = (values: Row) => {
+  const handleSave = (input: Row) => {
+    const values: Row = { ...input };
+    // Trava: usuário comum só grava empresas da sua matriz/filiais.
+    if (!isMaster) {
+      const ids = new Set(empresasPermitidas.map((e) => text(rowId(e))));
+      const escolhida = text(values["empresa_id"]);
+      if (!userEmpresaId) {
+        toast.error("Não foi possível identificar sua empresa.");
+        return;
+      }
+      values["empresa_id"] = escolhida && ids.has(escolhida) ? values["empresa_id"] : userEmpresaId;
+    } else if (!text(values["empresa_id"]) && userEmpresaId) {
+      values["empresa_id"] = userEmpresaId;
+    }
     if (pw.senha !== pw.confirma) {
       toast.error("As senhas não conferem.");
       return;
@@ -284,17 +308,21 @@ function UsuariosPage() {
         type: "select",
         options: perfilOptions.filter((o) => o.value !== "todos"),
       },
-      {
-        fields: ["empresa_id"],
-        label: "Empresa",
-        type: "select",
-        options: empresas.map((e) => ({
-          value: text(rowId(e)),
-          label: text(pick(e, ["nome"], "Empresa")),
-        })),
-      },
+      ...(empresasPermitidas.length > 1 || (isMaster && empresasPermitidas.length > 0)
+        ? [
+            {
+              fields: ["empresa_id"],
+              label: "Empresa",
+              type: "select" as const,
+              options: empresasPermitidas.map((e) => ({
+                value: text(rowId(e)),
+                label: text(pick(e, ["nome_fantasia", "razao_social", "nome"], "Empresa")),
+              })),
+            },
+          ]
+        : []),
     ],
-    [perfilOptions, empresas, record],
+    [perfilOptions, empresasPermitidas, isMaster, record],
   );
 
   const filtered = useMemo(
