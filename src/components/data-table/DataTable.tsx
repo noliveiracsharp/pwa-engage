@@ -37,6 +37,8 @@ type Props = {
   editReadOnly?: boolean;
   /** When set, shows a delete button per row (can_delete). */
   onDelete?: ((row: Row) => void) | undefined;
+  /** Skips the built-in confirm (the page shows its own dialog). */
+  skipDeleteConfirm?: boolean;
   rowKey: (row: Row, index: number) => string;
   /** Enables drag-and-drop row reordering (active when no column sort is applied). */
   onReorder?: (ordered: Row[]) => void;
@@ -57,6 +59,7 @@ export function DataTable({
   onEdit,
   editReadOnly,
   onDelete,
+  skipDeleteConfirm,
   rowKey,
   onReorder,
   rowDepth,
@@ -257,7 +260,7 @@ export function DataTable({
                           size="icon"
                           aria-label="Excluir"
                           onClick={() => {
-                            if (window.confirm("Deseja realmente excluir este registro?")) onDelete(row);
+                            if (skipDeleteConfirm || window.confirm("Deseja realmente excluir este registro?")) onDelete(row);
                           }}
                         >
                           <Trash2 className="h-4 w-4 text-destructive" />
