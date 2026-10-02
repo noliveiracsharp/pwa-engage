@@ -77,10 +77,10 @@ export function NovoAtendimentoDialog({ open, onOpenChange, instancias, kanbans,
   }
 
   async function confirmar() {
-    if (!inst || !kanban) return toast.error("Escolha a instância e o departamento.");
-    if (!novo && !pessoaId) return toast.error("Selecione ou cadastre o contato.");
-    if (novo && (!nome.trim() || digitos(fone).length < 10)) return toast.error("Informe nome e telefone com DDD.");
-    if (!msg.trim()) return toast.error("Digite a primeira mensagem.");
+    if (!inst || !kanban) { toast.error("Escolha a instância e o departamento."); return; }
+    if (!novo && !pessoaId) { toast.error("Selecione ou cadastre o contato."); return; }
+    if (novo && (!nome.trim() || digitos(fone).length < 10)) { toast.error("Informe nome e telefone com DDD."); return; }
+    if (!msg.trim()) { toast.error("Digite a primeira mensagem."); return; }
     setSalvando(true);
     try {
       // 1. Pessoa
