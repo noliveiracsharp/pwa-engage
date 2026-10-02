@@ -171,7 +171,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
 
   async function assumir() {
     const ok = await atualizarAtendimento(
-      { modo: "humano", modo_atendimento: "humano", usuario_responsavel_id: usuarioId, status_atendimento: "Em atendimento", situacao: "Em atendimento" },
+      { modo: "Humano", modo_atendimento: "Humano", usuario_responsavel_id: usuarioId, status_atendimento: "Em atendimento", situacao: "Em atendimento" },
       "Você assumiu o atendimento.",
     );
     if (ok && usuarioId !== undefined) {
