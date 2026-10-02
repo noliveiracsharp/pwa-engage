@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil, Plus, QrCode, Trash2 } from "lucide-react";
+import { Pencil, Plus, QrCode, Trash2, Unplug } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
 import { QrCodeDialog } from "@/components/empresas/QrCodeDialog";
+import { desconectarWhatsApp } from "@/lib/zapi.functions";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -108,6 +111,7 @@ function ChildTable({ config, empresa, perms = FULL }: { config: ChildConfig; em
   const [editing, setEditing] = useState<Row | null>(null);
   const [adding, setAdding] = useState(false);
   const [qrInst, setQrInst] = useState<Row | null>(null);
+  const desconectarFn = useServerFn(desconectarWhatsApp);
 
   const { data: rows = [], isError } = useQuery({
     queryKey: ["child", config.table, text(empresaId)],
@@ -185,6 +189,22 @@ function ChildTable({ config, empresa, perms = FULL }: { config: ChildConfig; em
     refresh();
   };
 
+  const desconectar = async (row: Row) => {
+    if (!window.confirm("Deseja desconectar este WhatsApp?")) return;
+    const clientToken = text(pick(row, ["client_token"]));
+    const token = text(pick(row, ["token"])) || clientToken;
+    const r = await desconectarFn({ data: { instanceId: text(pick(row, ["instance_id"])), token, clientToken: clientToken || undefined } });
+    if (!r.ok) {
+      toast.error(`Não foi possível desconectar: ${r.message ?? ""}`);
+      return;
+    }
+    const key = idColumn(row);
+    const { error } = await supabase.from(config.table).update({ status_conexao: "desconectado" } as never).eq(key, row[key] as never);
+    if (error) toast.error(error.message);
+    else toast.success("WhatsApp desconectado.");
+    refresh();
+  };
+
   return (
     <div className="space-y-4">
       <div className="divide-y divide-border rounded-md border border-border">
@@ -241,16 +261,19 @@ function ChildTable({ config, empresa, perms = FULL }: { config: ChildConfig; em
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-1">
-                {config.table === "empresas_instancias" && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={!text(pick(row, ["instance_id"])) || !text(pick(row, ["client_token"]))}
-                    onClick={() => setQrInst(row)}
-                  >
-                    <QrCode className="mr-1 h-4 w-4" /> Conectar WhatsApp
-                  </Button>
-                )}
+                {config.table === "empresas_instancias" &&
+                  (text(pick(row, ["status_conexao"])).toLowerCase() === "conectado" ? (
+                    <>
+                      <Badge className="bg-success text-success-foreground hover:bg-success">WhatsApp Conectado</Badge>
+                      <Button variant="outline" size="sm" onClick={() => void desconectar(row)}>
+                        <Unplug className="mr-1 h-4 w-4" /> Desconectar
+                      </Button>
+                    </>
+                  ) : text(pick(row, ["instance_id"])) && text(pick(row, ["client_token"])) ? (
+                    <Button variant="outline" size="sm" onClick={() => setQrInst(row)}>
+                      <QrCode className="mr-1 h-4 w-4" /> Conectar WhatsApp
+                    </Button>
+                  ) : null)}
                 {perms.canUpdate && (
                   <Button variant="ghost" size="icon" aria-label="Editar" onClick={() => startEditing(row)}>
                     <Pencil className="h-4 w-4" />

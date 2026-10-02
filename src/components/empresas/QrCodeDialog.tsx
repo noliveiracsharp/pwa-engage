@@ -66,8 +66,8 @@ export function QrCodeDialog({ instancia, onOpenChange }: { instancia: Row | nul
             )}
           </div>
           <ol className="space-y-1 text-sm text-muted-foreground">
-            <li>1. Abra o WhatsApp no seu celular.</li>
-            <li>2. Toque em Aparelhos Conectados.</li>
+            <li>1. Abra o WhatsApp.</li>
+            <li>2. Aparelhos Conectados.</li>
             <li>3. Aponte a câmera para este QR Code.</li>
           </ol>
           <Button variant="outline" onClick={() => void carregar()} disabled={loading}>
