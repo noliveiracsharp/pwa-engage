@@ -15,7 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { rowId, text } from "@/lib/crud";
+import { rowId, text, useTableRows } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
 import { filterPayload, useCols } from "@/lib/projetos";
 import { useAudit } from "@/lib/audit";
@@ -51,6 +51,11 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
   const [moverAberto, setMoverAberto] = useState(false);
   const fimRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const { data: usuarios = [] } = useTableRows("usuarios");
+  const autores = useMemo(
+    () => new Map(usuarios.map((u) => [text(rowId(u)), text(pick(u, ["primeiro_nome", "nome", "nome_completo", "email"]))])),
+    [usuarios],
+  );
 
   const { data: mensagens = [], isLoading } = useQuery({
     queryKey: ["table", "atendimentos_mensagem", "at", id],
@@ -226,7 +231,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
         {!isLoading && mensagens.length === 0 && (
           <p className="text-center text-sm text-muted-foreground">Nenhuma mensagem nesta conversa.</p>
         )}
-        {mensagens.map((m) => <Balao key={text(rowId(m))} m={m} />)}
+        {mensagens.map((m) => <Balao key={text(rowId(m))} m={m} autores={autores} />)}
         <div ref={fimRef} />
       </div>
 
@@ -322,13 +327,15 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
   );
 }
 
-function Balao({ m }: { m: Row }) {
+function Balao({ m, autores }: { m: Row; autores: Map<string, string> }) {
   const interna = m["msg_interna"] === true || m["interna"] === true || m["nota_interna"] === true;
   const cliente = !interna && isCliente(m);
   const tipo = tipoMidia(m);
   const url = pick<string>(m, M.midia);
   const corpo = text(pick(m, M.texto));
   const hora = dataDe(m, M.data)?.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  const uid = text(pick(m, M.usuario));
+  const autor = cliente ? "" : (uid && autores.get(uid)) || (interna ? "" : "Sistema");
   return (
     <div className={cn("flex", cliente ? "justify-start" : "justify-end")}>
       <div
@@ -341,9 +348,11 @@ function Balao({ m }: { m: Row }) {
       >
         {interna && (
           <p className="mb-1 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-warning">
-            <Lock className="h-3 w-3" /> Nota interna
+            <Lock className="h-3 w-3" /> Nota interna{autor ? ` · ${autor}` : ""}
           </p>
         )}
+        {!interna && autor && <p className="mb-0.5 text-xs font-semibold italic opacity-80">{autor}</p>}
+
         {url && tipo === "imagem" && (
           <a href={url} target="_blank" rel="noreferrer"><img src={url} alt="Imagem" className="mb-1 max-h-72 rounded-md" /></a>
         )}
