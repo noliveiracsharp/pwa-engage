@@ -10,9 +10,9 @@ type Envio = {
   atendimentoId: unknown;
   telefone: string;
   texto: string;
-  midiaUrl?: string;
-  tipo?: string;
-  nomeArquivo?: string;
+  midiaUrl?: string | undefined;
+  tipo?: string | undefined;
+  nomeArquivo?: string | undefined;
 };
 
 /** Dispara a mensagem conforme o tipo_envio da instância. Retorna true se enviou. */
