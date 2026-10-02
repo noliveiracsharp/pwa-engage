@@ -278,7 +278,7 @@ function Painel({ d, perms, onOpen }: { d: D; perms: Perms; onOpen: (id: string)
             </section>
           );
         })}
-      </div>
+      </div>}
       <TarefasPadraoDialog open={padraoOpen} onOpenChange={setPadraoOpen} perms={perms} />
       <StatusDialog open={statusOpen} onOpenChange={setStatusOpen} perms={perms} projetos={d.projetos} statusCol={d.pc.status} />
       {form && <ProjetoDialog d={d} original={form === "new" ? null : form} onClose={() => setForm(null)} />}
