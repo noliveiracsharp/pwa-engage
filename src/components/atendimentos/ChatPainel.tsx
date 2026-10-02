@@ -25,6 +25,7 @@ import {
 } from "@/lib/atendimentos";
 import { dispararMensagem, marcarEnvio } from "@/lib/atendimentos-envio";
 import { etapaHumano, etapaPayload } from "@/lib/atendimentos";
+import { GravadorAudio } from "./GravadorAudio";
 
 const EMOJIS = "😀 😃 😄 😁 😅 😂 🙂 😉 😊 😍 😘 🤔 😐 😴 😢 😭 😡 👍 👎 👏 🙏 💪 👋 🤝 ✅ ❌ ⚠️ ❤️ 🔥 🎉 ⭐ 📦 📄 📞 💰 🕐 🚀 💬 📍 🙌".split(" ");
 
@@ -312,6 +313,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
             placeholder={interna ? "Nota interna (só a equipe vê)…" : "Digite uma mensagem ou / para respostas rápidas"}
             className="max-h-32 min-h-10 flex-1 resize-none"
           />
+          <GravadorAudio disabled={enviando} onGravado={(f) => void anexar(f)} />
           <Button size="icon" onClick={() => enviar(texto)} disabled={enviando || !texto.trim()} aria-label="Enviar">
             {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </Button>
