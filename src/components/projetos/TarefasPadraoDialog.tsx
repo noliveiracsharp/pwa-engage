@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useTableRows, rowId, idColumn } from "@/lib/crud";
+import { rowId, idColumn } from "@/lib/crud";
 import { useAudit } from "@/lib/audit";
 import { filterPayload, PRIORIDADES, prioridadeClass, useCols } from "@/lib/projetos";
 import type { Row } from "@/lib/row";
@@ -22,9 +22,22 @@ const VAZIO = { nome: "", descricao: "", prioridade: "Normal", dias: "1" };
 
 export function TarefasPadraoDialog({ open, onOpenChange, perms }: { open: boolean; onOpenChange: (v: boolean) => void; perms: Perms }) {
   const qc = useQueryClient();
-  const { data: rows = [] } = useTableRows(TAREFAS_PADRAO, open, "ordem");
   const { data: cols } = useCols(TAREFAS_PADRAO);
-  const { stamp } = useAudit();
+  // Master usa a empresa do "Contexto da Empresa"; usuário comum, a própria empresa.
+  const { stamp, empresaId } = useAudit();
+  const empId = empresaId !== undefined && empresaId !== null && String(empresaId) !== "" ? String(empresaId) : "";
+  const qKey = ["table", TAREFAS_PADRAO, "emp", empId];
+  const { data: rows = [] } = useQuery({
+    queryKey: qKey,
+    enabled: open,
+    queryFn: async (): Promise<Row[]> => {
+      let q = supabase.from(TAREFAS_PADRAO).select("*");
+      if (empId) q = q.eq("empresa_id", empId as never) as typeof q;
+      const { data, error } = await q.order("ordem", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as Row[];
+    },
+  });
   const [edit, setEdit] = useState<Row | "new" | null>(null);
   const [f, setF] = useState(VAZIO);
   const [saving, setSaving] = useState(false);
@@ -32,7 +45,7 @@ export function TarefasPadraoDialog({ open, onOpenChange, perms }: { open: boole
   const sorted = [...rows].sort((a, b) => (Number(a["ordem"]) || 0) - (Number(b["ordem"]) || 0));
 
   async function reordenar(novo: Row[]) {
-    qc.setQueryData(["table", TAREFAS_PADRAO], novo.map((r, i) => ({ ...r, ordem: i })));
+    qc.setQueryData(qKey, novo.map((r, i) => ({ ...r, ordem: i })));
     try { await salvarOrdem(TAREFAS_PADRAO, novo); }
     catch (e) { toast.error((e as Error).message); refresh(); }
   }
