@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, ChevronDown, ChevronRight, Pencil, Plus, Settings, Share2, Trash2, ListChecks, Download, List, Columns3 } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronRight, Pencil, Plus, Settings, Share2, Trash2, ListChecks, Download, List, Columns3, Printer } from "lucide-react";
+import { ProjetoPrint } from "@/components/projetos/ProjetoPrint";
 
 async function compartilhar(projeto: Row) {
   let token = projeto["token_compartilhamento"] as string | null | undefined;
@@ -349,7 +350,14 @@ function ProjetoDialog({ d, original, onClose }: { d: D; original: Row | null; o
 }
 
 function Detalhe({ projeto, d, perms, onBack }: { projeto: Row; d: D; perms: Perms; onBack: () => void }) {
-  const { stamp } = useAudit();
+  const { stamp, empresaId } = useAudit();
+  function imprimir() {
+    const html = document.documentElement;
+    html.classList.add("prj-printing");
+    const off = () => { html.classList.remove("prj-printing"); window.removeEventListener("afterprint", off); };
+    window.addEventListener("afterprint", off);
+    window.print();
+  }
   const qc = useQueryClient();
   const pid = String(rowId(projeto));
   const tarefas = d.tarefas.filter((t) => String(t[d.tc.projeto]) === pid)
@@ -417,7 +425,11 @@ function Detalhe({ projeto, d, perms, onBack }: { projeto: Row; d: D; perms: Per
           <h1 className="truncate text-2xl font-bold text-foreground">{String(projeto[d.pc.nome] ?? "Projeto")}</h1>
           <p className="text-sm text-muted-foreground">{cli ? nomePessoa(cli) : "Sem cliente"}{periodo(projeto[d.pc.ini], projeto[d.pc.fim]) ? ` · ${periodo(projeto[d.pc.ini], projeto[d.pc.fim])}` : ""}</p>
         </div>
+        <Button variant="outline" onClick={imprimir}><Printer className="mr-1 h-4 w-4" />Imprimir / Exportar PDF</Button>
         <Button variant="outline" onClick={() => compartilhar(projeto)}><Share2 className="mr-1 h-4 w-4" />Compartilhar</Button>
+        <ProjetoPrint projeto={projeto} cliente={cli ? nomePessoa(cli) : "Sem cliente"} periodo={periodo(projeto[d.pc.ini], projeto[d.pc.fim])}
+          tarefas={tarefas} usuarios={d.usuarios} empresaId={empresaId} pct={pr.pct}
+          cols={{ nome: d.tc.nome, ini: d.tc.ini, fim: d.tc.fim, prio: d.tc.prio, resp: d.tc.resp, done: d.tc.done }} />
         {perms.canCreate && <Button variant="outline" onClick={importarPadrao} disabled={importando}><Download className="mr-1 h-4 w-4" />{importando ? "Importando…" : "Importar Tarefas Padrão"}</Button>}
         {perms.canCreate && <Button onClick={() => setNova(true)}><Plus className="mr-1 h-4 w-4" />Nova tarefa</Button>}
       </div>

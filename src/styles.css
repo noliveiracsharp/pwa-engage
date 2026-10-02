@@ -444,3 +444,42 @@
     print-color-adjust: exact;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* Cronograma do projeto (somente impressão, paisagem)                 */
+/* ------------------------------------------------------------------ */
+.prj-print-host { display: none; }
+.prj-doc { background: #fff; color: #13263f; font-size: 11px; font-family: system-ui, sans-serif; }
+.prj-head { display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; border-bottom: 3px solid #0e7490; }
+.prj-emp { display: flex; align-items: center; gap: 12px; }
+.prj-emp img { height: 44px; width: auto; max-width: 150px; object-fit: contain; }
+.prj-emp-nome { font-size: 15px; font-weight: 700; color: #0f3b5c; }
+.prj-rot { font-size: 9px; letter-spacing: .12em; text-transform: uppercase; color: #5b7290; }
+.prj-ger { font-size: 10px; color: #5b7290; }
+.prj-info { margin: 12px 0; }
+.prj-info h1 { font-size: 20px; font-weight: 700; color: #0f3b5c; margin-bottom: 2px; }
+.prj-gantt { border: 1px solid #dbe6f0; border-radius: 6px; overflow: hidden; }
+.prj-row { display: flex; align-items: center; min-height: 26px; border-top: 1px solid #eef3f8; break-inside: avoid; }
+.prj-row-head { border-top: none; background: #0f3b5c; color: #fff; font-size: 9px; text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
+.prj-cell-nome { width: 24%; padding: 4px 8px; }
+.prj-cell-resp { width: 12%; padding: 4px 8px; }
+.prj-cell-dt { width: 13%; padding: 4px 8px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.prj-track { position: relative; flex: 1; align-self: stretch; min-height: 26px; }
+.prj-mes { position: absolute; top: 50%; transform: translateY(-50%); padding-left: 3px; border-left: 1px solid rgba(255,255,255,.4); white-space: nowrap; }
+.prj-grid { position: absolute; top: 0; bottom: 0; border-left: 1px dashed #e3ecf4; }
+.prj-hoje { position: absolute; top: 0; bottom: 0; border-left: 2px solid #dc2626; }
+.prj-bar { position: absolute; top: 5px; bottom: 5px; background: #e2e8f0; border-left: 4px solid; border-radius: 3px; overflow: hidden; }
+.prj-bar-fill { position: absolute; inset: 0 auto 0 0; }
+.prj-bar span { position: relative; padding-left: 4px; font-size: 9px; font-weight: 700; line-height: 16px; color: #0f172a; }
+.prj-vazio { padding: 16px; text-align: center; color: #5b7290; }
+.prj-leg { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; font-size: 9px; color: #486381; }
+.prj-leg i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 3px; vertical-align: middle; }
+.prj-leg-sep { margin-left: 8px; font-weight: 600; }
+
+@page prj { size: landscape; margin: 10mm; }
+@media print {
+  html.prj-printing, html.prj-printing body { height: auto !important; overflow: visible !important; background: #fff !important; }
+  html.prj-printing body > *:not(.prj-print-host) { display: none !important; }
+  html.prj-printing .prj-print-host { display: block !important; page: prj; }
+  .prj-doc, .prj-doc * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
