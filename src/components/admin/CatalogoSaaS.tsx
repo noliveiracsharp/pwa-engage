@@ -91,7 +91,8 @@ function montarPayload(config: CatalogoConfig, values: Record<string, string>, s
   for (const f of config.fields) {
     const raw = (values[f.key] ?? "").trim();
     if (f.type === "money" || f.type === "int") {
-      const n = raw === "" ? 0 : Number(raw.replace(/\./g, "").replace(",", ".").replace(/[^0-9.-]/g, "")) ;
+      const norm = raw.includes(",") ? raw.replace(/\./g, "").replace(",", ".") : raw;
+      const n = raw === "" ? 0 : Number(norm.replace(/[^0-9.-]/g, ""));
       const val = Number.isFinite(n) ? n : 0;
       payload[f.key] = f.type === "int" ? Math.trunc(val) : val;
     } else {
