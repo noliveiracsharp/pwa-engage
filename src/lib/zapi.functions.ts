@@ -39,3 +39,26 @@ export const buscarQrCode = createServerFn({ method: "POST" })
       return { status: "error", message: e instanceof Error ? e.message : "Falha ao contatar a Z-API" };
     }
   });
+
+export const desconectarWhatsApp = createServerFn({ method: "POST" })
+  .inputValidator((d) =>
+    z
+      .object({
+        instanceId: z.string().min(1).max(200),
+        token: z.string().min(1).max(500),
+        clientToken: z.string().max(500).optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }): Promise<{ ok: boolean; message?: string }> => {
+    const url = `https://api.z-api.io/instances/${encodeURIComponent(data.instanceId)}/token/${encodeURIComponent(data.token)}/disconnect`;
+    const headers: Record<string, string> = {};
+    if (data.clientToken) headers["Client-Token"] = data.clientToken;
+    try {
+      const r = await fetch(url, { headers });
+      if (r.ok) return { ok: true };
+      return { ok: false, message: (await r.text()).slice(0, 200) || `HTTP ${r.status}` };
+    } catch (e) {
+      return { ok: false, message: e instanceof Error ? e.message : "Falha ao contatar a Z-API" };
+    }
+  });
