@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, ChevronDown, ChevronRight, Pencil, Plus, Settings, Share2, Trash2, ListChecks, Download, List, Columns3, Printer } from "lucide-react";
 import { ProjetoPrint } from "@/components/projetos/ProjetoPrint";
@@ -29,7 +29,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { SearchSelect } from "@/components/data-table/SearchSelect";
 import { StatusDialog } from "@/components/projetos/StatusDialog";
-import { TarefasPadraoDialog, TAREFAS_PADRAO } from "@/components/projetos/TarefasPadraoDialog";
+import { TAREFAS_PADRAO, diasDoModelo } from "@/components/projetos/TarefasPadraoDialog";
+import { EspacosSidebar, ESPACOS, cadeiaEspaco, espacoEDescendentes } from "@/components/projetos/EspacosSidebar";
 import { TarefaSheet } from "@/components/projetos/TarefaSheet";
 import { useTableRows, rowId, idColumn, matches } from "@/lib/crud";
 import { SortableList, salvarOrdem, useSortableRow } from "@/lib/reorder";
@@ -49,6 +50,7 @@ export const Route = createFileRoute("/_authenticated/projetos")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
+  validateSearch: (s: Record<string, unknown>): { espaco?: string } => (typeof s.espaco === "string" && s.espaco ? { espaco: s.espaco } : {}),
   component: ProjetosPage,
 });
 
@@ -61,6 +63,8 @@ function useProjetoData() {
   const { data: pCols } = useCols("projetos");
   const { data: tCols } = useCols("projetos_tarefas");
   const { data: sCols } = useCols("projetos_status");
+  const { data: espacos = [] } = useTableRows(ESPACOS);
+  const { data: templates = [] } = useTableRows("projetos_templates");
   const pc = {
     nome: resolveCol(pCols, projetos, C.projeto.nome),
     status: resolveCol(pCols, projetos, C.projeto.status),
@@ -83,16 +87,33 @@ function useProjetoData() {
     ordem: resolveCol(sCols, status, C.status.ordem),
     cor: resolveCol(sCols, status, C.status.cor),
   };
-  return { status, projetos, tarefas, parceiros, usuarios, pCols, tCols, pc, tc, sc, isLoading };
+  return { espacos, templates, status, projetos, tarefas, parceiros, usuarios, pCols, tCols, pc, tc, sc, isLoading };
 }
 
 function ProjetosPage() {
   const perms = usePagePermissions("/projetos");
   const d = useProjetoData();
+  const { espaco } = Route.useSearch();
+  const navigate = useNavigate({ from: "/projetos" });
+  const espacoId = espaco && d.espacos.some((e) => String(rowId(e)) === espaco) ? espaco : null;
   const [selId, setSelId] = useState<string | null>(null);
   const sel = d.projetos.find((p) => String(rowId(p)) === selId);
   if (sel) return <Detalhe projeto={sel} d={d} perms={perms} onBack={() => setSelId(null)} />;
-  return <Painel d={d} perms={perms} onOpen={(id) => setSelId(id)} />;
+  return (
+    <div className="flex flex-col gap-4 md:flex-row md:items-start">
+      <EspacosSidebar espacos={d.espacos} ativo={espacoId} perms={perms} onSelect={(id) => navigate({ search: id ? { espaco: id } : {} })} />
+      <div className="min-w-0 flex-1"><Painel d={d} perms={perms} espacoId={espacoId} onOpen={(id) => setSelId(id)} /></div>
+    </div>
+  );
+}
+
+/** Status valendo para o espaço: os próprios; senão os do espaço acima; por fim os gerais (sem espaço). */
+function statusDoEspaco(d: D, espacoId: string | null): Row[] {
+  for (const id of cadeiaEspaco(d.espacos, espacoId)) {
+    const proprios = d.status.filter((s) => String(s["espaco_id"] ?? "") === id);
+    if (proprios.length) return proprios;
+  }
+  return d.status.filter((s) => !s["espaco_id"]);
 }
 
 type D = ReturnType<typeof useProjetoData>;
@@ -104,7 +125,7 @@ function progresso(d: D, projetoId: string) {
   return { total: ts.length, ok, pct: ts.length ? Math.round(soma / ts.length) : 0 };
 }
 
-function Painel({ d, perms, onOpen }: { d: D; perms: Perms; onOpen: (id: string) => void }) {
+function Painel({ d, perms, espacoId, onOpen }: { d: D; perms: Perms; espacoId: string | null; onOpen: (id: string) => void }) {
   const [busca, setBusca] = useState("");
   const [statusOpen, setStatusOpen] = useState(false);
   const [form, setForm] = useState<Row | null | "new">(null);
@@ -112,8 +133,10 @@ function Painel({ d, perms, onOpen }: { d: D; perms: Perms; onOpen: (id: string)
   const qc = useQueryClient();
 
   const grupos = useMemo(() => {
-    const ordered = [...d.status].sort((a, b) => Number(a[d.sc.ordem] ?? 0) - Number(b[d.sc.ordem] ?? 0));
+    const doEspaco = espacoId ? espacoEDescendentes(d.espacos, espacoId) : null;
+    const ordered = [...statusDoEspaco(d, espacoId)].sort((a, b) => Number(a[d.sc.ordem] ?? 0) - Number(b[d.sc.ordem] ?? 0));
     const filtered = d.projetos.filter((p) => {
+      if (doEspaco && !doEspaco.has(String(p["espaco_id"] ?? ""))) return false;
       const cli = nomePessoa(d.parceiros.find((x) => String(rowId(x)) === String(p[d.pc.parceiro])));
       return matches(`${p[d.pc.nome] ?? ""} ${cli}`, busca);
     });
@@ -125,9 +148,9 @@ function Painel({ d, perms, onOpen }: { d: D; perms: Perms; onOpen: (id: string)
     const sem = filtered.filter((p) => !ids.has(String(p[d.pc.status] ?? "")));
     if (sem.length) g.push({ id: "__sem", nome: "Sem status", cor: "", itens: sem });
     return g;
-  }, [d, busca]);
+  }, [d, busca, espacoId]);
 
-  const [padraoOpen, setPadraoOpen] = useState(false);
+  const espacoNome = espacoId ? String(d.espacos.find((e) => String(rowId(e)) === espacoId)?.["nome"] ?? "") : "";
   const [apagar, setApagar] = useState<Row | null>(null);
   const [confirmaNome, setConfirmaNome] = useState("");
   const [apagando, setApagando] = useState(false);
@@ -216,12 +239,12 @@ function Painel({ d, perms, onOpen }: { d: D; perms: Perms; onOpen: (id: string)
         </DialogContent>
       </Dialog>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-foreground">Projetos</h1>
+        <h1 className="text-2xl font-bold text-foreground">{espacoNome || "Projetos"}</h1>
         <div className="flex gap-2">
           <Button variant="outline" size="icon" onClick={() => setStatusOpen(true)} aria-label="Gerenciar status" title="Gerenciar status">
             <Settings className="h-4 w-4" />
           </Button>
-          <Button variant="outline" onClick={() => setPadraoOpen(true)}><ListChecks className="mr-1 h-4 w-4" />Tarefas Padrão</Button>
+          <Button asChild variant="outline"><Link to="/projetos/templates"><ListChecks className="mr-1 h-4 w-4" />Templates</Link></Button>
           {perms.canCreate && <Button onClick={() => setForm("new")}><Plus className="mr-1 h-4 w-4" />Novo projeto</Button>}
         </div>
       </div>
@@ -235,7 +258,7 @@ function Painel({ d, perms, onOpen }: { d: D; perms: Perms; onOpen: (id: string)
       {d.isLoading && <p className="text-sm text-muted-foreground">Carregando…</p>}
       {!d.isLoading && grupos.length === 0 && (
         <p className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-          Nenhum status cadastrado. Use a engrenagem para criar os status (ex.: Não iniciado, Em produção).
+          Nenhum status para este espaço. Use a engrenagem para criar os status (ex.: Não iniciado, Em produção).
         </p>
       )}
       {modo === "kanban" && (
@@ -281,14 +304,16 @@ function Painel({ d, perms, onOpen }: { d: D; perms: Perms; onOpen: (id: string)
           );
         })}
       </div>}
-      <TarefasPadraoDialog open={padraoOpen} onOpenChange={setPadraoOpen} perms={perms} />
-      <StatusDialog open={statusOpen} onOpenChange={setStatusOpen} perms={perms} projetos={d.projetos} statusCol={d.pc.status} />
-      {form && <ProjetoDialog d={d} original={form === "new" ? null : form} onClose={() => setForm(null)} />}
+      <StatusDialog open={statusOpen} onOpenChange={setStatusOpen} perms={perms} projetos={d.projetos} statusCol={d.pc.status} espacoId={espacoId} espacoNome={espacoNome} />
+      {form && <ProjetoDialog d={d} espacoId={espacoId} original={form === "new" ? null : form} onClose={() => setForm(null)} />}
     </div>
   );
 }
 
-function ProjetoDialog({ d, original, onClose }: { d: D; original: Row | null; onClose: () => void }) {
+function ProjetoDialog({ d, espacoId, original, onClose }: { d: D; espacoId: string | null; original: Row | null; onClose: () => void }) {
+  const espacoProj = original ? (original["espaco_id"] ? String(original["espaco_id"]) : null) : espacoId;
+  const statusLista = statusDoEspaco(d, espacoProj);
+  const [templateId, setTemplateId] = useState("none");
   const qc = useQueryClient();
   const { stamp } = useAudit();
   const [f, setF] = useState<Row>(original ? { ...original } : {});
@@ -299,11 +324,20 @@ function ProjetoDialog({ d, original, onClose }: { d: D; original: Row | null; o
     if (!String(f[d.pc.nome] ?? "").trim()) { toast.error("Informe o nome do projeto."); return; }
     const v: Row = { [d.pc.nome]: f[d.pc.nome], [d.pc.status]: f[d.pc.status] || null, [d.pc.parceiro]: f[d.pc.parceiro] || null, [d.pc.ini]: f[d.pc.ini] || null, [d.pc.fim]: f[d.pc.fim] || null };
     if (d.pc.descricao !== d.pc.nome) v[d.pc.descricao] = f[d.pc.descricao] ?? null;
+    if (!original) v["espaco_id"] = espacoId;
     const payload = filterPayload(stamp(v, !original), d.pCols);
-    const { error } = original
-      ? await supabase.from("projetos").update(payload).eq(idColumn(original), rowId(original) as never)
-      : await supabase.from("projetos").insert(payload);
-    if (error) { toast.error(error.message); return; }
+    if (original) {
+      const { error } = await supabase.from("projetos").update(payload as never).eq(idColumn(original), rowId(original) as never);
+      if (error) { console.error(error); toast.error(error.message); return; }
+    } else {
+      const { data: criado, error } = await supabase.from("projetos").insert(payload as never).select().maybeSingle();
+      if (error) { console.error(error); toast.error(error.message); return; }
+      if (templateId !== "none" && criado) {
+        const n = await aplicarTemplate(d, templateId, rowId(criado as Row), 0, stamp);
+        if (n > 0) toast.success(`${n} tarefa(s) do template criadas.`);
+        qc.invalidateQueries({ queryKey: ["table", "projetos_tarefas"] });
+      }
+    }
     toast.success("Projeto salvo.");
     qc.invalidateQueries({ queryKey: ["table", "projetos"] });
     onClose();
@@ -328,12 +362,24 @@ function ProjetoDialog({ d, original, onClose }: { d: D; original: Row | null; o
             <Select value={String(f[d.pc.status] ?? "")} onValueChange={(v) => set(d.pc.status, v)}>
               <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
               <SelectContent>
-                {[...d.status].sort((a, b) => Number(a[d.sc.ordem] ?? 0) - Number(b[d.sc.ordem] ?? 0)).map((s) => (
+                {[...statusLista].sort((a, b) => Number(a[d.sc.ordem] ?? 0) - Number(b[d.sc.ordem] ?? 0)).map((s) => (
                   <SelectItem key={String(rowId(s))} value={String(rowId(s))}>{String(s[d.sc.nome] ?? "")}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
+          {!original && d.templates.length > 0 && (
+            <div className="space-y-1 sm:col-span-2">
+              <Label>Aplicar Template de Tarefas</Label>
+              <Select value={templateId} onValueChange={setTemplateId}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhum</SelectItem>
+                  {d.templates.map((t) => <SelectItem key={String(rowId(t))} value={String(rowId(t))}>{String(t["nome"] ?? "")}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="space-y-1"><Label>Dt Início</Label><Input type="date" value={String(f[d.pc.ini] ?? "").slice(0, 10)} onChange={(e) => set(d.pc.ini, e.target.value)} /></div>
           <div className="space-y-1"><Label>Dt Fim</Label><Input type="date" value={String(f[d.pc.fim] ?? "").slice(0, 10)} onChange={(e) => set(d.pc.fim, e.target.value)} /></div>
           {d.pc.descricao !== d.pc.nome && (
@@ -380,28 +426,15 @@ function Detalhe({ projeto, d, perms, onBack }: { projeto: Row; d: D; perms: Per
   }
 
   const [importando, setImportando] = useState(false);
+  const [escolherTpl, setEscolherTpl] = useState(false);
+  const [tplImport, setTplImport] = useState("");
   async function importarPadrao() {
+    if (!tplImport) { toast.error("Escolha um template."); return; }
     setImportando(true);
     try {
-      const { data, error } = await supabase.from(TAREFAS_PADRAO).select("*").order("ordem", { ascending: true });
-      if (error) { toast.error(error.message); return; }
-      const modelos = (data ?? []) as Row[];
-      if (!modelos.length) { toast.error("Nenhuma tarefa padrão cadastrada."); return; }
-      const hoje = new Date();
-      const iso = (dt: Date) => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
       const base = tarefas.reduce((mx, t) => Math.max(mx, Number(t["ordem"] ?? -1) || 0), -1) + 1;
-      const novas = modelos.map((m, idx) => {
-        const fim = new Date(hoje);
-        fim.setDate(fim.getDate() + (Number(m["dias_estimados"]) || 0));
-        return filterPayload(stamp({
-          [d.tc.projeto]: rowId(projeto), [d.tc.nome]: m["nome"], descricao: m["descricao"] ?? null,
-          [d.tc.prio]: m["prioridade"] ?? "Normal", [d.tc.ini]: iso(hoje), [d.tc.fim]: iso(fim),
-          ordem: base + (m["ordem"] != null ? Number(m["ordem"]) : idx),
-        }, true), d.tCols);
-      });
-      const { error: e2 } = await supabase.from("projetos_tarefas").insert(novas);
-      if (e2) { toast.error(e2.message); return; }
-      toast.success(`${novas.length} tarefa(s) importada(s).`);
+      const n = await aplicarTemplate(d, tplImport, rowId(projeto), base, stamp);
+      if (n > 0) { toast.success(`${n} tarefa(s) importada(s).`); setEscolherTpl(false); }
       await refresh();
     } finally { setImportando(false); }
   }
@@ -430,7 +463,27 @@ function Detalhe({ projeto, d, perms, onBack }: { projeto: Row; d: D; perms: Per
         <ProjetoPrint projeto={projeto} cliente={cli ? nomePessoa(cli) : "Sem cliente"} periodo={periodo(projeto[d.pc.ini], projeto[d.pc.fim])}
           tarefas={tarefas} usuarios={d.usuarios} empresaId={empresaId} pct={pr.pct}
           cols={{ nome: d.tc.nome, ini: d.tc.ini, fim: d.tc.fim, prio: d.tc.prio, resp: d.tc.resp, done: d.tc.done }} />
-        {perms.canCreate && <Button variant="outline" onClick={importarPadrao} disabled={importando}><Download className="mr-1 h-4 w-4" />{importando ? "Importando…" : "Importar Tarefas Padrão"}</Button>}
+        {perms.canCreate && <Button variant="outline" onClick={() => { setTplImport(d.templates.length === 1 ? String(rowId(d.templates[0]!)) : ""); setEscolherTpl(true); }}><Download className="mr-1 h-4 w-4" />Importar Tarefas Padrão</Button>}
+        <Dialog open={escolherTpl} onOpenChange={setEscolherTpl}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Importar tarefas de um template</DialogTitle>
+              <DialogDescription>As tarefas do template entram no final da lista, na ordem do template.</DialogDescription>
+            </DialogHeader>
+            {d.templates.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nenhum template criado. <Link to="/projetos/templates" className="text-primary underline">Criar templates</Link></p>
+            ) : (
+              <Select value={tplImport} onValueChange={setTplImport}>
+                <SelectTrigger><SelectValue placeholder="Selecione o template" /></SelectTrigger>
+                <SelectContent>{d.templates.map((t) => <SelectItem key={String(rowId(t))} value={String(rowId(t))}>{String(t["nome"] ?? "")}</SelectItem>)}</SelectContent>
+              </Select>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEscolherTpl(false)}>Cancelar</Button>
+              <Button onClick={importarPadrao} disabled={importando || !tplImport}>{importando ? "Importando…" : "Importar"}</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
         {perms.canCreate && <Button onClick={() => setNova(true)}><Plus className="mr-1 h-4 w-4" />Nova tarefa</Button>}
       </div>
       <div className="flex items-center gap-3">
@@ -506,4 +559,26 @@ function SortRow({ id, disabled, onClick, children }: { id: string; disabled: bo
       {children}
     </TableRow>
   );
+}
+
+/** Cria no projeto as tarefas do template, na ordem do template. Retorna quantas foram criadas. */
+async function aplicarTemplate(d: D, templateId: string, projetoId: unknown, base: number, stamp: (v: Row, isNew: boolean) => Row): Promise<number> {
+  const { data, error } = await supabase.from(TAREFAS_PADRAO).select("*").eq("template_id", templateId as never).order("ordem", { ascending: true });
+  if (error) { console.error(error); toast.error(error.message); return 0; }
+  const modelos = (data ?? []) as Row[];
+  if (!modelos.length) { toast.error("Este template não tem tarefas."); return 0; }
+  const hoje = new Date();
+  const iso = (dt: Date) => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+  const novas = modelos.map((m, idx) => {
+    const fim = new Date(hoje);
+    fim.setDate(fim.getDate() + diasDoModelo(m));
+    return filterPayload(stamp({
+      [d.tc.projeto]: projetoId, [d.tc.nome]: m["nome"], descricao: m["descricao"] ?? null,
+      [d.tc.prio]: m["prioridade"] ?? "Normal", [d.tc.ini]: iso(hoje), [d.tc.fim]: iso(fim),
+      ordem: base + idx,
+    }, true), d.tCols);
+  });
+  const { error: e2 } = await supabase.from("projetos_tarefas").insert(novas as never);
+  if (e2) { console.error(e2); toast.error(e2.message); return 0; }
+  return novas.length;
 }
