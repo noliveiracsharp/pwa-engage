@@ -53,7 +53,7 @@ export const STATUS_LABEL: Record<StatusAt, string> = {
 export function isIA(a: Row) {
   const m = text(pick(a, A.modo)).toLowerCase();
   if (m) return /ia|bot|robo|ai/.test(m) && !/human/.test(m);
-  return pick(a, A.responsavel) === undefined && statusDe(a) !== "encerrado";
+  return pick(a, A.responsavel) === undefined;
 }
 
 /** Mensagem do cliente (entrada) x atendente/sistema (saída). */
@@ -106,8 +106,36 @@ export function etapaHumano(etapas: Row[], kanbanId: string) {
   const lista = etapasDoKanban(etapas, kanbanId);
   return lista.find((e) => e["is_default_humano"] === true) ?? lista[0];
 }
-/** Payload com todas as variações da coluna de etapa (filterPayload mantém a real). */
-export function etapaPayload(etapaId: unknown) {
+/** Etapa de encerramento (is_default_encerrado) do kanban. */
+export function etapaEncerrado(etapas: Row[], kanbanId: string) {
+  return etapasDoKanban(etapas, kanbanId).find((e) => e["is_default_encerrado"] === true);
+}
+/** Etapa atual do atendimento. */
+export function etapaDe(a: Row | undefined, etapas: Row[]) {
+  const id = text(pick(a, A.etapa));
+  return id ? etapas.find((e) => text(e["id"]) === id) : undefined;
+}
+/** Encerrado = etapa atual com is_default_encerrado (fonte única da verdade). */
+export function isEncerrado(a: Row | undefined, etapas: Row[]) {
+  return etapaDe(a, etapas)?.["is_default_encerrado"] === true;
+}
+/** Nome da etapa atual (ou o texto gravado em status, como fallback). */
+export function nomeEtapa(a: Row | undefined, etapas: Row[]) {
+  return text(pick(etapaDe(a, etapas), ["descricao", "nome"])) || text(pick(a, A.status)) || "Sem etapa";
+}
+/**
+ * Payload de mudança de etapa: grava todas as variações da coluna de etapa
+ * (filterPayload mantém a real) e sincroniza `status` com o nome da etapa.
+ */
+export function etapaPayload(etapaId: unknown, etapas: Row[] = []) {
   const v = etapaId ?? null;
-  return { kanban_etapa_id: v, kanban_etapas_id: v, etapa_id: v };
+  const payload: Row = { kanban_etapa_id: v, kanban_etapas_id: v, etapa_id: v };
+  const et = v === null ? undefined : etapas.find((e) => text(e["id"]) === text(v));
+  const nome = text(pick(et, ["descricao", "nome"]));
+  if (nome) {
+    payload["status"] = nome;
+    payload["status_atendimento"] = nome;
+    payload["situacao"] = nome;
+  }
+  return payload;
 }

@@ -20,11 +20,10 @@ import { pick, type Row } from "@/lib/row";
 import { filterPayload, useCols } from "@/lib/projetos";
 import { useAudit } from "@/lib/audit";
 import {
-  A, M, STATUS_LABEL, dataDe, fotoPessoa, iniciais, isCliente, isIA, nomePessoa, statusDe, tipoMidia,
-  telefonePessoa,
+  A, M, dataDe, fotoPessoa, iniciais, isCliente, isIA, nomePessoa, tipoMidia,
+  telefonePessoa, etapaHumano, etapaEncerrado, etapaPayload, isEncerrado, nomeEtapa,
 } from "@/lib/atendimentos";
 import { dispararMensagem, marcarEnvio } from "@/lib/atendimentos-envio";
-import { etapaHumano, etapaPayload } from "@/lib/atendimentos";
 import { GravadorAudio } from "./GravadorAudio";
 
 const EMOJIS = "😀 😃 😄 😁 😅 😂 🙂 😉 😊 😍 😘 🤔 😐 😴 😢 😭 😡 👍 👎 👏 🙏 💪 👋 🤝 ✅ ❌ ⚠️ ❤️ 🔥 🎉 ⭐ 📦 📄 📞 💰 🕐 🚀 💬 📍 🙌".split(" ");
@@ -84,7 +83,8 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
 
   const nome = nomePessoa(pessoa);
   const kanban = kanbans.find((k) => text(rowId(k)) === text(pick(atendimento, A.kanban)));
-  const status = statusDe(atendimento);
+  const status = nomeEtapa(atendimento, etapas);
+  const encerrado = isEncerrado(atendimento, etapas);
   const ia = isIA(atendimento);
   const souResponsavel = usuarioId !== undefined && text(pick(atendimento, A.responsavel)) === text(usuarioId);
 
@@ -143,7 +143,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
       const et = etapaHumano(etapas, text(pick(atendimento, A.kanban)));
       const { error: eH } = await supabase
         .from("atendimentos")
-        .update(filterPayload({ modo: "Humano", modo_atendimento: "Humano", usuario_responsavel_id: usuarioId, ...(et ? etapaPayload(rowId(et)) : {}) }, colsAt))
+        .update(filterPayload({ modo: "Humano", modo_atendimento: "Humano", usuario_responsavel_id: usuarioId, ...(et ? etapaPayload(rowId(et), etapas) : {}) }, colsAt))
         .eq("id", id);
       if (eH) console.error(eH);
       else qc.invalidateQueries({ queryKey: ["table", "atendimentos"] });
@@ -188,9 +188,19 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
     });
   }
 
+  async function encerrar() {
+    const et = etapaEncerrado(etapas, text(pick(atendimento, A.kanban)));
+    if (!et) {
+      toast.error('Nenhuma etapa deste quadro está marcada como "Etapa de Encerramento". Marque uma nas configurações do Kanban.');
+      return;
+    }
+    await atualizarAtendimento(etapaPayload(rowId(et), etapas), "Atendimento encerrado.");
+  }
+
   async function assumir() {
+    const et = etapaHumano(etapas, text(pick(atendimento, A.kanban)));
     const ok = await atualizarAtendimento(
-      { modo: "Humano", modo_atendimento: "Humano", usuario_responsavel_id: usuarioId, status_atendimento: "Em atendimento", situacao: "Em atendimento", status: "Em atendimento" },
+      { modo: "Humano", modo_atendimento: "Humano", usuario_responsavel_id: usuarioId, ...(et ? etapaPayload(rowId(et), etapas) : {}) },
       "Você assumiu o atendimento.",
     );
     if (ok && usuarioId !== undefined) {
@@ -214,10 +224,10 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
           <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
             {kanban && <span>{text(pick(kanban, ["nome", "descricao"]))}</span>}
             {instancia && <Badge variant="outline" className="h-5 px-1.5 text-[10px]">{text(pick(instancia, ["nome", "descricao"]))}</Badge>}
-            <Badge variant={status === "encerrado" ? "secondary" : "outline"} className="h-5 px-1.5 text-[10px]">
-              {STATUS_LABEL[status]}
+            <Badge variant={encerrado ? "secondary" : "outline"} className="h-5 px-1.5 text-[10px]">
+              {status}
             </Badge>
-            {ia && status !== "encerrado" && (
+            {ia && !encerrado && (
               <span className="inline-flex items-center gap-1 text-primary"><Bot className="h-3 w-3" /> IA</span>
             )}
           </div>
@@ -225,12 +235,12 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
         <Button variant="outline" size="sm" onClick={() => setMoverAberto(true)} className="hidden sm:inline-flex">
           <MoveRight className="mr-1 h-4 w-4" /> Mover
         </Button>
-        {status !== "encerrado" && (
+        {!encerrado && (
           <Button
             variant="ghost"
             size="sm"
             className="hidden lg:inline-flex"
-            onClick={() => atualizarAtendimento({ status_atendimento: "Encerrado", situacao: "Encerrado", status: "Encerrado" }, "Atendimento encerrado.")}
+            onClick={encerrar}
           >
             <CheckCircle2 className="mr-1 h-4 w-4" /> Encerrar
           </Button>
@@ -250,7 +260,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
       </div>
 
       <footer className="border-t border-border bg-card p-3">
-        {(ia || !souResponsavel) && status !== "encerrado" && (
+        {(ia || !souResponsavel) && !encerrado && (
           <div className="mb-2 flex items-center justify-between gap-2 rounded-md bg-muted px-3 py-2 text-sm">
             <span className="text-muted-foreground">
               {ia ? "A IA está conduzindo esta conversa." : "Outro atendente é o responsável."}
@@ -258,6 +268,15 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
             <Button size="sm" onClick={assumir}><Hand className="mr-1 h-4 w-4" /> Assumir atendimento</Button>
           </div>
         )}
+        {encerrado ? (
+          <div className="flex items-center justify-between gap-2 rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">
+            <span>Atendimento encerrado. Mova para outra etapa para reabrir a conversa.</span>
+            <Button size="sm" variant="outline" onClick={() => setMoverAberto(true)}>
+              <MoveRight className="mr-1 h-4 w-4" /> Reabrir
+            </Button>
+          </div>
+        ) : (
+        <>
         {sugestoes.length > 0 && (
           <div className="mb-2 max-h-48 overflow-y-auto rounded-md border border-border bg-popover">
             {sugestoes.map((n) => (
@@ -324,6 +343,8 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
             <Lock className="h-3 w-3" /> Nota interna (apenas equipe)
           </Label>
         </div>
+        </>
+        )}
       </footer>
 
       <MoverDialog
@@ -333,7 +354,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
         kanbans={kanbans}
         etapas={etapas}
         onSalvar={(kanbanId, etapaId) =>
-          atualizarAtendimento({ kanban_nome_id: kanbanId, kanban_etapa_id: etapaId || null }, "Atendimento movido.").then(
+          atualizarAtendimento({ kanban_nome_id: kanbanId, ...etapaPayload(etapaId || null, etapas) }, "Atendimento movido.").then(
             (ok) => ok && setMoverAberto(false),
           )
         }

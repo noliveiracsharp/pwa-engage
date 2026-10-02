@@ -348,9 +348,14 @@ function KanbanPage() {
       etapaId: string;
       column: string;
     }) => {
+      // Status do atendimento = nome da etapa (fonte única da verdade).
+      const etapa = etapas.find((e) => String(e["id"]) === etapaId);
+      const desc = String(etapa?.["descricao"] ?? etapa?.["nome"] ?? "").trim();
+      const patch: Row = { [column]: etapaId };
+      if (desc) patch["status"] = desc;
       const { error } = await supabase
         .from("atendimentos")
-        .update({ [column]: etapaId })
+        .update(patch)
         .eq("id", id);
       if (error) throw error;
     },
