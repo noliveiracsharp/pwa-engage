@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, ChevronDown, ChevronRight, Pencil, Plus, Settings, Share2, Trash2 } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronRight, Pencil, Plus, Settings, Share2, Trash2, ListChecks, Download } from "lucide-react";
 
 async function compartilhar(projeto: Row) {
   let token = projeto["token_compartilhamento"] as string | null | undefined;
@@ -28,6 +28,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { SearchSelect } from "@/components/data-table/SearchSelect";
 import { StatusDialog } from "@/components/projetos/StatusDialog";
+import { TarefasPadraoDialog, TAREFAS_PADRAO } from "@/components/projetos/TarefasPadraoDialog";
 import { TarefaSheet } from "@/components/projetos/TarefaSheet";
 import { useTableRows, rowId, idColumn, matches } from "@/lib/crud";
 import { useAudit } from "@/lib/audit";
@@ -123,6 +124,7 @@ function Painel({ d, perms, onOpen }: { d: D; perms: Perms; onOpen: (id: string)
     return g;
   }, [d, busca]);
 
+  const [padraoOpen, setPadraoOpen] = useState(false);
   async function excluir(p: Row) {
     const id = String(rowId(p));
     if (d.tarefas.some((t) => String(t[d.tc.projeto]) === id)) { toast.error("Exclua as tarefas do projeto antes."); return; }
@@ -140,6 +142,7 @@ function Painel({ d, perms, onOpen }: { d: D; perms: Perms; onOpen: (id: string)
           <Button variant="outline" size="icon" onClick={() => setStatusOpen(true)} aria-label="Gerenciar status" title="Gerenciar status">
             <Settings className="h-4 w-4" />
           </Button>
+          <Button variant="outline" onClick={() => setPadraoOpen(true)}><ListChecks className="mr-1 h-4 w-4" />Tarefas Padrão</Button>
           {perms.canCreate && <Button onClick={() => setForm("new")}><Plus className="mr-1 h-4 w-4" />Novo projeto</Button>}
         </div>
       </div>
@@ -195,6 +198,7 @@ function Painel({ d, perms, onOpen }: { d: D; perms: Perms; onOpen: (id: string)
           );
         })}
       </div>
+      <TarefasPadraoDialog open={padraoOpen} onOpenChange={setPadraoOpen} perms={perms} />
       <StatusDialog open={statusOpen} onOpenChange={setStatusOpen} perms={perms} projetos={d.projetos} statusCol={d.pc.status} />
       {form && <ProjetoDialog d={d} original={form === "new" ? null : form} onClose={() => setForm(null)} />}
     </div>
@@ -263,6 +267,7 @@ function ProjetoDialog({ d, original, onClose }: { d: D; original: Row | null; o
 }
 
 function Detalhe({ projeto, d, perms, onBack }: { projeto: Row; d: D; perms: Perms; onBack: () => void }) {
+  const { stamp } = useAudit();
   const qc = useQueryClient();
   const pid = String(rowId(projeto));
   const tarefas = d.tarefas.filter((t) => String(t[d.tc.projeto]) === pid)
@@ -275,6 +280,30 @@ function Detalhe({ projeto, d, perms, onBack }: { projeto: Row; d: D; perms: Per
   const tarefaAberta = tarefas.find((t) => String(rowId(t)) === aberta) ?? null;
   const refresh = () => qc.invalidateQueries({ queryKey: ["table", "projetos_tarefas"] });
 
+  const [importando, setImportando] = useState(false);
+  async function importarPadrao() {
+    setImportando(true);
+    try {
+      const { data, error } = await supabase.from(TAREFAS_PADRAO).select("*");
+      if (error) { toast.error(error.message); return; }
+      const modelos = (data ?? []) as Row[];
+      if (!modelos.length) { toast.error("Nenhuma tarefa padrão cadastrada."); return; }
+      const hoje = new Date();
+      const iso = (dt: Date) => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+      const novas = modelos.map((m) => {
+        const fim = new Date(hoje);
+        fim.setDate(fim.getDate() + (Number(m["dias_estimados"]) || 0));
+        return filterPayload(stamp({
+          [d.tc.projeto]: rowId(projeto), [d.tc.nome]: m["nome"], descricao: m["descricao"] ?? null,
+          [d.tc.prio]: m["prioridade"] ?? "Normal", [d.tc.ini]: iso(hoje), [d.tc.fim]: iso(fim),
+        }, true), d.tCols);
+      });
+      const { error: e2 } = await supabase.from("projetos_tarefas").insert(novas);
+      if (e2) { toast.error(e2.message); return; }
+      toast.success(`${novas.length} tarefa(s) importada(s).`);
+      await refresh();
+    } finally { setImportando(false); }
+  }
   async function patch(t: Row, v: Row) {
     const { error } = await supabase.from("projetos_tarefas").update(filterPayload(v, d.tCols)).eq(idColumn(t), rowId(t) as never);
     if (error) { toast.error(error.message); return; }
@@ -296,6 +325,7 @@ function Detalhe({ projeto, d, perms, onBack }: { projeto: Row; d: D; perms: Per
           <p className="text-sm text-muted-foreground">{cli ? nomePessoa(cli) : "Sem cliente"} · {fmtDate(projeto[d.pc.ini])} a {fmtDate(projeto[d.pc.fim])}</p>
         </div>
         <Button variant="outline" onClick={() => compartilhar(projeto)}><Share2 className="mr-1 h-4 w-4" />Compartilhar</Button>
+        {perms.canCreate && <Button variant="outline" onClick={importarPadrao} disabled={importando}><Download className="mr-1 h-4 w-4" />{importando ? "Importando…" : "Importar Tarefas Padrão"}</Button>}
         {perms.canCreate && <Button onClick={() => setNova(true)}><Plus className="mr-1 h-4 w-4" />Nova tarefa</Button>}
       </div>
       <div className="flex items-center gap-3">
