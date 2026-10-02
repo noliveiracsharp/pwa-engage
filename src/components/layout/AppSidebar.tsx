@@ -24,7 +24,7 @@ export function AppSidebar({ open, onNavigate }: Props) {
         {isLoading && <div className="px-3 py-2 text-xs text-muted-foreground">Carregando…</div>}
         {items.map((item) => {
           const Icon = getIcon(item.icon);
-          const active = pathname === item.path || pathname.startsWith(item.path + "/") || (item.path.startsWith("/admin/") && pathname.startsWith("/admin/"));
+          const active = pathname === item.path || pathname.startsWith(item.path + "/") || (item.path === "/admin/planos" && pathname === "/admin/modulos");
           const link = (
             <Link
               key={item.id}

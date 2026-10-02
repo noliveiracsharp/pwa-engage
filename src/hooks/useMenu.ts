@@ -75,7 +75,8 @@ export function useMenu() {
           }))
           .sort((a, b) => a.order - b.order);
         const base = all.length > 0 ? all : FALLBACK;
-        return [...base, { id: "catalogo-saas", label: "Catálogo SaaS", path: "/admin/planos", icon: "store", order: 9999 }];
+        return [...base, { id: "catalogo-saas", label: "Catálogo SaaS", path: "/admin/planos", icon: "store", order: 9999 },
+          { id: "gestao-clientes", label: "Gestão de Clientes", path: "/admin/clientes", icon: "building", order: 10000 }];
       }
       const { data, error } = await supabase
         .from("vw_menu_usuario_perfil")
