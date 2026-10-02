@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, ChevronDown, ChevronRight, Pencil, Plus, Settings, Share2, Trash2, ListChecks, Download } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronRight, Pencil, Plus, Settings, Share2, Trash2, ListChecks, Download, List, Columns3 } from "lucide-react";
 
 async function compartilhar(projeto: Row) {
   let token = projeto["token_compartilhamento"] as string | null | undefined;
@@ -160,6 +160,39 @@ function Painel({ d, perms, onOpen }: { d: D; perms: Perms; onOpen: (id: string)
   }
   const nomeApagar = apagar ? String(apagar[d.pc.nome] ?? "") : "";
 
+  const [modo, setModo] = useState<"lista" | "kanban">("lista");
+  const [arrastando, setArrastando] = useState<string | null>(null);
+  async function moverStatus(projetoId: string, statusId: string) {
+    const p = d.projetos.find((x) => String(rowId(x)) === projetoId);
+    if (!p || statusId === "__sem" || String(p[d.pc.status] ?? "") === statusId) return;
+    qc.setQueryData<Row[]>(["table", "projetos"], (old = []) => old.map((x) => (String(rowId(x)) === projetoId ? { ...x, [d.pc.status]: statusId } : x)));
+    const { error } = await supabase.from("projetos").update({ [d.pc.status]: statusId } as never).eq(idColumn(p), rowId(p) as never);
+    if (error) toast.error(error.message);
+    qc.invalidateQueries({ queryKey: ["table", "projetos"] });
+  }
+  function cardProjeto(p: Row) {
+                    const id = String(rowId(p));
+                    const pr = progresso(d, id);
+                    const cli = d.parceiros.find((x) => String(rowId(x)) === String(p[d.pc.parceiro]));
+                    return (
+                      <div key={id} role="button" draggable={modo === "kanban" && perms.canUpdate} onDragStart={() => setArrastando(id)} onDragEnd={() => setArrastando(null)} tabIndex={0} onClick={() => onOpen(id)} onKeyDown={(e) => e.key === "Enter" && onOpen(id)}
+                        className="group cursor-pointer space-y-2 rounded-md border border-border bg-background p-3 transition-shadow hover:shadow-md">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="truncate font-medium text-foreground">{String(p[d.pc.nome] ?? "Projeto")}</p>
+                            <p className="truncate text-xs text-muted-foreground">{cli ? nomePessoa(cli) : "Sem cliente"}</p>
+                          </div>
+                          <div className="flex opacity-0 transition-opacity group-hover:opacity-100" onClick={(e) => e.stopPropagation()}>
+                            {perms.canUpdate && <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setForm(p)} aria-label="Editar"><Pencil className="h-3.5 w-3.5" /></Button>}
+                            {perms.canDelete && <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => excluir(p)} aria-label="Excluir"><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>}
+                          </div>
+                        </div>
+                        <Progress value={pr.pct} className="h-2" />
+                        <p className="text-xs text-muted-foreground">{pr.ok} de {pr.total} tarefas concluídas · {pr.pct}%</p>
+                      </div>
+                    );
+  }
+
   return (
     <div className="space-y-4">
       <Dialog open={!!apagar} onOpenChange={(v) => { if (!v) setApagar(null); }}>
@@ -190,14 +223,39 @@ function Painel({ d, perms, onOpen }: { d: D; perms: Perms; onOpen: (id: string)
           {perms.canCreate && <Button onClick={() => setForm("new")}><Plus className="mr-1 h-4 w-4" />Novo projeto</Button>}
         </div>
       </div>
-      <Input placeholder="Pesquisar por projeto ou cliente…" value={busca} onChange={(e) => setBusca(e.target.value)} className="max-w-md" />
+      <div className="flex flex-wrap items-center gap-2">
+        <Input placeholder="Pesquisar por projeto ou cliente…" value={busca} onChange={(e) => setBusca(e.target.value)} className="max-w-md" />
+        <div className="flex rounded-md border border-border p-0.5" role="group" aria-label="Modo de visualização">
+          <Button size="sm" variant={modo === "lista" ? "secondary" : "ghost"} onClick={() => setModo("lista")} aria-pressed={modo === "lista"}><List className="mr-1 h-4 w-4" />Lista</Button>
+          <Button size="sm" variant={modo === "kanban" ? "secondary" : "ghost"} onClick={() => setModo("kanban")} aria-pressed={modo === "kanban"}><Columns3 className="mr-1 h-4 w-4" />Kanban</Button>
+        </div>
+      </div>
       {d.isLoading && <p className="text-sm text-muted-foreground">Carregando…</p>}
       {!d.isLoading && grupos.length === 0 && (
         <p className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
           Nenhum status cadastrado. Use a engrenagem para criar os status (ex.: Não iniciado, Em produção).
         </p>
       )}
-      <div className="space-y-3">
+      {modo === "kanban" && (
+        <div className="flex gap-3 overflow-x-auto pb-2">
+          {grupos.map((g) => (
+            <section key={g.id} className="flex w-72 shrink-0 flex-col rounded-lg border border-border bg-card"
+              onDragOver={(e) => { if (arrastando) e.preventDefault(); }}
+              onDrop={() => { if (arrastando) moverStatus(arrastando, g.id); setArrastando(null); }}>
+              <div className="flex items-center gap-2 border-b border-border px-3 py-2">
+                <span className="h-3 w-3 rounded-full border border-border" style={{ background: g.cor || "transparent" }} />
+                <span className="truncate font-semibold text-foreground">{g.nome}</span>
+                <Badge variant="secondary" className="ml-auto">{g.itens.length}</Badge>
+              </div>
+              <div className="flex min-h-24 flex-col gap-2 p-2">
+                {g.itens.map((p) => cardProjeto(p))}
+                {g.itens.length === 0 && <p className="p-2 text-center text-xs text-muted-foreground">Nenhum projeto</p>}
+              </div>
+            </section>
+          ))}
+        </div>
+      )}
+      {modo === "lista" && <div className="space-y-3">
         {grupos.map((g) => {
           const closed = fechados.has(g.id);
           return (
@@ -213,35 +271,14 @@ function Painel({ d, perms, onOpen }: { d: D; perms: Perms; onOpen: (id: string)
               </button>
               {!closed && (
                 <div className="grid gap-3 border-t border-border p-4 sm:grid-cols-2 xl:grid-cols-3">
-                  {g.itens.map((p) => {
-                    const id = String(rowId(p));
-                    const pr = progresso(d, id);
-                    const cli = d.parceiros.find((x) => String(rowId(x)) === String(p[d.pc.parceiro]));
-                    return (
-                      <div key={id} role="button" tabIndex={0} onClick={() => onOpen(id)} onKeyDown={(e) => e.key === "Enter" && onOpen(id)}
-                        className="group cursor-pointer space-y-2 rounded-md border border-border bg-background p-3 transition-shadow hover:shadow-md">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <p className="truncate font-medium text-foreground">{String(p[d.pc.nome] ?? "Projeto")}</p>
-                            <p className="truncate text-xs text-muted-foreground">{cli ? nomePessoa(cli) : "Sem cliente"}</p>
-                          </div>
-                          <div className="flex opacity-0 transition-opacity group-hover:opacity-100" onClick={(e) => e.stopPropagation()}>
-                            {perms.canUpdate && <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setForm(p)} aria-label="Editar"><Pencil className="h-3.5 w-3.5" /></Button>}
-                            {perms.canDelete && <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => excluir(p)} aria-label="Excluir"><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>}
-                          </div>
-                        </div>
-                        <Progress value={pr.pct} className="h-2" />
-                        <p className="text-xs text-muted-foreground">{pr.ok} de {pr.total} tarefas concluídas · {pr.pct}%</p>
-                      </div>
-                    );
-                  })}
+                  {g.itens.map((p) => cardProjeto(p))}
                   {g.itens.length === 0 && <p className="text-sm text-muted-foreground">Nenhum projeto neste status.</p>}
                 </div>
               )}
             </section>
           );
         })}
-      </div>
+      </div>}
       <TarefasPadraoDialog open={padraoOpen} onOpenChange={setPadraoOpen} perms={perms} />
       <StatusDialog open={statusOpen} onOpenChange={setStatusOpen} perms={perms} projetos={d.projetos} statusCol={d.pc.status} />
       {form && <ProjetoDialog d={d} original={form === "new" ? null : form} onClose={() => setForm(null)} />}
