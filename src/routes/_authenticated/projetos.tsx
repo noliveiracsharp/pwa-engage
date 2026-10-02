@@ -267,6 +267,7 @@ function ProjetoDialog({ d, original, onClose }: { d: D; original: Row | null; o
 }
 
 function Detalhe({ projeto, d, perms, onBack }: { projeto: Row; d: D; perms: Perms; onBack: () => void }) {
+  const { stamp } = useAudit();
   const qc = useQueryClient();
   const pid = String(rowId(projeto));
   const tarefas = d.tarefas.filter((t) => String(t[d.tc.projeto]) === pid)
