@@ -34,7 +34,7 @@ import { useTableRows, rowId, idColumn, matches } from "@/lib/crud";
 import { SortableList, salvarOrdem, useSortableRow } from "@/lib/reorder";
 import { useAudit } from "@/lib/audit";
 import { usePagePermissions, type Perms } from "@/hooks/usePagePermissions";
-import { C, doneValue, filterPayload, fmtDate, isDone, nomePessoa, prioridadeClass, progressoCor, resolveCol, tarefaPct, useCols } from "@/lib/projetos";
+import { periodo, C, doneValue, filterPayload, fmtDate, isDone, nomePessoa, prioridadeClass, progressoCor, resolveCol, tarefaPct, useCols } from "@/lib/projetos";
 import type { Row } from "@/lib/row";
 
 export const Route = createFileRoute("/_authenticated/projetos")({
