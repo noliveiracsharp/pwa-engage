@@ -183,7 +183,7 @@ function CatalogoSheet({ open, onOpenChange, config, record }: { open: boolean; 
   );
 
   async function salvar() {
-    if (!values["nome"]?.trim()) return toast.error("Informe o nome.");
+    if (!values["nome"]?.trim()) { toast.error("Informe o nome."); return; }
     setSaving(true);
     try {
       const payload: Row = { status };
