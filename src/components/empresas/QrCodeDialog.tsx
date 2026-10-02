@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { buscarQrCode } from "@/lib/zapi.functions";
 import { RefreshCw } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -13,34 +15,38 @@ export function qrCodeUrl(inst: Row): string {
 
 export function QrCodeDialog({ instancia, onOpenChange }: { instancia: Row | null; onOpenChange: (o: boolean) => void }) {
   const [src, setSrc] = useState("");
+  const [aviso, setAviso] = useState("");
   const [loading, setLoading] = useState(false);
+  const buscar = useServerFn(buscarQrCode);
 
   const carregar = useCallback(async () => {
     if (!instancia) return;
-    const url = `${qrCodeUrl(instancia)}?t=${Date.now()}`;
+    const instanceId = text(pick(instancia, ["instance_id"]));
+    const clientToken = text(pick(instancia, ["client_token"]));
+    const token = text(pick(instancia, ["token"])) || clientToken;
     setLoading(true);
+    setAviso("");
     try {
-      const headers: Record<string, string> = {};
-      const ct = text(pick(instancia, ["client_token"]));
-      if (ct) headers["Client-Token"] = ct;
-      const r = await fetch(url, { headers });
-      const type = r.headers.get("content-type") ?? "";
-      if (type.includes("json")) {
-        const j = (await r.json()) as { value?: string };
-        setSrc(j.value ?? url);
-      } else {
-        setSrc(URL.createObjectURL(await r.blob()));
+      const r = await buscar({ data: { instanceId, token, clientToken: clientToken || undefined } });
+      if (r.status === "qr") setSrc(r.image);
+      else {
+        setSrc("");
+        setAviso(r.status === "connected" ? "Esta instância já está conectada ao WhatsApp!" : `Não foi possível gerar o QR Code: ${r.message}. Verifique o ID e o Token da instância.`);
       }
-    } catch {
-      setSrc(url);
+    } catch (e) {
+      setSrc("");
+      setAviso(e instanceof Error ? e.message : "Erro ao buscar o QR Code.");
     } finally {
       setLoading(false);
     }
-  }, [instancia]);
+  }, [instancia, buscar]);
 
   useEffect(() => {
     if (instancia) void carregar();
-    else setSrc("");
+    else {
+      setSrc("");
+      setAviso("");
+    }
   }, [instancia, carregar]);
 
   return (
@@ -50,8 +56,14 @@ export function QrCodeDialog({ instancia, onOpenChange }: { instancia: Row | nul
           <DialogTitle>Conectar WhatsApp</DialogTitle>
         </DialogHeader>
         <div className="flex flex-col items-center gap-4">
-          <div className="flex h-64 w-64 items-center justify-center rounded-md border bg-background p-2">
-            {src ? <img src={src} alt="QR Code do WhatsApp" className="h-full w-full object-contain" /> : <span className="text-sm text-muted-foreground">Carregando…</span>}
+          <div className="flex h-64 w-64 items-center justify-center rounded-md border bg-background p-2 text-center">
+            {loading ? (
+              <span className="text-sm text-muted-foreground">Carregando…</span>
+            ) : src ? (
+              <img src={src} alt="QR Code do WhatsApp" className="h-full w-full object-contain" />
+            ) : (
+              <span className="text-sm text-muted-foreground">{aviso}</span>
+            )}
           </div>
           <ol className="space-y-1 text-sm text-muted-foreground">
             <li>1. Abra o WhatsApp no seu celular.</li>
