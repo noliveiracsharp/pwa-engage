@@ -739,6 +739,22 @@ function KanbanPage() {
                 />
               </div>
             </div>
+            <div className="flex items-center justify-between gap-4">
+              <Label htmlFor="etapa-edit-ia">Padrão IA</Label>
+              <Switch
+                id="etapa-edit-ia"
+                checked={editForm.is_default_ia}
+                onCheckedChange={(v) => setEditForm({ ...editForm, is_default_ia: v })}
+              />
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <Label htmlFor="etapa-edit-humano">Padrão Equipe</Label>
+              <Switch
+                id="etapa-edit-humano"
+                checked={editForm.is_default_humano}
+                onCheckedChange={(v) => setEditForm({ ...editForm, is_default_humano: v })}
+              />
+            </div>
           </div>
           <DialogFooter className="border-t pt-4 mt-4">
             <Button variant="outline" onClick={() => setEditEtapa(null)}>
