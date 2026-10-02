@@ -15,20 +15,27 @@ import { useAudit } from "@/lib/audit";
 import { filterPayload, PRIORIDADES, prioridadeClass, useCols } from "@/lib/projetos";
 import type { Row } from "@/lib/row";
 import type { Perms } from "@/hooks/usePagePermissions";
+import { SortableList, proximaOrdem, salvarOrdem, useSortableRow } from "@/lib/reorder";
 
 export const TAREFAS_PADRAO = "projetos_tarefas_default";
 const VAZIO = { nome: "", descricao: "", prioridade: "Normal", dias: "1" };
 
 export function TarefasPadraoDialog({ open, onOpenChange, perms }: { open: boolean; onOpenChange: (v: boolean) => void; perms: Perms }) {
   const qc = useQueryClient();
-  const { data: rows = [] } = useTableRows(TAREFAS_PADRAO, open);
+  const { data: rows = [] } = useTableRows(TAREFAS_PADRAO, open, "ordem");
   const { data: cols } = useCols(TAREFAS_PADRAO);
   const { stamp } = useAudit();
   const [edit, setEdit] = useState<Row | "new" | null>(null);
   const [f, setF] = useState(VAZIO);
   const [saving, setSaving] = useState(false);
   const refresh = () => qc.invalidateQueries({ queryKey: ["table", TAREFAS_PADRAO] });
-  const sorted = [...rows].sort((a, b) => String(a["nome"] ?? "").localeCompare(String(b["nome"] ?? ""), "pt-BR"));
+  const sorted = [...rows].sort((a, b) => (Number(a["ordem"]) || 0) - (Number(b["ordem"]) || 0));
+
+  async function reordenar(novo: Row[]) {
+    qc.setQueryData(["table", TAREFAS_PADRAO], novo.map((r, i) => ({ ...r, ordem: i })));
+    try { await salvarOrdem(TAREFAS_PADRAO, novo); }
+    catch (e) { toast.error((e as Error).message); refresh(); }
+  }
 
   function abrir(r: Row | "new") {
     setEdit(r);
@@ -42,7 +49,7 @@ export function TarefasPadraoDialog({ open, onOpenChange, perms }: { open: boole
     if (!f.nome.trim()) { toast.error("Informe o nome."); return; }
     const dias = Math.max(0, Math.round(Number(f.dias) || 0));
     const isNew = edit === "new";
-    const payload = filterPayload(stamp({ nome: f.nome.trim(), descricao: f.descricao.trim() || null, prioridade: f.prioridade, dias_estimados: dias }, isNew), cols);
+    const payload = filterPayload(stamp({ nome: f.nome.trim(), descricao: f.descricao.trim() || null, prioridade: f.prioridade, dias_estimados: dias, ...(isNew ? { ordem: proximaOrdem(rows) } : {}) }, isNew), cols);
     setSaving(true);
     const { error } = isNew
       ? await supabase.from(TAREFAS_PADRAO).insert(payload)
@@ -92,23 +99,33 @@ export function TarefasPadraoDialog({ open, onOpenChange, perms }: { open: boole
           <div className="space-y-3">
             {perms.canCreate && <Button onClick={() => abrir("new")}><Plus className="mr-1 h-4 w-4" />Nova tarefa padrão</Button>}
             {sorted.length === 0 && <p className="py-6 text-center text-sm text-muted-foreground">Nenhuma tarefa padrão cadastrada.</p>}
-            <ul className="divide-y rounded-md border">
-              {sorted.map((r) => (
-                <li key={String(rowId(r))} className="flex items-center gap-3 p-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium text-foreground">{String(r["nome"] ?? "")}</p>
-                    {r["descricao"] ? <p className="truncate text-xs text-muted-foreground">{String(r["descricao"])}</p> : null}
-                  </div>
-                  <Badge className={prioridadeClass(r["prioridade"])}>{String(r["prioridade"] ?? "Normal")}</Badge>
-                  <span className="w-16 text-right text-sm text-muted-foreground">{Number(r["dias_estimados"] ?? 0)} dia(s)</span>
-                  {perms.canUpdate && <Button variant="ghost" size="icon" onClick={() => abrir(r)} aria-label="Editar"><Pencil className="h-4 w-4" /></Button>}
-                  {perms.canDelete && <Button variant="ghost" size="icon" onClick={() => excluir(r)} aria-label="Excluir"><Trash2 className="h-4 w-4" /></Button>}
-                </li>
-              ))}
-            </ul>
+            <SortableList rows={sorted} onReorder={reordenar}>
+              <ul className="divide-y rounded-md border">
+                {sorted.map((r) => (
+                  <PadraoItem key={String(rowId(r))} r={r} perms={perms} onEdit={() => abrir(r)} onDelete={() => excluir(r)} />
+                ))}
+              </ul>
+            </SortableList>
           </div>
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function PadraoItem({ r, perms, onEdit, onDelete }: { r: Row; perms: Perms; onEdit: () => void; onDelete: () => void }) {
+  const { setNodeRef, style, handle } = useSortableRow(String(rowId(r)), !perms.canUpdate);
+  return (
+    <li ref={setNodeRef} style={style} className="flex items-center gap-3 bg-background p-3">
+      {handle}
+      <div className="min-w-0 flex-1">
+        <p className="truncate font-medium text-foreground">{String(r["nome"] ?? "")}</p>
+        {r["descricao"] ? <p className="truncate text-xs text-muted-foreground">{String(r["descricao"])}</p> : null}
+      </div>
+      <Badge className={prioridadeClass(r["prioridade"])}>{String(r["prioridade"] ?? "Normal")}</Badge>
+      <span className="w-16 text-right text-sm text-muted-foreground">{Number(r["dias_estimados"] ?? 0)} dia(s)</span>
+      {perms.canUpdate && <Button variant="ghost" size="icon" onClick={onEdit} aria-label="Editar"><Pencil className="h-4 w-4" /></Button>}
+      {perms.canDelete && <Button variant="ghost" size="icon" onClick={onDelete} aria-label="Excluir"><Trash2 className="h-4 w-4" /></Button>}
+    </li>
   );
 }

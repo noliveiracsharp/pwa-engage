@@ -31,6 +31,7 @@ import { StatusDialog } from "@/components/projetos/StatusDialog";
 import { TarefasPadraoDialog, TAREFAS_PADRAO } from "@/components/projetos/TarefasPadraoDialog";
 import { TarefaSheet } from "@/components/projetos/TarefaSheet";
 import { useTableRows, rowId, idColumn, matches } from "@/lib/crud";
+import { SortableList, salvarOrdem, useSortableRow } from "@/lib/reorder";
 import { useAudit } from "@/lib/audit";
 import { usePagePermissions, type Perms } from "@/hooks/usePagePermissions";
 import { C, doneValue, filterPayload, fmtDate, isDone, nomePessoa, prioridadeClass, resolveCol, useCols } from "@/lib/projetos";
@@ -53,7 +54,7 @@ export const Route = createFileRoute("/_authenticated/projetos")({
 function useProjetoData() {
   const { data: status = [] } = useTableRows("projetos_status");
   const { data: projetos = [], isLoading } = useTableRows("projetos");
-  const { data: tarefas = [] } = useTableRows("projetos_tarefas");
+  const { data: tarefas = [] } = useTableRows("projetos_tarefas", true, "ordem");
   const { data: parceiros = [] } = useTableRows("parceiros");
   const { data: usuarios = [] } = useTableRows("usuarios");
   const { data: pCols } = useCols("projetos");
@@ -271,7 +272,7 @@ function Detalhe({ projeto, d, perms, onBack }: { projeto: Row; d: D; perms: Per
   const qc = useQueryClient();
   const pid = String(rowId(projeto));
   const tarefas = d.tarefas.filter((t) => String(t[d.tc.projeto]) === pid)
-    .sort((a, b) => String(a[d.tc.ini] ?? "9").localeCompare(String(b[d.tc.ini] ?? "9")));
+    .sort((a, b) => (Number(a["ordem"]) || 0) - (Number(b["ordem"]) || 0));
   const [aberta, setAberta] = useState<string | null>(null);
   const [nova, setNova] = useState(false);
   const [busca, setBusca] = useState("");
@@ -280,22 +281,33 @@ function Detalhe({ projeto, d, perms, onBack }: { projeto: Row; d: D; perms: Per
   const tarefaAberta = tarefas.find((t) => String(rowId(t)) === aberta) ?? null;
   const refresh = () => qc.invalidateQueries({ queryKey: ["table", "projetos_tarefas"] });
 
+  const podeArrastar = perms.canUpdate && !busca.trim();
+  async function reordenar(novo: Row[]) {
+    const pos = new Map(novo.map((r, i) => [String(rowId(r)), i]));
+    qc.setQueryData<Row[]>(["table", "projetos_tarefas"], (old = []) =>
+      old.map((r) => (pos.has(String(rowId(r))) ? { ...r, ordem: pos.get(String(rowId(r))) } : r)));
+    try { await salvarOrdem("projetos_tarefas", novo); }
+    catch (e) { toast.error((e as Error).message); refresh(); }
+  }
+
   const [importando, setImportando] = useState(false);
   async function importarPadrao() {
     setImportando(true);
     try {
-      const { data, error } = await supabase.from(TAREFAS_PADRAO).select("*");
+      const { data, error } = await supabase.from(TAREFAS_PADRAO).select("*").order("ordem", { ascending: true });
       if (error) { toast.error(error.message); return; }
       const modelos = (data ?? []) as Row[];
       if (!modelos.length) { toast.error("Nenhuma tarefa padrão cadastrada."); return; }
       const hoje = new Date();
       const iso = (dt: Date) => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
-      const novas = modelos.map((m) => {
+      const base = tarefas.reduce((mx, t) => Math.max(mx, Number(t["ordem"] ?? -1) || 0), -1) + 1;
+      const novas = modelos.map((m, idx) => {
         const fim = new Date(hoje);
         fim.setDate(fim.getDate() + (Number(m["dias_estimados"]) || 0));
         return filterPayload(stamp({
           [d.tc.projeto]: rowId(projeto), [d.tc.nome]: m["nome"], descricao: m["descricao"] ?? null,
           [d.tc.prio]: m["prioridade"] ?? "Normal", [d.tc.ini]: iso(hoje), [d.tc.fim]: iso(fim),
+          ordem: base + (m["ordem"] != null ? Number(m["ordem"]) : idx),
         }, true), d.tCols);
       });
       const { error: e2 } = await supabase.from("projetos_tarefas").insert(novas);
@@ -337,6 +349,7 @@ function Detalhe({ projeto, d, perms, onBack }: { projeto: Row; d: D; perms: Per
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-8" />
               <TableHead className="w-10" />
               <TableHead>Nome da Tarefa</TableHead>
               <TableHead>Responsável</TableHead>
@@ -346,12 +359,13 @@ function Detalhe({ projeto, d, perms, onBack }: { projeto: Row; d: D; perms: Per
               <TableHead className="w-24 text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
+          <SortableList rows={tarefas} onReorder={reordenar}>
           <TableBody>
             {tarefas.filter((t) => matches(t[d.tc.nome], busca)).map((t) => {
               const id = String(rowId(t));
               const done = isDone(t[d.tc.done]);
               return (
-                <TableRow key={id} className="cursor-pointer" onClick={() => setAberta(id)}>
+                <SortRow key={id} id={id} disabled={!podeArrastar} onClick={() => setAberta(id)}>
                   <TableCell onClick={(e) => e.stopPropagation()}>
                     <Checkbox disabled={!perms.canUpdate} checked={done} onCheckedChange={(v) => patch(t, { [d.tc.done]: doneValue(d.tc.done, v === true) })} aria-label="Concluída" />
                   </TableCell>
@@ -372,17 +386,28 @@ function Detalhe({ projeto, d, perms, onBack }: { projeto: Row; d: D; perms: Per
                     <Button size="icon" variant="ghost" onClick={() => setAberta(id)} aria-label="Abrir"><Pencil className="h-4 w-4" /></Button>
                     {perms.canDelete && <Button size="icon" variant="ghost" onClick={() => excluir(t)} aria-label="Excluir"><Trash2 className="h-4 w-4 text-destructive" /></Button>}
                   </TableCell>
-                </TableRow>
+                </SortRow>
               );
             })}
             {tarefas.length === 0 && (
-              <TableRow><TableCell colSpan={7} className="py-8 text-center text-muted-foreground">Nenhuma tarefa neste projeto.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="py-8 text-center text-muted-foreground">Nenhuma tarefa neste projeto.</TableCell></TableRow>
             )}
           </TableBody>
+          </SortableList>
         </Table>
       </div>
       <TarefaSheet tarefa={tarefaAberta} isNew={nova} tarefasDoProjeto={tarefas} projetoId={pid} perms={perms}
         onClose={() => { setAberta(null); setNova(false); }} />
     </div>
+  );
+}
+
+function SortRow({ id, disabled, onClick, children }: { id: string; disabled: boolean; onClick: () => void; children: React.ReactNode }) {
+  const { setNodeRef, style, handle } = useSortableRow(id, disabled);
+  return (
+    <TableRow ref={setNodeRef} style={style} className="cursor-pointer bg-background" onClick={onClick}>
+      <TableCell className="w-8 px-2" onClick={(e) => e.stopPropagation()}>{handle}</TableCell>
+      {children}
+    </TableRow>
   );
 }
