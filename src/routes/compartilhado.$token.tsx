@@ -4,7 +4,7 @@ import { CheckCircle2, Circle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { C, fmtDate, isDone, prioridadeClass, tarefaPct } from "@/lib/projetos";
+import { C, fmtDate, isDone, prioridadeClass, progressoCor, tarefaPct } from "@/lib/projetos";
 import { pick, type Row } from "@/lib/row";
 
 export const Route = createFileRoute("/compartilhado/$token")({
