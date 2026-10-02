@@ -126,3 +126,13 @@ export function progressoCor(pct: number): string {
   const faixa = pct >= 100 ? 100 : pct >= 75 ? 75 : pct >= 50 ? 50 : pct >= 25 ? 25 : 0;
   return `var(--progress-${faixa})`;
 }
+
+/** Período "dd/mm/aaaa a dd/mm/aaaa" só com as datas existentes; vazio se nenhuma. */
+export function periodo(ini: unknown, fim: unknown): string {
+  const a = ini ? fmtDate(ini) : "";
+  const b = fim ? fmtDate(fim) : "";
+  if (a && b) return `${a} a ${b}`;
+  if (a) return `Início ${a}`;
+  if (b) return `Até ${b}`;
+  return "";
+}

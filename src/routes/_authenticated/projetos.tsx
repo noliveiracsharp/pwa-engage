@@ -415,7 +415,7 @@ function Detalhe({ projeto, d, perms, onBack }: { projeto: Row; d: D; perms: Per
         <Button variant="ghost" size="icon" onClick={onBack} aria-label="Voltar"><ArrowLeft className="h-4 w-4" /></Button>
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-2xl font-bold text-foreground">{String(projeto[d.pc.nome] ?? "Projeto")}</h1>
-          <p className="text-sm text-muted-foreground">{cli ? nomePessoa(cli) : "Sem cliente"} · {fmtDate(projeto[d.pc.ini])} a {fmtDate(projeto[d.pc.fim])}</p>
+          <p className="text-sm text-muted-foreground">{cli ? nomePessoa(cli) : "Sem cliente"}{periodo(projeto[d.pc.ini], projeto[d.pc.fim]) ? ` · ${periodo(projeto[d.pc.ini], projeto[d.pc.fim])}` : ""}</p>
         </div>
         <Button variant="outline" onClick={() => compartilhar(projeto)}><Share2 className="mr-1 h-4 w-4" />Compartilhar</Button>
         {perms.canCreate && <Button variant="outline" onClick={importarPadrao} disabled={importando}><Download className="mr-1 h-4 w-4" />{importando ? "Importando…" : "Importar Tarefas Padrão"}</Button>}
