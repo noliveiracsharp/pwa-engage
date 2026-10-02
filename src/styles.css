@@ -84,6 +84,11 @@
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.984 0.003 247.858);
   --success: oklch(0.6 0.17 150);
+  --progress-0: #94a3b8;
+  --progress-25: #38bdf8;
+  --progress-50: #3b82f6;
+  --progress-75: #14b8a6;
+  --progress-100: #22c55e;
   --success-foreground: oklch(0.99 0.005 150);
   --warning: oklch(0.85 0.16 88);
   --warning-foreground: oklch(0.3 0.07 70);

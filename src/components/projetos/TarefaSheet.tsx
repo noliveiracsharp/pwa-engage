@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { useTableRows, rowId, idColumn } from "@/lib/crud";
 import { useAudit } from "@/lib/audit";
-import { C, PRIORIDADES, doneValue, filterPayload, isDone, nomePessoa, prioridadeClass, progressoPayload, resolveCol, tarefaPct, useCols } from "@/lib/projetos";
+import { C, PRIORIDADES, doneValue, filterPayload, isDone, nomePessoa, prioridadeClass, progressoCor, progressoPayload, resolveCol, tarefaPct, useCols } from "@/lib/projetos";
 import type { Row } from "@/lib/row";
 import type { Perms } from "@/hooks/usePagePermissions";
 
@@ -176,9 +176,9 @@ function ProgressoTarefa({ tarefa, tarefaId, doneCol, tCols, readOnly }: { taref
     <section className="space-y-2 rounded-lg border border-border p-3">
       <div className="flex items-center justify-between">
         <h3 className="font-semibold text-foreground">Progresso</h3>
-        <span className="text-sm font-semibold text-foreground">{mostrado}%</span>
+        <span className="text-sm font-semibold" style={{ color: progressoCor(mostrado) }}>{mostrado}%</span>
       </div>
-      <Progress value={mostrado} className="h-2.5" />
+      <Progress value={mostrado} indicatorColor={progressoCor(mostrado)} className="h-2.5 bg-muted" />
       <div className="flex flex-wrap gap-2">
         {[0, 25, 50, 75, 100].map((v) => (
           <Button key={v} size="sm" variant={mostrado === v ? "default" : "outline"} disabled={travado} onClick={() => gravar(v)}>{v}%</Button>

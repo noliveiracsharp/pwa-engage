@@ -120,3 +120,9 @@ export function progressoPayload(pct: number, anterior: number): Row {
   else if (anterior >= 100) p["situacao"] = "Em andamento";
   return p;
 }
+
+/** Cor da escala de progresso (0/25/50/75/100) como variável de tema. */
+export function progressoCor(pct: number): string {
+  const faixa = pct >= 100 ? 100 : pct >= 75 ? 75 : pct >= 50 ? 50 : pct >= 25 ? 25 : 0;
+  return `var(--progress-${faixa})`;
+}
