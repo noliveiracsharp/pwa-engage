@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, QrCode, Trash2 } from "lucide-react";
+import { QrCodeDialog } from "@/components/empresas/QrCodeDialog";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -106,6 +107,7 @@ function ChildTable({ config, empresa, perms = FULL }: { config: ChildConfig; em
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [editing, setEditing] = useState<Row | null>(null);
   const [adding, setAdding] = useState(false);
+  const [qrInst, setQrInst] = useState<Row | null>(null);
 
   const { data: rows = [], isError } = useQuery({
     queryKey: ["child", config.table, text(empresaId)],
@@ -239,6 +241,16 @@ function ChildTable({ config, empresa, perms = FULL }: { config: ChildConfig; em
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-1">
+                {config.table === "empresas_instancias" && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!text(pick(row, ["instance_id"])) || !text(pick(row, ["client_token"]))}
+                    onClick={() => setQrInst(row)}
+                  >
+                    <QrCode className="mr-1 h-4 w-4" /> Conectar WhatsApp
+                  </Button>
+                )}
                 {perms.canUpdate && (
                   <Button variant="ghost" size="icon" aria-label="Editar" onClick={() => startEditing(row)}>
                     <Pencil className="h-4 w-4" />
@@ -349,6 +361,7 @@ function ChildTable({ config, empresa, perms = FULL }: { config: ChildConfig; em
       </div>
       </>
       )}
+      <QrCodeDialog instancia={qrInst} onOpenChange={(o) => !o && setQrInst(null)} />
     </div>
   );
 }
