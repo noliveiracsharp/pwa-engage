@@ -15,9 +15,14 @@ import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/components/theme-provider";
 import { supabase } from "@/integrations/supabase/client";
 import { pick } from "@/lib/row";
+import { useTableRows, rowId } from "@/lib/crud";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Building2 } from "lucide-react";
 
 export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) {
-  const { usuario, empresa, user } = useAuth();
+  const { usuario, empresa, user, isMaster, empresaContextoId, setEmpresaContexto } = useAuth();
+  const { data: empresas = [] } = useTableRows("empresas", isMaster);
+  const ativas = empresas.filter((e) => e["status"] !== false && e["ativo"] !== false);
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -49,6 +54,27 @@ export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) 
       </div>
 
       <div className="flex items-center gap-1">
+        {isMaster && (
+          <Select
+            value={empresaContextoId ?? String(empresa ? rowId(empresa) ?? "" : "")}
+            onValueChange={(v) => {
+              setEmpresaContexto(v);
+              queryClient.invalidateQueries();
+            }}
+          >
+            <SelectTrigger className="mr-1 h-9 w-[180px] sm:w-[240px]" aria-label="Contexto da Empresa" title="Contexto da Empresa">
+              <Building2 className="mr-1 h-4 w-4 shrink-0 text-muted-foreground" />
+              <SelectValue placeholder="Contexto da Empresa" />
+            </SelectTrigger>
+            <SelectContent>
+              {ativas.map((e) => (
+                <SelectItem key={String(rowId(e))} value={String(rowId(e))}>
+                  {pick<string>(e, ["nome_fantasia", "nome", "razao_social"], "Empresa")}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
         <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Alternar tema">
           {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
         </Button>
