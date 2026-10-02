@@ -129,7 +129,8 @@ function KanbanPage() {
   const [editForm, setEditForm] = useState({ descricao: "", status: true });
 
   useEffect(() => {
-    if (!kanbanId && kanbans.length > 0) setKanbanId(String(kanbans[0]!["id"]));
+    const valido = kanbans.some((k) => String(k["id"]) === kanbanId);
+    if (!valido) setKanbanId(kanbans.length > 0 ? String(kanbans[0]!["id"]) : "");
   }, [kanbans, kanbanId]);
 
   const boardEtapas = useMemo(
