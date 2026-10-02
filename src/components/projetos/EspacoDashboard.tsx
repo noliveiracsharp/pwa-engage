@@ -85,7 +85,7 @@ export function EspacoDashboard({ espaco, espacos, projetos, tarefas, status, pc
       }
       for (const p of ps) {
         const fim = String(p[pc.fim] ?? "").slice(0, 10);
-        if (projDone(p)) { if (!fim || fim >= hoje || true) noPrazo++; }
+        if (projDone(p)) noPrazo++;
         else if (fim && fim < hoje) atraso++;
         else ativos++;
       }
