@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, Check, Pencil, Plus, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Bot, Check, Pencil, Plus, Trash2, Users, X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -94,6 +95,8 @@ export function KanbanConfigDialog({
   const [novaEtapa, setNovaEtapa] = useState("");
   const [editId, setEditId] = useState<string | null>(null);
   const [editDesc, setEditDesc] = useState("");
+  const [editIA, setEditIA] = useState(false);
+  const [editHum, setEditHum] = useState(false);
   const [funcaoId, setFuncaoId] = useState("");
   const [sel, setSel] = useState<CampoCardTipado[]>([]);
 
