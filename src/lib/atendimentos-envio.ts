@@ -4,6 +4,12 @@ import { pick, type Row } from "@/lib/row";
 
 const digitos = (v: unknown) => text(v).replace(/\D/g, "");
 
+/** Só dígitos; adiciona 55 quando vier apenas DDD + número (10 ou 11 dígitos). */
+export function sanitizarTelefone(v: unknown): string {
+  const phone = digitos(v);
+  return phone.length === 10 || phone.length === 11 ? `55${phone}` : phone;
+}
+
 type Envio = {
   instancia: Row | undefined;
   mensagemId: unknown;
@@ -20,7 +26,8 @@ export async function dispararMensagem(e: Envio): Promise<boolean> {
   const inst = e.instancia;
   if (!inst) throw new Error("Instância não encontrada.");
   const tipoEnvio = text(pick(inst, ["tipo_envio"])) || "zapi_direto";
-  const phone = digitos(e.telefone);
+  const phone = sanitizarTelefone(e.telefone);
+  if (!phone) throw new Error("Contato sem telefone.");
 
   if (tipoEnvio === "n8n_webhook") {
     const url = text(pick(inst, ["n8n_webhook_url"]));
@@ -48,8 +55,10 @@ export async function dispararMensagem(e: Envio): Promise<boolean> {
     return true;
   }
 
-  const base = text(pick(inst, ["url", "url_api", "endpoint"])).replace(/\/$/, "");
-  if (!base) throw new Error("URL da Z-API não configurada.");
+  const instanceId = text(pick(inst, ["instance_id"]));
+  const token = text(pick(inst, ["token"]));
+  if (!instanceId || !token) throw new Error("Instance ID ou token da Z-API não configurados.");
+  const base = `https://api.z-api.io/instances/${instanceId}/token/${token}`;
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   const clientToken = text(pick(inst, ["client_token"]));
   if (clientToken) headers["Client-Token"] = clientToken;
@@ -62,17 +71,20 @@ export async function dispararMensagem(e: Envio): Promise<boolean> {
     else if (t === "video") { endpoint = "send-video"; body = { phone, video: e.midiaUrl, caption: e.texto }; }
     else {
       const ext = (e.nomeArquivo ?? e.midiaUrl).split(".").pop()?.split("?")[0] || "pdf";
-      endpoint = `send-document/${ext}`;
+      endpoint = `send-document/${ext}`; // a Z-API exige a extensão no caminho
       body = { phone, document: e.midiaUrl, fileName: e.nomeArquivo };
     }
   }
   const r = await fetch(`${base}/${endpoint}`, { method: "POST", headers, body: JSON.stringify(body) });
-  if (!r.ok) throw new Error(`Z-API respondeu ${r.status}`);
+  if (!r.ok) {
+    const detalhe = await r.text().catch(() => "");
+    throw new Error(`Z-API respondeu ${r.status}${detalhe ? `: ${detalhe.slice(0, 200)}` : ""}`);
+  }
   return true;
 }
 
 /** Atualiza status_envio da mensagem (ignora se a coluna não existir). */
-export async function marcarEnvio(mensagemId: unknown, status: "enviado" | "erro") {
+export async function marcarEnvio(mensagemId: unknown, status: "enviado" | "falha") {
   if (mensagemId == null) return;
   await supabase.from("atendimentos_mensagem").update({ status_envio: status } as never).eq("id", mensagemId as never);
 }
