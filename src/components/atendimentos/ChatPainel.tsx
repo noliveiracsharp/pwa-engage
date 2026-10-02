@@ -20,11 +20,10 @@ import { pick, type Row } from "@/lib/row";
 import { filterPayload, useCols } from "@/lib/projetos";
 import { useAudit } from "@/lib/audit";
 import {
-  A, M, STATUS_LABEL, dataDe, fotoPessoa, iniciais, isCliente, isIA, nomePessoa, statusDe, tipoMidia,
-  telefonePessoa,
+  A, M, dataDe, fotoPessoa, iniciais, isCliente, isIA, nomePessoa, tipoMidia,
+  telefonePessoa, etapaHumano, etapaEncerrado, etapaPayload, isEncerrado, nomeEtapa,
 } from "@/lib/atendimentos";
 import { dispararMensagem, marcarEnvio } from "@/lib/atendimentos-envio";
-import { etapaHumano, etapaPayload } from "@/lib/atendimentos";
 import { GravadorAudio } from "./GravadorAudio";
 
 const EMOJIS = "😀 😃 😄 😁 😅 😂 🙂 😉 😊 😍 😘 🤔 😐 😴 😢 😭 😡 👍 👎 👏 🙏 💪 👋 🤝 ✅ ❌ ⚠️ ❤️ 🔥 🎉 ⭐ 📦 📄 📞 💰 🕐 🚀 💬 📍 🙌".split(" ");
