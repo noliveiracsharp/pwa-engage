@@ -136,6 +136,16 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
       return;
     }
     setTexto("");
+    // Handoff silencioso: humano respondeu numa conversa da IA.
+    if (!interna && isIA(atendimento)) {
+      const et = etapaHumano(etapas, text(pick(atendimento, A.kanban)));
+      const { error: eH } = await supabase
+        .from("atendimentos")
+        .update(filterPayload({ modo: "Humano", modo_atendimento: "Humano", usuario_responsavel_id: usuarioId, ...(et ? etapaPayload(rowId(et)) : {}) }, colsAt))
+        .eq("id", id);
+      if (eH) console.error(eH);
+      else qc.invalidateQueries({ queryKey: ["table", "atendimentos"] });
+    }
     if (!interna) {
       const mid = (salva as Row | null)?.["id"];
       try {
