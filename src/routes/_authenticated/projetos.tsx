@@ -34,7 +34,7 @@ import { useTableRows, rowId, idColumn, matches } from "@/lib/crud";
 import { SortableList, salvarOrdem, useSortableRow } from "@/lib/reorder";
 import { useAudit } from "@/lib/audit";
 import { usePagePermissions, type Perms } from "@/hooks/usePagePermissions";
-import { C, doneValue, filterPayload, fmtDate, isDone, nomePessoa, prioridadeClass, resolveCol, tarefaPct, useCols } from "@/lib/projetos";
+import { C, doneValue, filterPayload, fmtDate, isDone, nomePessoa, prioridadeClass, progressoCor, resolveCol, tarefaPct, useCols } from "@/lib/projetos";
 import type { Row } from "@/lib/row";
 
 export const Route = createFileRoute("/_authenticated/projetos")({
@@ -452,7 +452,7 @@ function Detalhe({ projeto, d, perms, onBack }: { projeto: Row; d: D; perms: Per
                   </TableCell>
                   <TableCell className={done ? "text-muted-foreground line-through" : "font-medium"}>
                     {String(t[d.tc.nome] ?? "")}
-                    <div className="mt-1 flex items-center gap-2"><Progress value={tarefaPct(t, d.tc.done)} className="h-1 w-24" /><span className="text-xs text-muted-foreground">{tarefaPct(t, d.tc.done)}%</span></div>
+                    <div className="mt-1 flex items-center gap-2"><Progress value={tarefaPct(t, d.tc.done)} indicatorColor={progressoCor(tarefaPct(t, d.tc.done))} className="h-1 w-24 bg-muted" /><span className="text-xs text-muted-foreground">{tarefaPct(t, d.tc.done)}%</span></div>
                   </TableCell>
                   <TableCell onClick={(e) => e.stopPropagation()}>
                     <Select disabled={!perms.canUpdate} value={String(t[d.tc.resp] ?? "none")} onValueChange={(v) => patch(t, { [d.tc.resp]: v === "none" ? null : v })}>
