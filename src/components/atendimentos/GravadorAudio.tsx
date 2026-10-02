@@ -38,7 +38,7 @@ export function GravadorAudio({ disabled, onGravado }: { disabled?: boolean; onG
       rec.onstop = () => {
         const tipo = rec.mimeType || mime || "audio/webm";
         const ext = tipo.includes("ogg") ? "ogg" : tipo.includes("mp4") ? "m4a" : "webm";
-        const blob = new Blob(chunks.current, { type: tipo.split(";")[0] });
+        const blob = new Blob(chunks.current, { type: tipo.split(";")[0] ?? tipo });
         const enviar = enviarRef.current;
         limpar();
         if (enviar && blob.size) onGravado(new File([blob], `audio-${Date.now()}.${ext}`, { type: blob.type }));
