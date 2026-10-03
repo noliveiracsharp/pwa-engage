@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { GestaoClientes } from "@/components/admin/GestaoClientes";
 
 export const Route = createFileRoute("/_authenticated/admin/clientes")({
+  staticData: { sitemap: false },
   head: () => ({
     meta: [
       { title: "Gestão de Clientes — Backoffice" },

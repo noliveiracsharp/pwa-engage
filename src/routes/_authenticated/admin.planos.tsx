@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { CatalogoSaaS, planosConfig } from "@/components/admin/CatalogoSaaS";
 
 export const Route = createFileRoute("/_authenticated/admin/planos")({
+  staticData: { sitemap: false },
   head: () => ({
     meta: [
       { title: "Planos Base — Catálogo SaaS" },

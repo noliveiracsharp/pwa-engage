@@ -8,6 +8,7 @@ import { C, fmtDate, isDone, periodo, prioridadeClass, progressoCor, tarefaPct }
 import { pick, type Row } from "@/lib/row";
 
 export const Route = createFileRoute("/compartilhado/$token")({
+  staticData: { sitemap: false },
   ssr: false,
   head: () => ({
     meta: [

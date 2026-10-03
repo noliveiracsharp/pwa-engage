@@ -22,6 +22,7 @@ import { useNotificacoesChat } from "@/hooks/useNotificacoesChat";
 import { AvaliacaoSelo } from "@/components/atendimentos/Pesquisa";
 
 export const Route = createFileRoute("/_authenticated/atendimentos")({
+  staticData: { sitemap: false },
   validateSearch: (search: Record<string, unknown>) => ({
     id: typeof search["id"] === "string" ? search["id"] : undefined,
   }),

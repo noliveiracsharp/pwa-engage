@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { CatalogoSaaS, modulosConfig } from "@/components/admin/CatalogoSaaS";
 
 export const Route = createFileRoute("/_authenticated/admin/modulos")({
+  staticData: { sitemap: false },
   head: () => ({
     meta: [
       { title: "Módulos Adicionais — Catálogo SaaS" },

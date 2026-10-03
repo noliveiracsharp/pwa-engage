@@ -27,6 +27,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { PasswordFields } from "@/components/usuarios/PasswordFields";
 
 export const Route = createFileRoute("/_authenticated/usuarios")({
+  staticData: { sitemap: false },
   head: () => ({
     meta: [
       { title: "Usuários — Atende.ai" },

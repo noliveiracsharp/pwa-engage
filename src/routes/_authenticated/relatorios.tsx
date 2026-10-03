@@ -31,6 +31,7 @@ import { labelAmigavel, normalizarColunas } from "@/lib/orcamento-kanban";
 import { pick, type Row } from "@/lib/row";
 
 export const Route = createFileRoute("/_authenticated/relatorios")({
+  staticData: { sitemap: false },
   head: () => ({
     meta: [
       { title: "Relatórios — Atende.ai" },

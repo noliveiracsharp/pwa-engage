@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/portal")({
+  staticData: { sitemap: true },
   ssr: false,
   head: () => ({
     meta: [
@@ -159,7 +160,7 @@ function Historico({ chamado, telefone, onClose }: { chamado: Chamado | null; te
             return (
               <div key={m.id} className={cn("flex", cli ? "justify-end" : "justify-start")}>
                 <div className={cn("max-w-[80%] rounded-lg px-3 py-2 text-sm", cli ? "bg-primary text-primary-foreground" : "bg-muted text-foreground")}>
-                  {url && m.tipo_midia === "imagem" && <img src={url} alt="Imagem" className="mb-1 max-h-60 rounded" />}
+                  {url && m.tipo_midia === "imagem" && <img src={url} alt={m.nome_arquivo ? `Imagem enviada: ${m.nome_arquivo}` : "Imagem enviada na conversa do chamado"} className="mb-1 max-h-60 rounded" />}
                   {url && m.tipo_midia === "audio" && <audio controls src={url} className="mb-1 max-w-full" />}
                   {url && m.tipo_midia === "video" && <video controls src={url} className="mb-1 max-h-60 rounded" />}
                   {url && m.tipo_midia === "documento" && (

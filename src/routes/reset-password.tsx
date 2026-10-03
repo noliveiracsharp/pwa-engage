@@ -7,10 +7,12 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/reset-password")({
+  staticData: { sitemap: false },
   ssr: false,
   head: () => ({
     meta: [
       { title: "Redefinir senha — Atende.ai" },
+      { name: "robots", content: "noindex" },
       { name: "description", content: "Defina uma nova senha para sua conta no Atende.ai." },
       { property: "og:title", content: "Redefinir senha — Atende.ai" },
       { property: "og:description", content: "Defina uma nova senha para sua conta no Atende.ai." },

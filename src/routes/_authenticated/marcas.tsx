@@ -3,6 +3,7 @@ import { ApoioCrud } from "@/components/itens/ApoioCrud";
 import { marcaConfig } from "@/components/itens/apoio-config";
 
 export const Route = createFileRoute("/_authenticated/marcas")({
+  staticData: { sitemap: false },
   head: () => ({
     meta: [
       { title: "Marcas — Atende.ai" },

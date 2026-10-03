@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import loginHero from "@/assets/login-hero.jpg";
 
 export const Route = createFileRoute("/login")({
+  staticData: { sitemap: true },
   ssr: false,
   head: () => ({
     meta: [

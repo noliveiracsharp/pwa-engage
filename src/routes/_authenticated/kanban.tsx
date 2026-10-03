@@ -48,6 +48,7 @@ import { cn } from "@/lib/utils";
 import { formatPhoneDisplay } from "@/lib/input-masks";
 
 export const Route = createFileRoute("/_authenticated/kanban")({
+  staticData: { sitemap: false },
   head: () => ({
     meta: [
       { title: "Kanban — Atende.ai" },
