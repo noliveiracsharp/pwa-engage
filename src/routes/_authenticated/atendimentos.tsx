@@ -111,7 +111,7 @@ function AtendimentosPage() {
   const [rapido, setRapido] = useState<Rapido>("todos");
   const [busca, setBusca] = useState("");
   const [painel, setPainel] = useState(true);
-  const [lista, setLista] = useState(true);
+  const [listaAberta, setLista] = useState(true);
   const [novoAberto, setNovoAberto] = useState(false);
 
   const pessoasMap = useMemo(() => byId(pessoas), [pessoas]);
@@ -160,7 +160,7 @@ function AtendimentosPage() {
   return (
     <div className="-m-4 flex h-[calc(100vh-4rem)] overflow-hidden border-border bg-card sm:-m-6">
       {/* Coluna 1 */}
-      <aside className={cn("flex w-full flex-col border-r border-border md:w-80 lg:w-96", ativo && (lista ? "hidden md:flex" : "hidden"))}>
+      <aside className={cn("flex w-full flex-col border-r border-border md:w-80 lg:w-96", ativo && (listaAberta ? "hidden md:flex" : "hidden"))}>
         <div className="space-y-2 border-b border-border p-3">
           <div className="flex gap-2">
             <Button className="flex-1" onClick={() => setNovoAberto(true)}>
@@ -304,7 +304,7 @@ function AtendimentosPage() {
         </div>
       </aside>
 
-      {ativo && !lista && (
+      {ativo && !listaAberta && (
         <button type="button" onClick={() => setLista(true)} aria-label="Mostrar conversas" title="Mostrar conversas"
           className="hidden w-10 shrink-0 flex-col items-center gap-2 border-r border-border bg-card pt-3 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground md:flex">
           <PanelLeftOpen className="h-5 w-5" />
