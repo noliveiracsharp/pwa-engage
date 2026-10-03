@@ -91,6 +91,12 @@ export function LandingPage() {
     setAberto(true);
   };
 
+  const testar = () => {
+    setMenu(false);
+    if (planos.length === 1) abrirPlano(planos[0]);
+    else scrollTo("planos");
+  };
+
   const go = (id: string) => {
     setMenu(false);
     scrollTo(id);
@@ -118,7 +124,7 @@ export function LandingPage() {
             <Button variant="outline" asChild>
               <Link to={logado ? "/dashboard" : "/login"}>{logado ? "Ir para o Painel" : "Acessar Sistema"}</Link>
             </Button>
-            <Button onClick={() => go("planos")}>Testar Grátis</Button>
+            <Button onClick={testar}>Testar Grátis</Button>
           </div>
           <div className="flex items-center gap-1 md:hidden">
             <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Alternar tema">
@@ -140,7 +146,7 @@ export function LandingPage() {
               <Button variant="outline" asChild>
                 <Link to={logado ? "/dashboard" : "/login"}>{logado ? "Ir para o Painel" : "Acessar Sistema"}</Link>
               </Button>
-              <Button onClick={() => go("planos")}>Testar Grátis</Button>
+              <Button onClick={testar}>Testar Grátis</Button>
             </div>
           </div>
         )}
@@ -169,7 +175,7 @@ export function LandingPage() {
                 Ver Planos e Começar <ArrowRight className="h-4 w-4" />
               </Button>
               <Button size="lg" variant="outline" asChild className="gap-2">
-                <a href={waLink("Olá! Gostaria de falar com um consultor sobre o Atende.ai.")} target="_blank" rel="noreferrer">
+                <a href={waLink("Olá, gostaria de tirar dúvidas sobre os planos do Atende.ai")} target="_blank" rel="noreferrer">
                   <MessageCircle className="h-4 w-4" /> Falar com Consultor
                 </a>
               </Button>
@@ -253,7 +259,7 @@ export function LandingPage() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <div className={planos.length === 1 ? "mx-auto flex max-w-lg justify-center [&>*]:w-full" : "grid gap-6 md:grid-cols-2 lg:grid-cols-3"}>
               {planos.map((p, i) => {
                 const destaque = planos.length >= 3 && i === 1;
                 return (
@@ -276,7 +282,7 @@ export function LandingPage() {
                     </CardContent>
                     <CardFooter>
                       <Button className="w-full" variant={destaque ? "default" : "outline"} onClick={() => abrirPlano(p)}>
-                        Contratar Plano
+                        Começar Agora
                       </Button>
                     </CardFooter>
                   </Card>
@@ -302,7 +308,7 @@ export function LandingPage() {
           <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
             <Button size="lg" variant="secondary" onClick={() => go("planos")}>Ver Planos</Button>
             <Button size="lg" variant="outline" asChild className="border-primary-foreground/40 bg-transparent text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground">
-              <a href={waLink("Olá! Quero saber mais sobre o Atende.ai.")} target="_blank" rel="noreferrer">Falar com Consultor</a>
+              <a href={waLink("Olá, gostaria de tirar dúvidas sobre os planos do Atende.ai")} target="_blank" rel="noreferrer">Falar com Consultor</a>
             </Button>
           </div>
         </div>
