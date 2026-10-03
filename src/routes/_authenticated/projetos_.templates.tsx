@@ -14,6 +14,7 @@ import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/projetos_/templates")({
+  staticData: { sitemap: false },
   head: () => ({
     meta: [
       { title: "Templates de Tarefas — Atende.ai" },

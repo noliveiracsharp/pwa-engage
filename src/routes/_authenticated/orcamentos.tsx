@@ -24,6 +24,7 @@ import { pick, type Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/orcamentos")({
+  staticData: { sitemap: false },
   head: () => ({
     meta: [
       { title: "Orçamentos — Atende.ai" },

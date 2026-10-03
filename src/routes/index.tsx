@@ -6,6 +6,7 @@ const DESC =
   "Centralize atendimentos WhatsApp com IA, gerencie funis de vendas em Kanban, calcule orçamentos com juros automáticos e organize projetos.";
 
 export const Route = createFileRoute("/")({
+  staticData: { sitemap: true },
   ssr: false,
   head: () => ({
     meta: [

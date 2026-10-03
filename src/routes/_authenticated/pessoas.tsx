@@ -26,6 +26,7 @@ import { usePagePermissions, subtabKind } from "@/hooks/usePagePermissions";
 import { formatCpfCnpj, formatPhoneDisplay, matchesAny } from "@/lib/input-masks";
 
 export const Route = createFileRoute("/_authenticated/pessoas")({
+  staticData: { sitemap: false },
   head: () => ({
     meta: [
       { title: "Pessoas — Atende.ai" },

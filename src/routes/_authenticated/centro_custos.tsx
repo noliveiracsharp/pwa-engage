@@ -3,6 +3,7 @@ import { ApoioCrud } from "@/components/itens/ApoioCrud";
 import { centroCustoConfig } from "@/components/itens/apoio-config";
 
 export const Route = createFileRoute("/_authenticated/centro_custos")({
+  staticData: { sitemap: false },
   head: () => ({
     meta: [
       { title: "Centros de Custo — Atende.ai" },

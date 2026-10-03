@@ -41,6 +41,7 @@ import { periodo, C, doneValue, filterPayload, fmtDate, isDone, nomePessoa, prio
 import type { Row } from "@/lib/row";
 
 export const Route = createFileRoute("/_authenticated/projetos")({
+  staticData: { sitemap: false },
   head: () => ({
     meta: [
       { title: "Projetos — Atende.ai" },

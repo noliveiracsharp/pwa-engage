@@ -14,6 +14,7 @@ import { pick, type Row } from "@/lib/row";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 
 export const Route = createFileRoute("/_authenticated/funcoes")({
+  staticData: { sitemap: false },
   head: () => ({
     meta: [
       { title: "Funções — Atende.ai" },

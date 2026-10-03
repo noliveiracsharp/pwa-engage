@@ -12,6 +12,7 @@ import { useAudit } from "@/lib/audit";
 import { formatCpfCnpj, formatPhoneDisplay, matchesAny } from "@/lib/input-masks";
 
 export const Route = createFileRoute("/_authenticated/parceiros")({
+  staticData: { sitemap: false },
   head: () => ({
     meta: [
       { title: "Parceiros de Negócios — Atende.ai" },

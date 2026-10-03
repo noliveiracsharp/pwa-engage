@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as PortalRouteImport } from './routes/portal'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as AuthenticatedAtendimentosRouteImport } from './routes/_authenticated/atendimentos'
 import { Route as AuthenticatedCentro_custosRouteImport } from './routes/_authenticated/centro_custos'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
@@ -58,6 +59,11 @@ const PortalRoute = PortalRouteImport.update({
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedAtendimentosRoute =
@@ -178,6 +184,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/portal': typeof PortalRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/atendimentos': typeof AuthenticatedAtendimentosRoute
   '/centro_custos': typeof AuthenticatedCentro_custosRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -205,6 +212,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/portal': typeof PortalRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/atendimentos': typeof AuthenticatedAtendimentosRoute
   '/centro_custos': typeof AuthenticatedCentro_custosRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -234,6 +242,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/portal': typeof PortalRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/_authenticated/atendimentos': typeof AuthenticatedAtendimentosRoute
   '/_authenticated/centro_custos': typeof AuthenticatedCentro_custosRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
@@ -263,6 +272,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/portal'
     | '/reset-password'
+    | '/sitemap.xml'
     | '/atendimentos'
     | '/centro_custos'
     | '/dashboard'
@@ -290,6 +300,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/portal'
     | '/reset-password'
+    | '/sitemap.xml'
     | '/atendimentos'
     | '/centro_custos'
     | '/dashboard'
@@ -318,6 +329,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/portal'
     | '/reset-password'
+    | '/sitemap.xml'
     | '/_authenticated/atendimentos'
     | '/_authenticated/centro_custos'
     | '/_authenticated/dashboard'
@@ -347,6 +359,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   PortalRoute: typeof PortalRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   CompartilhadoTokenRoute: typeof CompartilhadoTokenRoute
 }
 
@@ -385,6 +398,13 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/atendimentos': {
@@ -592,6 +612,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   PortalRoute: PortalRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   CompartilhadoTokenRoute: CompartilhadoTokenRoute,
 }
 export const routeTree = rootRouteImport

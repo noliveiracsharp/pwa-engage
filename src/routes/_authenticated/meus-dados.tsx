@@ -7,6 +7,17 @@ import { pick } from "@/lib/row";
 import { formatCpfCnpj } from "@/lib/input-masks";
 
 export const Route = createFileRoute("/_authenticated/meus-dados")({
+  staticData: { sitemap: false },
+  head: () => ({
+    meta: [
+      { title: "Meus Dados — Atende.ai" },
+      { name: "description", content: "Seus dados de cadastro, cargo e perfil de acesso no Atende.ai." },
+      { property: "og:title", content: "Meus Dados — Atende.ai" },
+      { property: "og:description", content: "Seus dados de cadastro, cargo e perfil de acesso no Atende.ai." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: MeusDados,
 });
 

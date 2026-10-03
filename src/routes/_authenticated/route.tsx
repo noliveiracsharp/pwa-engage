@@ -6,6 +6,7 @@ import { useRealtimeRefresh } from "@/hooks/useRealtime";
 import { getAllowedPaths, isPathAllowed } from "@/lib/access";
 
 export const Route = createFileRoute("/_authenticated")({
+  staticData: { sitemap: "exclude-subtree" },
   ssr: false,
   beforeLoad: async ({ location }) => {
     const { data, error } = await supabase.auth.getUser();

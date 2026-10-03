@@ -3,6 +3,7 @@ import { ApoioCrud } from "@/components/itens/ApoioCrud";
 import { unidadeConfig } from "@/components/itens/apoio-config";
 
 export const Route = createFileRoute("/_authenticated/unid_medida")({
+  staticData: { sitemap: false },
   head: () => ({
     meta: [
       { title: "Unidades de Medida — Atende.ai" },
