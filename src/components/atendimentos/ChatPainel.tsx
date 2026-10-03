@@ -82,6 +82,31 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
     fimRef.current?.scrollIntoView({ block: "end" });
   }, [mensagens.length, id]);
 
+  // Presença em tempo real (digitando / gravando) via broadcast "chat_presence".
+  const [presenca, setPresenca] = useState<"composing" | "recording" | null>(null);
+  useEffect(() => {
+    setPresenca(null);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const canal = supabase
+      .channel("chat_presence")
+      .on("broadcast", { event: "*" }, (msg) => {
+        const p = ((msg as { payload?: Row }).payload ?? {}) as Row;
+        if (text(p["atendimento_id"]) !== text(id)) return;
+        const st = text(p["status"]).toLowerCase();
+        clearTimeout(timer);
+        if (st === "composing" || st === "recording") {
+          setPresenca(st);
+          timer = setTimeout(() => setPresenca(null), 5000);
+        } else setPresenca(null);
+      })
+      .subscribe();
+    return () => { clearTimeout(timer); supabase.removeChannel(canal); };
+  }, [id]);
+
+  useEffect(() => {
+    if (presenca) fimRef.current?.scrollIntoView({ block: "end" });
+  }, [presenca]);
+
   // Zera não lidas ao abrir a conversa.
   useEffect(() => {
     const col = A.naoLidas.find((k) => k in atendimento);
@@ -276,6 +301,16 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
       </div>
 
       <footer className="border-t border-border bg-card p-3">
+        {presenca && (
+          <div className="mb-2 flex items-center gap-2 px-1 text-xs italic text-primary" aria-live="polite">
+            <span className="flex gap-0.5">
+              {[0, 150, 300].map((d) => (
+                <span key={d} className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary" style={{ animationDelay: `${d}ms` }} />
+              ))}
+            </span>
+            {presenca === "recording" ? "Cliente está a gravar áudio..." : "Cliente está a escrever..."}
+          </div>
+        )}
         {(ia || !souResponsavel) && !encerrado && (
           <div className="mb-2 flex items-center justify-between gap-2 rounded-md bg-muted px-3 py-2 text-sm">
             <span className="text-muted-foreground">
