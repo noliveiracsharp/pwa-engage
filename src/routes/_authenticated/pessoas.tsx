@@ -7,7 +7,20 @@ import { RecordSheet, type Field } from "@/components/data-table/RecordSheet";
 import { StarRating } from "@/components/data-table/StarRating";
 import { StatusBadge } from "@/components/data-table/StatusBadge";
 import { PessoaCampos } from "@/components/pessoas/PessoaCampos";
-import { rowId, useDeleteRecord, useSaveRecord, useTableRows } from "@/lib/crud";
+import { idColumn, rowId, useSaveRecord, useTableRows } from "@/lib/crud";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { pick, type Row } from "@/lib/row";
 import { usePagePermissions, subtabKind } from "@/hooks/usePagePermissions";
 import { formatCpfCnpj, formatPhoneDisplay, matchesAny } from "@/lib/input-masks";
@@ -45,7 +58,44 @@ function PessoasPage() {
   const { data: rows = [], isLoading } = useTableRows("pessoas");
   const save = useSaveRecord("pessoas");
   const perms = usePagePermissions("/pessoas");
-  const remove = useDeleteRecord("pessoas");
+  const queryClient = useQueryClient();
+  const [toDelete, setToDelete] = useState<Row | null>(null);
+  const [removing, setRemoving] = useState(false);
+  const inativar = async () => {
+    if (!toDelete) return;
+    setRemoving(true);
+    const key = idColumn(toDelete);
+    const { error } = await supabase.from("pessoas").update({ status: false }).eq(key, toDelete[key] as never);
+    setRemoving(false);
+    if (error) return void toast.error(error.message);
+    queryClient.invalidateQueries({ queryKey: ["table", "pessoas"] });
+    toast.success("Contato inativado.");
+    setToDelete(null);
+  };
+  const excluir = async () => {
+    if (!toDelete) return;
+    setRemoving(true);
+    try {
+      const key = idColumn(toDelete);
+      const id = toDelete[key] as never;
+      await supabase.from("pessoas_camposperson").delete().eq("pessoa_id", id);
+      const { error } = await supabase.from("pessoas").delete().eq(key, id);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["table", "pessoas"] });
+      toast.success("Contato excluído.");
+      setToDelete(null);
+    } catch (e) {
+      const err = e as { code?: string; message?: string };
+      const fk = err.code === "23503" || /foreign key|violates|viola/i.test(err.message ?? "");
+      toast.error(
+        fk
+          ? "Este contato possui atendimentos ou outros registros associados e não pode ser excluído. Recomendamos inativá-lo."
+          : err.message || "Não foi possível excluir.",
+      );
+    } finally {
+      setRemoving(false);
+    }
+  };
   const [open, setOpen] = useState(false);
   const [record, setRecord] = useState<Row | null>(null);
   const [f, setF] = useState({ busca: "", status: "todos", nota: "todas" });
@@ -158,7 +208,8 @@ function PessoasPage() {
           setOpen(true);
         }}
         editReadOnly={!perms.canUpdate}
-        onDelete={perms.canDelete ? (row) => remove.mutate(row) : undefined}
+        onDelete={perms.canDelete ? (row) => setToDelete(row) : undefined}
+        skipDeleteConfirm
         filters={
           <>
             <FilterInput
@@ -222,6 +273,27 @@ function PessoasPage() {
           );
         }}
       />
+
+      <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover contato</AlertDialogTitle>
+            <AlertDialogDescription>
+              Deseja inativar este contato ou excluí-lo permanentemente?
+              {toDelete && <strong className="block pt-2">{String(pick(toDelete, ["nome", "email"], ""))}</strong>}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <Button variant="outline" disabled={removing} onClick={inativar}>
+              Inativar
+            </Button>
+            <Button variant="destructive" disabled={removing} onClick={excluir}>
+              Excluir permanentemente
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
