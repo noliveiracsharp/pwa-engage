@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Bot, MessageSquare, Plus, Search, Users } from "lucide-react";
+import { Bot, MessageSquare, PanelLeftClose, PanelLeftOpen, Plus, Search, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NovoAtendimentoDialog } from "@/components/atendimentos/NovoAtendimentoDialog";
 import { supabase } from "@/integrations/supabase/client";
@@ -111,6 +111,7 @@ function AtendimentosPage() {
   const [rapido, setRapido] = useState<Rapido>("todos");
   const [busca, setBusca] = useState("");
   const [painel, setPainel] = useState(true);
+  const [listaAberta, setLista] = useState(true);
   const [novoAberto, setNovoAberto] = useState(false);
 
   const pessoasMap = useMemo(() => byId(pessoas), [pessoas]);
@@ -159,11 +160,18 @@ function AtendimentosPage() {
   return (
     <div className="-m-4 flex h-[calc(100vh-4rem)] overflow-hidden border-border bg-card sm:-m-6">
       {/* Coluna 1 */}
-      <aside className={cn("flex w-full flex-col border-r border-border md:w-80 lg:w-96", ativo && "hidden md:flex")}>
+      <aside className={cn("flex w-full flex-col border-r border-border md:w-80 lg:w-96", ativo && (listaAberta ? "hidden md:flex" : "hidden"))}>
         <div className="space-y-2 border-b border-border p-3">
-          <Button className="w-full" onClick={() => setNovoAberto(true)}>
-            <Plus className="mr-1 h-4 w-4" /> Iniciar Atendimento
-          </Button>
+          <div className="flex gap-2">
+            <Button className="flex-1" onClick={() => setNovoAberto(true)}>
+              <Plus className="mr-1 h-4 w-4" /> Iniciar Atendimento
+            </Button>
+            {ativo && (
+              <Button variant="outline" size="icon" className="hidden shrink-0 md:inline-flex" onClick={() => setLista(false)} aria-label="Ocultar conversas" title="Ocultar conversas">
+                <PanelLeftClose className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
           <NovoAtendimentoDialog
             open={novoAberto}
             onOpenChange={setNovoAberto}
@@ -295,6 +303,14 @@ function AtendimentosPage() {
           })}
         </div>
       </aside>
+
+      {ativo && !listaAberta && (
+        <button type="button" onClick={() => setLista(true)} aria-label="Mostrar conversas" title="Mostrar conversas"
+          className="hidden w-10 shrink-0 flex-col items-center gap-2 border-r border-border bg-card pt-3 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground md:flex">
+          <PanelLeftOpen className="h-5 w-5" />
+          <span className="text-[11px] font-medium [writing-mode:vertical-rl]">Conversas</span>
+        </button>
+      )}
 
       {/* Coluna 2 */}
       {ativo ? (
