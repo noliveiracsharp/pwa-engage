@@ -16,9 +16,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ChatPainel } from "@/components/atendimentos/ChatPainel";
 import { ContatoPainel } from "@/components/atendimentos/ContatoPainel";
 import {
-  A, M, corEtiqueta, dataDe, fotoPessoa, horaCurta, iniciais, isEncerrado, isIA, nomePessoa, telefonePessoa,
+  A, M, corEtiqueta, dataDe, fotoPessoa, horaCurta, iniciais, isCliente, isEncerrado, isIA, nomePessoa, telefonePessoa,
 } from "@/lib/atendimentos";
 import { useNotificacoesChat } from "@/hooks/useNotificacoesChat";
+import { AvaliacaoSelo } from "@/components/atendimentos/Pesquisa";
 
 export const Route = createFileRoute("/_authenticated/atendimentos")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -115,6 +116,10 @@ function AtendimentosPage() {
   const pessoasMap = useMemo(() => byId(pessoas), [pessoas]);
   const instMap = useMemo(() => byId(instancias), [instancias]);
   const etMap = useMemo(() => byId(etiquetas), [etiquetas]);
+  const autores = useMemo(
+    () => new Map(usuarios.map((u) => [text(rowId(u)), text(pick(u, ["nome", "name", "email"])).split(" ")[0] ?? ""])),
+    [usuarios],
+  );
 
   const lista = useMemo(() => {
     const permitidos = new Set(kanbans.map((k) => text(rowId(k))));
@@ -235,6 +240,17 @@ function AtendimentosPage() {
             const naoLidas = Number(pick(a, A.naoLidas) ?? 0);
             const ets = vincEt.filter((v) => text(v["atendimento_id"]) === aid).map((v) => etMap.get(text(pick(v, ["etiqueta_id", "etiquetas_id"])))).filter(Boolean) as Row[];
             const interna = ult?.["msg_interna"] === true;
+            const enc = isEncerrado(a, etapas);
+            let autorUlt = "";
+            if (ult) {
+              if (isCliente(ult)) autorUlt = nome.split(" ")[0] ?? "";
+              else {
+                const uid = text(pick(ult, M.usuario));
+                if (uid && uid === usuarioId) autorUlt = "Você";
+                else if (uid) autorUlt = autores.get(uid) || "Equipe";
+                else autorUlt = /ia|bot/i.test(text(pick(ult, ["remetente_tipo"]))) ? "IA" : "Sistema";
+              }
+            }
             return (
               <button
                 key={aid}
@@ -254,14 +270,19 @@ function AtendimentosPage() {
                   <div className="flex items-center justify-between gap-2">
                     <p className="flex min-w-0 items-center gap-1 truncate text-sm text-muted-foreground">
                       {isIA(a) && <Bot className="h-3.5 w-3.5 shrink-0 text-primary" />}
-                      <span className="truncate">{interna ? "📝 Nota interna" : text(pick(ult, M.texto)) || "—"}</span>
+                      <span className="truncate">
+                        {autorUlt && <span className="font-medium text-foreground/80">{autorUlt}: </span>}
+                        {interna ? "📝 Nota interna" : text(pick(ult, M.texto)) || "—"}
+                      </span>
                     </p>
                     {naoLidas > 0 && (
                       <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-semibold text-primary-foreground">{naoLidas}</span>
                     )}
                   </div>
-                  <div className="mt-1 flex flex-wrap gap-1">
+                  <div className="mt-1 flex flex-wrap items-center gap-1">
                     {inst && <Badge variant="outline" className="h-5 px-1.5 text-[10px]">{text(pick(inst, ["nome", "descricao"]))}</Badge>}
+                    {enc && <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">Encerrado</Badge>}
+                    {enc && <AvaliacaoSelo atendimento={a} encerrado />}
                     {ets.map((e) => (
                       <span key={text(rowId(e))} className="rounded-full px-1.5 py-0.5 text-[10px] text-white" style={{ backgroundColor: corEtiqueta(e) }}>
                         {text(pick(e, ["descricao", "nome"]))}
