@@ -80,7 +80,7 @@ function Login({ onEntrar }: { onEntrar: (c: Cliente) => void }) {
   }
   return (
     <Card className="mx-auto max-w-sm">
-      <CardHeader><CardTitle>Acompanhe seus chamados</CardTitle></CardHeader>
+      <CardHeader><h1 className="text-2xl font-semibold leading-none tracking-tight text-foreground">Acompanhe seus chamados</h1></CardHeader>
       <CardContent>
         <form onSubmit={enviar} className="space-y-4">
           <div className="space-y-1">
