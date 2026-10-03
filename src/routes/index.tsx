@@ -1,34 +1,23 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
-import { Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { createFileRoute } from "@tanstack/react-router";
+import { LandingPage } from "@/components/landing/LandingPage";
+
+const TITLE = "Atende.ai — WhatsApp, Orçamentos e Projetos em uma só plataforma";
+const DESC =
+  "Centralize atendimentos WhatsApp com IA, gerencie funis de vendas em Kanban, calcule orçamentos com juros automáticos e organize projetos.";
 
 export const Route = createFileRoute("/")({
   ssr: false,
-  beforeLoad: async () => {
-    const { data } = await supabase.auth.getSession();
-    throw redirect({ to: data.session ? "/dashboard" : "/login", replace: true });
-  },
   head: () => ({
     meta: [
-      { title: "Atende.ai — Suporte e atendimento multicanal" },
-      {
-        name: "description",
-        content: "Plataforma multiempresa de suporte e atendimento multicanal com IA, kanban e chat.",
-      },
-      { property: "og:title", content: "Atende.ai — Suporte e atendimento multicanal" },
-      {
-        property: "og:description",
-        content: "Plataforma multiempresa de suporte e atendimento multicanal com IA, kanban e chat.",
-      },
+      { title: TITLE },
+      { name: "description", content: DESC },
+      { property: "og:title", content: TITLE },
+      { property: "og:description", content: DESC },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://pwa-engage.lovable.app/" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
+    links: [{ rel: "canonical", href: "https://pwa-engage.lovable.app/" }],
   }),
-  component: Index,
+  component: LandingPage,
 });
-
-function Index() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <Loader2 className="h-6 w-6 animate-spin text-primary" />
-    </div>
-  );
-}
