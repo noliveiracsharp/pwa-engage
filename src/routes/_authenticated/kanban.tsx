@@ -126,7 +126,7 @@ function KanbanPage() {
   const [dragId, setDragId] = useState<string | null>(null);
   const [dragEtapaId, setDragEtapaId] = useState<string | null>(null);
   const [editEtapa, setEditEtapa] = useState<Row | null>(null);
-  const [editForm, setEditForm] = useState({ descricao: "", status: true, is_default_ia: false, is_default_humano: false });
+  const [editForm, setEditForm] = useState({ descricao: "", status: true, is_default_ia: false, is_default_humano: false, is_default_encerrado: false });
 
   useEffect(() => {
     const valido = kanbans.some((k) => String(k["id"]) === kanbanId);
@@ -275,7 +275,7 @@ function KanbanPage() {
   });
 
   const updateEtapa = useMutation({
-    mutationFn: async (value: { id: string; descricao: string; status: boolean; is_default_ia: boolean; is_default_humano: boolean }) => {
+    mutationFn: async (value: { id: string; descricao: string; status: boolean; is_default_ia: boolean; is_default_humano: boolean; is_default_encerrado: boolean }) => {
       const { error } = await supabase
         .from("kanban_etapas")
         .update({
@@ -283,6 +283,7 @@ function KanbanPage() {
           status: value.status,
           is_default_ia: value.is_default_ia === true,
           is_default_humano: value.is_default_humano === true,
+          is_default_encerrado: value.is_default_encerrado === true,
         } as never)
         .eq("id", value.id);
       if (error) throw error;
@@ -508,6 +509,7 @@ function KanbanPage() {
                         status: String(pick(etapa, ["status"], "true")) !== "false",
                         is_default_ia: etapa["is_default_ia"] === true,
                         is_default_humano: etapa["is_default_humano"] === true,
+                        is_default_encerrado: etapa["is_default_encerrado"] === true,
                       });
                       setEditEtapa(etapa);
                     }}
@@ -758,6 +760,14 @@ function KanbanPage() {
                 id="etapa-edit-humano"
                 checked={editForm.is_default_humano}
                 onCheckedChange={(v) => setEditForm({ ...editForm, is_default_humano: v })}
+              />
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <Label htmlFor="etapa-edit-encerrado">Etapa de Encerramento</Label>
+              <Switch
+                id="etapa-edit-encerrado"
+                checked={editForm.is_default_encerrado}
+                onCheckedChange={(v) => setEditForm({ ...editForm, is_default_encerrado: v })}
               />
             </div>
           </div>
