@@ -93,7 +93,7 @@ export function LandingPage() {
 
   const testar = () => {
     setMenu(false);
-    if (planos.length === 1) abrirPlano(planos[0]);
+    if (planos.length === 1) abrirPlano(planos[0] ?? null);
     else scrollTo("planos");
   };
 
