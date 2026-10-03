@@ -377,7 +377,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
 }
 
 function VistoLeitura({ status }: { status: string }) {
-  if (status === "lido") return <CheckCheck className="h-3.5 w-3.5 text-info" aria-label="Lido" />;
+  if (status === "lido") return <CheckCheck className="h-3.5 w-3.5 text-lido" aria-label="Lido" />;
   if (status === "entregue") return <CheckCheck className="h-3.5 w-3.5 opacity-70" aria-label="Entregue" />;
   if (status === "enviado") return <Check className="h-3.5 w-3.5 opacity-70" aria-label="Enviado" />;
   return null;
