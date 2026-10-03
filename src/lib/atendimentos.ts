@@ -137,5 +137,7 @@ export function etapaPayload(etapaId: unknown, etapas: Row[] = []) {
     payload["status_atendimento"] = nome;
     payload["situacao"] = nome;
   }
+  // Etapa ativa (reabertura/movimento): zera a avaliação anterior.
+  if (et && et["is_default_encerrado"] !== true) payload["nota"] = null;
   return payload;
 }
