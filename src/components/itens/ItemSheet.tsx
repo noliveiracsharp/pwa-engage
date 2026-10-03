@@ -81,14 +81,8 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, canCre
   const { data: marcas = [] } = useTableRows("itens_marcas");
   const { data: itens = [] } = useTableRows("itens");
   const { empresaId } = useAudit();
-  const centroTree = useMemo(
-    () =>
-      buildTree(
-        centros.filter((r) => empresaId === undefined || r["empresa_id"] == null || String(r["empresa_id"]) === String(empresaId)),
-        "centro_custo_pai_id",
-      ),
-    [centros, empresaId],
-  );
+  void empresaId;
+  const centroTree = useMemo(() => buildTree(centros, "centro_custo_pai_id"), [centros]);
 
   /** Próximo código sequencial por tipo: Produto → P00001…, Serviço → S00001… */
   const nextCodigoFor = (tipo: string) => {
