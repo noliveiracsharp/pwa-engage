@@ -2,8 +2,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-  ArrowLeft, Bot, Check, CheckCheck, FileText, Hand, Lock, MoveRight, Paperclip, PanelRightClose, PanelRightOpen, Send, Smile, CheckCircle2, Loader2, Users,
+  ArrowLeft, Bot, Check, CheckCheck, FileText, Hand, Lock, MoreVertical, MoveRight, Paperclip, PanelRightClose, PanelRightOpen, Send, Smile, CheckCircle2, Loader2, Trash2, Users,
 } from "lucide-react";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -63,7 +66,11 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
   const { data: mensagens = [], isLoading } = useQuery({
     queryKey: ["table", "atendimentos_mensagem", "at", id],
     queryFn: async (): Promise<Row[]> => {
-      const { data, error } = await supabase.from("atendimentos_mensagem").select("*").eq("atendimento_id", id);
+      const { data, error } = await supabase
+        .from("atendimentos_mensagem")
+        .select("*")
+        .eq("atendimento_id", id)
+        .eq("oculta_para_atendente", false);
       if (error) throw error;
       return ((data ?? []) as Row[]).sort(
         (a, b) => (dataDe(a, M.data)?.getTime() ?? 0) - (dataDe(b, M.data)?.getTime() ?? 0),
@@ -395,16 +402,70 @@ function Balao({ m, autores }: { m: Row; autores: Map<string, string> }) {
   const hora = dataDe(m, M.data)?.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
   const uid = text(pick(m, M.usuario));
   const autor = cliente ? "" : (uid && autores.get(uid)) || (interna ? "" : "Sistema");
+  const qc = useQueryClient();
+  const [menu, setMenu] = useState(false);
+  const [apagando, setApagando] = useState(false);
+  const mid = rowId(m);
+  const tirarDaTela = () => {
+    qc.setQueriesData<Row[]>({ queryKey: ["table", "atendimentos_mensagem", "at"] }, (old) =>
+      Array.isArray(old) ? old.filter((x) => text(rowId(x)) !== text(mid)) : old,
+    );
+    qc.invalidateQueries({ queryKey: ["table", "atendimentos_mensagem", "ultimas"] });
+  };
+  async function apagarParaMim() {
+    setApagando(true);
+    const { error } = await supabase.from("atendimentos_mensagem").update({ oculta_para_atendente: true }).eq("id", mid as string);
+    setApagando(false);
+    if (error) { toast.error(`Não foi possível apagar: ${error.message}`); return; }
+    tirarDaTela();
+    toast.success("Mensagem apagada para você.");
+  }
+  async function apagarParaTodos() {
+    setApagando(true);
+    const { data, error } = await supabase.functions.invoke("zapi-delete-msg", {
+      body: { id: mid, message_id_zapi: m["message_id_zapi"] ?? null },
+    });
+    setApagando(false);
+    const falha = error?.message || (data && typeof data === "object" && (data as Row)["error"] ? text((data as Row)["error"]) : "");
+    if (falha) { toast.error(`Não foi possível apagar para todos: ${falha}`); return; }
+    tirarDaTela();
+    toast.success("Mensagem apagada para todos.");
+  }
+  const equipe = !cliente;
   return (
     <div className={cn("flex", cliente ? "justify-start" : "justify-end")}>
       <div
+        onContextMenu={equipe ? (e) => { e.preventDefault(); setMenu(true); } : undefined}
         className={cn(
-          "max-w-[85%] rounded-lg px-3 py-2 text-sm shadow-sm sm:max-w-[70%]",
+          "group relative max-w-[85%] rounded-lg px-3 py-2 text-sm shadow-sm sm:max-w-[70%]",
           interna && "border border-warning/40 bg-warning/15 text-foreground",
           !interna && cliente && "rounded-tl-none bg-muted text-foreground",
           !interna && !cliente && "rounded-tr-none bg-primary text-primary-foreground",
+          equipe && "pr-7",
         )}
       >
+        {equipe && (
+          <DropdownMenu open={menu} onOpenChange={setMenu}>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                aria-label="Opções da mensagem"
+                disabled={apagando}
+                className="absolute right-1 top-1 rounded p-0.5 opacity-60 hover:opacity-100 sm:opacity-0 sm:group-hover:opacity-100 data-[state=open]:opacity-100"
+              >
+                {apagando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MoreVertical className="h-3.5 w-3.5" />}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={apagarParaMim}><Trash2 className="mr-2 h-4 w-4" /> Apagar para mim</DropdownMenuItem>
+              {!interna && (
+                <DropdownMenuItem onSelect={apagarParaTodos} className="text-destructive focus:text-destructive">
+                  <Trash2 className="mr-2 h-4 w-4" /> Apagar para todos
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
         {interna && (
           <p className="mb-1 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-warning">
             <Lock className="h-3 w-3" /> Nota interna{autor ? ` · ${autor}` : ""}

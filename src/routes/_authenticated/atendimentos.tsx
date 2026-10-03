@@ -85,7 +85,7 @@ function AtendimentosPage() {
   const { data: ultimas = new Map<string, Row>() } = useQuery({
     queryKey: ["table", "atendimentos_mensagem", "ultimas"],
     queryFn: async () => {
-      const { data } = await supabase.from("atendimentos_mensagem").select("*").order("id", { ascending: false }).limit(800);
+      const { data } = await supabase.from("atendimentos_mensagem").select("*").eq("oculta_para_atendente", false).order("id", { ascending: false }).limit(800);
       const map = new Map<string, Row>();
       for (const m of (data ?? []) as Row[]) {
         const k = text(pick(m, M.atendimento));
