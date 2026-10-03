@@ -2,6 +2,7 @@ import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { FileText, Settings2 } from "lucide-react";
 import { KanbanConfigDialog } from "@/components/kanban/KanbanConfigDialog";
 import { SituacaoBadge } from "@/components/orcamentos/SituacaoBadge";
+import { AvaliacaoSelo, usePesquisaSatisfacao } from "@/components/atendimentos/Pesquisa";
 import { formatBRL } from "@/lib/orcamentos";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -339,6 +340,7 @@ function KanbanPage() {
     reorderEtapas.mutate(list);
   };
 
+  const pesquisa = usePesquisaSatisfacao();
   const moveCard = useMutation({
     mutationFn: async ({
       id,
@@ -395,7 +397,18 @@ function KanbanPage() {
     const column =
       ["kanban_etapa_id", "etapa_id", "id_etapa"].find((k) => k in card) ?? "kanban_etapa_id";
     if (String(card[column] ?? "") === etapaId) return;
-    moveCard.mutate({ id: dragId, etapaId, column });
+    const alvo = etapas.find((e) => String(e["id"]) === etapaId);
+    const atual = etapas.find((e) => String(e["id"]) === String(card[column] ?? ""));
+    const id = dragId;
+    if (alvo?.["is_default_encerrado"] === true && atual?.["is_default_encerrado"] !== true) {
+      void pesquisa.pedir({
+        atendimento: card,
+        pessoa: pessoaById.get(String(pick(card, ["pessoas_id", "pessoa_id"]) ?? "")),
+        executar: () => moveCard.mutateAsync({ id, etapaId, column }).then(() => true, () => false),
+      });
+      return;
+    }
+    moveCard.mutate({ id, etapaId, column });
   };
 
   return (
@@ -592,6 +605,9 @@ function KanbanPage() {
                             {formatPhoneDisplay(text(pick(pessoa, ["telefone"], ""))) ||
                               text(pick(card, ["status"], "Sem status"))}
                           </p>
+                          <div className="mt-1">
+                            <AvaliacaoSelo atendimento={card} encerrado={etapa["is_default_encerrado"] === true} />
+                          </div>
                         </div>
                       </button>
                     );
@@ -671,6 +687,7 @@ function KanbanPage() {
         </DialogContent>
       </Dialog>
 
+      {pesquisa.dialog}
       <Dialog open={newEtapa} onOpenChange={setNewEtapa}>
         <DialogContent>
           <DialogHeader>
