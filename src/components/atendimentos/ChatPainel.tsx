@@ -416,7 +416,7 @@ function Balao({ m, autores }: { m: Row; autores: Map<string, string> }) {
     setApagando(true);
     const { error } = await supabase.from("atendimentos_mensagem").update({ oculta_para_atendente: true }).eq("id", mid as string);
     setApagando(false);
-    if (error) return toast.error(`Não foi possível apagar: ${error.message}`);
+    if (error) { toast.error(`Não foi possível apagar: ${error.message}`); return; }
     tirarDaTela();
     toast.success("Mensagem apagada para você.");
   }
@@ -427,7 +427,7 @@ function Balao({ m, autores }: { m: Row; autores: Map<string, string> }) {
     });
     setApagando(false);
     const falha = error?.message || (data && typeof data === "object" && (data as Row)["error"] ? text((data as Row)["error"]) : "");
-    if (falha) return toast.error(`Não foi possível apagar para todos: ${falha}`);
+    if (falha) { toast.error(`Não foi possível apagar para todos: ${falha}`); return; }
     tirarDaTela();
     toast.success("Mensagem apagada para todos.");
   }
