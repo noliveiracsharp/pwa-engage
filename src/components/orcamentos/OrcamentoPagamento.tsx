@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { CalendarClock, ReceiptText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { num } from "@/lib/orcamentos";
+import { useAudit } from "@/lib/audit";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
