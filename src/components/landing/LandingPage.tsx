@@ -87,6 +87,10 @@ export function LandingPage() {
   });
 
   const abrirPlano = (p: Plano | null) => {
+    if (p) {
+      window.location.assign(`/checkout?planoId=${encodeURIComponent(p.id)}`);
+      return;
+    }
     setPlano(p);
     setAberto(true);
   };
