@@ -21,6 +21,7 @@ const DESC = "Cadastre sua empresa e escolha a forma de pagamento para assinar o
 
 export const Route = createFileRoute("/checkout")({
   ssr: false,
+  staticData: { sitemap: false },
   validateSearch: (s: Record<string, unknown>) => ({ planoId: typeof s["planoId"] === "string" ? s["planoId"] : "" }),
   head: () => ({
     meta: [
@@ -40,8 +41,8 @@ type Plano = { id: string; nome: string; valor_mensal: number | null; usuarios_i
 type Metodo = "cartao" | "pix" | "boleto";
 type Resultado =
   | { tipo: "cartao" }
-  | { tipo: "pix"; qrCode?: string; copiaCola?: string }
-  | { tipo: "boleto"; url?: string };
+  | { tipo: "pix"; qrCode?: string | undefined; copiaCola?: string | undefined }
+  | { tipo: "boleto"; url?: string | undefined };
 
 const passo1Schema = z.object({
   nome_empresa: z.string().trim().min(2, "Informe o nome da empresa").max(150),
