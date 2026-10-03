@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Bot, MessageSquare, Plus, Search } from "lucide-react";
+import { Bot, MessageSquare, Plus, Search, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NovoAtendimentoDialog } from "@/components/atendimentos/NovoAtendimentoDialog";
 import { supabase } from "@/integrations/supabase/client";
