@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-  ArrowLeft, Bot, FileText, Hand, Lock, MoveRight, Paperclip, PanelRightClose, PanelRightOpen, Send, Smile, CheckCircle2, Loader2,
+  ArrowLeft, Bot, Check, CheckCheck, FileText, Hand, Lock, MoveRight, Paperclip, PanelRightClose, PanelRightOpen, Send, Smile, CheckCircle2, Loader2, Users,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -225,7 +225,10 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
           <AvatarFallback>{iniciais(nome)}</AvatarFallback>
         </Avatar>
         <div className="min-w-0 flex-1">
-          <p className="truncate font-semibold text-foreground">{nome}</p>
+          <p className="flex items-center gap-1.5 truncate font-semibold text-foreground">
+            {pessoa?.["is_group"] === true && <Users className="h-4 w-4 shrink-0 text-muted-foreground" aria-label="Grupo" />}
+            <span className="truncate">{nome}</span>
+          </p>
           <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
             {kanban && <span>{text(pick(kanban, ["nome", "descricao"]))}</span>}
             {instancia && <Badge variant="outline" className="h-5 px-1.5 text-[10px]">{text(pick(instancia, ["nome", "descricao"]))}</Badge>}
@@ -373,7 +376,17 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
   );
 }
 
+function VistoLeitura({ status }: { status: string }) {
+  if (status === "lido") return <CheckCheck className="h-3.5 w-3.5 text-lido" aria-label="Lido" />;
+  if (status === "entregue") return <CheckCheck className="h-3.5 w-3.5 opacity-70" aria-label="Entregue" />;
+  if (status === "enviado") return <Check className="h-3.5 w-3.5 opacity-70" aria-label="Enviado" />;
+  return null;
+}
+
 function Balao({ m, autores }: { m: Row; autores: Map<string, string> }) {
+  const pNome = text(m["participante_grupo_nome"]);
+  const pTel = text(m["participante_grupo_telefone"]);
+  const participante = pNome && pTel ? `${pNome} · ${pTel}` : pNome || pTel;
   const interna = m["msg_interna"] === true || m["interna"] === true || m["nota_interna"] === true;
   const cliente = !interna && isCliente(m);
   const tipo = tipoMidia(m);
@@ -398,6 +411,7 @@ function Balao({ m, autores }: { m: Row; autores: Map<string, string> }) {
           </p>
         )}
         {!interna && autor && <p className="mb-0.5 text-xs font-semibold italic opacity-80">{autor}</p>}
+        {participante && <p className="mb-0.5 text-[11px] font-semibold text-primary">{participante}</p>}
 
         {url && tipo === "imagem" && (
           <a href={url} target="_blank" rel="noreferrer"><img src={url} alt="Imagem" className="mb-1 max-h-72 rounded-md" /></a>
@@ -411,7 +425,10 @@ function Balao({ m, autores }: { m: Row; autores: Map<string, string> }) {
           </a>
         )}
         {corpo && !(url && corpo === text(m["nome_arquivo"])) && <p className="whitespace-pre-wrap break-words">{corpo}</p>}
-        <p className={cn("mt-1 text-right text-[10px] opacity-70")}>{hora}</p>
+        <p className="mt-1 flex items-center justify-end gap-1 text-[10px]">
+          <span className="opacity-70">{hora}</span>
+          {!interna && !cliente && <VistoLeitura status={text(m["status_envio"]).toLowerCase()} />}
+        </p>
       </div>
     </div>
   );
