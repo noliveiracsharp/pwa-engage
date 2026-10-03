@@ -105,7 +105,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
 
   useEffect(() => {
     if (presenca) fimRef.current?.scrollIntoView({ block: "end" });
-  }, [mensagens.length, id]);
+  }, [presenca]);
 
   // Zera não lidas ao abrir a conversa.
   useEffect(() => {
