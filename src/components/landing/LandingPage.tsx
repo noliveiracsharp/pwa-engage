@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 /** Número do WhatsApp comercial (somente dígitos, com 55). Ajuste para o número real. */
 export const WHATSAPP_VENDAS = "5500000000000";
@@ -33,7 +34,17 @@ const NAV = [
   { id: "recursos", label: "Recursos" },
   { id: "modulos", label: "Módulos" },
   { id: "planos", label: "Planos" },
+  { id: "duvidas", label: "Dúvidas" },
   { id: "contato", label: "Contato" },
+];
+
+const FAQ = [
+  { q: "Como funciona o teste grátis?", a: "Você escolhe um plano, envia seus dados e nossa equipe ativa seu acesso para testar o sistema completo antes de pagar." },
+  { q: "Preciso de cartão de crédito para testar?", a: "Não. O teste é liberado sem cartão." },
+  { q: "Posso ter vários usuários?", a: "Sim. Cada plano já inclui um número de usuários, e você pode adicionar mais quando precisar." },
+  { q: "Quanto custa um usuário adicional?", a: "O valor por usuário adicional aparece no card de cada plano." },
+  { q: "Posso cancelar quando quiser?", a: "Sim. Não há fidelidade: você pode cancelar a qualquer momento." },
+  { q: "O suporte é em português?", a: "Sim. Nosso suporte é feito em português, direto pelo WhatsApp." },
 ];
 
 function scrollTo(id: string) {
@@ -265,7 +276,7 @@ export function LandingPage() {
                     </CardContent>
                     <CardFooter>
                       <Button className="w-full" variant={destaque ? "default" : "outline"} onClick={() => abrirPlano(p)}>
-                        Começar Agora
+                        Contratar Plano
                       </Button>
                     </CardFooter>
                   </Card>
@@ -273,6 +284,12 @@ export function LandingPage() {
               })}
             </div>
           )}
+          <p className="mt-10 text-center text-sm text-muted-foreground">
+            Ficou com dúvidas?{" "}
+            <a href={waLink("Olá! Tenho dúvidas sobre os planos do Atende.ai.")} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-medium text-primary hover:underline">
+              <MessageCircle className="h-4 w-4" /> Fale no WhatsApp
+            </a>
+          </p>
         </div>
       </section>
 
@@ -289,6 +306,22 @@ export function LandingPage() {
             </Button>
           </div>
         </div>
+      </section>
+
+      {/* FAQ */}
+      <section id="duvidas" className="mx-auto max-w-3xl scroll-mt-20 px-4 pb-20 sm:px-6">
+        <div className="mb-8 text-center">
+          <Badge variant="outline" className="mb-3">Dúvidas</Badge>
+          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Dúvidas Frequentes</h2>
+        </div>
+        <Accordion type="single" collapsible className="w-full">
+          {FAQ.map((f, i) => (
+            <AccordionItem key={f.q} value={`f${i}`}>
+              <AccordionTrigger className="text-left">{f.q}</AccordionTrigger>
+              <AccordionContent className="text-muted-foreground">{f.a}</AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
       </section>
 
       {/* Footer */}
@@ -376,7 +409,8 @@ function ContratarDialog({ open, onOpenChange, plano }: { open: boolean; onOpenC
     e.preventDefault();
     if (!valido) return;
     const msg = [
-      `Olá! Quero começar o teste grátis do Atende.ai${plano ? ` (plano ${plano.nome})` : ""}.`,
+      `Olá! Quero contratar o Atende.ai${plano ? ` (plano ${plano.nome})` : ""}.`,
+      ...(plano ? [`ID do plano: ${plano.id}`] : []),
       `Nome: ${form.nome}`,
       `Empresa: ${form.empresa}`,
       `WhatsApp: ${form.whatsapp}`,
@@ -390,9 +424,17 @@ function ContratarDialog({ open, onOpenChange, plano }: { open: boolean; onOpenC
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{plano ? `Começar com o plano ${plano.nome}` : "Começar teste grátis"}</DialogTitle>
+          <DialogTitle>{plano ? `Contratar o plano ${plano.nome}` : "Começar teste grátis"}</DialogTitle>
           <DialogDescription>Preencha seus dados e nossa equipe ativa seu acesso.</DialogDescription>
         </DialogHeader>
+        {plano && (
+          <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm">
+            <p className="font-semibold">{plano.nome}</p>
+            <p className="text-muted-foreground">
+              {formatBRL(plano.valor_mensal)}/mês · {num(plano.usuarios_inclusos)} usuários inclusos
+            </p>
+          </div>
+        )}
         <form onSubmit={enviar} className="space-y-4">
           <div className="space-y-1.5"><Label htmlFor="lp-nome">Nome completo</Label><Input id="lp-nome" value={form.nome} onChange={set("nome")} required /></div>
           <div className="space-y-1.5"><Label htmlFor="lp-emp">Empresa</Label><Input id="lp-emp" value={form.empresa} onChange={set("empresa")} required /></div>
