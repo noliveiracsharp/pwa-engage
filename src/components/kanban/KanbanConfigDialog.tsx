@@ -579,6 +579,7 @@ export function KanbanConfigDialog({
                         </span>
                         {e["is_default_ia"] === true && <Badge variant="secondary" className="gap-1 text-[10px]"><Bot className="h-3 w-3" /> Padrão IA</Badge>}
                         {e["is_default_humano"] === true && <Badge variant="secondary" className="gap-1 text-[10px]"><Users className="h-3 w-3" /> Padrão Equipe</Badge>}
+                        {e["is_default_encerrado"] === true && <Badge variant="secondary" className="gap-1 text-[10px]"><Check className="h-3 w-3" /> Encerramento</Badge>}
                         <Switch
                           checked={ativo}
                           aria-label="Status"
