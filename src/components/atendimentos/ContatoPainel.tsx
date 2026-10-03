@@ -13,6 +13,7 @@ import { rowId, text } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
 import { A, corEtiqueta, etapaPayload, etapasDoKanban, fotoPessoa, iniciais, nomePessoa, telefonePessoa } from "@/lib/atendimentos";
 import { filterPayload, useCols } from "@/lib/projetos";
+import { usePesquisaSatisfacao } from "./Pesquisa";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type Props = {
@@ -79,11 +80,21 @@ export function ContatoPainel({ atendimento, pessoa, usuarios, participantes, et
 
   const kanban = kanbans.find((k) => text(rowId(k)) === text(pick(atendimento, A.kanban)));
   const etapa = etapas.find((e) => text(rowId(e)) === text(pick(atendimento, A.etapa)));
-  async function mudarEtapa(etId: string) {
+  const pesquisa = usePesquisaSatisfacao();
+  async function aplicarEtapa(etId: string) {
     const { error } = await supabase.from("atendimentos").update(filterPayload(etapaPayload(etId, etapas), colsAt)).eq("id", atId);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(error.message); return false; }
     qc.invalidateQueries({ queryKey: ["table", "atendimentos"] });
     toast.success("Etapa atualizada.");
+    return true;
+  }
+  async function mudarEtapa(etId: string) {
+    const alvo = etapas.find((e) => text(rowId(e)) === etId);
+    if (alvo?.["is_default_encerrado"] === true && etapa?.["is_default_encerrado"] !== true) {
+      await pesquisa.pedir({ atendimento, pessoa, executar: () => aplicarEtapa(etId) });
+      return;
+    }
+    await aplicarEtapa(etId);
   }
   const orcamento = orcamentos.find(
     (o) => text(o["atendimento_id"]) === atId || (pessoaId !== undefined && text(pick(o, ["pessoa_id"])) === text(pessoaId)),
@@ -182,6 +193,7 @@ export function ContatoPainel({ atendimento, pessoa, usuarios, participantes, et
               ))}
             </SelectContent>
           </Select>
+          {pesquisa.dialog}
           {orcamento && (
             <p className="text-sm text-muted-foreground">
               Orçamento {text(orcamento["numero"])} · {text(orcamento["situacao"])}

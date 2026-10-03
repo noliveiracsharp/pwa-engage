@@ -25,6 +25,7 @@ import {
 } from "@/lib/atendimentos";
 import { dispararMensagem, marcarEnvio } from "@/lib/atendimentos-envio";
 import { GravadorAudio } from "./GravadorAudio";
+import { AvaliacaoSelo, usePesquisaSatisfacao } from "./Pesquisa";
 
 const EMOJIS = "😀 😃 😄 😁 😅 😂 🙂 😉 😊 😍 😘 🤔 😐 😴 😢 😭 😡 👍 👎 👏 🙏 💪 👋 🤝 ✅ ❌ ⚠️ ❤️ 🔥 🎉 ⭐ 📦 📄 📞 💰 🕐 🚀 💬 📍 🙌".split(" ");
 
@@ -50,6 +51,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
   const [interna, setInterna] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [moverAberto, setMoverAberto] = useState(false);
+  const pesquisa = usePesquisaSatisfacao();
   const fimRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const { data: usuarios = [] } = useTableRows("usuarios");
@@ -194,7 +196,10 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
       toast.error('Nenhuma etapa deste quadro está marcada como "Etapa de Encerramento". Marque uma nas configurações do Kanban.');
       return;
     }
-    await atualizarAtendimento(etapaPayload(rowId(et), etapas), "Atendimento encerrado.");
+    await pesquisa.pedir({
+      atendimento, pessoa, instancia,
+      executar: () => atualizarAtendimento(etapaPayload(rowId(et), etapas), "Atendimento encerrado."),
+    });
   }
 
   async function assumir() {
@@ -227,6 +232,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
             <Badge variant={encerrado ? "secondary" : "outline"} className="h-5 px-1.5 text-[10px]">
               {status}
             </Badge>
+            <AvaliacaoSelo atendimento={atendimento} encerrado={encerrado} />
             {ia && !encerrado && (
               <span className="inline-flex items-center gap-1 text-primary"><Bot className="h-3 w-3" /> IA</span>
             )}
@@ -353,12 +359,16 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
         atendimento={atendimento}
         kanbans={kanbans}
         etapas={etapas}
-        onSalvar={(kanbanId, etapaId) =>
-          atualizarAtendimento({ kanban_nome_id: kanbanId, ...etapaPayload(etapaId || null, etapas) }, "Atendimento movido.").then(
-            (ok) => ok && setMoverAberto(false),
-          )
-        }
+        onSalvar={(kanbanId, etapaId) => {
+          const executar = () =>
+            atualizarAtendimento({ kanban_nome_id: kanbanId, ...etapaPayload(etapaId || null, etapas) }, "Atendimento movido.");
+          const alvo = etapas.find((e) => text(rowId(e)) === etapaId);
+          const vaiEncerrar = alvo?.["is_default_encerrado"] === true && !encerrado;
+          const acao = vaiEncerrar ? pesquisa.pedir({ atendimento, pessoa, instancia, executar }) : executar();
+          return acao.then((ok) => ok && setMoverAberto(false));
+        }}
       />
+      {pesquisa.dialog}
     </section>
   );
 }
