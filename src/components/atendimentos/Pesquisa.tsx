@@ -81,6 +81,11 @@ export function usePesquisaSatisfacao() {
     const { data: salva, error } = await supabase
       .from("atendimentos_mensagem").insert(filterPayload(payload, colsMsg)).select().single();
     if (error) { toast.error(`Não foi possível registrar a pesquisa: ${error.message}`); return; }
+    // Nova pesquisa: limpa a nota anterior até o cliente responder.
+    if (atId) {
+      await supabase.from("atendimentos").update({ nota: null } as Row).eq("id", atId);
+      qc.invalidateQueries({ queryKey: ["table", "atendimentos"] });
+    }
     const mid = (salva as Row | null)?.["id"];
     try {
       await dispararMensagem({ instancia, mensagemId: mid, atendimentoId: atId, telefone: telefonePessoa(pessoa), texto: TEXTO_PESQUISA });

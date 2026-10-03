@@ -356,6 +356,7 @@ function KanbanPage() {
       const desc = String(etapa?.["descricao"] ?? etapa?.["nome"] ?? "").trim();
       const patch: Row = { [column]: etapaId };
       if (desc) patch["status"] = desc;
+      if (etapa && etapa["is_default_encerrado"] !== true) patch["nota"] = null;
       const { error } = await supabase
         .from("atendimentos")
         .update(patch)
