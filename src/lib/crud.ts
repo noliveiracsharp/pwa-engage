@@ -5,7 +5,7 @@ import { pick, type Row } from "@/lib/row";
 import { useAuth } from "@/hooks/useAuth";
 
 /** Tabelas globais: nunca filtradas pelo contexto de empresa do Master. */
-const GLOBAL_TABLES = new Set(["empresas", "funcoes", "perfil", "menu", "planos", "modulos", "planos_funcoes", "modulos_funcoes", "planos_base", "modulos_adicionais"]);
+const GLOBAL_TABLES = new Set(["empresas", "funcoes", "perfil", "menu", "planos", "modulos", "planos_funcoes", "modulos_funcoes", "planos_base", "modulos_adicionais", "unidade_medida", "centro_custo", "itens_marcas", "empresas_configuracao"]);
 
 /** Reads every row of a table (schema-tolerant: no column names assumed). */
 export function useTableRows(table: string, enabled = true, orderBy?: string) {

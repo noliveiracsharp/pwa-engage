@@ -91,14 +91,9 @@ function OrcamentosPage() {
     () => itens.filter((i) => mesmaEmpresa(i, empresaId)),
     [itens, empresaId],
   );
-  const unidadesEmpresa = useMemo(
-    () => unidades.filter((u) => mesmaEmpresa(u, empresaId)),
-    [unidades, empresaId],
-  );
-  const marcasEmpresa = useMemo(
-    () => marcas.filter((m) => mesmaEmpresa(m, empresaId)),
-    [marcas, empresaId],
-  );
+  // Unidades e marcas são catálogos compartilhados: nunca filtrar por empresa.
+  const unidadesEmpresa = unidades;
+  const marcasEmpresa = marcas;
 
   const parceiroById = useMemo(
     () => new Map(parceiros.map((p) => [String(rowId(p) ?? ""), p])),

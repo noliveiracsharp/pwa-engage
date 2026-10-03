@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { CalendarClock, ReceiptText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { num } from "@/lib/orcamentos";
+import { useAudit } from "@/lib/audit";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -104,26 +105,33 @@ export function OrcamentoPagamento({ value, parcelas, totalLiquido, readOnly, on
 
   // Parâmetros comerciais da empresa (taxa de juros, custo operacional, markup).
   const [configComercial, setConfigComercial] = useState<ConfigComercial | null>(null);
+  const { empresaId } = useAudit();
   useEffect(() => {
     let ativo = true;
     supabase
       .from("empresas_configuracao")
-      .select("taxa_juros_mensal, custo_operacional_mensal, fator_markup")
-      .eq("ativo", true)
-      .single()
+      .select("*")
       .then(({ data }) => {
         if (!ativo || !data) return;
-        const row = data as Record<string, unknown>;
+        const rows = (data as Record<string, unknown>[]).filter((r) => r["ativo"] !== false);
+        const row =
+          rows.find((r) => empresaId !== undefined && String(r["empresa_id"] ?? "") === String(empresaId)) ??
+          rows.find((r) => r["empresa_id"] == null) ??
+          rows[0];
+        if (!row) return;
+        // Aceita taxa/markup em decimal (0,015 / 0,65) ou percentual (1,5 / 65).
+        const taxa = num(row["taxa_juros_mensal"]);
+        const markup = num(row["fator_markup"]);
         setConfigComercial({
-          taxa_juros_mensal: num(row["taxa_juros_mensal"]),
+          taxa_juros_mensal: taxa > 1 ? taxa / 100 : taxa,
           custo_operacional_mensal: num(row["custo_operacional_mensal"]),
-          fator_markup: num(row["fator_markup"]),
+          fator_markup: markup > 1 ? markup / 100 : markup,
         });
       });
     return () => {
       ativo = false;
     };
-  }, []);
+  }, [empresaId]);
 
   // Recalcula o coeficiente global sempre que o total líquido, a quantidade de
   // parcelas ou o toggle "Com juros" mudarem. Preenche e trava o campo quando
@@ -226,7 +234,15 @@ export function OrcamentoPagamento({ value, parcelas, totalLiquido, readOnly, on
               className="w-full"
               value={value.tem_juros ? "com" : "sem"}
               onValueChange={(v) => {
-                if (v) onChange({ tem_juros: v === "com" });
+                if (!v) return;
+                if (v === "com") {
+                  onChange({
+                    tem_juros: true,
+                    coeficiente_juros: coeficienteGlobal > 0 ? fmtCoef(coeficienteGlobal) : "",
+                  });
+                } else {
+                  onChange({ tem_juros: false, coeficiente_juros: "" });
+                }
               }}
               disabled={Boolean(readOnly)}
             >
