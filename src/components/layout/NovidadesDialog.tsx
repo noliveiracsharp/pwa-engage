@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { type Atualizacao, type Versao, TIPO_CLASS, TIPO_LABEL, fmtData } from "@/lib/versoes";
 
 const db = supabase as any;
@@ -117,15 +118,24 @@ export function NovidadesDialog({ open, onOpenChange }: { open: boolean; onOpenC
 export function VersaoSidebar({ open }: { open: boolean }) {
   const { data: versao } = useVersaoAtual();
   const [dlg, setDlg] = useState(false);
+  const label = `Versão ${versao?.versao ?? "—"}`;
+  const btn = (
+    <button type="button" onClick={() => setDlg(true)} aria-label={label}
+      className={cn("flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+        dlg && "bg-sidebar-accent",
+        !open && "justify-center px-0")}>
+      <Sparkles className="h-5 w-5 shrink-0" />
+      {open && <span className="truncate">{label}</span>}
+    </button>
+  );
   return (
     <>
-      <button type="button" onClick={() => setDlg(true)} title={`Novidades · Versão ${versao?.versao ?? "—"}`}
-        className={cn("flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-          dlg && "bg-sidebar-accent",
-          !open && "justify-center px-0")}>
-        <Sparkles className="h-5 w-5 shrink-0" />
-        {open ? <span className="truncate">Versão {versao?.versao ?? "—"}</span> : <span className="sr-only">Novidades</span>}
-      </button>
+      {open ? btn : (
+        <Tooltip>
+          <TooltipTrigger asChild>{btn}</TooltipTrigger>
+          <TooltipContent side="right">{label}</TooltipContent>
+        </Tooltip>
+      )}
       <NovidadesDialog open={dlg} onOpenChange={setDlg} />
     </>
   );
