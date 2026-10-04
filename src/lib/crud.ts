@@ -9,11 +9,16 @@ const GLOBAL_TABLES = new Set(["empresas", "funcoes", "perfil", "menu", "planos"
 
 /** Reads every row of a table (schema-tolerant: no column names assumed). */
 export function useTableRows(table: string, enabled = true, orderBy?: string) {
-  const { isMaster, empresa } = useAuth();
-  const ctx = isMaster && !GLOBAL_TABLES.has(table) && empresa ? String(rowId(empresa) ?? "") : "";
+  const { isMaster, empresa, usuario, loading } = useAuth();
+  // Master: empresa do "Contexto da Empresa". Demais perfis: sempre a empresa do próprio usuário.
+  const ownEmpresa = usuario ? text(pick(usuario, ["empresa_id", "id_empresa", "empresaid"])) : "";
+  const scoped = !GLOBAL_TABLES.has(table);
+  const ctx = !scoped ? "" : isMaster ? (empresa ? String(rowId(empresa) ?? "") : "") : ownEmpresa || "__sem_empresa__";
+  // Não-Master só consulta depois de saber a empresa, para nunca exibir dados de outras.
+  const ready = isMaster || !scoped || (!loading && !!usuario);
   return useQuery({
     queryKey: ctx ? ["table", table, "ctx", ctx] : ["table", table],
-    enabled,
+    enabled: enabled && ready,
     queryFn: async (): Promise<Row[]> => {
       let q = supabase.from(table).select("*");
       // Anti-escalonamento: o perfil Master (ordem 0) nunca aparece em listas/selects.
