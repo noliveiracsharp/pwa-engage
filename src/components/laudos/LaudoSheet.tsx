@@ -175,11 +175,17 @@ export function LaudoSheet({ open, onOpenChange, record, linhas, fotos, clientes
   };
 
   const salvar = () => {
-    if (!h.parceiro_id) return toast.error("Selecione o cliente.");
-    if (!ls.length) return toast.error(inspecao ? "Adicione itens ao checklist." : "Adicione ao menos um item.");
-    if (!inspecao && ls.some((l) => !(Number(l.quantidade.replace(",", ".")) > 0)))
-      return toast.error("Todas as quantidades precisam ser maiores que zero.");
-    if (inspecao && !h.classificacao) return toast.error("Classifique o condomínio.");
+    const erro = !h.parceiro_id
+      ? "Selecione o cliente."
+      : !ls.length
+        ? inspecao ? "Adicione itens ao checklist." : "Adicione ao menos um item."
+        : !inspecao && ls.some((l) => !(Number(l.quantidade.replace(",", ".")) > 0))
+          ? "Todas as quantidades precisam ser maiores que zero."
+          : inspecao && !h.classificacao ? "Classifique o condomínio." : "";
+    if (erro) {
+      toast.error(erro);
+      return;
+    }
     onSave({ header: h, linhas: ls, fotosGerais: gerais });
   };
 
