@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { CheckCircle2, Circle } from "lucide-react";
+import { CheckCircle2, Circle, Printer } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { iniciais } from "@/components/projetos/ResponsaveisPicker";
 import { supabase } from "@/integrations/supabase/client";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -42,6 +44,7 @@ function Compartilhado() {
   const [projeto, setProjeto] = useState<Row | null>(null);
   const [empresa, setEmpresa] = useState<Row | null>(null);
   const [tarefas, setTarefas] = useState<Row[]>([]);
+  const [pessoas, setPessoas] = useState<Map<string, { nome: string; departamento: string }>>(new Map());
   const [estado, setEstado] = useState<"carregando" | "ok" | "erro">("carregando");
 
   useEffect(() => {
@@ -61,6 +64,10 @@ function Compartilhado() {
         ["*, usuarios(nome)", "*"],
         (q) => q.eq(col, pid as never).order("ordem", { ascending: true }),
       );
+      const { data: rs } = await supabase.rpc("compartilhado_responsaveis" as never, { p_token: token } as never);
+      const mapa = new Map<string, { nome: string; departamento: string }>();
+      for (const r of ((rs ?? []) as Row[])) mapa.set(String(r["id"]), { nome: String(r["nome"] ?? ""), departamento: String(r["departamento"] ?? "") });
+      setPessoas(mapa);
       setProjeto(proj); setEmpresa(emp ?? null); setTarefas(t); setEstado("ok");
     })();
   }, [token]);
@@ -72,7 +79,9 @@ function Compartilhado() {
       const resp = one(t["usuarios"]);
       return {
         nome: String(first(t, C.tarefa.nome) ?? "Tarefa"),
-        resp: resp ? String(resp["nome"] ?? "") : "",
+        resps: (Array.isArray(t["responsaveis"]) && (t["responsaveis"] as unknown[]).length
+          ? (t["responsaveis"] as unknown[]).map((id) => pessoas.get(String(id))).filter((x): x is { nome: string; departamento: string } => Boolean(x))
+          : resp ? [{ nome: String(resp["nome"] ?? ""), departamento: "" }] : []),
         ini: toTime(first(t, C.tarefa.dtInicio)),
         fim: toTime(first(t, C.tarefa.dtFim)),
         iniRaw: first(t, C.tarefa.dtInicio), fimRaw: first(t, C.tarefa.dtFim),
@@ -94,7 +103,7 @@ function Compartilhado() {
     const ok = lista.filter((x) => x.done).length;
     const soma = lista.reduce((a, x) => a + (x.done ? 100 : x.pct), 0);
     return { lista, min, span, marcas, ok, pct: lista.length ? Math.round(soma / lista.length) : 0 };
-  }, [tarefas]);
+  }, [tarefas, pessoas]);
 
   if (estado === "carregando") return <div className="grid min-h-dvh place-items-center text-muted-foreground">Carregando…</div>;
   if (estado === "erro" || !projeto) return (
@@ -123,7 +132,12 @@ function Compartilhado() {
               </div>
             </div>
           )}
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">Cronograma do projeto</p>
+          <div className="flex items-start justify-between gap-3">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Cronograma do projeto</p>
+            <Button size="sm" variant="outline" className="print:hidden" onClick={() => window.print()}>
+              <Printer className="mr-1 h-4 w-4" /> Imprimir / Exportar PDF
+            </Button>
+          </div>
           <h1 className="text-2xl font-bold text-foreground">{nome}</h1>
           {per && <p className="text-sm text-muted-foreground">{per}</p>}
           <div className="mt-4 flex items-center gap-3">
@@ -160,12 +174,12 @@ function Compartilhado() {
                       <div className="min-w-0 flex-1">
                         <p className={`break-words font-medium leading-snug ${t.done ? "text-muted-foreground line-through" : "text-foreground"}`}>{t.nome}</p>
                         <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                          {t.resp && (
-                            <span className="flex items-center gap-1">
-                              <span className="grid h-5 w-5 place-items-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground">{t.resp.charAt(0).toUpperCase()}</span>
-                              {t.resp}
+                          {t.resps.map((r, k) => (
+                            <span key={k} className="flex items-center gap-1" title={r.nome}>
+                              <span className="grid h-5 w-5 place-items-center rounded-full bg-primary text-[9px] font-semibold text-primary-foreground">{iniciais(r.nome)}</span>
+                              {r.departamento && <span>{r.departamento}</span>}
                             </span>
-                          )}
+                          ))}
                           {t.prio ? <Badge className={`h-5 px-1.5 text-[10px] ${prioridadeClass(t.prio)}`}>{String(t.prio)}</Badge> : null}
                         </div>
                       </div>
