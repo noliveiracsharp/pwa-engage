@@ -272,3 +272,156 @@ export function ChatInterno({ sidebarOpen }: { sidebarOpen: boolean }) {
   );
 }
 
+type Anexo = { url: string; nome: string; tipo: string };
+
+function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack }: { me: string; empresaId: string; sel: Sel; usuarios: Row[]; isOnline: boolean; onBack: () => void }) {
+  const qc = useQueryClient();
+  const nome = sel.tipo === "direto" ? String(pick(sel.outro, ["nome"], "Usuário")) : String(sel.canal["nome"] ?? "Grupo");
+  const [canalId, setCanalId] = useState<string>(sel.tipo === "grupo" ? String(sel.canal["id"]) : "");
+  const [texto, setTexto] = useState("");
+  const [enviando, setEnviando] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const endRef = useRef<HTMLDivElement>(null);
+  const key = ["chat-interno", canalId];
+  const nomes = useMemo(() => new Map(usuarios.map((u) => [String(u["id"]), String(pick(u, ["nome"], "Usuário"))])), [usuarios]);
+
+  useEffect(() => {
+    if (sel.tipo !== "direto") return;
+    canalDireto(me, String(sel.outro["id"]), empresaId).then(setCanalId).catch((e: Error) => toast.error(e.message));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const { data: msgs = [] } = useQuery({
+    queryKey: key,
+    enabled: !!canalId,
+    queryFn: async () => {
+      const { data, error } = await supabase.from(TABLE).select("*").eq("canal_id", canalId).order("criado_em", { ascending: true }).limit(300);
+      if (error) throw error;
+      return (data ?? []) as Row[];
+    },
+  });
+
+  useEffect(() => {
+    if (!canalId) return;
+    const ch = supabase
+      .channel(`chat_interno:${canalId}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: TABLE, filter: `canal_id=eq.${canalId}` }, () => {
+        void qc.invalidateQueries({ queryKey: key });
+      })
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(ch);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canalId]);
+
+  // Marca como lidas as mensagens recebidas.
+  useEffect(() => {
+    msgs
+      .filter((m) => String(m["remetente_id"]) !== me && !((m["lida_por"] as string[] | null) ?? []).includes(me))
+      .forEach((m) => {
+        void supabase.from(TABLE).update({ lida_por: [...((m["lida_por"] as string[] | null) ?? []), me] }).eq("id", String(m["id"]));
+      });
+    endRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [msgs, me]);
+
+  const enviar = async (anexo?: Anexo) => {
+    const msg = texto.trim();
+    if ((!msg && !anexo) || !canalId) return;
+    setEnviando(true);
+    const { error } = await supabase.from(TABLE).insert({
+      empresa_id: empresaId,
+      canal_id: canalId,
+      remetente_id: me,
+      mensagem: msg || anexo?.nome || "",
+      anexos: anexo ? [anexo] : [],
+      lida_por: [me],
+    });
+    setEnviando(false);
+    if (error) return toast.error(error.message);
+    setTexto("");
+    void qc.invalidateQueries({ queryKey: key });
+  };
+
+  const anexar = async (file: File) => {
+    setEnviando(true);
+    const path = `interno/${crypto.randomUUID()}-${file.name.replace(/[^\w.-]/g, "_")}`;
+    const up = await supabase.storage.from("chat_media").upload(path, file, file.type ? { contentType: file.type } : undefined);
+    setEnviando(false);
+    if (up.error) return toast.error(up.error.message);
+    const url = supabase.storage.from("chat_media").getPublicUrl(path).data.publicUrl;
+    await enviar({ url, nome: file.name, tipo: file.type.startsWith("image/") ? "imagem" : "documento" });
+    if (fileRef.current) fileRef.current.value = "";
+  };
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col animate-in fade-in slide-in-from-right-4">
+      <div className="flex items-center gap-2 border-b border-border px-2 py-2">
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onBack} aria-label="Voltar">
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
+        <Avatar className="h-8 w-8">
+          {sel.tipo === "direto" && <AvatarImage src={String(pick(sel.outro, ["foto"], ""))} alt={nome} />}
+          <AvatarFallback>{sel.tipo === "grupo" ? <Users className="h-4 w-4" /> : iniciais(nome)}</AvatarFallback>
+        </Avatar>
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium">{nome}</p>
+          {sel.tipo === "direto" ? (
+            <p className={cn("text-xs", isOnline ? "text-success" : "text-muted-foreground")}>{isOnline ? "Online" : "Offline"}</p>
+          ) : (
+            <p className="text-xs text-muted-foreground">Grupo</p>
+          )}
+        </div>
+      </div>
+
+      <ScrollArea className="min-h-0 flex-1">
+        <div className="space-y-2 p-3">
+          {!canalId && <Loader2 className="mx-auto my-8 h-5 w-5 animate-spin text-muted-foreground" />}
+          {canalId && msgs.length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">Envie a primeira mensagem para {nome}.</p>}
+          {msgs.map((m) => {
+            const mine = String(m["remetente_id"]) === me;
+            const anexos = (Array.isArray(m["anexos"]) ? m["anexos"] : []) as Anexo[];
+            return (
+              <div key={String(m["id"])} className={cn("flex", mine ? "justify-end" : "justify-start")}>
+                <div className={cn("max-w-[80%] rounded-2xl px-3 py-2 text-sm", mine ? "rounded-br-sm bg-primary text-primary-foreground" : "rounded-bl-sm bg-muted")}>
+                  {!mine && sel.tipo === "grupo" && <p className="mb-0.5 text-xs font-semibold text-primary">{nomes.get(String(m["remetente_id"])) ?? "Usuário"}</p>}
+                  {anexos.map((a, i) =>
+                    a.tipo === "imagem" ? (
+                      <a key={i} href={a.url} target="_blank" rel="noreferrer">
+                        <img src={a.url} alt={a.nome || "Imagem"} className="mb-1 max-h-48 rounded-lg" />
+                      </a>
+                    ) : (
+                      <a key={i} href={a.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 underline">
+                        <FileText className="h-4 w-4" /> {a.nome || "Arquivo"}
+                      </a>
+                    ),
+                  )}
+                  {anexos.length === 0 && <p className="break-words whitespace-pre-wrap">{String(m["mensagem"] ?? "")}</p>}
+                  <p className={cn("mt-0.5 text-right text-[10px]", mine ? "text-primary-foreground/70" : "text-muted-foreground")}>{hora(m["criado_em"])}</p>
+                </div>
+              </div>
+            );
+          })}
+          <div ref={endRef} />
+        </div>
+      </ScrollArea>
+
+      <form
+        className="flex items-center gap-1 border-t border-border p-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void enviar();
+        }}
+      >
+        <input ref={fileRef} type="file" hidden onChange={(e) => e.target.files?.[0] && void anexar(e.target.files[0])} />
+        <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => fileRef.current?.click()} aria-label="Anexar arquivo" disabled={enviando || !canalId}>
+          <Paperclip className="h-4 w-4" />
+        </Button>
+        <Input value={texto} onChange={(e) => setTexto(e.target.value)} placeholder="Digite uma mensagem..." className="flex-1" />
+        <Button type="submit" size="icon" className="h-9 w-9 shrink-0" disabled={enviando || !texto.trim() || !canalId} aria-label="Enviar">
+          {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+        </Button>
+      </form>
+    </div>
+  );
+}
