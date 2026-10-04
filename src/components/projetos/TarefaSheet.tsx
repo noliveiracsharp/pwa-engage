@@ -1,3 +1,4 @@
+import { ResponsaveisPicker, responsaveisDe } from "@/components/projetos/ResponsaveisPicker";
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { FileIcon, Paperclip, Plus, Trash2, Upload, X } from "lucide-react";
@@ -48,10 +49,11 @@ export function TarefaSheet({ tarefa, tarefasDoProjeto, projetoId, perms, onClos
   }, [tarefa, isNew]);
   const set = (k: string, v: unknown) => setForm((f) => ({ ...f, [k]: v }));
 
+  const resps = responsaveisDe(form, tc.resp);
   async function salvar() {
     if (!String(form[tc.nome] ?? "").trim()) { toast.error("Informe o nome da tarefa."); return; }
     const base: Row = {
-      [tc.nome]: form[tc.nome], [tc.descricao]: form[tc.descricao] ?? null, [tc.resp]: form[tc.resp] || null,
+      [tc.nome]: form[tc.nome], [tc.descricao]: form[tc.descricao] ?? null, [tc.resp]: resps[0] ?? null, responsaveis: resps,
       [tc.ini]: form[tc.ini] || null, [tc.fim]: form[tc.fim] || null, [tc.prio]: form[tc.prio] ?? "Normal",
     };
     if (tc.nome === tc.descricao) delete base[tc.descricao];
@@ -91,14 +93,8 @@ export function TarefaSheet({ tarefa, tarefasDoProjeto, projetoId, perms, onClos
               </div>
             )}
             <div className="space-y-1">
-              <Label>Responsável</Label>
-              <Select disabled={readOnly} value={String(form[tc.resp] ?? "none")} onValueChange={(v) => set(tc.resp, v === "none" ? null : v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Sem responsável</SelectItem>
-                  {usuarios.map((u) => <SelectItem key={String(rowId(u))} value={String(rowId(u))}>{nomePessoa(u)}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <Label>Responsáveis</Label>
+              <div><ResponsaveisPicker disabled={readOnly} value={resps} usuarios={usuarios} onChange={(v) => setForm((f) => ({ ...f, responsaveis: v, [tc.resp]: v[0] ?? null }))} /></div>
             </div>
             <div className="space-y-1">
               <Label>Prioridade</Label>

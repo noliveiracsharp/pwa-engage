@@ -1,3 +1,4 @@
+import { ResponsaveisPicker, responsaveisDe } from "@/components/projetos/ResponsaveisPicker";
 import { useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
@@ -528,13 +529,7 @@ function Detalhe({ projeto, d, perms, onBack }: { projeto: Row; d: D; perms: Per
                     <div className="mt-1 flex items-center gap-2"><Progress value={tarefaPct(t, d.tc.done)} indicatorColor={progressoCor(tarefaPct(t, d.tc.done))} className="h-1 w-24 bg-muted" /><span className="text-xs text-muted-foreground">{tarefaPct(t, d.tc.done)}%</span></div>
                   </TableCell>
                   <TableCell onClick={(e) => e.stopPropagation()}>
-                    <Select disabled={!perms.canUpdate} value={String(t[d.tc.resp] ?? "none")} onValueChange={(v) => patch(t, { [d.tc.resp]: v === "none" ? null : v })}>
-                      <SelectTrigger className="h-8 w-44"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Sem responsável</SelectItem>
-                        {d.usuarios.map((u) => <SelectItem key={String(rowId(u))} value={String(rowId(u))}>{nomePessoa(u)}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
+                    <ResponsaveisPicker disabled={!perms.canUpdate} usuarios={d.usuarios} value={responsaveisDe(t, d.tc.resp)} onChange={(v) => patch(t, { responsaveis: v, [d.tc.resp]: v[0] ?? null })} />
                   </TableCell>
                   <TableCell>{fmtDate(t[d.tc.ini])}</TableCell>
                   <TableCell>{fmtDate(t[d.tc.fim])}</TableCell>
