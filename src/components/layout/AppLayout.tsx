@@ -3,10 +3,12 @@ import { AppHeader } from "./AppHeader";
 import { AppSidebar } from "./AppSidebar";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useNotificacoesChat } from "@/hooks/useNotificacoesChat";
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const isMobile = useIsMobile();
+  useNotificacoesChat();
 
   return (
     <div className="flex h-screen w-full flex-col bg-background">
