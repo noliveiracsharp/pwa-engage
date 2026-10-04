@@ -33,6 +33,7 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const [novoForn, setNovoForn] = useState("");
+  const [novoItem, setNovoItem] = useState("");
   const [busy, setBusy] = useState(false);
   const cid = cotacao ? String(rowId(cotacao)) : "";
   const aprovada = cotacao?.["status"] === "aprovado";
@@ -48,8 +49,13 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
       .map((p) => ({ value: String(rowId(p)), label: nomeParc(p), keywords: [String(p["razao_social"] ?? "")] }));
   }, [parceiros, fornCot]);
 
+  const itemOpts = useMemo(
+    () => itens.map((i) => ({ value: String(rowId(i)), label: String(i["descricao"] ?? "Item"), hint: i["codigo"] ? String(i["codigo"]) : undefined, keywords: [String(i["codigo"] ?? "")] })),
+    [itens],
+  );
+
   const invalidar = () => {
-    for (const t of ["cotacoes", "cotacoes_fornecedores", "cotacoes_precos"]) qc.invalidateQueries({ queryKey: ["table", t] });
+    for (const t of ["cotacoes", "cotacoes_itens", "cotacoes_fornecedores", "cotacoes_precos"]) qc.invalidateQueries({ queryKey: ["table", t] });
   };
   const precoDe = (itemCotId: string, fornId: string) =>
     precos.find((p) => String(p["cotacao_item_id"]) === itemCotId && String(p["fornecedor_id"]) === fornId);
@@ -89,6 +95,26 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
     if (error) return void toast.error(error.message);
     if (cotacao["status"] === "pendente") await supabase.from("cotacoes").update({ status: "em_cotacao" }).eq("id", cid);
     setNovoForn("");
+    invalidar();
+  };
+
+  const addItem = async (itemId: string) => {
+    if (!itemId) return;
+    setNovoItem("");
+    const { error } = await supabase.from("cotacoes_itens").insert({ cotacao_id: cid, item_id: itemId, quantidade: 1 });
+    if (error) return void toast.error(error.message);
+    invalidar();
+  };
+  const salvarQtd = async (it: Row, valor: string) => {
+    const q = num(valor);
+    if (q <= 0 || q === num(it["quantidade"])) return;
+    const { error } = await supabase.from("cotacoes_itens").update({ quantidade: q }).eq("id", String(it["id"]));
+    if (error) return void toast.error(error.message);
+    invalidar();
+  };
+  const removerItem = async (it: Row) => {
+    const { error } = await supabase.from("cotacoes_itens").delete().eq("id", String(it["id"]));
+    if (error) return void toast.error(error.message);
     invalidar();
   };
 
@@ -207,6 +233,7 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
 
           <section className="space-y-3">
             <h3 className="font-semibold">Comparativo de preços</h3>
+            {editavel && <SearchSelect value={novoItem} onChange={addItem} options={itemOpts} placeholder="Adicionar item à cotação" />}
             <div className="overflow-x-auto rounded-lg border">
               <table className="w-full text-sm">
                 <thead className="bg-muted/50">
@@ -230,7 +257,14 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
                           <div className="font-medium">{String(item?.["descricao"] ?? "Item")}</div>
                           {item?.["codigo"] ? <div className="text-muted-foreground text-xs">{String(item["codigo"])}</div> : null}
                         </td>
-                        <td className="px-3 py-2 text-right tabular-nums">{formatQtd(it["quantidade"])}</td>
+                        <td className="px-2 py-1.5 text-right tabular-nums">
+                          {editavel ? (
+                            <div className="flex items-center justify-end gap-1">
+                              <Input key={String(it["quantidade"])} defaultValue={formatQtd(it["quantidade"])} inputMode="decimal" aria-label="Quantidade" className="h-8 w-20 text-right" onBlur={(e) => salvarQtd(it, e.target.value)} />
+                              <Button size="icon" variant="ghost" className="h-8 w-8" aria-label="Remover item" onClick={() => removerItem(it)}><Trash2 className="h-4 w-4" /></Button>
+                            </div>
+                          ) : formatQtd(it["quantidade"])}
+                        </td>
                         {fornCot.map((f) => {
                           const fid = String(f["fornecedor_id"]);
                           const p = precoDe(String(it["id"]), fid);
