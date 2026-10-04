@@ -28,7 +28,10 @@ import {
 import { pick, type Row } from "@/lib/row";
 import { labelAmigavel, parseCamposCardTipado, type CampoCardTipado } from "@/lib/orcamento-kanban";
 
-const errMsg = (e: unknown, f: string) => (e instanceof Error ? e.message : f);
+const errMsg = (e: unknown, f: string) => {
+  const m = e && typeof e === "object" && "message" in e ? String((e as { message: unknown }).message) : "";
+  return m ? `${f} ${m}` : f;
+};
 const funcaoKey = (f: Row) => String(pick(f, ["funcao_id", "id"]) ?? "");
 
 /** Normaliza o retorno da RPC listar_colunas_tabela em [{key, tipo}]. */
@@ -268,12 +271,20 @@ export function KanbanConfigDialog({
       if (!funcaoId) throw new Error("Selecione uma função.");
       const payload: Row = { kanban_nome_id: kanbanId, funcao_id: funcaoId, campos_card: sel };
       if (empresaId !== undefined) payload["empresa_id"] = empresaId;
-      const t = supabase.from("funcoes_kanban" as never);
-      const { error } = vinculo
-        ? await (vinculo["id"] !== undefined
-            ? t.update(payload as never).eq("id", vinculo["id"] as never)
-            : t.update(payload as never).eq("kanban_nome_id", kanbanId as never))
-        : await t.insert(payload as never);
+      const gravar = (p: Row) => {
+        const t = supabase.from("funcoes_kanban" as never);
+        return vinculo
+          ? vinculo["id"] !== undefined
+            ? t.update(p as never).eq("id", vinculo["id"] as never)
+            : t.update(p as never).eq("kanban_nome_id", kanbanId as never)
+          : t.insert(p as never);
+      };
+      let { error } = await gravar(payload);
+      // Tabela sem coluna empresa_id: grava sem ela.
+      if (error && /empresa_id/.test(error.message ?? "") && "empresa_id" in payload) {
+        const { empresa_id: _e, ...semEmpresa } = payload;
+        ({ error } = await gravar(semEmpresa));
+      }
       if (error) throw error;
     },
     onSuccess: () => {
