@@ -18,3 +18,5 @@ Orçamentos: gravação multi-tabela (cabeçalho + sincronização das linhas) f
 Selects com muitas opções (clientes, itens) usam `SearchSelect` (Popover + Command) em `src/components/data-table/`; o `Select` simples continua para listas curtas (vendedor, unidade, situação).
 
 Cores semânticas `success` e `warning` existem em `src/styles.css` (claro/escuro) para estados como situação do orçamento; nunca usar classes de cor fixas (green-500 etc.).
+
+Laudos/Cotações: helpers (numeração PREFIXO-AAAA-NNN, CSV, upload de fotos) ficam em `src/lib/laudos.ts`; a aprovação da cotação cria o orçamento via `useSaveOrcamento` para reaproveitar numeração e sincronização de linhas.
