@@ -23,6 +23,7 @@ import { Route as AuthenticatedEmpresasRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedFuncoesRouteImport } from './routes/_authenticated/funcoes'
 import { Route as AuthenticatedItensRouteImport } from './routes/_authenticated/itens'
 import { Route as AuthenticatedKanbanRouteImport } from './routes/_authenticated/kanban'
+import { Route as AuthenticatedLaudosRouteImport } from './routes/_authenticated/laudos'
 import { Route as AuthenticatedMarcasRouteImport } from './routes/_authenticated/marcas'
 import { Route as AuthenticatedMeusDadosRouteImport } from './routes/_authenticated/meus-dados'
 import { Route as AuthenticatedOrcamentosRouteImport } from './routes/_authenticated/orcamentos'
@@ -108,6 +109,11 @@ const AuthenticatedItensRoute = AuthenticatedItensRouteImport.update({
 const AuthenticatedKanbanRoute = AuthenticatedKanbanRouteImport.update({
   id: '/kanban',
   path: '/kanban',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedLaudosRoute = AuthenticatedLaudosRouteImport.update({
+  id: '/laudos',
+  path: '/laudos',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedMarcasRoute = AuthenticatedMarcasRouteImport.update({
@@ -206,6 +212,7 @@ export interface FileRoutesByFullPath {
   '/funcoes': typeof AuthenticatedFuncoesRoute
   '/itens': typeof AuthenticatedItensRoute
   '/kanban': typeof AuthenticatedKanbanRoute
+  '/laudos': typeof AuthenticatedLaudosRoute
   '/marcas': typeof AuthenticatedMarcasRoute
   '/meus-dados': typeof AuthenticatedMeusDadosRoute
   '/orcamentos': typeof AuthenticatedOrcamentosRoute
@@ -236,6 +243,7 @@ export interface FileRoutesByTo {
   '/funcoes': typeof AuthenticatedFuncoesRoute
   '/itens': typeof AuthenticatedItensRoute
   '/kanban': typeof AuthenticatedKanbanRoute
+  '/laudos': typeof AuthenticatedLaudosRoute
   '/marcas': typeof AuthenticatedMarcasRoute
   '/meus-dados': typeof AuthenticatedMeusDadosRoute
   '/orcamentos': typeof AuthenticatedOrcamentosRoute
@@ -268,6 +276,7 @@ export interface FileRoutesById {
   '/_authenticated/funcoes': typeof AuthenticatedFuncoesRoute
   '/_authenticated/itens': typeof AuthenticatedItensRoute
   '/_authenticated/kanban': typeof AuthenticatedKanbanRoute
+  '/_authenticated/laudos': typeof AuthenticatedLaudosRoute
   '/_authenticated/marcas': typeof AuthenticatedMarcasRoute
   '/_authenticated/meus-dados': typeof AuthenticatedMeusDadosRoute
   '/_authenticated/orcamentos': typeof AuthenticatedOrcamentosRoute
@@ -300,6 +309,7 @@ export interface FileRouteTypes {
     | '/funcoes'
     | '/itens'
     | '/kanban'
+    | '/laudos'
     | '/marcas'
     | '/meus-dados'
     | '/orcamentos'
@@ -330,6 +340,7 @@ export interface FileRouteTypes {
     | '/funcoes'
     | '/itens'
     | '/kanban'
+    | '/laudos'
     | '/marcas'
     | '/meus-dados'
     | '/orcamentos'
@@ -361,6 +372,7 @@ export interface FileRouteTypes {
     | '/_authenticated/funcoes'
     | '/_authenticated/itens'
     | '/_authenticated/kanban'
+    | '/_authenticated/laudos'
     | '/_authenticated/marcas'
     | '/_authenticated/meus-dados'
     | '/_authenticated/orcamentos'
@@ -489,6 +501,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedKanbanRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/laudos': {
+      id: '/_authenticated/laudos'
+      path: '/laudos'
+      fullPath: '/laudos'
+      preLoaderRoute: typeof AuthenticatedLaudosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/marcas': {
       id: '/_authenticated/marcas'
       path: '/marcas'
@@ -605,6 +624,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedFuncoesRoute: typeof AuthenticatedFuncoesRoute
   AuthenticatedItensRoute: typeof AuthenticatedItensRoute
   AuthenticatedKanbanRoute: typeof AuthenticatedKanbanRoute
+  AuthenticatedLaudosRoute: typeof AuthenticatedLaudosRoute
   AuthenticatedMarcasRoute: typeof AuthenticatedMarcasRoute
   AuthenticatedMeusDadosRoute: typeof AuthenticatedMeusDadosRoute
   AuthenticatedOrcamentosRoute: typeof AuthenticatedOrcamentosRoute
@@ -629,6 +649,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedFuncoesRoute: AuthenticatedFuncoesRoute,
   AuthenticatedItensRoute: AuthenticatedItensRoute,
   AuthenticatedKanbanRoute: AuthenticatedKanbanRoute,
+  AuthenticatedLaudosRoute: AuthenticatedLaudosRoute,
   AuthenticatedMarcasRoute: AuthenticatedMarcasRoute,
   AuthenticatedMeusDadosRoute: AuthenticatedMeusDadosRoute,
   AuthenticatedOrcamentosRoute: AuthenticatedOrcamentosRoute,
