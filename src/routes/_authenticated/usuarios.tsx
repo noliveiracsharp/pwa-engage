@@ -65,6 +65,28 @@ function UsuariosPage() {
       (e) => text(rowId(e)) === userEmpresaId || text(e["empresa_pai_id"]) === userEmpresaId,
     );
   }, [empresas, isMaster, userEmpresaId]);
+  const empresaLimiteId = text(empresaAtual ? rowId(empresaAtual) : "") || userEmpresaId;
+  const { data: planoEmpresa } = useQuery({
+    queryKey: ["plano-empresa-limite", empresaLimiteId],
+    enabled: Boolean(empresaLimiteId),
+    queryFn: async () => {
+      const { data: ass } = await supabase.from("empresas_assinaturas" as never).select("plano_base_id").eq("empresa_id", empresaLimiteId).maybeSingle();
+      const planoId = (ass as Row | null)?.["plano_base_id"];
+      if (!planoId) return null;
+      const { data: plano } = await supabase.from("planos_base" as never).select("nome, usuarios_inclusos, valor_usuario_adicional").eq("id", planoId as never).maybeSingle();
+      return (plano as Row | null) ?? null;
+    },
+  });
+  const usuariosAtivosEmpresa = rows.filter((u) => text(u["empresa_id"]) === empresaLimiteId && u["status"] !== false).length;
+  const limitePlano = planoEmpresa ? Number(planoEmpresa["usuarios_inclusos"] ?? 0) : 0;
+  const excedeLimite = Boolean(planoEmpresa) && limitePlano > 0 && usuariosAtivosEmpresa + 1 > limitePlano;
+  const valorAdicional = Number(planoEmpresa?.["valor_usuario_adicional"] ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const avisoLimite = !record && excedeLimite ? (
+    <div className="mb-4 rounded-md border border-warning bg-warning/10 p-3 text-sm text-foreground">
+      <strong>Limite do plano atingido.</strong> O plano {text(planoEmpresa?.["nome"])} inclui {limitePlano} usuários e a empresa já tem {usuariosAtivosEmpresa} ativos.
+      Este novo usuário gerará uma cobrança adicional de {valorAdicional}/mês na próxima fatura.
+    </div>
+  ) : null;
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [record, setRecord] = useState<Row | null>(null);
@@ -444,7 +466,7 @@ function UsuariosPage() {
         fields={fields}
         record={record}
         readOnly={readOnlySheet}
-        extra={kanbanPicker}
+        extra={<>{avisoLimite}{kanbanPicker}</>}
         saving={save.isPending || createUser.isPending}
         onSave={handleSave}
       />
