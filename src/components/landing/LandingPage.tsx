@@ -51,6 +51,23 @@ function Celula({ v }: { v: Cel }) {
   return <span className="text-xs text-muted-foreground">{v}</span>;
 }
 
+function ModulosAvulsos() {
+  const { data: modulos = [] } = useQuery({
+    queryKey: ["landing-modulos"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("modulos_adicionais" as never).select("*");
+      if (error) throw error;
+      return ((data ?? []) as Record<string, unknown>[])
+        .filter((m) => m["status"] !== false && m["ativo"] !== false)
+        .sort((a, b) => Number(a["valor_mensal_fixo"] ?? a["valor_mensal"] ?? 0) - Number(b["valor_mensal_fixo"] ?? b["valor_mensal"] ?? 0));
+    },
+  });
+  if (modulos.length === 0) return null;
+  const itens = modulos.map((m) => `${String(m["nome"] ?? "")} (+${formatBRL(m["valor_mensal_fixo"] ?? m["valor_mensal"])})`);
+  const lista = itens.length > 1 ? `${itens.slice(0, -1).join(", ")} e ${itens[itens.length - 1]}` : itens[0];
+  return <p className="mt-4 text-center text-sm text-muted-foreground">Módulos avulsos: {lista} por mês.</p>;
+}
+
 function Comparativo() {
   return (
     <div className="mt-16">
@@ -82,9 +99,7 @@ function Comparativo() {
           </tbody>
         </table>
       </div>
-      <p className="mt-4 text-center text-sm text-muted-foreground">
-        Módulos avulsos: Projetos (+R$ 79,90), Orçamentos (+R$ 199,90) e Cotações (+R$ 299,90) por mês.
-      </p>
+      <ModulosAvulsos />
     </div>
   );
 }
