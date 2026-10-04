@@ -130,7 +130,7 @@ export function ChatInterno({ sidebarOpen }: { sidebarOpen: boolean }) {
             onClick={() => setOpen((o) => !o)}
             aria-label="Chat da equipe"
             className={cn(
-              "mt-auto flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+              "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
               open && "bg-sidebar-accent",
               !sidebarOpen && "justify-center px-0",
             )}
