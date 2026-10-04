@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -16,8 +16,78 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
-/** Número do WhatsApp comercial (somente dígitos, com 55). Ajuste para o número real. */
-export const WHATSAPP_VENDAS = "5500000000000";
+/** Número do WhatsApp comercial (somente dígitos, com 55). */
+export const WHATSAPP_VENDAS = "5511936181205";
+
+type Cel = boolean | string;
+const COMP: { grupo: string; linhas: [string, Cel, Cel, Cel][] }[] = [
+  { grupo: "Atendimento e comunicação", linhas: [
+    ["WhatsApp multi-atendente", true, true, true],
+    ["Triagem inteligente com IA", true, true, true],
+    ["Chat interno da equipe", true, true, true],
+    ["Pesquisa de satisfação (CSAT)", true, true, true],
+    ["Portal do Cliente", true, true, true],
+  ] },
+  { grupo: "Vendas e orçamentos", linhas: [
+    ["Funil de vendas (Kanban)", true, true, true],
+    ["Orçamentos em PDF", "Opcional", true, true],
+    ["Cálculo de markup e margem", "Opcional", true, true],
+    ["Tabela de juros parcelados", "Opcional", true, true],
+  ] },
+  { grupo: "Operação, compras e projetos", linhas: [
+    ["Laudos técnicos e vistorias", false, "Opcional", true],
+    ["Cotação com fornecedores", false, "Opcional", true],
+    ["Gestão de projetos e Gantt", "Opcional", "Opcional", true],
+  ] },
+  { grupo: "Suporte", linhas: [
+    ["Suporte via WhatsApp", "Padrão", "Prioritário", "Gerente dedicado"],
+    ["Treinamento", "Vídeo-aulas", "Vídeo-aulas", "Reunião 1 a 1"],
+  ] },
+];
+
+function Celula({ v }: { v: Cel }) {
+  if (v === true) return <Check className="mx-auto h-4 w-4 text-primary" aria-label="Incluso" />;
+  if (v === false) return <span className="text-muted-foreground" aria-label="Não incluso">—</span>;
+  return <span className="text-xs text-muted-foreground">{v}</span>;
+}
+
+function Comparativo() {
+  return (
+    <div className="mt-16">
+      <h3 className="mb-6 text-center text-2xl font-bold tracking-tight">Compare os recursos de cada plano</h3>
+      <div className="overflow-x-auto rounded-xl border border-border bg-card">
+        <table className="w-full min-w-[640px] text-sm">
+          <thead>
+            <tr className="border-b border-border">
+              <th className="p-4 text-left font-semibold">Recursos</th>
+              <th className="p-4 text-center font-semibold">Atende Start</th>
+              <th className="bg-primary/10 p-4 text-center font-semibold text-primary">Atende Pro ★</th>
+              <th className="p-4 text-center font-semibold">Atende Enterprise</th>
+            </tr>
+          </thead>
+          <tbody>
+            {COMP.map((g) => (
+              <Fragment key={g.grupo}>
+                <tr className="bg-muted/50"><td colSpan={4} className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{g.grupo}</td></tr>
+                {g.linhas.map(([nome, a, b, c]) => (
+                  <tr key={nome} className="border-t border-border">
+                    <td className="p-4">{nome}</td>
+                    <td className="p-4 text-center"><Celula v={a} /></td>
+                    <td className="bg-primary/5 p-4 text-center"><Celula v={b} /></td>
+                    <td className="p-4 text-center"><Celula v={c} /></td>
+                  </tr>
+                ))}
+              </Fragment>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="mt-4 text-center text-sm text-muted-foreground">
+        Módulos avulsos: Projetos (+R$ 79,90), Orçamentos (+R$ 199,90) e Cotações (+R$ 299,90) por mês.
+      </p>
+    </div>
+  );
+}
 
 const waLink = (msg: string) => `https://wa.me/${WHATSAPP_VENDAS}?text=${encodeURIComponent(msg)}`;
 
@@ -300,6 +370,7 @@ export function LandingPage() {
               <MessageCircle className="h-4 w-4" /> Fale no WhatsApp
             </a>
           </p>
+          <Comparativo />
         </div>
       </section>
 
