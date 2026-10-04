@@ -6,6 +6,7 @@ import { Bot, CheckCircle2, Headphones, UserCheck, Users, UsersRound } from "luc
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
+import { useAudit } from "@/lib/audit";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   staticData: { sitemap: false },
@@ -23,9 +24,10 @@ function periodStart(periodo: Periodo) {
   return new Date(d.getFullYear(), d.getMonth(), 1);
 }
 
-async function countOf(table: string, build?: (q: any) => any) {
+async function countOf(table: string, empId: string | number | undefined, build?: (q: any) => any) {
   try {
     let query: any = supabase.from(table).select("*", { count: "exact", head: true });
+    if (empId !== undefined) query = query.eq("empresa_id", empId);
     if (build) query = build(query);
     const { count, error } = await query;
     if (error) return 0;
@@ -36,27 +38,30 @@ async function countOf(table: string, build?: (q: any) => any) {
 }
 
 function useDashboard(periodo: Periodo) {
+  const { empresaId } = useAudit();
   const since = periodStart(periodo).toISOString();
 
   return useQuery({
-    queryKey: ["dashboard", periodo],
+    queryKey: ["dashboard", periodo, empresaId],
     queryFn: async () => {
       void since;
       const [pessoas, usuarios, usuariosAtivos, comIA, emAtendimento, encerrados] = await Promise.all([
-        countOf("pessoas"),
-        countOf("usuarios"),
-        countOf("usuarios", (q) => q.eq("status", true)),
-        countOf("atendimentos", (q) => q.eq("status", "IA")),
-        countOf("atendimentos", (q) => q.eq("status", "Em atendimento")),
-        countOf("atendimentos", (q) => q.eq("status", "Encerrado")),
+        countOf("pessoas", empresaId),
+        countOf("usuarios", empresaId),
+        countOf("usuarios", empresaId, (q) => q.eq("status", true)),
+        countOf("atendimentos", empresaId, (q) => q.eq("status", "IA")),
+        countOf("atendimentos", empresaId, (q) => q.eq("status", "Em atendimento")),
+        countOf("atendimentos", empresaId, (q) => q.eq("status", "Encerrado")),
       ]);
 
       let porDia: Array<{ label: string; total: number }> = [];
       let porMes: Array<{ label: string; total: number }> = [];
       try {
-        const { data } = await supabase
+        let q: any = supabase
           .from("atendimentos")
-          .select("created_at")
+          .select("created_at");
+        if (empresaId !== undefined) q = q.eq("empresa_id", empresaId);
+        const { data } = await q
           .gte("created_at", periodStart("ano").toISOString())
           .limit(5000);
         const rows = (data ?? []) as Array<{ created_at: string }>;
