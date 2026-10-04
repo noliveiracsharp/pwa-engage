@@ -3,6 +3,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { cn } from "@/lib/utils";
 import { useMenu } from "@/hooks/useMenu";
 import { getIcon } from "./icon-map";
+import { ChatInterno } from "@/components/chat-interno/ChatInterno";
 
 type Props = {
   open: boolean;
@@ -49,6 +50,7 @@ export function AppSidebar({ open, onNavigate }: Props) {
             </Tooltip>
           );
         })}
+        <ChatInterno sidebarOpen={open} />
       </nav>
     </TooltipProvider>
   );
