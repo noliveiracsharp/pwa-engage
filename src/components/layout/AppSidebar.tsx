@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { useMenu } from "@/hooks/useMenu";
 import { getIcon } from "./icon-map";
 import { ChatInterno } from "@/components/chat-interno/ChatInterno";
+import { VersaoSidebar } from "./NovidadesDialog";
 
 type Props = {
   open: boolean;
@@ -51,6 +52,9 @@ export function AppSidebar({ open, onNavigate }: Props) {
           );
         })}
         <ChatInterno sidebarOpen={open} />
+        <div className="mt-auto border-t border-sidebar-border pt-1">
+          <VersaoSidebar open={open} />
+        </div>
       </nav>
     </TooltipProvider>
   );
