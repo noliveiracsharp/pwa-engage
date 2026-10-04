@@ -10,7 +10,8 @@ import { useSaveOrcamento, type LinhaPayload } from "@/hooks/useSaveOrcamento";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { rowId, useDeleteRecord, useTableRows } from "@/lib/crud";
 import { matchesAny } from "@/lib/input-masks";
-import { COTACAO_STATUS, cotacaoStatusMeta } from "@/lib/laudos";
+import { COTACAO_STATUS, cotacaoStatusMeta, proximoNumero } from "@/lib/laudos";
+import { useAudit } from "@/lib/audit";
 import { formatDate, num, round2 } from "@/lib/orcamentos";
 import { pick, type Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
@@ -44,6 +45,22 @@ function CotacoesPage() {
   const { data: itens = [] } = useTableRows("itens");
   const remove = useDeleteRecord("cotacoes");
   const saveOrc = useSaveOrcamento();
+  const { empresaId } = useAudit();
+
+  const novaCotacao = async () => {
+    const titulo = window.prompt("Título da cotação avulsa:", "Cotação avulsa");
+    if (titulo === null) return;
+    const numero = await proximoNumero("cotacoes", "COT", empresaId);
+    const { data, error } = await supabase
+      .from("cotacoes")
+      .insert({ empresa_id: empresaId, numero, titulo: titulo.trim() || "Cotação avulsa", status: "pendente" })
+      .select("id")
+      .single();
+    if (error) return void toast.error(error.message);
+    await qc.invalidateQueries({ queryKey: ["table", "cotacoes"] });
+    setSelId(String((data as Row)["id"]));
+    toast.success(`Cotação ${numero} criada. Adicione os itens e fornecedores.`);
+  };
 
   const [selId, setSelId] = useState<string | null>(null);
   const [aprovando, setAprovando] = useState(false);
@@ -184,6 +201,7 @@ function CotacoesPage() {
         loading={isLoading}
         getValue={(row, keys) => pick(row, keys)}
         rowKey={(row, i) => String(rowId(row) ?? i)}
+        onAdd={perms.canCreate ? novaCotacao : undefined}
         onEdit={(r) => setSelId(String(rowId(r)))}
         onDelete={perms.canDelete ? (r) => remove.mutate(r) : undefined}
         filters={
