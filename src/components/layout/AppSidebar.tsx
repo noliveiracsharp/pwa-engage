@@ -52,7 +52,7 @@ export function AppSidebar({ open, onNavigate }: Props) {
           );
         })}
         <div className="mt-auto flex flex-col gap-1 border-t border-sidebar-border pt-2">
-          <ChatInterno sidebarOpen={open} />
+          <ChatInterno sidebarOpen={open} onAbrir={onNavigate} />
           <VersaoSidebar open={open} />
         </div>
       </nav>
