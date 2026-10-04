@@ -70,7 +70,7 @@ function FotoStrip({ fotos, onChange }: { fotos: string[]; onChange: (f: string[
       {fotos.map((u) => (
         <div key={u} className="relative">
           <a href={u} target="_blank" rel="noreferrer">
-            <img src={u} alt="Foto do laudo" className="h-16 w-16 rounded-md border object-cover" />
+            <img src={u} alt="Foto do laudo" className="h-10 w-10 rounded-md border object-cover" />
           </a>
           <button
             type="button"
@@ -191,7 +191,7 @@ export function LaudoSheet({ open, onOpenChange, record, linhas, fotos, clientes
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-2xl">
+      <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-4xl">
         <SheetHeader className="border-b px-6 py-4">
           <SheetTitle>{record ? `Laudo ${String(record["numero"] ?? "")}` : "Novo laudo técnico"}</SheetTitle>
         </SheetHeader>
