@@ -119,11 +119,12 @@ export function VersaoSidebar({ open }: { open: boolean }) {
   const [dlg, setDlg] = useState(false);
   return (
     <>
-      <button type="button" onClick={() => setDlg(true)} title="Novidades"
-        className={cn("mt-1 flex items-center gap-2 rounded-md px-3 py-2 text-xs text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+      <button type="button" onClick={() => setDlg(true)} title={`Novidades · Versão ${versao?.versao ?? "—"}`}
+        className={cn("flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+          dlg && "bg-sidebar-accent",
           !open && "justify-center px-0")}>
-        <Sparkles className="h-4 w-4 shrink-0 text-primary" />
-        {open ? <span>Versão {versao?.versao ?? "—"}</span> : <span className="sr-only">Novidades</span>}
+        <Sparkles className="h-5 w-5 shrink-0" />
+        {open ? <span className="truncate">Versão {versao?.versao ?? "—"}</span> : <span className="sr-only">Novidades</span>}
       </button>
       <NovidadesDialog open={dlg} onOpenChange={setDlg} />
     </>

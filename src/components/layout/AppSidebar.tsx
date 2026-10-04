@@ -51,8 +51,8 @@ export function AppSidebar({ open, onNavigate }: Props) {
             </Tooltip>
           );
         })}
-        <ChatInterno sidebarOpen={open} />
-        <div className="mt-auto border-t border-sidebar-border pt-1">
+        <div className="mt-auto flex flex-col gap-1 border-t border-sidebar-border pt-2">
+          <ChatInterno sidebarOpen={open} />
           <VersaoSidebar open={open} />
         </div>
       </nav>
