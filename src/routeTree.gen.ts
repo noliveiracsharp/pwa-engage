@@ -18,6 +18,7 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as AuthenticatedAtendimentosRouteImport } from './routes/_authenticated/atendimentos'
 import { Route as AuthenticatedCentro_custosRouteImport } from './routes/_authenticated/centro_custos'
+import { Route as AuthenticatedCotacoesRouteImport } from './routes/_authenticated/cotacoes'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedEmpresasRouteImport } from './routes/_authenticated/empresas'
 import { Route as AuthenticatedFuncoesRouteImport } from './routes/_authenticated/funcoes'
@@ -86,6 +87,11 @@ const AuthenticatedCentro_custosRoute =
     path: '/centro_custos',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedCotacoesRoute = AuthenticatedCotacoesRouteImport.update({
+  id: '/cotacoes',
+  path: '/cotacoes',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -207,6 +213,7 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/atendimentos': typeof AuthenticatedAtendimentosRoute
   '/centro_custos': typeof AuthenticatedCentro_custosRoute
+  '/cotacoes': typeof AuthenticatedCotacoesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/empresas': typeof AuthenticatedEmpresasRoute
   '/funcoes': typeof AuthenticatedFuncoesRoute
@@ -238,6 +245,7 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/atendimentos': typeof AuthenticatedAtendimentosRoute
   '/centro_custos': typeof AuthenticatedCentro_custosRoute
+  '/cotacoes': typeof AuthenticatedCotacoesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/empresas': typeof AuthenticatedEmpresasRoute
   '/funcoes': typeof AuthenticatedFuncoesRoute
@@ -271,6 +279,7 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/_authenticated/atendimentos': typeof AuthenticatedAtendimentosRoute
   '/_authenticated/centro_custos': typeof AuthenticatedCentro_custosRoute
+  '/_authenticated/cotacoes': typeof AuthenticatedCotacoesRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/empresas': typeof AuthenticatedEmpresasRoute
   '/_authenticated/funcoes': typeof AuthenticatedFuncoesRoute
@@ -304,6 +313,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/atendimentos'
     | '/centro_custos'
+    | '/cotacoes'
     | '/dashboard'
     | '/empresas'
     | '/funcoes'
@@ -335,6 +345,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/atendimentos'
     | '/centro_custos'
+    | '/cotacoes'
     | '/dashboard'
     | '/empresas'
     | '/funcoes'
@@ -367,6 +378,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/_authenticated/atendimentos'
     | '/_authenticated/centro_custos'
+    | '/_authenticated/cotacoes'
     | '/_authenticated/dashboard'
     | '/_authenticated/empresas'
     | '/_authenticated/funcoes'
@@ -464,6 +476,13 @@ declare module '@tanstack/react-router' {
       path: '/centro_custos'
       fullPath: '/centro_custos'
       preLoaderRoute: typeof AuthenticatedCentro_custosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/cotacoes': {
+      id: '/_authenticated/cotacoes'
+      path: '/cotacoes'
+      fullPath: '/cotacoes'
+      preLoaderRoute: typeof AuthenticatedCotacoesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/dashboard': {
@@ -619,6 +638,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAtendimentosRoute: typeof AuthenticatedAtendimentosRoute
   AuthenticatedCentro_custosRoute: typeof AuthenticatedCentro_custosRoute
+  AuthenticatedCotacoesRoute: typeof AuthenticatedCotacoesRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedEmpresasRoute: typeof AuthenticatedEmpresasRoute
   AuthenticatedFuncoesRoute: typeof AuthenticatedFuncoesRoute
@@ -644,6 +664,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAtendimentosRoute: AuthenticatedAtendimentosRoute,
   AuthenticatedCentro_custosRoute: AuthenticatedCentro_custosRoute,
+  AuthenticatedCotacoesRoute: AuthenticatedCotacoesRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedEmpresasRoute: AuthenticatedEmpresasRoute,
   AuthenticatedFuncoesRoute: AuthenticatedFuncoesRoute,
