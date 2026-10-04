@@ -486,3 +486,14 @@
   html.prj-printing .prj-print-host { display: block !important; page: prj; }
   .prj-doc, .prj-doc * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+
+/* Cronograma compartilhado: impressão em paisagem */
+@page cmp { size: A4 landscape; margin: 10mm; }
+@media print {
+  .cmp-print { page: cmp; min-height: 0 !important; }
+  .cmp-print, .cmp-print * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .cmp-print .overflow-x-auto { overflow: visible !important; }
+  .cmp-print .min-w-\[960px\] { min-width: 0 !important; }
+  .cmp-print .max-w-7xl { max-width: none !important; padding: 0 0 12px !important; }
+  .cmp-print .grid-cols-\[340px_1fr\] { grid-template-columns: 30% 1fr !important; break-inside: avoid; }
+}
