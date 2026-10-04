@@ -120,7 +120,7 @@ function Compartilhado() {
   const pos = (t: number) => ((t - g.min) / g.span) * 100;
 
   return (
-    <div className="min-h-dvh bg-background">
+    <div className="cmp-print min-h-dvh bg-background">
       <header className="border-b border-border bg-card">
         <div className="mx-auto max-w-7xl p-6">
           {(empNome || logo) && (
