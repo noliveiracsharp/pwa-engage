@@ -151,12 +151,13 @@ export function LaudoSheet({ open, onOpenChange, record, linhas, fotos, clientes
   );
 
   const confirmarEdit = () => {
-    if (!edit) return;
+    if (!edit) return undefined;
     if (!edit.descricao_item.trim()) return toast.error(inspecao ? "Selecione um item ou digite um tópico." : "Selecione o item.");
     if (!inspecao && !(Number(edit.quantidade.replace(",", ".")) > 0)) return toast.error("Quantidade precisa ser maior que zero.");
     if (edit.key) setLs((p) => p.map((l) => (l.key === edit.key ? edit : l)));
     else setLs((p) => [...p, { ...edit, key: crypto.randomUUID() }]);
     setEdit(null);
+    return undefined;
   };
 
   const salvar = () => {
