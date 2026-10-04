@@ -81,7 +81,7 @@ function UsuariosPage() {
   const limitePlano = planoEmpresa ? Number(planoEmpresa["usuarios_inclusos"] ?? 0) : 0;
   const excedeLimite = Boolean(planoEmpresa) && limitePlano > 0 && usuariosAtivosEmpresa + 1 > limitePlano;
   const valorAdicional = Number(planoEmpresa?.["valor_usuario_adicional"] ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-  const avisoLimite = !record && excedeLimite ? (
+  const avisoLimiteNovo = excedeLimite ? (
     <div className="mb-4 rounded-md border border-warning bg-warning/10 p-3 text-sm text-foreground">
       <strong>Limite do plano atingido.</strong> O plano {text(planoEmpresa?.["nome"])} inclui {limitePlano} usuários e a empresa já tem {usuariosAtivosEmpresa} ativos.
       Este novo usuário gerará uma cobrança adicional de {valorAdicional}/mês na próxima fatura.
@@ -466,7 +466,7 @@ function UsuariosPage() {
         fields={fields}
         record={record}
         readOnly={readOnlySheet}
-        extra={<>{avisoLimite}{kanbanPicker}</>}
+        extra={<>{!record && avisoLimiteNovo}{kanbanPicker}</>}
         saving={save.isPending || createUser.isPending}
         onSave={handleSave}
       />
