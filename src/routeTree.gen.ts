@@ -36,6 +36,7 @@ import { Route as CompartilhadoTokenRouteImport } from './routes/compartilhado.$
 import { Route as AuthenticatedAdminClientesRouteImport } from './routes/_authenticated/admin.clientes'
 import { Route as AuthenticatedAdminModulosRouteImport } from './routes/_authenticated/admin.modulos'
 import { Route as AuthenticatedAdminPlanosRouteImport } from './routes/_authenticated/admin.planos'
+import { Route as AuthenticatedAdminVersoesRouteImport } from './routes/_authenticated/admin.versoes'
 import { Route as AuthenticatedProjetosTemplatesRouteImport } from './routes/_authenticated/projetos_.templates'
 
 const IndexRoute = IndexRouteImport.update({
@@ -178,6 +179,12 @@ const AuthenticatedAdminPlanosRoute =
     path: '/admin/planos',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAdminVersoesRoute =
+  AuthenticatedAdminVersoesRouteImport.update({
+    id: '/admin/versoes',
+    path: '/admin/versoes',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedProjetosTemplatesRoute =
   AuthenticatedProjetosTemplatesRouteImport.update({
     id: '/projetos_/templates',
@@ -212,6 +219,7 @@ export interface FileRoutesByFullPath {
   '/admin/clientes': typeof AuthenticatedAdminClientesRoute
   '/admin/modulos': typeof AuthenticatedAdminModulosRoute
   '/admin/planos': typeof AuthenticatedAdminPlanosRoute
+  '/admin/versoes': typeof AuthenticatedAdminVersoesRoute
   '/projetos/templates': typeof AuthenticatedProjetosTemplatesRoute
 }
 export interface FileRoutesByTo {
@@ -241,6 +249,7 @@ export interface FileRoutesByTo {
   '/admin/clientes': typeof AuthenticatedAdminClientesRoute
   '/admin/modulos': typeof AuthenticatedAdminModulosRoute
   '/admin/planos': typeof AuthenticatedAdminPlanosRoute
+  '/admin/versoes': typeof AuthenticatedAdminVersoesRoute
   '/projetos/templates': typeof AuthenticatedProjetosTemplatesRoute
 }
 export interface FileRoutesById {
@@ -272,6 +281,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/clientes': typeof AuthenticatedAdminClientesRoute
   '/_authenticated/admin/modulos': typeof AuthenticatedAdminModulosRoute
   '/_authenticated/admin/planos': typeof AuthenticatedAdminPlanosRoute
+  '/_authenticated/admin/versoes': typeof AuthenticatedAdminVersoesRoute
   '/_authenticated/projetos_/templates': typeof AuthenticatedProjetosTemplatesRoute
 }
 export interface FileRouteTypes {
@@ -303,6 +313,7 @@ export interface FileRouteTypes {
     | '/admin/clientes'
     | '/admin/modulos'
     | '/admin/planos'
+    | '/admin/versoes'
     | '/projetos/templates'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -332,6 +343,7 @@ export interface FileRouteTypes {
     | '/admin/clientes'
     | '/admin/modulos'
     | '/admin/planos'
+    | '/admin/versoes'
     | '/projetos/templates'
   id:
     | '__root__'
@@ -362,6 +374,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/clientes'
     | '/_authenticated/admin/modulos'
     | '/_authenticated/admin/planos'
+    | '/_authenticated/admin/versoes'
     | '/_authenticated/projetos_/templates'
   fileRoutesById: FileRoutesById
 }
@@ -567,6 +580,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminPlanosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin/versoes': {
+      id: '/_authenticated/admin/versoes'
+      path: '/admin/versoes'
+      fullPath: '/admin/versoes'
+      preLoaderRoute: typeof AuthenticatedAdminVersoesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/projetos_/templates': {
       id: '/_authenticated/projetos_/templates'
       path: '/projetos/templates'
@@ -597,6 +617,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminClientesRoute: typeof AuthenticatedAdminClientesRoute
   AuthenticatedAdminModulosRoute: typeof AuthenticatedAdminModulosRoute
   AuthenticatedAdminPlanosRoute: typeof AuthenticatedAdminPlanosRoute
+  AuthenticatedAdminVersoesRoute: typeof AuthenticatedAdminVersoesRoute
   AuthenticatedProjetosTemplatesRoute: typeof AuthenticatedProjetosTemplatesRoute
 }
 
@@ -620,6 +641,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminClientesRoute: AuthenticatedAdminClientesRoute,
   AuthenticatedAdminModulosRoute: AuthenticatedAdminModulosRoute,
   AuthenticatedAdminPlanosRoute: AuthenticatedAdminPlanosRoute,
+  AuthenticatedAdminVersoesRoute: AuthenticatedAdminVersoesRoute,
   AuthenticatedProjetosTemplatesRoute: AuthenticatedProjetosTemplatesRoute,
 }
 
