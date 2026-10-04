@@ -95,6 +95,8 @@ type Plano = {
   id: string;
   nome: string;
   descricao: string | null;
+  subtitulo?: string | null;
+  recursos_inclusos?: string | null;
   valor_mensal: number | null;
   usuarios_inclusos: number | null;
   valor_usuario_adicional: number | null;
@@ -341,7 +343,8 @@ export function LandingPage() {
                     {destaque && <Badge className="absolute -top-3 left-1/2 -translate-x-1/2">Mais escolhido</Badge>}
                     <CardHeader>
                       <CardTitle className="text-xl">{p.nome}</CardTitle>
-                      {p.descricao && <p className="text-sm text-muted-foreground">{p.descricao}</p>}
+                      {p.subtitulo && <p className="text-sm font-medium text-primary">{p.subtitulo}</p>}
+                      {p.descricao && <p className="text-sm italic text-muted-foreground">{p.descricao}</p>}
                     </CardHeader>
                     <CardContent className="flex-1 space-y-4">
                       <div>
@@ -349,9 +352,12 @@ export function LandingPage() {
                         <span className="text-muted-foreground">/mês</span>
                       </div>
                       <ul className="space-y-2 text-sm">
-                        <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> {num(p.usuarios_inclusos)} usuários inclusos</li>
-                        <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> + {formatBRL(p.valor_usuario_adicional)} por usuário adicional</li>
-                        <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Teste grátis</li>
+                        <li className="flex items-center gap-2"><Check className="h-4 w-4 shrink-0 text-primary" /> {num(p.usuarios_inclusos)} usuários inclusos</li>
+                        <li className="flex items-center gap-2"><Check className="h-4 w-4 shrink-0 text-primary" /> + {formatBRL(p.valor_usuario_adicional)} por usuário adicional</li>
+                        {(p.recursos_inclusos ?? "").split("\n").map((l) => l.trim()).filter(Boolean).map((l) => (
+                          <li key={l} className="flex items-start gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" /> {l}</li>
+                        ))}
+                        <li className="flex items-center gap-2"><Check className="h-4 w-4 shrink-0 text-primary" /> Teste grátis</li>
                       </ul>
                     </CardContent>
                     <CardFooter>
