@@ -1,4 +1,5 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { useRouterState } from "@tanstack/react-router";
 import { AppHeader } from "./AppHeader";
 import { AppSidebar } from "./AppSidebar";
 import { cn } from "@/lib/utils";
@@ -8,24 +9,28 @@ import { useNotificacoesChat } from "@/hooks/useNotificacoesChat";
 export function AppLayout({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const isMobile = useIsMobile();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
   useNotificacoesChat();
 
+  // No celular, qualquer navegação fecha o menu.
+  useEffect(() => { if (isMobile) setOpen(false); }, [pathname, isMobile]);
+
   return (
-    <div className="flex h-screen w-full flex-col bg-background">
+    <div className="flex h-dvh w-full flex-col bg-background">
       <AppHeader onToggleSidebar={() => setOpen((v) => !v)} />
       <div className="relative flex min-h-0 flex-1">
         {isMobile ? (
           <>
             {open && (
               <div
-                className="fixed inset-0 top-16 z-30 bg-foreground/40"
+                className="fixed inset-x-0 bottom-0 top-16 z-30 bg-foreground/40"
                 onClick={() => setOpen(false)}
                 aria-hidden
               />
             )}
             <div
               className={cn(
-                "fixed inset-y-16 left-0 z-40 transition-transform duration-200",
+                "fixed bottom-0 left-0 top-16 z-40 transition-transform duration-200",
                 open ? "translate-x-0" : "-translate-x-full",
               )}
             >

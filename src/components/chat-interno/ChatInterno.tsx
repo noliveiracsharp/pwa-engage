@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Check, ArrowLeft, Maximize2, MessageSquare, Minimize2, Paperclip, Search, Send, Users, X, FileText, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -55,7 +56,7 @@ function hora(v: unknown) {
 }
 
 /** Chat interno da equipe: botão no menu lateral + janela flutuante. */
-export function ChatInterno({ sidebarOpen }: { sidebarOpen: boolean }) {
+export function ChatInterno({ sidebarOpen, onAbrir }: { sidebarOpen: boolean; onAbrir?: (() => void) | undefined }) {
   const { usuario } = useAuth();
   const me = String(pick(usuario, ["id"]) ?? "");
   const empresaId = String(pick(usuario, ["empresa_id", "id_empresa"]) ?? "");
@@ -213,7 +214,7 @@ export function ChatInterno({ sidebarOpen }: { sidebarOpen: boolean }) {
           <button
             ref={botaoRef}
             type="button"
-            onClick={() => { setOpen((o) => !o); setPiscar(false); }}
+            onClick={() => { setOpen((o) => { if (!o) onAbrir?.(); return !o; }); setPiscar(false); }}
             aria-label="Chat da equipe"
             className={cn(
               "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
@@ -236,14 +237,15 @@ export function ChatInterno({ sidebarOpen }: { sidebarOpen: boolean }) {
         {!sidebarOpen && <TooltipContent side="right">Chat da equipe</TooltipContent>}
       </Tooltip>
 
-      {open && (
+      {open && createPortal(
         <div
           ref={painelRef}
           className={cn(
             "fixed bottom-4 z-50 flex flex-col overflow-hidden rounded-2xl border border-border bg-popover text-popover-foreground shadow-2xl transition-all duration-300 animate-in fade-in slide-in-from-bottom-4",
-            sidebarOpen ? "left-[15.5rem]" : "left-[4.5rem]",
-            expanded ? "h-[85vh] w-[640px]" : "h-[560px] w-[380px]",
-            "max-h-[calc(100vh-2rem)] max-w-[calc(100vw-5.5rem)]",
+            "max-md:inset-x-2 max-md:bottom-2 max-md:top-20 max-md:h-auto max-md:w-auto max-md:max-w-none",
+            sidebarOpen ? "md:left-[15.5rem]" : "md:left-[4.5rem]",
+            expanded ? "md:h-[85vh] md:w-[640px]" : "md:h-[560px] md:w-[380px]",
+            "md:max-h-[calc(100vh-2rem)] md:max-w-[calc(100vw-5.5rem)]",
           )}
         >
           <div className="flex items-center justify-between border-b border-border px-4 py-3">
@@ -363,7 +365,8 @@ export function ChatInterno({ sidebarOpen }: { sidebarOpen: boolean }) {
               </TabsContent>
             </Tabs>
           )}
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   );
