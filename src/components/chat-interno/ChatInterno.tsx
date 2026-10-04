@@ -12,6 +12,10 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { tocarSom } from "@/lib/som-notificacao";
+
+/** Canal da conversa aberta no momento (para não notificar o que já está na tela). */
+let canalAberto = "";
 
 const TABLE = "chat_interno_mensagens";
 type Sel = { tipo: "direto"; outro: Row } | { tipo: "grupo"; canal: Row };
@@ -100,6 +104,64 @@ export function ChatInterno({ sidebarOpen }: { sidebarOpen: boolean }) {
     },
   });
 
+  const [naoLidas, setNaoLidas] = useState<Record<string, number>>({});
+  const [piscar, setPiscar] = useState(false);
+  const ctxRef = useRef({ open, usuarios, grupos });
+  ctxRef.current = { open, usuarios, grupos };
+
+  // Escuta global de mensagens novas da equipe.
+  useEffect(() => {
+    if (!me) return;
+    const ch = supabase
+      .channel(`chat_interno_avisos:${me}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: TABLE }, async (payload) => {
+        const m = payload.new as Row;
+        const rem = String(m["remetente_id"] ?? "");
+        const canal = String(m["canal_id"] ?? "");
+        if (!rem || rem === me) return;
+        const meus = await meusCanais(me);
+        if (!meus.includes(canal)) return;
+        const { open: aberto, usuarios: us, grupos: gs } = ctxRef.current;
+        if (aberto && canalAberto === canal && !document.hidden) return;
+        const grupo = gs.find((g) => String(g["id"]) === canal);
+        const autor = us.find((u) => String(u["id"]) === rem);
+        const nomeAutor = String(pick(autor ?? {}, ["nome"], "Colega"));
+        const chave = grupo ? canal : rem;
+        setNaoLidas((n) => ({ ...n, [chave]: (n[chave] ?? 0) + 1 }));
+        setPiscar(true);
+        tocarSom("equipe");
+        const txt = String(m["mensagem"] ?? "") || "Enviou um anexo";
+        toast(grupo ? `${nomeAutor} em ${String(grupo["nome"] ?? "Grupo")}` : `Mensagem de ${nomeAutor}`, {
+          description: txt.length > 100 ? `${txt.slice(0, 97)}…` : txt,
+          duration: 8000,
+          action: {
+            label: "Abrir",
+            onClick: () => {
+              setOpen(true);
+              if (grupo) setSel({ tipo: "grupo", canal: grupo });
+              else if (autor) setSel({ tipo: "direto", outro: autor });
+            },
+          },
+        });
+      })
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(ch);
+    };
+  }, [me]);
+
+  // Ao abrir uma conversa, zera as não lidas dela.
+  useEffect(() => {
+    if (!sel || !open) return;
+    const chave = sel.tipo === "grupo" ? String(sel.canal["id"]) : String(sel.outro["id"]);
+    setNaoLidas((n) => (n[chave] ? { ...n, [chave]: 0 } : n));
+  }, [sel, open]);
+
+  const totalNaoLidas = Object.values(naoLidas).reduce((a, b) => a + b, 0);
+  useEffect(() => {
+    if (totalNaoLidas === 0) setPiscar(false);
+  }, [totalNaoLidas]);
+
   const criarGrupo = async () => {
     if (!gNome.trim() || !gMembros.size) { toast.error("Informe o nome e ao menos um participante."); return; }
     const id = crypto.randomUUID();
@@ -127,7 +189,7 @@ export function ChatInterno({ sidebarOpen }: { sidebarOpen: boolean }) {
         <TooltipTrigger asChild>
           <button
             type="button"
-            onClick={() => setOpen((o) => !o)}
+            onClick={() => { setOpen((o) => !o); setPiscar(false); }}
             aria-label="Chat da equipe"
             className={cn(
               "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
@@ -135,7 +197,15 @@ export function ChatInterno({ sidebarOpen }: { sidebarOpen: boolean }) {
               !sidebarOpen && "justify-center px-0",
             )}
           >
-            <MessageSquare className="h-5 w-5 shrink-0" />
+            <span className="relative">
+              <MessageSquare className={cn("h-5 w-5 shrink-0", piscar && "animate-bounce text-primary")} />
+              {totalNaoLidas > 0 && (
+                <span className="absolute -top-2 -right-2 flex h-4 min-w-4 items-center justify-center">
+                  {piscar && <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-destructive opacity-75" />}
+                  <span className="relative rounded-full bg-destructive px-1 text-[10px] font-bold leading-4 text-destructive-foreground">{totalNaoLidas > 9 ? "9+" : totalNaoLidas}</span>
+                </span>
+              )}
+            </span>
             {sidebarOpen && <span className="truncate">Chat da equipe</span>}
           </button>
         </TooltipTrigger>
@@ -208,6 +278,7 @@ export function ChatInterno({ sidebarOpen }: { sidebarOpen: boolean }) {
                             <p className="truncate text-sm font-medium">{nome}</p>
                             <p className={cn("text-xs", on ? "text-success" : "text-muted-foreground")}>{on ? "Online" : "Offline"}</p>
                           </div>
+                          {(naoLidas[String(u["id"])] ?? 0) > 0 && <span className="ml-auto rounded-full bg-destructive px-1.5 text-xs font-bold text-destructive-foreground">{naoLidas[String(u["id"])]}</span>}
                         </button>
                       );
                     })}
@@ -257,6 +328,7 @@ export function ChatInterno({ sidebarOpen }: { sidebarOpen: boolean }) {
                           <button key={String(g["id"])} type="button" onClick={() => setSel({ tipo: "grupo", canal: g })} className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left hover:bg-accent">
                             <Avatar className="h-10 w-10"><AvatarFallback><Users className="h-4 w-4" /></AvatarFallback></Avatar>
                             <p className="truncate text-sm font-medium">{String(g["nome"] ?? "Grupo")}</p>
+                            {(naoLidas[String(g["id"])] ?? 0) > 0 && <span className="ml-auto rounded-full bg-destructive px-1.5 text-xs font-bold text-destructive-foreground">{naoLidas[String(g["id"])]}</span>}
                           </button>
                         ))}
                       </div>
@@ -300,6 +372,13 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack }: { me: stri
       return (data ?? []) as Row[];
     },
   });
+
+  useEffect(() => {
+    canalAberto = canalId;
+    return () => {
+      if (canalAberto === canalId) canalAberto = "";
+    };
+  }, [canalId]);
 
   useEffect(() => {
     if (!canalId) return;
