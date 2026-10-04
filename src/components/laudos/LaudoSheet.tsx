@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Camera, Check, Loader2, Plus, Trash2, X } from "lucide-react";
+import { Camera, Check, Loader2, Pencil, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { SearchSelect } from "@/components/data-table/SearchSelect";
 import { rowId } from "@/lib/crud";
@@ -98,8 +99,8 @@ export function LaudoSheet({ open, onOpenChange, record, linhas, fotos, clientes
   });
   const [ls, setLs] = useState<LaudoLinha[]>([]);
   const [gerais, setGerais] = useState<string[]>([]);
-  const [novoItem, setNovoItem] = useState("");
-  const [topico, setTopico] = useState("");
+  const [edit, setEdit] = useState<LaudoLinha | null>(null);
+  const vazio = (): LaudoLinha => ({ key: "", item_id: "", descricao_item: "", quantidade: "1", conforme: true, observacao: "", fotos: [] });
 
   useEffect(() => {
     if (!open) return;
@@ -127,8 +128,7 @@ export function LaudoSheet({ open, onOpenChange, record, linhas, fotos, clientes
         })),
     );
     setGerais(fotosDo.filter((f) => !f["laudo_item_id"]).map((f) => String(f["url_foto"])));
-    setNovoItem("");
-    setTopico("");
+    setEdit(null);
   }, [open, record, linhas, fotos]);
 
   const inspecao = isInspecao(h.objetivo);
@@ -150,28 +150,14 @@ export function LaudoSheet({ open, onOpenChange, record, linhas, fotos, clientes
     [itens],
   );
 
-  const patch = (key: string, p: Partial<LaudoLinha>) =>
-    setLs((prev) => prev.map((l) => (l.key === key ? { ...l, ...p } : l)));
-
-  const addItem = (itemId: string) => {
-    if (!itemId) return;
-    const it = itens.find((i) => String(rowId(i)) === itemId);
-    const existente = ls.find((l) => l.item_id === itemId);
-    if (existente && !inspecao) {
-      patch(existente.key, { quantidade: String(Number(existente.quantidade || 0) + 1) });
-    } else {
-      setLs((p) => [...p, {
-        key: crypto.randomUUID(), item_id: itemId, descricao_item: String(it?.["descricao"] ?? "Item"),
-        quantidade: "1", conforme: true, observacao: "", fotos: [],
-      }]);
-    }
-    setNovoItem("");
-  };
-  const addTopico = () => {
-    const t = topico.trim();
-    if (!t) return;
-    setLs((p) => [...p, { key: crypto.randomUUID(), item_id: "", descricao_item: t, quantidade: "1", conforme: true, observacao: "", fotos: [] }]);
-    setTopico("");
+  const confirmarEdit = () => {
+    if (!edit) return undefined;
+    if (!edit.descricao_item.trim()) return toast.error(inspecao ? "Selecione um item ou digite um tópico." : "Selecione o item.");
+    if (!inspecao && !(Number(edit.quantidade.replace(",", ".")) > 0)) return toast.error("Quantidade precisa ser maior que zero.");
+    if (edit.key) setLs((p) => p.map((l) => (l.key === edit.key ? edit : l)));
+    else setLs((p) => [...p, { ...edit, key: crypto.randomUUID() }]);
+    setEdit(null);
+    return undefined;
   };
 
   const salvar = () => {
@@ -226,83 +212,61 @@ export function LaudoSheet({ open, onOpenChange, record, linhas, fotos, clientes
           </div>
 
           <section className="space-y-3">
-            <h3 className="font-semibold">{inspecao ? "Checklist da inspeção" : "Itens levantados"}</h3>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <SearchSelect className="flex-1" value={novoItem} onChange={addItem} options={itemOpts} placeholder="Adicionar item do cadastro" />
-              {inspecao && (
-                <div className="flex flex-1 gap-2">
-                  <Input placeholder="Ou digite um tópico" value={topico} onChange={(e) => setTopico(e.target.value)} onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addTopico())} />
-                  <Button type="button" variant="outline" size="icon" onClick={addTopico} aria-label="Adicionar tópico"><Plus className="h-4 w-4" /></Button>
-                </div>
-              )}
-            </div>
-
-            <div className="overflow-x-auto rounded-lg border">
+            <h3 className="font-semibold">{inspecao ? "Checklist da inspeção" : "Itens levantados"} <span className="text-muted-foreground font-normal">({ls.length})</span></h3>
+            <div className="overflow-x-auto rounded-xl border">
               <table className="w-full text-sm">
-                <thead className="bg-muted/50 text-muted-foreground text-xs uppercase">
+                <thead className="bg-muted/50 text-muted-foreground">
                   <tr>
-                    <th className="w-8 px-2 py-2 text-left">#</th>
-                    <th className="min-w-56 px-2 py-2 text-left">Item</th>
-                    {inspecao ? <th className="px-2 py-2 text-center">Situação</th> : <th className="w-24 px-2 py-2 text-right">Qtd.</th>}
-                    <th className="min-w-44 px-2 py-2 text-left">Observação</th>
-                    <th className="px-2 py-2 text-left">Fotos</th>
-                    <th className="w-10" />
+                    <th className="w-10 px-4 py-3 text-left font-medium">#</th>
+                    <th className="px-2 py-3 text-left font-medium">Item</th>
+                    <th className="w-28 px-2 py-3 text-right font-medium">{inspecao ? "Situação" : "Qtd"}</th>
+                    <th className="w-24 px-2 py-3 text-center font-medium">Fotos</th>
+                    <th className="w-28 px-4 py-3 text-right font-medium">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
                   {ls.length === 0 && (
-                    <tr><td colSpan={6} className="text-muted-foreground p-4 text-center">Nenhum item adicionado.</td></tr>
+                    <tr><td colSpan={5} className="text-muted-foreground p-6 text-center">Nenhum item adicionado.</td></tr>
                   )}
-                  {ls.map((l, i) => (
-                    <tr key={l.key} className={cn("border-t align-top", inspecao && !l.conforme && "bg-destructive/10")}>
-                      <td className="text-muted-foreground px-2 py-2.5 tabular-nums">{i + 1}</td>
-                      <td className="px-2 py-1.5">
-                        {l.item_id ? (
-                          <SearchSelect
-                            value={l.item_id}
-                            allowClear={false}
-                            options={itemOpts}
-                            onChange={(v) => {
-                              const it = itens.find((x) => String(rowId(x)) === v);
-                              if (v) patch(l.key, { item_id: v, descricao_item: String(it?.["descricao"] ?? "Item") });
-                            }}
-                          />
-                        ) : (
-                          <Input aria-label="Descrição" value={l.descricao_item} onChange={(e) => patch(l.key, { descricao_item: e.target.value })} />
-                        )}
-                      </td>
-                      {inspecao ? (
-                        <td className="px-2 py-1.5">
-                          <div className="flex justify-center gap-1">
-                            <Button type="button" size="icon" title="Conforme" aria-label="Conforme" variant={l.conforme ? "default" : "outline"} className={cn(l.conforme && "bg-success text-success-foreground hover:bg-success/90")} onClick={() => patch(l.key, { conforme: true })}>
-                              <Check className="h-4 w-4" />
-                            </Button>
-                            <Button type="button" size="icon" title="Não conforme" aria-label="Não conforme" variant={!l.conforme ? "destructive" : "outline"} onClick={() => patch(l.key, { conforme: false })}>
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
+                  {ls.map((l, i) => {
+                    const it = itens.find((x) => String(rowId(x)) === l.item_id);
+                    const cod = it?.["codigo"] ? String(it["codigo"]) : "";
+                    return (
+                      <tr key={l.key} className={cn("border-t", inspecao && !l.conforme && "bg-destructive/10")}>
+                        <td className="text-muted-foreground px-4 py-3 tabular-nums">{i + 1}.</td>
+                        <td className="max-w-0 px-2 py-3">
+                          <div className="truncate font-semibold" title={l.descricao_item}>{cod ? `${cod} — ` : ""}{l.descricao_item}</div>
+                          {l.observacao && <div className="text-muted-foreground truncate text-xs">{l.observacao}</div>}
                         </td>
-                      ) : (
-                        <td className="px-2 py-1.5">
-                          <Input aria-label="Quantidade" className="text-right" inputMode="decimal" value={l.quantidade} onChange={(e) => patch(l.key, { quantidade: e.target.value })} />
+                        <td className="px-2 py-3 text-right tabular-nums">
+                          {inspecao ? (
+                            <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", l.conforme ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive")}>
+                              {l.conforme ? "Conforme" : "Não conforme"}
+                            </span>
+                          ) : (
+                            <>{l.quantidade} <span className="text-muted-foreground">unid</span></>
+                          )}
                         </td>
-                      )}
-                      <td className="px-2 py-1.5">
-                        <Textarea rows={1} className="min-h-9" placeholder="Observação" value={l.observacao} onChange={(e) => patch(l.key, { observacao: e.target.value })} />
-                      </td>
-                      <td className="px-2 py-1.5">
-                        <FotoStrip fotos={l.fotos} onChange={(f) => patch(l.key, { fotos: f })} />
-                      </td>
-                      <td className="px-1 py-1.5">
-                        <Button type="button" variant="ghost" size="icon" aria-label="Remover item" onClick={() => setLs((p) => p.filter((x) => x.key !== l.key))}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
+                        <td className="text-muted-foreground px-2 py-3 text-center">
+                          {l.fotos.length ? <span className="inline-flex items-center gap-1"><Camera className="h-3.5 w-3.5" />{l.fotos.length}</span> : "—"}
+                        </td>
+                        <td className="px-4 py-2 text-right whitespace-nowrap">
+                          <Button type="button" variant="ghost" size="icon" aria-label="Editar item" onClick={() => setEdit({ ...l })}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button type="button" variant="ghost" size="icon" className="text-destructive" aria-label="Remover item" onClick={() => setLs((p) => p.filter((x) => x.key !== l.key))}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
+            <Button type="button" variant="outline" className="w-full" onClick={() => setEdit({ ...vazio(), key: "" })}>
+              <Plus className="mr-2 h-4 w-4" /> Adicionar item
+            </Button>
           </section>
 
           <section className="space-y-2">
@@ -340,6 +304,63 @@ export function LaudoSheet({ open, onOpenChange, record, linhas, fotos, clientes
           </Button>
         </div>
       </SheetContent>
+      <Dialog open={!!edit} onOpenChange={(o) => !o && setEdit(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader><DialogTitle>{edit?.key ? "Editar item" : "Adicionar item"}</DialogTitle></DialogHeader>
+          {edit && (
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label>Item do cadastro</Label>
+                <SearchSelect
+                  value={edit.item_id}
+                  options={itemOpts}
+                  placeholder="Selecione o item"
+                  onChange={(v) => {
+                    const it = itens.find((x) => String(rowId(x)) === v);
+                    setEdit({ ...edit, item_id: v, descricao_item: v ? String(it?.["descricao"] ?? "Item") : "" });
+                  }}
+                />
+              </div>
+              {inspecao && !edit.item_id && (
+                <div className="space-y-1.5">
+                  <Label>Ou tópico livre</Label>
+                  <Input value={edit.descricao_item} onChange={(e) => setEdit({ ...edit, descricao_item: e.target.value })} placeholder="Ex.: Portão de garagem" />
+                </div>
+              )}
+              {inspecao ? (
+                <div className="space-y-1.5">
+                  <Label>Situação</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button type="button" variant={edit.conforme ? "default" : "outline"} className={cn(edit.conforme && "bg-success text-success-foreground hover:bg-success/90")} onClick={() => setEdit({ ...edit, conforme: true })}>
+                      <Check className="mr-1 h-4 w-4" /> Conforme
+                    </Button>
+                    <Button type="button" variant={!edit.conforme ? "destructive" : "outline"} onClick={() => setEdit({ ...edit, conforme: false })}>
+                      <X className="mr-1 h-4 w-4" /> Não conforme
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  <Label htmlFor="lq">Quantidade</Label>
+                  <Input id="lq" inputMode="decimal" value={edit.quantidade} onChange={(e) => setEdit({ ...edit, quantidade: e.target.value })} />
+                </div>
+              )}
+              <div className="space-y-1.5">
+                <Label htmlFor="lo">Observação</Label>
+                <Textarea id="lo" rows={3} value={edit.observacao} onChange={(e) => setEdit({ ...edit, observacao: e.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Fotos</Label>
+                <FotoStrip fotos={edit.fotos} onChange={(f) => setEdit({ ...edit, fotos: f })} />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEdit(null)}>Cancelar</Button>
+            <Button onClick={confirmarEdit}>Salvar item</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Sheet>
   );
 }
