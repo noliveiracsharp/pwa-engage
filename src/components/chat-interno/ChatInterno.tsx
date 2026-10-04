@@ -101,12 +101,12 @@ export function ChatInterno({ sidebarOpen }: { sidebarOpen: boolean }) {
   });
 
   const criarGrupo = async () => {
-    if (!gNome.trim() || !gMembros.size) return toast.error("Informe o nome e ao menos um participante.");
+    if (!gNome.trim() || !gMembros.size) { toast.error("Informe o nome e ao menos um participante."); return; }
     const id = crypto.randomUUID();
     const { error } = await supabase.from("chat_interno_canais").insert({ id, empresa_id: empresaId, tipo: "grupo", nome: gNome.trim() });
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     const p = await supabase.from("chat_interno_participantes").insert([me, ...gMembros].map((u) => ({ canal_id: id, usuario_id: u })));
-    if (p.error) return toast.error(p.error.message);
+    if (p.error) { toast.error(p.error.message); return; }
     setCriando(false);
     setGNome("");
     setGMembros(new Set());
@@ -338,7 +338,7 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack }: { me: stri
       lida_por: [me],
     });
     setEnviando(false);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     setTexto("");
     void qc.invalidateQueries({ queryKey: key });
   };
@@ -348,7 +348,7 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack }: { me: stri
     const path = `interno/${crypto.randomUUID()}-${file.name.replace(/[^\w.-]/g, "_")}`;
     const up = await supabase.storage.from("chat_media").upload(path, file, file.type ? { contentType: file.type } : undefined);
     setEnviando(false);
-    if (up.error) return toast.error(up.error.message);
+    if (up.error) { toast.error(up.error.message); return; }
     const url = supabase.storage.from("chat_media").getPublicUrl(path).data.publicUrl;
     await enviar({ url, nome: file.name, tipo: file.type.startsWith("image/") ? "imagem" : "documento" });
     if (fileRef.current) fileRef.current.value = "";
