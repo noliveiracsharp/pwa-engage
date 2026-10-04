@@ -18,6 +18,8 @@ import { pick } from "@/lib/row";
 import { useTableRows, rowId } from "@/lib/crud";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Building2 } from "lucide-react";
+import { useState } from "react";
+import { MeusDadosSheet } from "@/components/perfil/MeusDadosSheet";
 
 export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) {
   const { usuario, empresa, user, isMaster, empresaContextoId, setEmpresaContexto } = useAuth();
@@ -26,6 +28,7 @@ export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) 
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [meusDados, setMeusDados] = useState(false);
 
   const empresaNome = pick<string>(empresa, ["nome", "empresa_nome", "razao_social", "titulo", "descricao"], "Atende.ai");
   const empresaLogo = pick<string>(empresa, ["logo", "logo_url", "url_logo", "imagem", "avatar"]);
@@ -90,7 +93,7 @@ export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) 
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel className="truncate">{nome}</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={() => navigate({ to: "/meus-dados" })}>
+            <DropdownMenuItem onSelect={() => setMeusDados(true)}>
               <User className="mr-2 h-4 w-4" /> Meus Dados
             </DropdownMenuItem>
             <DropdownMenuItem onSelect={handleSignOut}>
@@ -98,6 +101,7 @@ export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) 
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        <MeusDadosSheet open={meusDados} onOpenChange={setMeusDados} />
       </div>
     </header>
   );
