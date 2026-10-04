@@ -72,7 +72,7 @@ export function NovidadesDialog({ open, onOpenChange }: { open: boolean; onOpenC
       empresa_id: (empresa as any)?.id ?? (usuario as any)?.empresa_id ?? null,
     });
     setEnviando(false);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     setTexto("");
     toast.success("Sugestão enviada! Obrigado.");
     qc.invalidateQueries({ queryKey: ["sistema_sugestoes"] });

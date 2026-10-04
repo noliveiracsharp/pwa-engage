@@ -95,7 +95,7 @@ function VersoesTab() {
       ...previa, versao: fmtVersao(previa), descricao: form.descricao || null,
       data_lancamento: form.data, is_atual: form.atual,
     });
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success(`Versão ${fmtVersao(previa)} criada`);
     setForm(null);
     refresh();
@@ -104,7 +104,7 @@ function VersoesTab() {
   const tornarAtual = async (v: Versao) => {
     await db.from("sistema_versoes").update({ is_atual: false }).eq("is_atual", true);
     const { error } = await db.from("sistema_versoes").update({ is_atual: true }).eq("id", v.id);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success(`${v.versao} agora é a versão atual`);
     refresh();
   };
@@ -112,7 +112,7 @@ function VersoesTab() {
   const excluir = async (v: Versao) => {
     if (!confirm(`Excluir a versão ${v.versao}?`)) return;
     const { error } = await db.from("sistema_versoes").delete().eq("id", v.id);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     refresh();
   };
 
@@ -181,7 +181,7 @@ function ItensTab() {
   const refresh = () => qc.invalidateQueries({ queryKey: ["sistema_atualizacoes"] });
 
   const salvar = async () => {
-    if (!form?.titulo?.trim() || !form.descricao?.trim()) return toast.error("Informe título e descrição");
+    if (!form?.titulo?.trim() || !form.descricao?.trim()) { toast.error("Informe título e descrição"); return; }
     const payload = {
       titulo: form.titulo, descricao: form.descricao, tipo: form.tipo ?? "novo_recurso",
       categoria: form.categoria ?? "ultimas", versao_id: form.versao_id || null,
@@ -190,7 +190,7 @@ function ItensTab() {
     const { error } = form.id
       ? await db.from("sistema_atualizacoes").update(payload).eq("id", form.id)
       : await db.from("sistema_atualizacoes").insert(payload);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success("Novidade salva");
     setForm(null);
     refresh();
@@ -199,7 +199,7 @@ function ItensTab() {
   const excluir = async (a: Atualizacao) => {
     if (!confirm(`Excluir "${a.titulo}"?`)) return;
     const { error } = await db.from("sistema_atualizacoes").delete().eq("id", a.id);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     refresh();
   };
 
@@ -242,13 +242,13 @@ function ItensTab() {
               <div><Label>Descrição</Label><Textarea rows={4} value={form.descricao ?? ""} onChange={(e) => setForm({ ...form, descricao: e.target.value })} /></div>
               <div className="grid grid-cols-2 gap-3">
                 <div><Label>Tipo</Label>
-                  <Select value={form.tipo} onValueChange={(v) => setForm({ ...form, tipo: v as Atualizacao["tipo"] })}>
+                  <Select value={form.tipo ?? "novo_recurso"} onValueChange={(v) => setForm({ ...form, tipo: v as Atualizacao["tipo"] })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>{Object.entries(TIPO_LABEL).map(([k, l]) => <SelectItem key={k} value={k}>{l}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <div><Label>Coluna</Label>
-                  <Select value={form.categoria} onValueChange={(v) => setForm({ ...form, categoria: v as Atualizacao["categoria"] })}>
+                  <Select value={form.categoria ?? "ultimas"} onValueChange={(v) => setForm({ ...form, categoria: v as Atualizacao["categoria"] })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent><SelectItem value="ultimas">Últimas atualizações</SelectItem><SelectItem value="futuras">Futuras atualizações</SelectItem></SelectContent>
                   </Select>
@@ -302,7 +302,7 @@ function SugestoesTab() {
   const salvar = async () => {
     if (!edit) return;
     const { error } = await db.from("sistema_sugestoes").update({ status: edit.status, resposta_admin: edit.resposta_admin || null }).eq("id", edit.id);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success("Sugestão atualizada");
     setEdit(null);
     qc.invalidateQueries({ queryKey: ["sistema_sugestoes"] });
