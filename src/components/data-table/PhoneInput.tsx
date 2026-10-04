@@ -50,7 +50,7 @@ export function PhoneInput({ id, value, onChange }: Props) {
   };
 
   return (
-    <div className="grid min-w-0 grid-cols-[116px_minmax(0,1fr)] gap-2 sm:grid-cols-[148px_minmax(220px,1fr)]">
+    <div className="grid w-full min-w-0 grid-cols-[116px_minmax(0,1fr)] gap-2 @container sm:grid-cols-[132px_minmax(0,1fr)]">
       <Select value={country} onValueChange={changeCountry}>
         <SelectTrigger className="w-full" aria-label="País e código telefônico">
           <SelectValue />

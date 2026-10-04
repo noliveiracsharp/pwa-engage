@@ -181,7 +181,7 @@ function CheckoutPage() {
                       <Campo label="Nome da empresa / Razão social" erro={erros["nome_empresa"]}>
                         <Input value={dados.nome_empresa} onChange={(e) => setD("nome_empresa", e.target.value)} />
                       </Campo>
-                      <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="grid gap-3 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] [&>*]:min-w-0">
                         <Campo label="CPF ou CNPJ" erro={erros["cnpj_cpf"]}>
                           <DocumentInput value={dados.cnpj_cpf} onChange={(v) => setD("cnpj_cpf", v)} />
                         </Campo>
