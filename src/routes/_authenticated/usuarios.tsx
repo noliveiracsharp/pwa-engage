@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { createEphemeralAuthClient, supabase } from "@/integrations/supabase/client";
 import { DataTable, type Column } from "@/components/data-table/DataTable";
 import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
+import { DepartamentosDialog } from "@/components/usuarios/DepartamentosDialog";
 import { RecordSheet, type Field } from "@/components/data-table/RecordSheet";
 import { StatusBadge } from "@/components/data-table/StatusBadge";
 import { rowId, text, useSaveRecord, useTableRows } from "@/lib/crud";
@@ -48,6 +49,8 @@ const STATUS_OPTIONS = [
 function UsuariosPage() {
   const { data: rows = [], isLoading } = useTableRows("usuarios");
   const { data: perfis = [] } = useTableRows("perfil");
+  const { data: departamentos = [] } = useTableRows("usuarios_departamentos");
+  const [deptOpen, setDeptOpen] = useState(false);
   const { data: empresas = [] } = useTableRows("empresas");
   const { data: kanbans = [] } = useTableRows("kanban_nome");
   const { data: vinculos = [] } = useTableRows("usuario_kanban");
@@ -324,6 +327,14 @@ function UsuariosPage() {
       { fields: ["email"], label: "E-mail", type: "email" },
       { fields: ["cpf"], label: "CPF", type: "document" },
       { fields: ["cargo"], label: "Cargo" },
+      {
+        fields: ["departamento_id"],
+        label: "Departamento",
+        type: "select",
+        options: departamentos
+          .filter((d) => d["status"] !== false)
+          .map((d) => ({ value: text(rowId(d)), label: text(d["descricao"]) })),
+      },
       { fields: ["status"], label: "Status", type: "boolean" },
       {
         fields: ["perfil_id"],
@@ -345,7 +356,7 @@ function UsuariosPage() {
           ]
         : []),
     ],
-    [perfilOptions, empresasPermitidas, isMaster, record],
+    [perfilOptions, empresasPermitidas, isMaster, record, departamentos],
   );
 
   const filtered = useMemo(
@@ -450,10 +461,12 @@ function UsuariosPage() {
               onChange={(v) => setF({ ...f, perfil: v })}
               options={perfilOptions}
             />
+            <Button variant="outline" className="self-end" onClick={() => setDeptOpen(true)}>Departamentos</Button>
           </>
         }
       />
 
+      <DepartamentosDialog open={deptOpen} onOpenChange={setDeptOpen} empresaId={text(empresaAtual ? rowId(empresaAtual) : "") || userEmpresaId} />
       <RecordSheet
         open={open}
         onOpenChange={setOpen}
