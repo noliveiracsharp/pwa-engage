@@ -12,7 +12,9 @@ export function useTableRows(table: string, enabled = true, orderBy?: string) {
   const { isMaster, empresa, usuario, loading } = useAuth();
   // Master: empresa do "Contexto da Empresa". Demais perfis: sempre a empresa do próprio usuário.
   const ownEmpresa = usuario ? text(pick(usuario, ["empresa_id", "id_empresa", "empresaid"])) : "";
-  const scoped = !GLOBAL_TABLES.has(table);
+  // "empresas": Master vê todas; demais perfis só a própria empresa e suas filiais.
+  const isEmpresas = table === "empresas";
+  const scoped = !GLOBAL_TABLES.has(table) || (isEmpresas && !isMaster);
   const ctx = !scoped ? "" : isMaster ? (empresa ? String(rowId(empresa) ?? "") : "") : ownEmpresa || "__sem_empresa__";
   // Não-Master só consulta depois de saber a empresa, para nunca exibir dados de outras.
   const ready = isMaster || !scoped || (!loading && !!usuario);
@@ -27,9 +29,12 @@ export function useTableRows(table: string, enabled = true, orderBy?: string) {
       const { data, error } = await q;
       if (error) throw error;
       const rows = (data ?? []) as Row[];
-      // Master: mostra só os dados da empresa escolhida no "Contexto da Empresa".
-      if (ctx) return rows.filter((r) => !("empresa_id" in r) || r["empresa_id"] == null || String(r["empresa_id"]) === ctx);
-      return rows;
+      if (!ctx) return rows;
+      if (isEmpresas) return rows.filter((r) => String(rowId(r) ?? "") === ctx || String(r["empresa_pai_id"] ?? "") === ctx);
+      // Master: mantém registros sem empresa (modelos). Demais: só a própria empresa.
+      return rows.filter((r) =>
+        !("empresa_id" in r) || (r["empresa_id"] == null ? isMaster : String(r["empresa_id"]) === ctx),
+      );
     },
   });
 }
