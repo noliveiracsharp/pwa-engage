@@ -162,6 +162,29 @@ export function ChatInterno({ sidebarOpen }: { sidebarOpen: boolean }) {
     if (totalNaoLidas === 0) setPiscar(false);
   }, [totalNaoLidas]);
 
+  // Fecha com ESC ou clique fora da janela.
+  const painelRef = useRef<HTMLDivElement>(null);
+  const botaoRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    const onDown = (e: PointerEvent) => {
+      const t = e.target as Element | null;
+      if (!t) return;
+      if (painelRef.current?.contains(t) || botaoRef.current?.contains(t)) return;
+      if (t.closest("[data-radix-popper-content-wrapper],[role='dialog'],[data-sonner-toaster]")) return;
+      setOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    document.addEventListener("pointerdown", onDown);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.removeEventListener("pointerdown", onDown);
+    };
+  }, [open]);
+
   const criarGrupo = async () => {
     if (!gNome.trim() || !gMembros.size) { toast.error("Informe o nome e ao menos um participante."); return; }
     const id = crypto.randomUUID();
@@ -188,6 +211,7 @@ export function ChatInterno({ sidebarOpen }: { sidebarOpen: boolean }) {
       <Tooltip>
         <TooltipTrigger asChild>
           <button
+            ref={botaoRef}
             type="button"
             onClick={() => { setOpen((o) => !o); setPiscar(false); }}
             aria-label="Chat da equipe"
@@ -214,6 +238,7 @@ export function ChatInterno({ sidebarOpen }: { sidebarOpen: boolean }) {
 
       {open && (
         <div
+          ref={painelRef}
           className={cn(
             "fixed bottom-4 z-50 flex flex-col overflow-hidden rounded-2xl border border-border bg-popover text-popover-foreground shadow-2xl transition-all duration-300 animate-in fade-in slide-in-from-bottom-4",
             sidebarOpen ? "left-[15.5rem]" : "left-[4.5rem]",
