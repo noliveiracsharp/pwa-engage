@@ -192,8 +192,12 @@ function LaudosPage() {
     },
   ];
 
+  if (!perms.loading && !perms.canRead) {
+    return <p className="text-muted-foreground text-sm">Você não tem acesso a esta página.</p>;
+  }
+
   return (
-    <div className="space-y-4 p-4 md:p-6">
+    <>
       <DataTable
         title="Laudos Técnicos"
         columns={columns}
@@ -234,6 +238,6 @@ function LaudosPage() {
         cliente={preview ? parceiroById.get(String(preview["parceiro_id"])) : undefined}
         tecnico={preview ? usuarioById.get(String(preview["tecnico_usuario_id"])) : undefined}
       />
-    </div>
+    </>
   );
 }
