@@ -5,6 +5,7 @@ import { useMenu } from "@/hooks/useMenu";
 import { getIcon } from "./icon-map";
 import { ChatInterno } from "@/components/chat-interno/ChatInterno";
 import { VersaoSidebar } from "./NovidadesDialog";
+import { useEmpresaAtiva } from "@/hooks/useEmpresaAtiva";
 
 type Props = {
   open: boolean;
@@ -13,6 +14,7 @@ type Props = {
 
 export function AppSidebar({ open, onNavigate }: Props) {
   const { data: items = [], isLoading } = useMenu();
+  const ativa = useEmpresaAtiva();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   return (
@@ -23,6 +25,13 @@ export function AppSidebar({ open, onNavigate }: Props) {
           open ? "w-60" : "w-16",
         )}
       >
+        {onNavigate && (
+          <div className="mb-2 flex items-center justify-center border-b border-sidebar-border px-2 pb-3 pt-1">
+            {ativa.logo
+              ? <img src={ativa.logo} alt={ativa.nome} className="h-10 w-auto max-w-full object-contain" />
+              : <span className="truncate text-base font-bold text-sidebar-foreground">{ativa.nome}</span>}
+          </div>
+        )}
         {isLoading && <div className="px-3 py-2 text-xs text-muted-foreground">Carregando…</div>}
         {items.map((item) => {
           const Icon = getIcon(item.icon);

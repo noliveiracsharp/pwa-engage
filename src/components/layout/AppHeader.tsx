@@ -20,6 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Building2 } from "lucide-react";
 import { useState } from "react";
 import { MeusDadosSheet } from "@/components/perfil/MeusDadosSheet";
+import { useEmpresaAtiva } from "@/hooks/useEmpresaAtiva";
 
 export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) {
   const { usuario, empresa, user, isMaster, empresaContextoId, setEmpresaContexto } = useAuth();
@@ -30,8 +31,7 @@ export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) 
   const queryClient = useQueryClient();
   const [meusDados, setMeusDados] = useState(false);
 
-  const empresaNome = pick<string>(empresa, ["nome", "empresa_nome", "razao_social", "titulo", "descricao"], "Atende.ai");
-  const empresaLogo = pick<string>(empresa, ["logo", "logo_url", "url_logo", "imagem", "avatar"]);
+  const ativa = useEmpresaAtiva();
   const nome = pick<string>(usuario, ["nome", "nome_completo", "usuario_nome"], user?.email ?? "Usuário");
   const foto = pick<string>(usuario, ["foto", "avatar", "avatar_url", "imagem"]);
   const iniciais = (nome ?? "U").slice(0, 2).toUpperCase();
@@ -44,19 +44,20 @@ export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) 
   }
 
   return (
-    <header className="flex h-16 shrink-0 items-center justify-between gap-3 border-b border-border bg-card px-3 sm:px-4">
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={onToggleSidebar} aria-label="Abrir menu">
+    <header className="flex h-16 w-full shrink-0 items-center justify-between gap-2 overflow-hidden border-b border-border bg-card px-2 sm:gap-3 sm:px-4">
+      <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+        <Button variant="ghost" size="icon" className="shrink-0" onClick={onToggleSidebar} aria-label="Abrir menu">
           <Menu className="h-5 w-5" />
         </Button>
-        {empresaLogo ? (
-          <img src={empresaLogo} alt={empresaNome} className="h-8 w-auto max-w-[160px] object-contain" />
+        <span className="truncate text-base font-bold tracking-tight text-foreground md:hidden">{ativa.titulo}</span>
+        {ativa.logo ? (
+          <img src={ativa.logo} alt={ativa.nome} className="hidden h-8 w-auto max-w-[160px] object-contain md:block" />
         ) : (
-          <span className="text-lg font-bold tracking-tight text-foreground">{empresaNome}</span>
+          <span className="hidden truncate text-lg font-bold tracking-tight text-foreground md:block">{ativa.nome}</span>
         )}
       </div>
 
-      <div className="flex items-center gap-1">
+      <div className="flex shrink-0 items-center gap-1">
         {isMaster && (
           <Select
             value={empresaContextoId ?? String(empresa ? rowId(empresa) ?? "" : "")}
@@ -65,7 +66,7 @@ export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) 
               queryClient.invalidateQueries();
             }}
           >
-            <SelectTrigger className="mr-1 h-9 w-[180px] sm:w-[240px]" aria-label="Contexto da Empresa" title="Contexto da Empresa">
+            <SelectTrigger className="h-9 w-10 px-2 sm:mr-1 sm:w-[240px] sm:px-3 [&>span]:hidden sm:[&>span]:inline [&>svg:last-child]:hidden sm:[&>svg:last-child]:block" aria-label="Contexto da Empresa" title="Contexto da Empresa">
               <Building2 className="mr-1 h-4 w-4 shrink-0 text-muted-foreground" />
               <SelectValue placeholder="Contexto da Empresa" />
             </SelectTrigger>

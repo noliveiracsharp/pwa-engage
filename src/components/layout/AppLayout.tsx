@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useRouterState } from "@tanstack/react-router";
 import { AppHeader } from "./AppHeader";
 import { AppSidebar } from "./AppSidebar";
+import { PullToRefresh } from "./PullToRefresh";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useNotificacoesChat } from "@/hooks/useNotificacoesChat";
@@ -40,7 +41,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
         ) : (
           <AppSidebar open={open} />
         )}
-        <main className="min-w-0 flex-1 overflow-y-auto p-4 sm:p-6">{children}</main>
+        <PullToRefresh className="min-w-0 flex-1 overflow-y-auto overscroll-y-contain p-4 sm:p-6">{children}</PullToRefresh>
       </div>
     </div>
   );
