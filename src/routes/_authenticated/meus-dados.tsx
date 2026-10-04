@@ -76,7 +76,7 @@ function MeusDados() {
 
   const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
-  const salvar = async () => {
+  const salvar = async (): Promise<unknown> => {
     if (!usuario) return;
     if (!form.nome.trim()) return toast.error("Informe o nome.");
     if (!/^\S+@\S+\.\S+$/.test(form.email.trim())) return toast.error("Informe um e-mail válido.");
