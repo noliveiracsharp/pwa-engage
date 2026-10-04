@@ -18,7 +18,6 @@ import { ContatoPainel } from "@/components/atendimentos/ContatoPainel";
 import {
   A, M, corEtiqueta, dataDe, fotoPessoa, horaCurta, iniciais, isCliente, isEncerrado, isIA, nomePessoa, telefonePessoa,
 } from "@/lib/atendimentos";
-import { useNotificacoesChat } from "@/hooks/useNotificacoesChat";
 import { AvaliacaoSelo } from "@/components/atendimentos/Pesquisa";
 
 export const Route = createFileRoute("/_authenticated/atendimentos")({
@@ -70,7 +69,6 @@ function AtendimentosPage() {
   const { data: orcamentos = [] } = useTableRows("orcamentos");
   const { data: parceiros = [] } = useTableRows("parceiros");
   const [parcFiltro, setParcFiltro] = useState("todos");
-  useNotificacoesChat();
 
   const { data: meusKanbans = [] } = useQuery({
     queryKey: ["table", "usuario_kanban", usuarioId],
