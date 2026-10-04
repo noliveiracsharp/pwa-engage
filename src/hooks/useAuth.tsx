@@ -18,6 +18,7 @@ type AuthContextValue = {
   setEmpresaContexto: (id: string | null) => void;
   loading: boolean;
   signOut: () => Promise<void>;
+  refreshUsuario: () => void;
 };
 
 const AuthContext = createContext<AuthContextValue>({
@@ -31,6 +32,7 @@ const AuthContext = createContext<AuthContextValue>({
   setEmpresaContexto: () => {},
   loading: true,
   signOut: async () => {},
+  refreshUsuario: () => {},
 });
 
 export async function loadUsuario(user: User) {
@@ -63,6 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [ctxId, setCtxId] = useState<string | null>(null);
   const [ctxEmpresa, setCtxEmpresa] = useState<Row | null>(null);
   const [loading, setLoading] = useState(true);
+  const [version, setVersion] = useState(0);
 
   useEffect(() => {
     setCtxId(localStorage.getItem(CTX_KEY));
@@ -107,7 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [session]);
+  }, [session, version]);
 
   useEffect(() => {
     if (!isMaster || !ctxId) {
@@ -144,6 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isMaster,
       empresaContextoId: isMaster ? ctxId : null,
       setEmpresaContexto,
+      refreshUsuario: () => setVersion((v) => v + 1),
       loading,
       signOut: async () => {
         await supabase.auth.signOut();
