@@ -70,7 +70,7 @@ function FotoStrip({ fotos, onChange }: { fotos: string[]; onChange: (f: string[
       {fotos.map((u) => (
         <div key={u} className="relative">
           <a href={u} target="_blank" rel="noreferrer">
-            <img src={u} alt="Foto do laudo" className="h-16 w-16 rounded-md border object-cover" />
+            <img src={u} alt="Foto do laudo" className="h-10 w-10 rounded-md border object-cover" />
           </a>
           <button
             type="button"
@@ -191,7 +191,7 @@ export function LaudoSheet({ open, onOpenChange, record, linhas, fotos, clientes
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-2xl">
+      <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-4xl">
         <SheetHeader className="border-b px-6 py-4">
           <SheetTitle>{record ? `Laudo ${String(record["numero"] ?? "")}` : "Novo laudo técnico"}</SheetTitle>
         </SheetHeader>
@@ -237,34 +237,72 @@ export function LaudoSheet({ open, onOpenChange, record, linhas, fotos, clientes
               )}
             </div>
 
-            {ls.length === 0 && <p className="text-muted-foreground rounded-md border border-dashed p-4 text-center text-sm">Nenhum item adicionado.</p>}
-
-            {ls.map((l, i) => (
-              <div key={l.key} className={cn("space-y-2 rounded-lg border p-3", inspecao && !l.conforme && "border-destructive/60")}>
-                <div className="flex items-start gap-2">
-                  <span className="text-muted-foreground pt-2 text-xs tabular-nums">{i + 1}.</span>
-                  <div className="flex-1 pt-1.5 text-sm font-medium">{l.descricao_item}</div>
-                  {!inspecao && (
-                    <Input aria-label="Quantidade" className="w-24 text-right" inputMode="decimal" value={l.quantidade} onChange={(e) => patch(l.key, { quantidade: e.target.value })} />
+            <div className="overflow-x-auto rounded-lg border">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/50 text-muted-foreground text-xs uppercase">
+                  <tr>
+                    <th className="w-8 px-2 py-2 text-left">#</th>
+                    <th className="min-w-56 px-2 py-2 text-left">Item</th>
+                    {inspecao ? <th className="px-2 py-2 text-center">Situação</th> : <th className="w-24 px-2 py-2 text-right">Qtd.</th>}
+                    <th className="min-w-44 px-2 py-2 text-left">Observação</th>
+                    <th className="px-2 py-2 text-left">Fotos</th>
+                    <th className="w-10" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {ls.length === 0 && (
+                    <tr><td colSpan={6} className="text-muted-foreground p-4 text-center">Nenhum item adicionado.</td></tr>
                   )}
-                  <Button type="button" variant="ghost" size="icon" aria-label="Remover item" onClick={() => setLs((p) => p.filter((x) => x.key !== l.key))}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-                {inspecao && (
-                  <div className="flex gap-2">
-                    <Button type="button" size="sm" variant={l.conforme ? "default" : "outline"} className={cn(l.conforme && "bg-success text-success-foreground hover:bg-success/90")} onClick={() => patch(l.key, { conforme: true })}>
-                      <Check className="mr-1 h-4 w-4" /> Conforme
-                    </Button>
-                    <Button type="button" size="sm" variant={!l.conforme ? "destructive" : "outline"} onClick={() => patch(l.key, { conforme: false })}>
-                      <X className="mr-1 h-4 w-4" /> Não conforme
-                    </Button>
-                  </div>
-                )}
-                <Textarea rows={2} placeholder="Observação" value={l.observacao} onChange={(e) => patch(l.key, { observacao: e.target.value })} />
-                <FotoStrip fotos={l.fotos} onChange={(f) => patch(l.key, { fotos: f })} />
-              </div>
-            ))}
+                  {ls.map((l, i) => (
+                    <tr key={l.key} className={cn("border-t align-top", inspecao && !l.conforme && "bg-destructive/10")}>
+                      <td className="text-muted-foreground px-2 py-2.5 tabular-nums">{i + 1}</td>
+                      <td className="px-2 py-1.5">
+                        {l.item_id ? (
+                          <SearchSelect
+                            value={l.item_id}
+                            allowClear={false}
+                            options={itemOpts}
+                            onChange={(v) => {
+                              const it = itens.find((x) => String(rowId(x)) === v);
+                              if (v) patch(l.key, { item_id: v, descricao_item: String(it?.["descricao"] ?? "Item") });
+                            }}
+                          />
+                        ) : (
+                          <Input aria-label="Descrição" value={l.descricao_item} onChange={(e) => patch(l.key, { descricao_item: e.target.value })} />
+                        )}
+                      </td>
+                      {inspecao ? (
+                        <td className="px-2 py-1.5">
+                          <div className="flex justify-center gap-1">
+                            <Button type="button" size="icon" title="Conforme" aria-label="Conforme" variant={l.conforme ? "default" : "outline"} className={cn(l.conforme && "bg-success text-success-foreground hover:bg-success/90")} onClick={() => patch(l.key, { conforme: true })}>
+                              <Check className="h-4 w-4" />
+                            </Button>
+                            <Button type="button" size="icon" title="Não conforme" aria-label="Não conforme" variant={!l.conforme ? "destructive" : "outline"} onClick={() => patch(l.key, { conforme: false })}>
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </td>
+                      ) : (
+                        <td className="px-2 py-1.5">
+                          <Input aria-label="Quantidade" className="text-right" inputMode="decimal" value={l.quantidade} onChange={(e) => patch(l.key, { quantidade: e.target.value })} />
+                        </td>
+                      )}
+                      <td className="px-2 py-1.5">
+                        <Textarea rows={1} className="min-h-9" placeholder="Observação" value={l.observacao} onChange={(e) => patch(l.key, { observacao: e.target.value })} />
+                      </td>
+                      <td className="px-2 py-1.5">
+                        <FotoStrip fotos={l.fotos} onChange={(f) => patch(l.key, { fotos: f })} />
+                      </td>
+                      <td className="px-1 py-1.5">
+                        <Button type="button" variant="ghost" size="icon" aria-label="Remover item" onClick={() => setLs((p) => p.filter((x) => x.key !== l.key))}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </section>
 
           <section className="space-y-2">
