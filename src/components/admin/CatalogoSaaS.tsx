@@ -36,7 +36,9 @@ export const planosConfig: CatalogoConfig = {
   singular: "plano",
   fields: [
     { key: "nome", label: "Nome do Plano", type: "text" },
-    { key: "descricao", label: "Descrição", type: "textarea" },
+    { key: "subtitulo", label: "Subtítulo (ex.: Atendimento & CRM)", type: "text" },
+    { key: "descricao", label: "Proposta de valor / Slogan", type: "textarea" },
+    { key: "recursos_inclusos", label: "O que inclui (um item por linha)", type: "textarea" },
     { key: "valor_mensal", label: "Valor Mensal (R$)", type: "money" },
     { key: "usuarios_inclusos", label: "Utilizadores Incluídos", type: "int" },
     { key: "valor_usuario_adicional", label: "Valor por Utilizador Adicional (R$)", type: "money" },
