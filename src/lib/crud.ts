@@ -35,7 +35,6 @@ export function useTableRows(table: string, enabled = true, orderBy?: string) {
       return rows.filter((r) =>
         !("empresa_id" in r) || (r["empresa_id"] == null ? isMaster : String(r["empresa_id"]) === ctx),
       );
-      return rows;
     },
   });
 }
