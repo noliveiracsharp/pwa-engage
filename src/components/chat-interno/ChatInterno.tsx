@@ -56,7 +56,7 @@ function hora(v: unknown) {
 }
 
 /** Chat interno da equipe: botão no menu lateral + janela flutuante. */
-export function ChatInterno({ sidebarOpen, onAbrir }: { sidebarOpen: boolean; onAbrir?: () => void }) {
+export function ChatInterno({ sidebarOpen, onAbrir }: { sidebarOpen: boolean; onAbrir?: (() => void) | undefined }) {
   const { usuario } = useAuth();
   const me = String(pick(usuario, ["id"]) ?? "");
   const empresaId = String(pick(usuario, ["empresa_id", "id_empresa"]) ?? "");
