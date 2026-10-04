@@ -120,6 +120,7 @@ function MeusDados() {
     } finally {
       setSaving(false);
     }
+    return undefined;
   };
 
   return (
