@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { FileText, Pencil, Send, Trash2 } from "lucide-react";
+import { FileText, Send } from "lucide-react";
 import { DataTable, type Column } from "@/components/data-table/DataTable";
 import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
 import { Button } from "@/components/ui/button";
@@ -184,12 +184,8 @@ function LaudosPage() {
       render: (r) => (
         <div className="flex justify-end gap-1">
           <Button size="icon" variant="ghost" aria-label="Visualizar relatório" onClick={() => setPreview(r)}><FileText className="h-4 w-4" /></Button>
-          {!isInspecao(r["objetivo"]) && !cotadoPorLaudo.has(String(rowId(r))) && perms.can_update !== false && (
+          {!isInspecao(r["objetivo"]) && !cotadoPorLaudo.has(String(rowId(r))) && perms.canUpdate && (
             <Button size="icon" variant="ghost" aria-label="Enviar para cotação" title="Enviar para cotação" disabled={enviarCotacao.isPending} onClick={() => enviarCotacao.mutate(r)}><Send className="h-4 w-4" /></Button>
-          )}
-          {perms.can_update !== false && <Button size="icon" variant="ghost" aria-label="Editar" onClick={() => { setRecord(r); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>}
-          {perms.can_delete !== false && (
-            <Button size="icon" variant="ghost" aria-label="Excluir" onClick={() => { if (confirm(`Excluir o laudo ${r["numero"] ?? ""}?`)) remove.mutate(r); }}><Trash2 className="h-4 w-4" /></Button>
           )}
         </div>
       ),
@@ -198,21 +194,24 @@ function LaudosPage() {
 
   return (
     <div className="space-y-4 p-4 md:p-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">Laudos Técnicos</h1>
-          <p className="text-muted-foreground text-sm">Levantamentos e inspeções feitos em campo.</p>
-        </div>
-        {perms.can_create !== false && <Button onClick={() => { setRecord(null); setOpen(true); }}>Novo laudo</Button>}
-      </div>
-
-      <div className="grid gap-3 md:grid-cols-[1fr_200px_200px]">
-        <FilterInput label="Buscar" value={f.busca} onChange={(v: string) => setF({ ...f, busca: v })} placeholder="Número, cliente…" />
-        <FilterSelect label="Objetivo" value={f.objetivo} onChange={(v: string) => setF({ ...f, objetivo: v })} options={[{ value: "todos", label: "Todos" }, ...OBJETIVOS]} />
-        <FilterSelect label="Classificação" value={f.classificacao} onChange={(v: string) => setF({ ...f, classificacao: v })} options={[{ value: "todos", label: "Todas" }, ...CLASSIFICACOES.map((c) => ({ value: c.value, label: c.label }))]} />
-      </div>
-
-      <DataTable rows={rows} columns={columns} loading={isLoading} />
+      <DataTable
+        title="Laudos Técnicos"
+        columns={columns}
+        rows={rows}
+        loading={isLoading}
+        getValue={(row, keys) => pick(row, keys)}
+        rowKey={(row, i) => String(rowId(row) ?? i)}
+        onAdd={perms.canCreate ? () => { setRecord(null); setOpen(true); } : undefined}
+        onEdit={perms.canUpdate ? (r) => { setRecord(r); setOpen(true); } : undefined}
+        onDelete={perms.canDelete ? (r) => remove.mutate(r) : undefined}
+        filters={
+          <>
+            <FilterInput label="Buscar" value={f.busca} onChange={(v) => setF({ ...f, busca: v })} placeholder="Número, cliente…" />
+            <FilterSelect label="Objetivo" value={f.objetivo} onChange={(v) => setF({ ...f, objetivo: v })} options={[{ value: "todos", label: "Todos" }, ...OBJETIVOS]} />
+            <FilterSelect label="Classificação" value={f.classificacao} onChange={(v) => setF({ ...f, classificacao: v })} options={[{ value: "todos", label: "Todas" }, ...CLASSIFICACOES.map((c) => ({ value: c.value, label: c.label }))]} />
+          </>
+        }
+      />
 
       <LaudoSheet
         open={open}
