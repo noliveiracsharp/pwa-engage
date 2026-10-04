@@ -1,3 +1,7 @@
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
@@ -47,9 +51,14 @@ function CotacoesPage() {
   const saveOrc = useSaveOrcamento();
   const { empresaId } = useAudit();
 
-  const novaCotacao = async () => {
-    const titulo = window.prompt("Título da cotação avulsa:", "Cotação avulsa");
-    if (titulo === null) return;
+  const [novoTitulo, setNovoTitulo] = useState<string | null>(null);
+  const [criando, setCriando] = useState(false);
+  const novaCotacao = () => setNovoTitulo("Cotação avulsa");
+  const criarCotacao = async () => {
+    if (novoTitulo === null) return;
+    const titulo = novoTitulo;
+    setCriando(true);
+    try {
     const numero = await proximoNumero("cotacoes", "COT", empresaId);
     const { data, error } = await supabase
       .from("cotacoes")
@@ -58,8 +67,14 @@ function CotacoesPage() {
       .single();
     if (error) return void toast.error(error.message);
     await qc.invalidateQueries({ queryKey: ["table", "cotacoes"] });
+    setNovoTitulo(null);
     setSelId(String((data as Row)["id"]));
     toast.success(`Cotação ${numero} criada. Adicione os itens e fornecedores.`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Falha ao criar cotação.");
+    } finally {
+      setCriando(false);
+    }
   };
 
   const [selId, setSelId] = useState<string | null>(null);
@@ -211,6 +226,19 @@ function CotacoesPage() {
           </>
         }
       />
+      <Dialog open={novoTitulo !== null} onOpenChange={(o) => !o && setNovoTitulo(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader><DialogTitle>Nova cotação avulsa</DialogTitle></DialogHeader>
+          <div className="space-y-1.5">
+            <Label htmlFor="cot-titulo">Título</Label>
+            <Input id="cot-titulo" autoFocus value={novoTitulo ?? ""} onChange={(e) => setNovoTitulo(e.target.value)} onKeyDown={(e) => e.key === "Enter" && void criarCotacao()} />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNovoTitulo(null)}>Cancelar</Button>
+            <Button onClick={() => void criarCotacao()} disabled={criando}>Criar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <CotacaoSheet
         open={!!sel}
         onOpenChange={(o) => !o && setSelId(null)}
