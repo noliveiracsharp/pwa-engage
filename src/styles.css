@@ -497,3 +497,35 @@
   .cmp-print .max-w-7xl { max-width: none !important; padding: 0 0 12px !important; }
   .cmp-print .grid-cols-\[340px_1fr\] { grid-template-columns: 30% 1fr !important; break-inside: avoid; }
 }
+
+/* ------------------------------------------------------------------ */
+/* Proposta digital (montador, link público e impressão)               */
+/* ------------------------------------------------------------------ */
+.prop-doc { display: flex; flex-direction: column; gap: 24px; color: #13263f; }
+.prop-pagina { background: #fff; border-radius: 10px; box-shadow: 0 2px 18px rgb(15 30 60 / 0.08); padding: 48px 56px; min-height: 420px; }
+.prop-pagina-orc { padding: 0; overflow: hidden; }
+.prop-titulo { font-size: 22px; font-weight: 700; margin-bottom: 18px; padding-bottom: 10px; border-bottom: 3px solid #0ea5e9; display: inline-block; }
+.prop-texto { white-space: pre-wrap; font-size: 14px; line-height: 1.75; }
+.prop-capa { display: flex; flex-direction: column; justify-content: space-between; min-height: 640px; background: linear-gradient(160deg, #0b2545 0%, #13426f 60%, #0ea5e9 140%); color: #fff; }
+.prop-capa-logo { max-height: 64px; max-width: 220px; object-fit: contain; background: #fff; padding: 8px 12px; border-radius: 8px; align-self: flex-start; }
+.prop-capa-marca { font-size: 20px; font-weight: 700; letter-spacing: 0.04em; }
+.prop-capa-centro h1 { font-size: 40px; line-height: 1.15; font-weight: 800; margin: 10px 0 16px; }
+.prop-capa-num { text-transform: uppercase; letter-spacing: 0.18em; font-size: 12px; opacity: 0.8; }
+.prop-capa-rodape { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; border-top: 1px solid rgb(255 255 255 / 0.25); padding-top: 18px; }
+.prop-capa-rodape span { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.75; }
+.prop-certificado { background: #f0fdf4; border: 1px solid #86efac; border-radius: 10px; padding: 20px 24px; font-size: 12px; }
+.prop-certificado h3 { font-weight: 700; font-size: 14px; margin-bottom: 10px; color: #166534; }
+.prop-certificado dl { display: grid; grid-template-columns: 140px 1fr; gap: 4px 12px; margin-bottom: 10px; }
+.prop-certificado dt { font-weight: 600; }
+.prop-quebra { word-break: break-all; }
+@media (max-width: 640px) {
+  .prop-pagina { padding: 28px 22px; }
+  .prop-capa-centro h1 { font-size: 28px; }
+}
+@media print {
+  .orc-print-host .prop-doc { gap: 0; }
+  .orc-print-host .prop-pagina { box-shadow: none; border-radius: 0; min-height: 0; padding: 0 0 12px; break-after: page; }
+  .orc-print-host .prop-capa { padding: 40px; min-height: 260mm; }
+  .orc-print-host .prop-doc, .orc-print-host .prop-doc * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .orc-print-host .prop-certificado { break-inside: avoid; }
+}

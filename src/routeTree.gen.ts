@@ -35,6 +35,7 @@ import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authentic
 import { Route as AuthenticatedUnid_medidaRouteImport } from './routes/_authenticated/unid_medida'
 import { Route as AuthenticatedUsuariosRouteImport } from './routes/_authenticated/usuarios'
 import { Route as CompartilhadoTokenRouteImport } from './routes/compartilhado.$token'
+import { Route as PropostaTokenRouteImport } from './routes/proposta.$token'
 import { Route as AuthenticatedAdminClientesRouteImport } from './routes/_authenticated/admin.clientes'
 import { Route as AuthenticatedAdminModulosRouteImport } from './routes/_authenticated/admin.modulos'
 import { Route as AuthenticatedAdminPlanosRouteImport } from './routes/_authenticated/admin.planos'
@@ -173,6 +174,11 @@ const CompartilhadoTokenRoute = CompartilhadoTokenRouteImport.update({
   path: '/compartilhado/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PropostaTokenRoute = PropostaTokenRouteImport.update({
+  id: '/proposta/$token',
+  path: '/proposta/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedAdminClientesRoute =
   AuthenticatedAdminClientesRouteImport.update({
     id: '/admin/clientes',
@@ -230,6 +236,7 @@ export interface FileRoutesByFullPath {
   '/unid_medida': typeof AuthenticatedUnid_medidaRoute
   '/usuarios': typeof AuthenticatedUsuariosRoute
   '/compartilhado/$token': typeof CompartilhadoTokenRoute
+  '/proposta/$token': typeof PropostaTokenRoute
   '/admin/clientes': typeof AuthenticatedAdminClientesRoute
   '/admin/modulos': typeof AuthenticatedAdminModulosRoute
   '/admin/planos': typeof AuthenticatedAdminPlanosRoute
@@ -262,6 +269,7 @@ export interface FileRoutesByTo {
   '/unid_medida': typeof AuthenticatedUnid_medidaRoute
   '/usuarios': typeof AuthenticatedUsuariosRoute
   '/compartilhado/$token': typeof CompartilhadoTokenRoute
+  '/proposta/$token': typeof PropostaTokenRoute
   '/admin/clientes': typeof AuthenticatedAdminClientesRoute
   '/admin/modulos': typeof AuthenticatedAdminModulosRoute
   '/admin/planos': typeof AuthenticatedAdminPlanosRoute
@@ -296,6 +304,7 @@ export interface FileRoutesById {
   '/_authenticated/unid_medida': typeof AuthenticatedUnid_medidaRoute
   '/_authenticated/usuarios': typeof AuthenticatedUsuariosRoute
   '/compartilhado/$token': typeof CompartilhadoTokenRoute
+  '/proposta/$token': typeof PropostaTokenRoute
   '/_authenticated/admin/clientes': typeof AuthenticatedAdminClientesRoute
   '/_authenticated/admin/modulos': typeof AuthenticatedAdminModulosRoute
   '/_authenticated/admin/planos': typeof AuthenticatedAdminPlanosRoute
@@ -330,6 +339,7 @@ export interface FileRouteTypes {
     | '/unid_medida'
     | '/usuarios'
     | '/compartilhado/$token'
+    | '/proposta/$token'
     | '/admin/clientes'
     | '/admin/modulos'
     | '/admin/planos'
@@ -362,6 +372,7 @@ export interface FileRouteTypes {
     | '/unid_medida'
     | '/usuarios'
     | '/compartilhado/$token'
+    | '/proposta/$token'
     | '/admin/clientes'
     | '/admin/modulos'
     | '/admin/planos'
@@ -395,6 +406,7 @@ export interface FileRouteTypes {
     | '/_authenticated/unid_medida'
     | '/_authenticated/usuarios'
     | '/compartilhado/$token'
+    | '/proposta/$token'
     | '/_authenticated/admin/clientes'
     | '/_authenticated/admin/modulos'
     | '/_authenticated/admin/planos'
@@ -411,6 +423,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   CompartilhadoTokenRoute: typeof CompartilhadoTokenRoute
+  PropostaTokenRoute: typeof PropostaTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -597,6 +610,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CompartilhadoTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/proposta/$token': {
+      id: '/proposta/$token'
+      path: '/proposta/$token'
+      fullPath: '/proposta/$token'
+      preLoaderRoute: typeof PropostaTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/admin/clientes': {
       id: '/_authenticated/admin/clientes'
       path: '/admin/clientes'
@@ -699,6 +719,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   CompartilhadoTokenRoute: CompartilhadoTokenRoute,
+  PropostaTokenRoute: PropostaTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
