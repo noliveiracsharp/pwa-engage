@@ -1,3 +1,4 @@
+import { useChecklistGate } from "@/components/kanban/ChecklistGate";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -55,6 +56,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
   const [enviando, setEnviando] = useState(false);
   const [moverAberto, setMoverAberto] = useState(false);
   const pesquisa = usePesquisaSatisfacao();
+  const checklist = useChecklistGate();
   const fimRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const { data: usuarios = [] } = useTableRows("usuarios");
@@ -409,11 +411,13 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
             atualizarAtendimento({ kanban_nome_id: kanbanId, ...etapaPayload(etapaId || null, etapas) }, "Atendimento movido.");
           const alvo = etapas.find((e) => text(rowId(e)) === etapaId);
           const vaiEncerrar = alvo?.["is_default_encerrado"] === true && !encerrado;
-          const acao = vaiEncerrar ? pesquisa.pedir({ atendimento, pessoa, instancia, executar }) : executar();
+          const mover = () => (vaiEncerrar ? pesquisa.pedir({ atendimento, pessoa, instancia, executar }) : executar());
+          const acao = alvo && checklist.precisa(alvo) ? checklist.exigir({ atendimento, etapa: alvo, executar: mover }) : mover();
           return acao.then((ok) => ok && setMoverAberto(false));
         }}
       />
       {pesquisa.dialog}
+      {checklist.dialog}
     </section>
   );
 }

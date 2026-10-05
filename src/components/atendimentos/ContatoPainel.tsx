@@ -1,3 +1,4 @@
+import { useChecklistGate } from "@/components/kanban/ChecklistGate";
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -198,6 +199,7 @@ export function ContatoPainel({ atendimento, pessoa, usuarios, participantes, et
             </SelectContent>
           </Select>
           {pesquisa.dialog}
+          {checklist.dialog}
           {orcamento && (
             <p className="text-sm text-muted-foreground">
               Orçamento {text(orcamento["numero"])} · {text(orcamento["situacao"])}
