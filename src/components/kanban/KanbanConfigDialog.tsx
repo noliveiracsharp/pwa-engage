@@ -615,7 +615,7 @@ export function KanbanConfigDialog({
                         {e["is_default_ia"] === true && <Badge variant="secondary" className="gap-1 text-[10px]"><Bot className="h-3 w-3" /> Padrão IA</Badge>}
                         {e["is_default_humano"] === true && <Badge variant="secondary" className="gap-1 text-[10px]"><Users className="h-3 w-3" /> Padrão Equipe</Badge>}
                         {e["is_default_encerrado"] === true && <Badge variant="secondary" className="gap-1 text-[10px]"><Check className="h-3 w-3" /> Encerramento</Badge>}
-                        {e["exige_checklist"] === true && <Badge variant="secondary" className="gap-1 text-[10px]"><ClipboardCheck className="h-3 w-3" /> Checklist</Badge>}
+                        {[true, 1, "true", "t"].includes(e["exige_checklist"] as never) && <Badge variant="secondary" className="gap-1 text-[10px]"><ClipboardCheck className="h-3 w-3" /> Checklist</Badge>}
                         <Switch
                           checked={ativo}
                           aria-label="Status"
@@ -630,7 +630,7 @@ export function KanbanConfigDialog({
                             setEditDesc(String(e["descricao"] ?? ""));
                             setEditIA(e["is_default_ia"] === true);
                             setEditHum(e["is_default_humano"] === true);
-                            setEditCk(e["exige_checklist"] === true);
+                            setEditCk([true, 1, "true", "t"].includes(e["exige_checklist"] as never));
                             setEditTpl(String(e["checklist_template_id"] ?? ""));
                           }}
                         >
