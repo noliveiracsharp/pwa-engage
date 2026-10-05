@@ -85,9 +85,9 @@ const txt = (v: unknown) => {
 
 export type Contexto = {
   orcamento: Row;
-  empresa?: Row | null;
-  cliente?: Row | null;
-  vendedor?: Row | null;
+  empresa?: Row | null | undefined;
+  cliente?: Row | null | undefined;
+  vendedor?: Row | null | undefined;
 };
 
 export function aplicarTags(texto: string, c: Contexto): string {

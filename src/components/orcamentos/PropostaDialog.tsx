@@ -96,7 +96,10 @@ export function PropostaDialog(props: Props) {
       tipo: b.tipo,
       conteudo: JSON.stringify({ titulo: b.titulo, conteudo: b.conteudo }),
     } as never);
-    if (error) return toast.error("Erro ao salvar modelo", { description: error.message });
+    if (error) {
+      toast.error("Erro ao salvar modelo", { description: error.message });
+      return;
+    }
     toast.success("Modelo salvo");
     templates.refetch();
   };
@@ -107,7 +110,7 @@ export function PropostaDialog(props: Props) {
     const raw = String(tpl["conteudo"] ?? "");
     try {
       const j = JSON.parse(raw) as { titulo?: string; conteudo?: string };
-      set(i, { titulo: j.titulo ?? blocos[i].titulo, conteudo: j.conteudo ?? "" });
+      set(i, { titulo: j.titulo ?? blocos[i]?.titulo ?? "", conteudo: j.conteudo ?? "" });
     } catch {
       set(i, { conteudo: raw });
     }
