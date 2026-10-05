@@ -233,8 +233,13 @@ export function KanbanConfigDialog({
   const updEtapa = useMutation({
     mutationFn: async (v: { id: string; patch: Row }) => {
       // Campos independentes: grava exatamente o que está na tela.
-      const { error } = await supabase.from("kanban_etapas").update(v.patch as never).eq("id", v.id);
+      const { data, error } = await supabase.from("kanban_etapas").update(v.patch as never).eq("id", v.id).select("*");
       if (error) throw error;
+      if (!data || data.length === 0) throw new Error("A etapa não foi atualizada (sem permissão no banco para alterar esta etapa).");
+      const salvo = data[0] as Row;
+      if ("exige_checklist" in v.patch && !("exige_checklist" in salvo)) {
+        throw new Error("A coluna exige_checklist não existe em kanban_etapas. Execute o script SQL do checklist.");
+      }
     },
     onSuccess: () => {
       invalidate();
@@ -610,7 +615,7 @@ export function KanbanConfigDialog({
                         {e["is_default_ia"] === true && <Badge variant="secondary" className="gap-1 text-[10px]"><Bot className="h-3 w-3" /> Padrão IA</Badge>}
                         {e["is_default_humano"] === true && <Badge variant="secondary" className="gap-1 text-[10px]"><Users className="h-3 w-3" /> Padrão Equipe</Badge>}
                         {e["is_default_encerrado"] === true && <Badge variant="secondary" className="gap-1 text-[10px]"><Check className="h-3 w-3" /> Encerramento</Badge>}
-                        {e["exige_checklist"] === true && <Badge variant="secondary" className="gap-1 text-[10px]"><ClipboardCheck className="h-3 w-3" /> Checklist</Badge>}
+                        {[true, 1, "true", "t"].includes(e["exige_checklist"] as never) && <Badge variant="secondary" className="gap-1 text-[10px]"><ClipboardCheck className="h-3 w-3" /> Checklist</Badge>}
                         <Switch
                           checked={ativo}
                           aria-label="Status"
@@ -625,7 +630,7 @@ export function KanbanConfigDialog({
                             setEditDesc(String(e["descricao"] ?? ""));
                             setEditIA(e["is_default_ia"] === true);
                             setEditHum(e["is_default_humano"] === true);
-                            setEditCk(e["exige_checklist"] === true);
+                            setEditCk([true, 1, "true", "t"].includes(e["exige_checklist"] as never));
                             setEditTpl(String(e["checklist_template_id"] ?? ""));
                           }}
                         >
