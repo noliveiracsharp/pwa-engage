@@ -60,6 +60,7 @@ function ItensPage() {
   const [open, setOpen] = useState(false);
   const [record, setRecord] = useState<Row | null>(null);
   const [f, setF] = useState({ busca: "", tipo: "todos", status: "todos" });
+  const [galeria, setGaleria] = useState<{ titulo: string; imagens: string[] } | null>(null);
 
   const marcaById = useMemo(() => {
     const map = new Map<string, Row>();
@@ -91,9 +92,25 @@ function ItensPage() {
       sortable: false,
       render: (row) => {
         const imgs = row["imagens"];
-        const first = Array.isArray(imgs) && imgs.length ? String(imgs[0]) : "";
+        const lista = Array.isArray(imgs) ? imgs.map(String).filter(Boolean) : [];
+        const first = lista[0] ?? "";
         return first ? (
-          <img src={first} alt="" className="border-border h-10 w-10 rounded-md border object-cover" />
+          <button
+            type="button"
+            title="Ver imagens"
+            className="relative block rounded-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            onClick={(e) => {
+              e.stopPropagation();
+              setGaleria({ titulo: String(pick(row, ["descricao"]) ?? "Imagens"), imagens: lista });
+            }}
+          >
+            <img src={first} alt="" className="border-border h-10 w-10 cursor-pointer rounded-md border object-cover transition hover:opacity-80" />
+            {lista.length > 1 && (
+              <span className="bg-primary text-primary-foreground absolute -top-1.5 -right-1.5 rounded-full px-1.5 text-[10px] font-semibold">
+                {lista.length}
+              </span>
+            )}
+          </button>
         ) : (
           <span className="bg-muted text-muted-foreground border-border flex h-10 w-10 items-center justify-center rounded-md border">
             <ImageIcon className="h-4 w-4" />

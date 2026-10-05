@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { QuickCreateDialog, type QuickField } from "@/components/itens/QuickCreateDialog";
+import { SearchSelect } from "@/components/data-table/SearchSelect";
 import { rowId, text, useTableRows } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
 import { buildTree } from "@/lib/hierarchy";
