@@ -695,6 +695,7 @@ function KanbanPage() {
       </Dialog>
 
       {pesquisa.dialog}
+      {checklist.dialog}
       <Dialog open={newEtapa} onOpenChange={setNewEtapa}>
         <DialogContent>
           <DialogHeader>

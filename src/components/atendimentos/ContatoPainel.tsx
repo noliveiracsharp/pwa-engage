@@ -198,6 +198,7 @@ export function ContatoPainel({ atendimento, pessoa, usuarios, participantes, et
             </SelectContent>
           </Select>
           {pesquisa.dialog}
+          {checklist.dialog}
           {orcamento && (
             <p className="text-sm text-muted-foreground">
               Orçamento {text(orcamento["numero"])} · {text(orcamento["situacao"])}
