@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { QuickCreateDialog, type QuickField } from "@/components/itens/QuickCreateDialog";
+import { SearchSelect } from "@/components/data-table/SearchSelect";
 import { rowId, text, useTableRows } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
 import { buildTree } from "@/lib/hierarchy";
@@ -119,14 +120,18 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, canCre
     });
   }, [open, record]);
 
-  const options = useMemo(
-    () => ({
-      unidade: unidades.map((r) => ({ value: String(rowId(r) ?? ""), label: String(pick(r, ["descricao"]) ?? "—") })),
+  const options = useMemo(() => {
+    const alfa = (a: { label: string }, b: { label: string }) => a.label.localeCompare(b.label, "pt-BR");
+    return {
+      unidade: unidades
+        .map((r) => ({ value: String(rowId(r) ?? ""), label: String(pick(r, ["descricao"]) ?? "—") }))
+        .sort(alfa),
       centro: centroTree.map((n) => ({ value: String(rowId(n.row) ?? ""), label: n.path })),
-      marca: marcas.map((r) => ({ value: String(rowId(r) ?? ""), label: String(pick(r, ["descricao"]) ?? "—") })),
-    }),
-    [unidades, centroTree, marcas],
-  );
+      marca: marcas
+        .map((r) => ({ value: String(rowId(r) ?? ""), label: String(pick(r, ["descricao"]) ?? "—") }))
+        .sort(alfa),
+    };
+  }, [unidades, centroTree, marcas]);
 
   /** Recalcula o preço de venda a partir de custo, margem e imposto. */
   const setPricing = (patch: Partial<Values>) => {
@@ -177,19 +182,16 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, canCre
         {label}
       </Label>
       <div className="flex items-center gap-2">
-        <Select value={v[id]} onValueChange={(value) => setV((s) => ({ ...s, [id]: value }))}>
-          <SelectTrigger id={id} className="flex-1">
-            <SelectValue placeholder="Selecione" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={NONE}>Não informado</SelectItem>
-            {list.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <SearchSelect
+          id={id}
+          className="min-w-0 flex-1"
+          value={v[id] === NONE ? "" : v[id]}
+          onChange={(value) => setV((s) => ({ ...s, [id]: value || NONE }))}
+          options={list}
+          placeholder="Não informado"
+          searchPlaceholder="Pesquisar…"
+          disabled={readOnly}
+        />
         {canCreateApoio && (
           <Button
             type="button"

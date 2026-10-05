@@ -288,25 +288,15 @@ export function OrcamentoLinhas({
                       <Label htmlFor={`unid-${l.key}`} className="block text-xs font-medium">
                         Unidade
                       </Label>
-                      <Select
-                        value={l.unidade_medida_id || NONE}
-                        onValueChange={(v) =>
-                          onChange(l.key, { unidade_medida_id: v === NONE ? "" : v })
-                        }
+                      <SearchSelect
+                        id={`unid-${l.key}`}
+                        value={l.unidade_medida_id}
+                        onChange={(v) => onChange(l.key, { unidade_medida_id: v })}
+                        options={unidadeOptions}
+                        placeholder="Unid."
+                        searchPlaceholder="Pesquisar…"
                         disabled={Boolean(readOnly)}
-                      >
-                        <SelectTrigger id={`unid-${l.key}`}>
-                          <SelectValue placeholder="Unid." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value={NONE}>—</SelectItem>
-                          {unidadeOptions.map((o) => (
-                            <SelectItem key={o.value} value={o.value}>
-                              {o.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      />
                     </div>
                     <div className="space-y-1.5 sm:col-span-2">
                       <Label htmlFor={`vu-${l.key}`} className="block text-xs font-medium">
