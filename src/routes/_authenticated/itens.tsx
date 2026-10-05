@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ApoioCrud } from "@/components/itens/ApoioCrud";
 import { centroCustoConfig, marcaConfig, unidadeConfig } from "@/components/itens/apoio-config";
 import { ItemSheet } from "@/components/itens/ItemSheet";
+import { ImagensCarrosselDialog } from "@/components/itens/ImagensCarrosselDialog";
 import { rowId, useDeleteRecord, useSaveRecord, useTableRows } from "@/lib/crud";
 import { matchesAny } from "@/lib/input-masks";
 import { useAudit } from "@/lib/audit";
@@ -246,6 +247,12 @@ function ItensPage() {
         onSave={(values) =>
           save.mutate({ values: stamp(values, !record), original: record }, { onSuccess: () => setOpen(false) })
         }
+      />
+      <ImagensCarrosselDialog
+        open={galeria !== null}
+        onOpenChange={(o) => !o && setGaleria(null)}
+        titulo={galeria?.titulo ?? ""}
+        imagens={galeria?.imagens ?? []}
       />
     </Tabs>
   );
