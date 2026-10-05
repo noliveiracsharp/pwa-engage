@@ -49,12 +49,7 @@ export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) 
         <Button variant="ghost" size="icon" className="shrink-0" onClick={onToggleSidebar} aria-label="Abrir menu">
           <Menu className="h-5 w-5" />
         </Button>
-        <span className="truncate text-base font-bold tracking-tight text-foreground md:hidden">{ativa.titulo}</span>
-        {ativa.logo ? (
-          <img src={ativa.logo} alt={ativa.nome} className="hidden h-8 w-auto max-w-[160px] object-contain md:block" />
-        ) : (
-          <span className="hidden truncate text-lg font-bold tracking-tight text-foreground md:block">{ativa.nome}</span>
-        )}
+        <span className="truncate text-base font-bold tracking-tight text-foreground sm:text-lg">{ativa.titulo}</span>
       </div>
 
       <div className="flex shrink-0 items-center gap-1">
