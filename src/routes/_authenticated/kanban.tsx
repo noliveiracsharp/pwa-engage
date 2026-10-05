@@ -1,6 +1,7 @@
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { FileText, Settings2 } from "lucide-react";
 import { KanbanConfigDialog } from "@/components/kanban/KanbanConfigDialog";
+import { useChecklistGate } from "@/components/kanban/ChecklistGate";
 import { SituacaoBadge } from "@/components/orcamentos/SituacaoBadge";
 import { AvaliacaoSelo, usePesquisaSatisfacao } from "@/components/atendimentos/Pesquisa";
 import { formatBRL } from "@/lib/orcamentos";
@@ -342,6 +343,7 @@ function KanbanPage() {
   };
 
   const pesquisa = usePesquisaSatisfacao();
+  const checklist = useChecklistGate();
   const moveCard = useMutation({
     mutationFn: async ({
       id,
@@ -402,15 +404,18 @@ function KanbanPage() {
     const alvo = etapas.find((e) => String(e["id"]) === etapaId);
     const atual = etapas.find((e) => String(e["id"]) === String(card[column] ?? ""));
     const id = dragId;
-    if (alvo?.["is_default_encerrado"] === true && atual?.["is_default_encerrado"] !== true) {
-      void pesquisa.pedir({
-        atendimento: card,
-        pessoa: pessoaById.get(String(pick(card, ["pessoas_id", "pessoa_id"]) ?? "")),
-        executar: () => moveCard.mutateAsync({ id, etapaId, column }).then(() => true, () => false),
-      });
-      return;
-    }
-    moveCard.mutate({ id, etapaId, column });
+    const mover = (): Promise<boolean> => {
+      if (alvo?.["is_default_encerrado"] === true && atual?.["is_default_encerrado"] !== true) {
+        return pesquisa.pedir({
+          atendimento: card,
+          pessoa: pessoaById.get(String(pick(card, ["pessoas_id", "pessoa_id"]) ?? "")),
+          executar: () => moveCard.mutateAsync({ id, etapaId, column }).then(() => true, () => false),
+        });
+      }
+      return moveCard.mutateAsync({ id, etapaId, column }).then(() => true, () => false);
+    };
+    if (alvo && checklist.precisa(alvo)) void checklist.exigir({ atendimento: card, etapa: alvo, executar: mover });
+    else void mover();
   };
 
   return (
