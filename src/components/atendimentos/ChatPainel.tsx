@@ -30,6 +30,7 @@ import {
 import { dispararMensagem, marcarEnvio } from "@/lib/atendimentos-envio";
 import { GravadorAudio } from "./GravadorAudio";
 import { AvaliacaoSelo, usePesquisaSatisfacao } from "./Pesquisa";
+import { ChecklistEventoCard, dataChecklist, useChecklistsAtendimento } from "./ChecklistRespostas";
 
 const EMOJIS = "😀 😃 😄 😁 😅 😂 🙂 😉 😊 😍 😘 🤔 😐 😴 😢 😭 😡 👍 👎 👏 🙏 💪 👋 🤝 ✅ ❌ ⚠️ ❤️ 🔥 🎉 ⭐ 📦 📄 📞 💰 🕐 🚀 💬 📍 🙌".split(" ");
 
@@ -80,9 +81,19 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
     },
   });
 
+  // Checklists de etapa entram na linha do tempo como eventos internos (nunca vão ao cliente).
+  const { data: checklists = [] } = useChecklistsAtendimento(id);
+  const linhaTempo = useMemo(() => {
+    const itens: { tipo: "msg" | "ck"; t: number; row: Row }[] = [
+      ...mensagens.map((m) => ({ tipo: "msg" as const, t: dataDe(m, M.data)?.getTime() ?? 0, row: m })),
+      ...checklists.map((c) => ({ tipo: "ck" as const, t: dataChecklist(c).getTime(), row: c })),
+    ];
+    return itens.sort((a, b) => a.t - b.t);
+  }, [mensagens, checklists]);
+
   useEffect(() => {
     fimRef.current?.scrollIntoView({ block: "end" });
-  }, [mensagens.length, id]);
+  }, [linhaTempo.length, id]);
 
   // Presença em tempo real (digitando / gravando) via broadcast "chat_presence".
   const [presenca, setPresenca] = useState<"composing" | "recording" | null>(null);
@@ -298,7 +309,11 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
         {!isLoading && mensagens.length === 0 && (
           <p className="text-center text-sm text-muted-foreground">Nenhuma mensagem nesta conversa.</p>
         )}
-        {mensagens.map((m) => <Balao key={text(rowId(m))} m={m} autores={autores} />)}
+        {linhaTempo.map((it) =>
+          it.tipo === "ck"
+            ? <ChecklistEventoCard key={`ck-${text(rowId(it.row))}`} c={it.row} />
+            : <Balao key={text(rowId(it.row))} m={it.row} autores={autores} />,
+        )}
         <div ref={fimRef} />
       </div>
 

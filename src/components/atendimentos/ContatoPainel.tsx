@@ -15,6 +15,7 @@ import { pick, type Row } from "@/lib/row";
 import { A, corEtiqueta, etapaPayload, etapasDoKanban, fotoPessoa, iniciais, nomePessoa, telefonePessoa } from "@/lib/atendimentos";
 import { filterPayload, useCols } from "@/lib/projetos";
 import { usePesquisaSatisfacao } from "./Pesquisa";
+import { ChecklistsPainel } from "./ChecklistRespostas";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type Props = {
@@ -207,6 +208,9 @@ export function ContatoPainel({ atendimento, pessoa, usuarios, participantes, et
             </p>
           )}
         </section>
+
+        <ChecklistsPainel atId={atId} />
+
 
         {pessoaId !== undefined && (
           <section className="space-y-2">
