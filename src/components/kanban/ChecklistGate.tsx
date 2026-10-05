@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ClipboardCheck, Loader2, Paperclip, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -41,6 +41,7 @@ type Valor = boolean | string;
  */
 export function useChecklistGate() {
   const { empresaId, usuarioId } = useAudit();
+  const qc = useQueryClient();
   const podePular = usePodePular();
   const [pedido, setPedido] = useState<Pedido | null>(null);
   const [itens, setItens] = useState<Row[]>([]);
@@ -110,6 +111,7 @@ export function useChecklistGate() {
       justificativa: pular ? justificativa.trim() : null,
     } as never);
     if (error) { setOcupado(false); toast.error(`Não foi possível salvar o checklist. ${error.message}`); return; }
+    qc.invalidateQueries({ queryKey: ["table", "atendimentos_checklists"] });
     const ok = await pedido.executar();
     setOcupado(false);
     if (ok) toast.success("Checklist registrado e atendimento transferido.");
