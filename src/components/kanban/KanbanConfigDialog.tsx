@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, Bot, Check, Pencil, Plus, Trash2, Users, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Bot, Check, ClipboardCheck, Pencil, Plus, Trash2, Users, X } from "lucide-react";
+import { ChecklistTemplates, useChecklistTemplates } from "./ChecklistTemplates";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -100,6 +101,9 @@ export function KanbanConfigDialog({
   const [editDesc, setEditDesc] = useState("");
   const [editIA, setEditIA] = useState(false);
   const [editHum, setEditHum] = useState(false);
+  const [editCk, setEditCk] = useState(false);
+  const [editTpl, setEditTpl] = useState("");
+  const { data: templates = [] } = useChecklistTemplates(empresaId);
   const [funcaoId, setFuncaoId] = useState("");
   const [sel, setSel] = useState<CampoCardTipado[]>([]);
 
@@ -392,7 +396,7 @@ export function KanbanConfigDialog({
           <DialogDescription>Dados, etapas e integração do quadro Kanban.</DialogDescription>
         </DialogHeader>
         <Tabs value={tab} onValueChange={setTab}>
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="dados">Dados do Quadro</TabsTrigger>
             <TabsTrigger value="etapas" disabled={!kanbanId}>
               Etapas
@@ -400,6 +404,7 @@ export function KanbanConfigDialog({
             <TabsTrigger value="integracao" disabled={!kanbanId}>
               Integração e Cards
             </TabsTrigger>
+            <TabsTrigger value="checklists">Checklists</TabsTrigger>
           </TabsList>
 
           <TabsContent value="dados" className="space-y-4 pt-4">
@@ -527,7 +532,7 @@ export function KanbanConfigDialog({
                 return (
                   <div
                     key={id}
-                    className="flex items-center gap-2 rounded-md border border-border p-2"
+                    className="flex flex-wrap items-center gap-2 rounded-md border border-border p-2"
                   >
                     <div className="flex flex-col">
                       <button
@@ -563,13 +568,27 @@ export function KanbanConfigDialog({
                         <label className="flex items-center gap-1 text-xs whitespace-nowrap">
                           <Switch checked={editHum} onCheckedChange={setEditHum} /> Etapa Padrão da Equipe
                         </label>
+                        <label className="flex items-center gap-1 text-xs whitespace-nowrap">
+                          <Switch checked={editCk} onCheckedChange={setEditCk} /> Exige checklist para entrar
+                        </label>
+                        {editCk && (
+                          <Select value={editTpl} onValueChange={setEditTpl}>
+                            <SelectTrigger className="h-8 w-48"><SelectValue placeholder={templates.length ? "Escolha o checklist" : "Crie na aba Checklists"} /></SelectTrigger>
+                            <SelectContent>
+                              {templates.map((t) => <SelectItem key={String(t["id"])} value={String(t["id"])}>{String(t["nome"] ?? "")}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        )}
                         <Button
                           size="icon"
                           variant="ghost"
                           aria-label="Salvar etapa"
-                          disabled={!editDesc.trim()}
+                          disabled={!editDesc.trim() || (editCk && !editTpl)}
                           onClick={() =>
-                            updEtapa.mutate({ id, patch: { descricao: editDesc.trim(), is_default_ia: editIA, is_default_humano: editHum } })
+                            updEtapa.mutate({ id, patch: {
+                              descricao: editDesc.trim(), is_default_ia: editIA, is_default_humano: editHum,
+                              exige_checklist: editCk, checklist_template_id: editCk ? editTpl : null,
+                            } })
                           }
                         >
                           <Check className="h-4 w-4" />
@@ -591,6 +610,7 @@ export function KanbanConfigDialog({
                         {e["is_default_ia"] === true && <Badge variant="secondary" className="gap-1 text-[10px]"><Bot className="h-3 w-3" /> Padrão IA</Badge>}
                         {e["is_default_humano"] === true && <Badge variant="secondary" className="gap-1 text-[10px]"><Users className="h-3 w-3" /> Padrão Equipe</Badge>}
                         {e["is_default_encerrado"] === true && <Badge variant="secondary" className="gap-1 text-[10px]"><Check className="h-3 w-3" /> Encerramento</Badge>}
+                        {e["exige_checklist"] === true && <Badge variant="secondary" className="gap-1 text-[10px]"><ClipboardCheck className="h-3 w-3" /> Checklist</Badge>}
                         <Switch
                           checked={ativo}
                           aria-label="Status"
@@ -605,6 +625,8 @@ export function KanbanConfigDialog({
                             setEditDesc(String(e["descricao"] ?? ""));
                             setEditIA(e["is_default_ia"] === true);
                             setEditHum(e["is_default_humano"] === true);
+                            setEditCk(e["exige_checklist"] === true);
+                            setEditTpl(String(e["checklist_template_id"] ?? ""));
                           }}
                         >
                           <Pencil className="h-4 w-4" />
@@ -641,6 +663,10 @@ export function KanbanConfigDialog({
                 <Plus className="mr-1 h-4 w-4" /> Adicionar
               </Button>
             </div>
+          </TabsContent>
+
+          <TabsContent value="checklists" className="pt-4">
+            <ChecklistTemplates empresaId={empresaId} />
           </TabsContent>
 
           <TabsContent value="integracao" className="space-y-4 pt-4">

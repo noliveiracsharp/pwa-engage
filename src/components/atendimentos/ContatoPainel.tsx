@@ -81,6 +81,7 @@ export function ContatoPainel({ atendimento, pessoa, usuarios, participantes, et
   const kanban = kanbans.find((k) => text(rowId(k)) === text(pick(atendimento, A.kanban)));
   const etapa = etapas.find((e) => text(rowId(e)) === text(pick(atendimento, A.etapa)));
   const pesquisa = usePesquisaSatisfacao();
+  const checklist = useChecklistGate();
   async function aplicarEtapa(etId: string) {
     const { error } = await supabase.from("atendimentos").update(filterPayload(etapaPayload(etId, etapas), colsAt)).eq("id", atId);
     if (error) { toast.error(error.message); return false; }
@@ -90,11 +91,14 @@ export function ContatoPainel({ atendimento, pessoa, usuarios, participantes, et
   }
   async function mudarEtapa(etId: string) {
     const alvo = etapas.find((e) => text(rowId(e)) === etId);
-    if (alvo?.["is_default_encerrado"] === true && etapa?.["is_default_encerrado"] !== true) {
-      await pesquisa.pedir({ atendimento, pessoa, executar: () => aplicarEtapa(etId) });
-      return;
-    }
-    await aplicarEtapa(etId);
+    const mover = async (): Promise<boolean> => {
+      if (alvo?.["is_default_encerrado"] === true && etapa?.["is_default_encerrado"] !== true) {
+        return pesquisa.pedir({ atendimento, pessoa, executar: () => aplicarEtapa(etId) });
+      }
+      return aplicarEtapa(etId);
+    };
+    if (alvo && checklist.precisa(alvo)) await checklist.exigir({ atendimento, etapa: alvo, executar: mover });
+    else await mover();
   }
   const orcamento = orcamentos.find(
     (o) => text(o["atendimento_id"]) === atId || (pessoaId !== undefined && text(pick(o, ["pessoa_id"])) === text(pessoaId)),
