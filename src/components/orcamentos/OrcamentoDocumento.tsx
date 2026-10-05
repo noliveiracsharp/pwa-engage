@@ -291,7 +291,7 @@ export function OrcamentoDocumento({ id, orcamento, linhas, empresa, cliente, ve
               <span>{empresaNome}</span>
               <small>{txt(pick(vendedor ?? {}, ["nome"])) || "Responsável comercial"}</small>
             </div>
-          </div>
+          </div>)}
 
           <footer className="orc-rodape">
             {empresaNome} · Proposta {numero} · Válida até{" "}
