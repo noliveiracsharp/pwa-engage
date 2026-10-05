@@ -16,7 +16,21 @@ export function PullToRefresh({ children, className }: { children: ReactNode; cl
     <main
       ref={ref}
       className={className}
-      onTouchStart={(e) => { inicio.current = (ref.current?.scrollTop ?? 1) <= 0 ? e.touches[0]!.clientY : null; }}
+      onTouchStart={(e) => {
+        inicio.current = null;
+        const main = ref.current;
+        const alvo = e.target as Node | null;
+        // Ignora toques vindos de portais (Sheet/Dialog) ou fora do <main>.
+        if (!main || !alvo || !main.contains(alvo) || main.scrollTop > 0) return;
+        // Ignora se algum contêiner rolável interno não estiver no topo.
+        let el = alvo instanceof HTMLElement ? alvo : alvo.parentElement;
+        while (el && el !== main) {
+          if (el.scrollTop > 0) return;
+          el = el.parentElement;
+        }
+        if (document.querySelector('[role="dialog"], [data-state="open"][data-radix-popper-content-wrapper]')) return;
+        inicio.current = e.touches[0]!.clientY;
+      }}
       onTouchMove={(e) => {
         if (inicio.current === null || atualizando) return;
         const d = e.touches[0]!.clientY - inicio.current;
