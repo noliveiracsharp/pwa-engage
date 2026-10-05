@@ -233,8 +233,13 @@ export function KanbanConfigDialog({
   const updEtapa = useMutation({
     mutationFn: async (v: { id: string; patch: Row }) => {
       // Campos independentes: grava exatamente o que está na tela.
-      const { error } = await supabase.from("kanban_etapas").update(v.patch as never).eq("id", v.id);
+      const { data, error } = await supabase.from("kanban_etapas").update(v.patch as never).eq("id", v.id).select("*");
       if (error) throw error;
+      if (!data || data.length === 0) throw new Error("A etapa não foi atualizada (sem permissão no banco para alterar esta etapa).");
+      const salvo = data[0] as Row;
+      if ("exige_checklist" in v.patch && !("exige_checklist" in salvo)) {
+        throw new Error("A coluna exige_checklist não existe em kanban_etapas. Execute o script SQL do checklist.");
+      }
     },
     onSuccess: () => {
       invalidate();

@@ -52,12 +52,23 @@ export function useChecklistGate() {
   const [justificativa, setJustificativa] = useState("");
   const resolver = useRef<((ok: boolean) => void) | null>(null);
 
+  const ativo = (v: unknown) => v === true || v === 1 || ["true", "t", "1", "s", "sim"].includes(String(v ?? "").toLowerCase());
+
+  // Sempre devolve true quando há etapa: a decisão real é feita em `exigir` com dados frescos do banco.
   function precisa(etapa: Row | undefined) {
-    return !!etapa && etapa["exige_checklist"] === true && !!etapa["checklist_template_id"];
+    return !!etapa;
   }
 
   async function exigir(p: Pedido): Promise<boolean> {
-    if (!precisa(p.etapa)) return p.executar();
+    // Relê a etapa de destino para não depender de cache desatualizado.
+    const { data: fresca } = await supabase.from("kanban_etapas").select("*").eq("id", String(p.etapa["id"])).maybeSingle();
+    const etapa = { ...p.etapa, ...((fresca as Row | null) ?? {}) };
+    if (!ativo(etapa["exige_checklist"])) return p.executar();
+    if (!etapa["checklist_template_id"]) {
+      toast.error("Esta etapa exige checklist, mas nenhum template está vinculado. Ajuste em Configurar quadro > Etapas.");
+      return false;
+    }
+    p = { ...p, etapa };
     setPedido(p); setValores({}); setPular(false); setJustificativa(""); setCarregando(true);
     const { data, error } = await supabase.from("checklists_itens").select("*")
       .eq("template_id", String(p.etapa["checklist_template_id"])).order("ordem");
