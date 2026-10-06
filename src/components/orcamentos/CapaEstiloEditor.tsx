@@ -58,7 +58,7 @@ export function CapaEstiloEditor({ estilo, onChange }: Props) {
         <div className="grid grid-cols-2 gap-2">
           <div className="space-y-1.5">
             <Label className="text-xs">Cor do texto</Label>
-            <Select value={e.texto} onValueChange={(v) => up({ texto: v as EstiloCapa["texto"] })}>
+            <Select value={e.texto} onValueChange={(v) => up({ texto: v as "claro" })}>
               <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="claro">Claro (branco)</SelectItem>
@@ -68,7 +68,7 @@ export function CapaEstiloEditor({ estilo, onChange }: Props) {
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">Logo</Label>
-            <Select value={e.logo} onValueChange={(v) => up({ logo: v as EstiloCapa["logo"] })}>
+            <Select value={e.logo} onValueChange={(v) => up({ logo: v as "esquerda" })}>
               <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="esquerda">À esquerda</SelectItem>
@@ -80,7 +80,7 @@ export function CapaEstiloEditor({ estilo, onChange }: Props) {
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">Alinhar textos</Label>
-            <Select value={e.alinhamento} onValueChange={(v) => up({ alinhamento: v as EstiloCapa["alinhamento"] })}>
+            <Select value={e.alinhamento} onValueChange={(v) => up({ alinhamento: v as "esquerda" })}>
               <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="esquerda">À esquerda</SelectItem>
