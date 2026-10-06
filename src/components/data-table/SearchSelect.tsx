@@ -88,7 +88,7 @@ export function SearchSelect({
           </span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-(--radix-popover-trigger-width) min-w-64 p-0" align="start">
+      <PopoverContent className="w-(--radix-popover-trigger-width) min-w-72 max-w-[95vw] p-0" align="start">
         <Command>
           <CommandInput placeholder={searchPlaceholder} />
           <CommandList>
@@ -111,15 +111,19 @@ export function SearchSelect({
                     )}
                   />
                   <span
-                    className={cn("min-w-0 flex-1 truncate", opt.depth === 0 && "font-semibold")}
+                    className="flex min-w-0 flex-1 flex-col"
                     style={opt.depth ? { paddingLeft: `${opt.depth * 1.1}rem` } : undefined}
                   >
-                    {opt.depth ? "↳ " : ""}
-                    {opt.label}
+                    <span className={cn("break-words whitespace-normal", opt.depth === 0 && "font-semibold")}>
+                      {opt.depth ? "↳ " : ""}
+                      {opt.label}
+                    </span>
+                    {opt.hint && (
+                      <span className="text-muted-foreground text-xs break-words whitespace-normal">
+                        {opt.hint}
+                      </span>
+                    )}
                   </span>
-                  {opt.hint && (
-                    <span className="text-muted-foreground ml-2 shrink-0 text-xs">{opt.hint}</span>
-                  )}
                 </CommandItem>
               ))}
             </CommandGroup>
