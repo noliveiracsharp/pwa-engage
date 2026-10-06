@@ -1,3 +1,4 @@
+import DOMPurify from "dompurify";
 import { formatBRL, formatDate, num } from "@/lib/orcamentos";
 import { pick, type Row } from "@/lib/row";
 
@@ -144,4 +145,26 @@ export function imprimirElemento(id: string) {
   };
   window.addEventListener("afterprint", limpar);
   setTimeout(() => window.print(), 80);
+}
+
+const escapar = (s: string) =>
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+/** Indica se o conteúdo salvo já é HTML (blocos antigos eram texto puro). */
+export const ehHtml = (s: string) => /<\/?[a-z][\s\S]*>/i.test(s);
+
+/** Converte texto puro legado em parágrafos HTML; HTML passa direto. */
+export function paraHtml(s: string): string {
+  if (!s) return "";
+  if (ehHtml(s)) return s;
+  return s
+    .split(/\n{2,}/)
+    .map((p) => `<p>${escapar(p).replace(/\n/g, "<br>")}</p>`)
+    .join("");
+}
+
+/** Remove scripts/eventos do HTML antes de exibir (o link público é aberto por terceiros). */
+export function htmlSeguro(html: string): string {
+  if (typeof window === "undefined" || typeof DOMPurify.sanitize !== "function") return "";
+  return DOMPurify.sanitize(html, { USE_PROFILES: { html: true }, FORBID_TAGS: ["style", "form", "input", "script", "iframe"] });
 }
