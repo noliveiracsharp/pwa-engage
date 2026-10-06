@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
-import { ImageIcon, Package } from "lucide-react";
+import { ImageIcon, Package, Settings2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { PrecificacaoDialog } from "@/components/itens/PrecificacaoDialog";
 import { createFileRoute } from "@tanstack/react-router";
 import { DataTable, type Column } from "@/components/data-table/DataTable";
 import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
@@ -48,7 +50,7 @@ const STATUS_OPTIONS = [
 const TIPO_OPTIONS = [
   { value: "todos", label: "Todos" },
   { value: "Produto", label: "Produto" },
-  { value: "Serviço", label: "Serviço" },
+  { value: "Serviço", label: "Serviço avulso" },
   { value: "Serviço Recorrente", label: "Serviço recorrente" },
 ];
 
@@ -62,6 +64,7 @@ function ItensPage() {
   const [open, setOpen] = useState(false);
   const [record, setRecord] = useState<Row | null>(null);
   const [f, setF] = useState({ busca: "", tipo: "todos", status: "todos" });
+  const [precOpen, setPrecOpen] = useState(false);
   const [galeria, setGaleria] = useState<{ titulo: string; imagens: string[] } | null>(null);
 
   const marcaById = useMemo(() => {
@@ -122,7 +125,7 @@ function ItensPage() {
     },
     { key: "codigo", header: "Código", fields: ["codigo"] },
     { key: "descricao", header: "Descrição", fields: ["descricao"] },
-    { key: "tipo", header: "Tipo", fields: ["tipo"] },
+    { key: "tipo", header: "Natureza", fields: ["tipo"] },
     {
       key: "marca",
       header: "Marca",
@@ -181,7 +184,14 @@ function ItensPage() {
         </TabsTrigger>
       </TabsList>
 
-      <TabsContent value="itens">
+      <TabsContent value="itens" className="space-y-3">
+        {perms.canUpdate && (
+          <div className="flex justify-end">
+            <Button variant="outline" size="sm" onClick={() => setPrecOpen(true)}>
+              <Settings2 className="mr-2 h-4 w-4" /> Parâmetros de Precificação
+            </Button>
+          </div>
+        )}
         <DataTable
           title="Produtos e Serviços"
           columns={columns}
@@ -212,7 +222,7 @@ function ItensPage() {
                 placeholder="Código, descrição ou marca"
               />
               <FilterSelect
-                label="Tipo"
+                label="Natureza"
                 value={f.tipo}
                 onChange={(v) => setF({ ...f, tipo: v })}
                 options={TIPO_OPTIONS}
@@ -249,6 +259,7 @@ function ItensPage() {
           save.mutate({ values: stamp(values, !record), original: record }, { onSuccess: () => setOpen(false) })
         }
       />
+      <PrecificacaoDialog open={precOpen} onOpenChange={setPrecOpen} />
       <ImagensCarrosselDialog
         open={galeria !== null}
         onOpenChange={(o) => !o && setGaleria(null)}
