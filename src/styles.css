@@ -504,7 +504,7 @@
 .prop-doc { display: flex; flex-direction: column; gap: 24px; color: #13263f; }
 .prop-pagina { background: #fff; border-radius: 10px; box-shadow: 0 2px 18px rgb(15 30 60 / 0.08); padding: 48px 56px; min-height: 420px; }
 .prop-pagina-orc { padding: 0; overflow: hidden; }
-.prop-titulo { font-size: 22px; font-weight: 700; margin-bottom: 18px; padding-bottom: 10px; border-bottom: 3px solid #0ea5e9; display: inline-block; }
+.prop-titulo { font-size: 22px; font-weight: 700; margin-bottom: 18px; padding-bottom: 10px; border-bottom: 3px solid var(--prop-destaque, #0ea5e9); display: inline-block; }
 .prop-texto { white-space: pre-wrap; font-size: 14px; line-height: 1.75; }
 .prop-capa { display: flex; flex-direction: column; justify-content: space-between; min-height: 640px; background: linear-gradient(160deg, #0b2545 0%, #13426f 60%, #0ea5e9 140%); color: #fff; }
 .prop-capa-logo { max-height: 64px; max-width: 220px; object-fit: contain; background: #fff; padding: 8px 12px; border-radius: 8px; align-self: flex-start; }
@@ -549,3 +549,10 @@
   .orc-print-host .prop-doc, .orc-print-host .prop-doc * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .orc-print-host .prop-certificado { break-inside: avoid; }
 }
+.prop-capa-escura { color: #13263f; }
+.prop-capa-escura .prop-capa-rodape { border-top-color: rgb(19 38 63 / 0.18); }
+.prop-capa.prop-capa-escura .prop-legal { border-top-color: rgb(19 38 63 / 0.15); color: #6b7f96; }
+.prop-capa-escura .prop-capa-logo { box-shadow: 0 1px 6px rgb(15 30 60 / 0.12); }
+.prop-logo-centro { align-self: center !important; }
+.prop-logo-direita { align-self: flex-end !important; }
+.prop-capa-centralizada .prop-capa-centro, .prop-capa-centralizada .prop-capa-rodape { text-align: center; }
