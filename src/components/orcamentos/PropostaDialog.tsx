@@ -223,7 +223,7 @@ export function PropostaDialog(props: Props) {
                     </>
                   )}
                   {b.ativo && b.tipo === "ORCAMENTO" && (
-                    <p className="text-muted-foreground text-xs">Itens, totais e pagamento vêm do orçamento.</p>
+                    <p className="text-muted-foreground text-xs">Itens, totais e pagamento vêm da oferta.</p>
                   )}
                 </div>
               );

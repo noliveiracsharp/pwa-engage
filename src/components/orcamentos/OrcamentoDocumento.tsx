@@ -53,7 +53,7 @@ export function OrcamentoDocumento({ id, orcamento, linhas, empresa, cliente, ve
   const unidadeById = new Map(unidades.map((u) => [String(rowId(u) ?? ""), u]));
   const marcaById = new Map(marcas.map((m) => [String(rowId(m) ?? ""), m]));
 
-  const numero = txt(orcamento["numero"]) || "Orçamento";
+  const numero = txt(orcamento["numero"]) || "Oferta";
   const situacao = situacaoOf(orcamento["situacao"]);
   const parcelas = parcelasFromValue(orcamento["parcelas"]);
   const totalItens = num(orcamento["total_itens"]);
@@ -102,7 +102,7 @@ export function OrcamentoDocumento({ id, orcamento, linhas, empresa, cliente, ve
             </div>
 
             <div className="orc-identificacao">
-              <span className="orc-rotulo">Orçamento</span>
+              <span className="orc-rotulo">Oferta</span>
               <span className="orc-numero">{numero}</span>
               <span
                 className={`orc-situacao orc-situacao-${situacao.replace(/\s+/g, "-").toLowerCase()}`}
@@ -157,7 +157,7 @@ export function OrcamentoDocumento({ id, orcamento, linhas, empresa, cliente, ve
           </div>
 
           {txt(orcamento["descricao"]) && (
-            <Bloco titulo="Objeto do orçamento">
+            <Bloco titulo="Objeto da oferta">
               <p className="orc-texto">{txt(orcamento["descricao"])}</p>
             </Bloco>
           )}

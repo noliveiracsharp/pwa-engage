@@ -205,7 +205,7 @@ export function OrcamentoTotais({
         </p>
         {prejuizo && (
           <p className="text-destructive flex items-center gap-1.5 text-xs font-medium">
-            <TriangleAlert className="h-3.5 w-3.5" /> Atenção: com este desconto o orçamento fica
+            <TriangleAlert className="h-3.5 w-3.5" /> Atenção: com este desconto a oferta fica
             com prejuízo.
           </p>
         )}

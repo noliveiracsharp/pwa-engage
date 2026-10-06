@@ -38,7 +38,7 @@ export function OrcamentoPDF({
 }: Props) {
   if (!orcamento) return null;
 
-  const numero = String(orcamento["numero"] ?? "") || "Orçamento";
+  const numero = String(orcamento["numero"] ?? "") || "Oferta";
   const imprimir = () => {
     const src = document.getElementById("orcamento-print");
     if (!src) return;
@@ -66,7 +66,7 @@ export function OrcamentoPDF({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[92vh] w-[96vw] max-w-4xl overflow-y-auto p-0">
         <DialogHeader className="sticky top-0 z-20 flex-row items-center justify-between gap-3 space-y-0 border-b bg-background px-6 py-4 print:hidden">
-          <DialogTitle>Visualizar orçamento {numero}</DialogTitle>
+          <DialogTitle>Visualizar oferta {numero}</DialogTitle>
           <div className="flex items-center gap-2">
             <Button onClick={imprimir}>
               <Printer className="mr-2 h-4 w-4" />

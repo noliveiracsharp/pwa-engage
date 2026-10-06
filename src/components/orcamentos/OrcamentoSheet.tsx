@@ -338,19 +338,19 @@ export function OrcamentoSheet({
 
   const submit = () => {
     if (!h.parceiro_id) {
-      toast.error("Selecione o cliente do orçamento.");
+      toast.error("Selecione o cliente da oferta.");
       return;
     }
     if (!h.dt_orcamento) {
-      toast.error("Informe a data do orçamento.");
+      toast.error("Informe a data da oferta.");
       return;
     }
     if (h.validade_orcamento && h.validade_orcamento < h.dt_orcamento) {
-      toast.error("A validade não pode ser anterior à data do orçamento.");
+      toast.error("A validade não pode ser anterior à data da oferta.");
       return;
     }
     if (linhasValidas.length === 0) {
-      toast.error("Adicione pelo menos um item ao orçamento.");
+      toast.error("Adicione pelo menos um item à oferta.");
       return;
     }
     const semQuantidade = linhasValidas.find((l) => num(l.quantidade) <= 0);
@@ -417,12 +417,12 @@ export function OrcamentoSheet({
       <SheetContent className="w-full overflow-y-auto sm:max-w-[92vw] lg:max-w-5xl xl:max-w-6xl">
         <SheetHeader className="px-6 pb-4">
           <SheetTitle className="flex flex-wrap items-center gap-2">
-            {record ? `Orçamento ${numero || ""}`.trim() : "Novo orçamento"}
+            {record ? `Oferta ${numero || ""}`.trim() : "Nova oferta"}
             {record && <SituacaoBadge value={etapaAtual?.descricao ?? h.situacao} />}
           </SheetTitle>
           <SheetDescription>
             {record
-              ? "Altere os dados, itens e condições comerciais do orçamento."
+              ? "Altere os dados, itens e condições comerciais da oferta."
               : "O número é gerado automaticamente no formato #ano-sequência ao salvar."}
           </SheetDescription>
         </SheetHeader>
@@ -470,7 +470,7 @@ export function OrcamentoSheet({
 
             <div className="min-w-0 space-y-1.5">
               <Label htmlFor="dt_orcamento" className="block text-sm font-medium">
-                Data do orçamento
+                Data da oferta
               </Label>
               <Input
                 id="dt_orcamento"
@@ -540,7 +540,7 @@ export function OrcamentoSheet({
                 id="descricao"
                 rows={2}
                 value={h.descricao}
-                placeholder="Objeto do orçamento, condições de pagamento, prazo de entrega…"
+                placeholder="Objeto da oferta, condições de pagamento, prazo de entrega…"
                 onChange={(e) => patchHeader({ descricao: e.target.value })}
               />
             </div>

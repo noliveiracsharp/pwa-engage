@@ -112,7 +112,7 @@ export const CAMPOS_CARD_ORCAMENTO: CampoCard[] = [
   { key: "numero", label: "Número" },
   { key: "parceiro_id", label: "Cliente" },
   { key: "total_liquido", label: "Total Líquido" },
-  { key: "dt_orcamento", label: "Data do Orçamento" },
+  { key: "dt_orcamento", label: "Data da Oferta" },
   { key: "usuario_id", label: "Vendedor" },
 ];
 

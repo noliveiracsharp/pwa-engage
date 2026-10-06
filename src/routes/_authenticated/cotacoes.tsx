@@ -25,9 +25,9 @@ export const Route = createFileRoute("/_authenticated/cotacoes")({
   head: () => ({
     meta: [
       { title: "Cotações de Compras — Atende.ai" },
-      { name: "description", content: "Cotações com fornecedores via CSV, comparativo automático de preços e geração de orçamento." },
+      { name: "description", content: "Cotações com fornecedores via CSV, comparativo automático de preços e geração de oferta." },
       { property: "og:title", content: "Cotações de Compras — Atende.ai" },
-      { property: "og:description", content: "Cotações com fornecedores via CSV, comparativo automático de preços e geração de orçamento." },
+      { property: "og:description", content: "Cotações com fornecedores via CSV, comparativo automático de preços e geração de oferta." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "robots", content: "noindex" },
@@ -151,8 +151,8 @@ function CotacoesPage() {
         await supabase.from("cotacoes_fornecedores").update({ vencedor: vencedores.has(String(fc["fornecedor_id"])) }).eq("id", String(fc["id"]));
       }
       for (const t of ["cotacoes", "cotacoes_fornecedores"]) qc.invalidateQueries({ queryKey: ["table", t] });
-      toast.success("Cotação aprovada. Orçamento criado para o comercial.", {
-        action: { label: "Abrir orçamentos", onClick: () => navigate({ to: "/orcamentos" }) },
+      toast.success("Cotação aprovada. Oferta criada para o comercial.", {
+        action: { label: "Abrir ofertas", onClick: () => navigate({ to: "/orcamentos" }) },
       });
       setSelId(null);
     } catch (e) {
