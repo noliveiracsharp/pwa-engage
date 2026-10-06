@@ -1,6 +1,6 @@
 import { rowId } from "@/lib/crud";
 import { formatCpfCnpj, formatPhoneDisplay } from "@/lib/input-masks";
-import { formatBRL, formatDate, formatQtd, num, parcelasFromValue, situacaoOf } from "@/lib/orcamentos";
+import { formatBRL, formatDate, formatQtd, modalidadeLabel, modalidadeOf, naturezaOf, num, parcelasFromValue, situacaoOf } from "@/lib/orcamentos";
 import { pick, type Row } from "@/lib/row";
 
 export type OrcamentoDocumentoProps = {
@@ -70,6 +70,58 @@ export function OrcamentoDocumento({ id, orcamento, linhas, empresa, cliente, ve
 
   const linhasOrdenadas = [...linhas].sort(
     (a, b) => Number(a["ordem"] ?? 0) - Number(b["ordem"] ?? 0),
+  );
+  const natDe = (l: Row) =>
+    naturezaOf(l["natureza"], itemById.get(String(pick(l, ["item_id"]) ?? ""))?.["tipo"]);
+  const linhasImpl = linhasOrdenadas.filter((l) => natDe(l) !== "recorrente");
+  const linhasRec = linhasOrdenadas.filter((l) => natDe(l) === "recorrente");
+  const modalidade = modalidadeOf(orcamento["modalidade"]);
+  const descontoAvista = num(orcamento["desconto_avista_valor"]);
+  const totalAvista = num(orcamento["total_avista"]) || totalLiquido - descontoAvista;
+  const taxaInstalacao = num(orcamento["taxa_instalacao"]);
+  const isenta = orcamento["taxa_instalacao_isenta"] === true;
+  const vigencia = num(orcamento["vigencia_meses"]) || 36;
+  const reajuste = txt(orcamento["reajuste_indice"]) || "IPCA";
+  const totalRecorrente =
+    num(orcamento["total_recorrente"]) || linhasRec.reduce((s, l) => s + num(l["total_linha"]), 0);
+
+  const tabela = (rows: Row[], mensal: boolean) => (
+    <table className="orc-tabela">
+      <thead>
+        <tr>
+          <th className="orc-col-num">#</th>
+          <th>{mensal ? "Serviço" : "Descrição"}</th>
+          <th className="orc-right">Qtd.</th>
+          <th>Un.</th>
+          <th className="orc-right">{mensal ? "Mensal unit." : "Valor unit."}</th>
+          <th className="orc-right">{mensal ? "Mensalidade" : "Total"}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((l, i) => {
+          const item = itemById.get(String(pick(l, ["item_id"]) ?? ""));
+          const marca = marcaById.get(String(pick(item ?? {}, ["itens_marcas_id"]) ?? ""));
+          const nomeMarca = txt(pick(marca ?? {}, ["descricao"]));
+          const unidade = unidadeById.get(String(pick(l, ["unidade_medida_id"]) ?? ""));
+          const descricao = txt(pick(item ?? {}, ["descricao"])) || txt(l["detalhe"]) || "Item";
+          const detalhe = txt(l["detalhe"]);
+          return (
+            <tr key={String(rowId(l) ?? i)}>
+              <td className="orc-col-num">{i + 1}</td>
+              <td>
+                <strong>{descricao}</strong>
+                {nomeMarca && <div className="orc-detalhe">Marca: {nomeMarca}</div>}
+                {detalhe && detalhe !== descricao && <div className="orc-detalhe">{detalhe}</div>}
+              </td>
+              <td className="orc-right">{formatQtd(l["quantidade"])}</td>
+              <td>{txt(pick(unidade ?? {}, ["sigla", "descricao"])) || "—"}</td>
+              <td className="orc-right">{formatBRL(l["valor_unitario"])}</td>
+              <td className="orc-right">{formatBRL(l["total_linha"])}</td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
   );
 
   return (
@@ -162,52 +214,41 @@ export function OrcamentoDocumento({ id, orcamento, linhas, empresa, cliente, ve
             </Bloco>
           )}
 
-          {/* -------------------------- itens -------------------------- */}
-          <table className="orc-tabela">
-            <thead>
-              <tr>
-                <th className="orc-col-num">#</th>
-                <th>Descrição</th>
-                <th className="orc-right">Qtd.</th>
-                <th>Un.</th>
-                <th className="orc-right">Valor unit.</th>
-                <th className="orc-right">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {linhasOrdenadas.map((l, i) => {
-                const item = itemById.get(String(pick(l, ["item_id"]) ?? ""));
-                const marca = marcaById.get(String(pick(item ?? {}, ["itens_marcas_id"]) ?? ""));
-                const nomeMarca = txt(pick(marca ?? {}, ["descricao"]));
-                const unidade = unidadeById.get(String(pick(l, ["unidade_medida_id"]) ?? ""));
-                const descricao =
-                  txt(pick(item ?? {}, ["descricao"])) || txt(l["detalhe"]) || "Item";
-                const detalhe = txt(l["detalhe"]);
-                return (
-                  <tr key={String(rowId(l) ?? i)}>
-                    <td className="orc-col-num">{i + 1}</td>
-                    <td>
-                      <strong>{descricao}</strong>
-                       {nomeMarca && <div className="orc-detalhe">Marca: {nomeMarca}</div>}
-                      {detalhe && detalhe !== descricao && (
-                        <div className="orc-detalhe">{detalhe}</div>
-                      )}
-                    </td>
-                    <td className="orc-right">{formatQtd(l["quantidade"])}</td>
-                    <td>{txt(pick(unidade ?? {}, ["sigla", "descricao"])) || "—"}</td>
-                    <td className="orc-right">{formatBRL(l["valor_unitario"])}</td>
-                    <td className="orc-right">{formatBRL(l["total_linha"])}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          {/* -------------------- 1. implantação -------------------- */}
+          {(linhasImpl.length > 0 || linhasRec.length === 0) && (
+            <>
+              {linhasRec.length > 0 && <h3 className="orc-grupo">1. Implantação, equipamentos e instalação</h3>}
+              {tabela(linhasImpl, false)}
+            </>
+          )}
 
-          {/* ------------------------- totais -------------------------- */}
           <div className="orc-fechamento">
             <div className="orc-condicoes">
-              {(txt(orcamento["forma_pagamento"]) || parcelas.length > 0) && (
-                <Bloco titulo="Condições de pagamento">
+              {(txt(orcamento["forma_pagamento"]) || parcelas.length > 0 || modalidade !== "prazo") && (
+                <Bloco titulo={`Condição comercial · ${modalidadeLabel(modalidade)}`}>
+                  {modalidade === "avista" && (
+                    <div className="orc-avista">
+                      {descontoAvista > 0 ? (
+                        <>De <s>{formatBRL(totalLiquido)}</s> por <strong>{formatBRL(totalAvista)}</strong> à vista</>
+                      ) : (
+                        <>Pagamento à vista: <strong>{formatBRL(totalAvista)}</strong></>
+                      )}
+                    </div>
+                  )}
+                  {modalidade === "comodato" && (
+                    <div className="orc-texto">
+                      Equipamentos cedidos em <strong>regime de comodato</strong>, permanecendo propriedade da contratada.
+                      {taxaInstalacao > 0 && (
+                        <div>
+                          Taxa de instalação: {isenta ? (
+                            <><s>{formatBRL(taxaInstalacao)}</s> <strong>isenta</strong> mediante permanência de {vigencia} meses (cobrada integralmente em caso de cancelamento antecipado).</>
+                          ) : (
+                            <strong>{formatBRL(taxaInstalacao)}</strong>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
                   {txt(orcamento["forma_pagamento"]) && (
                     <div>
                       <strong>{txt(orcamento["forma_pagamento"])}</strong>
@@ -217,7 +258,7 @@ export function OrcamentoDocumento({ id, orcamento, linhas, empresa, cliente, ve
                   {txt(orcamento["forma_pagamento_obs"]) && (
                     <p className="orc-texto">{txt(orcamento["forma_pagamento_obs"])}</p>
                   )}
-                  {parcelas.length > 0 && (
+                  {parcelas.length > 1 && (
                     <table className="orc-parcelas">
                       <thead>
                         <tr>
@@ -245,7 +286,7 @@ export function OrcamentoDocumento({ id, orcamento, linhas, empresa, cliente, ve
 
             <div className="orc-totais">
               <div>
-                <span>Subtotal dos itens</span>
+                <span>Subtotal da implantação</span>
                 <span>{formatBRL(totalItens)}</span>
               </div>
               {descontoValor > 0 && (
@@ -266,12 +307,52 @@ export function OrcamentoDocumento({ id, orcamento, linhas, empresa, cliente, ve
                   <span>{formatBRL(adicionais)}</span>
                 </div>
               )}
+              {modalidade === "avista" && descontoAvista > 0 && (
+                <div>
+                  <span>Desconto à vista</span>
+                  <span>− {formatBRL(descontoAvista)}</span>
+                </div>
+              )}
               <div className="orc-total-final">
-                <span>Total</span>
-                <span>{formatBRL(totalLiquido)}</span>
+                <span>{modalidade === "avista" ? "Total à vista" : "Total da implantação"}</span>
+                <span>{formatBRL(modalidade === "avista" ? totalAvista : totalLiquido)}</span>
               </div>
             </div>
           </div>
+
+          {/* ------------------ 2. recorrentes mensais ------------------ */}
+          {linhasRec.length > 0 && (
+            <>
+              <h3 className="orc-grupo">2. Serviços recorrentes mensais</h3>
+              {tabela(linhasRec, true)}
+              <div className="orc-totais orc-totais-rec">
+                <div className="orc-total-final">
+                  <span>Mensalidade</span>
+                  <span>{formatBRL(totalRecorrente)}/mês</span>
+                </div>
+                <div>
+                  <span>Vigência {vigencia} meses · reajuste anual pelo {reajuste}</span>
+                </div>
+              </div>
+
+              <Bloco titulo="Resumo do investimento">
+                <div className="orc-resumo">
+                  <div>
+                    <span>Investimento inicial / implantação</span>
+                    <strong>
+                      {formatBRL(modalidade === "avista" ? totalAvista : totalLiquido)}
+                      {modalidade !== "avista" && parcelas.length > 1 && ` (${parcelas.length}x de ${formatBRL(parcelas[0]!.valor)})`}
+                      {modalidade === "comodato" && " · comodato"}
+                    </strong>
+                  </div>
+                  <div>
+                    <span>Mensalidade dos serviços</span>
+                    <strong>{formatBRL(totalRecorrente)}/mês</strong>
+                  </div>
+                </div>
+              </Bloco>
+            </>
+          )}
 
           {txt(orcamento["obs_nota_fiscal"]) && (
             <Bloco titulo="Observações complementares">
