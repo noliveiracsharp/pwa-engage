@@ -414,7 +414,7 @@ export function OrcamentoSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-3xl">
+      <SheetContent className="w-full overflow-y-auto sm:max-w-[92vw] lg:max-w-5xl xl:max-w-6xl">
         <SheetHeader className="px-6 pb-4">
           <SheetTitle className="flex flex-wrap items-center gap-2">
             {record ? `Orçamento ${numero || ""}`.trim() : "Novo orçamento"}
