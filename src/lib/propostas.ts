@@ -1,3 +1,4 @@
+import DOMPurify from "dompurify";
 import { formatBRL, formatDate, num } from "@/lib/orcamentos";
 import { pick, type Row } from "@/lib/row";
 
@@ -163,8 +164,7 @@ export function paraHtml(s: string): string {
 }
 
 /** Remove scripts/eventos do HTML antes de exibir (o link público é aberto por terceiros). */
-export async function carregarSanitizador() {
-  const mod = await import("dompurify");
-  return (html: string) =>
-    mod.default.sanitize(html, { USE_PROFILES: { html: true }, FORBID_TAGS: ["style", "form", "input"] });
+export function htmlSeguro(html: string): string {
+  if (typeof window === "undefined" || typeof DOMPurify.sanitize !== "function") return "";
+  return DOMPurify.sanitize(html, { USE_PROFILES: { html: true }, FORBID_TAGS: ["style", "form", "input", "script", "iframe"] });
 }
