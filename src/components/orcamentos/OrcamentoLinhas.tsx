@@ -13,7 +13,21 @@ import {
 import { SearchSelect, type SearchOption } from "@/components/data-table/SearchSelect";
 import { rowId } from "@/lib/crud";
 import { QuickItemDialog } from "./QuickItemDialog";
-import { calcLinha, formatBRL, formatPct, num, type Linha } from "@/lib/orcamentos";
+import { calcLinha, formatBRL, formatPct, NATUREZAS, num, type Linha, type Natureza } from "@/lib/orcamentos";
+
+function NaturezaBadge({ n }: { n: Natureza }) {
+  const meta = NATUREZAS.find((x) => x.value === n)!;
+  return (
+    <span
+      className={cn(
+        "mr-1.5 inline-block rounded px-1.5 py-0.5 align-middle text-[10px] font-medium",
+        n === "recorrente" ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground",
+      )}
+    >
+      {meta.curto}
+    </span>
+  );
+}
 import { pick, type Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
 
@@ -227,6 +241,25 @@ export function OrcamentoLinhas({
                       {nomeMarca && (
                         <p className="text-muted-foreground text-xs">Marca: {nomeMarca}</p>
                       )}
+                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                        <Label className="text-xs font-medium">Natureza</Label>
+                        <Select
+                          value={l.natureza}
+                          onValueChange={(v) => onChange(l.key, { natureza: v as Natureza })}
+                          disabled={Boolean(readOnly)}
+                        >
+                          <SelectTrigger className="h-8 w-56 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {NATUREZAS.map((n) => (
+                              <SelectItem key={n.value} value={n.value}>
+                                {n.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                     <div className="flex shrink-0 gap-0.5">
                       {!readOnly && (
@@ -384,7 +417,7 @@ export function OrcamentoLinhas({
                     {index + 1}.
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{nomeItem || "—"}</p>
+                    <p className="truncate text-sm font-medium"><NaturezaBadge n={l.natureza} />{nomeItem || "—"}</p>
                     {nomeMarca && (
                       <p className="text-muted-foreground truncate text-xs">Marca: {nomeMarca}</p>
                     )}
@@ -410,7 +443,7 @@ export function OrcamentoLinhas({
                 <div className={cn("hidden items-center px-3 py-2 sm:grid", GRID)}>
                   <span className="text-muted-foreground text-xs tabular-nums">{index + 1}.</span>
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{nomeItem || "—"}</p>
+                    <p className="truncate text-sm font-medium"><NaturezaBadge n={l.natureza} />{nomeItem || "—"}</p>
                     {nomeMarca && (
                       <p className="text-muted-foreground truncate text-xs">Marca: {nomeMarca}</p>
                     )}
