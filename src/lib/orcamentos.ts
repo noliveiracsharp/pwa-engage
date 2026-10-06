@@ -143,6 +143,8 @@ export type Linha = {
   /** Memória de cálculo copiada do item no momento da inclusão. */
   preco_custo: number;
   imposto_pct: number;
+  /** produto / serviço avulso (implantação) ou recorrente (mensal). */
+  natureza: Natureza;
 };
 
 export type LinhaCalc = {
@@ -168,10 +170,11 @@ export function novaLinha(): Linha {
     valor_unitario: "",
     preco_custo: 0,
     imposto_pct: 0,
+    natureza: "produto",
   };
 }
 
-export function linhaFromRow(row: Row): Linha {
+export function linhaFromRow(row: Row, itemTipo?: unknown): Linha {
   return {
     key: String(rowId(row) ?? newKey()),
     id: rowId(row) !== undefined ? String(rowId(row)) : undefined,
@@ -182,6 +185,7 @@ export function linhaFromRow(row: Row): Linha {
     valor_unitario: String(pick(row, ["valor_unitario"]) ?? ""),
     preco_custo: num(pick(row, ["preco_custo"])),
     imposto_pct: num(pick(row, ["imposto_pct", "imposto"])),
+    natureza: naturezaOf(row["natureza"], itemTipo),
   };
 }
 
@@ -195,6 +199,7 @@ export function aplicarItem(linha: Linha, item: Row | undefined): Linha {
     valor_unitario: String(num(pick(item, ["preco_venda"]))),
     preco_custo: num(pick(item, ["preco_custo"])),
     imposto_pct: num(pick(item, ["imposto"])),
+    natureza: naturezaDoTipo(item["tipo"]),
     quantidade: linha.quantidade || "1",
   };
 }
