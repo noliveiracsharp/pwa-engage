@@ -155,7 +155,7 @@ function PropostaPublica() {
               </div>
               <label className="flex items-start gap-2 text-sm">
                 <Checkbox checked={aceite} onCheckedChange={(v) => setAceite(v === true)} className="mt-0.5" />
-                Li e aceito os termos desta proposta e contrato.
+                Li e aceito os termos desta proposta e reconheço esta assinatura eletrônica como válida, nos termos do art. 10, § 2º, da MP nº 2.200-2/2001 e da Lei nº 14.063/2020.
               </label>
               {msg && <p className="text-destructive text-sm">{msg}</p>}
               <Button className="w-full sm:w-auto" disabled={!podeAssinar || enviando} onClick={assinar}>

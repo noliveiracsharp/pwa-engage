@@ -518,6 +518,11 @@
 .prop-certificado dl { display: grid; grid-template-columns: 140px 1fr; gap: 4px 12px; margin-bottom: 10px; }
 .prop-certificado dt { font-weight: 600; }
 .prop-quebra { word-break: break-all; }
+.prop-pagina:not(.prop-pagina-orc) { display: flex; flex-direction: column; justify-content: space-between; }
+.prop-legal { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; margin-top: 28px; padding-top: 10px; border-top: 1px solid #e3ecf4; font-size: 9.5px; line-height: 1.4; color: #6b7f96; }
+.prop-legal-pag { white-space: nowrap; font-weight: 600; }
+.prop-capa .prop-legal { border-top-color: rgb(255 255 255 / 0.2); color: rgb(255 255 255 / 0.7); margin-top: 16px; }
+.prop-legal-wrap { padding: 0 32px 20px; }
 @media (max-width: 640px) {
   .prop-pagina { padding: 28px 22px; }
   .prop-capa-centro h1 { font-size: 28px; }
