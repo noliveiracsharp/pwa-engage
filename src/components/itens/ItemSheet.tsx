@@ -126,7 +126,18 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, canCre
       unidade: unidades
         .map((r) => ({ value: String(rowId(r) ?? ""), label: String(pick(r, ["descricao"]) ?? "—") }))
         .sort(alfa),
-      centro: centroTree.map((n) => ({ value: String(rowId(n.row) ?? ""), label: n.path })),
+      centro: centroTree.map((n) => {
+        const parts = n.path.split(" > ");
+        const label = parts[parts.length - 1] ?? n.path;
+        const pai = parts.length > 1 ? parts[parts.length - 2] : undefined;
+        return {
+          value: String(rowId(n.row) ?? ""),
+          label,
+          depth: n.depth,
+          hint: pai ? `em ${pai.split(" — ").pop()}` : undefined,
+          keywords: [n.path],
+        };
+      }),
       marca: marcas
         .map((r) => ({ value: String(rowId(r) ?? ""), label: String(pick(r, ["descricao"]) ?? "—") }))
         .sort(alfa),
@@ -244,7 +255,7 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, canCre
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-xl">
+      <SheetContent className="w-full overflow-y-auto sm:max-w-[85vw] lg:max-w-3xl">
         <SheetHeader className="px-6 pb-4">
           <SheetTitle>{record ? "Editar item" : "Novo item"}</SheetTitle>
         </SheetHeader>

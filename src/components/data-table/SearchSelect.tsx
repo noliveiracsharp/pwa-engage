@@ -19,6 +19,8 @@ export type SearchOption = {
   hint?: string | undefined;
   /** Termos extras para a busca (código, documento…). */
   keywords?: string[] | undefined;
+  /** Nível na hierarquia (recuo visual na lista). */
+  depth?: number | undefined;
 };
 
 type Props = {
@@ -108,7 +110,13 @@ export function SearchSelect({
                       opt.value === value ? "opacity-100" : "opacity-0",
                     )}
                   />
-                  <span className="min-w-0 flex-1 truncate">{opt.label}</span>
+                  <span
+                    className={cn("min-w-0 flex-1 truncate", opt.depth === 0 && "font-semibold")}
+                    style={opt.depth ? { paddingLeft: `${opt.depth * 1.1}rem` } : undefined}
+                  >
+                    {opt.depth ? "↳ " : ""}
+                    {opt.label}
+                  </span>
                   {opt.hint && (
                     <span className="text-muted-foreground ml-2 shrink-0 text-xs">{opt.hint}</span>
                   )}
