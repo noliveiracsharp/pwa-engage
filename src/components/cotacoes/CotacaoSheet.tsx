@@ -338,12 +338,12 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
             <Button
               disabled={aprovando || analise.melhores.length === 0}
               onClick={() => {
-                if (analise.melhores.length < itensCot.length && !confirm("Alguns itens estão sem preço e ficarão sem custo no orçamento. Aprovar mesmo assim?")) return;
+                if (analise.melhores.length < itensCot.length && !confirm("Alguns itens estão sem preço e ficarão sem custo na oferta. Aprovar mesmo assim?")) return;
                 onAprovar(analise.melhores);
               }}
             >
               {aprovando ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
-              Aprovar e gerar orçamento
+              Aprovar e gerar oferta
             </Button>
           )}
         </div>

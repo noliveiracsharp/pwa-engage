@@ -119,7 +119,7 @@ export function OrcamentoLinhas({
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-3">
         <h3 className="text-sm font-semibold">
-          Itens do orçamento{" "}
+          Itens da oferta{" "}
           {linhas.length > 0 && (
             <span className="text-muted-foreground font-normal">({linhas.length})</span>
           )}

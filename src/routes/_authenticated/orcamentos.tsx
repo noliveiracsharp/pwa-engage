@@ -28,17 +28,17 @@ export const Route = createFileRoute("/_authenticated/orcamentos")({
   staticData: { sitemap: false },
   head: () => ({
     meta: [
-      { title: "Orçamentos — Atende.ai" },
+      { title: "Ofertas — Atende.ai" },
       {
         name: "description",
         content:
-          "Orçamentos de produtos e serviços com numeração automática, situação e memória de cálculo de lucratividade.",
+          "Ofertas de produtos e serviços com numeração automática, situação e memória de cálculo de lucratividade.",
       },
-      { property: "og:title", content: "Orçamentos — Atende.ai" },
+      { property: "og:title", content: "Ofertas — Atende.ai" },
       {
         property: "og:description",
         content:
-          "Orçamentos de produtos e serviços com numeração automática, situação e memória de cálculo de lucratividade.",
+          "Ofertas de produtos e serviços com numeração automática, situação e memória de cálculo de lucratividade.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -327,7 +327,7 @@ function OrcamentosPage() {
   return (
     <>
       <DataTable
-        title="Orçamentos"
+        title="Ofertas"
         columns={columns}
         rows={rows}
         loading={isLoading}
