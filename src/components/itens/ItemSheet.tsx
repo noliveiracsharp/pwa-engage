@@ -13,6 +13,7 @@ import { pick, type Row } from "@/lib/row";
 import { buildTree } from "@/lib/hierarchy";
 import { useAudit } from "@/lib/audit";
 import { ImageGallery } from "@/components/itens/ImageGallery";
+import { padraoPorNatureza, usePrecificacao } from "@/components/itens/PrecificacaoDialog";
 
 const NONE = "__none__";
 
@@ -83,6 +84,7 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, canCre
   const { data: itens = [] } = useTableRows("itens");
   const { empresaId } = useAudit();
   void empresaId;
+  const { data: precificacao } = usePrecificacao();
   const centroTree = useMemo(() => buildTree(centros, "centro_custo_pai_id"), [centros]);
 
   /** Próximo código sequencial por tipo: Produto → P00001…, Serviço → S00001… */
@@ -101,7 +103,13 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, canCre
   useEffect(() => {
     if (!open) return;
     if (!record) {
-      setV({ ...EMPTY, codigo: nextCodigo });
+      const p = padraoPorNatureza(precificacao, EMPTY.tipo);
+      setV({
+        ...EMPTY,
+        codigo: nextCodigo,
+        margem_lucro: p?.margem ? String(p.margem) : "",
+        imposto: p?.imposto ? String(p.imposto) : "",
+      });
       return;
     }
     setV({
@@ -272,16 +280,19 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, canCre
             </div>
             <div className="min-w-0 space-y-1.5">
               <Label htmlFor="tipo" className="block text-sm font-medium">
-                Tipo
+                Natureza
               </Label>
               <Select
                 value={v.tipo}
-                onValueChange={(value) =>
+                onValueChange={(value) => {
                   setV((s) => {
                     const auto = /^[PS]\d{5,}$/i.test(s.codigo) || s.codigo === "";
                     return { ...s, tipo: value, codigo: !record && auto ? nextCodigoFor(value) : s.codigo };
-                  })
-                }
+                  });
+                  const p = padraoPorNatureza(precificacao, value);
+                  if (p && (p.margem || p.imposto))
+                    setPricing({ margem_lucro: String(p.margem), imposto: String(p.imposto) });
+                }}
               >
                 <SelectTrigger id="tipo">
                   <SelectValue placeholder="Selecione" />
