@@ -14,6 +14,7 @@ import { rowId } from "@/lib/crud";
 import {
   BLOCO_LABEL,
   blocosDe,
+  gerarContratoModular,
   imprimirElemento,
   linkProposta,
   TAGS,
@@ -201,7 +202,23 @@ export function PropostaDialog(props: Props) {
                         onChange={(html) => set(i, { conteudo: html })}
                         minHeight={b.tipo === "CONTRATO" ? 260 : 160}
                       />
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2">
+                        {b.tipo === "CONTRATO" && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 text-xs"
+                            onClick={() => {
+                              if (b.conteudo.trim() && !window.confirm("Substituir o texto atual pelo contrato gerado a partir da oferta?")) return;
+                              set(i, {
+                                titulo: "Contrato de prestação de serviços e tecnologia",
+                                conteudo: gerarContratoModular({ ...props, orcamento, linhas: props.linhas, itens: props.itens }),
+                              });
+                            }}
+                          >
+                            Gerar pela oferta
+                          </Button>
+                        )}
                         {tpls.length > 0 && (
                           <Select onValueChange={(v) => aplicarModelo(i, v)}>
                             <SelectTrigger className="h-8 flex-1 text-xs">
