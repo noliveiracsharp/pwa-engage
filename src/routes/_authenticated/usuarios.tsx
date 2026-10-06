@@ -424,7 +424,19 @@ function UsuariosPage() {
   ];
 
   return (
-    <>
+    <Tabs defaultValue="usuarios" className="space-y-4">
+      {permsPerfil.canRead && (
+        <TabsList>
+          <TabsTrigger value="usuarios">Usuários</TabsTrigger>
+          <TabsTrigger value="perfis">Perfis</TabsTrigger>
+        </TabsList>
+      )}
+      {permsPerfil.canRead && (
+        <TabsContent value="perfis">
+          <PerfisTab />
+        </TabsContent>
+      )}
+      <TabsContent value="usuarios">
       <DataTable
         title="Usuários"
         columns={columns}
