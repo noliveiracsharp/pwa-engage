@@ -26,6 +26,8 @@ import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { formatCpfCnpj, matchesAny } from "@/lib/input-masks";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PasswordFields } from "@/components/usuarios/PasswordFields";
+import { PerfisTab } from "@/components/usuarios/PerfisTab";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export const Route = createFileRoute("/_authenticated/usuarios")({
   staticData: { sitemap: false },
@@ -56,6 +58,7 @@ function UsuariosPage() {
   const { data: vinculos = [] } = useTableRows("usuario_kanban");
   const save = useSaveRecord("usuarios");
   const perms = usePagePermissions("/usuarios");
+  const permsPerfil = usePagePermissions("/perfil");
   const { usuario, isMaster, empresa: empresaAtual } = useAuth();
   const userEmpresaId = text(
     pick(usuario, ["empresa_id", "id_empresa"]) ?? (empresaAtual ? rowId(empresaAtual) : ""),
@@ -424,7 +427,19 @@ function UsuariosPage() {
   ];
 
   return (
-    <>
+    <Tabs defaultValue="usuarios" className="space-y-4">
+      {permsPerfil.canRead && (
+        <TabsList>
+          <TabsTrigger value="usuarios">Usuários</TabsTrigger>
+          <TabsTrigger value="perfis">Perfis</TabsTrigger>
+        </TabsList>
+      )}
+      {permsPerfil.canRead && (
+        <TabsContent value="perfis">
+          <PerfisTab />
+        </TabsContent>
+      )}
+      <TabsContent value="usuarios">
       <DataTable
         title="Usuários"
         columns={columns}
@@ -504,6 +519,7 @@ function UsuariosPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+      </TabsContent>
+    </Tabs>
   );
 }

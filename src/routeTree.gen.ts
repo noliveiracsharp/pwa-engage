@@ -29,6 +29,7 @@ import { Route as AuthenticatedMarcasRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedMeusDadosRouteImport } from './routes/_authenticated/meus-dados'
 import { Route as AuthenticatedOrcamentosRouteImport } from './routes/_authenticated/orcamentos'
 import { Route as AuthenticatedParceirosRouteImport } from './routes/_authenticated/parceiros'
+import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated/perfil'
 import { Route as AuthenticatedPessoasRouteImport } from './routes/_authenticated/pessoas'
 import { Route as AuthenticatedProjetosRouteImport } from './routes/_authenticated/projetos'
 import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authenticated/relatorios'
@@ -143,6 +144,11 @@ const AuthenticatedParceirosRoute = AuthenticatedParceirosRouteImport.update({
   path: '/parceiros',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPerfilRoute = AuthenticatedPerfilRouteImport.update({
+  id: '/perfil',
+  path: '/perfil',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedPessoasRoute = AuthenticatedPessoasRouteImport.update({
   id: '/pessoas',
   path: '/pessoas',
@@ -230,6 +236,7 @@ export interface FileRoutesByFullPath {
   '/meus-dados': typeof AuthenticatedMeusDadosRoute
   '/orcamentos': typeof AuthenticatedOrcamentosRoute
   '/parceiros': typeof AuthenticatedParceirosRoute
+  '/perfil': typeof AuthenticatedPerfilRoute
   '/pessoas': typeof AuthenticatedPessoasRoute
   '/projetos': typeof AuthenticatedProjetosRoute
   '/relatorios': typeof AuthenticatedRelatoriosRoute
@@ -263,6 +270,7 @@ export interface FileRoutesByTo {
   '/meus-dados': typeof AuthenticatedMeusDadosRoute
   '/orcamentos': typeof AuthenticatedOrcamentosRoute
   '/parceiros': typeof AuthenticatedParceirosRoute
+  '/perfil': typeof AuthenticatedPerfilRoute
   '/pessoas': typeof AuthenticatedPessoasRoute
   '/projetos': typeof AuthenticatedProjetosRoute
   '/relatorios': typeof AuthenticatedRelatoriosRoute
@@ -298,6 +306,7 @@ export interface FileRoutesById {
   '/_authenticated/meus-dados': typeof AuthenticatedMeusDadosRoute
   '/_authenticated/orcamentos': typeof AuthenticatedOrcamentosRoute
   '/_authenticated/parceiros': typeof AuthenticatedParceirosRoute
+  '/_authenticated/perfil': typeof AuthenticatedPerfilRoute
   '/_authenticated/pessoas': typeof AuthenticatedPessoasRoute
   '/_authenticated/projetos': typeof AuthenticatedProjetosRoute
   '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRoute
@@ -333,6 +342,7 @@ export interface FileRouteTypes {
     | '/meus-dados'
     | '/orcamentos'
     | '/parceiros'
+    | '/perfil'
     | '/pessoas'
     | '/projetos'
     | '/relatorios'
@@ -366,6 +376,7 @@ export interface FileRouteTypes {
     | '/meus-dados'
     | '/orcamentos'
     | '/parceiros'
+    | '/perfil'
     | '/pessoas'
     | '/projetos'
     | '/relatorios'
@@ -400,6 +411,7 @@ export interface FileRouteTypes {
     | '/_authenticated/meus-dados'
     | '/_authenticated/orcamentos'
     | '/_authenticated/parceiros'
+    | '/_authenticated/perfil'
     | '/_authenticated/pessoas'
     | '/_authenticated/projetos'
     | '/_authenticated/relatorios'
@@ -568,6 +580,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedParceirosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/perfil': {
+      id: '/_authenticated/perfil'
+      path: '/perfil'
+      fullPath: '/perfil'
+      preLoaderRoute: typeof AuthenticatedPerfilRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/pessoas': {
       id: '/_authenticated/pessoas'
       path: '/pessoas'
@@ -669,6 +688,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedMeusDadosRoute: typeof AuthenticatedMeusDadosRoute
   AuthenticatedOrcamentosRoute: typeof AuthenticatedOrcamentosRoute
   AuthenticatedParceirosRoute: typeof AuthenticatedParceirosRoute
+  AuthenticatedPerfilRoute: typeof AuthenticatedPerfilRoute
   AuthenticatedPessoasRoute: typeof AuthenticatedPessoasRoute
   AuthenticatedProjetosRoute: typeof AuthenticatedProjetosRoute
   AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRoute
@@ -695,6 +715,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedMeusDadosRoute: AuthenticatedMeusDadosRoute,
   AuthenticatedOrcamentosRoute: AuthenticatedOrcamentosRoute,
   AuthenticatedParceirosRoute: AuthenticatedParceirosRoute,
+  AuthenticatedPerfilRoute: AuthenticatedPerfilRoute,
   AuthenticatedPessoasRoute: AuthenticatedPessoasRoute,
   AuthenticatedProjetosRoute: AuthenticatedProjetosRoute,
   AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRoute,
