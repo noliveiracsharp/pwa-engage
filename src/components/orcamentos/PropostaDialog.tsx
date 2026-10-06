@@ -21,6 +21,7 @@ import {
 } from "@/lib/propostas";
 import { pick, type Row } from "@/lib/row";
 import { PropostaDocumento } from "./PropostaDocumento";
+import { CapaEstiloEditor } from "./CapaEstiloEditor";
 
 type Props = {
   open: boolean;
@@ -94,7 +95,7 @@ export function PropostaDialog(props: Props) {
       empresa_id: empresaId,
       nome,
       tipo: b.tipo,
-      conteudo: JSON.stringify({ titulo: b.titulo, conteudo: b.conteudo }),
+      conteudo: JSON.stringify({ titulo: b.titulo, conteudo: b.conteudo, estilo: b.estilo }),
     } as never);
     if (error) {
       toast.error("Erro ao salvar modelo", { description: error.message });
@@ -109,8 +110,12 @@ export function PropostaDialog(props: Props) {
     if (!tpl) return;
     const raw = String(tpl["conteudo"] ?? "");
     try {
-      const j = JSON.parse(raw) as { titulo?: string; conteudo?: string };
-      set(i, { titulo: j.titulo ?? blocos[i]?.titulo ?? "", conteudo: j.conteudo ?? "" });
+      const j = JSON.parse(raw) as { titulo?: string; conteudo?: string; estilo?: Bloco["estilo"] };
+      set(i, {
+        titulo: j.titulo ?? blocos[i]?.titulo ?? "",
+        conteudo: j.conteudo ?? "",
+        ...(j.estilo ? { estilo: j.estilo } : {}),
+      });
     } catch {
       set(i, { conteudo: raw });
     }
@@ -192,6 +197,9 @@ export function PropostaDialog(props: Props) {
                   </div>
                   {b.ativo && b.tipo !== "ORCAMENTO" && (
                     <>
+                      {b.tipo === "CAPA" && (
+                        <CapaEstiloEditor estilo={b.estilo} onChange={(estilo) => set(i, { estilo })} />
+                      )}
                       <Input value={b.titulo} onChange={(e) => set(i, { titulo: e.target.value })} placeholder="Título" />
                       <RichEditor
                         value={b.conteudo}
