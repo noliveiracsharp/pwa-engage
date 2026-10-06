@@ -4,7 +4,58 @@ import { pick, type Row } from "@/lib/row";
 
 export type BlocoTipo = "CAPA" | "APRESENTACAO" | "ORCAMENTO" | "FECHAMENTO" | "CONTRATO";
 
-export type Bloco = { tipo: BlocoTipo; ativo: boolean; titulo: string; conteudo: string };
+export type CampoRodape = { rotulo: string; valor: string; ativo: boolean };
+
+/** Aparência personalizável da capa (opcional; ausente = visual padrão). */
+export type EstiloCapa = {
+  fundo?: string; // preset (chave de FUNDOS_CAPA) ou cor hex
+  texto?: "claro" | "escuro";
+  destaque?: string; // cor hex usada nos títulos das páginas internas
+  logo?: "esquerda" | "centro" | "direita" | "oculto";
+  alinhamento?: "esquerda" | "centro";
+  etiqueta?: string;
+  tamanhoTitulo?: number;
+  rodape?: CampoRodape[];
+};
+
+export type Bloco = {
+  tipo: BlocoTipo;
+  ativo: boolean;
+  titulo: string;
+  conteudo: string;
+  estilo?: EstiloCapa;
+};
+
+export const FUNDOS_CAPA: Record<string, { nome: string; css: string; texto: "claro" | "escuro" }> = {
+  azul: { nome: "Azul", css: "linear-gradient(160deg, #0b2545 0%, #13426f 60%, #0ea5e9 140%)", texto: "claro" },
+  grafite: { nome: "Grafite", css: "linear-gradient(160deg, #0f1115 0%, #262a33 70%, #3b4252 130%)", texto: "claro" },
+  verde: { nome: "Verde", css: "linear-gradient(160deg, #052e1f 0%, #0f5132 60%, #22c55e 150%)", texto: "claro" },
+  vinho: { nome: "Vinho", css: "linear-gradient(160deg, #2a0a12 0%, #5c1426 60%, #e11d48 150%)", texto: "claro" },
+  claro: { nome: "Claro", css: "linear-gradient(160deg, #ffffff 0%, #f1f5f9 100%)", texto: "escuro" },
+};
+
+export const RODAPE_PADRAO: CampoRodape[] = [
+  { rotulo: "Emissão", valor: "{{data}}", ativo: true },
+  { rotulo: "Válida até", valor: "{{validade}}", ativo: true },
+  { rotulo: "Consultor", valor: "{{vendedor_nome}}", ativo: true },
+];
+
+export function estiloCapa(e?: EstiloCapa) {
+  const fundoKey = e?.fundo ?? "azul";
+  const preset = FUNDOS_CAPA[fundoKey];
+  const fundo = preset ? preset.css : fundoKey;
+  const texto = e?.texto ?? preset?.texto ?? "claro";
+  return {
+    fundo,
+    texto,
+    destaque: e?.destaque || "#0ea5e9",
+    logo: e?.logo ?? "esquerda",
+    alinhamento: e?.alinhamento ?? "esquerda",
+    etiqueta: e?.etiqueta ?? "Proposta {{numero}}",
+    tamanhoTitulo: e?.tamanhoTitulo ?? 40,
+    rodape: e?.rodape ?? RODAPE_PADRAO,
+  };
+}
 
 export const BLOCO_LABEL: Record<BlocoTipo, string> = {
   CAPA: "Capa",
@@ -81,6 +132,7 @@ export function blocosDe(valor: unknown): Bloco[] {
         ativo: s.ativo ?? p.ativo,
         titulo: s.titulo ?? p.titulo,
         conteudo: s.conteudo ?? p.conteudo,
+        ...(s.estilo && typeof s.estilo === "object" ? { estilo: s.estilo } : {}),
       });
     }
   }
