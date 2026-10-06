@@ -16,6 +16,8 @@ type Props = {
   itensSemCusto: number;
   /** Acréscimo financeiro do parcelamento com juros (0 quando sem juros). */
   acrescimoJuros?: number;
+  /** Desconto da venda à vista (reduz o lucro final). */
+  descontoAvista?: number;
   onChange: (patch: {
     desconto_tipo?: DescontoTipo;
     desconto?: string;
@@ -53,12 +55,13 @@ export function OrcamentoTotais({
   readOnly,
   itensSemCusto,
   acrescimoJuros = 0,
+  descontoAvista = 0,
   onChange,
 }: Props) {
   const comJuros = acrescimoJuros >= 0.01;
   // Com juros, o cliente paga o acréscimo do parcelamento — ele entra no lucro final.
-  const lucroFinal = totais.total_lucro + (comJuros ? acrescimoJuros : 0);
-  const baseFinal = totais.total_liquido + (comJuros ? acrescimoJuros : 0);
+  const lucroFinal = totais.total_lucro + (comJuros ? acrescimoJuros : 0) - descontoAvista;
+  const baseFinal = totais.total_liquido + (comJuros ? acrescimoJuros : 0) - descontoAvista;
   const margemFinal = baseFinal > 0 ? (lucroFinal / baseFinal) * 100 : 0;
   const prejuizo = lucroFinal < 0 && totais.total_itens > 0;
 
@@ -67,7 +70,7 @@ export function OrcamentoTotais({
       {/* ---------------- Totais do orçamento ---------------- */}
       <div className="bg-card space-y-3 rounded-lg border p-4">
         <h3 className="text-sm font-semibold">Totais</h3>
-        <Linha label="Total dos itens" value={formatBRL(totais.total_itens)} />
+        <Linha label="Total da implantação" value={formatBRL(totais.total_itens)} />
 
         <div className="space-y-1.5">
           <div className="flex items-center justify-between gap-3">

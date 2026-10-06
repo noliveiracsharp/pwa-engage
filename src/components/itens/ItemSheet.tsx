@@ -87,7 +87,7 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, canCre
 
   /** Próximo código sequencial por tipo: Produto → P00001…, Serviço → S00001… */
   const nextCodigoFor = (tipo: string) => {
-    const prefixo = tipo === "Serviço" ? "S" : "P";
+    const prefixo = tipo.startsWith("Serviço") ? "S" : "P";
     let max = 0;
     for (const r of itens) {
       const c = String(pick(r, ["codigo"]) ?? "");
@@ -288,7 +288,8 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, canCre
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Produto">Produto</SelectItem>
-                  <SelectItem value="Serviço">Serviço</SelectItem>
+                  <SelectItem value="Serviço">Serviço avulso</SelectItem>
+                  <SelectItem value="Serviço Recorrente">Serviço recorrente (mensal)</SelectItem>
                 </SelectContent>
               </Select>
             </div>

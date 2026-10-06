@@ -1,5 +1,5 @@
 import DOMPurify from "dompurify";
-import { formatBRL, formatDate, num } from "@/lib/orcamentos";
+import { formatBRL, formatDate, modalidadeLabel, modalidadeOf, naturezaOf, num } from "@/lib/orcamentos";
 import { pick, type Row } from "@/lib/row";
 
 export type BlocoTipo = "CAPA" | "APRESENTACAO" | "ORCAMENTO" | "FECHAMENTO" | "CONTRATO";
@@ -76,6 +76,10 @@ export const TAGS = [
   "{{validade}}",
   "{{vendedor_nome}}",
   "{{forma_pagamento}}",
+  "{{modalidade}}",
+  "{{mensalidade}}",
+  "{{vigencia}}",
+  "{{taxa_instalacao}}",
 ];
 
 const ORDEM: BlocoTipo[] = ["CAPA", "APRESENTACAO", "ORCAMENTO", "FECHAMENTO", "CONTRATO"];
@@ -166,6 +170,10 @@ export function aplicarTags(texto: string, c: Contexto): string {
     validade: formatDate(o["validade_orcamento"]),
     vendedor_nome: txt(pick(c.vendedor ?? {}, ["nome", "email"])),
     forma_pagamento: txt(o["forma_pagamento"]) || "condições acordadas",
+    modalidade: modalidadeLabel(o["modalidade"]),
+    mensalidade: formatBRL(num(o["total_recorrente"])),
+    vigencia: `${num(o["vigencia_meses"]) || 36} meses`,
+    taxa_instalacao: formatBRL(num(o["taxa_instalacao"])),
   };
   return texto.replace(/\{\{\s*(\w+)\s*\}\}/g, (m, k: string) => mapa[k] ?? m);
 }
@@ -219,4 +227,88 @@ export function paraHtml(s: string): string {
 export function htmlSeguro(html: string): string {
   if (typeof window === "undefined" || typeof DOMPurify.sanitize !== "function") return "";
   return DOMPurify.sanitize(html, { USE_PROFILES: { html: true }, FORBID_TAGS: ["style", "form", "input", "script", "iframe"] });
+}
+
+/* ------------------------------------------------------------------ */
+/* Contrato modular: condições gerais + anexos conforme a oferta       */
+/* ------------------------------------------------------------------ */
+
+const por = (n: number) =>
+  ({ 12: "doze", 24: "vinte e quatro", 36: "trinta e seis", 48: "quarenta e oito", 60: "sessenta" })[n];
+
+/**
+ * Monta o contrato em HTML injetando somente os anexos aplicáveis:
+ *  A (licença de software) e B (manutenção) pelos serviços recorrentes,
+ *  C (comodato) pela modalidade, D (venda com reserva de domínio) quando há produtos vendidos.
+ * O texto resultante continua editável no editor da proposta.
+ */
+export function gerarContratoModular(c: Contexto & { linhas: Row[]; itens: Row[] }): string {
+  const o = c.orcamento;
+  const itemById = new Map(c.itens.map((i) => [String(i["id"] ?? ""), i]));
+  const desc = (l: Row) => {
+    const it = itemById.get(String(l["item_id"] ?? ""));
+    return { it, nome: `${txt(it?.["descricao"])} ${txt(l["detalhe"])}`.toLowerCase() };
+  };
+  const nat = (l: Row) => naturezaOf(l["natureza"], desc(l).it?.["tipo"]);
+  const recorrentes = c.linhas.filter((l) => nat(l) === "recorrente");
+  const produtos = c.linhas.filter((l) => nat(l) === "produto");
+  const modalidade = modalidadeOf(o["modalidade"]);
+  const meses = num(o["vigencia_meses"]) || 36;
+  const reajuste = txt(o["reajuste_indice"]) || "IPCA";
+  const extenso = por(meses);
+  const mesesTxt = extenso ? `${meses} (${extenso})` : String(meses);
+
+  const ehSoftware = (l: Row) => /licen|software|app|saas|sistema|plataforma|shield/.test(desc(l).nome);
+  const ehManut = (l: Row) => /manuten|blindagem|suporte|preventiv|corretiv/.test(desc(l).nome);
+  let anexoA = recorrentes.some(ehSoftware);
+  let anexoB = recorrentes.some(ehManut);
+  if (recorrentes.length && !anexoA && !anexoB) anexoA = anexoB = true;
+  const anexoC = modalidade === "comodato";
+  const anexoD = !anexoC && produtos.length > 0;
+  const isenta = o["taxa_instalacao_isenta"] === true && num(o["taxa_instalacao"]) > 0;
+
+  const partes: string[] = [];
+  partes.push(`<h2>Condições gerais de prestação de serviços e tecnologia</h2>
+<h3>1. Partes</h3>
+<p><strong>CONTRATADA:</strong> {{empresa_nome}}, inscrita sob o n.º {{empresa_documento}}.<br><strong>CONTRATANTE:</strong> {{cliente_nome}}, inscrito sob o n.º {{cliente_documento}}, identificado na oferta {{numero}}.</p>
+<h3>2. Objeto do contrato</h3>
+<p>O presente instrumento estabelece as condições gerais que regem a relação comercial entre as partes. Os serviços, licenças e equipamentos contratados estão detalhados na oferta {{numero}} e são regidos pelos anexos modulares vinculados a este documento.</p>
+<h3>3. Vigência e rescisão</h3>
+<p>3.1. O contrato tem duração de ${mesesTxt} meses, com início na data de ativação dos serviços, renovando-se automaticamente por períodos iguais e sucessivos.</p>
+<p>3.2. Qualquer das partes poderá rescindir este contrato imotivadamente, mediante aviso prévio escrito de 30 (trinta) dias.</p>
+${isenta ? `<p>3.3. A taxa de instalação, no valor de {{taxa_instalacao}}, foi isentada mediante permanência mínima de ${mesesTxt} meses. A rescisão antecipada por parte do CONTRATANTE implicará a cobrança integral e corrigida dessa taxa.</p>` : ""}
+<h3>4. Condições financeiras e faturamento</h3>
+<p>4.1. Implantação na modalidade <strong>{{modalidade}}</strong>, no valor de {{valor_total}}, conforme {{forma_pagamento}}.</p>
+${recorrentes.length ? `<p>4.2. Mensalidade dos serviços recorrentes: <strong>{{mensalidade}}</strong>, reajustada a cada 12 (doze) meses pela variação do ${reajuste}.</p>` : ""}
+<p>4.3. O atraso no pagamento sujeitará o CONTRATANTE a multa moratória de 2% (dois por cento) e juros de 1% (um por cento) ao mês.</p>
+<p>4.4. A inadimplência superior a 10 (dez) dias corridos confere à CONTRATADA o direito de suspender os acessos e serviços de suporte, mediante notificação prévia, com reativação após a regularização.</p>
+<h3>5. Confidencialidade e proteção de dados (LGPD)</h3>
+<p>5.1. A CONTRATADA atua em conformidade com a Lei n.º 13.709/2018 (LGPD), garantindo a confidencialidade e a segurança no tratamento dos dados do CONTRATANTE, moradores e colaboradores.</p>
+<p>5.2. As partes comprometem-se a utilizar os dados a que tenham acesso exclusivamente para a execução deste contrato.</p>
+<h3>6. Disposições gerais e foro</h3>
+<p>6.1. Este contrato não estabelece vínculo trabalhista ou societário entre as partes.</p>
+<p>6.2. Elege-se o foro da Comarca de São Paulo/SP para dirimir eventuais litígios deste contrato.</p>`);
+
+  if (anexoA)
+    partes.push(`<h3>Anexo A — Licenciamento de software (SaaS)</h3>
+<p>A.1. A CONTRATADA concede ao CONTRATANTE licença de uso do sistema (web e aplicativo), de caráter não exclusivo e intransferível. Todos os direitos de propriedade intelectual pertencem à CONTRATADA.</p>
+<p>A.2. A CONTRATADA assegura disponibilidade (SLA) de 98% do sistema, salvo força maior ou falhas dos fornecedores de internet do CONTRATANTE.</p>
+<p>A.3. A gestão de acessos, a guarda das credenciais e a inserção de dados são de responsabilidade exclusiva dos usuários.</p>`);
+  if (anexoB)
+    partes.push(`<h3>Anexo B — Manutenção preventiva e corretiva</h3>
+<p>B.1. A CONTRATADA executará a manutenção preventiva e corretiva dos equipamentos e da infraestrutura indicados na oferta.</p>
+<p>B.2. Exclusões: não estão cobertos danos por vandalismo, descargas atmosféricas, picos de tensão, pragas, mau uso, obras civis ou intervenções de terceiros, que serão objeto de oferta à parte.</p>
+<p>B.3. Os tempos de resposta para emergências respeitarão a matriz de criticidade estipulada na proposta técnica.</p>`);
+  if (anexoC)
+    partes.push(`<h3>Anexo C — Comodato de equipamentos</h3>
+<p>C.1. A CONTRATADA cede ao CONTRATANTE, a título de comodato, os equipamentos listados na oferta, destinados exclusivamente à operação do sistema contratado.</p>
+<p>C.2. Os bens permanecem propriedade da CONTRATADA. O CONTRATANTE obriga-se a guardá-los e conservá-los, sendo proibida sua cessão, venda ou remoção para outro endereço.</p>
+<p>C.3. Ao final do contrato, por qualquer motivo, o CONTRATANTE devolverá os equipamentos em estado normal de conservação, sob pena de indenização pelo valor de reposição.</p>`);
+  if (anexoD)
+    partes.push(`<h3>Anexo D — Venda de equipamentos e instalação</h3>
+<p>D.1. Este anexo rege a venda e a instalação dos equipamentos detalhados na oferta.</p>
+<p>D.2. Garantia: equipamentos novos possuem garantia de 12 (doze) meses contra defeitos de fabricação; a instalação possui garantia de 90 (noventa) dias.</p>
+<p>D.3. Reserva de domínio: nos termos do art. 521 do Código Civil, a propriedade dos bens só será transferida ao CONTRATANTE após o pagamento integral. Em caso de inadimplência superior a 30 (trinta) dias, a CONTRATADA poderá reaver os equipamentos.</p>`);
+
+  return partes.join("\n");
 }

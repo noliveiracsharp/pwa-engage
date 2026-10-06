@@ -143,6 +143,8 @@ export type Linha = {
   /** Memória de cálculo copiada do item no momento da inclusão. */
   preco_custo: number;
   imposto_pct: number;
+  /** produto / serviço avulso (implantação) ou recorrente (mensal). */
+  natureza: Natureza;
 };
 
 export type LinhaCalc = {
@@ -168,10 +170,11 @@ export function novaLinha(): Linha {
     valor_unitario: "",
     preco_custo: 0,
     imposto_pct: 0,
+    natureza: "produto",
   };
 }
 
-export function linhaFromRow(row: Row): Linha {
+export function linhaFromRow(row: Row, itemTipo?: unknown): Linha {
   return {
     key: String(rowId(row) ?? newKey()),
     id: rowId(row) !== undefined ? String(rowId(row)) : undefined,
@@ -182,6 +185,7 @@ export function linhaFromRow(row: Row): Linha {
     valor_unitario: String(pick(row, ["valor_unitario"]) ?? ""),
     preco_custo: num(pick(row, ["preco_custo"])),
     imposto_pct: num(pick(row, ["imposto_pct", "imposto"])),
+    natureza: naturezaOf(row["natureza"], itemTipo),
   };
 }
 
@@ -195,6 +199,7 @@ export function aplicarItem(linha: Linha, item: Row | undefined): Linha {
     valor_unitario: String(num(pick(item, ["preco_venda"]))),
     preco_custo: num(pick(item, ["preco_custo"])),
     imposto_pct: num(pick(item, ["imposto"])),
+    natureza: naturezaDoTipo(item["tipo"]),
     quantidade: linha.quantidade || "1",
   };
 }
@@ -385,4 +390,55 @@ export function parcelasFromValue(value: unknown): Parcela[] {
       };
     })
     .filter((p) => p.vencimento !== "");
+}
+
+/* ------------------------------------------------------------------ */
+/* Natureza dos itens e modalidade comercial                           */
+/* ------------------------------------------------------------------ */
+
+/** produto/servico = implantação (pago uma vez); recorrente = mensalidade. */
+export type Natureza = "produto" | "servico" | "recorrente";
+
+export const NATUREZAS: Array<{ value: Natureza; label: string; curto: string }> = [
+  { value: "produto", label: "Produto", curto: "Produto" },
+  { value: "servico", label: "Serviço avulso", curto: "Serviço" },
+  { value: "recorrente", label: "Serviço recorrente (mensal)", curto: "Mensal" },
+];
+
+/** Converte o "tipo" do cadastro de itens (Produto / Serviço / Serviço Recorrente) em natureza. */
+export function naturezaDoTipo(tipo: unknown): Natureza {
+  const t = String(tipo ?? "").trim().toLowerCase();
+  if (t.includes("recorr") || t.includes("mensal")) return "recorrente";
+  if (t.startsWith("serv")) return "servico";
+  return "produto";
+}
+
+export function naturezaOf(value: unknown, fallbackTipo?: unknown): Natureza {
+  const v = String(value ?? "").trim().toLowerCase();
+  if (v === "produto" || v === "servico" || v === "recorrente") return v;
+  return naturezaDoTipo(fallbackTipo);
+}
+
+export type Modalidade = "avista" | "prazo" | "comodato";
+
+export const MODALIDADES: Array<{ value: Modalidade; label: string; descricao: string }> = [
+  { value: "avista", label: "À vista", descricao: "Pagamento único com desconto opcional." },
+  { value: "prazo", label: "A prazo", descricao: "Parcelado sem juros ou com juros." },
+  { value: "comodato", label: "Comodato", descricao: "Equipamentos cedidos, parcelado com juros." },
+];
+
+export function modalidadeOf(value: unknown): Modalidade {
+  const v = String(value ?? "").trim().toLowerCase();
+  return v === "avista" || v === "comodato" ? v : "prazo";
+}
+
+export const modalidadeLabel = (m: unknown) =>
+  MODALIDADES.find((x) => x.value === modalidadeOf(m))?.label ?? "A prazo";
+
+/** Valor à vista: total líquido − desconto à vista (R$ ou %). */
+export function calcAvista(totalLiquido: number, tipo: DescontoTipo, desconto: unknown) {
+  const d = Math.max(0, num(desconto));
+  let valor = tipo === "percentual" ? round2((totalLiquido * Math.min(100, d)) / 100) : round2(d);
+  valor = Math.min(valor, totalLiquido);
+  return { desconto_valor: valor, total: round2(totalLiquido - valor) };
 }

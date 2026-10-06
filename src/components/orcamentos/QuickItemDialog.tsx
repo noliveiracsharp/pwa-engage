@@ -20,7 +20,7 @@ type Props = {
 };
 
 function nextCodigo(itens: Row[], tipo: string) {
-  const prefixo = tipo === "Serviço" ? "S" : "P";
+  const prefixo = tipo.startsWith("Serviço") ? "S" : "P";
   let max = 0;
   for (const r of itens) {
     const m = new RegExp(`^${prefixo}(\\d{5,})$`, "i").exec(String(pick(r, ["codigo"]) ?? ""));
@@ -78,7 +78,8 @@ export function QuickItemDialog({ open, onOpenChange, itens, unidadeOptions, onC
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Produto">Produto</SelectItem>
-                  <SelectItem value="Serviço">Serviço</SelectItem>
+                  <SelectItem value="Serviço">Serviço avulso</SelectItem>
+                  <SelectItem value="Serviço Recorrente">Serviço recorrente (mensal)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
