@@ -6,7 +6,7 @@ import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle } from "@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
+import { RichEditor } from "./RichEditor";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
@@ -177,10 +177,10 @@ export function PropostaDialog(props: Props) {
           </div>
         </DialogHeader>
 
-        <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[400px_1fr]">
+        <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[460px_1fr]">
           <aside className="space-y-3 overflow-y-auto border-r p-4">
             <p className="text-muted-foreground text-xs">
-              Variáveis disponíveis: {TAGS.join(" ")}
+              Formate textos, cores e caixas de destaque. Use o botão {"{ }"} para inserir dados do cliente.
             </p>
             {blocos.map((b, i) => {
               const tpls = (templates.data ?? []).filter((t) => t["tipo"] === b.tipo);
@@ -193,10 +193,10 @@ export function PropostaDialog(props: Props) {
                   {b.ativo && b.tipo !== "ORCAMENTO" && (
                     <>
                       <Input value={b.titulo} onChange={(e) => set(i, { titulo: e.target.value })} placeholder="Título" />
-                      <Textarea
+                      <RichEditor
                         value={b.conteudo}
-                        onChange={(e) => set(i, { conteudo: e.target.value })}
-                        rows={b.tipo === "CONTRATO" ? 10 : 5}
+                        onChange={(html) => set(i, { conteudo: html })}
+                        minHeight={b.tipo === "CONTRATO" ? 260 : 160}
                       />
                       <div className="flex gap-2">
                         {tpls.length > 0 && (

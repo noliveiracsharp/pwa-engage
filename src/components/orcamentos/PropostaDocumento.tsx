@@ -1,6 +1,12 @@
 import { formatCpfCnpj } from "@/lib/input-masks";
 import { formatDate } from "@/lib/orcamentos";
-import { aplicarTags, BASE_LEGAL, type Bloco } from "@/lib/propostas";
+import { aplicarTags, BASE_LEGAL, ehHtml, htmlSeguro, type Bloco } from "@/lib/propostas";
+
+/** Texto legado (pre-wrap) ou HTML do editor, sempre sanitizado. */
+function Conteudo({ texto }: { texto: string }) {
+  if (!ehHtml(texto)) return <div className="prop-texto">{texto}</div>;
+  return <div className="prop-texto prop-rich" dangerouslySetInnerHTML={{ __html: htmlSeguro(texto) }} />;
+}
 import { pick, type Row } from "@/lib/row";
 import { OrcamentoDocumento } from "./OrcamentoDocumento";
 
@@ -57,7 +63,7 @@ export function PropostaDocumento({ id, blocos, ...ctx }: Props) {
               <div className="prop-capa-centro">
                 <span className="prop-capa-num">Proposta {numero}</span>
                 <h1>{t(b.titulo)}</h1>
-                <p className="prop-texto">{t(b.conteudo)}</p>
+                <Conteudo texto={t(b.conteudo)} />
               </div>
               <div>
                 <div className="prop-capa-rodape">
@@ -91,7 +97,7 @@ export function PropostaDocumento({ id, blocos, ...ctx }: Props) {
           <section key={b.tipo} className="prop-pagina">
             <div>
               <h2 className="prop-titulo">{t(b.titulo)}</h2>
-              <div className="prop-texto">{t(b.conteudo)}</div>
+              <Conteudo texto={t(b.conteudo)} />
             </div>
             <Rodape pagina={pag} />
           </section>
