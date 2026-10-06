@@ -22,7 +22,40 @@ export type LinhaPayload = {
   custo_total: number;
   lucro: number;
   margem_pct: number;
+  natureza?: string;
 };
+
+/**
+ * Executa a gravação removendo colunas que ainda não existem no banco
+ * (ex.: script de modalidades não executado), para não travar o salvamento.
+ */
+async function gravarTolerante<T extends Row | Row[]>(
+  payload: T,
+  run: (p: T) => PromiseLike<{ data?: unknown; error: { code?: string; message: string } | null }>,
+) {
+  let atual = payload;
+  const ausentes: string[] = [];
+  for (let i = 0; i < 15; i += 1) {
+    const res = await run(atual);
+    const m = res.error?.message.match(/Could not find the '([^']+)' column/);
+    if (!res.error || !m) {
+      if (ausentes.length) {
+        toast.warning("Alguns campos novos não foram gravados", {
+          description: `Execute o script de modalidades no banco (${ausentes.join(", ")}).`,
+        });
+      }
+      return res;
+    }
+    const col = m[1]!;
+    ausentes.push(col);
+    const tira = (r: Row) => {
+      const { [col]: _x, ...rest } = r;
+      return rest;
+    };
+    atual = (Array.isArray(atual) ? atual.map(tira) : tira(atual as Row)) as T;
+  }
+  return run(atual);
+}
 
 export type SaveOrcamentoInput = {
   header: Row;
@@ -53,17 +86,18 @@ export function useSaveOrcamento() {
       if (original) {
         const key = idColumn(original);
         id = String(original[key]);
-        const { error } = await supabase
-          .from("orcamentos")
-          .update(stamp(header, false))
-          .eq(key, id);
+        const { error } = await gravarTolerante(stamp(header, false), (p) =>
+          supabase.from("orcamentos").update(p).eq(key, id),
+        );
         if (error) throw error;
       } else {
-        const { data, error } = await supabase
-          .from("orcamentos")
-          .insert(stamp(header, true))
-          .select("id, numero, ano, sequencia, empresa_id, dt_orcamento")
-          .single();
+        const { data, error } = await gravarTolerante(stamp(header, true), (p) =>
+          supabase
+            .from("orcamentos")
+            .insert(p)
+            .select("id, numero, ano, sequencia, empresa_id, dt_orcamento")
+            .single(),
+        );
         if (error) throw error;
         const created = data as Row;
         id = String(created["id"]);
@@ -113,18 +147,16 @@ export function useSaveOrcamento() {
 
       for (const l of atualizar) {
         const { id: lid, ...rest } = l;
-        const { error } = await supabase
-          .from("orcamento_itens")
-          .update({ ...rest, orcamento_id: id, ...auditoria })
-          .eq("id", lid!);
+        const { error } = await gravarTolerante({ ...rest, orcamento_id: id, ...auditoria } as Row, (p) =>
+          supabase.from("orcamento_itens").update(p).eq("id", lid!),
+        );
         if (error) throw error;
       }
       if (inserir.length) {
-        const { error } = await supabase
-          .from("orcamento_itens")
-          .insert(
-            inserir.map(({ id: _omit, ...rest }) => ({ ...rest, orcamento_id: id, ...auditoria })),
-          );
+        const { error } = await gravarTolerante(
+          inserir.map(({ id: _omit, ...rest }) => ({ ...rest, orcamento_id: id, ...auditoria }) as Row),
+          (p) => supabase.from("orcamento_itens").insert(p),
+        );
         if (error) throw error;
       }
 
@@ -134,7 +166,7 @@ export function useSaveOrcamento() {
       queryClient.invalidateQueries({ queryKey: ["table", "orcamentos"] });
       queryClient.invalidateQueries({ queryKey: ["table", "orcamento_itens"] });
       toast.success(
-        numero ? `Orçamento ${numero} salvo com sucesso.` : "Orçamento salvo com sucesso.",
+        numero ? `Oferta ${numero} salva com sucesso.` : "Oferta salva com sucesso.",
       );
     },
     onError: (error: unknown) => {
