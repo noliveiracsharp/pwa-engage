@@ -1,6 +1,6 @@
+import type React from "react";
 import { formatCpfCnpj } from "@/lib/input-masks";
-import { formatDate } from "@/lib/orcamentos";
-import { aplicarTags, BASE_LEGAL, ehHtml, htmlSeguro, type Bloco } from "@/lib/propostas";
+import { aplicarTags, BASE_LEGAL, ehHtml, estiloCapa, htmlSeguro, type Bloco } from "@/lib/propostas";
 
 /** Texto legado (pre-wrap) ou HTML do editor, sempre sanitizado. */
 function Conteudo({ texto }: { texto: string }) {
@@ -38,6 +38,8 @@ export function PropostaDocumento({ id, blocos, ...ctx }: Props) {
   const assinado = txt(orcamento["assinado_em"]);
   const numero = txt(orcamento["numero"]);
   const ativos = blocos.filter((b) => b.ativo);
+  const capaEstilo = estiloCapa(blocos.find((b) => b.tipo === "CAPA")?.estilo);
+  const varsDoc = { "--prop-destaque": capaEstilo.destaque } as React.CSSProperties;
 
   const Rodape = ({ pagina }: { pagina: number }) => (
     <footer className="prop-legal">
@@ -49,41 +51,46 @@ export function PropostaDocumento({ id, blocos, ...ctx }: Props) {
   );
 
   return (
-    <div id={id} className="prop-doc">
+    <div id={id} className="prop-doc" style={varsDoc}>
       {ativos.map((b, i) => {
         const pag = i + 1;
-        if (b.tipo === "CAPA")
+        if (b.tipo === "CAPA") {
+          const e = estiloCapa(b.estilo);
+          const campos = e.rodape.filter((c) => c.ativo);
           return (
-            <section key={b.tipo} className="prop-pagina prop-capa">
-              {logo ? (
-                <img src={logo} alt={empresaNome} className="prop-capa-logo" />
+            <section
+              key={b.tipo}
+              className={`prop-pagina prop-capa ${e.texto === "escuro" ? "prop-capa-escura" : ""} ${e.alinhamento === "centro" ? "prop-capa-centralizada" : ""}`}
+              style={{ background: e.fundo }}
+            >
+              {e.logo === "oculto" ? (
+                <div />
+              ) : logo ? (
+                <img src={logo} alt={empresaNome} className={`prop-capa-logo prop-logo-${e.logo}`} />
               ) : (
-                <div className="prop-capa-marca">{empresaNome}</div>
+                <div className={`prop-capa-marca prop-logo-${e.logo}`}>{empresaNome}</div>
               )}
               <div className="prop-capa-centro">
-                <span className="prop-capa-num">Proposta {numero}</span>
-                <h1>{t(b.titulo)}</h1>
+                {e.etiqueta.trim() && <span className="prop-capa-num">{t(e.etiqueta)}</span>}
+                <h1 style={{ fontSize: e.tamanhoTitulo }}>{t(b.titulo)}</h1>
                 <Conteudo texto={t(b.conteudo)} />
               </div>
               <div>
-                <div className="prop-capa-rodape">
-                  <div>
-                    <span>Emissão</span>
-                    <strong>{formatDate(orcamento["dt_orcamento"])}</strong>
+                {campos.length > 0 && (
+                  <div className="prop-capa-rodape" style={{ gridTemplateColumns: `repeat(${campos.length}, 1fr)` }}>
+                    {campos.map((c, k) => (
+                      <div key={k}>
+                        <span>{t(c.rotulo)}</span>
+                        <strong>{t(c.valor) || "—"}</strong>
+                      </div>
+                    ))}
                   </div>
-                  <div>
-                    <span>Válida até</span>
-                    <strong>{formatDate(orcamento["validade_orcamento"])}</strong>
-                  </div>
-                  <div>
-                    <span>Consultor</span>
-                    <strong>{txt(pick(vendedor ?? {}, ["nome", "email"])) || "—"}</strong>
-                  </div>
-                </div>
+                )}
                 <Rodape pagina={pag} />
               </div>
             </section>
           );
+        }
         if (b.tipo === "ORCAMENTO")
           return (
             <section key={b.tipo} className="prop-pagina prop-pagina-orc">
