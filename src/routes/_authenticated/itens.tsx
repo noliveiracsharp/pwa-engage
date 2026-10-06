@@ -49,6 +49,7 @@ const TIPO_OPTIONS = [
   { value: "todos", label: "Todos" },
   { value: "Produto", label: "Produto" },
   { value: "Serviço", label: "Serviço" },
+  { value: "Serviço Recorrente", label: "Serviço recorrente" },
 ];
 
 function ItensPage() {
