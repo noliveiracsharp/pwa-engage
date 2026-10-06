@@ -368,6 +368,41 @@
   font-weight: 700;
   border-top: none !important;
 }
+.orc-grupo {
+  margin: 22px 0 8px;
+  padding-bottom: 4px;
+  border-bottom: 2px solid #0e7490;
+  color: #0e7490;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.orc-totais-rec {
+  margin: 10px 0 0 auto;
+  max-width: 420px;
+}
+.orc-avista {
+  margin-bottom: 6px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #ecfdf5;
+  font-size: 14px;
+}
+.orc-avista s,
+.orc-resumo s {
+  color: #64748b;
+}
+.orc-resumo > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 6px 0;
+  font-variant-numeric: tabular-nums;
+}
+.orc-resumo > div + div {
+  border-top: 1px solid #eef3f8;
+}
 
 .orc-parcelas {
   width: 100%;
