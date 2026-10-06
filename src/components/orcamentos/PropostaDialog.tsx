@@ -171,14 +171,9 @@ export function PropostaDialog(props: Props) {
             ) : (
               <span className="text-muted-foreground text-xs">Execute o script da proposta no banco para gerar o link.</span>
             )}
-            <Button size="sm" onClick={() => salvar()} disabled={salvando}>
+            <Button size="sm" className="mr-8" onClick={() => salvar()} disabled={salvando}>
               <Save className="mr-1 h-4 w-4" /> Salvar
             </Button>
-            <DialogClose asChild>
-              <Button variant="ghost" size="icon" aria-label="Fechar">
-                <X className="h-5 w-5" />
-              </Button>
-            </DialogClose>
           </div>
         </DialogHeader>
 

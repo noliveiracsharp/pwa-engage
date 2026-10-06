@@ -55,7 +55,10 @@ function PropostaPublica() {
 
   const carregar = async () => {
     const { data, error } = await rpc("obter_proposta_publica", { _token: token });
-    if (error) return setErro("Não foi possível abrir a proposta.");
+    if (error) {
+      console.error("obter_proposta_publica", error);
+      return setErro(`Não foi possível abrir a proposta. ${error.message ?? ""}`.trim());
+    }
     const d = data as Dados;
     if (!d?.encontrado) return setErro("Proposta não encontrada ou link inválido.");
     setDados(d);
