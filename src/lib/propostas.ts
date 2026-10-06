@@ -28,21 +28,30 @@ export const TAGS = [
 
 const ORDEM: BlocoTipo[] = ["CAPA", "APRESENTACAO", "ORCAMENTO", "FECHAMENTO", "CONTRATO"];
 
+/** Texto jurídico exibido no rodapé de todas as páginas da proposta. */
+export const BASE_LEGAL =
+  "Documento apto a aceite e assinatura eletrônica, com validade jurídica nos termos do art. 10, § 2º, da MP nº 2.200-2/2001 e da Lei nº 14.063/2020.";
+
 const PADRAO: Record<BlocoTipo, Omit<Bloco, "tipo">> = {
-  CAPA: { ativo: true, titulo: "Proposta Comercial", conteudo: "Preparada para {{cliente_nome}}" },
+  CAPA: {
+    ativo: true,
+    titulo: "Proposta Executiva",
+    conteudo: "Preparada exclusivamente para {{cliente_nome}}",
+  },
   APRESENTACAO: {
     ativo: true,
-    titulo: "Quem somos",
+    titulo: "Diagnóstico e escopo recomendado",
     conteudo:
-      "A {{empresa_nome}} entrega soluções sob medida, com equipe especializada e atendimento próximo.\n\nNesta proposta apresentamos o escopo, os investimentos e as condições para {{cliente_nome}}.",
+      "O que identificamos\nResumo das necessidades e riscos levantados com {{cliente_nome}}.\n\nO que vamos entregar\n• Pilar 1 — descreva o resultado esperado\n• Pilar 2 — descreva o resultado esperado\n• Pilar 3 — descreva o resultado esperado\n\nPor que a {{empresa_nome}}\nExperiência comprovada, equipe própria e garantias por contrato.",
   },
   ORCAMENTO: { ativo: true, titulo: "Investimento", conteudo: "" },
   FECHAMENTO: {
     ativo: true,
-    titulo: "Prazos e garantia",
+    titulo: "Cronograma, garantia e próximos passos",
     conteudo:
-      "Prazo de execução combinado após a aprovação.\nGarantia de 90 dias para serviços e conforme fabricante para equipamentos.\nProposta válida até {{validade}}.",
+      "Cronograma de implantação\nSemana 1 — Levantamento e laudo técnico\nSemana 2 — Cadastros e configuração\nSemana 3 — Implantação e capacitação\nSemana 4 — Homologação e entrega oficial\n\nGarantia\nSe algo não entregar o prometido, ajustamos sem custo.\n\nPróximos passos\n1. Aprove e assine eletronicamente esta proposta.\n2. Agendamos o início da implantação.\n\nProposta válida até {{validade}}. Forma de pagamento: {{forma_pagamento}}.",
   },
+
   CONTRATO: {
     ativo: false,
     titulo: "Contrato de prestação de serviços",

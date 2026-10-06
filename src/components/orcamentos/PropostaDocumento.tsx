@@ -1,6 +1,6 @@
 import { formatCpfCnpj } from "@/lib/input-masks";
 import { formatDate } from "@/lib/orcamentos";
-import { aplicarTags, type Bloco } from "@/lib/propostas";
+import { aplicarTags, BASE_LEGAL, type Bloco } from "@/lib/propostas";
 import { pick, type Row } from "@/lib/row";
 import { OrcamentoDocumento } from "./OrcamentoDocumento";
 
@@ -30,25 +30,36 @@ export function PropostaDocumento({ id, blocos, ...ctx }: Props) {
     txt(pick(empresa ?? {}, ["nome_fantasia", "nome", "razao_social", "titulo"])) || "Empresa";
   const logo = txt(pick(empresa ?? {}, ["logo", "logo_url", "logotipo", "imagem"]));
   const assinado = txt(orcamento["assinado_em"]);
+  const numero = txt(orcamento["numero"]);
+  const ativos = blocos.filter((b) => b.ativo);
+
+  const Rodape = ({ pagina }: { pagina: number }) => (
+    <footer className="prop-legal">
+      <span>{BASE_LEGAL}</span>
+      <span className="prop-legal-pag">
+        Proposta {numero} · {pagina}/{ativos.length}
+      </span>
+    </footer>
+  );
 
   return (
     <div id={id} className="prop-doc">
-      {blocos
-        .filter((b) => b.ativo)
-        .map((b) => {
-          if (b.tipo === "CAPA")
-            return (
-              <section key={b.tipo} className="prop-pagina prop-capa">
-                {logo ? (
-                  <img src={logo} alt={empresaNome} className="prop-capa-logo" />
-                ) : (
-                  <div className="prop-capa-marca">{empresaNome}</div>
-                )}
-                <div className="prop-capa-centro">
-                  <span className="prop-capa-num">Proposta {txt(orcamento["numero"])}</span>
-                  <h1>{t(b.titulo)}</h1>
-                  <p className="prop-texto">{t(b.conteudo)}</p>
-                </div>
+      {ativos.map((b, i) => {
+        const pag = i + 1;
+        if (b.tipo === "CAPA")
+          return (
+            <section key={b.tipo} className="prop-pagina prop-capa">
+              {logo ? (
+                <img src={logo} alt={empresaNome} className="prop-capa-logo" />
+              ) : (
+                <div className="prop-capa-marca">{empresaNome}</div>
+              )}
+              <div className="prop-capa-centro">
+                <span className="prop-capa-num">Proposta {numero}</span>
+                <h1>{t(b.titulo)}</h1>
+                <p className="prop-texto">{t(b.conteudo)}</p>
+              </div>
+              <div>
                 <div className="prop-capa-rodape">
                   <div>
                     <span>Emissão</span>
@@ -63,21 +74,29 @@ export function PropostaDocumento({ id, blocos, ...ctx }: Props) {
                     <strong>{txt(pick(vendedor ?? {}, ["nome", "email"])) || "—"}</strong>
                   </div>
                 </div>
-              </section>
-            );
-          if (b.tipo === "ORCAMENTO")
-            return (
-              <section key={b.tipo} className="prop-pagina prop-pagina-orc">
-                <OrcamentoDocumento {...ctx} semAceite />
-              </section>
-            );
-          return (
-            <section key={b.tipo} className="prop-pagina">
-              <h2 className="prop-titulo">{t(b.titulo)}</h2>
-              <div className="prop-texto">{t(b.conteudo)}</div>
+                <Rodape pagina={pag} />
+              </div>
             </section>
           );
-        })}
+        if (b.tipo === "ORCAMENTO")
+          return (
+            <section key={b.tipo} className="prop-pagina prop-pagina-orc">
+              <OrcamentoDocumento {...ctx} semAceite />
+              <div className="prop-legal-wrap">
+                <Rodape pagina={pag} />
+              </div>
+            </section>
+          );
+        return (
+          <section key={b.tipo} className="prop-pagina">
+            <div>
+              <h2 className="prop-titulo">{t(b.titulo)}</h2>
+              <div className="prop-texto">{t(b.conteudo)}</div>
+            </div>
+            <Rodape pagina={pag} />
+          </section>
+        );
+      })}
 
       {assinado && (
         <section className="prop-certificado">
@@ -97,7 +116,7 @@ export function PropostaDocumento({ id, blocos, ...ctx }: Props) {
             <dt>Hash SHA-256</dt>
             <dd className="prop-quebra">{txt(orcamento["assinado_hash"])}</dd>
           </dl>
-          <p>Assinatura eletrônica nos termos do art. 10, § 2º, da MP 2.200-2/2001 e da Lei 14.063/2020.</p>
+          <p>{BASE_LEGAL}</p>
         </section>
       )}
     </div>
