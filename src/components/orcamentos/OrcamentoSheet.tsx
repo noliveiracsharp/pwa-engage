@@ -26,6 +26,10 @@ import {
   OrcamentoPagamento,
   type PagamentoState,
 } from "@/components/orcamentos/OrcamentoPagamento";
+import {
+  OrcamentoModalidade,
+  type ModalidadeState,
+} from "@/components/orcamentos/OrcamentoModalidade";
 import { SituacaoBadge } from "@/components/orcamentos/SituacaoBadge";
 import { dateOrNull, type LinhaPayload } from "@/hooks/useSaveOrcamento";
 import { rowId } from "@/lib/crud";
@@ -33,8 +37,11 @@ import { formatCpfCnpj } from "@/lib/input-masks";
 import {
   addDaysISO,
   aplicarItem,
+  calcAvista,
   calcLinha,
   calcTotais,
+  modalidadeOf,
+  round2,
   formatBRL,
   gerarParcelas,
   somaParcelas,
@@ -72,7 +79,8 @@ type Header = {
   desconto: string;
   frete: string;
   valores_adicionais: string;
-} & PagamentoState;
+} & PagamentoState &
+  ModalidadeState;
 
 const emptyHeader = (vendedorId: string): Header => {
   const hoje = todayISO();
@@ -95,6 +103,13 @@ const emptyHeader = (vendedorId: string): Header => {
     tem_juros: false,
     coeficiente_juros: "",
     primeira_parcela: hoje,
+    modalidade: "prazo",
+    desconto_avista_tipo: "percentual",
+    desconto_avista: "",
+    taxa_instalacao: "",
+    taxa_instalacao_isenta: false,
+    vigencia_meses: "36",
+    reajuste_indice: "IPCA",
   };
 };
 
@@ -120,6 +135,13 @@ const headerFromRecord = (r: Row): Header => {
     tem_juros: r["tem_juros"] === true,
     coeficiente_juros: num(r["coeficiente_juros"]) ? String(num(r["coeficiente_juros"])) : "",
     primeira_parcela: parcelas[0]?.vencimento || dt,
+    modalidade: modalidadeOf(r["modalidade"]),
+    desconto_avista_tipo: String(r["desconto_avista_tipo"] ?? "") === "valor" ? "valor" : "percentual",
+    desconto_avista: num(r["desconto_avista"]) ? String(num(r["desconto_avista"])) : "",
+    taxa_instalacao: num(r["taxa_instalacao"]) ? String(num(r["taxa_instalacao"])) : "",
+    taxa_instalacao_isenta: r["taxa_instalacao_isenta"] === true,
+    vigencia_meses: String(num(r["vigencia_meses"]) || 36),
+    reajuste_indice: String(r["reajuste_indice"] ?? "") || "IPCA",
   };
 };
 
@@ -176,7 +198,10 @@ export function OrcamentoSheet({
     const linhasDb = linhasRecord
       .slice()
       .sort((a, b) => Number(a["ordem"] ?? 0) - Number(b["ordem"] ?? 0))
-      .map(linhaFromRow);
+      .map((row) => {
+        const it = itens.find((i) => String(rowId(i)) === String(row["item_id"] ?? ""));
+        return linhaFromRow(row, it?.["tipo"]);
+      });
     if (initKey.current !== key) {
       initKey.current = key;
       dirty.current = false;
@@ -187,6 +212,7 @@ export function OrcamentoSheet({
     if (record && !dirty.current) {
       setLinhas((atual) => (atual.length !== linhasDb.length ? linhasDb : atual));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, record, recordId, linhasRecord, vendedorPadraoId]);
 
   const kanbanNomeIdRecord = record?.["kanban_nome_id"] ? String(record["kanban_nome_id"]) : null;
@@ -303,16 +329,34 @@ export function OrcamentoSheet({
     [linhas],
   );
   const calcs = useMemo(() => linhasValidas.map(calcLinha), [linhasValidas]);
+  // Implantação = produtos + serviços avulsos; recorrentes viram mensalidade.
+  const calcsImplantacao = useMemo(
+    () => calcs.filter((_, i) => linhasValidas[i]!.natureza !== "recorrente"),
+    [calcs, linhasValidas],
+  );
+  const totalRecorrente = useMemo(
+    () =>
+      round2(
+        calcs.reduce(
+          (s, c, i) => s + (linhasValidas[i]!.natureza === "recorrente" ? c.total_linha : 0),
+          0,
+        ),
+      ),
+    [calcs, linhasValidas],
+  );
   const totais = useMemo(
     () =>
-      calcTotais(calcs, {
+      calcTotais(calcsImplantacao, {
         desconto_tipo: h.desconto_tipo,
         desconto: h.desconto,
         frete: h.frete,
         valores_adicionais: h.valores_adicionais,
       }),
-    [calcs, h.desconto_tipo, h.desconto, h.frete, h.valores_adicionais],
+    [calcsImplantacao, h.desconto_tipo, h.desconto, h.frete, h.valores_adicionais],
   );
+  const avista = calcAvista(totais.total_liquido, h.desconto_avista_tipo, h.desconto_avista);
+  const ehAvista = h.modalidade === "avista";
+  const ehComodato = h.modalidade === "comodato";
   const itensSemCusto = linhasValidas.filter((l) => l.item_id !== "" && l.preco_custo <= 0).length;
 
   /* ----------------------------- parcelas ----------------------------- */
@@ -320,19 +364,24 @@ export function OrcamentoSheet({
   const parcelas = useMemo(
     () =>
       gerarParcelas({
-        total: totais.total_liquido,
-        quantidade: num(h.qtd_parcelas) || 1,
+        total: ehAvista ? avista.total : totais.total_liquido,
+        quantidade: ehAvista ? 1 : num(h.qtd_parcelas) || 1,
         primeiraData: h.primeira_parcela,
-        comJuros: h.tem_juros,
+        comJuros: !ehAvista && h.tem_juros,
         coeficiente: h.coeficiente_juros,
       }),
-    [totais.total_liquido, h.qtd_parcelas, h.primeira_parcela, h.tem_juros, h.coeficiente_juros],
+    [ehAvista, avista.total, totais.total_liquido, h.qtd_parcelas, h.primeira_parcela, h.tem_juros, h.coeficiente_juros],
   );
 
   // Acréscimo financeiro quando o parcelamento é "Com juros".
-  const acrescimoJuros = h.tem_juros
+  const acrescimoJuros = !ehAvista && h.tem_juros
     ? Math.max(0, somaParcelas(parcelas) - totais.total_liquido)
     : 0;
+
+  // Comodato sempre parcela com juros.
+  useEffect(() => {
+    if (ehComodato && !h.tem_juros) setH((p) => ({ ...p, tem_juros: true }));
+  }, [ehComodato, h.tem_juros]);
 
   /* ------------------------------ salvar ------------------------------ */
 
@@ -381,10 +430,20 @@ export function OrcamentoSheet({
       obs_nota_fiscal: h.obs_nota_fiscal.trim() || null,
       forma_pagamento: h.forma_pagamento || null,
       forma_pagamento_obs: h.forma_pagamento_obs.trim() || null,
-      qtd_parcelas: Math.max(1, Math.floor(num(h.qtd_parcelas) || 1)),
-      tem_juros: h.tem_juros,
-      coeficiente_juros: h.tem_juros ? num(h.coeficiente_juros) : 0,
+      qtd_parcelas: ehAvista ? 1 : Math.max(1, Math.floor(num(h.qtd_parcelas) || 1)),
+      tem_juros: !ehAvista && h.tem_juros,
+      coeficiente_juros: !ehAvista && h.tem_juros ? num(h.coeficiente_juros) : 0,
       parcelas,
+      modalidade: h.modalidade,
+      desconto_avista_tipo: h.desconto_avista_tipo,
+      desconto_avista: ehAvista ? num(h.desconto_avista) : 0,
+      desconto_avista_valor: ehAvista ? avista.desconto_valor : 0,
+      total_avista: ehAvista ? avista.total : null,
+      taxa_instalacao: ehComodato ? num(h.taxa_instalacao) : 0,
+      taxa_instalacao_isenta: ehComodato && h.taxa_instalacao_isenta,
+      total_recorrente: totalRecorrente,
+      vigencia_meses: Math.max(1, Math.floor(num(h.vigencia_meses) || 36)),
+      reajuste_indice: h.reajuste_indice.trim() || "IPCA",
     };
 
     const payloadLinhas: LinhaPayload[] = linhasValidas.map((l, index) => {
@@ -404,6 +463,7 @@ export function OrcamentoSheet({
         custo_total: c.custo_total,
         lucro: c.lucro,
         margem_pct: c.margem_pct,
+        natureza: l.natureza,
       };
     });
 
@@ -570,6 +630,17 @@ export function OrcamentoSheet({
             readOnly={readOnly}
             itensSemCusto={itensSemCusto}
             acrescimoJuros={acrescimoJuros}
+            descontoAvista={ehAvista ? avista.desconto_valor : 0}
+            onChange={(patch) => patchHeader(patch)}
+          />
+
+          {/* ------------- modalidade e serviços recorrentes ------------- */}
+          <OrcamentoModalidade
+            value={h}
+            totalImplantacao={totais.total_liquido}
+            totalAvista={avista.total}
+            totalRecorrente={totalRecorrente}
+            readOnly={readOnly}
             onChange={(patch) => patchHeader(patch)}
           />
 
@@ -577,7 +648,8 @@ export function OrcamentoSheet({
           <OrcamentoPagamento
             value={h}
             parcelas={parcelas}
-            totalLiquido={totais.total_liquido}
+            totalLiquido={ehAvista ? avista.total : totais.total_liquido}
+            modalidade={h.modalidade}
             readOnly={readOnly}
             onChange={(patch) => patchHeader(patch)}
           />

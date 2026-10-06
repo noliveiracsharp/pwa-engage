@@ -92,12 +92,15 @@ type Props = {
   value: PagamentoState;
   parcelas: Parcela[];
   totalLiquido: number;
+  modalidade?: "avista" | "prazo" | "comodato";
   readOnly?: boolean | undefined;
   onChange: (patch: Partial<PagamentoState>) => void;
 };
 
 /** Observações fiscais, forma de pagamento e geração automática das parcelas. */
-export function OrcamentoPagamento({ value, parcelas, totalLiquido, readOnly, onChange }: Props) {
+export function OrcamentoPagamento({ value, parcelas, totalLiquido, modalidade = "prazo", readOnly, onChange }: Props) {
+  const avista = modalidade === "avista";
+  const comodato = modalidade === "comodato";
   const total = somaParcelas(parcelas);
   const acrescimo = total - totalLiquido;
 
@@ -211,7 +214,7 @@ export function OrcamentoPagamento({ value, parcelas, totalLiquido, readOnly, on
             </Select>
           </div>
 
-          <div className="min-w-0 space-y-1.5">
+          {!avista && (<div className="min-w-0 space-y-1.5">
             <Label htmlFor="qtd_parcelas" className="block text-sm font-medium">
               Parcelas
             </Label>
@@ -224,9 +227,9 @@ export function OrcamentoPagamento({ value, parcelas, totalLiquido, readOnly, on
               value={value.qtd_parcelas}
               onChange={(e) => onChange({ qtd_parcelas: e.target.value })}
             />
-          </div>
+          </div>)}
 
-          <div className="min-w-0 space-y-1.5">
+          {!avista && (<div className="min-w-0 space-y-1.5">
             <Label className="block text-sm font-medium">Juros</Label>
             <ToggleGroup
               type="single"
@@ -244,7 +247,7 @@ export function OrcamentoPagamento({ value, parcelas, totalLiquido, readOnly, on
                   onChange({ tem_juros: false, coeficiente_juros: "" });
                 }
               }}
-              disabled={Boolean(readOnly)}
+              disabled={Boolean(readOnly) || comodato}
             >
               <ToggleGroupItem value="sem" className="flex-1">
                 Sem juros
@@ -253,11 +256,11 @@ export function OrcamentoPagamento({ value, parcelas, totalLiquido, readOnly, on
                 Com juros
               </ToggleGroupItem>
             </ToggleGroup>
-          </div>
+          </div>)}
 
           <div className="min-w-0 space-y-1.5">
             <Label htmlFor="primeira_parcela" className="block text-sm font-medium">
-              1ª parcela
+              {avista ? "Vencimento" : "1ª parcela"}
             </Label>
             <Input
               id="primeira_parcela"
@@ -267,7 +270,7 @@ export function OrcamentoPagamento({ value, parcelas, totalLiquido, readOnly, on
             />
           </div>
 
-          {value.tem_juros && (
+          {!avista && value.tem_juros && (
             <div className="min-w-0 space-y-1.5 sm:col-span-2">
               <Label htmlFor="coeficiente_juros" className="block text-sm font-medium">
                 Coeficiente da parcela
@@ -289,7 +292,7 @@ export function OrcamentoPagamento({ value, parcelas, totalLiquido, readOnly, on
             </div>
           )}
 
-          {value.tem_juros && cfg && parcelaFinal > 0 && (
+          {!avista && value.tem_juros && cfg && parcelaFinal > 0 && (
             <div className="bg-muted/30 space-y-1 rounded-md border p-3 text-xs sm:col-span-2 lg:col-span-4">
               <p className="text-muted-foreground font-medium">
                 Memória de cálculo do parcelamento
