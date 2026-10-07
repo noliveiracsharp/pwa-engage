@@ -26,3 +26,5 @@ Stage-Gate de etapas: toda mudança manual de etapa de atendimento passa por `us
 Menu/Funções: `useMenu` monta árvore por `funcoes_pai_id` — filha com `menu_ativo=true` vira submenu retrátil na Sidebar; filha com `menu_ativo=false` vira aba da página pai, descoberta por `useSubmenuAbas(pathPai)` respeitando `can_read`; assim a organização do menu é toda configurada em /funcoes.
 
 Projetos: hierarquia Projeto → Tarefa → Atividade → Checklist; atividades em `projetos_atividades` (checklist/anexos via `atividade_id`, dependências em `projetos_atividades_dependencias`) e o progresso da tarefa é gravado como média das atividades por `sincronizarTarefa` (src/lib/projetos.ts), para que listagens, impressão e visão do cliente leiam um único número.
+
+Comissões: cálculo puro em `src/lib/comissoes.ts` (líquido = venda − compra − imposto − outros; comissão por papel e natureza), config por empresa em `comissao_parametros`/`comissao_papeis` e foto registrada em `orcamento_comissoes` para o extrato `/comissoes`; papéis são linhas configuráveis para não fixar Vendas/Compras/Integrador no código.
