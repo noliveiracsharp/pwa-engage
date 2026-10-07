@@ -85,7 +85,10 @@ export function CredenciaisDialog({ dados, onClose }: { dados: Credenciais | nul
 
   const enviarZapi = async () => {
     const inst = instancias.find((i) => text(rowId(i)) === instId);
-    if (!sanitizarTelefone(telefone)) return toast.error("Informe o WhatsApp do usuário.");
+    if (!sanitizarTelefone(telefone)) {
+      toast.error("Informe o WhatsApp do usuário.");
+      return;
+    }
     setEnviando(true);
     try {
       await dispararMensagem({ instancia: inst, mensagemId: null, atendimentoId: null, telefone, texto: mensagem });
