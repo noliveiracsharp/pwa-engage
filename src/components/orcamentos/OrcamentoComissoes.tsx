@@ -1,7 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, Calculator } from "lucide-react";
 import { toast } from "sonner";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -33,16 +33,37 @@ export function OrcamentoComissoes({ linhas, orcamentoId, vendedorId, usuarios }
   const [benef, setBenef] = useState<Record<string, string>>({});
   const [salvando, setSalvando] = useState(false);
 
+  const registradas = useQuery({
+    queryKey: ["table", "orcamento_comissoes", orcamentoId],
+    enabled: !!orcamentoId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("orcamento_comissoes")
+        .select("papel_id, beneficiario_id")
+        .eq("orcamento_id", orcamentoId as string);
+      if (error) throw error;
+      return (data ?? []) as Array<{ papel_id: string; beneficiario_id: string | null }>;
+    },
+  });
+  useEffect(() => {
+    const rs = registradas.data;
+    if (!rs || rs.length === 0) return;
+    const m: Record<string, string> = {};
+    for (const r of rs) m[r.papel_id] = r.beneficiario_id ?? "";
+    setBenef((b) => ({ ...m, ...b }));
+  }, [registradas.data]);
+  const temRegistro = (registradas.data?.length ?? 0) > 0;
+
   const memoria = useMemo(() => calcMemoria(linhas, parametros, papeis), [linhas, parametros, papeis]);
 
   if (perms.loading || !perms.canRead || !disponivel) return null;
 
   const papeisUsados = Array.from(new Map(memoria.flatMap((g) => g.comissoes).map((c) => [c.papel_id, c.nome])));
   const labelNat = (n: string) => NATUREZAS_COMISSAO.find((x) => x.value === n)?.label ?? n;
-  const benefDe = (papelId: string, nome: string) =>
-    benef[papelId] ?? (/vend|comerc/i.test(nome) && vendedorId ? vendedorId : "");
+  const benefDe = (papelId: string, nome: string, mapa = benef) =>
+    mapa[papelId] ?? (temRegistro ? "" : /vend|comerc/i.test(nome) && vendedorId ? vendedorId : "");
 
-  const registrar = async () => {
+  const registrar = async (mapa = benef, silencioso = false) => {
     if (!orcamentoId) return;
     setSalvando(true);
     try {
@@ -53,13 +74,15 @@ export function OrcamentoComissoes({ linhas, orcamentoId, vendedorId, usuarios }
         .neq("status", "paga");
       if (delErr) throw delErr;
       const rows = memoria.flatMap((g) =>
-        g.comissoes.map((c) => ({
+        g.comissoes
+          .filter((c) => !!benefDe(c.papel_id, c.nome, mapa))
+          .map((c) => ({
           empresa_id: empresaId,
           orcamento_id: orcamentoId,
           papel_id: c.papel_id,
           papel_nome: c.nome,
           natureza: g.natureza,
-          beneficiario_id: benefDe(c.papel_id, c.nome) || null,
+          beneficiario_id: benefDe(c.papel_id, c.nome, mapa),
           base_valor: g.base_valor,
           pct: c.pct,
           valor: c.valor,
@@ -71,7 +94,7 @@ export function OrcamentoComissoes({ linhas, orcamentoId, vendedorId, usuarios }
         if (error) throw error;
       }
       qc.invalidateQueries({ queryKey: ["table", "orcamento_comissoes"] });
-      toast.success("Comissões registradas como Previstas.");
+      if (!silencioso) toast.success(rows.length ? "Comissões registradas como Previstas." : "Nenhum beneficiário informado — nenhuma comissão registrada.");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Não foi possível registrar as comissões.");
     } finally {
@@ -134,7 +157,11 @@ export function OrcamentoComissoes({ linhas, orcamentoId, vendedorId, usuarios }
               {papeisUsados.map(([id, nome]) => (
                 <div key={id} className="space-y-1">
                   <span className="text-muted-foreground text-xs">{nome}</span>
-                  <Select value={benefDe(id, nome) || NONE} onValueChange={(v) => setBenef((b) => ({ ...b, [id]: v === NONE ? "" : v }))}>
+                  <Select value={benefDe(id, nome) || NONE} onValueChange={(v) => {
+                      const novo = { ...benef, [id]: v === NONE ? "" : v };
+                      setBenef(novo);
+                      void registrar(novo, true);
+                    }}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value={NONE}>Não informado</SelectItem>
@@ -151,7 +178,7 @@ export function OrcamentoComissoes({ linhas, orcamentoId, vendedorId, usuarios }
                 {salvando ? "Registrando…" : "Registrar comissões"}
               </Button>
             </div>
-            <p className="text-muted-foreground text-xs">Registrar substitui as comissões não pagas desta oferta pelo cálculo atual.</p>
+            <p className="text-muted-foreground text-xs">Somente papéis com beneficiário informado geram comissão. A escolha é salva automaticamente; "Registrar" recalcula as comissões não pagas.</p>
           </div>
         )}
         {!orcamentoId && <p className="text-muted-foreground text-xs">Salve a oferta para registrar as comissões.</p>}
