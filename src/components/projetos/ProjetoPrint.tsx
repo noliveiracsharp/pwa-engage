@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { pick, type Row } from "@/lib/row";
-import { fmtDate, tarefaPct } from "@/lib/projetos";
+import { atividadePct, fmtDate, tarefaPct } from "@/lib/projetos";
 
 const PRIO: Record<string, string> = { urg: "#dc2626", alt: "#eab308", baix: "#94a3b8" };
 const prioHex = (p: unknown) => {
@@ -17,6 +17,8 @@ type Props = {
   cliente: string;
   periodo: string;
   tarefas: Row[];
+  atividades?: Row[];
+  gestor?: string;
   cols: { nome: string; ini: string; fim: string; prio: string; resp: string; done: string };
   usuarios: Row[];
   empresaId?: unknown;
@@ -24,7 +26,7 @@ type Props = {
 };
 
 /** Documento do Gantt exibido somente na impressão (paisagem). */
-export function ProjetoPrint({ projeto, cliente, periodo, tarefas, cols, usuarios, empresaId, pct }: Props) {
+export function ProjetoPrint({ projeto, cliente, periodo, tarefas, atividades = [], gestor, cols, usuarios, empresaId, pct }: Props) {
   const [empresa, setEmpresa] = useState<Row | null>(null);
   const [host, setHost] = useState<HTMLElement | null>(null);
 
@@ -48,7 +50,7 @@ export function ProjetoPrint({ projeto, cliente, periodo, tarefas, cols, usuario
   const empNome = empresa ? String(pick(empresa, ["nome_fantasia", "razao_social", "nome"]) ?? "") : "";
   const logo = empresa ? (pick(empresa, ["logo", "logo_url", "logotipo", "imagem"]) as string | undefined) : undefined;
 
-  const tempos = tarefas.flatMap((t) => [toTime(t[cols.ini]), toTime(t[cols.fim])]).filter((n) => !isNaN(n));
+  const tempos = [...tarefas.flatMap((t) => [toTime(t[cols.ini]), toTime(t[cols.fim])]), ...atividades.flatMap((a) => [toTime(a["dt_inicio"]), toTime(a["dt_fim"])])].filter((n) => !isNaN(n));
   const min = tempos.length ? Math.min(...tempos) : Date.now();
   const max = tempos.length ? Math.max(...tempos) + 86400000 : Date.now() + 86400000;
   const span = Math.max(max - min, 86400000);
@@ -75,7 +77,7 @@ export function ProjetoPrint({ projeto, cliente, periodo, tarefas, cols, usuario
       </header>
       <section className="prj-info">
         <h1>{String(pick(projeto, ["nome", "descricao", "titulo"]) ?? "Projeto")}</h1>
-        <div><b>Cliente:</b> {cliente}{periodo && <> · <b>Período:</b> {periodo}</>} · <b>Andamento:</b> {pct}%</div>
+        <div><b>Cliente:</b> {cliente}{gestor && <> · <b>Gestor:</b> {gestor}</>}{periodo && <> · <b>Período:</b> {periodo}</>} · <b>Andamento:</b> {pct}%</div>
       </section>
       <div className="prj-gantt">
         <div className="prj-row prj-row-head">
@@ -91,8 +93,10 @@ export function ProjetoPrint({ projeto, cliente, periodo, tarefas, cols, usuario
           const ini = isNaN(a) ? b : a; const fim = isNaN(b) ? a : b;
           const p = tarefaPct(t, cols.done);
           const resp = usuarios.find((u) => String(pick(u, ["id", "usuario_id"])) === String(t[cols.resp]));
+          const filhas = atividades.filter((a) => String(a["tarefa_id"]) === String(pick(t, ["id"])));
           return (
-            <div key={i} className="prj-row">
+            <div key={i}>
+            <div className="prj-row">
               <div className="prj-cell-nome">{String(t[cols.nome] ?? "")}</div>
               <div className="prj-cell-resp">{resp ? String(pick(resp, ["nome", "email"]) ?? "—") : "—"}</div>
               <div className="prj-cell-dt">{fmtDate(t[cols.ini])} – {fmtDate(t[cols.fim])}</div>
@@ -110,6 +114,35 @@ export function ProjetoPrint({ projeto, cliente, periodo, tarefas, cols, usuario
                   </div>
                 )}
               </div>
+            </div>
+            {filhas.map((a, k) => {
+              const ia = toTime(a["dt_inicio"]); const fa = toTime(a["dt_fim"]);
+              const i0 = isNaN(ia) ? fa : ia; const f0 = isNaN(fa) ? ia : fa;
+              const pa = atividadePct(a);
+              const nomes = (Array.isArray(a["responsaveis"]) ? (a["responsaveis"] as unknown[]) : [])
+                .map((id) => usuarios.find((u) => String(pick(u, ["id"])) === String(id))).filter(Boolean)
+                .map((u) => String(pick(u as Row, ["nome", "email"]) ?? "")).join(", ");
+              return (
+                <div key={k} className="prj-row" style={{ fontSize: "0.9em" }}>
+                  <div className="prj-cell-nome" style={{ paddingLeft: 18 }}>↳ {String(a["nome"] ?? "")}</div>
+                  <div className="prj-cell-resp">{nomes || "—"}</div>
+                  <div className="prj-cell-dt">{fmtDate(a["dt_inicio"])} – {fmtDate(a["dt_fim"])}</div>
+                  <div className="prj-track">
+                    {meses.map((x) => <span key={x.left} className="prj-grid" style={{ left: `${x.left}%` }} />)}
+                    {!isNaN(i0) && (
+                      <div className="prj-bar" style={{
+                        left: `${((i0 - min) / span) * 100}%`,
+                        width: `${Math.max(((f0 + 86400000 - i0) / span) * 100, 1.5)}%`,
+                        borderLeftColor: prioHex(a["prioridade"]), opacity: 0.85,
+                      }}>
+                        <div className="prj-bar-fill" style={{ width: `${pa}%`, background: progHex(pa) }} />
+                        <span>{pa}%</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
             </div>
           );
         })}
