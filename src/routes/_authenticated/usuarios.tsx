@@ -29,6 +29,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { PasswordFields } from "@/components/usuarios/PasswordFields";
 import { PerfisTab } from "@/components/usuarios/PerfisTab";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CredenciaisDialog, type Credenciais } from "@/components/usuarios/CredenciaisDialog";
 
 export const Route = createFileRoute("/_authenticated/usuarios")({
   staticData: { sitemap: false },
@@ -101,6 +102,7 @@ function UsuariosPage() {
   const [record, setRecord] = useState<Row | null>(null);
   const [kanbanSel, setKanbanSel] = useState<string[]>([]);
   const [pw, setPw] = useState({ senha: "", confirma: "" });
+  const [cred, setCred] = useState<Credenciais | null>(null);
   const [f, setF] = useState({ busca: "", status: "todos", perfil: "todos" });
   const [toDelete, setToDelete] = useState<Row | null>(null);
   const [removing, setRemoving] = useState(false);
@@ -222,25 +224,45 @@ function UsuariosPage() {
       toast.error("A senha deve ter pelo menos 6 caracteres.");
       return;
     }
+    const empresaIdCred = text(values["empresa_id"]);
+    const empresaNomeCred = text(
+      pick(empresasPermitidas.find((e) => text(rowId(e)) === empresaIdCred) ?? {}, ["nome_fantasia", "razao_social", "nome"], ""),
+    );
+    const credBase = {
+      nome: text(values["nome"]),
+      email: text(values["email"]).trim(),
+      senha: pw.senha,
+      telefone: text(pick(values, ["telefone", "celular", "whatsapp"], pick(record ?? {}, ["telefone", "celular", "whatsapp"], ""))),
+      empresaId: empresaIdCred,
+      empresaNome: empresaNomeCred,
+    };
     if (record) {
       const rest: Row = { ...values };
       delete rest["senha"];
       const uid = text(rowId(record));
+      const emailMudou = credBase.email.toLowerCase() !== text(record["email"]).trim().toLowerCase();
+      const senhaDigitada = pw.senha;
       save.mutate(
         { values: rest, original: record },
         {
           onSuccess: async () => {
             try {
               await syncKanbans(uid, kanbanSel);
-              if (pw.senha) {
+              if (senhaDigitada) {
                 const { error } = await supabase.rpc("admin_set_user_password", {
                   p_user_id: uid,
-                  p_password: pw.senha,
+                  p_password: senhaDigitada,
                 });
                 if (error) throw new Error("Senha não alterada: " + error.message);
                 toast.success("Senha alterada.");
               }
               setOpen(false);
+              if (senhaDigitada || emailMudou) {
+                setCred({
+                  ...credBase,
+                  motivo: senhaDigitada && emailMudou ? "senha_email" : senhaDigitada ? "senha" : "email",
+                });
+              }
             } catch (e) {
               toast.error(e instanceof Error ? e.message : "Não foi possível salvar os kanbans.");
             }
@@ -248,7 +270,12 @@ function UsuariosPage() {
         },
       );
     } else {
-      createUser.mutate(values, { onSuccess: () => setOpen(false) });
+      createUser.mutate(values, {
+        onSuccess: () => {
+          setOpen(false);
+          setCred({ ...credBase, motivo: "novo" });
+        },
+      });
     }
   };
 
