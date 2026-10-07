@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { Check, ChevronUp, Eye, Pencil, Plus, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,7 @@ import {
 import { SearchSelect, type SearchOption } from "@/components/data-table/SearchSelect";
 import { rowId } from "@/lib/crud";
 import { QuickItemDialog } from "./QuickItemDialog";
-import { calcLinha, formatBRL, formatPct, NATUREZAS, num, type Linha, type Natureza } from "@/lib/orcamentos";
+import { agruparPorBloco, calcLinha, formatBRL, formatPct, NATUREZAS, num, type Linha, type Natureza } from "@/lib/orcamentos";
 
 function NaturezaBadge({ n }: { n: Natureza }) {
   const meta = NATUREZAS.find((x) => x.value === n)!;
@@ -128,42 +128,14 @@ export function OrcamentoLinhas({
   const itemById = new Map(itens.map((item) => [String(rowId(item) ?? ""), item]));
   const marcaById = new Map(marcas.map((marca) => [String(rowId(marca) ?? ""), marca]));
   const unidadeById = new Map(unidadeOptions.map((o) => [o.value, o.label]));
+  const temBlocos = linhas.some((l) => l.bloco.trim());
+  const grupos = agruparPorBloco(linhas, (l) => l.bloco);
+  const blocosUsados = grupos.map((g) => g.bloco).filter(Boolean);
+  const ordenadas = grupos.flatMap((g) => g.rows);
+  const primeiraDoGrupo = new Map(grupos.map((g) => [g.rows[0]!.key, g]));
+  const numero = new Map(linhas.map((l, i) => [l.key, i]));
 
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between gap-3">
-        <h3 className="text-sm font-semibold">
-          Itens da oferta{" "}
-          {linhas.length > 0 && (
-            <span className="text-muted-foreground font-normal">({linhas.length})</span>
-          )}
-        </h3>
-      </div>
-
-      {linhas.length === 0 && (
-        <div className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm">
-          Nenhum item adicionado. {readOnly ? "" : "Use o botão abaixo para começar."}
-        </div>
-      )}
-
-      {linhas.length > 0 && (
-        <div className="overflow-hidden rounded-lg border">
-          {/* Cabeçalho da tabela (somente desktop) */}
-          <div
-            className={cn(
-              "text-muted-foreground bg-muted/40 hidden border-b px-3 py-2 text-xs font-medium",
-              GRID,
-            )}
-          >
-            <span>#</span>
-            <span>Item</span>
-            <span className="text-right">Qtd</span>
-            <span className="text-right">Unitário</span>
-            <span className="text-right">Total</span>
-            <span className="text-right">Ações</span>
-          </div>
-
-          {linhas.map((l, index) => {
+  const renderLinha = (l: Linha, index: number) => {
             const c = calcLinha(l);
             const semCusto = l.item_id !== "" && l.preco_custo <= 0;
             const item = itemById.get(l.item_id);
@@ -259,6 +231,16 @@ export function OrcamentoLinhas({
                             ))}
                           </SelectContent>
                         </Select>
+                        <Label htmlFor={`bloco-${l.key}`} className="ml-2 text-xs font-medium">Bloco / ambiente</Label>
+                        <Input
+                          id={`bloco-${l.key}`}
+                          className="h-8 w-56 text-xs"
+                          list="orc-blocos"
+                          placeholder="Opcional (ex.: Frente do condomínio)"
+                          value={l.bloco}
+                          disabled={Boolean(readOnly)}
+                          onChange={(e) => onChange(l.key, { bloco: e.target.value })}
+                        />
                       </div>
                     </div>
                     <div className="flex shrink-0 gap-0.5">
@@ -467,6 +449,52 @@ export function OrcamentoLinhas({
                 </div>
               </div>
             );
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-sm font-semibold">
+          Itens da oferta{" "}
+          {linhas.length > 0 && (
+            <span className="text-muted-foreground font-normal">({linhas.length})</span>
+          )}
+        </h3>
+      </div>
+
+      {linhas.length === 0 && (
+        <div className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm">
+          Nenhum item adicionado. {readOnly ? "" : "Use o botão abaixo para começar."}
+        </div>
+      )}
+
+      {linhas.length > 0 && (
+        <div className="overflow-hidden rounded-lg border">
+          {/* Cabeçalho da tabela (somente desktop) */}
+          <div
+            className={cn(
+              "text-muted-foreground bg-muted/40 hidden border-b px-3 py-2 text-xs font-medium",
+              GRID,
+            )}
+          >
+            <span>#</span>
+            <span>Item</span>
+            <span className="text-right">Qtd</span>
+            <span className="text-right">Unitário</span>
+            <span className="text-right">Total</span>
+            <span className="text-right">Ações</span>
+          </div>
+
+          {ordenadas.map((l) => {
+            const index = numero.get(l.key) ?? 0;
+            const grupo = temBlocos ? primeiraDoGrupo.get(l.key) : undefined;
+            const cabecalho = grupo ? (
+              <div className="bg-muted/60 flex items-center justify-between border-b px-3 py-1.5 text-xs font-semibold">
+                <span>{grupo.bloco || "Itens gerais"} <span className="text-muted-foreground font-normal">({grupo.rows.length})</span></span>
+                <span className="tabular-nums">{formatBRL(grupo.rows.reduce((s, x) => s + calcLinha(x).total_linha, 0))}</span>
+              </div>
+            ) : null;
+            return <Fragment key={l.key}>{cabecalho}{renderLinha(l, index)}</Fragment>;
           })}
         </div>
       )}
@@ -476,6 +504,9 @@ export function OrcamentoLinhas({
           <Plus className="mr-1 h-4 w-4" /> Adicionar item
         </Button>
       )}
+      <datalist id="orc-blocos">
+        {blocosUsados.map((b) => <option key={b} value={b} />)}
+      </datalist>
       <QuickItemDialog
         open={quickFor !== null}
         onOpenChange={(o) => !o && setQuickFor(null)}

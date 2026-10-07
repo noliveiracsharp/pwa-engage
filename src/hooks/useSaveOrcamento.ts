@@ -23,6 +23,7 @@ export type LinhaPayload = {
   lucro: number;
   margem_pct: number;
   natureza?: string;
+  bloco?: string | null;
 };
 
 /**
