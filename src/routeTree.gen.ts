@@ -21,6 +21,7 @@ import { Route as AuthenticatedCentro_custosRouteImport } from './routes/_authen
 import { Route as AuthenticatedCotacoesRouteImport } from './routes/_authenticated/cotacoes'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedEmpresasRouteImport } from './routes/_authenticated/empresas'
+import { Route as AuthenticatedEstoqueRouteImport } from './routes/_authenticated/estoque'
 import { Route as AuthenticatedFuncoesRouteImport } from './routes/_authenticated/funcoes'
 import { Route as AuthenticatedItensRouteImport } from './routes/_authenticated/itens'
 import { Route as AuthenticatedKanbanRouteImport } from './routes/_authenticated/kanban'
@@ -102,6 +103,11 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
 const AuthenticatedEmpresasRoute = AuthenticatedEmpresasRouteImport.update({
   id: '/empresas',
   path: '/empresas',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedEstoqueRoute = AuthenticatedEstoqueRouteImport.update({
+  id: '/estoque',
+  path: '/estoque',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedFuncoesRoute = AuthenticatedFuncoesRouteImport.update({
@@ -228,6 +234,7 @@ export interface FileRoutesByFullPath {
   '/cotacoes': typeof AuthenticatedCotacoesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/empresas': typeof AuthenticatedEmpresasRoute
+  '/estoque': typeof AuthenticatedEstoqueRoute
   '/funcoes': typeof AuthenticatedFuncoesRoute
   '/itens': typeof AuthenticatedItensRoute
   '/kanban': typeof AuthenticatedKanbanRoute
@@ -262,6 +269,7 @@ export interface FileRoutesByTo {
   '/cotacoes': typeof AuthenticatedCotacoesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/empresas': typeof AuthenticatedEmpresasRoute
+  '/estoque': typeof AuthenticatedEstoqueRoute
   '/funcoes': typeof AuthenticatedFuncoesRoute
   '/itens': typeof AuthenticatedItensRoute
   '/kanban': typeof AuthenticatedKanbanRoute
@@ -298,6 +306,7 @@ export interface FileRoutesById {
   '/_authenticated/cotacoes': typeof AuthenticatedCotacoesRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/empresas': typeof AuthenticatedEmpresasRoute
+  '/_authenticated/estoque': typeof AuthenticatedEstoqueRoute
   '/_authenticated/funcoes': typeof AuthenticatedFuncoesRoute
   '/_authenticated/itens': typeof AuthenticatedItensRoute
   '/_authenticated/kanban': typeof AuthenticatedKanbanRoute
@@ -334,6 +343,7 @@ export interface FileRouteTypes {
     | '/cotacoes'
     | '/dashboard'
     | '/empresas'
+    | '/estoque'
     | '/funcoes'
     | '/itens'
     | '/kanban'
@@ -368,6 +378,7 @@ export interface FileRouteTypes {
     | '/cotacoes'
     | '/dashboard'
     | '/empresas'
+    | '/estoque'
     | '/funcoes'
     | '/itens'
     | '/kanban'
@@ -403,6 +414,7 @@ export interface FileRouteTypes {
     | '/_authenticated/cotacoes'
     | '/_authenticated/dashboard'
     | '/_authenticated/empresas'
+    | '/_authenticated/estoque'
     | '/_authenticated/funcoes'
     | '/_authenticated/itens'
     | '/_authenticated/kanban'
@@ -522,6 +534,13 @@ declare module '@tanstack/react-router' {
       path: '/empresas'
       fullPath: '/empresas'
       preLoaderRoute: typeof AuthenticatedEmpresasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/estoque': {
+      id: '/_authenticated/estoque'
+      path: '/estoque'
+      fullPath: '/estoque'
+      preLoaderRoute: typeof AuthenticatedEstoqueRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/funcoes': {
@@ -680,6 +699,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedCotacoesRoute: typeof AuthenticatedCotacoesRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedEmpresasRoute: typeof AuthenticatedEmpresasRoute
+  AuthenticatedEstoqueRoute: typeof AuthenticatedEstoqueRoute
   AuthenticatedFuncoesRoute: typeof AuthenticatedFuncoesRoute
   AuthenticatedItensRoute: typeof AuthenticatedItensRoute
   AuthenticatedKanbanRoute: typeof AuthenticatedKanbanRoute
@@ -707,6 +727,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCotacoesRoute: AuthenticatedCotacoesRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedEmpresasRoute: AuthenticatedEmpresasRoute,
+  AuthenticatedEstoqueRoute: AuthenticatedEstoqueRoute,
   AuthenticatedFuncoesRoute: AuthenticatedFuncoesRoute,
   AuthenticatedItensRoute: AuthenticatedItensRoute,
   AuthenticatedKanbanRoute: AuthenticatedKanbanRoute,

@@ -32,6 +32,9 @@ type Values = {
   status: string;
   imagens: string[];
   observacoes: string;
+  estoque_minimo: string;
+  estoque_maximo: string;
+  controla_estoque: string;
 };
 
 const EMPTY: Values = {
@@ -48,6 +51,9 @@ const EMPTY: Values = {
   status: "true",
   imagens: [],
   observacoes: "",
+  estoque_minimo: "",
+  estoque_maximo: "",
+  controla_estoque: "true",
 };
 
 const num = (v: string) => {
@@ -132,6 +138,9 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, canCre
       status: record["status"] === false ? "false" : "true",
       imagens: Array.isArray(record["imagens"]) ? (record["imagens"] as unknown[]).map(String).filter(Boolean) : [],
       observacoes: text(pick(record, ["observacoes"], "")),
+      estoque_minimo: text(pick(record, ["estoque_minimo"], "")),
+      estoque_maximo: text(pick(record, ["estoque_maximo"], "")),
+      controla_estoque: record["controla_estoque"] === false ? "false" : "true",
     });
   }, [open, record]);
 
@@ -194,6 +203,13 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, canCre
       status: v.status === "true",
       imagens: v.imagens,
       observacoes: v.observacoes.trim() || null,
+      ...(v.tipo === "Produto"
+        ? {
+            controla_estoque: v.controla_estoque === "true",
+            estoque_minimo: v.estoque_minimo === "" ? 0 : num(v.estoque_minimo),
+            estoque_maximo: v.estoque_maximo === "" ? null : num(v.estoque_maximo),
+          }
+        : {}),
     };
     onSave(payload);
   };
@@ -386,6 +402,32 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, canCre
                 onChange={(e) => setVenda(e.target.value)}
               />
             </div>
+
+            {v.tipo === "Produto" && (
+              <>
+                <div className="min-w-0 space-y-1.5 sm:col-span-2">
+                  <Label htmlFor="controla_estoque" className="block text-sm font-medium">
+                    Controla estoque
+                  </Label>
+                  <div className="bg-background flex h-10 items-center justify-between gap-3 rounded-md border px-3 py-2">
+                    <span className="text-muted-foreground text-sm">{v.controla_estoque === "true" ? "Sim" : "Não"}</span>
+                    <Switch
+                      id="controla_estoque"
+                      checked={v.controla_estoque === "true"}
+                      onCheckedChange={(c) => setV((s) => ({ ...s, controla_estoque: String(c) }))}
+                    />
+                  </div>
+                </div>
+                <div className="min-w-0 space-y-1.5">
+                  <Label htmlFor="estoque_minimo" className="block text-sm font-medium">Estoque mínimo</Label>
+                  <Input id="estoque_minimo" type="number" step="0.001" value={v.estoque_minimo} onChange={(e) => setV((s) => ({ ...s, estoque_minimo: e.target.value }))} />
+                </div>
+                <div className="min-w-0 space-y-1.5">
+                  <Label htmlFor="estoque_maximo" className="block text-sm font-medium">Estoque máximo</Label>
+                  <Input id="estoque_maximo" type="number" step="0.001" value={v.estoque_maximo} onChange={(e) => setV((s) => ({ ...s, estoque_maximo: e.target.value }))} />
+                </div>
+              </>
+            )}
 
             <div className="min-w-0 space-y-1.5 sm:col-span-2">
               <Label htmlFor="observacoes" className="block text-sm font-medium">
