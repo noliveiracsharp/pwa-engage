@@ -31,7 +31,7 @@ const FALLBACK: MenuItem[] = [
 ];
 
 // Perfil sem nenhuma permissão: apenas o Dashboard (nunca liberar tudo).
-const DASHBOARD_ONLY: MenuItem[] = [FALLBACK[0]!];
+const DASHBOARD_ONLY: MenuItem[] = [];
 
 function asBool(v: unknown, fallback = true): boolean {
   if (v === undefined || v === null) return fallback;
