@@ -256,7 +256,7 @@ function ItensPage() {
         readOnly={record ? !perms.canUpdate : !perms.canCreate}
         canCreateApoio={perms.canCreate}
         onSave={(values) =>
-          save.mutate({ values: stamp(values, !record), original: record }, { onSuccess: () => setOpen(false) })
+          save.mutate({ values: stamp(values, !record), original: record }, { onSuccess: () => { setOpen(false); setRecord(null); } })
         }
       />
       <PrecificacaoDialog open={precOpen} onOpenChange={setPrecOpen} />
