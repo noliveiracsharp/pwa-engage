@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { pick, type Row } from "@/lib/row";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
+import { useSubmenuAbas } from "@/hooks/useMenu";
 import { formatCpfCnpj, matchesAny } from "@/lib/input-masks";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PasswordFields } from "@/components/usuarios/PasswordFields";
@@ -59,6 +60,8 @@ function UsuariosPage() {
   const save = useSaveRecord("usuarios");
   const perms = usePagePermissions("/usuarios");
   const permsPerfil = usePagePermissions("/perfil");
+  const abaPerfil = useSubmenuAbas("/usuarios").find((a) => a.path === "/perfil");
+  const verPerfis = Boolean(abaPerfil) || permsPerfil.canRead;
   const { usuario, isMaster, empresa: empresaAtual } = useAuth();
   const userEmpresaId = text(
     pick(usuario, ["empresa_id", "id_empresa"]) ?? (empresaAtual ? rowId(empresaAtual) : ""),
@@ -428,13 +431,13 @@ function UsuariosPage() {
 
   return (
     <Tabs defaultValue="usuarios" className="space-y-4">
-      {permsPerfil.canRead && (
+      {verPerfis && (
         <TabsList>
           <TabsTrigger value="usuarios">Usuários</TabsTrigger>
-          <TabsTrigger value="perfis">Perfis</TabsTrigger>
+          <TabsTrigger value="perfis">{abaPerfil?.label ?? "Perfis"}</TabsTrigger>
         </TabsList>
       )}
-      {permsPerfil.canRead && (
+      {verPerfis && (
         <TabsContent value="perfis">
           <PerfisTab />
         </TabsContent>
