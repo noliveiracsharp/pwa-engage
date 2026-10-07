@@ -3,7 +3,7 @@ import { pick, type Row } from "@/lib/row";
 import { isPerfilMaster } from "@/hooks/useAuth";
 
 /** Paths that every authenticated user may open, regardless of menu grants. */
-const ALWAYS_ALLOWED = ["/dashboard", "/meus-dados"];
+const ALWAYS_ALLOWED = ["/meus-dados", "/sem-acesso"];
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const _LEGACY_PATHS = [
@@ -82,4 +82,9 @@ export async function getAllowedPaths(userId: string, email?: string): Promise<s
 
 export function isPathAllowed(pathname: string, allowed: string[]): boolean {
   return allowed.some((p) => pathname === p || pathname.startsWith(p + "/"));
+}
+
+/** Primeira tela liberada ao perfil (ou /sem-acesso quando não há nenhuma). */
+export function firstAllowedPath(allowed: string[]): string {
+  return allowed.find((p) => !ALWAYS_ALLOWED.includes(p)) ?? "/sem-acesso";
 }
