@@ -171,7 +171,8 @@ function Painel({ d, perms, espacoId, onOpen }: { d: D; perms: Perms; espacoId: 
       itens: filtered.filter((p) => String(p[d.pc.status] ?? "") === String(rowId(s))),
     }));
     const sem = filtered.filter((p) => !ids.has(String(p[d.pc.status] ?? "")));
-    if (sem.length) g.push({ id: "__sem", nome: "Sem status", cor: "", itens: sem });
+    // Sempre presente (quando há status) para permitir soltar um projeto em "Sem status".
+    if (sem.length || g.length) g.push({ id: "__sem", nome: "Sem status", cor: "", itens: sem });
     return g;
   }, [d, busca, espacoId]);
 
@@ -214,9 +215,11 @@ function Painel({ d, perms, espacoId, onOpen }: { d: D; perms: Perms; espacoId: 
   const [arrastando, setArrastando] = useState<string | null>(null);
   async function moverStatus(projetoId: string, statusId: string) {
     const p = d.projetos.find((x) => String(rowId(x)) === projetoId);
-    if (!p || statusId === "__sem" || String(p[d.pc.status] ?? "") === statusId) return;
-    qc.setQueryData<Row[]>(["table", "projetos"], (old = []) => old.map((x) => (String(rowId(x)) === projetoId ? { ...x, [d.pc.status]: statusId } : x)));
-    const { error } = await supabase.from("projetos").update({ [d.pc.status]: statusId } as never).eq(idColumn(p), rowId(p) as never);
+    if (!p) return;
+    const novo = statusId === "__sem" ? null : statusId;
+    if (String(p[d.pc.status] ?? "") === String(novo ?? "")) return;
+    qc.setQueryData<Row[]>(["table", "projetos"], (old = []) => old.map((x) => (String(rowId(x)) === projetoId ? { ...x, [d.pc.status]: novo } : x)));
+    const { error } = await supabase.from("projetos").update({ [d.pc.status]: novo } as never).eq(idColumn(p), rowId(p) as never);
     if (error) toast.error(error.message);
     qc.invalidateQueries({ queryKey: ["table", "projetos"] });
   }
