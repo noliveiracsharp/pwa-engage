@@ -590,7 +590,7 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
                 </Label>
                 {field.type === "select" ? (
                   <Select
-                    value={values[field.key] || undefined}
+                    value={values[field.key] ?? ""}
                     onValueChange={(val) => setValues((c) => ({ ...c, [field.key]: val }))}
                   >
                     <SelectTrigger id={field.key}>

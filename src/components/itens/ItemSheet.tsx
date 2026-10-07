@@ -492,7 +492,7 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, canCre
                 </div>
                 <div className="min-w-0 space-y-1.5 sm:col-span-2">
                   <Label htmlFor="origem" className="block text-sm font-medium">Origem da mercadoria</Label>
-                  <Select value={v.origem || undefined} onValueChange={(val) => setV((s) => ({ ...s, origem: val }))}>
+                  <Select value={v.origem} onValueChange={(val) => setV((s) => ({ ...s, origem: val }))}>
                     <SelectTrigger id="origem"><SelectValue placeholder="Selecione" /></SelectTrigger>
                     <SelectContent>
                       {ORIGENS.map(([c, l]) => (
