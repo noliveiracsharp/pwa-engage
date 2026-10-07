@@ -537,6 +537,10 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
       if (field.type === "boolean") {
         if (raw === "") continue;
         payload[field.key] = raw === "true";
+      } else if (field.numeric) {
+        payload[field.key] = raw === "" ? null : Number(digitsOnly(raw)) || 0;
+      } else if (field.fiscal) {
+        payload[field.key] = raw.trim() || null;
       } else {
         payload[field.key] = raw;
       }
