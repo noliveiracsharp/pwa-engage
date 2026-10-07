@@ -339,7 +339,9 @@ function Painel({ d, perms, espacoId, onOpen }: { d: D; perms: Perms; espacoId: 
 }
 
 function ProjetoDialog({ d, espacoId, original, onClose }: { d: D; espacoId: string | null; original: Row | null; onClose: () => void }) {
-  const inicialEsp = original ? (original["espaco_id"] ? String(original["espaco_id"]) : "") : (espacoId ?? "");
+  const espacosFolha = d.espacos.filter((e) => !d.espacos.some((x) => String(x["espaco_pai_id"] ?? "") === String(rowId(e))));
+  const inicialEspRaw = original ? (original["espaco_id"] ? String(original["espaco_id"]) : "") : (espacoId ?? "");
+  const inicialEsp = espacosFolha.some((e) => String(rowId(e)) === inicialEspRaw) ? inicialEspRaw : "";
   const [espSel, setEspSel] = useState<string>(inicialEsp);
   const statusLista = statusDoEspaco(d, espSel || null);
   const [templateId, setTemplateId] = useState("none");
@@ -348,7 +350,7 @@ function ProjetoDialog({ d, espacoId, original, onClose }: { d: D; espacoId: str
   const [f, setF] = useState<Row>(original ? { ...original } : {});
   const set = (k: string, v: unknown) => setF((x) => ({ ...x, [k]: v }));
   const clientes = d.parceiros.filter((p) => p["is_cliente"] !== false);
-  const espacoOpts = d.espacos.map((e) => {
+  const espacoOpts = espacosFolha.map((e) => {
     const nomes = cadeiaEspaco(d.espacos, String(rowId(e))).reverse()
       .map((id) => String(d.espacos.find((x) => String(rowId(x)) === id)?.["nome"] ?? ""));
     return { value: String(rowId(e)), label: nomes.join(" › ") };
