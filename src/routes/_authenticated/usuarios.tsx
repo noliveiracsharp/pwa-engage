@@ -529,6 +529,8 @@ function UsuariosPage() {
         onSave={handleSave}
       />
 
+      <CredenciaisDialog dados={cred} onClose={() => setCred(null)} />
+
       <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
