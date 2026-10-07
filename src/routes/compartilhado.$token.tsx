@@ -172,7 +172,7 @@ function Compartilhado() {
                     <div className="flex items-start gap-2 p-3 text-sm">
                       {t.done ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" /> : <Circle className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />}
                       <div className="min-w-0 flex-1">
-                        <p className={`break-words font-medium leading-snug ${t.done ? "text-muted-foreground line-through" : "text-foreground"}`}>{t.nome}</p>
+                        <p className={`break-words font-medium leading-snug ${t.done ? "" : "text-foreground"}`} style={t.done ? { color: "var(--progress-100)" } : undefined}>{t.nome}</p>
                         <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                           {t.resps.map((r, k) => (
                             <span key={k} className="flex items-center gap-1" title={r.nome}>

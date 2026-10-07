@@ -556,7 +556,7 @@ function Detalhe({ projeto, d, perms, onBack }: { projeto: Row; d: D; perms: Per
                   <TableCell onClick={(e) => e.stopPropagation()}>
                     <Checkbox disabled={!perms.canUpdate} checked={done} onCheckedChange={(v) => patch(t, { [d.tc.done]: doneValue(d.tc.done, v === true), progresso: v === true ? 100 : 0 })} aria-label="Concluída" />
                   </TableCell>
-                  <TableCell className={done ? "text-muted-foreground line-through" : "font-medium"}>
+                  <TableCell className="font-medium" style={done ? { color: "var(--progress-100)" } : undefined}>
                     {String(t[d.tc.nome] ?? "")}
                     <div className="mt-1 flex items-center gap-2"><Progress value={tarefaPct(t, d.tc.done)} indicatorColor={progressoCor(tarefaPct(t, d.tc.done))} className="h-1 w-24 bg-muted" /><span className="text-xs text-muted-foreground">{tarefaPct(t, d.tc.done)}%</span></div>
                   </TableCell>

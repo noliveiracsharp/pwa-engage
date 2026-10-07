@@ -43,10 +43,13 @@ export function TarefaSheet({ tarefa, tarefasDoProjeto, projetoId, perms, onClos
   const open = Boolean(tarefa) || isNew;
   const readOnly = isNew ? !perms.canCreate : !perms.canUpdate;
   const [form, setForm] = useState<Row>({});
+  // Só reinicia o formulário ao abrir outra tarefa (ou nova); recargas em segundo plano
+  // (progresso, checklist) não podem apagar o que está sendo digitado.
+  const formKey = isNew ? "nova" : tarefa ? String(rowId(tarefa)) : "";
   useEffect(() => {
     setForm(tarefa ? { ...tarefa } : { [tc.prio]: "Normal" });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tarefa, isNew]);
+  }, [formKey]);
   const set = (k: string, v: unknown) => setForm((f) => ({ ...f, [k]: v }));
 
   const resps = responsaveisDe(form, tc.resp);
@@ -226,7 +229,7 @@ function Checklist({ tarefaId, readOnly }: { tarefaId: string; readOnly: boolean
         {items.map((r) => (
           <li key={String(rowId(r))} className="group flex items-center gap-2 rounded px-1 py-1 hover:bg-muted/50">
             <Checkbox disabled={readOnly} checked={isDone(r[okC])} onCheckedChange={(v) => toggle(r, v === true)} />
-            <span className={`flex-1 text-sm ${isDone(r[okC]) ? "text-muted-foreground line-through" : ""}`}>{String(r[dC] ?? "")}</span>
+            <span className={`flex-1 text-sm ${isDone(r[okC]) ? "font-medium" : ""}`} style={isDone(r[okC]) ? { color: "var(--progress-100)" } : undefined}>{String(r[dC] ?? "")}</span>
             {!readOnly && (
               <button className="opacity-0 group-hover:opacity-100" onClick={() => del(r)} aria-label="Remover item">
                 <Trash2 className="h-3.5 w-3.5 text-destructive" />
