@@ -49,13 +49,13 @@ function ComissoesPage() {
         <TabsTrigger value="extrato">Extrato</TabsTrigger>
         <TabsTrigger value="config">Configuração</TabsTrigger>
       </TabsList>
-      <TabsContent value="extrato"><Extrato canUpdate={perms.canUpdate} /></TabsContent>
+      <TabsContent value="extrato"><Extrato canUpdate={perms.canUpdate} canDelete={perms.canDelete} /></TabsContent>
       <TabsContent value="config"><Configuracao canEdit={perms.canUpdate || perms.canCreate} /></TabsContent>
     </Tabs>
   );
 }
 
-function Extrato({ canUpdate }: { canUpdate: boolean }) {
+function Extrato({ canUpdate, canDelete }: { canUpdate: boolean; canDelete: boolean }) {
   const qc = useQueryClient();
   const { data: rowsDb = [], isLoading } = useTableRows("orcamento_comissoes");
   const { data: orcs = [] } = useTableRows("orcamentos");
@@ -90,6 +90,14 @@ function Extrato({ canUpdate }: { canUpdate: boolean }) {
     qc.invalidateQueries({ queryKey: ["table", "orcamento_comissoes"] });
   };
 
+  const excluir = async (r: Row) => {
+    if (!window.confirm("Excluir este registro de comissão?")) return;
+    const { error } = await supabase.from("orcamento_comissoes").delete().eq("id", text(rowId(r)));
+    if (error) return void toast.error(error.message);
+    toast.success("Comissão excluída.");
+    qc.invalidateQueries({ queryKey: ["table", "orcamento_comissoes"] });
+  };
+
   const columns: Column[] = [
     { key: "oferta", header: "Oferta", fields: [], render: (r) => <span className="font-semibold tabular-nums">{text(orcById.get(text(r["orcamento_id"]))?.["numero"]) || "—"}</span> },
     { key: "data", header: "Data", fields: ["created_at"], render: (r) => formatDate(r["created_at"]) },
@@ -108,6 +116,22 @@ function Extrato({ canUpdate }: { canUpdate: boolean }) {
         </Select>
       ),
     },
+    ...(canDelete
+      ? [{
+          key: "acoes", header: "", fields: [],
+          render: (r: Row) => (
+            <Button
+              size="icon"
+              variant="ghost"
+              title={r["status"] === "paga" ? "Comissão paga não pode ser excluída" : "Excluir"}
+              disabled={r["status"] === "paga"}
+              onClick={(e) => { e.stopPropagation(); void excluir(r); }}
+            >
+              <Trash2 className="text-destructive h-4 w-4" />
+            </Button>
+          ),
+        } as Column]
+      : []),
   ];
 
   return (
