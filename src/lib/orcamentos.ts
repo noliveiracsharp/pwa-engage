@@ -145,7 +145,22 @@ export type Linha = {
   imposto_pct: number;
   /** produto / serviço avulso (implantação) ou recorrente (mensal). */
   natureza: Natureza;
+  /** Bloco/ambiente opcional (ex.: "Frente do condomínio"). */
+  bloco: string;
 };
+
+/** Agrupa linhas por bloco na ordem em que aparecem; linhas sem bloco ficam no grupo "" (geral). */
+export function agruparPorBloco<T>(rows: T[], getBloco: (r: T) => string): Array<{ bloco: string; rows: T[] }> {
+  const map = new Map<string, T[]>();
+  for (const r of rows) {
+    const b = (getBloco(r) ?? "").trim();
+    if (!map.has(b)) map.set(b, []);
+    map.get(b)!.push(r);
+  }
+  const grupos = [...map.entries()].map(([bloco, rows]) => ({ bloco, rows }));
+  // Itens gerais (sem bloco) vão por último quando há blocos nomeados.
+  return grupos.sort((a, b) => (a.bloco === "" ? 1 : 0) - (b.bloco === "" ? 1 : 0));
+}
 
 export type LinhaCalc = {
   quantidade: number;
@@ -171,6 +186,7 @@ export function novaLinha(): Linha {
     preco_custo: 0,
     imposto_pct: 0,
     natureza: "produto",
+    bloco: "",
   };
 }
 
@@ -186,6 +202,7 @@ export function linhaFromRow(row: Row, itemTipo?: unknown): Linha {
     preco_custo: num(pick(row, ["preco_custo"])),
     imposto_pct: num(pick(row, ["imposto_pct", "imposto"])),
     natureza: naturezaOf(row["natureza"], itemTipo),
+    bloco: String(row["bloco"] ?? ""),
   };
 }
 

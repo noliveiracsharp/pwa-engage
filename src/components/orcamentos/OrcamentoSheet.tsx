@@ -492,6 +492,7 @@ export function OrcamentoSheet({
         lucro: c.lucro,
         margem_pct: c.margem_pct,
         natureza: l.natureza,
+        bloco: l.bloco.trim() || null,
       };
     });
 

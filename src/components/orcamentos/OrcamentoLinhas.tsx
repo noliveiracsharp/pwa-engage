@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { Check, ChevronUp, Eye, Pencil, Plus, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,7 @@ import {
 import { SearchSelect, type SearchOption } from "@/components/data-table/SearchSelect";
 import { rowId } from "@/lib/crud";
 import { QuickItemDialog } from "./QuickItemDialog";
-import { calcLinha, formatBRL, formatPct, NATUREZAS, num, type Linha, type Natureza } from "@/lib/orcamentos";
+import { agruparPorBloco, calcLinha, formatBRL, formatPct, NATUREZAS, num, type Linha, type Natureza } from "@/lib/orcamentos";
 
 function NaturezaBadge({ n }: { n: Natureza }) {
   const meta = NATUREZAS.find((x) => x.value === n)!;
@@ -128,6 +128,12 @@ export function OrcamentoLinhas({
   const itemById = new Map(itens.map((item) => [String(rowId(item) ?? ""), item]));
   const marcaById = new Map(marcas.map((marca) => [String(rowId(marca) ?? ""), marca]));
   const unidadeById = new Map(unidadeOptions.map((o) => [o.value, o.label]));
+  const temBlocos = linhas.some((l) => l.bloco.trim());
+  const grupos = agruparPorBloco(linhas, (l) => l.bloco);
+  const blocosUsados = grupos.map((g) => g.bloco).filter(Boolean);
+  const ordenadas = grupos.flatMap((g) => g.rows);
+  const primeiraDoGrupo = new Map(grupos.map((g) => [g.rows[0]!.key, g]));
+  const numero = new Map(linhas.map((l, i) => [l.key, i]));
 
   return (
     <div className="space-y-3">
@@ -163,7 +169,18 @@ export function OrcamentoLinhas({
             <span className="text-right">Ações</span>
           </div>
 
-          {linhas.map((l, index) => {
+          {ordenadas.map((l) => {
+            const index = numero.get(l.key) ?? 0;
+            const grupo = temBlocos ? primeiraDoGrupo.get(l.key) : undefined;
+            const cabecalho = grupo ? (
+              <div className="bg-muted/60 flex items-center justify-between border-b px-3 py-1.5 text-xs font-semibold">
+                <span>{grupo.bloco || "Itens gerais"} <span className="text-muted-foreground font-normal">({grupo.rows.length})</span></span>
+                <span className="tabular-nums">{formatBRL(grupo.rows.reduce((s, x) => s + calcLinha(x).total_linha, 0))}</span>
+              </div>
+            ) : null;
+            return <Fragment key={l.key}>{cabecalho}{renderLinha(l, index)}</Fragment>;
+          })}
+          {false && linhas.map((l, index) => {
             const c = calcLinha(l);
             const semCusto = l.item_id !== "" && l.preco_custo <= 0;
             const item = itemById.get(l.item_id);
