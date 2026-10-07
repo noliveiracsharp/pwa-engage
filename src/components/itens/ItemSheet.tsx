@@ -18,6 +18,18 @@ import { padraoPorNatureza, usePrecificacao } from "@/components/itens/Precifica
 
 const NONE = "__none__";
 
+const ORIGENS: Array<[string, string]> = [
+  ["0", "Nacional"],
+  ["1", "Estrangeira - importação direta"],
+  ["2", "Estrangeira - adquirida no mercado interno"],
+  ["3", "Nacional, conteúdo de importação > 40% e ≤ 70%"],
+  ["4", "Nacional, processos produtivos básicos"],
+  ["5", "Nacional, conteúdo de importação ≤ 40%"],
+  ["6", "Estrangeira - importação direta, sem similar nacional (CAMEX)"],
+  ["7", "Estrangeira - mercado interno, sem similar nacional (CAMEX)"],
+  ["8", "Nacional, conteúdo de importação > 70%"],
+];
+
 type Values = {
   tipo: string;
   codigo: string;
@@ -35,6 +47,14 @@ type Values = {
   estoque_minimo: string;
   estoque_maximo: string;
   controla_estoque: string;
+  ncm: string;
+  cest: string;
+  origem: string;
+  cfop_padrao: string;
+  csosn_cst: string;
+  lc116: string;
+  cod_tributacao_municipio: string;
+  aliquota_iss: string;
 };
 
 const EMPTY: Values = {
@@ -54,6 +74,14 @@ const EMPTY: Values = {
   estoque_minimo: "",
   estoque_maximo: "",
   controla_estoque: "true",
+  ncm: "",
+  cest: "",
+  origem: "",
+  cfop_padrao: "",
+  csosn_cst: "",
+  lc116: "",
+  cod_tributacao_municipio: "",
+  aliquota_iss: "",
 };
 
 const num = (v: string) => {
@@ -141,6 +169,14 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, canCre
       estoque_minimo: text(pick(record, ["estoque_minimo"], "")),
       estoque_maximo: text(pick(record, ["estoque_maximo"], "")),
       controla_estoque: record["controla_estoque"] === false ? "false" : "true",
+      ncm: text(pick(record, ["ncm"], "")),
+      cest: text(pick(record, ["cest"], "")),
+      origem: text(pick(record, ["origem"], "")),
+      cfop_padrao: text(pick(record, ["cfop_padrao"], "")),
+      csosn_cst: text(pick(record, ["csosn_cst"], "")),
+      lc116: text(pick(record, ["lc116"], "")),
+      cod_tributacao_municipio: text(pick(record, ["cod_tributacao_municipio"], "")),
+      aliquota_iss: text(pick(record, ["aliquota_iss"], "")),
     });
   }, [open, record]);
 
@@ -208,8 +244,17 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, canCre
             controla_estoque: v.controla_estoque === "true",
             estoque_minimo: v.estoque_minimo === "" ? 0 : num(v.estoque_minimo),
             estoque_maximo: v.estoque_maximo === "" ? null : num(v.estoque_maximo),
+            ncm: v.ncm.replace(/\D/g, "") || null,
+            cest: v.cest.replace(/\D/g, "") || null,
+            origem: v.origem || null,
+            cfop_padrao: v.cfop_padrao.replace(/\D/g, "") || null,
+            csosn_cst: v.csosn_cst.trim() || null,
           }
-        : {}),
+        : {
+            lc116: v.lc116.trim() || null,
+            cod_tributacao_municipio: v.cod_tributacao_municipio.trim() || null,
+            aliquota_iss: v.aliquota_iss === "" ? null : num(v.aliquota_iss),
+          }),
     };
     onSave(payload);
   };
@@ -425,6 +470,59 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, canCre
                 <div className="min-w-0 space-y-1.5">
                   <Label htmlFor="estoque_maximo" className="block text-sm font-medium">Estoque máximo</Label>
                   <Input id="estoque_maximo" type="number" step="0.001" value={v.estoque_maximo} onChange={(e) => setV((s) => ({ ...s, estoque_maximo: e.target.value }))} />
+                </div>
+              </>
+            )}
+
+            <div className="border-border min-w-0 border-t pt-4 sm:col-span-2">
+              <h3 className="text-sm font-semibold">Dados fiscais</h3>
+              <p className="text-muted-foreground text-xs">
+                {v.tipo === "Produto" ? "Usados na emissão de NF-e / NFC-e." : "Usados na emissão de NFS-e."}
+              </p>
+            </div>
+            {v.tipo === "Produto" ? (
+              <>
+                <div className="min-w-0 space-y-1.5">
+                  <Label htmlFor="ncm" className="block text-sm font-medium">NCM</Label>
+                  <Input id="ncm" placeholder="8 dígitos" maxLength={10} value={v.ncm} onChange={(e) => setV((s) => ({ ...s, ncm: e.target.value }))} />
+                </div>
+                <div className="min-w-0 space-y-1.5">
+                  <Label htmlFor="cest" className="block text-sm font-medium">CEST</Label>
+                  <Input id="cest" placeholder="7 dígitos (se houver ST)" maxLength={9} value={v.cest} onChange={(e) => setV((s) => ({ ...s, cest: e.target.value }))} />
+                </div>
+                <div className="min-w-0 space-y-1.5 sm:col-span-2">
+                  <Label htmlFor="origem" className="block text-sm font-medium">Origem da mercadoria</Label>
+                  <Select value={v.origem || undefined} onValueChange={(val) => setV((s) => ({ ...s, origem: val }))}>
+                    <SelectTrigger id="origem"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                    <SelectContent>
+                      {ORIGENS.map(([c, l]) => (
+                        <SelectItem key={c} value={c}>{c} - {l}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="min-w-0 space-y-1.5">
+                  <Label htmlFor="cfop_padrao" className="block text-sm font-medium">CFOP padrão de saída</Label>
+                  <Input id="cfop_padrao" placeholder="Ex.: 5102" maxLength={5} value={v.cfop_padrao} onChange={(e) => setV((s) => ({ ...s, cfop_padrao: e.target.value }))} />
+                </div>
+                <div className="min-w-0 space-y-1.5">
+                  <Label htmlFor="csosn_cst" className="block text-sm font-medium">CSOSN / CST</Label>
+                  <Input id="csosn_cst" placeholder="Ex.: 102 (Simples) ou 00" maxLength={4} value={v.csosn_cst} onChange={(e) => setV((s) => ({ ...s, csosn_cst: e.target.value }))} />
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="min-w-0 space-y-1.5">
+                  <Label htmlFor="lc116" className="block text-sm font-medium">Item da LC 116/2003</Label>
+                  <Input id="lc116" placeholder="Ex.: 14.01" value={v.lc116} onChange={(e) => setV((s) => ({ ...s, lc116: e.target.value }))} />
+                </div>
+                <div className="min-w-0 space-y-1.5">
+                  <Label htmlFor="cod_tributacao_municipio" className="block text-sm font-medium">Código de tributação municipal</Label>
+                  <Input id="cod_tributacao_municipio" placeholder="Conforme a prefeitura" value={v.cod_tributacao_municipio} onChange={(e) => setV((s) => ({ ...s, cod_tributacao_municipio: e.target.value }))} />
+                </div>
+                <div className="min-w-0 space-y-1.5">
+                  <Label htmlFor="aliquota_iss" className="block text-sm font-medium">Alíquota de ISS (%)</Label>
+                  <Input id="aliquota_iss" placeholder="Ex.: 5" type="number" step="0.01" value={v.aliquota_iss} onChange={(e) => setV((s) => ({ ...s, aliquota_iss: e.target.value }))} />
                 </div>
               </>
             )}
