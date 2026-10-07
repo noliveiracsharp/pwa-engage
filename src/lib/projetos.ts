@@ -67,7 +67,7 @@ export const C = {
     tarefa: ["tarefa_id", "projetos_tarefas_id", "projeto_tarefa_id"],
     nome: ["nome_arquivo", "nome", "descricao"],
     url: ["url", "arquivo_url", "link"],
-    path: ["caminho", "path", "storage_path"],
+    path: ["caminho_storage", "caminho", "path", "storage_path"],
     tamanho: ["tamanho", "tamanho_bytes", "size"],
     tipo: ["tipo", "mime_type", "content_type"],
   },
