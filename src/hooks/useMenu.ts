@@ -10,6 +10,7 @@ export type MenuItem = {
   path: string;
   icon: string;
   order: number;
+  children?: MenuItem[] | undefined;
 };
 
 const FALLBACK: MenuItem[] = [

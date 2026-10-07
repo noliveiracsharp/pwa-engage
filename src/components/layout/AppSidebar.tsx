@@ -66,7 +66,7 @@ export function AppSidebar({ open, onNavigate }: Props) {
 
 function SidebarEntry({
   item, open, pathname, onNavigate, depth,
-}: { item: MenuItem; open: boolean; pathname: string; onNavigate?: () => void; depth: number }) {
+}: { item: MenuItem; open: boolean; pathname: string; onNavigate?: (() => void) | undefined; depth: number }) {
   const Icon = getIcon(item.icon);
   const children = item.children ?? [];
   const childActive = hasActiveChild(item, pathname);
