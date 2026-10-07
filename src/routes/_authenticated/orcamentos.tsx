@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { ChevronDown, FileSignature, FileText } from "lucide-react";
+import { ChevronDown, Copy, FileSignature, FileText } from "lucide-react";
+import { toast } from "sonner";
 import { DataTable, type Column } from "@/components/data-table/DataTable";
 import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
 import { Button } from "@/components/ui/button";
@@ -80,6 +81,20 @@ function OrcamentosPage() {
   const [preview, setPreview] = useState<Row | null>(null);
   const [propostaOpen, setPropostaOpen] = useState(false);
   const [f, setF] = useState({ busca: "", situacao: "todos", vendedor: "todos", ano: "todos" });
+  const [duplicarDe, setDuplicarDe] = useState<{ record: Row; linhas: Row[] } | null>(null);
+
+  const duplicar = (r: Row) => {
+    const id = String(rowId(r) ?? "");
+    setRecord(null);
+    setDuplicarDe({
+      record: r,
+      linhas: todasLinhas.filter((l) => String(l["orcamento_id"] ?? "") === id),
+    });
+    setOpen(true);
+    toast.success("Oferta duplicada", {
+      description: "Revise e clique em Salvar para gerar o novo número.",
+    });
+  };
 
   const escopo = useMemo(() => todos.filter((r) => mesmaEmpresa(r, empresaId)), [todos, empresaId]);
   const clientes = useMemo(
@@ -315,6 +330,17 @@ function OrcamentosPage() {
         >
           <FileSignature className="h-4 w-4" />
         </Button>
+        {perms.canCreate && (
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Duplicar oferta"
+            title="Duplicar oferta"
+            onClick={() => duplicar(r)}
+          >
+            <Copy className="h-4 w-4" />
+          </Button>
+        )}
         </div>
       ),
     },
@@ -337,11 +363,13 @@ function OrcamentosPage() {
           perms.canCreate
             ? () => {
                 setRecord(null);
+                setDuplicarDe(null);
                 setOpen(true);
               }
             : undefined
         }
         onEdit={(row) => {
+          setDuplicarDe(null);
           setRecord(row);
           setOpen(true);
         }}
@@ -409,8 +437,18 @@ function OrcamentosPage() {
               }
             : undefined
         }
+        duplicarDe={duplicarDe}
         onSave={({ header, linhas }) =>
-          save.mutate({ header, linhas, original: record }, { onSuccess: () => setOpen(false) })
+          save.mutate(
+            { header, linhas, original: record },
+            {
+              onSuccess: () => {
+                setOpen(false);
+                setRecord(null);
+                setDuplicarDe(null);
+              },
+            },
+          )
         }
       />
 
