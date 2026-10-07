@@ -90,15 +90,28 @@ export function OrcamentoDocumento({ id, orcamento, linhas, empresa, cliente, ve
     if (!grupos.some((g) => g.bloco)) return tabelaSimples(rows, mensal);
     return (
       <>
-        {grupos.map((g) => (
-          <div key={g.bloco || "_geral"} className="orc-bloco">
-            <h4 className="orc-grupo">{g.bloco || "Itens gerais"}</h4>
-            {tabelaSimples(g.rows, mensal)}
-            <p className="orc-right orc-detalhe">
-              Subtotal {g.bloco || "itens gerais"}: <strong>{formatBRL(g.rows.reduce((s, l) => s + num(l["total_linha"]), 0))}</strong>
-            </p>
-          </div>
-        ))}
+        {grupos.map((g, gi) => {
+          const sub = g.rows.reduce((s, l) => s + num(l["total_linha"]), 0);
+          const nome = g.bloco || "Itens gerais";
+          return (
+            <div key={g.bloco || "_geral"} className="orc-amb">
+              <div className="orc-amb-head">
+                <div>
+                  <span className="orc-amb-idx">Ambiente {gi + 1}</span>
+                  <strong>{nome}</strong>
+                </div>
+                <span className="orc-amb-qtd">
+                  {g.rows.length} {g.rows.length === 1 ? "item" : "itens"}
+                </span>
+              </div>
+              {tabelaSimples(g.rows, mensal)}
+              <div className="orc-amb-foot">
+                <span>Subtotal · {nome}{mensal ? " (mensal)" : ""}</span>
+                <strong>{formatBRL(sub)}</strong>
+              </div>
+            </div>
+          );
+        })}
       </>
     );
   };
