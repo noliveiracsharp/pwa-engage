@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { LogOut, Menu, Moon, Sun, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -34,6 +34,15 @@ export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) 
   const ativa = useEmpresaAtiva();
   const nome = pick<string>(usuario, ["nome", "nome_completo", "usuario_nome"], user?.email ?? "Usuário");
   const foto = pick<string>(usuario, ["foto", "avatar", "avatar_url", "imagem"]);
+  const perfilId = pick<string | number>(usuario, ["perfil_id", "id_perfil"]);
+  const { data: perfilNome } = useQuery({
+    queryKey: ["perfil-nome", String(perfilId ?? "")],
+    enabled: perfilId !== undefined && perfilId !== null && String(perfilId) !== "",
+    queryFn: async () => {
+      const { data } = await supabase.from("perfil").select("descricao").eq("id", perfilId as never).maybeSingle();
+      return String((data as { descricao?: string } | null)?.descricao ?? "");
+    },
+  });
   const iniciais = (nome ?? "U").slice(0, 2).toUpperCase();
 
   async function handleSignOut() {
@@ -87,7 +96,10 @@ export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) 
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel className="truncate">{nome}</DropdownMenuLabel>
+            <DropdownMenuLabel className="flex flex-col">
+              <span className="truncate">{nome}</span>
+              {perfilNome && <span className="truncate text-xs font-normal text-muted-foreground">{perfilNome}</span>}
+            </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={() => setMeusDados(true)}>
               <User className="mr-2 h-4 w-4" /> Meus Dados
