@@ -1,5 +1,5 @@
-import { ResponsaveisPicker, responsaveisDe } from "@/components/projetos/ResponsaveisPicker";
-import { useMemo, useState } from "react";
+import { IniciaisResponsaveis, ResponsaveisPicker, responsaveisDe } from "@/components/projetos/ResponsaveisPicker";
+import { Fragment, useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, ChevronDown, ChevronRight, Pencil, Plus, Settings, Share2, Trash2, ListChecks, Download, List, Columns3, Printer } from "lucide-react";
@@ -33,12 +33,13 @@ import { StatusDialog } from "@/components/projetos/StatusDialog";
 import { TAREFAS_PADRAO, diasDoModelo } from "@/components/projetos/TarefasPadraoDialog";
 import { EspacosSidebar, ESPACOS, cadeiaEspaco, espacoEDescendentes } from "@/components/projetos/EspacosSidebar";
 import { TarefaSheet } from "@/components/projetos/TarefaSheet";
+import { AtividadeSheet } from "@/components/projetos/AtividadeSheet";
 import { EspacoDashboard } from "@/components/projetos/EspacoDashboard";
 import { useTableRows, rowId, idColumn, matches } from "@/lib/crud";
 import { SortableList, salvarOrdem, useSortableRow } from "@/lib/reorder";
 import { useAudit } from "@/lib/audit";
 import { usePagePermissions, type Perms } from "@/hooks/usePagePermissions";
-import { periodo, C, doneValue, filterPayload, fmtDate, isDone, nomePessoa, prioridadeClass, progressoCor, resolveCol, tarefaPct, useCols } from "@/lib/projetos";
+import { ATIVIDADES, atividadePct, periodo, C, doneValue, filterPayload, fmtDate, isDone, nomePessoa, prioridadeClass, progressoCor, resolveCol, sincronizarTarefa, tarefaPct, useCols } from "@/lib/projetos";
 import type { Row } from "@/lib/row";
 
 export const Route = createFileRoute("/_authenticated/projetos")({
@@ -68,6 +69,7 @@ function useProjetoData() {
   const { data: sCols } = useCols("projetos_status");
   const { data: espacos = [] } = useTableRows(ESPACOS);
   const { data: templates = [] } = useTableRows("projetos_templates");
+  const { data: atividades = [] } = useTableRows(ATIVIDADES, true, "ordem");
   const pc = {
     nome: resolveCol(pCols, projetos, C.projeto.nome),
     status: resolveCol(pCols, projetos, C.projeto.status),
@@ -90,7 +92,7 @@ function useProjetoData() {
     ordem: resolveCol(sCols, status, C.status.ordem),
     cor: resolveCol(sCols, status, C.status.cor),
   };
-  return { espacos, templates, status, projetos, tarefas, parceiros, usuarios, pCols, tCols, pc, tc, sc, isLoading };
+  return { atividades, espacos, templates, status, projetos, tarefas, parceiros, usuarios, pCols, tCols, pc, tc, sc, isLoading };
 }
 
 function ProjetosPage() {
@@ -142,6 +144,11 @@ function statusDoEspaco(d: D, espacoId: string | null): Row[] {
 }
 
 type D = ReturnType<typeof useProjetoData>;
+
+function nomeGestor(d: D, p: Row): string {
+  const g = p["gestor_id"] ? d.usuarios.find((u) => String(rowId(u)) === String(p["gestor_id"])) : undefined;
+  return g ? String(g["nome"] ?? g["email"] ?? "") : "";
+}
 
 function progresso(d: D, projetoId: string) {
   const ts = d.tarefas.filter((t) => String(t[d.tc.projeto]) === projetoId);
@@ -234,6 +241,7 @@ function Painel({ d, perms, espacoId, onOpen }: { d: D; perms: Perms; espacoId: 
                           <div className="min-w-0">
                             <p className="truncate font-medium text-foreground">{String(p[d.pc.nome] ?? "Projeto")}</p>
                             <p className="truncate text-xs text-muted-foreground">{cli ? nomePessoa(cli) : "Sem cliente"}</p>
+                            {nomeGestor(d, p) && <p className="truncate text-xs text-muted-foreground">Gestor: {nomeGestor(d, p)}</p>}
                           </div>
                           <div className="flex opacity-0 transition-opacity group-hover:opacity-100" onClick={(e) => e.stopPropagation()}>
                             {perms.canUpdate && <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setForm(p)} aria-label="Editar"><Pencil className="h-3.5 w-3.5" /></Button>}
@@ -368,6 +376,7 @@ function ProjetoDialog({ d, espacoId, original, onClose }: { d: D; espacoId: str
     const v: Row = { [d.pc.nome]: f[d.pc.nome], [d.pc.status]: f[d.pc.status] || null, [d.pc.parceiro]: f[d.pc.parceiro] || null, [d.pc.ini]: f[d.pc.ini] || null, [d.pc.fim]: f[d.pc.fim] || null };
     if (d.pc.descricao !== d.pc.nome) v[d.pc.descricao] = f[d.pc.descricao] ?? null;
     v["espaco_id"] = espSel;
+    v["gestor_id"] = f["gestor_id"] || null;
     const payload = filterPayload(stamp(v, !original), d.pCols);
     if (original) {
       const { error } = await supabase.from("projetos").update(payload as never).eq(idColumn(original), rowId(original) as never);
@@ -391,7 +400,7 @@ function ProjetoDialog({ d, espacoId, original, onClose }: { d: D; espacoId: str
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>{original ? "Editar projeto" : "Novo projeto"}</DialogTitle>
-          <DialogDescription>Nome, cliente, status e período do projeto.</DialogDescription>
+          <DialogDescription>Nome, cliente, gestor, status e período do projeto.</DialogDescription>
         </DialogHeader>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1 sm:col-span-2"><Label>Nome</Label><Input value={String(f[d.pc.nome] ?? "")} onChange={(e) => set(d.pc.nome, e.target.value)} /></div>
@@ -403,6 +412,11 @@ function ProjetoDialog({ d, espacoId, original, onClose }: { d: D; espacoId: str
             <Label>Cliente *</Label>
             <SearchSelect value={String(f[d.pc.parceiro] ?? "")} onChange={(v) => set(d.pc.parceiro, v)} placeholder="Selecione o cliente"
               options={clientes.map((c) => ({ value: String(rowId(c)), label: nomePessoa(c) }))} />
+          </div>
+          <div className="space-y-1 sm:col-span-2">
+            <Label>Gestor do projeto</Label>
+            <SearchSelect value={String(f["gestor_id"] ?? "")} onChange={(v) => set("gestor_id", v)} placeholder="Selecione o gestor"
+              options={d.usuarios.filter((u) => u["status"] !== false).map((u) => ({ value: String(rowId(u)), label: String(u["nome"] ?? u["email"] ?? "") }))} />
           </div>
           <div className="space-y-1 sm:col-span-2">
             <Label>Status</Label>
@@ -457,6 +471,28 @@ function Detalhe({ projeto, d, perms, onBack }: { projeto: Row; d: D; perms: Per
   const tarefas = d.tarefas.filter((t) => String(t[d.tc.projeto]) === pid)
     .sort((a, b) => (Number(a["ordem"]) || 0) - (Number(b["ordem"]) || 0));
   const [aberta, setAberta] = useState<string | null>(null);
+  const tIds = new Set(tarefas.map((t) => String(rowId(t))));
+  const ativs = d.atividades.filter((a) => tIds.has(String(a["tarefa_id"])))
+    .sort((a, b) => (Number(a["ordem"]) || 0) - (Number(b["ordem"]) || 0));
+  const ativsDe = (tid: string) => ativs.filter((a) => String(a["tarefa_id"]) === tid);
+  const [recolhidas, setRecolhidas] = useState<Set<string>>(new Set());
+  const [ativAberta, setAtivAberta] = useState<{ id: string | null; tarefa: string } | null>(null);
+  const atividadeAberta = ativAberta?.id ? ativs.find((a) => String(rowId(a)) === ativAberta.id) ?? null : null;
+  async function excluirAtividade(a: Row) {
+    if (!confirm(`Excluir a atividade "${a["nome"]}"?`)) return;
+    const { error } = await supabase.from(ATIVIDADES as never).delete().eq("id", rowId(a) as never);
+    if (error) { toast.error(error.message); return; }
+    await sincronizarTarefa(String(a["tarefa_id"]), d.tCols);
+    qc.invalidateQueries({ queryKey: ["table", ATIVIDADES] });
+    refresh();
+  }
+  async function concluirAtividade(a: Row, v: boolean) {
+    const { error } = await supabase.from(ATIVIDADES as never).update({ progresso: v ? 100 : 0, situacao: v ? "Concluída" : "Em andamento" } as never).eq("id", rowId(a) as never);
+    if (error) { toast.error(error.message); return; }
+    await sincronizarTarefa(String(a["tarefa_id"]), d.tCols);
+    qc.invalidateQueries({ queryKey: ["table", ATIVIDADES] });
+    refresh();
+  }
   const [nova, setNova] = useState(false);
   const [busca, setBusca] = useState("");
   const pr = progresso(d, pid);
@@ -504,12 +540,12 @@ function Detalhe({ projeto, d, perms, onBack }: { projeto: Row; d: D; perms: Per
         <Button variant="ghost" size="icon" onClick={onBack} aria-label="Voltar"><ArrowLeft className="h-4 w-4" /></Button>
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-2xl font-bold text-foreground">{String(projeto[d.pc.nome] ?? "Projeto")}</h1>
-          <p className="text-sm text-muted-foreground">{cli ? nomePessoa(cli) : "Sem cliente"}{periodo(projeto[d.pc.ini], projeto[d.pc.fim]) ? ` · ${periodo(projeto[d.pc.ini], projeto[d.pc.fim])}` : ""}</p>
+          <p className="text-sm text-muted-foreground">{cli ? nomePessoa(cli) : "Sem cliente"}{nomeGestor(d, projeto) ? ` · Gestor: ${nomeGestor(d, projeto)}` : ""}{periodo(projeto[d.pc.ini], projeto[d.pc.fim]) ? ` · ${periodo(projeto[d.pc.ini], projeto[d.pc.fim])}` : ""}</p>
         </div>
         <Button variant="outline" onClick={imprimir}><Printer className="mr-1 h-4 w-4" />Imprimir / Exportar PDF</Button>
         <Button variant="outline" onClick={() => compartilhar(projeto)}><Share2 className="mr-1 h-4 w-4" />Compartilhar</Button>
         <ProjetoPrint projeto={projeto} cliente={cli ? nomePessoa(cli) : "Sem cliente"} periodo={periodo(projeto[d.pc.ini], projeto[d.pc.fim])}
-          tarefas={tarefas} usuarios={d.usuarios} empresaId={empresaId} pct={pr.pct}
+          tarefas={tarefas} atividades={ativs} gestor={nomeGestor(d, projeto)} usuarios={d.usuarios} empresaId={empresaId} pct={pr.pct}
           cols={{ nome: d.tc.nome, ini: d.tc.ini, fim: d.tc.fim, prio: d.tc.prio, resp: d.tc.resp, done: d.tc.done }} />
         {perms.canCreate && <Button variant="outline" onClick={() => { setTplImport(d.templates.length === 1 ? String(rowId(d.templates[0]!)) : ""); setEscolherTpl(true); }}><Download className="mr-1 h-4 w-4" />Importar Tarefas Padrão</Button>}
         <Dialog open={escolherTpl} onOpenChange={setEscolherTpl}>
@@ -558,13 +594,23 @@ function Detalhe({ projeto, d, perms, onBack }: { projeto: Row; d: D; perms: Per
             {tarefas.filter((t) => matches(t[d.tc.nome], busca)).map((t) => {
               const id = String(rowId(t));
               const done = isDone(t[d.tc.done]);
+              const filhas = ativsDe(id);
+              const fechada = recolhidas.has(id);
               return (
+                <Fragment key={id}>
                 <SortRow key={id} id={id} disabled={!podeArrastar} onClick={() => setAberta(id)}>
                   <TableCell onClick={(e) => e.stopPropagation()}>
-                    <Checkbox disabled={!perms.canUpdate} checked={done} onCheckedChange={(v) => patch(t, { [d.tc.done]: doneValue(d.tc.done, v === true), progresso: v === true ? 100 : 0 })} aria-label="Concluída" />
+                    <Checkbox disabled={!perms.canUpdate || filhas.length > 0} checked={done} onCheckedChange={(v) => patch(t, { [d.tc.done]: doneValue(d.tc.done, v === true), progresso: v === true ? 100 : 0 })} aria-label="Concluída" />
                   </TableCell>
                   <TableCell className="font-medium" style={done ? { color: "var(--progress-100)" } : undefined}>
-                    {String(t[d.tc.nome] ?? "")}
+                    <div className="flex items-center gap-1">
+                      <button type="button" className="rounded p-0.5 hover:bg-muted" aria-label={fechada ? "Expandir" : "Recolher"}
+                        onClick={(e) => { e.stopPropagation(); setRecolhidas((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; }); }}>
+                        {fechada ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                      </button>
+                      <span>{String(t[d.tc.nome] ?? "")}</span>
+                      <Badge variant="secondary" className="ml-1 text-[10px]">{filhas.length} ativ.</Badge>
+                    </div>
                     <div className="mt-1 flex items-center gap-2"><Progress value={tarefaPct(t, d.tc.done)} indicatorColor={progressoCor(tarefaPct(t, d.tc.done))} className="h-1 w-24 bg-muted" /><span className="text-xs text-muted-foreground">{tarefaPct(t, d.tc.done)}%</span></div>
                   </TableCell>
                   <TableCell onClick={(e) => e.stopPropagation()}>
@@ -574,10 +620,42 @@ function Detalhe({ projeto, d, perms, onBack }: { projeto: Row; d: D; perms: Per
                   <TableCell>{fmtDate(t[d.tc.fim])}</TableCell>
                   <TableCell><Badge className={prioridadeClass(t[d.tc.prio])}>{String(t[d.tc.prio] ?? "Normal")}</Badge></TableCell>
                   <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                    {perms.canCreate && <Button size="icon" variant="ghost" onClick={() => { setRecolhidas((s) => { const n = new Set(s); n.delete(id); return n; }); setAtivAberta({ id: null, tarefa: id }); }} aria-label="Nova atividade" title="Nova atividade"><Plus className="h-4 w-4" /></Button>}
                     <Button size="icon" variant="ghost" onClick={() => setAberta(id)} aria-label="Abrir"><Pencil className="h-4 w-4" /></Button>
                     {perms.canDelete && <Button size="icon" variant="ghost" onClick={() => excluir(t)} aria-label="Excluir"><Trash2 className="h-4 w-4 text-destructive" /></Button>}
                   </TableCell>
                 </SortRow>
+                {!fechada && filhas.map((a) => {
+                  const aid = String(rowId(a));
+                  const ap = atividadePct(a);
+                  const ok = ap >= 100;
+                  return (
+                    <TableRow key={aid} className="cursor-pointer bg-muted/20" onClick={() => setAtivAberta({ id: aid, tarefa: id })}>
+                      <TableCell />
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <Checkbox disabled={!perms.canUpdate} checked={ok} onCheckedChange={(v) => concluirAtividade(a, v === true)} aria-label="Atividade concluída" />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2 pl-7 text-sm" style={ok ? { color: "var(--progress-100)" } : undefined}>
+                          <span className="text-muted-foreground">↳</span>{String(a["nome"] ?? "")}
+                        </div>
+                        <div className="mt-1 flex items-center gap-2 pl-11"><Progress value={ap} indicatorColor={progressoCor(ap)} className="h-1 w-20 bg-muted" /><span className="text-xs text-muted-foreground">{ap}%</span></div>
+                      </TableCell>
+                      <TableCell><IniciaisResponsaveis ids={Array.isArray(a["responsaveis"]) ? (a["responsaveis"] as unknown[]).map(String) : []} usuarios={d.usuarios} /></TableCell>
+                      <TableCell className="text-sm">{fmtDate(a["dt_inicio"])}</TableCell>
+                      <TableCell className="text-sm">{fmtDate(a["dt_fim"])}</TableCell>
+                      <TableCell><Badge className={prioridadeClass(a["prioridade"])}>{String(a["prioridade"] ?? "Normal")}</Badge></TableCell>
+                      <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                        <Button size="icon" variant="ghost" onClick={() => setAtivAberta({ id: aid, tarefa: id })} aria-label="Abrir atividade"><Pencil className="h-4 w-4" /></Button>
+                        {perms.canDelete && <Button size="icon" variant="ghost" onClick={() => excluirAtividade(a)} aria-label="Excluir atividade"><Trash2 className="h-4 w-4 text-destructive" /></Button>}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+                {!fechada && filhas.length === 0 && (
+                  <TableRow className="bg-muted/10"><TableCell colSpan={8} className="py-2 pl-16 text-xs text-muted-foreground">Nenhuma atividade. Use o botão + para adicionar.</TableCell></TableRow>
+                )}
+                </Fragment>
               );
             })}
             {tarefas.length === 0 && (
@@ -589,6 +667,8 @@ function Detalhe({ projeto, d, perms, onBack }: { projeto: Row; d: D; perms: Per
       </div>
       <TarefaSheet tarefa={tarefaAberta} isNew={nova} tarefasDoProjeto={tarefas} projetoId={pid} perms={perms}
         onClose={() => { setAberta(null); setNova(false); }} />
+      <AtividadeSheet atividade={atividadeAberta} isNew={Boolean(ativAberta && !ativAberta.id)} tarefaId={ativAberta?.tarefa ?? ""}
+        projetoId={pid} atividadesDoProjeto={ativs} tCols={d.tCols} perms={perms} onClose={() => setAtivAberta(null)} />
     </div>
   );
 }
