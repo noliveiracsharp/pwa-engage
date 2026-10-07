@@ -11,13 +11,16 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useTableRows, rowId, text } from "@/lib/crud";
 import { pick } from "@/lib/row";
-import { formatCpfCnpj } from "@/lib/input-masks";
+import { PhoneInput } from "@/components/data-table/PhoneInput";
+import { DocumentInput } from "@/components/data-table/DocumentInput";
+import { PasswordFields } from "@/components/usuarios/PasswordFields";
 
 
 export function MeusDadosSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
   const { usuario, user, isMaster, refreshUsuario } = useAuth();
   const queryClient = useQueryClient();
   const { data: empresas = [] } = useTableRows("empresas", isMaster);
+  const { data: departamentos = [] } = useTableRows("usuarios_departamentos");
   const { data: perfisAll = [] } = useQuery({
     queryKey: ["perfil-todos"],
     queryFn: async () => {
@@ -27,7 +30,7 @@ export function MeusDadosSheet({ open, onOpenChange }: { open: boolean; onOpenCh
     },
   });
 
-  const [form, setForm] = useState({ foto: "", nome: "", email: "", cpf: "", cargo: "", perfil_id: "", empresa_id: "" });
+  const [form, setForm] = useState({ foto: "", nome: "", email: "", cpf: "", cargo: "", telefone: "", departamento_id: "", perfil_id: "", empresa_id: "" });
   const [pw, setPw] = useState({ senha: "", confirma: "" });
   const [saving, setSaving] = useState(false);
 
@@ -39,6 +42,8 @@ export function MeusDadosSheet({ open, onOpenChange }: { open: boolean; onOpenCh
       email: text(pick(usuario, ["email"], user?.email)),
       cpf: text(pick(usuario, ["cpf"])),
       cargo: text(pick(usuario, ["cargo"])),
+      telefone: text(pick(usuario, ["telefone"])),
+      departamento_id: text(pick(usuario, ["departamento_id"])),
       perfil_id: text(pick(usuario, ["perfil_id"])),
       empresa_id: text(pick(usuario, ["empresa_id"])),
     });
@@ -85,6 +90,8 @@ export function MeusDadosSheet({ open, onOpenChange }: { open: boolean; onOpenCh
         cpf: form.cpf.replace(/\D/g, "") || null,
         cargo: form.cargo || null,
       };
+      if ("telefone" in (usuario ?? {})) values["telefone"] = form.telefone || null;
+      if (podeEditarPerfil && "departamento_id" in (usuario ?? {})) values["departamento_id"] = form.departamento_id || null;
       if (podeEditarPerfil && form.perfil_id) values["perfil_id"] = form.perfil_id;
       if (isMaster && form.empresa_id) values["empresa_id"] = form.empresa_id;
       const { error } = await supabase.from("usuarios").update(values).eq("id", rowId(usuario) as never);
@@ -133,11 +140,26 @@ export function MeusDadosSheet({ open, onOpenChange }: { open: boolean; onOpenCh
             </div>
             <div className="space-y-1.5">
               <Label>CPF</Label>
-              <Input value={formatCpfCnpj(form.cpf)} onChange={(e) => set("cpf", e.target.value.replace(/\D/g, "").slice(0, 11))} />
+              <DocumentInput value={form.cpf} placeholder="CPF" onChange={(v) => set("cpf", v.slice(0, 11))} />
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label>Telefone / WhatsApp</Label>
+              <PhoneInput value={form.telefone} onChange={(v) => set("telefone", v)} />
             </div>
             <div className="space-y-1.5">
               <Label>Cargo</Label>
               <Input value={form.cargo} onChange={(e) => set("cargo", e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Departamento</Label>
+              <Select value={form.departamento_id} onValueChange={(v) => set("departamento_id", v)} disabled={!podeEditarPerfil}>
+                <SelectTrigger><SelectValue placeholder="Departamento" /></SelectTrigger>
+                <SelectContent>
+                  {departamentos.filter((d) => d["status"] !== false).map((d) => (
+                    <SelectItem key={text(rowId(d))} value={text(rowId(d))}>{text(d["descricao"])}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-1.5">
               <Label>Perfil</Label>
@@ -169,19 +191,8 @@ export function MeusDadosSheet({ open, onOpenChange }: { open: boolean; onOpenCh
         </div>
       </section>
 
-      <section className="space-y-4">
-        <h3 className="text-sm font-semibold text-foreground">Trocar senha</h3>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label>Nova senha</Label>
-            <Input type="password" autoComplete="new-password" value={pw.senha} onChange={(e) => setPw({ ...pw, senha: e.target.value })} />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Confirmar senha</Label>
-            <Input type="password" autoComplete="new-password" value={pw.confirma} onChange={(e) => setPw({ ...pw, confirma: e.target.value })} />
-          </div>
-          <p className="text-muted-foreground text-xs sm:col-span-2">Deixe em branco para manter a senha atual.</p>
-        </div>
+      <section>
+        <PasswordFields senha={pw.senha} confirma={pw.confirma} onChange={(senha, confirma) => setPw({ senha, confirma })} />
       </section>
 
         </div>
