@@ -98,15 +98,31 @@ function ProjetosPage() {
   const d = useProjetoData();
   const { espaco } = Route.useSearch();
   const navigate = useNavigate({ from: "/projetos" });
+  const qc = useQueryClient();
   const espacoId = espaco && d.espacos.some((e) => String(rowId(e)) === espaco) ? espaco : null;
   const [selId, setSelId] = useState<string | null>(null);
   const sel = d.projetos.find((p) => String(rowId(p)) === selId);
   if (sel) return <Detalhe projeto={sel} d={d} perms={perms} onBack={() => setSelId(null)} />;
   const espAtual = espacoId ? d.espacos.find((e) => String(rowId(e)) === espacoId) : undefined;
   const ir = (id: string | null) => navigate({ search: id ? { espaco: id } : {} });
+  async function moverEspaco(projetoId: string, destino: string) {
+    const p = d.projetos.find((x) => String(rowId(x)) === projetoId);
+    if (!p || String(p["espaco_id"] ?? "") === destino) return;
+    const v: Row = { espaco_id: destino };
+    const novos = statusDoEspaco(d, destino);
+    if (!novos.some((s) => String(rowId(s)) === String(p[d.pc.status] ?? ""))) {
+      const primeiro = [...novos].sort((a, b) => Number(a[d.sc.ordem] ?? 0) - Number(b[d.sc.ordem] ?? 0))[0];
+      v[d.pc.status] = primeiro ? rowId(primeiro) : null;
+    }
+    const { error } = await supabase.from("projetos").update(v as never).eq(idColumn(p), rowId(p) as never);
+    if (error) { toast.error(error.message); return; }
+    const nome = String(d.espacos.find((e) => String(rowId(e)) === destino)?.["nome"] ?? "");
+    toast.success(`Projeto "${String(p[d.pc.nome] ?? "")}" movido para ${nome}.`);
+    qc.invalidateQueries({ queryKey: ["table", "projetos"] });
+  }
   return (
     <div className="flex flex-col gap-4 md:flex-row md:items-start">
-      <EspacosSidebar espacos={d.espacos} ativo={espacoId} perms={perms} onSelect={ir} />
+      <EspacosSidebar espacos={d.espacos} ativo={espacoId} perms={perms} onSelect={ir} onMoverProjeto={moverEspaco} />
       <div className="min-w-0 flex-1">
         {espAtual && !espAtual["espaco_pai_id"]
           ? <EspacoDashboard espaco={espAtual} espacos={d.espacos} projetos={d.projetos} tarefas={d.tarefas} status={d.status} pc={d.pc} tc={d.tc} onAcessar={ir} />
@@ -209,7 +225,7 @@ function Painel({ d, perms, espacoId, onOpen }: { d: D; perms: Perms; espacoId: 
                     const pr = progresso(d, id);
                     const cli = d.parceiros.find((x) => String(rowId(x)) === String(p[d.pc.parceiro]));
                     return (
-                      <div key={id} role="button" draggable={modo === "kanban" && perms.canUpdate} onDragStart={() => setArrastando(id)} onDragEnd={() => setArrastando(null)} tabIndex={0} onClick={() => onOpen(id)} onKeyDown={(e) => e.key === "Enter" && onOpen(id)}
+                      <div key={id} role="button" draggable={perms.canUpdate} onDragStart={(e) => { e.dataTransfer.setData("text/projeto-id", id); e.dataTransfer.effectAllowed = "move"; setArrastando(id); }} onDragEnd={() => setArrastando(null)} tabIndex={0} onClick={() => onOpen(id)} onKeyDown={(e) => e.key === "Enter" && onOpen(id)}
                         className="group cursor-pointer space-y-2 rounded-md border border-border bg-background p-3 transition-shadow hover:shadow-md">
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
