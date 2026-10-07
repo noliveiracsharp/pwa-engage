@@ -136,3 +136,28 @@ export function periodo(ini: unknown, fim: unknown): string {
   if (b) return `Até ${b}`;
   return "";
 }
+
+export const ATIVIDADES = "projetos_atividades";
+export const ATIV_DEPS = "projetos_atividades_dependencias";
+
+/** Progresso 0-100 de uma atividade. */
+export function atividadePct(a: Row): number {
+  const n = Number(a["progresso"]);
+  if (!isNaN(n) && a["progresso"] !== null && a["progresso"] !== undefined) return Math.max(0, Math.min(100, Math.round(n)));
+  return isDone(a["situacao"]) ? 100 : 0;
+}
+
+/** Média do progresso das atividades (null se não houver nenhuma). */
+export function mediaAtividades(ativs: Row[]): number | null {
+  if (!ativs.length) return null;
+  return Math.round(ativs.reduce((s, a) => s + atividadePct(a), 0) / ativs.length);
+}
+
+/** Recalcula e grava o progresso da tarefa a partir das suas atividades. */
+export async function sincronizarTarefa(tarefaId: string, tCols?: string[]): Promise<void> {
+  const { data } = await supabase.from(ATIVIDADES as never).select("progresso, situacao").eq("tarefa_id", tarefaId as never);
+  const media = mediaAtividades((data ?? []) as Row[]);
+  if (media === null) return;
+  const payload: Row = { progresso: media, situacao: media >= 100 ? "Concluída" : "Em andamento" };
+  await supabase.from("projetos_tarefas").update(filterPayload(payload, tCols?.length ? [...tCols, "progresso"] : tCols) as never).eq("id", tarefaId as never);
+}

@@ -6,7 +6,7 @@ import { iniciais } from "@/components/projetos/ResponsaveisPicker";
 import { supabase } from "@/integrations/supabase/client";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { C, fmtDate, isDone, periodo, prioridadeClass, progressoCor, tarefaPct } from "@/lib/projetos";
+import { atividadePct, C, fmtDate, isDone, periodo, prioridadeClass, progressoCor, tarefaPct } from "@/lib/projetos";
 import { pick, type Row } from "@/lib/row";
 
 export const Route = createFileRoute("/compartilhado/$token")({
@@ -44,6 +44,7 @@ function Compartilhado() {
   const [projeto, setProjeto] = useState<Row | null>(null);
   const [empresa, setEmpresa] = useState<Row | null>(null);
   const [tarefas, setTarefas] = useState<Row[]>([]);
+  const [extra, setExtra] = useState<{ gestor: string; atividades: Row[] }>({ gestor: "", atividades: [] });
   const [pessoas, setPessoas] = useState<Map<string, { nome: string; departamento: string }>>(new Map());
   const [estado, setEstado] = useState<"carregando" | "ok" | "erro">("carregando");
 
@@ -68,6 +69,10 @@ function Compartilhado() {
       const mapa = new Map<string, { nome: string; departamento: string }>();
       for (const r of ((rs ?? []) as Row[])) mapa.set(String(r["id"]), { nome: String(r["nome"] ?? ""), departamento: String(r["departamento"] ?? "") });
       setPessoas(mapa);
+      const { data: det } = await supabase.rpc("compartilhado_detalhes" as never, { p_token: token } as never);
+      const dj = (det ?? {}) as Row;
+      const gj = dj["gestor"] as Row | null | undefined;
+      setExtra({ gestor: gj ? String(gj["nome"] ?? "") : "", atividades: Array.isArray(dj["atividades"]) ? (dj["atividades"] as Row[]) : [] });
       setProjeto(proj); setEmpresa(emp ?? null); setTarefas(t); setEstado("ok");
     })();
   }, [token]);
@@ -77,7 +82,17 @@ function Compartilhado() {
     const lista = tarefas.map((t) => {
       const pct = tarefaPct(t);
       const resp = one(t["usuarios"]);
+      const tid = String(pick(t, ["id"]));
+      const subs = extra.atividades.filter((a) => String(a["tarefa_id"]) === tid).map((a) => ({
+        nome: String(a["nome"] ?? ""),
+        resps: (Array.isArray(a["responsaveis"]) ? (a["responsaveis"] as unknown[]) : []).map((n) => ({ nome: String(n ?? ""), departamento: "" })),
+        ini: toTime(a["dt_inicio"]), fim: toTime(a["dt_fim"]), iniRaw: a["dt_inicio"], fimRaw: a["dt_fim"],
+        prio: a["prioridade"], pct: atividadePct(a), done: atividadePct(a) >= 100,
+        check: Number(a["check_total"] ?? 0) > 0 ? `${Number(a["check_ok"] ?? 0)}/${Number(a["check_total"])}` : "",
+        sub: true as boolean,
+      }));
       return {
+        sub: false as boolean, check: "", subs,
         nome: String(first(t, C.tarefa.nome) ?? "Tarefa"),
         resps: (Array.isArray(t["responsaveis"]) && (t["responsaveis"] as unknown[]).length
           ? (t["responsaveis"] as unknown[]).map((id) => pessoas.get(String(id))).filter((x): x is { nome: string; departamento: string } => Boolean(x))
@@ -90,7 +105,8 @@ function Compartilhado() {
         done: pct >= 100 || isDone(first(t, C.tarefa.concluida)),
       };
     });
-    const ts = lista.flatMap((x) => [x.ini, x.fim]).filter((n) => !isNaN(n));
+    const linhas = lista.flatMap((x) => [x, ...x.subs]);
+    const ts = linhas.flatMap((x) => [x.ini, x.fim]).filter((n) => !isNaN(n));
     const min = ts.length ? Math.min(...ts) : 0;
     const max = ts.length ? Math.max(...ts) + DAY : 1;
     const span = Math.max(max - min, DAY);
@@ -102,8 +118,8 @@ function Compartilhado() {
     }
     const ok = lista.filter((x) => x.done).length;
     const soma = lista.reduce((a, x) => a + (x.done ? 100 : x.pct), 0);
-    return { lista, min, span, marcas, ok, pct: lista.length ? Math.round(soma / lista.length) : 0 };
-  }, [tarefas, pessoas]);
+    return { lista, linhas, min, span, marcas, ok, pct: lista.length ? Math.round(soma / lista.length) : 0 };
+  }, [tarefas, pessoas, extra]);
 
   if (estado === "carregando") return <div className="grid min-h-dvh place-items-center text-muted-foreground">Carregando…</div>;
   if (estado === "erro" || !projeto) return (
@@ -140,6 +156,7 @@ function Compartilhado() {
           </div>
           <h1 className="text-2xl font-bold text-foreground">{nome}</h1>
           {per && <p className="text-sm text-muted-foreground">{per}</p>}
+          {extra.gestor && <p className="text-sm text-muted-foreground">Gestor do projeto: <span className="font-medium text-foreground">{extra.gestor}</span></p>}
           <div className="mt-4 flex items-center gap-3">
             <Progress value={g.pct} className="h-2 max-w-md" />
             <span className="text-sm text-muted-foreground">{g.ok}/{g.lista.length} tarefas · {g.pct}%</span>
@@ -152,14 +169,14 @@ function Compartilhado() {
           <div className="overflow-x-auto rounded-lg border border-border bg-card">
             <div className="min-w-[960px]">
               <div className="grid grid-cols-[340px_1fr] border-b border-border bg-muted/40 text-xs text-muted-foreground">
-                <div className="p-3 font-medium">Tarefa</div>
+                <div className="p-3 font-medium">Tarefa / Atividade</div>
                 <div className="relative h-10 border-l border-border">
                   {g.marcas.map((m) => (
                     <span key={m} className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap" style={{ left: `${pos(m)}%` }}>{fmtDate(new Date(m).toISOString()).slice(0, 5)}</span>
                   ))}
                 </div>
               </div>
-              {g.lista.map((t, i) => {
+              {g.linhas.map((t, i) => {
                 const temData = !isNaN(t.ini) || !isNaN(t.fim);
                 const a = isNaN(t.ini) ? t.fim : t.ini;
                 const b = (isNaN(t.fim) ? t.ini : t.fim) + DAY;
@@ -169,10 +186,10 @@ function Compartilhado() {
                 const labelDentro = width > 18;
                 return (
                   <div key={i} className="grid grid-cols-[340px_1fr] items-stretch border-b border-border last:border-0">
-                    <div className="flex items-start gap-2 p-3 text-sm">
+                    <div className={`flex items-start gap-2 p-3 text-sm ${t.sub ? "bg-muted/20 pl-8" : ""}`}>
                       {t.done ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" /> : <Circle className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />}
                       <div className="min-w-0 flex-1">
-                        <p className={`break-words font-medium leading-snug ${t.done ? "" : "text-foreground"}`} style={t.done ? { color: "var(--progress-100)" } : undefined}>{t.nome}</p>
+                        <p className={`break-words leading-snug ${t.sub ? "" : "font-medium"} ${t.done ? "" : "text-foreground"}`} style={t.done ? { color: "var(--progress-100)" } : undefined}>{t.sub ? "↳ " : ""}{t.nome}</p>
                         <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                           {t.resps.map((r, k) => (
                             <span key={k} className="flex items-center gap-1" title={r.nome}>
@@ -180,6 +197,7 @@ function Compartilhado() {
                               {r.departamento && <span>{r.departamento}</span>}
                             </span>
                           ))}
+                          {t.check ? <span>Checklist {t.check}</span> : null}
                           {t.prio ? <Badge className={`h-5 px-1.5 text-[10px] ${prioridadeClass(t.prio)}`}>{String(t.prio)}</Badge> : null}
                         </div>
                       </div>
