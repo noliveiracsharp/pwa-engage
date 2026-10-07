@@ -128,7 +128,7 @@ function ParceirosPage() {
         readOnly={record ? !perms.canUpdate : !perms.canCreate}
         saving={save.isPending}
         onSave={(values) =>
-          save.mutate({ values: stamp(values, !record), original: record }, { onSuccess: () => setOpen(false) })
+          save.mutate({ values: stamp(values, !record), original: record }, { onSuccess: () => { setOpen(false); setRecord(null); } })
         }
       />
     </>

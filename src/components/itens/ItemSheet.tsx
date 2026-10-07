@@ -3,6 +3,7 @@ import { Plus } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -30,6 +31,7 @@ type Values = {
   preco_venda: string;
   status: string;
   imagens: string[];
+  observacoes: string;
 };
 
 const EMPTY: Values = {
@@ -45,6 +47,7 @@ const EMPTY: Values = {
   preco_venda: "",
   status: "true",
   imagens: [],
+  observacoes: "",
 };
 
 const num = (v: string) => {
@@ -101,7 +104,10 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, canCre
   const nextCodigo = useMemo(() => nextCodigoFor(v.tipo), [itens, v.tipo]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setV(EMPTY);
+      return;
+    }
     if (!record) {
       const p = padraoPorNatureza(precificacao, EMPTY.tipo);
       setV({
@@ -125,6 +131,7 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, canCre
       preco_venda: text(pick(record, ["preco_venda"], "")),
       status: record["status"] === false ? "false" : "true",
       imagens: Array.isArray(record["imagens"]) ? (record["imagens"] as unknown[]).map(String).filter(Boolean) : [],
+      observacoes: text(pick(record, ["observacoes"], "")),
     });
   }, [open, record]);
 
@@ -186,6 +193,7 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, canCre
       preco_venda: v.preco_venda === "" ? null : num(v.preco_venda),
       status: v.status === "true",
       imagens: v.imagens,
+      observacoes: v.observacoes.trim() || null,
     };
     onSave(payload);
   };
@@ -376,6 +384,18 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, canCre
                 step="0.01"
                 value={v.preco_venda}
                 onChange={(e) => setVenda(e.target.value)}
+              />
+            </div>
+
+            <div className="min-w-0 space-y-1.5 sm:col-span-2">
+              <Label htmlFor="observacoes" className="block text-sm font-medium">
+                Observações
+              </Label>
+              <Textarea
+                id="observacoes"
+                rows={4}
+                value={v.observacoes}
+                onChange={(e) => setV((s) => ({ ...s, observacoes: e.target.value }))}
               />
             </div>
 

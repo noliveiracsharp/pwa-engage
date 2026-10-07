@@ -71,7 +71,10 @@ export function RecordSheet({
   const [values, setValues] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setValues({});
+      return;
+    }
     const next: Record<string, string> = {};
     for (const field of fields) {
       const raw = text(pick(record, field.fields, ""));

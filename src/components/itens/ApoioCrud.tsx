@@ -196,7 +196,7 @@ export function ApoioCrud({
               ),
               original: record,
             },
-            { onSuccess: () => setOpen(false) },
+            { onSuccess: () => { setOpen(false); setRecord(null); } },
           )
         }
       />

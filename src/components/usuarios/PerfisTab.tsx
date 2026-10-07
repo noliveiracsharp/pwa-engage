@@ -63,7 +63,7 @@ export function PerfisTab() {
       toast.error("Você não pode cadastrar um perfil acima do seu nível.");
       return;
     }
-    save.mutate({ values: { ...values, ordem }, original: record }, { onSuccess: () => setOpen(false) });
+    save.mutate({ values: { ...values, ordem }, original: record }, { onSuccess: () => { setOpen(false); setRecord(null); } });
   };
 
   if (!perms.loading && !perms.canRead) {
