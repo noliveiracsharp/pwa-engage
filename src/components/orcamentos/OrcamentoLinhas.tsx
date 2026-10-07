@@ -472,7 +472,6 @@ export function OrcamentoLinhas({
     ...vaziosVisiveis.map((b) => ({ bloco: b, rows: [] as Linha[] })),
   ];
   const gerais = grupos.find((g) => g.bloco === "")?.rows ?? [];
-  const todosBlocos = secoes.map((s) => s.bloco);
 
   const criarAmbiente = () => {
     const nome = novoNome.trim();
