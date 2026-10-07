@@ -10,6 +10,7 @@ export type MenuItem = {
   path: string;
   icon: string;
   order: number;
+  children?: MenuItem[] | undefined;
 };
 
 const FALLBACK: MenuItem[] = [
@@ -104,7 +105,64 @@ export function useMenu() {
       return unique.length > 0 ? unique : FALLBACK;
     },
   });
-  // Itens com menu_ativo = false são submenus (abas dentro da página), não aparecem no menu lateral.
-  const data = query.data?.filter((item) => !submenuIds.has(item.id));
+  // Itens com menu_ativo = false são abas dentro da página pai, não aparecem no menu lateral.
+  const flat = query.data?.filter((item) => !submenuIds.has(item.id));
+  const data = flat ? buildMenuTree(flat, funcoes ?? []) : flat;
   return { ...query, data };
+}
+
+/** Funções com funcoes_pai_id e menu ativo viram submenu (drilldown) do pai. */
+function buildMenuTree(items: MenuItem[], funcoes: Row[]): MenuItem[] {
+  const parentOf = new Map<string, string>();
+  for (const f of funcoes) {
+    const pai = pick(f, ["funcoes_pai_id"]);
+    if (pai) parentOf.set(String(f["id"]), String(pai));
+  }
+  const byId = new Map(items.map((i) => [i.id, { ...i, children: [] as MenuItem[] }]));
+  const roots: MenuItem[] = [];
+  for (const item of byId.values()) {
+    const pai = parentOf.get(item.id);
+    const parent = pai && pai !== item.id ? byId.get(pai) : undefined;
+    if (parent) parent.children!.push(item);
+    else roots.push(item);
+  }
+  const clean = (list: MenuItem[]): MenuItem[] =>
+    list
+      .sort((a, b) => a.order - b.order)
+      .map((i) => ({ ...i, children: i.children?.length ? clean(i.children) : undefined }));
+  return clean(roots);
+}
+
+/** Abas da página pai: funções filhas com menu_ativo = false que o perfil pode ler. */
+export function useSubmenuAbas(pathPai: string) {
+  const { usuario, isMaster } = useAuth();
+  const perfilId = usuario ? pick<string | number>(usuario, ["perfil_id", "id_perfil"]) : undefined;
+  const { data: funcoes = [] } = useTableRows("funcoes");
+  const pai = funcoes.find((f) => String(f["path"] ?? "") === pathPai);
+  const paiId = pai ? String(pai["id"]) : "";
+  const filhas = funcoes
+    .filter((f) => paiId && String(f["funcoes_pai_id"] ?? "") === paiId && f["menu_ativo"] === false && asBool(f["status"]))
+    .sort((a, b) => Number(pick(a, ["ordem_hierarquia", "ordem"]) ?? 0) - Number(pick(b, ["ordem_hierarquia", "ordem"]) ?? 0));
+
+  const { data: leitura } = useQuery({
+    queryKey: ["submenu-abas", pathPai, String(perfilId ?? ""), isMaster],
+    enabled: !isMaster && perfilId !== undefined && filhas.length > 0,
+    queryFn: async () => {
+      const { data } = await supabase.from("vw_menu_usuario_perfil").select("*").eq("perfil_id", perfilId as string);
+      return new Set(
+        ((data ?? []) as Row[])
+          .filter((r) => asBool(r["can_read"]))
+          .map((r) => String(pick(r, ["funcao_id", "funcoes_id"]) ?? "")),
+      );
+    },
+  });
+
+  return filhas
+    .filter((f) => isMaster || leitura?.has(String(f["id"])))
+    .map((f) => ({
+      id: String(f["id"]),
+      label: String(pick(f, ["descricao", "nome"], "Aba")),
+      path: String(pick(f, ["path"], "")),
+      icon: String(pick(f, ["icone"], "circle")),
+    }));
 }
