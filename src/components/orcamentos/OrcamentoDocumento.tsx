@@ -1,6 +1,6 @@
 import { rowId } from "@/lib/crud";
 import { formatCpfCnpj, formatPhoneDisplay } from "@/lib/input-masks";
-import { formatBRL, formatDate, formatQtd, modalidadeLabel, modalidadeOf, naturezaOf, num, parcelasFromValue, situacaoOf } from "@/lib/orcamentos";
+import { agruparPorBloco, formatBRL, formatDate, formatQtd, modalidadeLabel, modalidadeOf, naturezaOf, num, parcelasFromValue, situacaoOf } from "@/lib/orcamentos";
 import { pick, type Row } from "@/lib/row";
 
 export type OrcamentoDocumentoProps = {
@@ -85,7 +85,25 @@ export function OrcamentoDocumento({ id, orcamento, linhas, empresa, cliente, ve
   const totalRecorrente =
     num(orcamento["total_recorrente"]) || linhasRec.reduce((s, l) => s + num(l["total_linha"]), 0);
 
-  const tabela = (rows: Row[], mensal: boolean) => (
+  const tabela = (rows: Row[], mensal: boolean) => {
+    const grupos = agruparPorBloco(rows, (l) => String(l["bloco"] ?? ""));
+    if (!grupos.some((g) => g.bloco)) return tabelaSimples(rows, mensal);
+    return (
+      <>
+        {grupos.map((g) => (
+          <div key={g.bloco || "_geral"} className="orc-bloco">
+            <h4 className="orc-grupo">{g.bloco || "Itens gerais"}</h4>
+            {tabelaSimples(g.rows, mensal)}
+            <p className="orc-right orc-detalhe">
+              Subtotal {g.bloco || "itens gerais"}: <strong>{formatBRL(g.rows.reduce((s, l) => s + num(l["total_linha"]), 0))}</strong>
+            </p>
+          </div>
+        ))}
+      </>
+    );
+  };
+
+  const tabelaSimples = (rows: Row[], mensal: boolean) => (
     <table className="orc-tabela">
       <thead>
         <tr>
