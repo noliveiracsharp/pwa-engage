@@ -162,6 +162,8 @@ type Props = {
   /** Abre a pré-visualização/PDF do orçamento em edição. */
   onPreview?: (() => void) | undefined;
   onSave: (input: { header: Row; linhas: LinhaPayload[] }) => void;
+  /** Quando informado (e record = null), abre um novo rascunho copiando esta oferta. */
+  duplicarDe?: { record: Row; linhas: Row[] } | null;
 };
 
 export function OrcamentoSheet({
@@ -179,6 +181,7 @@ export function OrcamentoSheet({
   vendedorPadraoId,
   onPreview,
   onSave,
+  duplicarDe,
 }: Props) {
   const [h, setH] = useState<Header>(() => emptyHeader(vendedorPadraoId ?? ""));
   const [linhas, setLinhas] = useState<Linha[]>([]);
@@ -194,26 +197,51 @@ export function OrcamentoSheet({
       initKey.current = "";
       return;
     }
-    const key = `${recordId}`;
-    const linhasDb = linhasRecord
-      .slice()
-      .sort((a, b) => Number(a["ordem"] ?? 0) - Number(b["ordem"] ?? 0))
-      .map((row) => {
-        const it = itens.find((i) => String(rowId(i)) === String(row["item_id"] ?? ""));
-        return linhaFromRow(row, it?.["tipo"]);
-      });
+    const key = record ? `r:${recordId}` : duplicarDe ? `dup:${String(rowId(duplicarDe.record) ?? "")}` : "novo";
+    const paraLinha = (rows: Row[]) =>
+      rows
+        .slice()
+        .sort((a, b) => Number(a["ordem"] ?? 0) - Number(b["ordem"] ?? 0))
+        .map((row) => {
+          const it = itens.find((i) => String(rowId(i)) === String(row["item_id"] ?? ""));
+          return linhaFromRow(row, it?.["tipo"]);
+        });
+    const linhasDb = paraLinha(linhasRecord);
     if (initKey.current !== key) {
       initKey.current = key;
       dirty.current = false;
-      setH(record ? headerFromRecord(record) : emptyHeader(vendedorPadraoId ?? ""));
-      setLinhas(record ? linhasDb : [novaLinha()]);
+      if (record) {
+        setH(headerFromRecord(record));
+        setLinhas(linhasDb);
+      } else if (duplicarDe) {
+        const hoje = todayISO();
+        const base = headerFromRecord(duplicarDe.record);
+        setH({
+          ...base,
+          situacao: "Em andamento",
+          kanban_etapa_id: "",
+          dt_orcamento: hoje,
+          validade_orcamento: addDaysISO(hoje, VALIDADE_PADRAO_DIAS),
+          primeira_parcela: hoje,
+        });
+        const copia = paraLinha(duplicarDe.linhas).map((l, i) => ({
+          ...l,
+          id: undefined,
+          key: `dup-${i}-${Math.random().toString(36).slice(2)}`,
+        }));
+        setLinhas(copia.length ? copia : [novaLinha()]);
+        dirty.current = true;
+      } else {
+        setH(emptyHeader(vendedorPadraoId ?? ""));
+        setLinhas([novaLinha()]);
+      }
       return;
     }
     if (record && !dirty.current) {
       setLinhas((atual) => (atual.length !== linhasDb.length ? linhasDb : atual));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, record, recordId, linhasRecord, vendedorPadraoId]);
+  }, [open, record, recordId, linhasRecord, vendedorPadraoId, duplicarDe]);
 
   const kanbanNomeIdRecord = record?.["kanban_nome_id"] ? String(record["kanban_nome_id"]) : null;
   const { data: etapas = [] } = useQuery({
