@@ -22,6 +22,7 @@ import {
 import { SearchSelect, type SearchOption } from "@/components/data-table/SearchSelect";
 import { OrcamentoLinhas } from "@/components/orcamentos/OrcamentoLinhas";
 import { OrcamentoTotais } from "@/components/orcamentos/OrcamentoTotais";
+import { OrcamentoComissoes } from "@/components/orcamentos/OrcamentoComissoes";
 import {
   OrcamentoPagamento,
   type PagamentoState,
@@ -382,6 +383,14 @@ export function OrcamentoSheet({
       }),
     [calcsImplantacao, h.desconto_tipo, h.desconto, h.frete, h.valores_adicionais],
   );
+  // Comissões: desconto comercial rateado nas linhas de implantação.
+  const linhasComissao = useMemo(() => {
+    const fator = totais.total_itens > 0 ? (totais.total_itens - totais.desconto_valor) / totais.total_itens : 1;
+    return calcs.map((c, i) => {
+      const natureza = linhasValidas[i]!.natureza;
+      return { natureza, venda: natureza === "recorrente" ? c.total_linha : c.total_linha * fator, compra: c.custo_total };
+    });
+  }, [calcs, linhasValidas, totais.total_itens, totais.desconto_valor]);
   const avista = calcAvista(totais.total_liquido, h.desconto_avista_tipo, h.desconto_avista);
   const ehAvista = h.modalidade === "avista";
   const ehComodato = h.modalidade === "comodato";
@@ -661,6 +670,14 @@ export function OrcamentoSheet({
             acrescimoJuros={acrescimoJuros}
             descontoAvista={ehAvista ? avista.desconto_valor : 0}
             onChange={(patch) => patchHeader(patch)}
+          />
+
+          {/* ------------- memória de cálculo e comissões ------------- */}
+          <OrcamentoComissoes
+            linhas={linhasComissao}
+            orcamentoId={record ? String(rowId(record) ?? "") || undefined : undefined}
+            vendedorId={h.usuario_id || undefined}
+            usuarios={vendedores}
           />
 
           {/* ------------- modalidade e serviços recorrentes ------------- */}
