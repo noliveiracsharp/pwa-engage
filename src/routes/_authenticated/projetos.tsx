@@ -320,20 +320,32 @@ function Painel({ d, perms, espacoId, onOpen }: { d: D; perms: Perms; espacoId: 
 }
 
 function ProjetoDialog({ d, espacoId, original, onClose }: { d: D; espacoId: string | null; original: Row | null; onClose: () => void }) {
-  const espacoProj = original ? (original["espaco_id"] ? String(original["espaco_id"]) : null) : espacoId;
-  const statusLista = statusDoEspaco(d, espacoProj);
+  const inicialEsp = original ? (original["espaco_id"] ? String(original["espaco_id"]) : "") : (espacoId ?? "");
+  const [espSel, setEspSel] = useState<string>(inicialEsp);
+  const statusLista = statusDoEspaco(d, espSel || null);
   const [templateId, setTemplateId] = useState("none");
   const qc = useQueryClient();
   const { stamp } = useAudit();
   const [f, setF] = useState<Row>(original ? { ...original } : {});
   const set = (k: string, v: unknown) => setF((x) => ({ ...x, [k]: v }));
   const clientes = d.parceiros.filter((p) => p["is_cliente"] !== false);
+  const espacoOpts = d.espacos.map((e) => {
+    const nomes = cadeiaEspaco(d.espacos, String(rowId(e))).reverse()
+      .map((id) => String(d.espacos.find((x) => String(rowId(x)) === id)?.["nome"] ?? ""));
+    return { value: String(rowId(e)), label: nomes.join(" › ") };
+  }).sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
+  function trocarEspaco(v: string) {
+    setEspSel(v);
+    const novos = statusDoEspaco(d, v || null);
+    if (!novos.some((s) => String(rowId(s)) === String(f[d.pc.status] ?? ""))) set(d.pc.status, "");
+  }
 
   async function salvar() {
     if (!String(f[d.pc.nome] ?? "").trim()) { toast.error("Informe o nome do projeto."); return; }
+    if (!espSel) { toast.error("Escolha o espaço do projeto."); return; }
     const v: Row = { [d.pc.nome]: f[d.pc.nome], [d.pc.status]: f[d.pc.status] || null, [d.pc.parceiro]: f[d.pc.parceiro] || null, [d.pc.ini]: f[d.pc.ini] || null, [d.pc.fim]: f[d.pc.fim] || null };
     if (d.pc.descricao !== d.pc.nome) v[d.pc.descricao] = f[d.pc.descricao] ?? null;
-    if (!original) v["espaco_id"] = espacoId;
+    v["espaco_id"] = espSel;
     const payload = filterPayload(stamp(v, !original), d.pCols);
     if (original) {
       const { error } = await supabase.from("projetos").update(payload as never).eq(idColumn(original), rowId(original) as never);
@@ -361,6 +373,10 @@ function ProjetoDialog({ d, espacoId, original, onClose }: { d: D; espacoId: str
         </DialogHeader>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1 sm:col-span-2"><Label>Nome</Label><Input value={String(f[d.pc.nome] ?? "")} onChange={(e) => set(d.pc.nome, e.target.value)} /></div>
+          <div className="space-y-1 sm:col-span-2">
+            <Label>Espaço *</Label>
+            <SearchSelect value={espSel} onChange={(v) => trocarEspaco(v)} placeholder="Selecione o espaço" options={espacoOpts} />
+          </div>
           <div className="space-y-1 sm:col-span-2">
             <Label>Cliente</Label>
             <SearchSelect value={String(f[d.pc.parceiro] ?? "")} onChange={(v) => set(d.pc.parceiro, v)} allowClear placeholder="Selecione o cliente"
