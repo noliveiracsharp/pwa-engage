@@ -378,6 +378,15 @@
   text-transform: uppercase;
   letter-spacing: 0.03em;
 }
+.orc-amb { margin: 18px 0; border: 1px solid #cfe0ec; border-radius: 10px; overflow: hidden; break-inside: avoid; page-break-inside: avoid; }
+.orc-amb-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 14px; background: #e6f4f8; border-left: 5px solid #0e7490; }
+.orc-amb-head strong { display: block; font-size: 14px; color: #0f3b5c; }
+.orc-amb-idx { display: block; font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em; color: #0e7490; font-weight: 700; }
+.orc-amb-qtd { font-size: 10px; font-weight: 600; color: #0e7490; background: #fff; border: 1px solid #b6d9e4; border-radius: 999px; padding: 2px 10px; white-space: nowrap; }
+.orc-amb .orc-tabela { margin: 0; border-radius: 0; }
+.orc-amb-foot { display: flex; justify-content: space-between; align-items: center; padding: 9px 14px; background: #0f3b5c; color: #fff; font-size: 12px; font-variant-numeric: tabular-nums; }
+.orc-amb-foot strong { font-size: 14px; }
+.orc-amb, .orc-amb * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 .orc-totais-rec {
   margin: 10px 0 0 auto;
   max-width: 420px;
