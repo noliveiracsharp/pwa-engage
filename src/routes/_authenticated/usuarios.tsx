@@ -24,7 +24,7 @@ import {
 import { pick, type Row } from "@/lib/row";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { useSubmenuAbas } from "@/hooks/useMenu";
-import { formatCpfCnpj, matchesAny } from "@/lib/input-masks";
+import { formatCpfCnpj, formatPhoneDisplay, matchesAny } from "@/lib/input-masks";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PasswordFields } from "@/components/usuarios/PasswordFields";
 import { PerfisTab } from "@/components/usuarios/PerfisTab";
