@@ -30,6 +30,8 @@ const FALLBACK: MenuItem[] = [
   { id: "relatorios", label: "Relatórios", path: "/relatorios", icon: "bar-chart-3", order: 14 },
 ];
 
+// Perfil sem nenhuma permissão: apenas o Dashboard (nunca liberar tudo).
+const DASHBOARD_ONLY: MenuItem[] = [FALLBACK[0]!];
 
 function asBool(v: unknown, fallback = true): boolean {
   if (v === undefined || v === null) return fallback;
@@ -82,7 +84,7 @@ export function useMenu() {
         .select("*")
         .eq("perfil_id", perfilId as string)
         .order("ordem_hierarquia");
-      if (error || !data || data.length === 0) return FALLBACK;
+      if (error || !data || data.length === 0) return DASHBOARD_ONLY;
 
       // Menu lateral: somente funcao_status = true e menu_ativo = true (da view, com fallback na tabela funcoes).
       const rows = (data as Row[]).filter((row) => {
@@ -102,7 +104,7 @@ export function useMenu() {
         return true;
       });
 
-      return unique.length > 0 ? unique : FALLBACK;
+      return unique.length > 0 ? unique : DASHBOARD_ONLY;
     },
   });
   // Itens com menu_ativo = false são abas dentro da página pai, não aparecem no menu lateral.

@@ -5,8 +5,8 @@ import { isPerfilMaster } from "@/hooks/useAuth";
 /** Paths that every authenticated user may open, regardless of menu grants. */
 const ALWAYS_ALLOWED = ["/dashboard", "/meus-dados"];
 
-/** Same fallback used by the sidebar when the view returns nothing. */
-const FALLBACK_PATHS = [
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const _LEGACY_PATHS = [
   "/dashboard",
   "/empresas",
   "/pessoas",
@@ -47,7 +47,7 @@ export async function getAllowedPaths(userId: string, email?: string): Promise<s
       const byEmail = await supabase.from("usuarios").select("*").eq("email", email).maybeSingle();
       usuario = (byEmail.data as Row) ?? null;
     }
-    if (!usuario) return null;
+    if (!usuario) return [...ALWAYS_ALLOWED];
 
     const perfilId = pick<string | number>(usuario, ["perfil_id", "id_perfil"]);
     // Master (perfil.ordem = 0): acesso total a todas as rotas.
@@ -61,14 +61,14 @@ export async function getAllowedPaths(userId: string, email?: string): Promise<s
       .select("*")
       .eq("perfil_id", perfilId as string)
       .order("ordem_hierarquia");
-    if (error) return null;
+    if (error) return [...ALWAYS_ALLOWED];
 
     const rows = ((data ?? []) as Row[]).filter(
       (row) => asBool(row["can_read"]) && asBool(row["funcao_status"]),
     );
     if (rows.length === 0) {
       // View vazia: mesmo comportamento do menu lateral (fallback).
-      return [...new Set([...FALLBACK_PATHS, ...ALWAYS_ALLOWED])];
+      return [...ALWAYS_ALLOWED];
     }
 
     const paths = rows.map((row) =>
@@ -76,7 +76,7 @@ export async function getAllowedPaths(userId: string, email?: string): Promise<s
     );
     return [...new Set([...paths, ...ALWAYS_ALLOWED])];
   } catch {
-    return null;
+    return [...ALWAYS_ALLOWED];
   }
 }
 

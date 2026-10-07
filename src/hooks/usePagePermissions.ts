@@ -42,7 +42,7 @@ export function usePerfilMenuRows() {
         .select("*")
         .eq("perfil_id", perfilId as string)
         .order("ordem_hierarquia");
-      if (error) return null;
+      if (error) return [];
       return (data ?? []) as Row[];
     },
   });
@@ -57,7 +57,7 @@ export function usePagePermissions(path: string) {
   const { data: funcoes = [] } = useTableRows("funcoes");
 
   return useMemo(() => {
-    const unrestricted = viewRows === null || (viewRows !== undefined && viewRows.length === 0);
+    const unrestricted = viewRows === null; // somente Master
     const byFuncao = new Map<string, Row>();
     for (const r of viewRows ?? []) byFuncao.set(String(pick(r, ["funcao_id", "funcoes_id"]) ?? ""), r);
 
