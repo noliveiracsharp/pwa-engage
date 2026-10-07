@@ -359,6 +359,7 @@ function UsuariosPage() {
       { fields: ["nome"], label: "Nome", full: true },
       { fields: ["email"], label: "E-mail", type: "email" },
       { fields: ["cpf"], label: "CPF", type: "document" },
+      { fields: ["telefone"], label: "Telefone / WhatsApp", type: "tel" },
       { fields: ["cargo"], label: "Cargo" },
       {
         fields: ["departamento_id"],
@@ -440,6 +441,12 @@ function UsuariosPage() {
       header: "CPF",
       fields: ["cpf"],
       render: (row) => formatCpfCnpj(text(pick(row, ["cpf"]))) || "—",
+    },
+    {
+      key: "telefone",
+      header: "Telefone",
+      fields: ["telefone"],
+      render: (row) => formatPhoneDisplay(text(pick(row, ["telefone"]))) || "—",
     },
     { key: "cargo", header: "Cargo", fields: ["cargo"] },
     {
