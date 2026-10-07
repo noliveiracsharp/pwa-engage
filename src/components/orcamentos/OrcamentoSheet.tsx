@@ -341,9 +341,9 @@ export function OrcamentoSheet({
     dirty.current = true;
     setLinhas((ls) => ls.map((l) => (l.key === key ? aplicarItem(l, itemById.get(itemId)) : l)));
   };
-  const addLinha = () => {
+  const addLinha = (bloco = "") => {
     dirty.current = true;
-    setLinhas((ls) => [...ls, novaLinha()]);
+    setLinhas((ls) => [...ls, { ...novaLinha(), bloco }]);
   };
   const removeLinha = (key: string) => {
     dirty.current = true;
