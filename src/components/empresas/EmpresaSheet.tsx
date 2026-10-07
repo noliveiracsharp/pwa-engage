@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Pencil, Plus, QrCode, Search, Trash2, Unplug } from "lucide-react";
 import { digitsOnly } from "@/lib/input-masks";
@@ -575,13 +575,16 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
             {EMPRESA_FIELDS.filter((field) => field.type !== "photo").map((field) => (
+              <Fragment key={field.key}>
+              {field.key === "inscricao_estadual" && (
+                <div className="border-border mt-2 border-t pt-4 sm:col-span-2">
+                  <h3 className="text-sm font-semibold">Dados fiscais (emissão de notas)</h3>
+                  <p className="text-muted-foreground text-xs">Usados na futura emissão de NF-e e NFS-e.</p>
+                </div>
+              )}
               <div
-                key={field.key}
                 className={field.full || field.type === "tel" ? "min-w-0 sm:col-span-2" : "min-w-0"}
               >
-                {field.key === "inscricao_estadual" && (
-                  <div className="border-border mb-4 mt-2 border-t pt-4 sm:hidden" />
-                )}
                 <Label htmlFor={field.key} className="mb-1.5 block">
                   {field.label}
                 </Label>
@@ -643,6 +646,7 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
                   />
                 )}
               </div>
+              </Fragment>
             ))}
             </div>
             </fieldset>
