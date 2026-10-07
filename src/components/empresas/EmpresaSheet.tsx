@@ -579,10 +579,27 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
                 key={field.key}
                 className={field.full || field.type === "tel" ? "min-w-0 sm:col-span-2" : "min-w-0"}
               >
+                {field.key === "inscricao_estadual" && (
+                  <div className="border-border mb-4 mt-2 border-t pt-4 sm:hidden" />
+                )}
                 <Label htmlFor={field.key} className="mb-1.5 block">
                   {field.label}
                 </Label>
-                {field.type === "boolean" ? (
+                {field.type === "select" ? (
+                  <Select
+                    value={values[field.key] || undefined}
+                    onValueChange={(val) => setValues((c) => ({ ...c, [field.key]: val }))}
+                  >
+                    <SelectTrigger id={field.key}>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {field.options?.map((o) => (
+                        <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : field.type === "boolean" ? (
                   <div className="flex h-10 items-center justify-between gap-3 rounded-md border bg-background px-3 py-2">
                     <span className="text-sm text-muted-foreground">
                       {values[field.key] === "true" ? "Ativo" : "Inativo"}
