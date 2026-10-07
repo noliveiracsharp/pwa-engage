@@ -98,15 +98,31 @@ function ProjetosPage() {
   const d = useProjetoData();
   const { espaco } = Route.useSearch();
   const navigate = useNavigate({ from: "/projetos" });
+  const qc = useQueryClient();
   const espacoId = espaco && d.espacos.some((e) => String(rowId(e)) === espaco) ? espaco : null;
   const [selId, setSelId] = useState<string | null>(null);
   const sel = d.projetos.find((p) => String(rowId(p)) === selId);
   if (sel) return <Detalhe projeto={sel} d={d} perms={perms} onBack={() => setSelId(null)} />;
   const espAtual = espacoId ? d.espacos.find((e) => String(rowId(e)) === espacoId) : undefined;
   const ir = (id: string | null) => navigate({ search: id ? { espaco: id } : {} });
+  async function moverEspaco(projetoId: string, destino: string) {
+    const p = d.projetos.find((x) => String(rowId(x)) === projetoId);
+    if (!p || String(p["espaco_id"] ?? "") === destino) return;
+    const v: Row = { espaco_id: destino };
+    const novos = statusDoEspaco(d, destino);
+    if (!novos.some((s) => String(rowId(s)) === String(p[d.pc.status] ?? ""))) {
+      const primeiro = [...novos].sort((a, b) => Number(a[d.sc.ordem] ?? 0) - Number(b[d.sc.ordem] ?? 0))[0];
+      v[d.pc.status] = primeiro ? rowId(primeiro) : null;
+    }
+    const { error } = await supabase.from("projetos").update(v as never).eq(idColumn(p), rowId(p) as never);
+    if (error) { toast.error(error.message); return; }
+    const nome = String(d.espacos.find((e) => String(rowId(e)) === destino)?.["nome"] ?? "");
+    toast.success(`Projeto "${String(p[d.pc.nome] ?? "")}" movido para ${nome}.`);
+    qc.invalidateQueries({ queryKey: ["table", "projetos"] });
+  }
   return (
     <div className="flex flex-col gap-4 md:flex-row md:items-start">
-      <EspacosSidebar espacos={d.espacos} ativo={espacoId} perms={perms} onSelect={ir} />
+      <EspacosSidebar espacos={d.espacos} ativo={espacoId} perms={perms} onSelect={ir} onMoverProjeto={moverEspaco} />
       <div className="min-w-0 flex-1">
         {espAtual && !espAtual["espaco_pai_id"]
           ? <EspacoDashboard espaco={espAtual} espacos={d.espacos} projetos={d.projetos} tarefas={d.tarefas} status={d.status} pc={d.pc} tc={d.tc} onAcessar={ir} />
@@ -209,7 +225,7 @@ function Painel({ d, perms, espacoId, onOpen }: { d: D; perms: Perms; espacoId: 
                     const pr = progresso(d, id);
                     const cli = d.parceiros.find((x) => String(rowId(x)) === String(p[d.pc.parceiro]));
                     return (
-                      <div key={id} role="button" draggable={modo === "kanban" && perms.canUpdate} onDragStart={() => setArrastando(id)} onDragEnd={() => setArrastando(null)} tabIndex={0} onClick={() => onOpen(id)} onKeyDown={(e) => e.key === "Enter" && onOpen(id)}
+                      <div key={id} role="button" draggable={perms.canUpdate} onDragStart={(e) => { e.dataTransfer.setData("text/projeto-id", id); e.dataTransfer.effectAllowed = "move"; setArrastando(id); }} onDragEnd={() => setArrastando(null)} tabIndex={0} onClick={() => onOpen(id)} onKeyDown={(e) => e.key === "Enter" && onOpen(id)}
                         className="group cursor-pointer space-y-2 rounded-md border border-border bg-background p-3 transition-shadow hover:shadow-md">
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
@@ -320,20 +336,32 @@ function Painel({ d, perms, espacoId, onOpen }: { d: D; perms: Perms; espacoId: 
 }
 
 function ProjetoDialog({ d, espacoId, original, onClose }: { d: D; espacoId: string | null; original: Row | null; onClose: () => void }) {
-  const espacoProj = original ? (original["espaco_id"] ? String(original["espaco_id"]) : null) : espacoId;
-  const statusLista = statusDoEspaco(d, espacoProj);
+  const inicialEsp = original ? (original["espaco_id"] ? String(original["espaco_id"]) : "") : (espacoId ?? "");
+  const [espSel, setEspSel] = useState<string>(inicialEsp);
+  const statusLista = statusDoEspaco(d, espSel || null);
   const [templateId, setTemplateId] = useState("none");
   const qc = useQueryClient();
   const { stamp } = useAudit();
   const [f, setF] = useState<Row>(original ? { ...original } : {});
   const set = (k: string, v: unknown) => setF((x) => ({ ...x, [k]: v }));
   const clientes = d.parceiros.filter((p) => p["is_cliente"] !== false);
+  const espacoOpts = d.espacos.map((e) => {
+    const nomes = cadeiaEspaco(d.espacos, String(rowId(e))).reverse()
+      .map((id) => String(d.espacos.find((x) => String(rowId(x)) === id)?.["nome"] ?? ""));
+    return { value: String(rowId(e)), label: nomes.join(" › ") };
+  }).sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
+  function trocarEspaco(v: string) {
+    setEspSel(v);
+    const novos = statusDoEspaco(d, v || null);
+    if (!novos.some((s) => String(rowId(s)) === String(f[d.pc.status] ?? ""))) set(d.pc.status, "");
+  }
 
   async function salvar() {
     if (!String(f[d.pc.nome] ?? "").trim()) { toast.error("Informe o nome do projeto."); return; }
+    if (!espSel) { toast.error("Escolha o espaço do projeto."); return; }
     const v: Row = { [d.pc.nome]: f[d.pc.nome], [d.pc.status]: f[d.pc.status] || null, [d.pc.parceiro]: f[d.pc.parceiro] || null, [d.pc.ini]: f[d.pc.ini] || null, [d.pc.fim]: f[d.pc.fim] || null };
     if (d.pc.descricao !== d.pc.nome) v[d.pc.descricao] = f[d.pc.descricao] ?? null;
-    if (!original) v["espaco_id"] = espacoId;
+    v["espaco_id"] = espSel;
     const payload = filterPayload(stamp(v, !original), d.pCols);
     if (original) {
       const { error } = await supabase.from("projetos").update(payload as never).eq(idColumn(original), rowId(original) as never);
@@ -361,6 +389,10 @@ function ProjetoDialog({ d, espacoId, original, onClose }: { d: D; espacoId: str
         </DialogHeader>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1 sm:col-span-2"><Label>Nome</Label><Input value={String(f[d.pc.nome] ?? "")} onChange={(e) => set(d.pc.nome, e.target.value)} /></div>
+          <div className="space-y-1 sm:col-span-2">
+            <Label>Espaço *</Label>
+            <SearchSelect value={espSel} onChange={(v) => trocarEspaco(v)} placeholder="Selecione o espaço" options={espacoOpts} />
+          </div>
           <div className="space-y-1 sm:col-span-2">
             <Label>Cliente</Label>
             <SearchSelect value={String(f[d.pc.parceiro] ?? "")} onChange={(v) => set(d.pc.parceiro, v)} allowClear placeholder="Selecione o cliente"

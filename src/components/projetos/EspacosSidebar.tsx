@@ -45,9 +45,10 @@ export function cadeiaEspaco(espacos: Row[], id: string | null): string[] {
   return out;
 }
 
-type Props = { espacos: Row[]; ativo: string | null; onSelect: (id: string | null) => void; perms: Perms };
+type Props = { espacos: Row[]; ativo: string | null; onSelect: (id: string | null) => void; perms: Perms; onMoverProjeto?: (projetoId: string, espacoId: string) => void };
 
-export function EspacosSidebar({ espacos, ativo, onSelect, perms }: Props) {
+export function EspacosSidebar({ espacos, ativo, onSelect, perms, onMoverProjeto }: Props) {
+  const [alvo, setAlvo] = useState<string | null>(null);
   const [abertos, setAbertos] = useState<Set<string>>(new Set());
   const [form, setForm] = useState<{ row: Row | null; pai: string | null } | null>(null);
   const qc = useQueryClient();
@@ -86,7 +87,10 @@ export function EspacosSidebar({ espacos, ativo, onSelect, perms }: Props) {
       return (
         <div key={id}>
           <div
-            className={cn("group flex items-center gap-1 rounded-md py-1 pr-1 text-sm hover:bg-accent", ativo === id && "bg-primary/10 font-semibold text-primary")}
+            className={cn("group flex items-center gap-1 rounded-md py-1 pr-1 text-sm hover:bg-accent", ativo === id && "bg-primary/10 font-semibold text-primary", alvo === id && "ring-2 ring-primary bg-primary/10")}
+            onDragOver={(ev) => { if (onMoverProjeto && ev.dataTransfer.types.includes("text/projeto-id")) { ev.preventDefault(); setAlvo(id); } }}
+            onDragLeave={() => setAlvo((a) => (a === id ? null : a))}
+            onDrop={(ev) => { const pid = ev.dataTransfer.getData("text/projeto-id"); setAlvo(null); if (pid && onMoverProjeto) { ev.preventDefault(); onMoverProjeto(pid, id); } }}
             style={{ paddingLeft: 4 + depth * 14 }}
           >
             <button className="flex h-5 w-5 shrink-0 items-center justify-center text-muted-foreground" aria-label={aberto ? "Recolher" : "Expandir"}
