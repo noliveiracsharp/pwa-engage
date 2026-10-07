@@ -339,7 +339,9 @@ function Painel({ d, perms, espacoId, onOpen }: { d: D; perms: Perms; espacoId: 
 }
 
 function ProjetoDialog({ d, espacoId, original, onClose }: { d: D; espacoId: string | null; original: Row | null; onClose: () => void }) {
-  const inicialEsp = original ? (original["espaco_id"] ? String(original["espaco_id"]) : "") : (espacoId ?? "");
+  const espacosFolha = d.espacos.filter((e) => !d.espacos.some((x) => String(x["espaco_pai_id"] ?? "") === String(rowId(e))));
+  const inicialEspRaw = original ? (original["espaco_id"] ? String(original["espaco_id"]) : "") : (espacoId ?? "");
+  const inicialEsp = espacosFolha.some((e) => String(rowId(e)) === inicialEspRaw) ? inicialEspRaw : "";
   const [espSel, setEspSel] = useState<string>(inicialEsp);
   const statusLista = statusDoEspaco(d, espSel || null);
   const [templateId, setTemplateId] = useState("none");
@@ -348,7 +350,7 @@ function ProjetoDialog({ d, espacoId, original, onClose }: { d: D; espacoId: str
   const [f, setF] = useState<Row>(original ? { ...original } : {});
   const set = (k: string, v: unknown) => setF((x) => ({ ...x, [k]: v }));
   const clientes = d.parceiros.filter((p) => p["is_cliente"] !== false);
-  const espacoOpts = d.espacos.map((e) => {
+  const espacoOpts = espacosFolha.map((e) => {
     const nomes = cadeiaEspaco(d.espacos, String(rowId(e))).reverse()
       .map((id) => String(d.espacos.find((x) => String(rowId(x)) === id)?.["nome"] ?? ""));
     return { value: String(rowId(e)), label: nomes.join(" › ") };
@@ -362,6 +364,7 @@ function ProjetoDialog({ d, espacoId, original, onClose }: { d: D; espacoId: str
   async function salvar() {
     if (!String(f[d.pc.nome] ?? "").trim()) { toast.error("Informe o nome do projeto."); return; }
     if (!espSel) { toast.error("Escolha o espaço do projeto."); return; }
+    if (!String(f[d.pc.parceiro] ?? "").trim()) { toast.error("Escolha o cliente do projeto."); return; }
     const v: Row = { [d.pc.nome]: f[d.pc.nome], [d.pc.status]: f[d.pc.status] || null, [d.pc.parceiro]: f[d.pc.parceiro] || null, [d.pc.ini]: f[d.pc.ini] || null, [d.pc.fim]: f[d.pc.fim] || null };
     if (d.pc.descricao !== d.pc.nome) v[d.pc.descricao] = f[d.pc.descricao] ?? null;
     v["espaco_id"] = espSel;
@@ -397,15 +400,16 @@ function ProjetoDialog({ d, espacoId, original, onClose }: { d: D; espacoId: str
             <SearchSelect value={espSel} onChange={(v) => trocarEspaco(v)} placeholder="Selecione o espaço" options={espacoOpts} />
           </div>
           <div className="space-y-1 sm:col-span-2">
-            <Label>Cliente</Label>
-            <SearchSelect value={String(f[d.pc.parceiro] ?? "")} onChange={(v) => set(d.pc.parceiro, v)} allowClear placeholder="Selecione o cliente"
+            <Label>Cliente *</Label>
+            <SearchSelect value={String(f[d.pc.parceiro] ?? "")} onChange={(v) => set(d.pc.parceiro, v)} placeholder="Selecione o cliente"
               options={clientes.map((c) => ({ value: String(rowId(c)), label: nomePessoa(c) }))} />
           </div>
           <div className="space-y-1 sm:col-span-2">
             <Label>Status</Label>
-            <Select value={String(f[d.pc.status] ?? "")} onValueChange={(v) => set(d.pc.status, v)}>
-              <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+            <Select value={String(f[d.pc.status] ?? "") || "none"} onValueChange={(v) => set(d.pc.status, v === "none" ? "" : v)}>
+              <SelectTrigger><SelectValue placeholder="Sem status" /></SelectTrigger>
               <SelectContent>
+                <SelectItem value="none">Sem status</SelectItem>
                 {[...statusLista].sort((a, b) => Number(a[d.sc.ordem] ?? 0) - Number(b[d.sc.ordem] ?? 0)).map((s) => (
                   <SelectItem key={String(rowId(s))} value={String(rowId(s))}>{String(s[d.sc.nome] ?? "")}</SelectItem>
                 ))}
