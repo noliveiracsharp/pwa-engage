@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Pencil, Plus, QrCode, Search, Trash2, Unplug } from "lucide-react";
 import { digitsOnly } from "@/lib/input-masks";
@@ -25,7 +25,15 @@ import { pick, type Row } from "@/lib/row";
 import { isCompletePhone, isValidCpfCnpj } from "@/lib/input-masks";
 import { formatPhoneDisplay } from "@/lib/input-masks";
 
-type EmpresaField = { key: string; label: string; full?: boolean; type?: "text" | "boolean" | "photo" | "tel" | "document" };
+type EmpresaField = {
+  key: string;
+  label: string;
+  full?: boolean;
+  type?: "text" | "boolean" | "photo" | "tel" | "document" | "select";
+  options?: Array<{ value: string; label: string }>;
+  numeric?: boolean;
+  fiscal?: boolean;
+};
 
 export const EMPRESA_FIELDS: EmpresaField[] = [
   { key: "cnpj_cpf", label: "CNPJ / CPF", type: "document" },
@@ -36,6 +44,36 @@ export const EMPRESA_FIELDS: EmpresaField[] = [
   { key: "telefone2", label: "Telefone 2", type: "tel" },
   { key: "logo", label: "Logo", type: "photo", full: true },
   { key: "titulo", label: "Título exibido", full: true },
+  { key: "inscricao_estadual", label: "Inscrição Estadual (IE)", fiscal: true },
+  { key: "inscricao_municipal", label: "Inscrição Municipal (IM)", fiscal: true },
+  {
+    key: "crt",
+    label: "Regime tributário (CRT)",
+    type: "select",
+    fiscal: true,
+    full: true,
+    options: [
+      { value: "1", label: "1 - Simples Nacional" },
+      { value: "2", label: "2 - Simples Nacional (excesso de sublimite)" },
+      { value: "3", label: "3 - Regime Normal (Presumido/Real)" },
+      { value: "4", label: "4 - MEI" },
+    ],
+  },
+  { key: "codigo_ibge", label: "Código IBGE do município", fiscal: true },
+  {
+    key: "ambiente_fiscal",
+    label: "Ambiente de emissão",
+    type: "select",
+    fiscal: true,
+    options: [
+      { value: "homologacao", label: "Homologação (testes)" },
+      { value: "producao", label: "Produção" },
+    ],
+  },
+  { key: "serie_nfe", label: "Série NF-e", fiscal: true },
+  { key: "numero_nfe_atual", label: "Último número NF-e", fiscal: true, numeric: true },
+  { key: "serie_nfse", label: "Série NFS-e", fiscal: true },
+  { key: "numero_nfse_atual", label: "Último número NFS-e", fiscal: true, numeric: true },
 ];
 
 type ChildColumn = { key: string; label: string; type?: "text" | "boolean" | "select" | "tel" | "icon" | "color"; options?: string[]; optionLabels?: Record<string, string>; showIf?: (d: Record<string, string>) => boolean; required?: boolean };
@@ -499,6 +537,10 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
       if (field.type === "boolean") {
         if (raw === "") continue;
         payload[field.key] = raw === "true";
+      } else if (field.numeric) {
+        payload[field.key] = raw === "" ? null : Number(digitsOnly(raw)) || 0;
+      } else if (field.fiscal) {
+        payload[field.key] = raw.trim() || null;
       } else {
         payload[field.key] = raw;
       }
@@ -533,14 +575,34 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
             {EMPRESA_FIELDS.filter((field) => field.type !== "photo").map((field) => (
+              <Fragment key={field.key}>
+              {field.key === "inscricao_estadual" && (
+                <div className="border-border mt-2 border-t pt-4 sm:col-span-2">
+                  <h3 className="text-sm font-semibold">Dados fiscais (emissão de notas)</h3>
+                  <p className="text-muted-foreground text-xs">Usados na futura emissão de NF-e e NFS-e.</p>
+                </div>
+              )}
               <div
-                key={field.key}
                 className={field.full || field.type === "tel" ? "min-w-0 sm:col-span-2" : "min-w-0"}
               >
                 <Label htmlFor={field.key} className="mb-1.5 block">
                   {field.label}
                 </Label>
-                {field.type === "boolean" ? (
+                {field.type === "select" ? (
+                  <Select
+                    value={values[field.key] ?? ""}
+                    onValueChange={(val) => setValues((c) => ({ ...c, [field.key]: val }))}
+                  >
+                    <SelectTrigger id={field.key}>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {field.options?.map((o) => (
+                        <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : field.type === "boolean" ? (
                   <div className="flex h-10 items-center justify-between gap-3 rounded-md border bg-background px-3 py-2">
                     <span className="text-sm text-muted-foreground">
                       {values[field.key] === "true" ? "Ativo" : "Inativo"}
@@ -584,6 +646,7 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
                   />
                 )}
               </div>
+              </Fragment>
             ))}
             </div>
             </fieldset>
