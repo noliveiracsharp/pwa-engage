@@ -1,5 +1,5 @@
-import { Fragment, useEffect, useRef, useState } from "react";
-import { Check, ChevronUp, Eye, Pencil, Plus, Trash2, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Check, ChevronUp, Eye, MapPin, Pencil, Plus, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -47,7 +47,7 @@ type Props = {
   readOnly?: boolean | undefined;
   onChange: (key: string, patch: Partial<Linha>) => void;
   onSelectItem: (key: string, itemId: string) => void;
-  onAdd: () => void;
+  onAdd: (bloco?: string) => void;
   onRemove: (key: string) => void;
 };
 
@@ -66,6 +66,11 @@ export function OrcamentoLinhas({
 }: Props) {
   const [quickFor, setQuickFor] = useState<string | null>(null);
   const [abertas, setAbertas] = useState<Set<string>>(() => new Set());
+  // Ambientes criados que ainda não têm itens (só existem na tela até receber um item).
+  const [blocosVazios, setBlocosVazios] = useState<string[]>([]);
+  const [criando, setCriando] = useState(false);
+  const [novoNome, setNovoNome] = useState("");
+  const [renomeando, setRenomeando] = useState<{ bloco: string; valor: string } | null>(null);
 
   // Estado da linha no momento em que a edição abriu, usado pelo "Cancelar".
   const linhasRef = useRef(linhas);
@@ -128,12 +133,11 @@ export function OrcamentoLinhas({
   const itemById = new Map(itens.map((item) => [String(rowId(item) ?? ""), item]));
   const marcaById = new Map(marcas.map((marca) => [String(rowId(marca) ?? ""), marca]));
   const unidadeById = new Map(unidadeOptions.map((o) => [o.value, o.label]));
-  const temBlocos = linhas.some((l) => l.bloco.trim());
-  const grupos = agruparPorBloco(linhas, (l) => l.bloco);
+  const grupos = agruparPorBloco(linhas, (l) => l.bloco.trim());
   const blocosUsados = grupos.map((g) => g.bloco).filter(Boolean);
   const ordenadas = grupos.flatMap((g) => g.rows);
-  const primeiraDoGrupo = new Map(grupos.map((g) => [g.rows[0]!.key, g]));
-  const numero = new Map(linhas.map((l, i) => [l.key, i]));
+  const numero = new Map(ordenadas.map((l, i) => [l.key, i]));
+  const todosBlocos = [...blocosUsados, ...blocosVazios.filter((b) => !blocosUsados.includes(b))];
 
   const renderLinha = (l: Linha, index: number) => {
             const c = calcLinha(l);
@@ -231,16 +235,26 @@ export function OrcamentoLinhas({
                             ))}
                           </SelectContent>
                         </Select>
-                        <Label htmlFor={`bloco-${l.key}`} className="ml-2 text-xs font-medium">Bloco / ambiente</Label>
-                        <Input
-                          id={`bloco-${l.key}`}
-                          className="h-8 w-56 text-xs"
-                          list="orc-blocos"
-                          placeholder="Opcional (ex.: Frente do condomínio)"
-                          value={l.bloco}
-                          disabled={Boolean(readOnly)}
-                          onChange={(e) => onChange(l.key, { bloco: e.target.value })}
-                        />
+                        {todosBlocos.length > 0 && (
+                          <>
+                            <Label className="ml-2 text-xs font-medium">Ambiente</Label>
+                            <Select
+                              value={l.bloco.trim() || NONE}
+                              onValueChange={(v) => onChange(l.key, { bloco: v === NONE ? "" : v })}
+                              disabled={Boolean(readOnly)}
+                            >
+                              <SelectTrigger className="h-8 w-56 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value={NONE}>Itens gerais</SelectItem>
+                                {todosBlocos.map((b) => (
+                                  <SelectItem key={b} value={b}>{b}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </>
+                        )}
                       </div>
                     </div>
                     <div className="flex shrink-0 gap-0.5">
@@ -451,62 +465,163 @@ export function OrcamentoLinhas({
             );
   };
 
+  // Ambientes exibidos: os usados nas linhas + os criados ainda vazios.
+  const vaziosVisiveis = blocosVazios.filter((b) => !blocosUsados.includes(b));
+  const secoes: Array<{ bloco: string; rows: Linha[] }> = [
+    ...grupos.filter((g) => g.bloco !== ""),
+    ...vaziosVisiveis.map((b) => ({ bloco: b, rows: [] as Linha[] })),
+  ];
+  const gerais = grupos.find((g) => g.bloco === "")?.rows ?? [];
+  const todosBlocos = secoes.map((s) => s.bloco);
+
+  const criarAmbiente = () => {
+    const nome = novoNome.trim();
+    if (!nome) return;
+    if (!todosBlocos.some((b) => b.toLowerCase() === nome.toLowerCase())) {
+      setBlocosVazios((prev) => [...prev, nome]);
+    }
+    setNovoNome("");
+    setCriando(false);
+  };
+
+  const renomear = (antigo: string) => {
+    const nome = (renomeando?.valor ?? "").trim();
+    setRenomeando(null);
+    if (!nome || nome === antigo) return;
+    for (const l of linhasRef.current) if (l.bloco.trim() === antigo) onChange(l.key, { bloco: nome });
+    setBlocosVazios((prev) => prev.map((b) => (b === antigo ? nome : b)));
+  };
+
+  const excluirAmbiente = (bloco: string, rows: Linha[]) => {
+    if (rows.length > 0 && !window.confirm(`Excluir o ambiente "${bloco}"? Os ${rows.length} item(ns) irão para "Itens gerais".`)) return;
+    for (const l of rows) onChange(l.key, { bloco: "" });
+    setBlocosVazios((prev) => prev.filter((b) => b !== bloco));
+  };
+
+  const cabecalhoTabela = (
+    <div className={cn("text-muted-foreground bg-muted/40 hidden border-b px-3 py-2 text-xs font-medium", GRID)}>
+      <span>#</span>
+      <span>Item</span>
+      <span className="text-right">Qtd</span>
+      <span className="text-right">Unitário</span>
+      <span className="text-right">Total</span>
+      <span className="text-right">Ações</span>
+    </div>
+  );
+
+  const renderSecao = (bloco: string, rows: Linha[]) => {
+    const subtotal = rows.reduce((s, x) => s + calcLinha(x).total_linha, 0);
+    const editandoNome = renomeando?.bloco === bloco && bloco !== "";
+    return (
+      <div key={bloco || "__geral__"} className="overflow-hidden rounded-lg border">
+        <div className="bg-muted/60 flex flex-wrap items-center gap-2 border-b px-3 py-2">
+          {editandoNome ? (
+            <Input
+              autoFocus
+              className="h-8 max-w-xs text-sm"
+              value={renomeando!.valor}
+              onChange={(e) => setRenomeando({ bloco, valor: e.target.value })}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") { e.preventDefault(); renomear(bloco); }
+                if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); setRenomeando(null); }
+              }}
+              onBlur={() => renomear(bloco)}
+            />
+          ) : (
+            <span className="text-sm font-semibold">
+              {bloco ? <><MapPin className="text-primary mr-1 inline h-4 w-4 align-text-bottom" />{bloco}</> : "Itens gerais"}{" "}
+              <span className="text-muted-foreground text-xs font-normal">({rows.length})</span>
+            </span>
+          )}
+          {!readOnly && bloco && !editandoNome && (
+            <>
+              <Button type="button" variant="ghost" size="icon" className="h-7 w-7" title="Renomear ambiente" aria-label="Renomear ambiente" onClick={() => setRenomeando({ bloco, valor: bloco })}>
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+              <Button type="button" variant="ghost" size="icon" className="h-7 w-7" title="Excluir ambiente" aria-label="Excluir ambiente" onClick={() => excluirAmbiente(bloco, rows)}>
+                <Trash2 className="text-destructive h-3.5 w-3.5" />
+              </Button>
+            </>
+          )}
+          <span className="ml-auto text-sm font-semibold tabular-nums">Subtotal: {formatBRL(subtotal)}</span>
+        </div>
+        {rows.length > 0 && cabecalhoTabela}
+        {rows.length === 0 && (
+          <p className="text-muted-foreground p-4 text-center text-xs">Nenhum item neste ambiente ainda.</p>
+        )}
+        {rows.map((l) => renderLinha(l, numero.get(l.key) ?? 0))}
+        {!readOnly && (
+          <div className="border-t p-2">
+            <Button type="button" variant="ghost" size="sm" className="text-primary w-full" onClick={() => onAdd(bloco)}>
+              <Plus className="mr-1 h-4 w-4" /> Adicionar item {bloco ? `em "${bloco}"` : "geral"}
+            </Button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h3 className="text-sm font-semibold">
           Itens da oferta{" "}
           {linhas.length > 0 && (
             <span className="text-muted-foreground font-normal">({linhas.length})</span>
           )}
         </h3>
+        {!readOnly && !criando && (
+          <Button type="button" variant="outline" size="sm" onClick={() => setCriando(true)}>
+            <MapPin className="mr-1 h-4 w-4" /> Novo ambiente / bloco
+          </Button>
+        )}
       </div>
 
-      {linhas.length === 0 && (
-        <div className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm">
-          Nenhum item adicionado. {readOnly ? "" : "Use o botão abaixo para começar."}
+      {!readOnly && criando && (
+        <div className="bg-muted/30 flex flex-wrap items-center gap-2 rounded-lg border border-dashed p-3">
+          <Input
+            autoFocus
+            className="h-9 max-w-sm flex-1"
+            placeholder="Nome do ambiente (ex.: Frente do condomínio)"
+            value={novoNome}
+            onChange={(e) => setNovoNome(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") { e.preventDefault(); criarAmbiente(); }
+              if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); setCriando(false); setNovoNome(""); }
+            }}
+          />
+          <Button type="button" size="sm" onClick={criarAmbiente} disabled={!novoNome.trim()}>
+            <Check className="mr-1 h-4 w-4" /> Criar
+          </Button>
+          <Button type="button" variant="ghost" size="sm" onClick={() => { setCriando(false); setNovoNome(""); }}>
+            Cancelar
+          </Button>
         </div>
       )}
 
-      {linhas.length > 0 && (
-        <div className="overflow-hidden rounded-lg border">
-          {/* Cabeçalho da tabela (somente desktop) */}
-          <div
-            className={cn(
-              "text-muted-foreground bg-muted/40 hidden border-b px-3 py-2 text-xs font-medium",
-              GRID,
+      {secoes.map((s) => renderSecao(s.bloco, s.rows))}
+
+      {(gerais.length > 0 || secoes.length === 0) && (
+        linhas.length === 0 && secoes.length === 0 ? (
+          <>
+            <div className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm">
+              Nenhum item adicionado. {readOnly ? "" : "Crie um ambiente ou adicione itens gerais."}
+            </div>
+            {!readOnly && (
+              <Button type="button" variant="outline" className="w-full" onClick={() => onAdd("")}>
+                <Plus className="mr-1 h-4 w-4" /> Adicionar item geral
+              </Button>
             )}
-          >
-            <span>#</span>
-            <span>Item</span>
-            <span className="text-right">Qtd</span>
-            <span className="text-right">Unitário</span>
-            <span className="text-right">Total</span>
-            <span className="text-right">Ações</span>
-          </div>
-
-          {ordenadas.map((l) => {
-            const index = numero.get(l.key) ?? 0;
-            const grupo = temBlocos ? primeiraDoGrupo.get(l.key) : undefined;
-            const cabecalho = grupo ? (
-              <div className="bg-muted/60 flex items-center justify-between border-b px-3 py-1.5 text-xs font-semibold">
-                <span>{grupo.bloco || "Itens gerais"} <span className="text-muted-foreground font-normal">({grupo.rows.length})</span></span>
-                <span className="tabular-nums">{formatBRL(grupo.rows.reduce((s, x) => s + calcLinha(x).total_linha, 0))}</span>
-              </div>
-            ) : null;
-            return <Fragment key={l.key}>{cabecalho}{renderLinha(l, index)}</Fragment>;
-          })}
-        </div>
+          </>
+        ) : (
+          renderSecao("", gerais)
+        )
       )}
-
-      {!readOnly && (
-        <Button type="button" variant="outline" className="w-full" onClick={onAdd}>
-          <Plus className="mr-1 h-4 w-4" /> Adicionar item
+      {!readOnly && gerais.length === 0 && secoes.length > 0 && (
+        <Button type="button" variant="ghost" size="sm" className="text-muted-foreground w-full" onClick={() => onAdd("")}>
+          <Plus className="mr-1 h-4 w-4" /> Adicionar item geral (sem ambiente)
         </Button>
       )}
-      <datalist id="orc-blocos">
-        {blocosUsados.map((b) => <option key={b} value={b} />)}
-      </datalist>
       <QuickItemDialog
         open={quickFor !== null}
         onOpenChange={(o) => !o && setQuickFor(null)}
