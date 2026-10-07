@@ -285,7 +285,7 @@ function EstoquePage() {
         saving={saveLocal.isPending}
         readOnly={localRec ? !perms.canUpdate : !perms.canCreate}
         onSave={(values) => {
-          if (!String(values["descricao"] ?? "").trim()) return toast.error("Informe a descrição.");
+          if (!String(values["descricao"] ?? "").trim()) { toast.error("Informe a descrição."); return; }
           const payload = localRec ? values : { tipo: "Almoxarifado", status: true, ...values };
           saveLocal.mutate(
             { values: stamp(payload, !localRec), original: localRec },
@@ -329,13 +329,13 @@ function MovimentacaoSheet({ open, onOpenChange, produtos, locais, saldos }: Mov
 
   const submit = () => {
     const q = Number(v.quantidade.replace(",", "."));
-    if (!v.item_id) return toast.error("Selecione o produto.");
-    if (!(q > 0)) return toast.error("Informe uma quantidade maior que zero.");
-    if (t.origem && !v.origem) return toast.error("Selecione o local de origem.");
-    if (t.destino && !v.destino) return toast.error("Selecione o local de destino.");
-    if (t.origem && t.destino && v.origem === v.destino) return toast.error("Origem e destino devem ser diferentes.");
+    if (!v.item_id) { toast.error("Selecione o produto."); return; }
+    if (!(q > 0)) { toast.error("Informe uma quantidade maior que zero."); return; }
+    if (t.origem && !v.origem) { toast.error("Selecione o local de origem."); return; }
+    if (t.destino && !v.destino) { toast.error("Selecione o local de destino."); return; }
+    if (t.origem && t.destino && v.origem === v.destino) { toast.error("Origem e destino devem ser diferentes."); return; }
     if (t.origem && disponivel !== null && q > disponivel)
-      return toast.error(`Saldo insuficiente na origem (disponível: ${qtd(disponivel)}).`);
+      { toast.error(`Saldo insuficiente na origem (disponível: ${qtd(disponivel)}).`); return; }
     const item = produtos.find((i) => String(rowId(i)) === v.item_id);
     const custo = v.custo ? Number(v.custo.replace(",", ".")) : Number(item?.["preco_custo"] ?? 0) || null;
     save.mutate(

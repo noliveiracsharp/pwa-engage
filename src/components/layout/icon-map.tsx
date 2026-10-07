@@ -46,6 +46,7 @@ const ALIASES: Record<string, string> = {
   configuracoes: "Settings",
   orcamento: "FileText",
   orcamentos: "FileText",
+  estoque: "Warehouse",
 };
 
 type IconComponent = ElementType;
