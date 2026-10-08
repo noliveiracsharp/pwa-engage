@@ -71,6 +71,9 @@ function WidgetPage() {
     const p = new URLSearchParams(window.location.search);
     const d = { nome: p.get("nome") || "", telefone: p.get("telefone") || "", email: p.get("email") || "" };
     if (d.nome) setIdent(d);
+    if (d.nome) setNome(d.nome);
+    if (d.email) setEmail(d.email);
+    if (d.telefone) setTelefone(d.telefone);
     const onMsg = (e: MessageEvent) => {
       const m = e.data as { tipo?: string; dados?: { nome?: string; telefone?: string; email?: string } };
       if (m?.tipo === "atendeai-identificar" && m.dados?.nome) setIdent({ nome: m.dados.nome, telefone: m.dados.telefone || "", email: m.dados.email || "" });
@@ -146,6 +149,7 @@ function WidgetPage() {
           </div>
           <p className="mt-2 text-xs font-medium text-muted-foreground">Para começar, informe seus dados:</p>
           <input className={campo} placeholder="Seu nome" value={nome} onChange={(e) => setNome(e.target.value)} />
+          <input className={campo} type="email" placeholder="Seu e-mail" value={email} onChange={(e) => setEmail(e.target.value)} />
           {cfg?.pedir_telefone !== false && (
             <input className={campo} inputMode="tel" placeholder="WhatsApp com DDD" value={telefone} onChange={(e) => setTelefone(e.target.value)} />
           )}
