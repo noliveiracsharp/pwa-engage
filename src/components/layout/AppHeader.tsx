@@ -1,6 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { LogOut, Menu, Moon, Sun, User } from "lucide-react";
+import { LogOut, Menu, Moon, RotateCw, Sun, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -30,6 +30,7 @@ export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) 
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [meusDados, setMeusDados] = useState(false);
+  const [recarregando, setRecarregando] = useState(false);
 
   const ativa = useEmpresaAtiva();
   const nome = pick<string>(usuario, ["nome", "nome_completo", "usuario_nome"], user?.email ?? "Usuário");
@@ -83,6 +84,33 @@ export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) 
             </SelectContent>
           </Select>
         )}
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Recarregar aplicação"
+          title="Recarregar aplicação (Ctrl+F5)"
+          disabled={recarregando}
+          onClick={async () => {
+            setRecarregando(true);
+            try {
+              queryClient.clear();
+              if ("caches" in window) {
+                const nomes = await caches.keys();
+                await Promise.allSettled(nomes.map((n) => caches.delete(n)));
+              }
+              if ("serviceWorker" in navigator) {
+                const regs = await navigator.serviceWorker.getRegistrations();
+                await Promise.allSettled(regs.map((r) => r.update()));
+              }
+            } finally {
+              const url = new URL(window.location.href);
+              url.searchParams.set("_r", String(Date.now()));
+              window.location.replace(url.toString());
+            }
+          }}
+        >
+          <RotateCw className={`h-5 w-5 ${recarregando ? "animate-spin" : ""}`} />
+        </Button>
         <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Alternar tema">
           {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
         </Button>
