@@ -22,6 +22,7 @@ import { IconPicker } from "@/components/data-table/IconPicker";
 import { getIcon } from "@/components/layout/icon-map";
 import { supabase } from "@/integrations/supabase/client";
 import { idColumn, text } from "@/lib/crud";
+import { SortableList, useSortableRow, salvarOrdem, proximaOrdem } from "@/lib/reorder";
 import { pick, type Row } from "@/lib/row";
 import { isCompletePhone, isValidCpfCnpj } from "@/lib/input-masks";
 import { formatPhoneDisplay } from "@/lib/input-masks";
@@ -85,7 +86,20 @@ type ChildConfig = {
   title: string;
   empty: string;
   columns: ChildColumn[];
+  /** Quando true, as linhas são ordenadas por `ordem` e podem ser reordenadas arrastando. */
+  sortable?: boolean;
 };
+
+/** Linha arrastável: aplica ref/estilo do dnd-kit e exibe a alça à esquerda. */
+function SortableRowWrap({ rowId, disabled, children }: { rowId: string; disabled: boolean; children: React.ReactNode }) {
+  const { setNodeRef, style, handle } = useSortableRow(rowId, disabled);
+  return (
+    <div ref={setNodeRef} style={style} className="flex items-center gap-1">
+      {handle}
+      <div className="min-w-0 flex-1">{children}</div>
+    </div>
+  );
+}
 
 const notChat = (d: Record<string, string>) => d["tipo"] !== "chat";
 
@@ -120,6 +134,7 @@ const CAMPOS: ChildConfig = {
   table: "empresas_camposperson",
   title: "Campos personalizados",
   empty: "Nenhum campo personalizado.",
+  sortable: true,
   columns: [
     { key: "label", label: "Label (exibido na tela)", required: true },
     { key: "chave", label: "Chave técnica (ex: matricula_convenio)", required: true },
@@ -131,7 +146,6 @@ const CAMPOS: ChildConfig = {
       optionLabels: { texto: "Texto", select: "Seleção (lista)", checkbox: "Checkbox (sim/não)", radio: "Radio button" },
     },
     { key: "valor", label: "Valor padrão / opções separadas por vírgula" },
-    { key: "ordem", label: "Ordem", numeric: true },
   ],
 };
 
@@ -186,6 +200,23 @@ export function ChildTable({ config, empresa, perms = FULL }: { config: ChildCon
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["child", config.table, text(empresaId)] });
 
+  const ordered = config.sortable
+    ? [...rows].sort((a, b) => (Number(a["ordem"]) || 0) - (Number(b["ordem"]) || 0))
+    : rows;
+
+  const reorder = async (next: Row[]) => {
+    queryClient.setQueryData(
+      ["child", config.table, text(empresaId)],
+      next.map((r, i) => ({ ...r, ordem: i })),
+    );
+    try {
+      await salvarOrdem(config.table, next);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível salvar a nova ordem.");
+      refresh();
+    }
+  };
+
   const resetForm = () => {
     setDraft({});
     setEditing(null);
@@ -222,6 +253,7 @@ export function ChildTable({ config, empresa, perms = FULL }: { config: ChildCon
       payload[col.key] = col.type === "boolean" ? value === "true" : col.numeric ? (value === "" ? 0 : Number(value) || 0) : value;
     }
     if (isChat) payload["status_conexao"] = "conectado";
+    if (config.sortable && !editing) payload["ordem"] = proximaOrdem(rows);
     const editingKey = editing ? idColumn(editing) : undefined;
     const response = editing && editingKey
       ? await supabase.from(config.table).update(payload as never).eq(editingKey, editing[editingKey] as never)
@@ -266,13 +298,15 @@ export function ChildTable({ config, empresa, perms = FULL }: { config: ChildCon
   return (
     <div className="space-y-4">
       <div className="divide-y divide-border rounded-md border border-border">
-        {rows.length === 0 && <p className="p-3 text-sm text-muted-foreground">{config.empty}</p>}
-        {rows.map((row, index) => {
+        {ordered.length === 0 && <p className="p-3 text-sm text-muted-foreground">{config.empty}</p>}
+        {(() => {
+          const list = ordered.map((row, index) => {
           const iconValue = text(pick(row, ["icone"], ""));
           const Icon = getIcon(iconValue);
           const nomeValue = text(pick(row, ["nome"], ""));
-          return (
-            <div key={text(row[idColumn(row)] ?? index)} className="flex items-start gap-3 p-3 text-sm">
+          const rowKey = text(row[idColumn(row)] ?? index);
+          const rowContent = (
+            <div className="flex items-start gap-3 p-3 text-sm">
               <div className="grid min-w-0 flex-1 gap-2">
                 <div className="flex items-center gap-2">
                   {iconValue && <Icon className="h-5 w-5 shrink-0 text-primary" />}
@@ -357,7 +391,22 @@ export function ChildTable({ config, empresa, perms = FULL }: { config: ChildCon
               </div>
             </div>
           );
-        })}
+          return config.sortable ? (
+            <SortableRowWrap key={rowKey} rowId={rowKey} disabled={!perms.canUpdate}>
+              {rowContent}
+            </SortableRowWrap>
+          ) : (
+            <Fragment key={rowKey}>{rowContent}</Fragment>
+          );
+        });
+          return config.sortable ? (
+            <SortableList rows={ordered} onReorder={(next) => void reorder(next)}>
+              {list}
+            </SortableList>
+          ) : (
+            list
+          );
+        })()}
       </div>
 
       {!editing && !adding && perms.canCreate && (
