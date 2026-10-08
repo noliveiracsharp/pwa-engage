@@ -132,7 +132,13 @@ function UsuariosPage() {
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ["table", "usuarios"] });
       queryClient.invalidateQueries({ queryKey: ["table", "usuario_kanban"] });
-      toast.success("Usuário excluído.");
+      const { error: authError } = await supabase.rpc("admin_delete_auth_user" as never, { p_user_id: uid } as never);
+      if (authError) {
+        console.error(authError);
+        toast.warning("Usuário excluído, mas o acesso (login) não foi removido: " + authError.message);
+      } else {
+        toast.success("Usuário e acesso excluídos.");
+      }
       setToDelete(null);
     } catch (e) {
       console.error(e);
@@ -183,8 +189,26 @@ function UsuariosPage() {
       // Ephemeral client: creates the auth access without replacing the
       // session of the user who is currently logged in.
       const authClient = createEphemeralAuthClient();
-      const { data, error } = await authClient.auth.signUp({ email, password });
-      if (error) throw error;
+      let { data, error } = await authClient.auth.signUp({ email, password });
+      if (error && /already registered|already exists/i.test(error.message)) {
+        // Login órfão (sem cadastro em usuarios): remove e tenta de novo.
+        if (rows.some((u) => text(u["email"]).trim().toLowerCase() === email.toLowerCase())) {
+          throw new Error("Este e-mail já pertence a um usuário cadastrado.");
+        }
+        const { data: limpou, error: rpcError } = await supabase.rpc("admin_limpar_auth_orfao" as never, { p_email: email } as never);
+        if (rpcError || !limpou) {
+          throw new Error(
+            "Este e-mail já possui um acesso antigo no sistema e não pôde ser liberado automaticamente. Peça ao administrador para liberar o e-mail.",
+          );
+        }
+        ({ data, error } = await authClient.auth.signUp({ email, password }));
+      }
+      if (error) {
+        if (/already registered|already exists/i.test(error.message)) throw new Error("Este e-mail já está cadastrado.");
+        if (/password/i.test(error.message)) throw new Error("Senha inválida: use pelo menos 6 caracteres.");
+        if (/invalid.*email|email.*invalid/i.test(error.message)) throw new Error("E-mail inválido.");
+        throw error;
+      }
       const uid = data.user?.id;
       if (!uid) throw new Error("Não foi possível criar o acesso do usuário.");
       const rest: Row = { ...values };
