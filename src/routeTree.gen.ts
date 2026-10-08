@@ -39,6 +39,7 @@ import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authentic
 import { Route as AuthenticatedSemAcessoRouteImport } from './routes/_authenticated/sem-acesso'
 import { Route as AuthenticatedUnid_medidaRouteImport } from './routes/_authenticated/unid_medida'
 import { Route as AuthenticatedUsuariosRouteImport } from './routes/_authenticated/usuarios'
+import { Route as ChamadaSalaRouteImport } from './routes/chamada.$sala'
 import { Route as CompartilhadoTokenRouteImport } from './routes/compartilhado.$token'
 import { Route as PropostaTokenRouteImport } from './routes/proposta.$token'
 import { Route as WidgetInstanciaIdRouteImport } from './routes/widget.$instanciaId'
@@ -200,6 +201,11 @@ const AuthenticatedUsuariosRoute = AuthenticatedUsuariosRouteImport.update({
   path: '/usuarios',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ChamadaSalaRoute = ChamadaSalaRouteImport.update({
+  id: '/chamada/$sala',
+  path: '/chamada/$sala',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CompartilhadoTokenRoute = CompartilhadoTokenRouteImport.update({
   id: '/compartilhado/$token',
   path: '/compartilhado/$token',
@@ -276,6 +282,7 @@ export interface FileRoutesByFullPath {
   '/sem-acesso': typeof AuthenticatedSemAcessoRoute
   '/unid_medida': typeof AuthenticatedUnid_medidaRoute
   '/usuarios': typeof AuthenticatedUsuariosRoute
+  '/chamada/$sala': typeof ChamadaSalaRoute
   '/compartilhado/$token': typeof CompartilhadoTokenRoute
   '/proposta/$token': typeof PropostaTokenRoute
   '/widget/$instanciaId': typeof WidgetInstanciaIdRoute
@@ -315,6 +322,7 @@ export interface FileRoutesByTo {
   '/sem-acesso': typeof AuthenticatedSemAcessoRoute
   '/unid_medida': typeof AuthenticatedUnid_medidaRoute
   '/usuarios': typeof AuthenticatedUsuariosRoute
+  '/chamada/$sala': typeof ChamadaSalaRoute
   '/compartilhado/$token': typeof CompartilhadoTokenRoute
   '/proposta/$token': typeof PropostaTokenRoute
   '/widget/$instanciaId': typeof WidgetInstanciaIdRoute
@@ -356,6 +364,7 @@ export interface FileRoutesById {
   '/_authenticated/sem-acesso': typeof AuthenticatedSemAcessoRoute
   '/_authenticated/unid_medida': typeof AuthenticatedUnid_medidaRoute
   '/_authenticated/usuarios': typeof AuthenticatedUsuariosRoute
+  '/chamada/$sala': typeof ChamadaSalaRoute
   '/compartilhado/$token': typeof CompartilhadoTokenRoute
   '/proposta/$token': typeof PropostaTokenRoute
   '/widget/$instanciaId': typeof WidgetInstanciaIdRoute
@@ -397,6 +406,7 @@ export interface FileRouteTypes {
     | '/sem-acesso'
     | '/unid_medida'
     | '/usuarios'
+    | '/chamada/$sala'
     | '/compartilhado/$token'
     | '/proposta/$token'
     | '/widget/$instanciaId'
@@ -436,6 +446,7 @@ export interface FileRouteTypes {
     | '/sem-acesso'
     | '/unid_medida'
     | '/usuarios'
+    | '/chamada/$sala'
     | '/compartilhado/$token'
     | '/proposta/$token'
     | '/widget/$instanciaId'
@@ -476,6 +487,7 @@ export interface FileRouteTypes {
     | '/_authenticated/sem-acesso'
     | '/_authenticated/unid_medida'
     | '/_authenticated/usuarios'
+    | '/chamada/$sala'
     | '/compartilhado/$token'
     | '/proposta/$token'
     | '/widget/$instanciaId'
@@ -494,6 +506,7 @@ export interface RootRouteChildren {
   PortalRoute: typeof PortalRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  ChamadaSalaRoute: typeof ChamadaSalaRoute
   CompartilhadoTokenRoute: typeof CompartilhadoTokenRoute
   PropostaTokenRoute: typeof PropostaTokenRoute
   WidgetInstanciaIdRoute: typeof WidgetInstanciaIdRoute
@@ -711,6 +724,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedUsuariosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/chamada/$sala': {
+      id: '/chamada/$sala'
+      path: '/chamada/$sala'
+      fullPath: '/chamada/$sala'
+      preLoaderRoute: typeof ChamadaSalaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/compartilhado/$token': {
       id: '/compartilhado/$token'
       path: '/compartilhado/$token'
@@ -843,6 +863,7 @@ const rootRouteChildren: RootRouteChildren = {
   PortalRoute: PortalRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  ChamadaSalaRoute: ChamadaSalaRoute,
   CompartilhadoTokenRoute: CompartilhadoTokenRoute,
   PropostaTokenRoute: PropostaTokenRoute,
   WidgetInstanciaIdRoute: WidgetInstanciaIdRoute,
