@@ -135,7 +135,8 @@ export function ChatInterno({ sidebarOpen, onAbrir }: { sidebarOpen: boolean; on
         setNaoLidas((n) => ({ ...n, [chave]: (n[chave] ?? 0) + 1 }));
         setPiscar(true);
         tocarSom("equipe");
-        const txt = String(m["mensagem"] ?? "") || "Enviou um anexo";
+        const bruto = String(m["mensagem"] ?? "");
+        const txt = bruto.startsWith(CONVITE) ? "📞 Está te chamando para uma chamada" : bruto.startsWith(ENCERRADA) ? "Chamada encerrada" : bruto || "Enviou um anexo";
         toast(grupo ? `${nomeAutor} em ${String(grupo["nome"] ?? "Grupo")}` : `Mensagem de ${nomeAutor}`, {
           description: txt.length > 100 ? `${txt.slice(0, 97)}…` : txt,
           duration: 8000,
