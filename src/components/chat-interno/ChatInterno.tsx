@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Check, ArrowLeft, Maximize2, MessageSquare, Minimize2, Paperclip, Search, Send, Users, X, FileText, Loader2 } from "lucide-react";
+import { Plus, Check, ArrowLeft, Maximize2, MessageSquare, Minimize2, Paperclip, Search, Send, Users, X, FileText, Loader2, Phone, Video } from "lucide-react";
+import { ChamadaFlutuante, duracao, novaSala, type Chamada } from "@/components/atendimentos/ChamadaFlutuante";
+
+const CONVITE = "📞CONVITE|";
+const ENCERRADA = "📞 Chamada encerrada";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -131,7 +135,8 @@ export function ChatInterno({ sidebarOpen, onAbrir }: { sidebarOpen: boolean; on
         setNaoLidas((n) => ({ ...n, [chave]: (n[chave] ?? 0) + 1 }));
         setPiscar(true);
         tocarSom("equipe");
-        const txt = String(m["mensagem"] ?? "") || "Enviou um anexo";
+        const bruto = String(m["mensagem"] ?? "");
+        const txt = bruto.startsWith(CONVITE) ? "📞 Está te chamando para uma chamada" : bruto.startsWith(ENCERRADA) ? "Chamada encerrada" : bruto || "Enviou um anexo";
         toast(grupo ? `${nomeAutor} em ${String(grupo["nome"] ?? "Grupo")}` : `Mensagem de ${nomeAutor}`, {
           description: txt.length > 100 ? `${txt.slice(0, 97)}…` : txt,
           duration: 8000,
@@ -381,6 +386,9 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack }: { me: stri
   const [texto, setTexto] = useState("");
   const [enviando, setEnviando] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const { usuario } = useAuth();
+  const meuNome = String(pick(usuario, ["nome"], "Colaborador"));
+  const [chamada, setChamada] = useState<Chamada | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const key = ["chat-interno", canalId];
   const nomes = useMemo(() => new Map(usuarios.map((u) => [String(u["id"]), String(pick(u, ["nome"], "Usuário"))])), [usuarios]);
@@ -461,6 +469,36 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack }: { me: stri
     if (fileRef.current) fileRef.current.value = "";
   };
 
+  const iniciarChamada = async (video: boolean) => {
+    if (!canalId || chamada) return;
+    const sala = novaSala();
+    setChamada({ sala, video, inicio: Date.now(), iniciador: meuNome });
+    await supabase.from(TABLE).insert({
+      empresa_id: empresaId, canal_id: canalId, remetente_id: me,
+      mensagem: `${CONVITE}${sala}|${video ? 1 : 0}`, anexos: [], lida_por: [me],
+    });
+    void qc.invalidateQueries({ queryKey: key });
+  };
+
+  const entrar = (sala: string, video: boolean) => {
+    if (chamada) return;
+    setChamada({ sala, video, inicio: Date.now() });
+  };
+
+  const encerrar = async () => {
+    const c = chamada;
+    setChamada(null);
+    if (!c || !canalId) return;
+    const fim = Date.now();
+    const h = (t: number) => new Date(t).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    await supabase.from(TABLE).insert({
+      empresa_id: empresaId, canal_id: canalId, remetente_id: me,
+      mensagem: `${ENCERRADA}\nInício: ${h(c.inicio)} · Término: ${h(fim)} · Duração: ${duracao(fim - c.inicio)}`,
+      anexos: [], lida_por: [me],
+    });
+    void qc.invalidateQueries({ queryKey: key });
+  };
+
   return (
     <div className="flex min-h-0 flex-1 flex-col animate-in fade-in slide-in-from-right-4">
       <div className="flex items-center gap-2 border-b border-border px-2 py-2">
@@ -471,7 +509,7 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack }: { me: stri
           {sel.tipo === "direto" && <AvatarImage src={String(pick(sel.outro, ["foto"], ""))} alt={nome} />}
           <AvatarFallback>{sel.tipo === "grupo" ? <Users className="h-4 w-4" /> : iniciais(nome)}</AvatarFallback>
         </Avatar>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium">{nome}</p>
           {sel.tipo === "direto" ? (
             <p className={cn("text-xs", isOnline ? "text-success" : "text-muted-foreground")}>{isOnline ? "Online" : "Offline"}</p>
@@ -479,7 +517,14 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack }: { me: stri
             <p className="text-xs text-muted-foreground">Grupo</p>
           )}
         </div>
+        <Button variant="ghost" size="icon" className="h-8 w-8" disabled={!canalId || !!chamada} onClick={() => void iniciarChamada(false)} aria-label="Chamada de áudio">
+          <Phone className="h-4 w-4" />
+        </Button>
+        <Button variant="ghost" size="icon" className="h-8 w-8" disabled={!canalId || !!chamada} onClick={() => void iniciarChamada(true)} aria-label="Chamada de vídeo">
+          <Video className="h-4 w-4" />
+        </Button>
       </div>
+      {chamada && createPortal(<ChamadaFlutuante chamada={chamada} nome={meuNome} titulo={`Chamada · ${nome}`} onEncerrar={() => void encerrar()} />, document.body)}
 
       <ScrollArea className="min-h-0 flex-1">
         <div className="space-y-2 p-3">
@@ -487,6 +532,30 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack }: { me: stri
           {canalId && msgs.length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">Envie a primeira mensagem para {nome}.</p>}
           {msgs.map((m) => {
             const mine = String(m["remetente_id"]) === me;
+            const txt = String(m["mensagem"] ?? "");
+            const autor = mine ? "Você" : (nomes.get(String(m["remetente_id"])) ?? "Usuário");
+            if (txt.startsWith(CONVITE) || txt.startsWith(ENCERRADA)) {
+              const convite = txt.startsWith(CONVITE);
+              const [, sala = "", v = "1"] = txt.split("|");
+              const video = v === "1";
+              return (
+                <div key={String(m["id"])} className="flex justify-center">
+                  <div className="w-full max-w-[85%] rounded-xl border border-border bg-card p-3 text-sm">
+                    <div className="flex items-center gap-2 font-medium">
+                      {convite && video ? <Video className="h-4 w-4 text-primary" /> : <Phone className="h-4 w-4 text-primary" />}
+                      {convite ? `${autor} iniciou uma chamada de ${video ? "vídeo" : "áudio"}` : ENCERRADA.replace("📞 ", "")}
+                      <span className="ml-auto text-[10px] text-muted-foreground">{hora(m["criado_em"])}</span>
+                    </div>
+                    {!convite && <p className="mt-1 text-xs text-muted-foreground">{txt.split("\n").slice(1).join(" ")}</p>}
+                    {convite && !mine && (
+                      <Button size="sm" className="mt-2 w-full" disabled={!!chamada} onClick={() => entrar(sala, video)}>
+                        Entrar na chamada
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              );
+            }
             const anexos = (Array.isArray(m["anexos"]) ? m["anexos"] : []) as Anexo[];
             return (
               <div key={String(m["id"])} className={cn("flex", mine ? "justify-end" : "justify-start")}>
