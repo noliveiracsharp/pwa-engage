@@ -475,14 +475,14 @@ type Props = {
 
 const DEFAULT_SECTIONS = [
   { key: "dados", kind: "dados", label: "Dados", perms: FULL },
-  { key: "instancias", kind: "instancias", label: "Instâncias", perms: FULL },
   { key: "campos", kind: "campos", label: "Campos", perms: FULL },
   { key: "etiquetas", kind: "etiquetas", label: "Etiquetas", perms: FULL },
   { key: "notas", kind: "notas", label: "Notas rápidas", perms: FULL },
 ];
 
 export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sections, readOnly }: Props) {
-  const baseTabs = sections && sections.length > 0 ? sections : DEFAULT_SECTIONS;
+  // Instâncias são geridas na aba "Canais & Instâncias" (/instancias), nunca no formulário.
+  const baseTabs = (sections && sections.length > 0 ? sections : DEFAULT_SECTIONS).filter((t) => t.kind !== "instancias");
   const tabs = [...baseTabs.filter((t) => t.kind === "dados"), ...baseTabs.filter((t) => t.kind !== "dados")];
   const [cnpjLoading, setCnpjLoading] = useState(false);
 
