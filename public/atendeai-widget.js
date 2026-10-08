@@ -35,7 +35,10 @@
   btn.onmouseenter = function () { btn.style.transform = "scale(1.07)"; };
   btn.onmouseleave = function () { btn.style.transform = "scale(1)"; };
   var frame = document.createElement("iframe");
-  frame.src = base + "/widget/" + encodeURIComponent(id);
+  var ident = { nome: s.getAttribute("data-nome") || "", telefone: s.getAttribute("data-telefone") || "", email: s.getAttribute("data-email") || "" };
+  var qs = new URLSearchParams();
+  Object.keys(ident).forEach(function (k) { if (ident[k]) qs.set(k, ident[k]); });
+  frame.src = base + "/widget/" + encodeURIComponent(id) + (qs.toString() ? "?" + qs.toString() : "");
   frame.title = "Chat";
   frame.style.cssText = "position:fixed;bottom:92px;" + lado + ":20px;width:370px;max-width:calc(100vw - 40px);height:560px;max-height:calc(100vh - 120px);border:0;border-radius:16px;box-shadow:0 10px 40px rgba(0,0,0,.3);z-index:2147483647;display:none;background:#fff";
   btn.onclick = function () {
@@ -45,6 +48,13 @@
     btn.style.padding = aberto || !imagem ? "16px" : "0";
   };
   window.addEventListener("message", function (e) { if (e.origin === base && e.data === "atendeai-widget-fechar" && aberto) btn.onclick(); });
+  function enviarIdent() { if (frame.contentWindow) frame.contentWindow.postMessage({ tipo: "atendeai-identificar", dados: ident }, base); }
+  frame.addEventListener("load", enviarIdent);
+  window.AtendeAI = {
+    identify: function (d) { d = d || {}; ident = { nome: d.nome || "", telefone: d.telefone || "", email: d.email || "" }; enviarIdent(); },
+    open: function () { if (!aberto) btn.onclick(); },
+    close: function () { if (aberto) btn.onclick(); }
+  };
   document.body.appendChild(frame);
   document.body.appendChild(btn);
 })();
