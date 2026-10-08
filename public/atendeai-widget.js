@@ -1,0 +1,22 @@
+(function () {
+  var s = document.currentScript;
+  if (!s) return;
+  var id = s.getAttribute("data-instancia");
+  if (!id) return;
+  var base = new URL(s.src).origin;
+  var cor = s.getAttribute("data-cor") || "#0ea5e9";
+  var lado = s.getAttribute("data-posicao") === "esquerda" ? "left" : "right";
+  var aberto = false;
+  var btn = document.createElement("button");
+  btn.setAttribute("aria-label", "Abrir chat");
+  btn.style.cssText = "position:fixed;bottom:20px;" + lado + ":20px;width:60px;height:60px;border-radius:50%;border:0;background:" + cor + ";color:#fff;box-shadow:0 6px 20px rgba(0,0,0,.25);cursor:pointer;z-index:2147483646;font-size:26px";
+  btn.innerHTML = "&#128172;";
+  var frame = document.createElement("iframe");
+  frame.src = base + "/widget/" + encodeURIComponent(id);
+  frame.title = "Chat";
+  frame.style.cssText = "position:fixed;bottom:92px;" + lado + ":20px;width:370px;max-width:calc(100vw - 40px);height:560px;max-height:calc(100vh - 120px);border:0;border-radius:16px;box-shadow:0 10px 40px rgba(0,0,0,.3);z-index:2147483647;display:none;background:#fff";
+  btn.onclick = function () { aberto = !aberto; frame.style.display = aberto ? "block" : "none"; btn.innerHTML = aberto ? "&#10005;" : "&#128172;"; };
+  window.addEventListener("message", function (e) { if (e.origin === base && e.data === "atendeai-widget-fechar" && aberto) btn.onclick(); });
+  document.body.appendChild(frame);
+  document.body.appendChild(btn);
+})();
