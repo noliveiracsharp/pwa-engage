@@ -2,6 +2,7 @@ import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { SubmenuTabs } from "@/components/layout/SubmenuTabs";
 import { useRealtimeRefresh } from "@/hooks/useRealtime";
 import { firstAllowedPath, getAllowedPaths, isPathAllowed } from "@/lib/access";
 
@@ -28,7 +29,9 @@ function AuthenticatedLayout() {
   useRealtimeRefresh();
   return (
     <AppLayout>
-      <Outlet />
+      <SubmenuTabs>
+        <Outlet />
+      </SubmenuTabs>
     </AppLayout>
   );
 }
