@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { jitsiUrl } from "@/components/atendimentos/ChamadaFlutuante";
 
 export const Route = createFileRoute("/chamada/$sala")({
+  staticData: { sitemap: false },
   head: () => ({
     meta: [
       { title: "Chamada ao vivo — Atende.ai" },
