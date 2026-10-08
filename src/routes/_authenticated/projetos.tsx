@@ -166,16 +166,29 @@ function Painel({ d, perms, espacoId, onOpen }: { d: D; perms: Perms; espacoId: 
 
   const grupos = useMemo(() => {
     const doEspaco = espacoId ? espacoEDescendentes(d.espacos, espacoId) : null;
-    const ordered = [...statusDoEspaco(d, espacoId)].sort((a, b) => Number(a[d.sc.ordem] ?? 0) - Number(b[d.sc.ordem] ?? 0));
+    const usados = new Set(d.projetos.map((p) => String(p[d.pc.status] ?? "")));
+    const base = espacoId
+      ? statusDoEspaco(d, espacoId)
+      : d.status.filter((s) => !s["espaco_id"] || usados.has(String(rowId(s))));
+    const ordered = [...base].sort((a, b) => Number(a[d.sc.ordem] ?? 0) - Number(b[d.sc.ordem] ?? 0));
     const filtered = d.projetos.filter((p) => {
       if (doEspaco && !doEspaco.has(String(p["espaco_id"] ?? ""))) return false;
       const cli = nomePessoa(d.parceiros.find((x) => String(rowId(x)) === String(p[d.pc.parceiro])));
       return matches(`${p[d.pc.nome] ?? ""} ${cli}`, busca);
     });
     const ids = new Set(ordered.map((s) => String(rowId(s))));
-    const g = ordered.map((s) => ({
-      id: String(rowId(s)), nome: String(s[d.sc.nome] ?? ""), cor: String(s[d.sc.cor] ?? ""),
-      itens: filtered.filter((p) => String(p[d.pc.status] ?? "") === String(rowId(s))),
+    // Em "Todos os projetos", status de espaços diferentes com o mesmo nome viram uma só coluna.
+    const porNome = new Map<string, { id: string; nome: string; cor: string; sids: Set<string> }>();
+    for (const s of ordered) {
+      const nome = String(s[d.sc.nome] ?? "");
+      const k = espacoId ? String(rowId(s)) : nome.trim().toLowerCase();
+      const atual = porNome.get(k);
+      if (atual) atual.sids.add(String(rowId(s)));
+      else porNome.set(k, { id: String(rowId(s)), nome, cor: String(s[d.sc.cor] ?? ""), sids: new Set([String(rowId(s))]) });
+    }
+    const g = [...porNome.values()].map((x) => ({
+      id: x.id, nome: x.nome, cor: x.cor,
+      itens: filtered.filter((p) => x.sids.has(String(p[d.pc.status] ?? ""))),
     }));
     const sem = filtered.filter((p) => !ids.has(String(p[d.pc.status] ?? "")));
     // Sempre presente (quando há status) para permitir soltar um projeto em "Sem status".
