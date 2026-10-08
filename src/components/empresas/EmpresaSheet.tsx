@@ -432,7 +432,7 @@ function ChildTable({ config, empresa, perms = FULL }: { config: ChildConfig; em
         <Button variant="ghost" onClick={resetForm}>
           Cancelar
         </Button>
-        <Button variant="outline" onClick={save}>
+        <Button onClick={save}>
           {editing ? "Salvar alterações" : "Adicionar"}
         </Button>
       </div>
