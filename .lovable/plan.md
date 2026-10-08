@@ -4,11 +4,11 @@
 Várias telas têm abas fixas no código e ignoram /funcoes. Exemplo: Produtos e Serviços mostra sempre Marcas, Unidades e Centros de Custo, e a função filha "Estoque" (Exibe no menu desligado) nunca aparece, mesmo liberada ao Administrador. Hoje só Usuários e Pessoas/Empresas leem as filhas de /funcoes.
 
 ## Regra única para o sistema
-Em qualquer tela pai, as abas serão:
+As abas seguem exatamente a mesma fonte do menu lateral: a view vw_menu_usuario_perfil do perfil logado (o que foi liberado em /funcoes). Em qualquer tela pai, as abas serão:
 1. A própria tela (primeira aba, com o nome da função pai).
-2. Cada função filha com "Exibe no menu" desligado e status ativo, na ordem cadastrada, somente se o perfil tiver "Ler" (Master vê todas).
+2. Cada linha da view cuja função pai é esta tela, com "Exibe no menu" desligado, função ativa e "Ler" liberado, na ordem da view. Master continua vendo todas.
 
-Cadastrar, remover, renomear ou reordenar em /funcoes muda as abas na hora, sem mexer em código. Se a tela não tiver filhas ocultas, não aparece barra de abas.
+Assim menu e abas nunca divergem. Cadastrar, remover, renomear ou reordenar em /funcoes muda as abas na hora, sem mexer em código. Se a tela não tiver filhas ocultas liberadas, não aparece barra de abas.
 
 ## Como cada aba sabe o que mostrar
 Uma lista central liga o caminho da função à tela correspondente. Caminho sem tela conhecida é ignorado. Telas cobertas:
