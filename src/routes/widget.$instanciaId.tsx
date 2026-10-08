@@ -34,6 +34,7 @@ function WidgetPage() {
   const [atId, setAtId] = useState("");
   const [nome, setNome] = useState("");
   const [telefone, setTelefone] = useState("");
+  const [email, setEmail] = useState("");
   const [texto, setTexto] = useState("");
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const fim = useRef<HTMLDivElement>(null);
@@ -64,17 +65,48 @@ function WidgetPage() {
 
   useEffect(() => { fim.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs.length]);
 
-  async function iniciar(e: React.FormEvent) {
-    e.preventDefault();
-    if (!nome.trim() || (cfg?.pedir_telefone && telefone.replace(/\D/g, "").length < 10)) {
-      setErro("Preencha seu nome" + (cfg?.pedir_telefone ? " e telefone com DDD." : "."));
-      return;
-    }
-    const { data, error } = await rpc("widget_iniciar", { p_instancia: instanciaId, p_sessao: sessao, p_nome: nome, p_telefone: telefone });
+  // Identificação automática (usuário logado no site): via URL ou window.AtendeAI.identify
+  const [ident, setIdent] = useState<{ nome: string; telefone: string; email: string } | null>(null);
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    const d = { nome: p.get("nome") || "", telefone: p.get("telefone") || "", email: p.get("email") || "" };
+    if (d.nome) setIdent(d);
+    if (d.nome) setNome(d.nome);
+    if (d.email) setEmail(d.email);
+    if (d.telefone) setTelefone(d.telefone);
+    const onMsg = (e: MessageEvent) => {
+      const m = e.data as { tipo?: string; dados?: { nome?: string; telefone?: string; email?: string } };
+      if (m?.tipo === "atendeai-identificar" && m.dados?.nome) setIdent({ nome: m.dados.nome, telefone: m.dados.telefone || "", email: m.dados.email || "" });
+    };
+    window.addEventListener("message", onMsg);
+    return () => window.removeEventListener("message", onMsg);
+  }, []);
+  const autoRef = useRef(false);
+  useEffect(() => {
+    if (!ident || !cfg || !sessao || atId || autoRef.current) return;
+    if (!ident.telefone && !ident.email) return;
+    autoRef.current = true;
+    void abrir(ident.nome, ident.telefone, ident.email);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ident, cfg, sessao, atId]);
+
+  async function abrir(n: string, tel: string, mail: string) {
+    const { data, error } = await rpc("widget_iniciar", { p_instancia: instanciaId, p_sessao: sessao, p_nome: n, p_telefone: tel });
     if (error) { setErro("Não foi possível iniciar a conversa."); return; }
     setErro("");
     setAtId(data as string);
     localStorage.setItem(chave, JSON.stringify({ sessao, at: data }));
+    if (mail) await rpc("widget_enviar", { p_sessao: sessao, p_atendimento: data, p_texto: `Contato: ${n} · E-mail: ${mail}${tel ? ` · Tel: ${tel}` : ""}` });
+  }
+
+  async function iniciar(e: React.FormEvent) {
+    e.preventDefault();
+    const pedeTel = cfg?.pedir_telefone !== false;
+    if (!nome.trim() || !/^\S+@\S+\.\S+$/.test(email.trim()) || (pedeTel && telefone.replace(/\D/g, "").length < 10)) {
+      setErro("Preencha nome, e-mail válido" + (pedeTel ? " e telefone com DDD." : "."));
+      return;
+    }
+    await abrir(nome.trim(), telefone, email.trim());
   }
 
   async function enviar(e: React.FormEvent) {
@@ -117,6 +149,7 @@ function WidgetPage() {
           </div>
           <p className="mt-2 text-xs font-medium text-muted-foreground">Para começar, informe seus dados:</p>
           <input className={campo} placeholder="Seu nome" value={nome} onChange={(e) => setNome(e.target.value)} />
+          <input className={campo} type="email" placeholder="Seu e-mail" value={email} onChange={(e) => setEmail(e.target.value)} />
           {cfg?.pedir_telefone !== false && (
             <input className={campo} inputMode="tel" placeholder="WhatsApp com DDD" value={telefone} onChange={(e) => setTelefone(e.target.value)} />
           )}
