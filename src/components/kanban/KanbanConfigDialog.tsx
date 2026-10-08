@@ -2,6 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, Bot, Check, ClipboardCheck, Pencil, Plus, Trash2, Users, X } from "lucide-react";
 import { ChecklistTemplates, useChecklistTemplates } from "./ChecklistTemplates";
+import { EtapaCorPicker } from "./EtapaCorPicker";
+import { corEtapa } from "@/lib/kanban-cores";
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,13 +22,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { pick, type Row } from "@/lib/row";
 import { labelAmigavel, parseCamposCardTipado, type CampoCardTipado } from "@/lib/orcamento-kanban";
 
@@ -99,6 +102,8 @@ export function KanbanConfigDialog({
   const [novaEtapa, setNovaEtapa] = useState("");
   const [editId, setEditId] = useState<string | null>(null);
   const [editDesc, setEditDesc] = useState("");
+  const [editCor, setEditCor] = useState("padrao");
+  const [novaCor, setNovaCor] = useState("padrao");
   const [editIA, setEditIA] = useState(false);
   const [editHum, setEditHum] = useState(false);
   const [editCk, setEditCk] = useState(false);
@@ -117,6 +122,7 @@ export function KanbanConfigDialog({
     });
     setEditId(null);
     setNovaEtapa("");
+      setNovaCor("padrao");
   }, [open, kanban]);
 
   const { data: funcoes = [] } = useQuery({
@@ -215,6 +221,7 @@ export function KanbanConfigDialog({
     mutationFn: async () => {
       const { error } = await supabase.from("kanban_etapas").insert({
         descricao: novaEtapa.trim(),
+        cor: novaCor,
         kanban_nome_id: kanbanId,
         ordem: etapas.length + 1,
         status: true,
@@ -226,6 +233,7 @@ export function KanbanConfigDialog({
     onSuccess: () => {
       invalidate();
       setNovaEtapa("");
+      setNovaCor("padrao");
     },
     onError: (e) => toast.error(errMsg(e, "Não foi possível criar.")),
   });
@@ -267,7 +275,7 @@ export function KanbanConfigDialog({
         const { error } = await supabase
           .from("kanban_etapas")
           .update({ ordem: i + 1 })
-          .eq("id", list[i]!["id"] as string);
+          .eq("id", String(list[i]?.["id"] ?? ""));
         if (error) throw error;
       }
     },
@@ -394,14 +402,14 @@ export function KanbanConfigDialog({
   const selKeys = useMemo(() => new Set(sel.map((s) => s.key)), [sel]);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{kanban ? "Configurar quadro" : "Novo quadro"}</DialogTitle>
-          <DialogDescription>Dados, etapas e integração do quadro Kanban.</DialogDescription>
-        </DialogHeader>
-        <Tabs value={tab} onValueChange={setTab}>
-          <TabsList className="grid w-full grid-cols-4">
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="flex flex-col gap-0 overflow-hidden p-0">
+        <SheetHeader className="shrink-0 border-b px-6 py-5 pr-12 text-left">
+          <SheetTitle>{kanban ? "Configurar quadro" : "Novo quadro"}</SheetTitle>
+          <SheetDescription>Dados, etapas e integração do quadro Kanban.</SheetDescription>
+        </SheetHeader>
+        <Tabs value={tab} onValueChange={setTab} className="flex min-h-0 flex-1 flex-col">
+          <TabsList className="mx-4 my-4 grid h-auto shrink-0 grid-cols-2 gap-1 sm:grid-cols-4">
             <TabsTrigger value="dados">Dados do Quadro</TabsTrigger>
             <TabsTrigger value="etapas" disabled={!kanbanId}>
               Etapas
@@ -412,7 +420,7 @@ export function KanbanConfigDialog({
             <TabsTrigger value="checklists">Checklists</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="dados" className="space-y-4 pt-4">
+          <TabsContent value="dados" className="m-0 min-h-0 flex-1 space-y-4 overflow-y-auto px-6 pb-6">
             <div>
               <Label htmlFor="kb-nome" className="mb-1.5 block">
                 Nome
@@ -503,31 +511,11 @@ export function KanbanConfigDialog({
                 </div>
               </div>
             )}
-            <DialogFooter className="border-t pt-4">
-              {canDelete && kanbanId && (
-                <Button
-                  variant="destructive"
-                  className="sm:mr-auto"
-                  disabled={delKanban.isPending || transfer}
-                  onClick={() => void pedirExclusao()}
-                >
-                  <Trash2 className="mr-1 h-4 w-4" /> Excluir quadro
-                </Button>
-              )}
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Cancelar
-              </Button>
-              <Button
-                disabled={!form.nome.trim() || saveDados.isPending}
-                onClick={() => saveDados.mutate()}
-              >
-                Salvar
-              </Button>
-            </DialogFooter>
+
           </TabsContent>
 
-          <TabsContent value="etapas" className="space-y-3 pt-4">
-            <div className="max-h-[45vh] space-y-2 overflow-y-auto">
+          <TabsContent value="etapas" className="m-0 min-h-0 flex-1 space-y-4 overflow-y-auto px-4 pb-6 sm:px-6">
+            <div className="space-y-3">
               {etapas.length === 0 && (
                 <p className="text-sm text-muted-foreground">Nenhuma etapa cadastrada.</p>
               )}
@@ -537,48 +525,51 @@ export function KanbanConfigDialog({
                 return (
                   <div
                     key={id}
-                    className="flex flex-wrap items-center gap-2 rounded-md border border-border p-2"
+                    className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-3 rounded-md border border-border p-4"
                   >
                     <div className="flex flex-col">
-                      <button
+                      <Button
+                        variant="ghost" size="icon"
                         type="button"
                         aria-label="Subir"
                         disabled={i === 0 || mover.isPending}
                         onClick={() => mover.mutate({ from: i, to: i - 1 })}
-                        className="text-muted-foreground hover:text-foreground disabled:opacity-30"
+                        className="h-7 w-7 text-muted-foreground disabled:opacity-30"
                       >
                         <ArrowUp className="h-3.5 w-3.5" />
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="ghost" size="icon"
                         type="button"
                         aria-label="Descer"
                         disabled={i === etapas.length - 1 || mover.isPending}
                         onClick={() => mover.mutate({ from: i, to: i + 1 })}
-                        className="text-muted-foreground hover:text-foreground disabled:opacity-30"
+                        className="h-7 w-7 text-muted-foreground disabled:opacity-30"
                       >
                         <ArrowDown className="h-3.5 w-3.5" />
-                      </button>
+                      </Button>
                     </div>
                     {editId === id ? (
-                      <>
+                      <div className="min-w-0 space-y-4">
                         <Input
-                          className="h-8 flex-1"
+                          className="w-full min-w-0" aria-label="Nome da etapa"
                           value={editDesc}
                           autoFocus
                           onChange={(ev) => setEditDesc(ev.target.value)}
                         />
-                        <label className="flex items-center gap-1 text-xs whitespace-nowrap">
-                          <Switch checked={editIA} onCheckedChange={setEditIA} /> Etapa Padrão da IA
+                        <EtapaCorPicker value={editCor} onChange={setEditCor} />
+                        <label className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 text-sm">
+                          <span>Etapa padrão da IA</span><Switch checked={editIA} onCheckedChange={setEditIA} />
                         </label>
-                        <label className="flex items-center gap-1 text-xs whitespace-nowrap">
-                          <Switch checked={editHum} onCheckedChange={setEditHum} /> Etapa Padrão da Equipe
+                        <label className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 text-sm">
+                          <span>Etapa padrão da equipe</span><Switch checked={editHum} onCheckedChange={setEditHum} />
                         </label>
-                        <label className="flex items-center gap-1 text-xs whitespace-nowrap">
-                          <Switch checked={editCk} onCheckedChange={setEditCk} /> Exige checklist para entrar
+                        <label className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 text-sm">
+                          <span>Exigir checklist para entrar</span><Switch checked={editCk} onCheckedChange={setEditCk} />
                         </label>
                         {editCk && (
                           <Select value={editTpl} onValueChange={setEditTpl}>
-                            <SelectTrigger className="h-8 w-48"><SelectValue placeholder={templates.length ? "Escolha o checklist" : "Crie na aba Checklists"} /></SelectTrigger>
+                            <SelectTrigger className="w-full"><SelectValue placeholder={templates.length ? "Escolha o checklist" : "Crie na aba Checklists"} /></SelectTrigger>
                             <SelectContent>
                               {templates.map((t) => <SelectItem key={String(t["id"])} value={String(t["id"])}>{String(t["nome"] ?? "")}</SelectItem>)}
                             </SelectContent>
@@ -588,10 +579,10 @@ export function KanbanConfigDialog({
                           size="icon"
                           variant="ghost"
                           aria-label="Salvar etapa"
-                          disabled={!editDesc.trim() || (editCk && !editTpl)}
+                          disabled={updEtapa.isPending || !editDesc.trim() || (editCk && !editTpl)}
                           onClick={() =>
                             updEtapa.mutate({ id, patch: {
-                              descricao: editDesc.trim(), is_default_ia: editIA, is_default_humano: editHum,
+                              descricao: editDesc.trim(), cor: editCor, is_default_ia: editIA, is_default_humano: editHum,
                               exige_checklist: editCk, checklist_template_id: editCk ? editTpl : null,
                             } })
                           }
@@ -606,16 +597,17 @@ export function KanbanConfigDialog({
                         >
                           <X className="h-4 w-4" />
                         </Button>
-                      </>
+                      </div>
                     ) : (
-                      <>
-                        <span className="flex-1 truncate text-sm">
+                      <div className="min-w-0 space-y-3">
+                        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+                        <span className="flex min-w-0 items-center gap-2 text-sm font-medium">
+                          <span className={cn("h-3 w-3 shrink-0 rounded-full", corEtapa(e["cor"]).className)} />
+                          <span className="break-words">
                           {String(e["descricao"] ?? "")}
+                          </span>
                         </span>
-                        {e["is_default_ia"] === true && <Badge variant="secondary" className="gap-1 text-[10px]"><Bot className="h-3 w-3" /> Padrão IA</Badge>}
-                        {e["is_default_humano"] === true && <Badge variant="secondary" className="gap-1 text-[10px]"><Users className="h-3 w-3" /> Padrão Equipe</Badge>}
-                        {e["is_default_encerrado"] === true && <Badge variant="secondary" className="gap-1 text-[10px]"><Check className="h-3 w-3" /> Encerramento</Badge>}
-                        {[true, 1, "true", "t"].includes(e["exige_checklist"] as never) && <Badge variant="secondary" className="gap-1 text-[10px]"><ClipboardCheck className="h-3 w-3" /> Checklist</Badge>}
+                        <div className="flex shrink-0 items-center gap-1">
                         <Switch
                           checked={ativo}
                           aria-label="Status"
@@ -628,6 +620,7 @@ export function KanbanConfigDialog({
                           onClick={() => {
                             setEditId(id);
                             setEditDesc(String(e["descricao"] ?? ""));
+                            setEditCor(corEtapa(e["cor"]).value);
                             setEditIA(e["is_default_ia"] === true);
                             setEditHum(e["is_default_humano"] === true);
                             setEditCk([true, 1, "true", "t"].includes(e["exige_checklist"] as never));
@@ -648,14 +641,24 @@ export function KanbanConfigDialog({
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>}
-                      </>
+                        </div>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                        {e["is_default_ia"] === true && <Badge variant="secondary" className="gap-1 text-[10px]"><Bot className="h-3 w-3" /> Padrão IA</Badge>}
+                        {e["is_default_humano"] === true && <Badge variant="secondary" className="gap-1 text-[10px]"><Users className="h-3 w-3" /> Padrão Equipe</Badge>}
+                        {e["is_default_encerrado"] === true && <Badge variant="secondary" className="gap-1 text-[10px]"><Check className="h-3 w-3" /> Encerramento</Badge>}
+                        {[true, 1, "true", "t"].includes(e["exige_checklist"] as never) && <Badge variant="secondary" className="gap-1 text-[10px]"><ClipboardCheck className="h-3 w-3" /> Checklist</Badge>}
+                        </div>
+                      </div>
                     )}
                   </div>
                 );
               })}
             </div>
-            <div className="flex gap-2">
-              <Input
+            <div className="space-y-3 border-t pt-4">
+              <Label htmlFor="kb-nova-etapa">Nova etapa</Label>
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+              <Input id="kb-nova-etapa"
                 placeholder="Nova etapa (ex.: Em análise)"
                 value={novaEtapa}
                 onChange={(e) => setNovaEtapa(e.target.value)}
@@ -667,14 +670,16 @@ export function KanbanConfigDialog({
               >
                 <Plus className="mr-1 h-4 w-4" /> Adicionar
               </Button>
+              </div>
+              <EtapaCorPicker value={novaCor} onChange={setNovaCor} />
             </div>
           </TabsContent>
 
-          <TabsContent value="checklists" className="pt-4">
+          <TabsContent value="checklists" className="m-0 min-h-0 flex-1 overflow-y-auto px-6 pb-6">
             <ChecklistTemplates empresaId={empresaId} />
           </TabsContent>
 
-          <TabsContent value="integracao" className="space-y-4 pt-4">
+          <TabsContent value="integracao" className="m-0 min-h-0 flex-1 space-y-4 overflow-y-auto px-6 pb-6">
             <div>
               <Label className="mb-1.5 block">Função</Label>
               <Select
@@ -726,20 +731,16 @@ export function KanbanConfigDialog({
                 </div>
               </div>
             )}
-            <DialogFooter className="border-t pt-4">
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Cancelar
-              </Button>
-              <Button
-                disabled={!funcaoId || saveIntegracao.isPending}
-                onClick={() => saveIntegracao.mutate()}
-              >
-                Salvar
-              </Button>
-            </DialogFooter>
+
           </TabsContent>
         </Tabs>
-      </DialogContent>
-    </Dialog>
+        <SheetFooter className="shrink-0 border-t bg-background p-4 sm:items-center">
+          {tab === "dados" && canDelete && kanbanId && <Button variant="destructive" className="sm:mr-auto" disabled={delKanban.isPending || transfer} onClick={() => void pedirExclusao()}><Trash2 className="mr-1 h-4 w-4" />Excluir quadro</Button>}
+          <Button variant="outline" onClick={() => onOpenChange(false)}>{tab === "dados" || tab === "integracao" ? "Cancelar" : "Fechar"}</Button>
+          {tab === "dados" && <Button disabled={!form.nome.trim() || saveDados.isPending} onClick={() => saveDados.mutate()}>Salvar</Button>}
+          {tab === "integracao" && <Button disabled={!funcaoId || saveIntegracao.isPending} onClick={() => saveIntegracao.mutate()}>Salvar</Button>}
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }
