@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { pick, type Row } from "@/lib/row";
 import { useAuth } from "@/hooks/useAuth";
@@ -56,13 +57,32 @@ export function useMenu() {
   const { usuario, user, isMaster } = useAuth();
   const perfilId = usuario ? pick<string | number>(usuario, ["perfil_id", "id_perfil"]) : undefined;
 
-  const { data: funcoes } = useTableRows("funcoes");
+  const { data: funcoes, dataUpdatedAt: funcoesAt } = useTableRows("funcoes");
   const submenuIds = new Set(
     (funcoes ?? []).filter((f) => f["menu_ativo"] === false).map((f) => String(f["id"])),
   );
 
+  // Atualiza o menu na hora quando funções/permissões mudam (inclusive em outras sessões).
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    if (!user) return;
+    const refresh = () => {
+      queryClient.invalidateQueries({ queryKey: ["table", "funcoes"] });
+      queryClient.invalidateQueries({ queryKey: ["table", "menu"] });
+    };
+    const channel = supabase
+      .channel(`menu-sync-${user.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "funcoes" }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "menu" }, refresh)
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, queryClient]);
+
   const query = useQuery({
-    queryKey: ["menu", String(perfilId ?? usuario?.["id"] ?? user?.id ?? null), isMaster, (funcoes ?? []).length],
+    // Prefixo ["table","menu"]: qualquer alteração em permissões invalida o menu junto.
+    queryKey: ["table", "menu", "sidebar", String(perfilId ?? usuario?.["id"] ?? user?.id ?? null), isMaster, funcoesAt],
     enabled: Boolean(user && perfilId !== undefined),
     queryFn: async (): Promise<MenuItem[]> => {
       // Master: todas as funções ativas que são menu, ignorando planos/módulos/menu.
@@ -147,7 +167,7 @@ export function useSubmenuAbas(pathPai: string) {
     .sort((a, b) => Number(pick(a, ["ordem_hierarquia", "ordem"]) ?? 0) - Number(pick(b, ["ordem_hierarquia", "ordem"]) ?? 0));
 
   const { data: leitura } = useQuery({
-    queryKey: ["submenu-abas", pathPai, String(perfilId ?? ""), isMaster],
+    queryKey: ["table", "menu", "submenu-abas", pathPai, String(perfilId ?? ""), isMaster],
     enabled: !isMaster && perfilId !== undefined && filhas.length > 0,
     queryFn: async () => {
       const { data } = await supabase.from("vw_menu_usuario_perfil").select("*").eq("perfil_id", perfilId as string);
