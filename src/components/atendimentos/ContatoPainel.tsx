@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { StarRating } from "@/components/data-table/StarRating";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PessoaCampos } from "@/components/pessoas/PessoaCampos";
 import { rowId, text } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
@@ -124,6 +125,12 @@ export function ContatoPainel({ atendimento, pessoa, usuarios, participantes, et
           {pessoa && <StarRating value={Number(pessoa[avCol] ?? 0)} onChange={(v) => salvarPessoa({ [avCol]: v })} />}
         </div>
 
+        <Tabs defaultValue="atendimento">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="atendimento">Atendimento</TabsTrigger>
+            <TabsTrigger value="campos">Dados & Campos</TabsTrigger>
+          </TabsList>
+          <TabsContent value="atendimento" className="space-y-5 pt-3">
         {pessoa && (
           <div className="space-y-1">
             <p className="text-xs font-medium uppercase text-muted-foreground">Observações</p>
@@ -210,14 +217,15 @@ export function ContatoPainel({ atendimento, pessoa, usuarios, participantes, et
         </section>
 
         <ChecklistsPainel atId={atId} />
-
-
-        {pessoaId !== undefined && (
-          <section className="space-y-2">
-            <p className="text-xs font-medium uppercase text-muted-foreground">Campos personalizados</p>
-            <PessoaCampos pessoaId={pessoaId} />
-          </section>
-        )}
+          </TabsContent>
+          <TabsContent value="campos" className="space-y-4 pt-3">
+            {pessoaId !== undefined ? (
+              <PessoaCampos pessoaId={pessoaId} />
+            ) : (
+              <p className="text-sm text-muted-foreground">Contato não identificado.</p>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
     </aside>
   );

@@ -78,7 +78,7 @@ export const EMPRESA_FIELDS: EmpresaField[] = [
   { key: "numero_nfse_atual", label: "Último número NFS-e", fiscal: true, numeric: true },
 ];
 
-type ChildColumn = { key: string; label: string; type?: "text" | "boolean" | "select" | "tel" | "icon" | "color"; options?: string[]; optionLabels?: Record<string, string>; showIf?: (d: Record<string, string>) => boolean; required?: boolean };
+type ChildColumn = { key: string; label: string; type?: "text" | "boolean" | "select" | "tel" | "icon" | "color"; options?: string[]; optionLabels?: Record<string, string>; showIf?: (d: Record<string, string>) => boolean; required?: boolean; numeric?: boolean };
 
 type ChildConfig = {
   table: string;
@@ -121,9 +121,17 @@ const CAMPOS: ChildConfig = {
   title: "Campos personalizados",
   empty: "Nenhum campo personalizado.",
   columns: [
-    { key: "chave", label: "Campo (chave)" },
-    { key: "tipo", label: "Tipo" },
-    { key: "valor", label: "Valor padrão" },
+    { key: "label", label: "Label (exibido na tela)", required: true },
+    { key: "chave", label: "Chave técnica (ex: matricula_convenio)", required: true },
+    {
+      key: "tipo",
+      label: "Tipo",
+      type: "select",
+      options: ["texto", "select", "checkbox", "radio"],
+      optionLabels: { texto: "Texto", select: "Seleção (lista)", checkbox: "Checkbox (sim/não)", radio: "Radio button" },
+    },
+    { key: "valor", label: "Valor padrão / opções separadas por vírgula" },
+    { key: "ordem", label: "Ordem", numeric: true },
   ],
 };
 
@@ -211,7 +219,7 @@ export function ChildTable({ config, empresa, perms = FULL }: { config: ChildCon
       const value = draft[col.key] ?? "";
       if (value === "" && !editing) continue;
       if (col.type === "tel" && isChat && !digitsOnly(value)) continue;
-      payload[col.key] = col.type === "boolean" ? value === "true" : value;
+      payload[col.key] = col.type === "boolean" ? value === "true" : col.numeric ? (value === "" ? 0 : Number(value) || 0) : value;
     }
     if (isChat) payload["status_conexao"] = "conectado";
     const editingKey = editing ? idColumn(editing) : undefined;
