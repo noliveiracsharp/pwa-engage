@@ -2,22 +2,13 @@ import { useEffect, useState } from "react";
 import { Maximize2, Minimize2, PhoneOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { SalaWebRTC } from "./SalaWebRTC";
 
 export type Chamada = { sala: string; video: boolean; inicio: number };
 
 export function novaSala() {
   const r = crypto.getRandomValues(new Uint8Array(9));
   return "atendeai-" + Array.from(r, (b) => b.toString(36).padStart(2, "0")).join("");
-}
-
-export function jitsiUrl(sala: string, nome: string, video: boolean) {
-  const cfg = [
-    "config.prejoinPageEnabled=false",
-    `config.startWithVideoMuted=${!video}`,
-    "config.disableDeepLinking=true",
-    `userInfo.displayName=${encodeURIComponent(JSON.stringify(nome))}`,
-  ].join("&");
-  return `https://meet.jit.si/${sala}#${cfg}`;
 }
 
 export function linkConvite(sala: string, video: boolean) {
@@ -55,12 +46,7 @@ export function ChamadaFlutuante({ chamada, nome, titulo, onEncerrar }: { chamad
           <PhoneOff className="mr-1 h-4 w-4" /> Encerrar
         </Button>
       </div>
-      <iframe
-        title="Chamada"
-        src={jitsiUrl(chamada.sala, nome, chamada.video)}
-        allow="camera; microphone; display-capture; fullscreen; autoplay; clipboard-write"
-        className="h-full w-full flex-1 border-0 bg-background"
-      />
+      <SalaWebRTC sala={chamada.sala} nome={nome} video={chamada.video} onSair={onEncerrar} className="flex-1" />
     </div>
   );
 }
