@@ -391,7 +391,22 @@ export function ChildTable({ config, empresa, perms = FULL }: { config: ChildCon
               </div>
             </div>
           );
-        })}
+          return config.sortable ? (
+            <SortableRowWrap key={rowKey} rowId={rowKey} disabled={!perms.canUpdate}>
+              {rowContent}
+            </SortableRowWrap>
+          ) : (
+            <Fragment key={rowKey}>{rowContent}</Fragment>
+          );
+        });
+          return config.sortable ? (
+            <SortableList rows={ordered} onReorder={(next) => void reorder(next)}>
+              {list}
+            </SortableList>
+          ) : (
+            list
+          );
+        })()}
       </div>
 
       {!editing && !adding && perms.canCreate && (
