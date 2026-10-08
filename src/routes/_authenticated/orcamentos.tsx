@@ -81,6 +81,8 @@ function OrcamentosPage() {
   // Situações = etapas do Kanban vinculado à função Ofertas (fallback: lista padrão).
   const { data: etapasKanban = [] } = useQuery({
     queryKey: ["orcamentos-etapas-kanban"],
+    staleTime: 0,
+    refetchOnMount: "always",
     queryFn: async () => etapasDoKanban(await kanbanDoModuloOrcamentos()),
   });
   const situacoes = useMemo(
