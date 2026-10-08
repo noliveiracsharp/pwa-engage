@@ -39,6 +39,7 @@ type EmpresaField = {
 export const EMPRESA_FIELDS: EmpresaField[] = [
   { key: "cnpj_cpf", label: "CNPJ / CPF", type: "document" },
   { key: "status", label: "Status", type: "boolean" },
+  { key: "compartilhar_catalogo_filiais", label: "Compartilhar catálogo com filiais", type: "boolean", full: true },
   { key: "nome", label: "Nome", full: true },
   { key: "endereco", label: "Endereço", full: true },
   { key: "telefone1", label: "Telefone 1", type: "tel" },
@@ -591,7 +592,9 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
               />
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
-            {EMPRESA_FIELDS.filter((field) => field.type !== "photo").map((field) => (
+            {EMPRESA_FIELDS.filter((field) => field.type !== "photo")
+              .filter((field) => field.key !== "compartilhar_catalogo_filiais" || !empresa?.["empresa_pai_id"])
+              .map((field) => (
               <Fragment key={field.key}>
               {field.key === "inscricao_estadual" && (
                 <div className="border-border mt-2 border-t pt-4 sm:col-span-2">

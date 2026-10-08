@@ -6,6 +6,8 @@ import { useAuth } from "@/hooks/useAuth";
 
 /** Tabelas globais: nunca filtradas pelo contexto de empresa do Master. */
 const GLOBAL_TABLES = new Set(["empresas", "funcoes", "perfil", "menu", "planos", "modulos", "planos_funcoes", "modulos_funcoes", "planos_base", "modulos_adicionais"]);
+/** Tabelas de catálogo que a matriz pode compartilhar com as filiais (só leitura nas filiais). */
+const CATALOG_TABLES = new Set(["itens", "marcas", "categorias", "unidades", "centro_custo"]);
 
 /** Reads every row of a table (schema-tolerant: no column names assumed). */
 export function useTableRows(table: string, enabled = true, orderBy?: string) {
@@ -31,10 +33,20 @@ export function useTableRows(table: string, enabled = true, orderBy?: string) {
       const rows = (data ?? []) as Row[];
       if (!ctx) return rows;
       if (isEmpresas) return rows.filter((r) => String(rowId(r) ?? "") === ctx || String(r["empresa_pai_id"] ?? "") === ctx);
+      // Catálogo compartilhado: filial também vê os itens da matriz quando ela permite.
+      let paiCatalogo = "";
+      const paiId = empresa ? text(empresa["empresa_pai_id"]) : "";
+      if (CATALOG_TABLES.has(table) && paiId) {
+        const { data: pai } = await supabase.from("empresas").select("*").eq("id", paiId).maybeSingle();
+        if (pai && (pai as Row)["compartilhar_catalogo_filiais"] === true) paiCatalogo = paiId;
+      }
       // Master: mantém registros sem empresa (modelos). Demais: só a própria empresa.
-      return rows.filter((r) =>
-        !("empresa_id" in r) || (r["empresa_id"] == null ? isMaster : String(r["empresa_id"]) === ctx),
-      );
+      return rows.filter((r) => {
+        if (!("empresa_id" in r)) return true;
+        if (r["empresa_id"] == null) return isMaster;
+        const e = String(r["empresa_id"]);
+        return e === ctx || (!!paiCatalogo && e === paiCatalogo);
+      });
     },
   });
 }
