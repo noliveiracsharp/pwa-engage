@@ -1,4 +1,7 @@
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { etapasDoKanban, kanbanDoModuloOrcamentos } from "@/lib/orcamento-kanban";
+import { situacaoMeta } from "@/lib/orcamentos";
 import { createFileRoute } from "@tanstack/react-router";
 import { ChevronDown, Copy, FileSignature, FileText } from "lucide-react";
 import { toast } from "sonner";
@@ -48,10 +51,12 @@ export const Route = createFileRoute("/_authenticated/orcamentos")({
   component: OrcamentosPage,
 });
 
-const SITUACAO_FILTRO = [
-  { value: "todos", label: "Todas" },
-  ...SITUACOES.map((s) => ({ value: s.value, label: s.label })),
-];
+const normSit = (v: unknown) =>
+  String(v ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
 
 function mesmaEmpresa(row: Row, empresaId: string | number | undefined) {
   return (
@@ -73,6 +78,22 @@ function OrcamentosPage() {
   const { data: empresas = [] } = useTableRows("empresas");
   const save = useSaveOrcamento();
   const alterarSituacao = useAlterarSituacao();
+  // Situações = etapas do Kanban vinculado à função Ofertas (fallback: lista padrão).
+  const { data: etapasKanban = [] } = useQuery({
+    queryKey: ["orcamentos-etapas-kanban"],
+    queryFn: async () => etapasDoKanban(await kanbanDoModuloOrcamentos()),
+  });
+  const situacoes = useMemo(
+    () =>
+      etapasKanban.length
+        ? etapasKanban.map((e) => ({ value: e.descricao, label: e.descricao, dot: situacaoMeta(e.descricao).dot }))
+        : SITUACOES.map((s) => ({ value: s.value as string, label: s.label, dot: s.dot })),
+    [etapasKanban],
+  );
+  const situacaoFiltro = useMemo(
+    () => [{ value: "todos", label: "Todas" }, ...situacoes.map((s) => ({ value: s.value, label: s.label }))],
+    [situacoes],
+  );
   const remove = useDeleteRecord("orcamentos");
 
   const [open, setOpen] = useState(false);
@@ -166,7 +187,7 @@ function OrcamentosPage() {
         .filter(
           (r) =>
             matchesAny([r["numero"], nomeCliente(r), nomeVendedor(r), r["descricao"]], f.busca) &&
-            (f.situacao === "todos" || situacaoOf(r["situacao"]) === f.situacao) &&
+            (f.situacao === "todos" || normSit(r["situacao"]) === normSit(f.situacao)) &&
             (f.vendedor === "todos" ||
               String(pick(r, ["usuario_id", "vendedor_id"]) ?? "") === f.vendedor) &&
             (f.ano === "todos" || String(yearOf(r["dt_orcamento"]) ?? "") === f.ano),
@@ -284,10 +305,10 @@ function OrcamentosPage() {
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
-              {SITUACOES.map((s) => (
+              {situacoes.map((s) => (
                 <DropdownMenuItem
                   key={s.value}
-                  disabled={situacaoOf(r["situacao"]) === s.value || alterarSituacao.isPending}
+                  disabled={normSit(r["situacao"]) === normSit(s.value) || alterarSituacao.isPending}
                   onClick={() => alterarSituacao.mutate({ row: r, situacao: s.value })}
                 >
                   <span className={cn("mr-2 h-2.5 w-2.5 rounded-full", s.dot)} />
@@ -387,7 +408,7 @@ function OrcamentosPage() {
               label="Situação"
               value={f.situacao}
               onChange={(v) => setF({ ...f, situacao: v })}
-              options={SITUACAO_FILTRO}
+              options={situacaoFiltro}
             />
             <FilterSelect
               label="Vendedor"
