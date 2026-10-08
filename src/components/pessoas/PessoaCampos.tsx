@@ -92,17 +92,18 @@ export function PessoaCampos({ pessoaId }: Props) {
       for (const campo of campos) {
         const chave = text(pick(campo, ["chave"]));
         const valor = values[chave] ?? "";
+        const ordem = Number(pick(campo, ["ordem"])) || 0;
         const existente = valores.find((row) => text(pick(row, ["chave"])) === chave);
         if (existente) {
           const { error } = await supabase
             .from("pessoas_camposperson")
-            .update({ valor })
+            .update({ valor, ordem } as never)
             .eq("id", pick(existente, ["id"]) as never);
           if (error) throw error;
         } else if (valor !== "") {
           const { error } = await supabase
             .from("pessoas_camposperson")
-            .insert({ pessoa_id: pessoaId, chave, valor });
+            .insert({ pessoa_id: pessoaId, chave, valor, ordem } as never);
           if (error) throw error;
         }
       }
