@@ -1,16 +1,31 @@
-# Abas de Produtos e Serviços vindas de /funcoes
+# Abas de todas as telas vindas de /funcoes
 
 ## Causa
-A tela Produtos e Serviços (/itens) tem as abas fixas no código (Produtos, Marcas, Unidades, Centros de Custo). Ela não consulta /funcoes, por isso a função filha "Estoque" (menu inativo) nunca aparece como aba, mesmo liberada ao Administrador.
+Várias telas têm abas fixas no código e ignoram /funcoes. Exemplo: Produtos e Serviços mostra sempre Marcas, Unidades e Centros de Custo, e a função filha "Estoque" (Exibe no menu desligado) nunca aparece, mesmo liberada ao Administrador. Hoje só Usuários e Pessoas/Empresas leem as filhas de /funcoes.
 
-## O que muda
-- A aba "Produtos e Serviços" continua fixa (é a própria tela).
-- As demais abas passam a vir das funções filhas de /itens com "Exibe no menu" desligado e status ativo, na ordem cadastrada, respeitando "Ler" do perfil (Master vê todas).
-- Cada aba é ligada ao conteúdo pelo caminho da função: /marcas, /unid_medida, /centro_custos, /estoque. Caminho sem tela conhecida não aparece.
-- Se /funcoes ainda não tiver filhas cadastradas, mantém as 3 abas atuais (sem quebrar quem não rodou o script).
-- O conteúdo de Estoque é extraído da página /estoque para um componente reutilizável, usado tanto na rota quanto na aba.
+## Regra única para o sistema
+Em qualquer tela pai, as abas serão:
+1. A própria tela (primeira aba, com o nome da função pai).
+2. Cada função filha com "Exibe no menu" desligado e status ativo, na ordem cadastrada, somente se o perfil tiver "Ler" (Master vê todas).
+
+Cadastrar, remover, renomear ou reordenar em /funcoes muda as abas na hora, sem mexer em código. Se a tela não tiver filhas ocultas, não aparece barra de abas.
+
+## Como cada aba sabe o que mostrar
+Uma lista central liga o caminho da função à tela correspondente. Caminho sem tela conhecida é ignorado. Telas cobertas:
+- /itens: /marcas, /unid_medida, /centro_custos, /estoque
+- /orcamentos: /comissoes
+- /projetos: /projetos/templates
+- /usuarios: /perfil (passa a usar a mesma regra)
+- /empresas, /pessoas, /admin/*: qualquer filha que aponte para uma tela já existente
+
+As abas internas dos formulários (Dados, Instâncias, Campos, Etiquetas) continuam como hoje.
+
+## Ajustes
+- Telas de Estoque, Comissões e Templates viram blocos reutilizáveis, usados tanto na própria rota quanto como aba.
+- A aba ativa fica na URL (?aba=estoque) para recarregar e compartilhar link.
+- Abrir /estoque direto continua funcionando conforme permissão.
 
 ## Detalhes técnicos
-- `src/routes/_authenticated/itens.tsx`: usar `useSubmenuAbas("/itens")`; mapa path → componente.
-- `src/routes/_authenticated/estoque.tsx`: mover corpo para `src/components/estoque/EstoquePanel.tsx`.
-- Guard de rota: aba acessível via permissão da filha; nada muda no acesso direto por URL.
+- Novo `src/components/layout/SubmenuTabs.tsx` usando `useSubmenuAbas(pathPai)` + registro `src/lib/submenu-registry.tsx` (path → componente lazy).
+- Remover TabsList fixa de `itens.tsx` e `usuarios.tsx`; extrair corpos de `estoque.tsx`, `comissoes.tsx`, `projetos_.templates.tsx` para `src/components/...Panel.tsx`.
+- Registrar em AGENTS.md: abas de página vêm só de /funcoes via registro central.
