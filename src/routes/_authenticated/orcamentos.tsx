@@ -48,10 +48,12 @@ export const Route = createFileRoute("/_authenticated/orcamentos")({
   component: OrcamentosPage,
 });
 
-const SITUACAO_FILTRO = [
-  { value: "todos", label: "Todas" },
-  ...SITUACOES.map((s) => ({ value: s.value, label: s.label })),
-];
+const normSit = (v: unknown) =>
+  String(v ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
 
 function mesmaEmpresa(row: Row, empresaId: string | number | undefined) {
   return (

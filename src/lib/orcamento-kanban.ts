@@ -57,35 +57,49 @@ export async function kanbanDoModuloOrcamentos(): Promise<string | null> {
   return k ? String(k) : null;
 }
 
-/** ID da etapa do kanban cuja descrição é exatamente a situação informada. */
+/** ID da etapa do kanban cuja descrição bate com a situação (ignora acento/maiúsculas). */
 export async function etapaPorDescricao(
   kanbanNomeId: string | null,
   descricao: string,
 ): Promise<string | null> {
   if (!kanbanNomeId) return null;
-  const { data } = await supabase.from("kanban_etapas").select("*").eq("descricao", descricao);
-  const e = ((data ?? []) as Row[]).find(
-    (r) => String(pick(r, ETAPA_KANBAN_KEYS) ?? "") === kanbanNomeId,
-  );
-  return e ? String(e["id"]) : null;
+  const etapas = await etapasDoKanban(kanbanNomeId);
+  const alvo = norm(descricao);
+  const e = etapas.find((r) => norm(r.descricao) === alvo);
+  return e ? e.id : null;
 }
 
 /**
  * Completa o cabeçalho com `kanban_nome_id`/`kanban_etapa_id` coerentes com a situação.
- * Mantém o kanban já gravado; senão descobre pelo módulo.
+ * A etapa é sempre recalculada pela situação, para o card nunca ficar na coluna antiga.
  */
 export async function vincularKanban(header: Row, original: Row | null): Promise<Row> {
   const situacao = String(header["situacao"] ?? "Em andamento");
   let kanbanId = original?.["kanban_nome_id"] ? String(original["kanban_nome_id"]) : null;
   if (!kanbanId) kanbanId = await kanbanDoModuloOrcamentos();
   if (!kanbanId) return header;
-  if (header["kanban_etapa_id"]) return { ...header, kanban_nome_id: kanbanId };
   const etapaId = await etapaPorDescricao(kanbanId, situacao);
   return {
     ...header,
     kanban_nome_id: kanbanId,
     ...(etapaId ? { kanban_etapa_id: etapaId } : {}),
   };
+}
+
+/** Tabela base (`funcoes.tabela_base`) da função vinculada ao kanban. */
+export async function tabelaDoKanban(kanbanNomeId: string): Promise<string | null> {
+  const v = await vinculoDoKanban(kanbanNomeId);
+  if (!v) return null;
+  const funcaoId = pick(v.row, ["funcao_id", "funcoes_id", "id_funcao"]) ?? colunaCom(v.row, ["func"]);
+  if (funcaoId === undefined || funcaoId === null) return null;
+  for (const k of ["funcao_id", "id"]) {
+    const { data, error } = await supabase.from("funcoes").select("*").eq(k, funcaoId as never).maybeSingle();
+    if (!error && data) {
+      const t = (data as Row)["tabela_base"];
+      return t ? String(t).trim() : null;
+    }
+  }
+  return null;
 }
 
 export type EtapaKanban = { id: string; descricao: string };
