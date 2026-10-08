@@ -31,3 +31,4 @@ Comissões: cálculo puro em `src/lib/comissoes.ts` (líquido = venda − compra
 - Abas de página (filhas de /funcoes com menu oculto) são renderizadas só por SubmenuTabs no layout autenticado, com a tela ligada pelo path em src/lib/submenu-registry.tsx; telas não fixam abas próprias para menu e abas nunca divergirem.
 - Right/left Sheet dimensions are centralized using data-panel-side in global CSS, excluding data-sidebar overlays, so form widths stay consistent across modules.
 - Kanban stage colors persist as semantic keys in kanban_etapas.cor and resolve through kanban-cores.ts and EtapaCorPicker, keeping configuration and board rendering consistent across themes.
+- Offer status badges and selectors consume the linked stage color through kanban-cores.ts, so they remain consistent with board configuration rather than deriving colors from status names.

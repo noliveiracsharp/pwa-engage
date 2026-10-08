@@ -102,7 +102,7 @@ export async function tabelaDoKanban(kanbanNomeId: string): Promise<string | nul
   return null;
 }
 
-export type EtapaKanban = { id: string; descricao: string };
+export type EtapaKanban = { id: string; descricao: string; cor: string };
 
 /** Etapas do kanban (ordem ascendente) — opções dinâmicas da Situação. */
 export async function etapasDoKanban(kanbanNomeId: string | null): Promise<EtapaKanban[]> {
@@ -116,6 +116,7 @@ export async function etapasDoKanban(kanbanNomeId: string | null): Promise<Etapa
   return ((data ?? []) as Row[]).map((r) => ({
     id: String(r["id"]),
     descricao: String(r["descricao"] ?? ""),
+    cor: String(r["cor"] ?? "padrao"),
   }));
 }
 

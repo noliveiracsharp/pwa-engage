@@ -51,7 +51,6 @@ import {
   num,
   parcelasFromValue,
   situacaoOf,
-  situacaoMeta,
   SITUACOES,
   toISODate,
   todayISO,
@@ -63,6 +62,7 @@ import { pick, type Row } from "@/lib/row";
 import { useQuery } from "@tanstack/react-query";
 import { etapasDoKanban, kanbanDoModuloOrcamentos } from "@/lib/orcamento-kanban";
 import { cn } from "@/lib/utils";
+import { corEtapa } from "@/lib/kanban-cores";
 
 const NONE = "__none__";
 /** Validade padrão de um novo orçamento (dias após a data). */
@@ -518,7 +518,7 @@ export function OrcamentoSheet({
         <SheetHeader className="px-6 pb-4">
           <SheetTitle className="flex flex-wrap items-center gap-2">
             {record ? `Oferta ${numero || ""}`.trim() : "Nova oferta"}
-            {record && <SituacaoBadge value={etapaAtual?.descricao ?? h.situacao} />}
+            {record && <SituacaoBadge value={etapaAtual?.descricao ?? h.situacao} cor={etapaAtual?.cor} />}
           </SheetTitle>
           <SheetDescription>
             {record
@@ -559,7 +559,7 @@ export function OrcamentoSheet({
                   {etapas.map((e) => (
                     <SelectItem key={e.id} value={e.id}>
                       <span className="flex items-center gap-2">
-                        <span className={cn("h-2.5 w-2.5 rounded-full", situacaoMeta(e.descricao).dot)} />
+                        <span className={cn("h-2.5 w-2.5 rounded-full", corEtapa(e.cor).className)} />
                         {e.descricao}
                       </span>
                     </SelectItem>

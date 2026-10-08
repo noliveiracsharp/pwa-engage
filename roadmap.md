@@ -1,6 +1,7 @@
 # Roadmap
 
 ## Ajuste atual
+- [x] Situação das Ofertas usa as cores das etapas vinculadas na listagem e no formulário.
 - [x] Cores por etapa e configuração do Kanban em painel lateral com campos organizados; seleção e dimensões verificadas com dados demonstrativos.
 - [x] Padronizar dimensões dos painéis laterais de cadastro: 60% desktop, 100% tablet/celular.
 - [x] Entregar SQL da cor e validar alterações.

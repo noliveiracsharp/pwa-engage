@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { etapasDoKanban, kanbanDoModuloOrcamentos } from "@/lib/orcamento-kanban";
-import { situacaoMeta } from "@/lib/orcamentos";
+import { corEtapa } from "@/lib/kanban-cores";
 import { createFileRoute } from "@tanstack/react-router";
 import { ChevronDown, Copy, FileSignature, FileText } from "lucide-react";
 import { toast } from "sonner";
@@ -88,7 +88,7 @@ function OrcamentosPage() {
   const situacoes = useMemo(
     () =>
       etapasKanban.length
-        ? etapasKanban.map((e) => ({ value: e.descricao, label: e.descricao, dot: situacaoMeta(e.descricao).dot }))
+        ? etapasKanban.map((e) => ({ value: e.descricao, label: e.descricao, dot: corEtapa(e.cor).className }))
         : SITUACOES.map((s) => ({ value: s.value as string, label: s.label, dot: s.dot })),
     [etapasKanban],
   );
@@ -97,6 +97,9 @@ function OrcamentosPage() {
     [situacoes],
   );
   const remove = useDeleteRecord("orcamentos");
+  const corSituacao = (row: Row) =>
+    (etapasKanban.find((e) => e.id === String(row["kanban_etapa_id"] ?? "")) ??
+      etapasKanban.find((e) => normSit(e.descricao) === normSit(row["situacao"])))?.cor;
 
   const [open, setOpen] = useState(false);
   const [record, setRecord] = useState<Row | null>(null);
@@ -302,7 +305,7 @@ function OrcamentosPage() {
                 aria-label="Alterar situação"
                 title="Alterar situação"
               >
-                <SituacaoBadge value={r["situacao"]} />
+                <SituacaoBadge value={r["situacao"]} cor={corSituacao(r)} />
                 <ChevronDown className="text-muted-foreground h-3.5 w-3.5" />
               </button>
             </DropdownMenuTrigger>
@@ -320,7 +323,7 @@ function OrcamentosPage() {
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
-          <SituacaoBadge value={r["situacao"]} />
+          <SituacaoBadge value={r["situacao"]} cor={corSituacao(r)} />
         ),
     },
     {
