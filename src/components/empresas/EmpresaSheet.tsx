@@ -88,7 +88,7 @@ type ChildConfig = {
 
 const notChat = (d: Record<string, string>) => d["tipo"] !== "chat";
 
-const INSTANCIAS: ChildConfig = {
+export const INSTANCIAS: ChildConfig = {
   table: "empresas_instancias",
   title: "Instâncias",
   empty: "Nenhuma instância vinculada.",
@@ -147,7 +147,7 @@ const NOTAS: ChildConfig = {
 type ChildPerms = { canCreate: boolean; canUpdate: boolean; canDelete: boolean };
 const FULL: ChildPerms = { canCreate: true, canUpdate: true, canDelete: true };
 
-function ChildTable({ config, empresa, perms = FULL }: { config: ChildConfig; empresa: Row | null; perms?: ChildPerms }) {
+export function ChildTable({ config, empresa, perms = FULL }: { config: ChildConfig; empresa: Row | null; perms?: ChildPerms }) {
   const queryClient = useQueryClient();
   const empresaId = empresa ? empresa[idColumn(empresa)] : undefined;
   const [draft, setDraft] = useState<Record<string, string>>({});
