@@ -247,6 +247,8 @@ export function OrcamentoSheet({
   const kanbanNomeIdRecord = record?.["kanban_nome_id"] ? String(record["kanban_nome_id"]) : null;
   const { data: etapas = [] } = useQuery({
     queryKey: ["orcamento-etapas", kanbanNomeIdRecord],
+    staleTime: 0,
+    refetchOnMount: "always",
     queryFn: async () => etapasDoKanban(kanbanNomeIdRecord ?? (await kanbanDoModuloOrcamentos())),
   });
   const etapaAtual =
