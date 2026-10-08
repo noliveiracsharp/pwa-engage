@@ -24,4 +24,4 @@ export const WIDGET_ICONES: Record<string, { nome: string; svg: string }> = {
 };
 
 export const svgIcone = (k: string, cor = "currentColor", tam = 28) =>
-  `<svg xmlns="http://www.w3.org/2000/svg" width="${tam}" height="${tam}" viewBox="0 0 24 24" fill="none" stroke="${cor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${(WIDGET_ICONES[k] ?? WIDGET_ICONES.chat!).svg}</svg>`;
+  `<svg xmlns="http://www.w3.org/2000/svg" width="${tam}" height="${tam}" viewBox="0 0 24 24" fill="none" stroke="${cor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${(WIDGET_ICONES[k] ?? WIDGET_ICONES["chat"]!).svg}</svg>`;
