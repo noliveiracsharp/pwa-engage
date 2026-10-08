@@ -2,7 +2,7 @@ import { IniciaisResponsaveis, ResponsaveisPicker, responsaveisDe } from "@/comp
 import { Fragment, useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, ChevronDown, ChevronRight, Pencil, Plus, Settings, Share2, Trash2, ListChecks, Download, List, Columns3, Printer } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, Pencil, Plus, Settings, Share2, Trash2, ListChecks, Download, List, Columns3, Printer } from "lucide-react";
 import { ProjetoPrint } from "@/components/projetos/ProjetoPrint";
 
 async function compartilhar(projeto: Row) {
@@ -488,7 +488,9 @@ function Detalhe({ projeto, d, perms, onBack }: { projeto: Row; d: D; perms: Per
   const ativs = d.atividades.filter((a) => tIds.has(String(a["tarefa_id"])))
     .sort((a, b) => (Number(a["ordem"]) || 0) - (Number(b["ordem"]) || 0));
   const ativsDe = (tid: string) => ativs.filter((a) => String(a["tarefa_id"]) === tid);
-  const [recolhidas, setRecolhidas] = useState<Set<string>>(new Set());
+  // Tarefas expandidas (padrão: todas recolhidas).
+  const [expandidas, setExpandidas] = useState<Set<string>>(new Set());
+  const todasAbertas = tarefas.length > 0 && tarefas.every((t) => expandidas.has(String(rowId(t))));
   const [ativAberta, setAtivAberta] = useState<{ id: string | null; tarefa: string } | null>(null);
   const atividadeAberta = ativAberta?.id ? ativs.find((a) => String(rowId(a)) === ativAberta.id) ?? null : null;
   async function excluirAtividade(a: Row) {
@@ -587,7 +589,13 @@ function Detalhe({ projeto, d, perms, onBack }: { projeto: Row; d: D; perms: Per
         <Progress value={pr.pct} className="h-2 max-w-sm" />
         <span className="text-sm text-muted-foreground">{pr.ok}/{pr.total} · {pr.pct}%</span>
       </div>
-      <Input placeholder="Pesquisar tarefa…" value={busca} onChange={(e) => setBusca(e.target.value)} className="max-w-md" />
+      <div className="flex flex-wrap items-center gap-2">
+        <Input placeholder="Pesquisar tarefa…" value={busca} onChange={(e) => setBusca(e.target.value)} className="max-w-md" />
+        <Button variant="outline" disabled={tarefas.length === 0}
+          onClick={() => setExpandidas(todasAbertas ? new Set() : new Set(tarefas.map((t) => String(rowId(t)))))}>
+          {todasAbertas ? <><ChevronsDownUp className="mr-1 h-4 w-4" />Recolher todas</> : <><ChevronsUpDown className="mr-1 h-4 w-4" />Expandir todas</>}
+        </Button>
+      </div>
       <div className="overflow-x-auto rounded-lg border border-border">
         <Table>
           <TableHeader>
@@ -608,7 +616,7 @@ function Detalhe({ projeto, d, perms, onBack }: { projeto: Row; d: D; perms: Per
               const id = String(rowId(t));
               const done = isDone(t[d.tc.done]);
               const filhas = ativsDe(id);
-              const fechada = recolhidas.has(id);
+              const fechada = !expandidas.has(id);
               return (
                 <Fragment key={id}>
                 <SortRow key={id} id={id} disabled={!podeArrastar} onClick={() => setAberta(id)}>
@@ -618,7 +626,7 @@ function Detalhe({ projeto, d, perms, onBack }: { projeto: Row; d: D; perms: Per
                   <TableCell className="font-medium" style={done ? { color: "var(--progress-100)" } : undefined}>
                     <div className="flex items-center gap-1">
                       <button type="button" className="rounded p-0.5 hover:bg-muted" aria-label={fechada ? "Expandir" : "Recolher"}
-                        onClick={(e) => { e.stopPropagation(); setRecolhidas((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; }); }}>
+                        onClick={(e) => { e.stopPropagation(); setExpandidas((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; }); }}>
                         {fechada ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                       </button>
                       <span>{String(t[d.tc.nome] ?? "")}</span>
@@ -633,7 +641,7 @@ function Detalhe({ projeto, d, perms, onBack }: { projeto: Row; d: D; perms: Per
                   <TableCell>{fmtDate(t[d.tc.fim])}</TableCell>
                   <TableCell><Badge className={prioridadeClass(t[d.tc.prio])}>{String(t[d.tc.prio] ?? "Normal")}</Badge></TableCell>
                   <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                    {perms.canCreate && <Button size="icon" variant="ghost" onClick={() => { setRecolhidas((s) => { const n = new Set(s); n.delete(id); return n; }); setAtivAberta({ id: null, tarefa: id }); }} aria-label="Nova atividade" title="Nova atividade"><Plus className="h-4 w-4" /></Button>}
+                    {perms.canCreate && <Button size="icon" variant="ghost" onClick={() => { setExpandidas((s) => new Set(s).add(id)); setAtivAberta({ id: null, tarefa: id }); }} aria-label="Nova atividade" title="Nova atividade"><Plus className="h-4 w-4" /></Button>}
                     <Button size="icon" variant="ghost" onClick={() => setAberta(id)} aria-label="Abrir"><Pencil className="h-4 w-4" /></Button>
                     {perms.canDelete && <Button size="icon" variant="ghost" onClick={() => excluir(t)} aria-label="Excluir"><Trash2 className="h-4 w-4 text-destructive" /></Button>}
                   </TableCell>
