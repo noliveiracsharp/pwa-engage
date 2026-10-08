@@ -176,7 +176,7 @@ function FluxosPage() {
     const { data, error } = await supabase.from("fluxos_atendimento")
       .insert({ nome: `Novo fluxo ${fluxos.length + 1}`, empresa_id: empresaId, nos: [inicio], conexoes: [] })
       .select().single();
-    if (error) return toast.error("Não foi possível criar o fluxo", { description: error.message });
+    if (error) { toast.error("Não foi possível criar o fluxo", { description: error.message }); return; }
     await qc.invalidateQueries({ queryKey: ["fluxos_atendimento"] });
     setFluxoId(String((data as Row)["id"]));
   };
@@ -197,7 +197,7 @@ function FluxosPage() {
       updated_at: new Date().toISOString(),
     }).eq("id", fluxo["id"] as string);
     setSalvando(false);
-    if (error) return toast.error("Erro ao salvar", { description: error.message });
+    if (error) { toast.error("Erro ao salvar", { description: error.message }); return; }
     toast.success("Fluxo salvo");
     qc.invalidateQueries({ queryKey: ["fluxos_atendimento"] });
   };
@@ -205,13 +205,13 @@ function FluxosPage() {
   const excluirFluxo = async () => {
     if (!fluxo || !confirm(`Excluir o fluxo "${nome}"?`)) return;
     const { error } = await supabase.from("fluxos_atendimento").delete().eq("id", fluxo["id"] as string);
-    if (error) return toast.error("Erro ao excluir", { description: error.message });
+    if (error) { toast.error("Erro ao excluir", { description: error.message }); return; }
     setFluxoId("");
     qc.invalidateQueries({ queryKey: ["fluxos_atendimento"] });
   };
 
   const adicionar = (tipo: TipoNo, pos?: { x: number; y: number }) => {
-    if (!fluxo) return toast.info("Crie ou selecione um fluxo primeiro");
+    if (!fluxo) { toast.info("Crie ou selecione um fluxo primeiro"); return; }
     const id = `${tipo}-${Date.now().toString(36)}`;
     const position = pos ?? screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
     setNodes((ns) => [...ns, { id, type: "bloco", position, data: comResumo({ tipo, ...dadosPadrao(tipo) }) }]);
@@ -337,7 +337,7 @@ function FluxosPage() {
   );
 }
 
-function Campo({ label, children, ajuda }: { label: string; children: React.ReactNode; ajuda?: string }) {
+function Campo({ label, children, ajuda }: { label: string; children: React.ReactNode; ajuda?: string | undefined }) {
   return (
     <div className="space-y-1.5">
       <Label>{label}</Label>

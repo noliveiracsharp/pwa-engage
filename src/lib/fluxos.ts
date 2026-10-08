@@ -84,7 +84,7 @@ export function dadosPadrao(tipo: TipoNo): DadosNo {
 }
 
 /** Resumo exibido no corpo do bloco. */
-export function resumoNo(tipo: TipoNo, d: DadosNo, nomes: { etapa?: string; quadro?: string }): string {
+export function resumoNo(tipo: TipoNo, d: DadosNo, nomes: { etapa?: string | undefined; quadro?: string | undefined }): string {
   switch (tipo) {
     case "gatilho":
       return d["gatilho"] === "palavra_chave" ? `Palavra-chave: ${d["palavras"] ?? "—"}` : d["gatilho"] === "novo_contato" ? "Novo contato" : "Mensagem recebida";
