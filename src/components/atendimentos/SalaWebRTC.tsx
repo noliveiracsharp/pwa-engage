@@ -33,7 +33,7 @@ function VideoTile({ stream, nome, mudo, espelhar }: { stream: MediaStream | nul
 }
 
 /** Sala de chamada nativa (WebRTC em malha, sinalização por canal em tempo real). */
-export function SalaWebRTC({ sala, nome, video, onSair, onParticipante, className }: { sala: string; nome: string; video: boolean; onSair: () => void; onParticipante?: (nome: string) => void; className?: string }) {
+export function SalaWebRTC({ sala, nome, video, onSair, onParticipante, className }: { sala: string; nome: string; video: boolean; onSair: () => void; onParticipante?: ((nome: string) => void) | undefined; className?: string }) {
   const [local, setLocal] = useState<MediaStream | null>(null);
   const [remotos, setRemotos] = useState<Remoto[]>([]);
   const [mic, setMic] = useState(true);
