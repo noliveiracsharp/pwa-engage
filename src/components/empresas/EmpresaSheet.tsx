@@ -22,6 +22,7 @@ import { IconPicker } from "@/components/data-table/IconPicker";
 import { getIcon } from "@/components/layout/icon-map";
 import { supabase } from "@/integrations/supabase/client";
 import { idColumn, text } from "@/lib/crud";
+import { SortableList, useSortableRow, salvarOrdem, proximaOrdem } from "@/lib/reorder";
 import { pick, type Row } from "@/lib/row";
 import { isCompletePhone, isValidCpfCnpj } from "@/lib/input-masks";
 import { formatPhoneDisplay } from "@/lib/input-masks";
@@ -85,7 +86,20 @@ type ChildConfig = {
   title: string;
   empty: string;
   columns: ChildColumn[];
+  /** Quando true, as linhas são ordenadas por `ordem` e podem ser reordenadas arrastando. */
+  sortable?: boolean;
 };
+
+/** Linha arrastável: aplica ref/estilo do dnd-kit e exibe a alça à esquerda. */
+function SortableRowWrap({ rowId, disabled, children }: { rowId: string; disabled: boolean; children: React.ReactNode }) {
+  const { setNodeRef, style, handle } = useSortableRow(rowId, disabled);
+  return (
+    <div ref={setNodeRef} style={style} className="flex items-center gap-1">
+      {handle}
+      <div className="min-w-0 flex-1">{children}</div>
+    </div>
+  );
+}
 
 const notChat = (d: Record<string, string>) => d["tipo"] !== "chat";
 
@@ -120,6 +134,7 @@ const CAMPOS: ChildConfig = {
   table: "empresas_camposperson",
   title: "Campos personalizados",
   empty: "Nenhum campo personalizado.",
+  sortable: true,
   columns: [
     { key: "label", label: "Label (exibido na tela)", required: true },
     { key: "chave", label: "Chave técnica (ex: matricula_convenio)", required: true },
@@ -131,7 +146,6 @@ const CAMPOS: ChildConfig = {
       optionLabels: { texto: "Texto", select: "Seleção (lista)", checkbox: "Checkbox (sim/não)", radio: "Radio button" },
     },
     { key: "valor", label: "Valor padrão / opções separadas por vírgula" },
-    { key: "ordem", label: "Ordem", numeric: true },
   ],
 };
 
