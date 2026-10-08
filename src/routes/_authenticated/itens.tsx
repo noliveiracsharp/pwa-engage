@@ -6,9 +6,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { DataTable, type Column } from "@/components/data-table/DataTable";
 import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
 import { StatusBadge } from "@/components/data-table/StatusBadge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ApoioCrud } from "@/components/itens/ApoioCrud";
-import { centroCustoConfig, marcaConfig, unidadeConfig } from "@/components/itens/apoio-config";
 import { ItemSheet } from "@/components/itens/ItemSheet";
 import { ImagensCarrosselDialog } from "@/components/itens/ImagensCarrosselDialog";
 import { rowId, useDeleteRecord, useSaveRecord, useTableRows } from "@/lib/crud";
@@ -168,23 +165,8 @@ function ItensPage() {
   }
 
   return (
-    <Tabs defaultValue="itens" className="space-y-4">
-      <TabsList className="h-auto w-full flex-wrap">
-        <TabsTrigger value="itens" className="flex-1">
-          Produtos e Serviços
-        </TabsTrigger>
-        <TabsTrigger value="marcas" className="flex-1">
-          Marcas
-        </TabsTrigger>
-        <TabsTrigger value="unidades" className="flex-1">
-          Unidades de Medida
-        </TabsTrigger>
-        <TabsTrigger value="centros" className="flex-1">
-          Centros de Custo
-        </TabsTrigger>
-      </TabsList>
-
-      <TabsContent value="itens" className="space-y-3">
+    <div className="space-y-4">
+      <div className="space-y-3">
         {perms.canUpdate && (
           <div className="flex justify-end">
             <Button variant="outline" size="sm" onClick={() => setPrecOpen(true)}>
@@ -236,17 +218,8 @@ function ItensPage() {
             </>
           }
         />
-      </TabsContent>
+      </div>
 
-      <TabsContent value="marcas">
-        <ApoioCrud {...marcaConfig} />
-      </TabsContent>
-      <TabsContent value="unidades">
-        <ApoioCrud {...unidadeConfig} />
-      </TabsContent>
-      <TabsContent value="centros">
-        <ApoioCrud {...centroCustoConfig} />
-      </TabsContent>
 
       <ItemSheet
         open={open}
@@ -266,6 +239,6 @@ function ItensPage() {
         titulo={galeria?.titulo ?? ""}
         imagens={galeria?.imagens ?? []}
       />
-    </Tabs>
+    </div>
   );
 }

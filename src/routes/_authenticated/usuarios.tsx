@@ -489,17 +489,6 @@ function UsuariosPage() {
 
   return (
     <Tabs defaultValue="usuarios" className="space-y-4">
-      {verPerfis && (
-        <TabsList>
-          <TabsTrigger value="usuarios">Usuários</TabsTrigger>
-          <TabsTrigger value="perfis">{abaPerfil?.label ?? "Perfis"}</TabsTrigger>
-        </TabsList>
-      )}
-      {verPerfis && (
-        <TabsContent value="perfis">
-          <PerfisTab />
-        </TabsContent>
-      )}
       <TabsContent value="usuarios">
       <DataTable
         title="Usuários"
