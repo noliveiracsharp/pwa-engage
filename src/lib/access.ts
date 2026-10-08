@@ -34,6 +34,24 @@ function asBool(v: unknown, fallback = true): boolean {
  * based on vw_menu_usuario_perfil (perfil_id do usuário logado).
  * Returns null when the access cannot be verified (fail-open).
  */
+const accessCache = new Map<string, { at: number; value: Promise<string[] | null> }>();
+const ACCESS_TTL = 60_000;
+
+/** Limpa o cache de permissões (logout, troca de usuário, alteração em Funções). */
+export function clearAccessCache() {
+  accessCache.clear();
+}
+
+/** Versão em cache (60s) de getAllowedPaths — usada pelo guardião de rotas. */
+export function getAllowedPathsCached(userId: string, email?: string): Promise<string[] | null> {
+  const hit = accessCache.get(userId);
+  if (hit && Date.now() - hit.at < ACCESS_TTL) return hit.value;
+  const value = getAllowedPaths(userId, email);
+  accessCache.set(userId, { at: Date.now(), value });
+  value.catch(() => accessCache.delete(userId));
+  return value;
+}
+
 export async function getAllowedPaths(userId: string, email?: string): Promise<string[] | null> {
   try {
     let usuario: Row | null = null;
