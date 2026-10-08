@@ -1,3 +1,4 @@
+import { Linkify } from "@/components/ui/linkify";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -134,21 +135,35 @@ export function ChatInterno({ sidebarOpen, onAbrir }: { sidebarOpen: boolean; on
         const chave = grupo ? canal : rem;
         setNaoLidas((n) => ({ ...n, [chave]: (n[chave] ?? 0) + 1 }));
         setPiscar(true);
-        tocarSom("equipe");
         const bruto = String(m["mensagem"] ?? "");
-        const txt = bruto.startsWith(CONVITE) ? "📞 Está te chamando para uma chamada" : bruto.startsWith(ENCERRADA) ? "Chamada encerrada" : bruto || "Enviou um anexo";
-        toast(grupo ? `${nomeAutor} em ${String(grupo["nome"] ?? "Grupo")}` : `Mensagem de ${nomeAutor}`, {
+        const ehChamada = bruto.startsWith(CONVITE);
+        const txt = ehChamada ? "📞 Está te chamando para uma chamada" : bruto.startsWith(ENCERRADA) ? "Chamada encerrada" : bruto || "Enviou um anexo";
+        const abrirConversa = () => {
+          setOpen(true);
+          if (grupo) setSel({ tipo: "grupo", canal: grupo });
+          else if (autor) setSel({ tipo: "direto", outro: autor });
+        };
+        tocarSom("equipe");
+        if (ehChamada) {
+          // Toque de chamada repetido para chamar atenção mesmo com o sistema minimizado.
+          let n = 0;
+          const t = setInterval(() => { tocarSom("cliente"); if (++n >= 6 || !document.hidden && canalAberto === canal) clearInterval(t); }, 1500);
+        }
+        const titulo = ehChamada ? `📞 Chamada de ${nomeAutor}` : grupo ? `${nomeAutor} em ${String(grupo["nome"] ?? "Grupo")}` : `Mensagem de ${nomeAutor}`;
+        toast(titulo, {
           description: txt.length > 100 ? `${txt.slice(0, 97)}…` : txt,
-          duration: 8000,
-          action: {
-            label: "Abrir",
-            onClick: () => {
-              setOpen(true);
-              if (grupo) setSel({ tipo: "grupo", canal: grupo });
-              else if (autor) setSel({ tipo: "direto", outro: autor });
-            },
-          },
+          duration: ehChamada ? 20000 : 8000,
+          action: { label: ehChamada ? "Atender" : "Abrir", onClick: abrirConversa },
         });
+        if (document.hidden && "Notification" in window && Notification.permission === "granted") {
+          const notif = new Notification(titulo, {
+            body: ehChamada ? "Toque para atender" : txt.slice(0, 120),
+            icon: "/icon-192.png",
+            tag: `interno-${canal}`,
+            requireInteraction: ehChamada,
+          });
+          notif.onclick = () => { window.focus(); abrirConversa(); notif.close(); };
+        }
       })
       .subscribe();
     return () => {
@@ -572,7 +587,7 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack }: { me: stri
                       </a>
                     ),
                   )}
-                  {anexos.length === 0 && <p className="break-words whitespace-pre-wrap">{String(m["mensagem"] ?? "")}</p>}
+                  {anexos.length === 0 && <p className="break-words whitespace-pre-wrap"><Linkify text={String(m["mensagem"] ?? "")} /></p>}
                   <p className={cn("mt-0.5 text-right text-[10px]", mine ? "text-primary-foreground/70" : "text-muted-foreground")}>{hora(m["criado_em"])}</p>
                 </div>
               </div>
