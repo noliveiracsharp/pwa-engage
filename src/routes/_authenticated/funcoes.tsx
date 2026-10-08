@@ -67,7 +67,10 @@ function FuncoesPage() {
         }),
       );
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["table", "funcoes"] }),
+    onSuccess: () => {
+      void import("@/lib/access").then((m) => m.clearAccessCache());
+      return queryClient.invalidateQueries({ queryKey: ["table", "funcoes"] });
+    },
     onError: () => toast.error("Não foi possível salvar a nova ordem."),
   });
   const [open, setOpen] = useState(false);

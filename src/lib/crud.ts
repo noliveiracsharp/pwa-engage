@@ -28,7 +28,20 @@ export function useTableRows(table: string, enabled = true, orderBy?: string) {
       // Anti-escalonamento: o perfil Master (ordem 0) nunca aparece em listas/selects.
       if (table === "perfil") q = q.gt("ordem", 0) as typeof q;
       if (orderBy) q = q.order(orderBy, { ascending: true }) as typeof q;
-      const { data, error } = await q;
+      // Filtra a empresa direto no banco; se a tabela não tiver empresa_id, cai na consulta completa.
+      let res: { data: unknown; error: { code?: string } | null };
+      if (ctx && !isEmpresas && !CATALOG_TABLES.has(table)) {
+        res = await (isMaster ? q.or(`empresa_id.eq.${ctx},empresa_id.is.null`) : q.eq("empresa_id", ctx));
+        if (res.error) {
+          let q2 = supabase.from(table).select("*");
+          if (table === "perfil") q2 = q2.gt("ordem", 0) as typeof q2;
+          if (orderBy) q2 = q2.order(orderBy, { ascending: true }) as typeof q2;
+          res = await q2;
+        }
+      } else {
+        res = await q;
+      }
+      const { data, error } = res;
       if (error) throw error;
       const rows = (data ?? []) as Row[];
       if (!ctx) return rows;
