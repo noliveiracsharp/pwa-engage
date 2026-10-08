@@ -15,6 +15,7 @@ export const SUBMENU_REGISTRY: Record<string, LazyExoticComponent<ComponentType>
   "/marcas": fromRoute(() => import("@/routes/_authenticated/marcas")),
   "/unid_medida": fromRoute(() => import("@/routes/_authenticated/unid_medida")),
   "/centro_custos": fromRoute(() => import("@/routes/_authenticated/centro_custos")),
+  "/instancias": fromRoute(() => import("@/routes/_authenticated/instancias")),
   "/estoque": fromRoute(() => import("@/routes/_authenticated/estoque")),
   "/comissoes": fromRoute(() => import("@/routes/_authenticated/comissoes")),
   "/projetos/templates": fromRoute(() => import("@/routes/_authenticated/projetos_.templates")),
