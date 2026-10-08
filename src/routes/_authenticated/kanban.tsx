@@ -168,15 +168,19 @@ function KanbanPage() {
       list.push(a);
       map.set(etapaId, list);
     }
+    const nrm = (v: unknown) =>
+      String(v ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
     if (quadroOfertas) for (const o of orcamentos) {
-      const etapaId = String(o["kanban_etapa_id"] ?? "");
+      // Posição segue a Situação da oferta; o vínculo gravado é só fallback.
+      const porSituacao = boardEtapas.find((e) => nrm(e["descricao"]) === nrm(o["situacao"]));
+      const etapaId = String(porSituacao?.["id"] ?? o["kanban_etapa_id"] ?? "");
       if (!etapaId) continue;
       const list = map.get(etapaId) ?? [];
       list.push({ ...o, __orc: true });
       map.set(etapaId, list);
     }
     return map;
-  }, [atendimentos, orcamentos, quadroOfertas]);
+  }, [atendimentos, orcamentos, quadroOfertas, boardEtapas]);
 
   const { data: parceiros = [] } = useRows("parceiros");
   const { data: usuarios = [] } = useRows("usuarios");
