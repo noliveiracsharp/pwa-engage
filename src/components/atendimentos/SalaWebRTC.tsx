@@ -165,7 +165,7 @@ export function SalaWebRTC({ sala, nome, video, onSair, className }: { sala: str
     } else {
       try {
         const s = await navigator.mediaDevices.getUserMedia({ video: true });
-        const t = s.getVideoTracks()[0];
+        const t = s.getVideoTracks()[0]!;
         camTrack.current = t;
         localRef.current?.addTrack(t);
         if (!tela) trocarVideo(t);
@@ -186,7 +186,7 @@ export function SalaWebRTC({ sala, nome, video, onSair, className }: { sala: str
     }
     try {
       const s = await (navigator.mediaDevices as any).getDisplayMedia({ video: true });
-      const t: MediaStreamTrack = s.getVideoTracks()[0];
+      const t: MediaStreamTrack = s.getVideoTracks()[0]!;
       trocarVideo(t);
       setTela(true);
       const audios = localRef.current?.getAudioTracks() ?? [];
