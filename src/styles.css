@@ -47,6 +47,9 @@
   --color-lido: var(--lido);
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
+  --color-stage-cyan: var(--stage-cyan);
+  --color-stage-violet: var(--stage-violet);
+  --color-stage-pink: var(--stage-pink);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -68,6 +71,9 @@
 
 :root {
   --radius: 0.625rem;
+  --stage-cyan: oklch(0.65 0.13 205);
+  --stage-violet: oklch(0.6 0.2 300);
+  --stage-pink: oklch(0.65 0.2 350);
   --background: oklch(0.985 0.005 240);
   --foreground: oklch(0.21 0.045 255);
   --card: oklch(1 0 0);
@@ -113,6 +119,9 @@
 }
 
 .dark {
+  --stage-cyan: oklch(0.76 0.13 205);
+  --stage-violet: oklch(0.75 0.16 300);
+  --stage-pink: oklch(0.77 0.16 350);
   color-scheme: dark;
   --background: oklch(0.17 0.03 255);
   --foreground: oklch(0.97 0.008 247);
@@ -161,6 +170,20 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+  }
+}
+
+[data-panel-side="right"]:not([data-sidebar]),
+[data-panel-side="left"]:not([data-sidebar]) {
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 100dvh;
+}
+@media (min-width: 1280px) {
+  [data-panel-side="right"]:not([data-sidebar]),
+  [data-panel-side="left"]:not([data-sidebar]) {
+    width: 60vw !important;
+    max-width: 60vw !important;
   }
 }
 

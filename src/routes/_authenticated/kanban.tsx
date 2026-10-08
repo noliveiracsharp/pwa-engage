@@ -1,5 +1,7 @@
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { FileText, Settings2 } from "lucide-react";
+import { EtapaCorPicker } from "@/components/kanban/EtapaCorPicker";
+import { corEtapa } from "@/lib/kanban-cores";
 import { KanbanConfigDialog } from "@/components/kanban/KanbanConfigDialog";
 import { useChecklistGate } from "@/components/kanban/ChecklistGate";
 import { SituacaoBadge } from "@/components/orcamentos/SituacaoBadge";
@@ -27,13 +29,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import {
   Select,
   SelectContent,
@@ -125,11 +127,11 @@ function KanbanPage() {
   const [newKanban, setNewKanban] = useState(false);
   const [newEtapa, setNewEtapa] = useState(false);
   const [form, setForm] = useState({ nome: "", descricao: "", status: true });
-  const [etapaForm, setEtapaForm] = useState({ descricao: "", status: true });
+  const [etapaForm, setEtapaForm] = useState({ descricao: "", status: true, cor: "padrao" });
   const [dragId, setDragId] = useState<string | null>(null);
   const [dragEtapaId, setDragEtapaId] = useState<string | null>(null);
   const [editEtapa, setEditEtapa] = useState<Row | null>(null);
-  const [editForm, setEditForm] = useState({ descricao: "", status: true, is_default_ia: false, is_default_humano: false, is_default_encerrado: false });
+  const [editForm, setEditForm] = useState({ descricao: "", status: true, cor: "padrao", is_default_ia: false, is_default_humano: false, is_default_encerrado: false });
 
   useEffect(() => {
     const valido = kanbans.some((k) => String(k["id"]) === kanbanId);
@@ -268,9 +270,10 @@ function KanbanPage() {
   });
 
   const createEtapa = useMutation({
-    mutationFn: async (value: { descricao: string; status: boolean }) => {
+    mutationFn: async (value: { descricao: string; status: boolean; cor: string }) => {
       const payload: Row = {
         descricao: value.descricao.trim(),
+        cor: value.cor,
         kanban_nome_id: kanbanId,
         ordem: boardEtapas.length + 1,
         status: value.status,
@@ -282,18 +285,19 @@ function KanbanPage() {
       queryClient.invalidateQueries({ queryKey: ["table", "kanban_etapas"] });
       toast.success("Etapa criada.");
       setNewEtapa(false);
-      setEtapaForm({ descricao: "", status: true });
+      setEtapaForm({ descricao: "", status: true, cor: "padrao" });
     },
     onError: (e: unknown) =>
       toast.error(e instanceof Error ? e.message : "Não foi possível criar."),
   });
 
   const updateEtapa = useMutation({
-    mutationFn: async (value: { id: string; descricao: string; status: boolean; is_default_ia: boolean; is_default_humano: boolean; is_default_encerrado: boolean }) => {
+    mutationFn: async (value: { id: string; descricao: string; status: boolean; cor: string; is_default_ia: boolean; is_default_humano: boolean; is_default_encerrado: boolean }) => {
       const { error } = await supabase
         .from("kanban_etapas")
         .update({
           descricao: value.descricao.trim(),
+          cor: value.cor,
           status: value.status,
           is_default_ia: value.is_default_ia === true,
           is_default_humano: value.is_default_humano === true,
@@ -430,7 +434,7 @@ function KanbanPage() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-foreground">Kanban</h1>
         <div className="flex items-center gap-2">
@@ -513,6 +517,8 @@ function KanbanPage() {
                   dragEtapaId === id && "opacity-50",
                 )}
               >
+                <div className="space-y-3">
+                <div className={cn("h-1 w-full rounded-full", corEtapa(etapa["cor"]).className)} />
                 <div className="flex items-center gap-1">
                   <span
                     draggable
@@ -537,6 +543,7 @@ function KanbanPage() {
                     onClick={() => {
                       setEditForm({
                         descricao: text(pick(etapa, ETAPA_FIELDS, "")),
+                        cor: corEtapa(etapa["cor"]).value,
                         status: String(pick(etapa, ["status"], "true")) !== "false",
                         is_default_ia: etapa["is_default_ia"] === true,
                         is_default_humano: etapa["is_default_humano"] === true,
@@ -560,6 +567,7 @@ function KanbanPage() {
                   )}
                 </div>
 
+                </div>
                 <div className="flex flex-col gap-2">
                   {cards.length === 0 && (
                     <p className="rounded-md border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
@@ -640,7 +648,7 @@ function KanbanPage() {
               variant="outline"
               className="w-full"
               onClick={() => {
-                setEtapaForm({ descricao: "", status: true });
+                setEtapaForm({ descricao: "", status: true, cor: "padrao" });
                 setNewEtapa(true);
               }}
             >
@@ -650,13 +658,13 @@ function KanbanPage() {
         </div>
       )}
 
-      <Dialog open={newKanban} onOpenChange={setNewKanban}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Novo kanban</DialogTitle>
-            <DialogDescription>Informe os dados do quadro.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
+      <Sheet open={newKanban} onOpenChange={setNewKanban}>
+        <SheetContent className="flex flex-col overflow-hidden">
+          <SheetHeader>
+            <SheetTitle>Novo kanban</SheetTitle>
+            <SheetDescription>Informe os dados do quadro.</SheetDescription>
+          </SheetHeader>
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
             <div>
               <Label htmlFor="kanban-nome" className="mb-1.5 block">
                 Nome
@@ -691,7 +699,7 @@ function KanbanPage() {
               </div>
             </div>
           </div>
-          <DialogFooter className="border-t pt-4 mt-4">
+          <SheetFooter className="mt-auto shrink-0 border-t pt-4">
             <Button variant="outline" onClick={() => setNewKanban(false)}>
               Cancelar
             </Button>
@@ -701,19 +709,19 @@ function KanbanPage() {
             >
               Criar
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
 
       {pesquisa.dialog}
       {checklist.dialog}
-      <Dialog open={newEtapa} onOpenChange={setNewEtapa}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Nova etapa</DialogTitle>
-            <DialogDescription>A etapa será adicionada ao final do quadro.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
+      <Sheet open={newEtapa} onOpenChange={setNewEtapa}>
+        <SheetContent className="flex flex-col overflow-hidden">
+          <SheetHeader>
+            <SheetTitle>Nova etapa</SheetTitle>
+            <SheetDescription>A etapa será adicionada ao final do quadro.</SheetDescription>
+          </SheetHeader>
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
             <div>
               <Label htmlFor="etapa-nome" className="mb-1.5 block">
                 Descrição
@@ -724,6 +732,7 @@ function KanbanPage() {
                 onChange={(e) => setEtapaForm({ ...etapaForm, descricao: e.target.value })}
               />
             </div>
+            <EtapaCorPicker value={etapaForm.cor} onChange={(cor) => setEtapaForm({ ...etapaForm, cor })} />
             <div className="flex items-center justify-between gap-4">
               <Label htmlFor="etapa-status">Status</Label>
               <div className="flex items-center gap-2">
@@ -738,7 +747,7 @@ function KanbanPage() {
               </div>
             </div>
           </div>
-          <DialogFooter className="border-t pt-4 mt-4">
+          <SheetFooter className="mt-auto shrink-0 border-t pt-4">
             <Button variant="outline" onClick={() => setNewEtapa(false)}>
               Cancelar
             </Button>
@@ -748,17 +757,17 @@ function KanbanPage() {
             >
               Criar
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
 
-      <Dialog open={editEtapa !== null} onOpenChange={(o) => !o && setEditEtapa(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Editar etapa</DialogTitle>
-            <DialogDescription>Altere o nome e o status da etapa.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
+      <Sheet open={editEtapa !== null} onOpenChange={(o) => !o && setEditEtapa(null)}>
+        <SheetContent className="flex flex-col overflow-hidden">
+          <SheetHeader>
+            <SheetTitle>Editar etapa</SheetTitle>
+            <SheetDescription>Altere o nome e o status da etapa.</SheetDescription>
+          </SheetHeader>
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
             <div>
               <Label htmlFor="etapa-edit-nome" className="mb-1.5 block">
                 Descrição
@@ -769,6 +778,7 @@ function KanbanPage() {
                 onChange={(e) => setEditForm({ ...editForm, descricao: e.target.value })}
               />
             </div>
+            <EtapaCorPicker value={editForm.cor} onChange={(cor) => setEditForm({ ...editForm, cor })} />
             <div className="flex items-center justify-between gap-4">
               <Label htmlFor="etapa-edit-status">Status</Label>
               <div className="flex items-center gap-2">
@@ -807,7 +817,7 @@ function KanbanPage() {
               />
             </div>
           </div>
-          <DialogFooter className="border-t pt-4 mt-4">
+          <SheetFooter className="mt-auto shrink-0 border-t pt-4">
             <Button variant="outline" onClick={() => setEditEtapa(null)}>
               Cancelar
             </Button>
@@ -819,9 +829,9 @@ function KanbanPage() {
             >
               Salvar
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
