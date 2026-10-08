@@ -4,6 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { pick, type Row } from "@/lib/row";
 
 const CTX_KEY = "atendeai.empresaContexto";
+/** Mude este valor a cada atualização publicada: força novo login de todos. */
+const APP_RELEASE = "2026-10-08-perf";
+const RELEASE_KEY = "atendeai.release";
 
 type AuthContextValue = {
   session: Session | null;
@@ -69,6 +72,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setCtxId(localStorage.getItem(CTX_KEY));
+    if (localStorage.getItem(RELEASE_KEY) !== APP_RELEASE) {
+      localStorage.setItem(RELEASE_KEY, APP_RELEASE);
+      void supabase.auth.getSession().then(async ({ data }) => {
+        if (data.session) {
+          await supabase.auth.signOut();
+          window.location.replace("/login");
+        }
+      });
+    }
     const { data: sub } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession);
       if (_event === "SIGNED_IN" || _event === "SIGNED_OUT" || _event === "USER_UPDATED") {
