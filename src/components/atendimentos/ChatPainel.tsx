@@ -58,6 +58,9 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
   const [enviando, setEnviando] = useState(false);
   const [moverAberto, setMoverAberto] = useState(false);
   const [chamada, setChamada] = useState<Chamada | null>(null);
+  const participantesRef = useRef<Set<string>>(new Set());
+  const [fimChamada, setFimChamada] = useState<{ c: Chamada; fim: number; participantes: string[] } | null>(null);
+  const [anotacoes, setAnotacoes] = useState("");
   const pesquisa = usePesquisaSatisfacao();
   const checklist = useChecklistGate();
   const fimRef = useRef<HTMLDivElement>(null);
@@ -233,7 +236,8 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
     const sala = novaSala();
     const quem = autores.get(text(usuarioId)) || "O atendente";
     const link = linkConvite(sala, video);
-    setChamada({ sala, video, inicio: Date.now() });
+    participantesRef.current = new Set();
+    setChamada({ sala, video, inicio: Date.now(), iniciador: quem });
     const prev = interna;
     if (prev) setInterna(false);
     await enviarConvite(`${video ? "📹" : "📞"} ${quem} iniciou uma chamada ${video ? "de vídeo" : "de áudio"}. Toque no link para entrar:\n${link}`);
@@ -259,13 +263,27 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
     qc.invalidateQueries({ queryKey: ["table", "atendimentos_mensagem"] });
   }
 
-  async function encerrarChamada() {
+  function encerrarChamada() {
     if (!chamada) return;
-    const fim = Date.now();
-    const hora = (t: number) => new Date(t).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
     const c = chamada;
     setChamada(null);
-    await registrarInterna(`Chamada ${c.video ? "de vídeo" : "de áudio"} encerrada — início ${hora(c.inicio)}, término ${hora(fim)}, duração ${duracao(fim - c.inicio)}.`);
+    setAnotacoes("");
+    setFimChamada({ c, fim: Date.now(), participantes: [...participantesRef.current] });
+  }
+
+  async function salvarRegistroChamada() {
+    if (!fimChamada) return;
+    const { c, fim, participantes } = fimChamada;
+    const hora = (t: number) => new Date(t).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    const linhas = [
+      `${REG_CHAMADA} ${c.video ? "de vídeo" : "de áudio"}`,
+      `Início: ${hora(c.inicio)} · Término: ${hora(fim)} · Duração: ${duracao(fim - c.inicio)}`,
+      `Iniciada por: ${c.iniciador || "Atendente"}`,
+      `Participantes: ${[c.iniciador || "Atendente", ...participantes].join(", ")}${participantes.length ? "" : " (ninguém mais entrou)"}`,
+    ];
+    if (anotacoes.trim()) linhas.push(`Anotações: ${anotacoes.trim()}`);
+    setFimChamada(null);
+    await registrarInterna(linhas.join("\n"));
   }
 
   async function anexar(file: File) {
@@ -352,6 +370,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
             nome={autores.get(text(usuarioId)) || "Atendente"}
             titulo={`Chamada com ${nome}`}
             onEncerrar={encerrarChamada}
+            onParticipante={(n) => participantesRef.current.add(n)}
           />
         )}
         <Button variant="outline" size="sm" onClick={() => setMoverAberto(true)} className="hidden sm:inline-flex">
@@ -483,6 +502,27 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
         )}
       </footer>
 
+      <Dialog open={!!fimChamada} onOpenChange={(v) => { if (!v) void salvarRegistroChamada(); }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Chamada encerrada</DialogTitle></DialogHeader>
+          {fimChamada && (
+            <div className="space-y-3 text-sm">
+              <p className="text-muted-foreground">
+                Duração {duracao(fimChamada.fim - fimChamada.c.inicio)} · Participantes:{" "}
+                {[fimChamada.c.iniciador || "Atendente", ...fimChamada.participantes].join(", ")}
+              </p>
+              <div className="space-y-1">
+                <Label htmlFor="anot-chamada">Anotações da chamada</Label>
+                <Textarea id="anot-chamada" rows={5} value={anotacoes} onChange={(e) => setAnotacoes(e.target.value)} placeholder="Resuma o que foi tratado, combinados e pendências…" autoFocus />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button onClick={() => void salvarRegistroChamada()}>Salvar no histórico</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <MoverDialog
         open={moverAberto}
         onOpenChange={setMoverAberto}
@@ -607,12 +647,31 @@ function Balao({ m, autores }: { m: Row; autores: Map<string, string> }) {
             <FileText className="h-4 w-4" /> {text(m["nome_arquivo"]) || "Abrir documento"}
           </a>
         )}
-        {corpo && !(url && corpo === text(m["nome_arquivo"])) && <p className="whitespace-pre-wrap break-words">{corpo}</p>}
+        {corpo.startsWith(REG_CHAMADA) ? <RegistroChamada corpo={corpo} /> : corpo && !(url && corpo === text(m["nome_arquivo"])) && <p className="whitespace-pre-wrap break-words">{corpo}</p>}
         <p className="mt-1 flex items-center justify-end gap-1 text-[10px]">
           <span className="opacity-70">{hora}</span>
           {!interna && !cliente && <VistoLeitura status={text(m["status_envio"]).toLowerCase()} />}
         </p>
       </div>
+    </div>
+  );
+}
+
+const REG_CHAMADA = "📞 Registro de chamada";
+
+function RegistroChamada({ corpo }: { corpo: string }) {
+  const [titulo, ...resto] = corpo.split("\n");
+  return (
+    <div className="space-y-1">
+      <p className="flex items-center gap-1 font-semibold"><Phone className="h-4 w-4" /> {titulo?.replace("📞 ", "")}</p>
+      {resto.map((l, i) => {
+        const [k, ...v] = l.split(": ");
+        return (
+          <p key={i} className="whitespace-pre-wrap break-words text-xs">
+            {v.length && !l.includes(" · ") ? (<><span className="font-semibold">{k}:</span> {v.join(": ")}</>) : l}
+          </p>
+        );
+      })}
     </div>
   );
 }
