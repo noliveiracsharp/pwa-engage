@@ -71,6 +71,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setCtxId(localStorage.getItem(CTX_KEY));
     const { data: sub } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession);
+      if (_event === "SIGNED_IN" || _event === "SIGNED_OUT" || _event === "USER_UPDATED") {
+        void import("@/lib/access").then((m) => m.clearAccessCache());
+      }
       if (!nextSession) {
         setUsuario(null);
         setEmpresaOriginal(null);
