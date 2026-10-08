@@ -3,8 +3,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-  ArrowLeft, Bot, Check, CheckCheck, FileText, Hand, Lock, MoreVertical, MoveRight, Paperclip, PanelRightClose, PanelRightOpen, Send, Smile, CheckCircle2, Loader2, Trash2, Users,
+  ArrowLeft, Bot, Check, CheckCheck, FileText, Hand, Lock, MoreVertical, MoveRight, Paperclip, PanelRightClose, PanelRightOpen, Send, Smile, CheckCircle2, Loader2, Trash2, Users, Video, Phone,
 } from "lucide-react";
+import { ChamadaFlutuante, duracao, linkConvite, novaSala, type Chamada } from "./ChamadaFlutuante";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -56,6 +57,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
   const [interna, setInterna] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [moverAberto, setMoverAberto] = useState(false);
+  const [chamada, setChamada] = useState<Chamada | null>(null);
   const pesquisa = usePesquisaSatisfacao();
   const checklist = useChecklistGate();
   const fimRef = useRef<HTMLDivElement>(null);
@@ -219,6 +221,53 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
     qc.invalidateQueries({ queryKey: ["table", "atendimentos_mensagem"] });
   }
 
+  async function registrarInterna(conteudo: string) {
+    const { error } = await supabase.from("atendimentos_mensagem").insert(
+      filterPayload({ atendimento_id: id, mensagem: conteudo, conteudo, texto: conteudo, tipo: "texto", msg_interna: true, usuario_id: usuarioId, empresa_id: empresaId }, colsMsg),
+    );
+    if (error) console.error(error);
+    qc.invalidateQueries({ queryKey: ["table", "atendimentos_mensagem"] });
+  }
+
+  async function iniciarChamada(video: boolean) {
+    const sala = novaSala();
+    const quem = autores.get(text(usuarioId)) || "O atendente";
+    const link = linkConvite(sala, video);
+    setChamada({ sala, video, inicio: Date.now() });
+    const prev = interna;
+    if (prev) setInterna(false);
+    await enviarConvite(`${video ? "📹" : "📞"} ${quem} iniciou uma chamada ${video ? "de vídeo" : "de áudio"}. Toque no link para entrar:\n${link}`);
+  }
+
+  async function enviarConvite(conteudo: string) {
+    // Convite sempre vai para o cliente, mesmo se o modo nota interna estiver ligado.
+    const payload: Row = {
+      atendimento_id: id, mensagem: conteudo, conteudo, texto: conteudo, tipo: "texto", msg_interna: false,
+      usuario_id: usuarioId, empresa_id: empresaId, instancia_id: pick(atendimento, A.instancia), status_envio: "pendente",
+    };
+    const { data: salva, error } = await supabase.from("atendimentos_mensagem").insert(filterPayload(payload, colsMsg)).select().single();
+    if (error) { toast.error(error.message); return; }
+    const mid = (salva as Row | null)?.["id"];
+    try {
+      await dispararMensagem({ instancia, mensagemId: mid, atendimentoId: id, telefone: telefonePessoa(pessoa), texto: conteudo });
+      await marcarEnvio(mid, "enviado");
+      toast.success("Convite da chamada enviado ao cliente");
+    } catch (e) {
+      await marcarEnvio(mid, "falha");
+      toast.error(`Convite salvo, mas o envio falhou: ${(e as Error).message}`);
+    }
+    qc.invalidateQueries({ queryKey: ["table", "atendimentos_mensagem"] });
+  }
+
+  async function encerrarChamada() {
+    if (!chamada) return;
+    const fim = Date.now();
+    const hora = (t: number) => new Date(t).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    const c = chamada;
+    setChamada(null);
+    await registrarInterna(`Chamada ${c.video ? "de vídeo" : "de áudio"} encerrada — início ${hora(c.inicio)}, término ${hora(fim)}, duração ${duracao(fim - c.inicio)}.`);
+  }
+
   async function anexar(file: File) {
     setEnviando(true);
     const path = `${empresaId ?? "geral"}/${id}/${Date.now()}-${file.name.replace(/[^\w.-]/g, "_")}`;
@@ -286,6 +335,25 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
             )}
           </div>
         </div>
+        {!encerrado && !chamada && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" aria-label="Iniciar chamada"><Video className="h-5 w-5" /></Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={() => iniciarChamada(true)}><Video className="mr-2 h-4 w-4" /> Vídeo e áudio</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => iniciarChamada(false)}><Phone className="mr-2 h-4 w-4" /> Apenas áudio</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+        {chamada && (
+          <ChamadaFlutuante
+            chamada={chamada}
+            nome={autores.get(text(usuarioId)) || "Atendente"}
+            titulo={`Chamada com ${nome}`}
+            onEncerrar={encerrarChamada}
+          />
+        )}
         <Button variant="outline" size="sm" onClick={() => setMoverAberto(true)} className="hidden sm:inline-flex">
           <MoveRight className="mr-1 h-4 w-4" /> Mover
         </Button>
