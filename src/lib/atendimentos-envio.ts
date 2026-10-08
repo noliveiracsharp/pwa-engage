@@ -25,6 +25,8 @@ type Envio = {
 export async function dispararMensagem(e: Envio): Promise<boolean> {
   const inst = e.instancia;
   if (!inst) throw new Error("Instância não encontrada.");
+  // Chat do site: a mensagem já está gravada e o widget a lê do banco.
+  if (text(pick(inst, ["tipo"])) === "chat") return true;
   const tipoEnvio = text(pick(inst, ["tipo_envio"])) || "zapi_direto";
   const phone = sanitizarTelefone(e.telefone);
   if (!phone) throw new Error("Contato sem telefone.");
