@@ -10,9 +10,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import type { Row } from "@/lib/row";
+import { WIDGET_ICONES, svgIcone } from "@/lib/widget-icones";
 
-type Cfg = { titulo: string; boas_vindas: string; cor: string; posicao: "direita" | "esquerda"; pedir_telefone: boolean };
-const PADRAO: Cfg = { titulo: "Fale conosco", boas_vindas: "Olá! Como podemos ajudar?", cor: "#0ea5e9", posicao: "direita", pedir_telefone: true };
+type Cfg = { titulo: string; boas_vindas: string; cor: string; posicao: "direita" | "esquerda"; pedir_telefone: boolean; icone: string; imagem: string };
+const PADRAO: Cfg = { titulo: "Fale conosco", boas_vindas: "Olá! Como podemos ajudar?", cor: "#0ea5e9", posicao: "direita", pedir_telefone: true, icone: "chat", imagem: "" };
+const fgDe = (hex: string) => {
+  const h = hex.replace("#", "");
+  if (!/^[0-9a-f]{6}$/i.test(h)) return "#ffffff";
+  const [r, g, b] = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16));
+  return ((r ?? 0) * 299 + (g ?? 0) * 587 + (b ?? 0) * 114) / 1000 > 170 ? "#0f172a" : "#ffffff";
+};
 
 export function WidgetChatDialog({ instancia, onClose }: { instancia: Row | null; onClose: () => void }) {
   const [cfg, setCfg] = useState<Cfg>(PADRAO);
@@ -25,7 +32,9 @@ export function WidgetChatDialog({ instancia, onClose }: { instancia: Row | null
   if (!instancia) return null;
   const id = String(instancia["id"]);
   const origem = typeof window !== "undefined" ? window.location.origin : "";
-  const script = `<script src="${origem}/atendeai-widget.js" data-instancia="${id}" data-cor="${cfg.cor}" data-posicao="${cfg.posicao}" async></script>`;
+  const img = cfg.imagem.trim().replace(/"/g, "");
+  const script = `<script src="${origem}/atendeai-widget.js" data-instancia="${id}" data-cor="${cfg.cor}" data-posicao="${cfg.posicao}" data-icone="${cfg.icone}"${img ? ` data-imagem="${img}"` : ""} async></script>`;
+  const fg = fgDe(cfg.cor);
 
   async function salvar() {
     setSalvando(true);
@@ -56,6 +65,27 @@ export function WidgetChatDialog({ instancia, onClose }: { instancia: Row | null
             </div>
             <div className="flex items-center justify-between"><Label>Pedir telefone do visitante</Label><Switch checked={cfg.pedir_telefone} onCheckedChange={(v) => set("pedir_telefone", v)} /></div>
             <div>
+              <Label>Ícone do botão</Label>
+              <div className="mt-1 grid grid-cols-6 gap-2">
+                {Object.entries(WIDGET_ICONES).map(([k, v]) => (
+                  <button
+                    key={k}
+                    type="button"
+                    title={v.nome}
+                    aria-label={v.nome}
+                    onClick={() => setCfg((c) => ({ ...c, icone: k, imagem: "" }))}
+                    className={`flex h-11 items-center justify-center rounded-lg border-2 p-2 transition ${!img && cfg.icone === k ? "border-ring" : "border-transparent"}`}
+                    style={{ background: cfg.cor }}
+                    dangerouslySetInnerHTML={{ __html: svgIcone(k, fg, 22) }}
+                  />
+                ))}
+              </div>
+            </div>
+            <div>
+              <Label>Ou use sua logo/foto (endereço da imagem)</Label>
+              <Input placeholder="https://seusite.com/logo.png" value={cfg.imagem} onChange={(e) => set("imagem", e.target.value)} />
+            </div>
+            <div>
               <Label>Script para colar antes de &lt;/body&gt; no site</Label>
               <Textarea readOnly rows={4} className="font-mono text-xs" value={script} />
               <Button variant="outline" size="sm" className="mt-2" onClick={() => { void navigator.clipboard.writeText(script); toast.success("Script copiado."); }}>
@@ -76,7 +106,11 @@ export function WidgetChatDialog({ instancia, onClose }: { instancia: Row | null
               </div>
             </div>
             <div className={`mt-3 flex ${cfg.posicao === "esquerda" ? "justify-start" : "justify-end"}`}>
-              <div className="h-12 w-12 rounded-full shadow" style={{ background: cfg.cor }} />
+              {img ? (
+                <img src={img} alt="Ícone do chat" className="h-12 w-12 rounded-full object-cover shadow" style={{ background: cfg.cor }} />
+              ) : (
+                <div className="flex h-12 w-12 items-center justify-center rounded-full shadow" style={{ background: cfg.cor }} dangerouslySetInnerHTML={{ __html: svgIcone(cfg.icone, fg, 24) }} />
+              )}
             </div>
           </div>
         </div>
