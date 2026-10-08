@@ -1,3 +1,5 @@
+import { useAuth } from "@/hooks/useAuth";
+import { registrarEventoProjeto } from "@/lib/projetos-eventos";
 import { ResponsaveisPicker, responsaveisDe } from "@/components/projetos/ResponsaveisPicker";
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -63,6 +65,11 @@ export function TarefaSheet({ tarefa, tarefasDoProjeto, projetoId, perms, onClos
       ({ error } = await supabase.from("projetos_tarefas").insert(filterPayload(stamp({ ...base, ordem: tarefasDoProjeto.reduce((mx, t) => Math.max(mx, Number(t["ordem"] ?? -1) || 0), -1) + 1 }, true), tCols)));
     }
     if (error) { toast.error(error.message); return; }
+    void registrarEventoProjeto({
+      empresaId, autorId: usuarioId, autorNome: String(usuario?.["nome"] ?? ""), projetoId: tarefa ? tarefa[tc.projeto] : projetoId,
+      tipo: "tarefa", acao: tarefa ? "alterou" : "criou", titulo: String(form[tc.nome] ?? ""), prazo: form[tc.fim],
+      responsaveis: resps, anteriores: tarefa ? responsaveisDe(tarefa, tc.resp) : [],
+    });
     toast.success("Tarefa salva.");
     qc.invalidateQueries({ queryKey: ["table", "projetos_tarefas"] });
     onClose();
