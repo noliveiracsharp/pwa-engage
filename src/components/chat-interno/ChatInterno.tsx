@@ -183,28 +183,9 @@ export function ChatInterno({ sidebarOpen, onAbrir }: { sidebarOpen: boolean; on
     if (totalNaoLidas === 0) setPiscar(false);
   }, [totalNaoLidas]);
 
-  // Fecha com ESC ou clique fora da janela.
+  // O chat só fecha pelo botão de fechar (sem clique fora/ESC), para não derrubar chamadas.
   const painelRef = useRef<HTMLDivElement>(null);
   const botaoRef = useRef<HTMLButtonElement>(null);
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-    };
-    const onDown = (e: PointerEvent) => {
-      const t = e.target as Element | null;
-      if (!t) return;
-      if (painelRef.current?.contains(t) || botaoRef.current?.contains(t)) return;
-      if (t.closest("[data-radix-popper-content-wrapper],[role='dialog'],[data-sonner-toaster]")) return;
-      setOpen(false);
-    };
-    window.addEventListener("keydown", onKey);
-    document.addEventListener("pointerdown", onDown);
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      document.removeEventListener("pointerdown", onDown);
-    };
-  }, [open]);
 
   const criarGrupo = async () => {
     if (!gNome.trim() || !gMembros.size) { toast.error("Informe o nome e ao menos um participante."); return; }
