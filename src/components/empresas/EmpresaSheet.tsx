@@ -200,6 +200,23 @@ export function ChildTable({ config, empresa, perms = FULL }: { config: ChildCon
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["child", config.table, text(empresaId)] });
 
+  const ordered = config.sortable
+    ? [...rows].sort((a, b) => (Number(a["ordem"]) || 0) - (Number(b["ordem"]) || 0))
+    : rows;
+
+  const reorder = async (next: Row[]) => {
+    queryClient.setQueryData(
+      ["child", config.table, text(empresaId)],
+      next.map((r, i) => ({ ...r, ordem: i })),
+    );
+    try {
+      await salvarOrdem(config.table, next);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível salvar a nova ordem.");
+      refresh();
+    }
+  };
+
   const resetForm = () => {
     setDraft({});
     setEditing(null);
@@ -236,6 +253,7 @@ export function ChildTable({ config, empresa, perms = FULL }: { config: ChildCon
       payload[col.key] = col.type === "boolean" ? value === "true" : col.numeric ? (value === "" ? 0 : Number(value) || 0) : value;
     }
     if (isChat) payload["status_conexao"] = "conectado";
+    if (config.sortable && !editing) payload["ordem"] = proximaOrdem(rows);
     const editingKey = editing ? idColumn(editing) : undefined;
     const response = editing && editingKey
       ? await supabase.from(config.table).update(payload as never).eq(editingKey, editing[editingKey] as never)
