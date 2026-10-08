@@ -1,9 +1,10 @@
 # Roadmap
 
 ## Ajuste atual
-- [ ] Cores por etapa e configuração do Kanban em painel lateral com campos organizados.
-- [ ] Padronizar dimensões dos painéis de cadastro: 60% desktop, 100% tablet/celular.
-- [ ] Entregar SQL da cor para execução no banco próprio e validar alterações.
+- [x] Cores por etapa e configuração do Kanban em painel lateral com campos organizados; seleção e dimensões verificadas com dados demonstrativos.
+- [x] Padronizar dimensões dos painéis laterais de cadastro: 60% desktop, 100% tablet/celular.
+- [x] Entregar SQL da cor e validar alterações.
+- [ ] Habilitar persistência das cores no banco próprio — aguarda execução pelo usuário de atendeai-kanban-cores.sql.
 
 ## Concluído
 - [x] Módulo de Orçamentos (/orcamentos): tabelas `orcamentos` + `orcamento_itens`, numeração automática #ano-seq, situação com cores, itens com memória de cálculo (custo, imposto, lucro), desconto R$/%, frete, adicionais e total líquido. (Aguarda o usuário rodar `atendeai-orcamentos.sql` e liberar a função /orcamentos ao perfil.)

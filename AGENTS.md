@@ -29,3 +29,5 @@ Projetos: hierarquia Projeto → Tarefa → Atividade → Checklist; atividades 
 
 Comissões: cálculo puro em `src/lib/comissoes.ts` (líquido = venda − compra − imposto − outros; comissão por papel e natureza), config por empresa em `comissao_parametros`/`comissao_papeis` e foto registrada em `orcamento_comissoes` para o extrato `/comissoes`; papéis são linhas configuráveis para não fixar Vendas/Compras/Integrador no código.
 - Abas de página (filhas de /funcoes com menu oculto) são renderizadas só por SubmenuTabs no layout autenticado, com a tela ligada pelo path em src/lib/submenu-registry.tsx; telas não fixam abas próprias para menu e abas nunca divergirem.
+- Right/left Sheet dimensions are centralized using data-panel-side in global CSS, excluding data-sidebar overlays, so form widths stay consistent across modules.
+- Kanban stage colors persist as semantic keys in kanban_etapas.cor and resolve through kanban-cores.ts and EtapaCorPicker, keeping configuration and board rendering consistent across themes.
