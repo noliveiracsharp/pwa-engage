@@ -6,7 +6,7 @@ import { StatusBadge } from "@/components/data-table/StatusBadge";
 import { EmpresaSheet } from "@/components/empresas/EmpresaSheet";
 import { rowId, useDeleteRecord, useSaveRecord, useTableRows } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
-import { usePagePermissions, subtabKind } from "@/hooks/usePagePermissions";
+import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { formatCpfCnpj, formatPhoneDisplay, matchesAny } from "@/lib/input-masks";
 
 export const Route = createFileRoute("/_authenticated/empresas")({
@@ -123,12 +123,6 @@ function EmpresasPage() {
         empresa={record}
         saving={save.isPending}
         readOnly={record ? !perms.canUpdate : !perms.canCreate}
-        sections={perms.subtabs.map((t) => ({
-          key: t.id,
-          kind: subtabKind(t),
-          label: t.descricao,
-          perms: { canCreate: t.canCreate, canUpdate: t.canUpdate, canDelete: t.canDelete },
-        }))}
         onSave={(values) => save.mutate({ values, original: record }, { onSuccess: () => setOpen(false) })}
       />
     </>

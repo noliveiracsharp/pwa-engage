@@ -477,6 +477,7 @@ const DEFAULT_SECTIONS = [
   { key: "instancias", kind: "instancias", label: "Instâncias", perms: FULL },
   { key: "campos", kind: "campos", label: "Campos", perms: FULL },
   { key: "etiquetas", kind: "etiquetas", label: "Etiquetas", perms: FULL },
+  { key: "notas", kind: "notas", label: "Notas rápidas", perms: FULL },
 ];
 
 export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sections, readOnly }: Props) {
