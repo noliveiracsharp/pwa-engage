@@ -23,7 +23,8 @@ export function TarefaSheet({ tarefa, tarefasDoProjeto, projetoId, perms, onClos
   tarefa: Row | null; tarefasDoProjeto: Row[]; projetoId: string; perms: Perms; onClose: () => void; isNew: boolean;
 }) {
   const qc = useQueryClient();
-  const { stamp } = useAudit();
+  const { stamp, empresaId, usuarioId } = useAudit();
+  const { usuario } = useAuth();
   const { data: usuarios = [] } = useTableRows("usuarios");
   const { data: tCols } = useCols("projetos_tarefas");
   const allT = tarefasDoProjeto;
