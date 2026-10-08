@@ -33,7 +33,7 @@ function VideoTile({ stream, nome, mudo, espelhar }: { stream: MediaStream | nul
 }
 
 /** Sala de chamada nativa (WebRTC em malha, sinalização por canal em tempo real). */
-export function SalaWebRTC({ sala, nome, video, onSair, className }: { sala: string; nome: string; video: boolean; onSair: () => void; className?: string }) {
+export function SalaWebRTC({ sala, nome, video, onSair, onParticipante, className }: { sala: string; nome: string; video: boolean; onSair: () => void; onParticipante?: ((nome: string) => void) | undefined; className?: string }) {
   const [local, setLocal] = useState<MediaStream | null>(null);
   const [remotos, setRemotos] = useState<Remoto[]>([]);
   const [mic, setMic] = useState(true);
@@ -43,6 +43,8 @@ export function SalaWebRTC({ sala, nome, video, onSair, className }: { sala: str
   const peers = useRef(new Map<string, RTCPeerConnection>());
   const localRef = useRef<MediaStream | null>(null);
   const camTrack = useRef<MediaStreamTrack | null>(null);
+  const partRef = useRef(onParticipante);
+  partRef.current = onParticipante;
 
   useEffect(() => {
     let ativo = true;
@@ -109,6 +111,7 @@ export function SalaWebRTC({ sala, nome, video, onSair, className }: { sala: str
         enviar({ para: id, tipo: "offer", data: pc.localDescription });
       }
       setRemotos((rs) => rs.map((r) => ({ ...r, nome: estado[r.id]?.[0]?.nome ?? r.nome })));
+      for (const id of ids) { const n = estado[id]?.[0]?.nome; if (n) partRef.current?.(n); }
     });
 
     (async () => {

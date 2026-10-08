@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { SalaWebRTC } from "./SalaWebRTC";
 
-export type Chamada = { sala: string; video: boolean; inicio: number };
+export type Chamada = { sala: string; video: boolean; inicio: number; iniciador?: string };
 
 export function novaSala() {
   const r = crypto.getRandomValues(new Uint8Array(9));
@@ -21,7 +21,7 @@ export function duracao(ms: number) {
   return `${String(m).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 }
 
-export function ChamadaFlutuante({ chamada, nome, titulo, onEncerrar }: { chamada: Chamada; nome: string; titulo: string; onEncerrar: () => void }) {
+export function ChamadaFlutuante({ chamada, nome, titulo, onEncerrar, onParticipante }: { chamada: Chamada; nome: string; titulo: string; onEncerrar: () => void; onParticipante?: (nome: string) => void }) {
   const [min, setMin] = useState(false);
   const [agora, setAgora] = useState(Date.now());
   useEffect(() => {
@@ -46,7 +46,7 @@ export function ChamadaFlutuante({ chamada, nome, titulo, onEncerrar }: { chamad
           <PhoneOff className="mr-1 h-4 w-4" /> Encerrar
         </Button>
       </div>
-      <SalaWebRTC sala={chamada.sala} nome={nome} video={chamada.video} onSair={onEncerrar} className="flex-1" />
+      <SalaWebRTC sala={chamada.sala} nome={nome} video={chamada.video} onSair={onEncerrar} onParticipante={onParticipante} className="flex-1" />
     </div>
   );
 }
