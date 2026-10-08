@@ -21,3 +21,6 @@
 - [ ] Tela de Atendimentos (chat estilo WhatsApp Web).
 
 - [x] Dashboard por perfil (Meu trabalho, Projetos, Comercial, Compras, Atendimento) + aviso WhatsApp ao atribuir tarefa/atividade. (Aguarda `atendeai-dashboard-eventos.sql`.)
+
+- [ ] Fluxos: motor de execução (WhatsApp/Widget) lendo fluxos_atendimento
+- [ ] Fluxos: base de conhecimento + nó de IA
