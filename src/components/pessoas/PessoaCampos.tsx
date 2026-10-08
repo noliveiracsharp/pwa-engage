@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { text } from "@/lib/crud";
@@ -13,8 +15,13 @@ import { pick, type Row } from "@/lib/row";
 
 type Props = { pessoaId?: string | number | undefined };
 
+const opcoesDe = (v: string) => v.split(",").map((o) => o.trim()).filter(Boolean);
+
 function inputTypeFor(tipo: string) {
   const t = tipo.toLowerCase();
+  if (t === "select") return "select";
+  if (t.startsWith("radio")) return "radio";
+  if (t === "checkbox") return "boolean";
   if (t.includes("int") || t.includes("num") || t.includes("float") || t.includes("decimal")) return "number";
   if (t.includes("date") || t.includes("data")) return "date";
   if (t.includes("mail")) return "email";
@@ -57,7 +64,7 @@ export function PessoaCampos({ pessoaId }: Props) {
           return empresaId === undefined || dono === undefined || text(dono) === text(empresaId);
         })
         .filter((row) => text(pick(row, ["chave"])) !== "")
-        .sort((a, b) => text(pick(a, ["chave"])).localeCompare(text(pick(b, ["chave"])))),
+        .sort((a, b) => (Number(pick(a, ["ordem"])) || 0) - (Number(pick(b, ["ordem"])) || 0) || text(pick(a, ["chave"])).localeCompare(text(pick(b, ["chave"])))),
     [definicoes, empresaId],
   );
 
@@ -66,7 +73,9 @@ export function PessoaCampos({ pessoaId }: Props) {
     for (const campo of campos) {
       const chave = text(pick(campo, ["chave"]));
       const existente = valores.find((row) => text(pick(row, ["chave"])) === chave);
-      next[chave] = text(pick(existente, ["valor"], ""));
+      const tp = inputTypeFor(text(pick(campo, ["tipo"], "texto")));
+      const padrao = tp === "select" || tp === "radio" ? "" : text(pick(campo, ["valor"], ""));
+      next[chave] = existente ? text(pick(existente, ["valor"], "")) : padrao;
     }
     setValues(next);
   }, [campos, valores]);
@@ -119,16 +128,17 @@ export function PessoaCampos({ pessoaId }: Props) {
         <p className="text-muted-foreground text-sm">Salve a pessoa para preencher os campos personalizados.</p>
       ) : (
         <>
-          <div className="grid gap-x-4 gap-y-5 sm:grid-cols-2">
+          <div className="grid gap-x-4 gap-y-5">
             {campos.map((campo) => {
               const chave = text(pick(campo, ["chave"]));
-              const tipo = inputTypeFor(text(pick(campo, ["tipo"], "text")));
+              const tipo = inputTypeFor(text(pick(campo, ["tipo"], "texto")));
+              const opcoes = opcoesDe(text(pick(campo, ["valor"], "")));
               const value = values[chave] ?? "";
               const id = `campo-${chave}`;
               return (
                 <div key={chave} className={`min-w-0 space-y-1.5 ${tipo === "textarea" ? "sm:col-span-2" : ""}`}>
                   <Label htmlFor={id} className="block text-sm font-medium">
-                    {chave}
+                    {text(pick(campo, ["label"])) || chave}
                   </Label>
                   {tipo === "boolean" ? (
                     <div className="bg-background flex h-10 items-center justify-between gap-3 rounded-md border px-3 py-2">
@@ -139,6 +149,22 @@ export function PessoaCampos({ pessoaId }: Props) {
                         onCheckedChange={(v) => setValues((s) => ({ ...s, [chave]: String(v) }))}
                       />
                     </div>
+                  ) : tipo === "select" ? (
+                    <Select value={value} onValueChange={(v) => setValues((s) => ({ ...s, [chave]: v }))}>
+                      <SelectTrigger id={id}><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <SelectContent>
+                        {opcoes.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  ) : tipo === "radio" ? (
+                    <RadioGroup value={value} onValueChange={(v) => setValues((s) => ({ ...s, [chave]: v }))} className="gap-2">
+                      {opcoes.map((o) => (
+                        <div key={o} className="flex items-center gap-2">
+                          <RadioGroupItem id={`${id}-${o}`} value={o} />
+                          <Label htmlFor={`${id}-${o}`} className="font-normal">{o}</Label>
+                        </div>
+                      ))}
+                    </RadioGroup>
                   ) : tipo === "textarea" ? (
                     <Textarea
                       id={id}
