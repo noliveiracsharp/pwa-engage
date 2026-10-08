@@ -671,7 +671,7 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
             ) : (
               <TabsContent key={t.key} value={t.key} className="mt-4">
                 {configFor[t.kind] ? (
-                  <ChildTable config={configFor[t.kind]!} empresa={empresa} perms={t.perms} />
+                  <ChildTable config={configFor[t.kind]!} empresa={empresa} perms={readOnly ? { canCreate: false, canUpdate: false, canDelete: false } : t.perms} />
                 ) : (
                   <p className="text-sm text-muted-foreground">Em breve.</p>
                 )}
