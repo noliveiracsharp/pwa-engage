@@ -14,7 +14,7 @@ import {
   parseCamposCardTipado,
   type CampoCardTipado,
   salvarCamposCard,
-  vinculoDoKanban,
+  vinculoDoKanban, tabelaDoKanban,
 } from "@/lib/orcamento-kanban";
 
 import { useEffect, useMemo, useState } from "react";
@@ -152,16 +152,23 @@ function KanbanPage() {
     return map;
   }, [pessoas]);
 
+  const { data: tabelaQuadro = null } = useQuery({
+    queryKey: ["kanban-tabela", kanbanId],
+    enabled: !!kanbanId,
+    queryFn: () => tabelaDoKanban(kanbanId),
+  });
+  const quadroOfertas = tabelaQuadro === "orcamentos";
   const cardsByEtapa = useMemo(() => {
     const map = new Map<string, Row[]>();
-    for (const a of atendimentos) {
+    // Cada quadro mostra só a entidade da função vinculada (padrão: atendimentos).
+    if (!quadroOfertas) for (const a of atendimentos) {
       const etapaId = String(pick(a, ["kanban_etapa_id", "etapa_id", "id_etapa"]) ?? "");
       if (!etapaId) continue;
       const list = map.get(etapaId) ?? [];
       list.push(a);
       map.set(etapaId, list);
     }
-    for (const o of orcamentos) {
+    if (quadroOfertas) for (const o of orcamentos) {
       const etapaId = String(o["kanban_etapa_id"] ?? "");
       if (!etapaId) continue;
       const list = map.get(etapaId) ?? [];
@@ -169,7 +176,7 @@ function KanbanPage() {
       map.set(etapaId, list);
     }
     return map;
-  }, [atendimentos, orcamentos]);
+  }, [atendimentos, orcamentos, quadroOfertas]);
 
   const { data: parceiros = [] } = useRows("parceiros");
   const { data: usuarios = [] } = useRows("usuarios");
@@ -552,7 +559,7 @@ function KanbanPage() {
                 <div className="flex flex-col gap-2">
                   {cards.length === 0 && (
                     <p className="rounded-md border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
-                      Arraste atendimentos para cá
+                      {quadroOfertas ? "Arraste ofertas para cá" : "Arraste atendimentos para cá"}
                     </p>
                   )}
                   {cards.map((card) => {
