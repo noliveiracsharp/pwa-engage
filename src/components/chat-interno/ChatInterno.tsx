@@ -531,6 +531,30 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack }: { me: stri
           {canalId && msgs.length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">Envie a primeira mensagem para {nome}.</p>}
           {msgs.map((m) => {
             const mine = String(m["remetente_id"]) === me;
+            const txt = String(m["mensagem"] ?? "");
+            const autor = mine ? "Você" : (nomes.get(String(m["remetente_id"])) ?? "Usuário");
+            if (txt.startsWith(CONVITE) || txt.startsWith(ENCERRADA)) {
+              const convite = txt.startsWith(CONVITE);
+              const [, sala = "", v = "1"] = txt.split("|");
+              const video = v === "1";
+              return (
+                <div key={String(m["id"])} className="flex justify-center">
+                  <div className="w-full max-w-[85%] rounded-xl border border-border bg-card p-3 text-sm">
+                    <div className="flex items-center gap-2 font-medium">
+                      {convite && video ? <Video className="h-4 w-4 text-primary" /> : <Phone className="h-4 w-4 text-primary" />}
+                      {convite ? `${autor} iniciou uma chamada de ${video ? "vídeo" : "áudio"}` : ENCERRADA.replace("📞 ", "")}
+                      <span className="ml-auto text-[10px] text-muted-foreground">{hora(m["criado_em"])}</span>
+                    </div>
+                    {!convite && <p className="mt-1 text-xs text-muted-foreground">{txt.split("\n").slice(1).join(" ")}</p>}
+                    {convite && !mine && (
+                      <Button size="sm" className="mt-2 w-full" disabled={!!chamada} onClick={() => entrar(sala, video)}>
+                        Entrar na chamada
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              );
+            }
             const anexos = (Array.isArray(m["anexos"]) ? m["anexos"] : []) as Anexo[];
             return (
               <div key={String(m["id"])} className={cn("flex", mine ? "justify-end" : "justify-start")}>
