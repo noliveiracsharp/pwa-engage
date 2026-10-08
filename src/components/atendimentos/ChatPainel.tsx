@@ -734,3 +734,21 @@ function MoverDialog({
     </Dialog>
   );
 }
+
+/** Texto da mensagem; convites de chamada viram cartão com botão "Entrar na chamada". */
+function CorpoMsg({ corpo }: { corpo: string }) {
+  const link = corpo.match(/https?:\/\/[^\s]+\/chamada\/atendeai-[a-z0-9]+[^\s]*/)?.[0];
+  if (!link) return <p className="whitespace-pre-wrap break-words"><Linkify text={corpo} /></p>;
+  const video = !link.includes("audio=1");
+  return (
+    <div className="space-y-2">
+      <p className="flex items-center gap-1 font-medium">
+        {video ? <Video className="h-4 w-4" /> : <Phone className="h-4 w-4" />}
+        {corpo.split("\n")[0]?.replace(/Toque no link para entrar:?/, "").trim()}
+      </p>
+      <Button asChild size="sm" variant="secondary" className="w-full">
+        <a href={link} target="_blank" rel="noreferrer">Entrar na chamada</a>
+      </Button>
+    </div>
+  );
+}
