@@ -4,6 +4,7 @@ import { Send, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/widget/$instanciaId")({
+  staticData: { sitemap: false },
   head: () => ({
     meta: [
       { title: "Chat de atendimento — Atende.ai" },
