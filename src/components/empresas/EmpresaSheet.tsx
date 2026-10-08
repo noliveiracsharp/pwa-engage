@@ -86,27 +86,30 @@ type ChildConfig = {
   columns: ChildColumn[];
 };
 
+const notChat = (d: Record<string, string>) => d["tipo"] !== "chat";
+
 const INSTANCIAS: ChildConfig = {
   table: "empresas_instancias",
   title: "Instâncias",
   empty: "Nenhuma instância vinculada.",
   columns: [
     { key: "nome", label: "Nome" },
-    { key: "telefone", label: "Telefone", type: "tel" },
     { key: "tipo", label: "Tipo", type: "select", options: ["whatsapp", "instagram", "telegram", "chat"] },
-    { key: "provedor", label: "Provedor" },
-    { key: "instance_id", label: "ID da instância" },
-    { key: "url", label: "URL" },
-    { key: "token", label: "Token" },
-    { key: "client_token", label: "Client token" },
+    { key: "telefone", label: "Telefone", type: "tel" },
+    { key: "provedor", label: "Provedor", showIf: notChat },
+    { key: "instance_id", label: "ID da instância", showIf: notChat },
+    { key: "url", label: "URL", showIf: notChat },
+    { key: "token", label: "Token", showIf: notChat },
+    { key: "client_token", label: "Client token", showIf: notChat },
     {
       key: "tipo_envio",
       label: "Tipo de envio",
       type: "select",
       options: ["zapi_direto", "n8n_webhook"],
       optionLabels: { zapi_direto: "Enviar diretamente via API da Z-API", n8n_webhook: "Rotear envio via Webhook do n8n / Workflow" },
+      showIf: notChat,
     },
-    { key: "n8n_webhook_url", label: "URL Webhook n8n", showIf: (d) => d["tipo_envio"] === "n8n_webhook", required: true },
+    { key: "n8n_webhook_url", label: "URL Webhook n8n", showIf: (d) => notChat(d) && d["tipo_envio"] === "n8n_webhook", required: true },
     { key: "icone", label: "Ícone", type: "icon" },
     { key: "status", label: "Status", type: "boolean" },
   ],
@@ -188,8 +191,10 @@ function ChildTable({ config, empresa, perms = FULL }: { config: ChildConfig; em
   };
 
   const save = async () => {
+    const isChat = config.table === "empresas_instancias" && draft["tipo"] === "chat";
     const phoneColumn = config.columns.find((column) => column.type === "tel");
-    if (phoneColumn && !isCompletePhone(draft[phoneColumn.key] ?? "")) {
+    const phoneValue = phoneColumn ? draft[phoneColumn.key] ?? "" : "";
+    if (phoneColumn && !(isChat && !digitsOnly(phoneValue)) && !isCompletePhone(phoneValue)) {
       toast.error(`${phoneColumn.label}: informe um telefone válido.`);
       return;
     }
@@ -201,10 +206,13 @@ function ChildTable({ config, empresa, perms = FULL }: { config: ChildConfig; em
     }
     const payload: Row = editing ? {} : { empresa_id: empresaId };
     for (const col of config.columns) {
+      if (col.showIf && !col.showIf(draft)) continue;
       const value = draft[col.key] ?? "";
       if (value === "" && !editing) continue;
+      if (col.type === "tel" && isChat && !digitsOnly(value)) continue;
       payload[col.key] = col.type === "boolean" ? value === "true" : value;
     }
+    if (isChat) payload["status_conexao"] = "conectado";
     const editingKey = editing ? idColumn(editing) : undefined;
     const response = editing && editingKey
       ? await supabase.from(config.table).update(payload as never).eq(editingKey, editing[editingKey] as never)
