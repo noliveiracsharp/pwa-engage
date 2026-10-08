@@ -32,3 +32,4 @@ Comissões: cálculo puro em `src/lib/comissoes.ts` (líquido = venda − compra
 - Right/left Sheet dimensions are centralized using data-panel-side in global CSS, excluding data-sidebar overlays, so form widths stay consistent across modules.
 - Kanban stage colors persist as semantic keys in kanban_etapas.cor and resolve through kanban-cores.ts and EtapaCorPicker, keeping configuration and board rendering consistent across themes.
 - Offer status badges and selectors consume the linked stage color through kanban-cores.ts, so they remain consistent with board configuration rather than deriving colors from status names.
+- Fluxos de atendimento: o grafo do construtor (React Flow) é salvo como jsonb (`nos`/`conexoes`) em `fluxos_atendimento`, com catálogo de blocos e saídas em `src/lib/fluxos.ts`; assim o futuro motor de execução lê o mesmo formato que a tela edita.
