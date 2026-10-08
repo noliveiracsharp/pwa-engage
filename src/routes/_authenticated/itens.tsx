@@ -133,15 +133,15 @@ function ItensPage() {
         const foto = pick(marca, ["foto"]);
         const nome = String(pick(marca, ["descricao"]) ?? "—");
         return (
-          <div className="flex items-center gap-2.5">
+          <div className="flex min-w-0 items-center gap-2.5">
             {foto ? (
-              <img src={foto} alt={nome} className="border-border h-7 w-7 rounded-full border object-cover" />
+              <img src={foto} alt={nome} className="border-border h-7 w-7 shrink-0 rounded-full border object-cover" />
             ) : (
-              <span className="bg-muted text-muted-foreground border-border flex h-7 w-7 items-center justify-center rounded-full border">
+              <span className="bg-muted text-muted-foreground border-border flex h-7 w-7 shrink-0 items-center justify-center rounded-full border">
                 <Package className="h-3.5 w-3.5" />
               </span>
             )}
-            <span>{nome}</span>
+            <span className="max-w-[120px] truncate">{nome}</span>
           </div>
         );
       },
