@@ -298,13 +298,15 @@ export function ChildTable({ config, empresa, perms = FULL }: { config: ChildCon
   return (
     <div className="space-y-4">
       <div className="divide-y divide-border rounded-md border border-border">
-        {rows.length === 0 && <p className="p-3 text-sm text-muted-foreground">{config.empty}</p>}
-        {rows.map((row, index) => {
+        {ordered.length === 0 && <p className="p-3 text-sm text-muted-foreground">{config.empty}</p>}
+        {(() => {
+          const list = ordered.map((row, index) => {
           const iconValue = text(pick(row, ["icone"], ""));
           const Icon = getIcon(iconValue);
           const nomeValue = text(pick(row, ["nome"], ""));
-          return (
-            <div key={text(row[idColumn(row)] ?? index)} className="flex items-start gap-3 p-3 text-sm">
+          const rowKey = text(row[idColumn(row)] ?? index);
+          const rowContent = (
+            <div className="flex items-start gap-3 p-3 text-sm">
               <div className="grid min-w-0 flex-1 gap-2">
                 <div className="flex items-center gap-2">
                   {iconValue && <Icon className="h-5 w-5 shrink-0 text-primary" />}
