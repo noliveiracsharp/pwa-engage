@@ -86,16 +86,24 @@ function WidgetPage() {
     await rpc("widget_enviar", { p_sessao: sessao, p_atendimento: atId, p_texto: t });
   }
 
-  const cor = cfg?.cor || "hsl(var(--primary))";
+  const cor = cfg?.cor || "#0ea5e9";
+  const corTexto = textoContraste(cor);
+  const marca = { background: cor, color: corTexto };
+  const hora = (iso: string) => new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  const campo = "w-full rounded-xl border border-input bg-card px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/30";
 
   return (
-    <div className="flex h-screen flex-col bg-background text-foreground">
-      <header className="flex items-center justify-between px-4 py-3 text-primary-foreground" style={{ background: cor }}>
-        <div>
-          <p className="font-semibold">{cfg?.titulo || "Fale conosco"}</p>
-          <p className="text-xs opacity-90">Respondemos o mais rápido possível</p>
+    <div className="flex h-screen flex-col bg-background text-foreground antialiased">
+      <header className="flex items-center gap-3 px-4 py-3.5 shadow-sm" style={marca}>
+        <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-base font-bold" style={{ background: "rgba(255,255,255,.22)" }}>
+          {(cfg?.titulo || "F").charAt(0).toUpperCase()}
+          <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 bg-success" style={{ borderColor: cor }} />
         </div>
-        <button aria-label="Fechar" onClick={() => window.parent.postMessage("atendeai-widget-fechar", "*")}>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-base font-semibold leading-tight">{cfg?.titulo || "Fale conosco"}</p>
+          <p className="text-xs" style={{ opacity: 0.85 }}>Online · respondemos o mais rápido possível</p>
+        </div>
+        <button aria-label="Fechar" className="rounded-full p-1.5 transition hover:bg-black/10" onClick={() => window.parent.postMessage("atendeai-widget-fechar", "*")}>
           <X className="h-5 w-5" />
         </button>
       </header>
@@ -103,36 +111,44 @@ function WidgetPage() {
       {!cfg && !erro ? (
         <p className="m-auto text-sm text-muted-foreground">Carregando…</p>
       ) : !atId ? (
-        <form onSubmit={iniciar} className="flex flex-1 flex-col gap-3 p-4">
-          <p className="rounded-lg bg-muted p-3 text-sm">{cfg?.boas_vindas || "Olá! Como podemos ajudar?"}</p>
-          <input className="rounded-md border border-input bg-background px-3 py-2 text-sm" placeholder="Seu nome" value={nome} onChange={(e) => setNome(e.target.value)} />
+        <form onSubmit={iniciar} className="flex flex-1 flex-col gap-3 overflow-y-auto p-4">
+          <div className="rounded-2xl rounded-tl-sm border border-border bg-card p-3.5 text-sm text-card-foreground shadow-sm">
+            {cfg?.boas_vindas || "Olá! Como podemos ajudar?"}
+          </div>
+          <p className="mt-2 text-xs font-medium text-muted-foreground">Para começar, informe seus dados:</p>
+          <input className={campo} placeholder="Seu nome" value={nome} onChange={(e) => setNome(e.target.value)} />
           {cfg?.pedir_telefone !== false && (
-            <input className="rounded-md border border-input bg-background px-3 py-2 text-sm" placeholder="WhatsApp com DDD" value={telefone} onChange={(e) => setTelefone(e.target.value)} />
+            <input className={campo} inputMode="tel" placeholder="WhatsApp com DDD" value={telefone} onChange={(e) => setTelefone(e.target.value)} />
           )}
           {erro && <p className="text-sm text-destructive">{erro}</p>}
-          <button type="submit" className="rounded-md px-3 py-2 text-sm font-medium text-primary-foreground" style={{ background: cor }} disabled={!cfg}>
+          <button type="submit" className="mt-1 rounded-xl px-3 py-2.5 text-sm font-semibold shadow-sm transition hover:opacity-90 disabled:opacity-50" style={marca} disabled={!cfg}>
             Iniciar conversa
           </button>
         </form>
       ) : (
         <>
-          <div className="flex-1 space-y-2 overflow-y-auto p-3">
-            <p className="max-w-[85%] rounded-lg bg-muted p-2 text-sm">{cfg?.boas_vindas || "Olá! Como podemos ajudar?"}</p>
+          <div className="flex-1 space-y-3 overflow-y-auto bg-muted/40 p-4">
+            <div className="flex justify-start">
+              <p className="max-w-[80%] rounded-2xl rounded-tl-sm border border-border bg-card px-3.5 py-2.5 text-sm text-card-foreground shadow-sm">
+                {cfg?.boas_vindas || "Olá! Como podemos ajudar?"}
+              </p>
+            </div>
             {msgs.map((m) => (
-              <div key={m.id} className={`flex ${m.from_me ? "justify-start" : "justify-end"}`}>
+              <div key={m.id} className={`flex flex-col ${m.from_me ? "items-start" : "items-end"}`}>
                 <p
-                  className={`max-w-[85%] whitespace-pre-wrap rounded-lg p-2 text-sm ${m.from_me ? "bg-muted" : "text-primary-foreground"}`}
-                  style={m.from_me ? undefined : { background: cor }}
+                  className={`max-w-[80%] whitespace-pre-wrap break-words px-3.5 py-2.5 text-sm shadow-sm ${m.from_me ? "rounded-2xl rounded-tl-sm border border-border bg-card text-card-foreground" : "rounded-2xl rounded-tr-sm"}`}
+                  style={m.from_me ? undefined : marca}
                 >
                   {m.mensagem}
                 </p>
+                <span className="mt-1 px-1 text-[10px] text-muted-foreground">{hora(m.created_at)}</span>
               </div>
             ))}
             <div ref={fim} />
           </div>
-          <form onSubmit={enviar} className="flex gap-2 border-t border-border p-2">
-            <input className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm" placeholder="Digite sua mensagem…" value={texto} onChange={(e) => setTexto(e.target.value)} />
-            <button type="submit" aria-label="Enviar" className="rounded-md px-3 text-primary-foreground" style={{ background: cor }}>
+          <form onSubmit={enviar} className="flex items-center gap-2 border-t border-border bg-background p-3">
+            <input className={`${campo} rounded-full`} placeholder="Digite sua mensagem…" value={texto} onChange={(e) => setTexto(e.target.value)} />
+            <button type="submit" aria-label="Enviar" disabled={!texto.trim()} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full shadow-sm transition hover:opacity-90 disabled:opacity-40" style={marca}>
               <Send className="h-4 w-4" />
             </button>
           </form>
@@ -140,4 +156,15 @@ function WidgetPage() {
       )}
     </div>
   );
+}
+
+/** Retorna texto claro ou escuro conforme a luminância da cor da marca. */
+function textoContraste(hex: string) {
+  const h = hex.replace("#", "");
+  if (!/^[0-9a-f]{6}$/i.test(h)) return "#ffffff";
+  const [r = 1, g = 1, b = 1] = [0, 2, 4].map((i) => {
+    const c = parseInt(h.slice(i, i + 2), 16) / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.5 ? "#0f172a" : "#ffffff";
 }
