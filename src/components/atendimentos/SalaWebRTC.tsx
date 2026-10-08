@@ -61,6 +61,7 @@ export function SalaWebRTC({ sala, nome, video, onSair, className }: { sala: str
       pc = new RTCPeerConnection(ICE);
       peers.current.set(id, pc);
       localRef.current?.getTracks().forEach((t) => pc!.addTrack(t, localRef.current!));
+      if (!localRef.current?.getVideoTracks().length) pc.addTransceiver("video", { direction: "sendrecv" });
       pc.onicecandidate = (e) => e.candidate && enviar({ para: id, tipo: "ice", data: e.candidate.toJSON() });
       pc.ontrack = (e) => setRemoto(id, { stream: e.streams[0] ?? new MediaStream([e.track]) });
       pc.onconnectionstatechange = () => {
@@ -149,9 +150,8 @@ export function SalaWebRTC({ sala, nome, video, onSair, className }: { sala: str
 
   const trocarVideo = (track: MediaStreamTrack | null) => {
     peers.current.forEach((pc) => {
-      const sender = pc.getSenders().find((s) => s.track?.kind === "video" || (!s.track && s !== pc.getSenders().find((x) => x.track?.kind === "audio")));
-      if (sender) sender.replaceTrack(track);
-      else if (track && localRef.current) pc.addTrack(track, localRef.current);
+      const sender = pc.getTransceivers().find((t) => t.receiver.track?.kind === "video")?.sender;
+      sender?.replaceTrack(track);
     });
   };
 
