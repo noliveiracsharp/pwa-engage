@@ -1,9 +1,10 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Pencil, Plus, QrCode, Search, Trash2, Unplug } from "lucide-react";
+import { Code, Loader2, Pencil, Plus, QrCode, Search, Trash2, Unplug } from "lucide-react";
 import { digitsOnly } from "@/lib/input-masks";
 import { useServerFn } from "@tanstack/react-start";
 import { QrCodeDialog } from "@/components/empresas/QrCodeDialog";
+import { WidgetChatDialog } from "@/components/empresas/WidgetChatDialog";
 import { desconectarWhatsApp } from "@/lib/zapi.functions";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -150,6 +151,7 @@ function ChildTable({ config, empresa, perms = FULL }: { config: ChildConfig; em
   const [editing, setEditing] = useState<Row | null>(null);
   const [adding, setAdding] = useState(false);
   const [qrInst, setQrInst] = useState<Row | null>(null);
+  const [widgetInst, setWidgetInst] = useState<Row | null>(null);
   const desconectarFn = useServerFn(desconectarWhatsApp);
 
   const { data: rows = [], isError } = useQuery({
@@ -300,7 +302,12 @@ function ChildTable({ config, empresa, perms = FULL }: { config: ChildConfig; em
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-1">
-                {config.table === "empresas_instancias" &&
+                {config.table === "empresas_instancias" && text(pick(row, ["tipo"])) === "chat" && (
+                  <Button variant="outline" size="sm" onClick={() => setWidgetInst(row)}>
+                    <Code className="mr-1 h-4 w-4" /> Widget do site
+                  </Button>
+                )}
+                {config.table === "empresas_instancias" && text(pick(row, ["tipo"])) !== "chat" &&
                   (text(pick(row, ["status_conexao"])).toLowerCase() === "conectado" ? (
                     <>
                       <Badge className="bg-success text-success-foreground hover:bg-success">WhatsApp Conectado</Badge>
@@ -423,6 +430,7 @@ function ChildTable({ config, empresa, perms = FULL }: { config: ChildConfig; em
       </div>
       </>
       )}
+      <WidgetChatDialog instancia={widgetInst} onClose={() => setWidgetInst(null)} />
       <QrCodeDialog
         instancia={qrInst}
         onOpenChange={(o) => !o && setQrInst(null)}
