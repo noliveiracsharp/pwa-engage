@@ -1,3 +1,4 @@
+import { Linkify } from "@/components/ui/linkify";
 import { useChecklistGate } from "@/components/kanban/ChecklistGate";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -647,7 +648,7 @@ function Balao({ m, autores }: { m: Row; autores: Map<string, string> }) {
             <FileText className="h-4 w-4" /> {text(m["nome_arquivo"]) || "Abrir documento"}
           </a>
         )}
-        {corpo.startsWith(REG_CHAMADA) ? <RegistroChamada corpo={corpo} /> : corpo && !(url && corpo === text(m["nome_arquivo"])) && <p className="whitespace-pre-wrap break-words">{corpo}</p>}
+        {corpo.startsWith(REG_CHAMADA) ? <RegistroChamada corpo={corpo} /> : corpo && !(url && corpo === text(m["nome_arquivo"])) && <CorpoMsg corpo={corpo} />}
         <p className="mt-1 flex items-center justify-end gap-1 text-[10px]">
           <span className="opacity-70">{hora}</span>
           {!interna && !cliente && <VistoLeitura status={text(m["status_envio"]).toLowerCase()} />}

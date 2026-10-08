@@ -1,3 +1,4 @@
+import { Linkify } from "@/components/ui/linkify";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -586,7 +587,7 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack }: { me: stri
                       </a>
                     ),
                   )}
-                  {anexos.length === 0 && <p className="break-words whitespace-pre-wrap">{String(m["mensagem"] ?? "")}</p>}
+                  {anexos.length === 0 && <p className="break-words whitespace-pre-wrap"><Linkify text={String(m["mensagem"] ?? "")} /></p>}
                   <p className={cn("mt-0.5 text-right text-[10px]", mine ? "text-primary-foreground/70" : "text-muted-foreground")}>{hora(m["criado_em"])}</p>
                 </div>
               </div>
