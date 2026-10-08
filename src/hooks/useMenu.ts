@@ -1,5 +1,4 @@
-import { useEffect } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { pick, type Row } from "@/lib/row";
 import { useAuth } from "@/hooks/useAuth";
@@ -62,24 +61,7 @@ export function useMenu() {
     (funcoes ?? []).filter((f) => f["menu_ativo"] === false).map((f) => String(f["id"])),
   );
 
-  // Atualiza o menu na hora quando funções/permissões mudam (inclusive em outras sessões).
-  const queryClient = useQueryClient();
-  useEffect(() => {
-    if (!user) return;
-    const refresh = () => {
-      queryClient.invalidateQueries({ queryKey: ["table", "funcoes"] });
-      queryClient.invalidateQueries({ queryKey: ["table", "menu"] });
-    };
-    const channel = supabase
-      .channel(`menu-sync-${user.id}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "funcoes" }, refresh)
-      .on("postgres_changes", { event: "*", schema: "public", table: "menu" }, refresh)
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user, queryClient]);
-
+  // Tempo real global (useRealtimeRefresh) já invalida ["table","funcoes"] e ["table","menu"].
   const query = useQuery({
     // Prefixo ["table","menu"]: qualquer alteração em permissões invalida o menu junto.
     queryKey: ["table", "menu", "sidebar", String(perfilId ?? usuario?.["id"] ?? user?.id ?? null), isMaster, funcoesAt],
