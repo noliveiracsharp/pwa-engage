@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { createContext, useContext, useState, type ReactNode } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
@@ -44,7 +44,8 @@ function periodStart(periodo: Periodo) {
 async function rowsOf(table: string, empId: unknown, build?: (q: any) => any): Promise<Row[]> {
   try {
     let q: any = supabase.from(table as never).select("*");
-    if (empId !== undefined) q = q.eq("empresa_id", empId);
+    if (Array.isArray(empId)) q = q.in("empresa_id", empId);
+    else if (empId !== undefined) q = q.eq("empresa_id", empId);
     if (build) q = build(q);
     const { data, error } = await q.limit(2000);
     return error ? [] : ((data ?? []) as Row[]);
@@ -56,13 +57,22 @@ async function rowsOf(table: string, empId: unknown, build?: (q: any) => any): P
 async function countOf(table: string, empId: unknown, build?: (q: any) => any) {
   try {
     let q: any = supabase.from(table as never).select("*", { count: "exact", head: true });
-    if (empId !== undefined) q = q.eq("empresa_id", empId);
+    if (Array.isArray(empId)) q = q.in("empresa_id", empId);
+    else if (empId !== undefined) q = q.eq("empresa_id", empId);
     if (build) q = build(q);
     const { count, error } = await q;
     return error ? 0 : count ?? 0;
   } catch {
     return 0;
   }
+}
+
+/** Empresas consideradas nos painéis (consolidado da matriz ou unidade escolhida). */
+const EscopoCtx = createContext<unknown>(undefined);
+function useEscopo() {
+  const { empresaId } = useAudit();
+  const escopo = useContext(EscopoCtx);
+  return escopo ?? empresaId;
 }
 
 const isDone = (r: Row) => {
@@ -164,7 +174,7 @@ function MeuTrabalho() {
 
 /* ---------------- Projetos ---------------- */
 function PainelProjetos() {
-  const { empresaId } = useAudit();
+  const empresaId = useEscopo();
   const { data } = useQuery({
     queryKey: ["dashboard", "projetos", empresaId],
     queryFn: async () => {
@@ -191,7 +201,7 @@ function PainelProjetos() {
 
 /* ---------------- Compras ---------------- */
 function PainelCompras() {
-  const { empresaId } = useAudit();
+  const empresaId = useEscopo();
   const { data } = useQuery({
     queryKey: ["dashboard", "cotacoes", empresaId],
     queryFn: async () => {
@@ -215,7 +225,8 @@ function PainelCompras() {
 
 /* ---------------- Comercial ---------------- */
 function PainelComercial({ periodo }: { periodo: Periodo }) {
-  const { empresaId, usuarioId } = useAudit();
+  const { usuarioId } = useAudit();
+  const empresaId = useEscopo();
   const since = periodStart(periodo).toISOString();
   const { data } = useQuery({
     queryKey: ["dashboard", "ofertas", empresaId, periodo, usuarioId],
@@ -254,7 +265,7 @@ function PainelComercial({ periodo }: { periodo: Periodo }) {
 
 /* ---------------- Atendimento ---------------- */
 function PainelAtendimento() {
-  const { empresaId } = useAudit();
+  const empresaId = useEscopo();
   const { data } = useQuery({
     queryKey: ["dashboard", "atendimentos", empresaId],
     queryFn: async () => {
@@ -307,6 +318,18 @@ function Dashboard() {
   const cotacoes = usePagePermissions("/cotacoes").canRead;
   const ofertas = usePagePermissions("/orcamentos").canRead;
   const atend = usePagePermissions("/atendimentos").canRead;
+  const { empresaId } = useAudit();
+  const [unidade, setUnidade] = useState("todas");
+  const { data: filiais = [] } = useQuery({
+    queryKey: ["dashboard", "filiais", empresaId],
+    enabled: empresaId != null,
+    queryFn: async () => {
+      const { data } = await supabase.from("empresas").select("*").eq("empresa_pai_id", empresaId as never);
+      return (data ?? []) as Row[];
+    },
+  });
+  const escopo = !filiais.length || empresaId == null ? undefined
+    : unidade === "todas" ? [empresaId, ...filiais.map((f) => f["id"])] : unidade;
   const nome = String(usuario?.["nome"] ?? "").split(" ")[0];
   const hora = new Date().getHours();
   const saud = hora < 12 ? "Bom dia" : hora < 18 ? "Boa tarde" : "Boa noite";
@@ -318,6 +341,19 @@ function Dashboard() {
           <h1 className="text-2xl font-bold text-foreground">{saud}{nome ? `, ${nome}` : ""}</h1>
           <p className="text-sm text-muted-foreground">Painéis das áreas que você acessa.</p>
         </div>
+        <div className="flex flex-wrap gap-2">
+        {filiais.length > 0 && (
+          <Select value={unidade} onValueChange={setUnidade}>
+            <SelectTrigger className="w-60" aria-label="Unidade"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todas">Consolidado (todas as unidades)</SelectItem>
+              <SelectItem value={String(empresaId)}>Apenas matriz</SelectItem>
+              {filiais.map((f) => (
+                <SelectItem key={String(f["id"])} value={String(f["id"])}>{String(pick(f, ["titulo", "nome"]) ?? "Filial")}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
         {ofertas && (
           <Select value={periodo} onValueChange={(v) => setPeriodo(v as Periodo)}>
             <SelectTrigger className="w-52"><SelectValue /></SelectTrigger>
@@ -327,12 +363,15 @@ function Dashboard() {
             </SelectContent>
           </Select>
         )}
+        </div>
       </div>
+      <EscopoCtx.Provider value={escopo}>
       <MeuTrabalho />
       {projetos && <PainelProjetos />}
       {ofertas && <PainelComercial periodo={periodo} />}
       {cotacoes && <PainelCompras />}
       {atend && <PainelAtendimento />}
+      </EscopoCtx.Provider>
     </div>
   );
 }
