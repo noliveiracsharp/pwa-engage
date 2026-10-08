@@ -69,13 +69,19 @@ function ParceirosPage() {
       header: "Nome/Razão Social",
       fields: ["razao_social"],
       render: (r) => (
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-1">
+            {r["is_cliente"] === true && (
+              <span title="Cliente" aria-label="Cliente" className="flex size-6 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">C</span>
+            )}
+            {r["is_fornecedor"] === true && (
+              <span title="Fornecedor" aria-label="Fornecedor" className="flex size-6 items-center justify-center rounded-full bg-warning text-xs font-bold text-warning-foreground">F</span>
+            )}
+          </div>
           <div>
             <div>{String(pick(r, ["razao_social"], "—"))}</div>
             {pick(r, ["nome_fantasia"]) && <div className="text-muted-foreground text-xs">{String(r["nome_fantasia"])}</div>}
           </div>
-          {r["is_cliente"] === true && <Badge>Cliente</Badge>}
-          {r["is_fornecedor"] === true && <Badge variant="secondary">Fornecedor</Badge>}
         </div>
       ),
     },
