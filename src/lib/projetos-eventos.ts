@@ -48,7 +48,7 @@ export async function registrarEventoProjeto(e: Evento) {
   if (novos.size === 0) return;
   try {
     const { data: insts } = await supabase.from("empresas_instancias").select("*").eq("empresa_id", e.empresaId as never);
-    const inst = ((insts ?? []) as Row[]).find((i) => pick(i, ["ativo", "status"]) !== false) ?? (insts as Row[] | null)?.[0];
+    const inst = ((insts ?? []) as Row[]).find((i) => String(pick(i, ["ativo", "status"]) ?? "true") !== "false") ?? (insts as Row[] | null)?.[0];
     if (!inst) return;
     const { data: users } = await supabase.from("usuarios").select("*").in("id", [...novos] as never);
     const prazo = e.prazo ? String(e.prazo).slice(0, 10).split("-").reverse().join("/") : "";

@@ -303,10 +303,10 @@ function PainelAtendimento() {
 function Dashboard() {
   const [periodo, setPeriodo] = useState<Periodo>("mes");
   const { usuario } = useAuth();
-  const projetos = usePagePermissions("/projetos").page.canRead;
-  const cotacoes = usePagePermissions("/cotacoes").page.canRead;
-  const ofertas = usePagePermissions("/orcamentos").page.canRead;
-  const atend = usePagePermissions("/atendimentos").page.canRead;
+  const projetos = usePagePermissions("/projetos").canRead;
+  const cotacoes = usePagePermissions("/cotacoes").canRead;
+  const ofertas = usePagePermissions("/orcamentos").canRead;
+  const atend = usePagePermissions("/atendimentos").canRead;
   const nome = String(usuario?.["nome"] ?? "").split(" ")[0];
   const hora = new Date().getHours();
   const saud = hora < 12 ? "Bom dia" : hora < 18 ? "Boa tarde" : "Boa noite";

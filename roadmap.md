@@ -12,3 +12,5 @@
 - [ ] Duplicar orçamento (gera novo número com os mesmos itens).
 - [ ] Filtro de Kanban por usuário (usuario_kanban) na tela /kanban.
 - [ ] Tela de Atendimentos (chat estilo WhatsApp Web).
+
+- [x] Dashboard por perfil (Meu trabalho, Projetos, Comercial, Compras, Atendimento) + aviso WhatsApp ao atribuir tarefa/atividade. (Aguarda `atendeai-dashboard-eventos.sql`.)
