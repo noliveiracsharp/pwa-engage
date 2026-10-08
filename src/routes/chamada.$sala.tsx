@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { jitsiUrl } from "@/components/atendimentos/ChamadaFlutuante";
+import { SalaWebRTC } from "@/components/atendimentos/SalaWebRTC";
 
 export const Route = createFileRoute("/chamada/$sala")({
   staticData: { sitemap: false },
@@ -26,6 +26,7 @@ function ChamadaPublica() {
   const [audio, setAudio] = useState(false);
   const [nome, setNome] = useState("");
   const [entrou, setEntrou] = useState(false);
+  const [saiu, setSaiu] = useState(false);
   useEffect(() => {
     setAudio(new URLSearchParams(window.location.search).get("audio") === "1");
   }, []);
@@ -34,14 +35,12 @@ function ChamadaPublica() {
   if (!valida) {
     return <main className="flex min-h-screen items-center justify-center p-6 text-muted-foreground">Link de chamada inválido.</main>;
   }
+  if (saiu && !entrou) {
+    return <main className="flex min-h-screen flex-col items-center justify-center gap-3 p-6 text-center"><p className="text-lg font-medium text-foreground">Chamada encerrada</p><p className="text-sm text-muted-foreground">Obrigado! Você já pode fechar esta página.</p><Button variant="outline" onClick={() => { setSaiu(false); setEntrou(true); }}>Entrar novamente</Button></main>;
+  }
   if (entrou) {
     return (
-      <iframe
-        title="Chamada"
-        src={jitsiUrl(sala, nome || "Cliente", !audio)}
-        allow="camera; microphone; display-capture; fullscreen; autoplay"
-        className="h-[100dvh] w-full border-0"
-      />
+      <div className="h-[100dvh]"><SalaWebRTC sala={sala} nome={nome || "Cliente"} video={!audio} onSair={() => { setEntrou(false); setSaiu(true); }} /></div>
     );
   }
   return (
