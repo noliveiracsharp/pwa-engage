@@ -92,16 +92,23 @@ export function WidgetChatDialog({ instancia, onClose }: { instancia: Row | null
                 <Copy className="mr-1 h-4 w-4" /> Copiar script
               </Button>
             </div>
+            <div className="rounded-lg border border-border p-3 text-xs text-muted-foreground">
+              <p className="mb-1 font-semibold text-foreground">Usuário já logado no seu sistema?</p>
+              <p>Inclua no script <code>data-nome</code>, <code>data-telefone</code> e <code>data-email</code>, ou chame depois do login:</p>
+              <pre className="mt-1 overflow-x-auto rounded bg-muted p-2 font-mono">{`window.AtendeAI.identify({ nome: "Carlos", telefone: "11999998888", email: "carlos@empresa.com" })`}</pre>
+              <p className="mt-1">Com nome e telefone/e-mail o chat abre direto; sem dados, pede nome e e-mail.</p>
+            </div>
           </div>
           <div className="rounded-xl border border-border bg-muted p-3">
             <p className="mb-2 text-xs text-muted-foreground">Pré-visualização</p>
             <div className="overflow-hidden rounded-xl border border-border bg-background shadow">
-              <div className="px-3 py-2 text-primary-foreground" style={{ background: cfg.cor }}>
+              <div className="px-3 py-2" style={{ background: cfg.cor, color: fg }}>
                 <p className="text-sm font-semibold">{cfg.titulo}</p>
               </div>
               <div className="space-y-2 p-3">
                 <p className="rounded-lg bg-muted p-2 text-sm">{cfg.boas_vindas}</p>
                 <div className="rounded-md border border-input px-2 py-1 text-xs text-muted-foreground">Seu nome</div>
+                <div className="rounded-md border border-input px-2 py-1 text-xs text-muted-foreground">Seu e-mail</div>
                 {cfg.pedir_telefone && <div className="rounded-md border border-input px-2 py-1 text-xs text-muted-foreground">WhatsApp com DDD</div>}
               </div>
             </div>
