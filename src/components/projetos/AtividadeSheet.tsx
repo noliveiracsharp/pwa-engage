@@ -1,3 +1,5 @@
+import { useAuth } from "@/hooks/useAuth";
+import { registrarEventoProjeto } from "@/lib/projetos-eventos";
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { FileIcon, Paperclip, Plus, Trash2, Upload, X } from "lucide-react";
@@ -27,7 +29,8 @@ export function AtividadeSheet({ atividade, isNew, tarefaId, projetoId, atividad
   tCols: string[] | undefined; perms: Perms; onClose: () => void;
 }) {
   const qc = useQueryClient();
-  const { stamp } = useAudit();
+  const { stamp, empresaId, usuarioId } = useAudit();
+  const { usuario } = useAuth();
   const { data: usuarios = [] } = useTableRows("usuarios");
   const open = Boolean(atividade) || isNew;
   const readOnly = isNew ? !perms.canCreate : !perms.canUpdate;
@@ -58,6 +61,11 @@ export function AtividadeSheet({ atividade, isNew, tarefaId, projetoId, atividad
       ({ error } = await supabase.from(ATIVIDADES as never).insert(stamp({ ...base, tarefa_id: tarefaId, progresso: 0, situacao: "Em andamento", ordem }, true) as never));
     }
     if (error) { toast.error(error.message); return; }
+    void registrarEventoProjeto({
+      empresaId, autorId: usuarioId, autorNome: String(usuario?.["nome"] ?? ""), projetoId,
+      tipo: "atividade", acao: atividade ? "alterou" : "criou", titulo: String(base["nome"]), prazo: base["dt_fim"],
+      responsaveis: resps, anteriores: Array.isArray(atividade?.["responsaveis"]) ? (atividade!["responsaveis"] as unknown[]).map(String) : [],
+    });
     await sincronizarTarefa(tid, tCols);
     toast.success("Atividade salva.");
     qc.invalidateQueries({ queryKey: ["table", ATIVIDADES] });
