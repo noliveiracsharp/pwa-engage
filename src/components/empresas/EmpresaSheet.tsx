@@ -287,8 +287,8 @@ export function ChildTable({ config, empresa, perms = FULL }: { config: ChildCon
       toast.error("Rode o script atendeai-fluxos-motor.sql no banco para liberar o recebimento.");
       return;
     }
-    const host = window.location.hostname;
-    const origem = /id-preview|lovableproject|localhost/.test(host) ? "https://pwa-engage.lovable.app" : window.location.origin;
+    // Sempre o domínio oficial: é o único endereço publicado que responde ao recebimento.
+    const origem = "https://atendeai.co";
     const url = `${origem}/api/public/zapi-webhook?k=${k}`;
     void navigator.clipboard?.writeText(url).catch(() => undefined);
     const clientToken = text(pick(row, ["client_token"]));
