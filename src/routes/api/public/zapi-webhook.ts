@@ -35,6 +35,7 @@ type Recebido = {
 const ok = (extra: Record<string, unknown> = {}) => Response.json({ ok: true, ...extra });
 
 export const Route = createFileRoute("/api/public/zapi-webhook")({
+  staticData: { sitemap: false },
   server: {
     handlers: {
       GET: async () => ok({ info: "Endereço de recebimento do Atende.ai" }),

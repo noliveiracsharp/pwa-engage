@@ -10,7 +10,7 @@ export type EstadoExec = { no_atual: string | null; status: "ativo" | "aguardand
 
 export type Acao =
   | { tipo: "mensagem"; texto: string }
-  | { tipo: "etapa"; etapa_id: string; prioridade?: string }
+  | { tipo: "etapa"; etapa_id: string; prioridade?: string | undefined }
   | { tipo: "modo"; modo: "Humano" | "IA" }
   | { tipo: "campo"; chave: string; valor: string }
   | { tipo: "encerrar" }
