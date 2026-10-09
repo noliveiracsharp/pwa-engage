@@ -49,6 +49,7 @@ import { Route as AuthenticatedAdminModulosRouteImport } from './routes/_authent
 import { Route as AuthenticatedAdminPlanosRouteImport } from './routes/_authenticated/admin.planos'
 import { Route as AuthenticatedAdminVersoesRouteImport } from './routes/_authenticated/admin.versoes'
 import { Route as AuthenticatedProjetosTemplatesRouteImport } from './routes/_authenticated/projetos_.templates'
+import { Route as ApiPublicZapiWebhookRouteImport } from './routes/api/public/zapi-webhook'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -257,6 +258,11 @@ const AuthenticatedProjetosTemplatesRoute =
     path: '/projetos/templates',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiPublicZapiWebhookRoute = ApiPublicZapiWebhookRouteImport.update({
+  id: '/api/public/zapi-webhook',
+  path: '/api/public/zapi-webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -298,6 +304,7 @@ export interface FileRoutesByFullPath {
   '/admin/planos': typeof AuthenticatedAdminPlanosRoute
   '/admin/versoes': typeof AuthenticatedAdminVersoesRoute
   '/projetos/templates': typeof AuthenticatedProjetosTemplatesRoute
+  '/api/public/zapi-webhook': typeof ApiPublicZapiWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -339,6 +346,7 @@ export interface FileRoutesByTo {
   '/admin/planos': typeof AuthenticatedAdminPlanosRoute
   '/admin/versoes': typeof AuthenticatedAdminVersoesRoute
   '/projetos/templates': typeof AuthenticatedProjetosTemplatesRoute
+  '/api/public/zapi-webhook': typeof ApiPublicZapiWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -382,6 +390,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/planos': typeof AuthenticatedAdminPlanosRoute
   '/_authenticated/admin/versoes': typeof AuthenticatedAdminVersoesRoute
   '/_authenticated/projetos_/templates': typeof AuthenticatedProjetosTemplatesRoute
+  '/api/public/zapi-webhook': typeof ApiPublicZapiWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -425,6 +434,7 @@ export interface FileRouteTypes {
     | '/admin/planos'
     | '/admin/versoes'
     | '/projetos/templates'
+    | '/api/public/zapi-webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -466,6 +476,7 @@ export interface FileRouteTypes {
     | '/admin/planos'
     | '/admin/versoes'
     | '/projetos/templates'
+    | '/api/public/zapi-webhook'
   id:
     | '__root__'
     | '/'
@@ -508,6 +519,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/planos'
     | '/_authenticated/admin/versoes'
     | '/_authenticated/projetos_/templates'
+    | '/api/public/zapi-webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -522,6 +534,7 @@ export interface RootRouteChildren {
   CompartilhadoTokenRoute: typeof CompartilhadoTokenRoute
   PropostaTokenRoute: typeof PropostaTokenRoute
   WidgetInstanciaIdRoute: typeof WidgetInstanciaIdRoute
+  ApiPublicZapiWebhookRoute: typeof ApiPublicZapiWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -806,6 +819,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjetosTemplatesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/zapi-webhook': {
+      id: '/api/public/zapi-webhook'
+      path: '/api/public/zapi-webhook'
+      fullPath: '/api/public/zapi-webhook'
+      preLoaderRoute: typeof ApiPublicZapiWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -888,6 +908,7 @@ const rootRouteChildren: RootRouteChildren = {
   CompartilhadoTokenRoute: CompartilhadoTokenRoute,
   PropostaTokenRoute: PropostaTokenRoute,
   WidgetInstanciaIdRoute: WidgetInstanciaIdRoute,
+  ApiPublicZapiWebhookRoute: ApiPublicZapiWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -91,6 +91,9 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
           nos: r.fluxo.nos ?? [], conexoes: r.fluxo.conexoes ?? [], estado: r.execucao, texto: tipo === "texto" ? texto : texto || tipo,
         });
 
+        // Fluxo começando agora: a conversa passa a ser do robô até um transbordo.
+        if (!r.execucao) await acao("modo", { modo: "IA" });
+
         for (const a of acoes) {
           try {
             if (a.tipo === "mensagem") {
