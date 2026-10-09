@@ -30,3 +30,19 @@ describe("motor de fluxos", () => {
     expect(r.estado).toMatchObject({ status: "aguardando", no_atual: "m" });
   });
 });
+
+describe("subfluxo", () => {
+  it("para no bloco e indica o fluxo a executar", () => {
+    const r = executarFluxo({
+      nos: [
+        { id: "g", data: { tipo: "gatilho" } },
+        { id: "m", data: { tipo: "mensagem", texto: "Oi" } },
+        { id: "s", data: { tipo: "subfluxo", fluxo_id: "F2" } },
+      ],
+      conexoes: [{ source: "g", target: "m" }, { source: "m", target: "s" }],
+      estado: null, texto: "ola",
+    });
+    expect(r.subfluxo).toBe("F2");
+    expect(r.acoes).toEqual([{ tipo: "mensagem", texto: "Oi" }]);
+  });
+});

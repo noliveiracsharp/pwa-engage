@@ -51,7 +51,7 @@ export const Route = createFileRoute("/_authenticated/fluxos")({
 const ICONES: Record<TipoNo, typeof Zap> = {
   gatilho: Zap, mensagem: MessageSquare, menu: ListOrdered, pergunta: MessageCircleQuestion,
   condicao: GitBranch, horario: Clock, atraso: Hourglass, kanban: KanbanSquare, atribuir: UserPlus,
-  campo: PenLine, ia: Bot, transbordo: PhoneForwarded, encerrar: CircleStop,
+  campo: PenLine, ia: Bot, transbordo: PhoneForwarded, encerrar: CircleStop, subfluxo: Workflow,
 };
 const COR_CATEGORIA: Record<CategoriaNo, string> = {
   Gatilhos: "bg-warning text-warning-foreground",
@@ -126,12 +126,15 @@ function FluxosPage() {
   const { data: quadros = [] } = useRows("kanban_nome");
   const { data: etapas = [] } = useRows("kanban_etapas");
   const { data: campos = [] } = useRows("empresas_camposperson");
+  const { data: instanciasTodas = [] } = useRows("empresas_instancias");
+  const instancias = instanciasTodas.filter((i) => !empresaId || String(i["empresa_id"] ?? "") === empresaId);
 
   const fluxos = fluxosQ.data ?? [];
   const [fluxoId, setFluxoId] = useState<string>("");
   const fluxo = fluxos.find((f) => String(f["id"]) === fluxoId);
   const [nome, setNome] = useState("");
   const [ativo, setAtivo] = useState(false);
+  const [instanciaId, setInstanciaId] = useState<string>("todas");
   const [nodes, setNodes, onNodesChange] = useNodesState<FluxoNode>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [selId, setSelId] = useState<string | null>(null);
@@ -147,8 +150,9 @@ function FluxosPage() {
     return {
       quadro: q ? pick<string>(q, ["nome", "descricao", "titulo"]) : undefined,
       etapa: e ? pick<string>(e, ["descricao", "nome", "titulo"]) : undefined,
+      fluxo: d["fluxo_id"] ? (fluxos.find((f) => String(f["id"]) === String(d["fluxo_id"]))?.["nome"] as string | undefined) : undefined,
     };
-  }, [quadros, etapas]);
+  }, [quadros, etapas, fluxos]);
 
   const comResumo = useCallback(
     (d: NoData): NoData => ({ ...d, resumo: resumoNo(d.tipo, d, nomesKanban(d)) }),
@@ -159,6 +163,7 @@ function FluxosPage() {
     if (!fluxo) { setNodes([]); setEdges([]); return; }
     setNome(String(fluxo["nome"] ?? ""));
     setAtivo(Boolean(fluxo["ativo"]));
+    setInstanciaId(fluxo["instancia_id"] ? String(fluxo["instancia_id"]) : "todas");
     const ns = ((fluxo["nos"] as FluxoNode[]) ?? []).map((n) => ({ ...n, type: "bloco", data: comResumo(n.data) }));
     setNodes(ns);
     setEdges(((fluxo["conexoes"] as Edge[]) ?? []).map((e) => ({ ...e, animated: true })));
@@ -192,6 +197,7 @@ function FluxosPage() {
     const gat = nodes.find((n) => n.data.tipo === "gatilho")?.data;
     const { error } = await supabase.from("fluxos_atendimento").update({
       nome, ativo, nos, conexoes,
+      instancia_id: instanciaId === "todas" ? null : instanciaId,
       gatilho: gat?.["gatilho"] ?? "mensagem_recebida",
       palavras_chave: gat?.["palavras"] ?? null,
       updated_at: new Date().toISOString(),
@@ -250,6 +256,15 @@ function FluxosPage() {
         {fluxo && (
           <>
             <Input value={nome} onChange={(e) => setNome(e.target.value)} className="h-9 w-56" aria-label="Nome do fluxo" />
+            <Select value={instanciaId} onValueChange={setInstanciaId}>
+              <SelectTrigger className="h-9 w-56" aria-label="Instância do fluxo"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todas">Todas as instâncias (geral)</SelectItem>
+                {instancias.map((i) => (
+                  <SelectItem key={String(i["id"])} value={String(i["id"])}>{pick<string>(i, ["nome", "descricao", "telefone"]) ?? "Instância"}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <label className="flex items-center gap-2 text-sm"><Switch checked={ativo} onCheckedChange={setAtivo} /> Ativo</label>
             <div className="ml-auto flex gap-2">
               <Button variant="ghost" size="sm" onClick={excluirFluxo}><Trash2 className="size-4" /></Button>
@@ -323,7 +338,7 @@ function FluxosPage() {
                 <Campo label="Título do bloco">
                   <Input value={String(sel.data.titulo ?? "")} placeholder={nomeTipo(sel.data.tipo)} onChange={(e) => atualizarSel({ titulo: e.target.value })} />
                 </Campo>
-                <Propriedades no={sel} atualizar={atualizarSel} quadros={quadros} etapas={etapas} campos={campos} />
+                <Propriedades no={sel} atualizar={atualizarSel} quadros={quadros} etapas={etapas} campos={campos} fluxos={fluxos.filter((f) => String(f["id"]) !== fluxoId)} />
               </div>
               <SheetFooter className="flex-row justify-between border-t">
                 <Button variant="ghost" onClick={removerSel} disabled={sel.data.tipo === "gatilho"}><Trash2 className="size-4" /> Excluir bloco</Button>
@@ -347,8 +362,8 @@ function Campo({ label, children, ajuda }: { label: string; children: React.Reac
   );
 }
 
-function Propriedades({ no, atualizar, quadros, etapas, campos }: {
-  no: FluxoNode; atualizar: (p: DadosNo) => void; quadros: Row[]; etapas: Row[]; campos: Row[];
+function Propriedades({ no, atualizar, quadros, etapas, campos, fluxos }: {
+  no: FluxoNode; atualizar: (p: DadosNo) => void; quadros: Row[]; etapas: Row[]; campos: Row[]; fluxos: Row[];
 }) {
   const d = no.data;
   const s = (k: string) => String(d[k] ?? "");
@@ -485,6 +500,17 @@ function Propriedades({ no, atualizar, quadros, etapas, campos }: {
           </Campo>
           <Campo label="Valor" ajuda="Use {{variavel}} para gravar uma resposta do cliente"><Input value={s("valor")} onChange={(e) => atualizar({ valor: e.target.value })} /></Campo>
         </>
+      );
+    case "subfluxo":
+      return (
+        <Campo label="Fluxo a executar" ajuda="A conversa continua a partir do início do fluxo escolhido, mantendo as respostas já coletadas.">
+          <Select value={s("fluxo_id")} onValueChange={(v) => atualizar({ fluxo_id: v })}>
+            <SelectTrigger><SelectValue placeholder="Escolha o fluxo" /></SelectTrigger>
+            <SelectContent>
+              {fluxos.map((f) => <SelectItem key={String(f["id"])} value={String(f["id"])}>{String(f["nome"])}{f["ativo"] ? "" : " (inativo)"}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </Campo>
       );
     case "ia":
       return texto("Instruções para a IA", "instrucoes", "A resposta usará a base de conhecimento da empresa (próxima etapa).");

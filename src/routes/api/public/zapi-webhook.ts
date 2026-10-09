@@ -88,9 +88,23 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
         const acao = (nome: string, dados: Record<string, unknown>) =>
           db.rpc("fluxo_webhook_acao", { p_token: k, p_atendimento: r.atendimento_id, p_acao: nome, p_dados: dados });
 
-        const { acoes, estado } = executarFluxo({
-          nos: r.fluxo.nos ?? [], conexoes: r.fluxo.conexoes ?? [], estado: r.execucao, texto: tipo === "texto" ? texto : texto || tipo,
-        });
+        const textoMotor = tipo === "texto" ? texto : texto || tipo;
+        let fluxoAtual = r.fluxo;
+        let res = executarFluxo({ nos: fluxoAtual.nos ?? [], conexoes: fluxoAtual.conexoes ?? [], estado: r.execucao, texto: textoMotor });
+        const acoes = [...res.acoes];
+        // Bloco "Executar outro fluxo": continua no fluxo escolhido (até 5 saltos, evita laço).
+        for (let saltos = 0; res.subfluxo && saltos < 5; saltos++) {
+          const { data: sub } = await db.rpc("fluxo_webhook_subfluxo", { p_token: k, p_fluxo: res.subfluxo });
+          const f = sub as Recebido["fluxo"];
+          if (!f) break;
+          fluxoAtual = f;
+          res = executarFluxo({
+            nos: f.nos ?? [], conexoes: f.conexoes ?? [],
+            estado: { no_atual: null, status: "ativo", variaveis: res.estado.variaveis }, texto: textoMotor,
+          });
+          acoes.push(...res.acoes);
+        }
+        const estado = res.estado;
 
         // Fluxo começando agora: a conversa passa a ser do robô até um transbordo.
         if (!r.execucao) await acao("modo", { modo: "IA" });
@@ -124,7 +138,13 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
           }
         }
 
-        await acao("execucao", { id: r.execucao?.id ?? null, fluxo_id: r.fluxo.id, ...estado });
+        if (fluxoAtual.id !== r.fluxo.id) {
+          // Encerra a execução anterior e abre uma nova no fluxo para onde a conversa foi.
+          if (r.execucao?.id) await acao("execucao", { id: r.execucao.id, no_atual: null, status: "finalizado", variaveis: estado.variaveis });
+          await acao("execucao", { id: null, fluxo_id: fluxoAtual.id, ...estado });
+        } else {
+          await acao("execucao", { id: r.execucao?.id ?? null, fluxo_id: r.fluxo.id, ...estado });
+        }
         return ok({ acoes: acoes.length });
       },
     },
