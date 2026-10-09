@@ -73,7 +73,7 @@ export function executarFluxo(p: {
   estado: EstadoExec | null;
   texto: string;
   agora?: Date;
-}): { acoes: Acao[]; estado: EstadoExec } {
+}): { acoes: Acao[]; estado: EstadoExec; subfluxo?: string } {
   const agora = p.agora ?? new Date();
   const acoes: Acao[] = [];
   const vars: Record<string, string> = { ...(p.estado?.variaveis ?? {}), ultima_mensagem: p.texto };
@@ -160,6 +160,10 @@ export function executarFluxo(p: {
         if (str(d["texto"])) acoes.push({ tipo: "mensagem", texto: interpolar(str(d["texto"]), vars) });
         acoes.push({ tipo: "encerrar" });
         return fim("finalizado");
+      case "subfluxo":
+        if (str(d["fluxo_id"])) return { ...fim("finalizado"), subfluxo: str(d["fluxo_id"]) };
+        atual = undefined;
+        break;
       default:
         atual = proximo(atual.id);
     }

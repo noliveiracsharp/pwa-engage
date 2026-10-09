@@ -12,7 +12,8 @@ export type TipoNo =
   | "campo"
   | "ia"
   | "transbordo"
-  | "encerrar";
+  | "encerrar"
+  | "subfluxo";
 
 export type DadosNo = Record<string, unknown> & { titulo?: string };
 
@@ -25,6 +26,7 @@ export const CATALOGO: { tipo: TipoNo; nome: string; categoria: CategoriaNo; des
   { tipo: "pergunta", nome: "Pergunta", categoria: "Mensagens", descricao: "Aguarda resposta e guarda em variável" },
   { tipo: "condicao", nome: "Condição", categoria: "Lógica", descricao: "Se / Senão" },
   { tipo: "horario", nome: "Horário de atendimento", categoria: "Lógica", descricao: "Aberto / Fechado" },
+  { tipo: "subfluxo", nome: "Executar outro fluxo", categoria: "Lógica", descricao: "Continua a conversa em outro fluxo" },
   { tipo: "atraso", nome: "Aguardar", categoria: "Lógica", descricao: "Pausa em segundos" },
   { tipo: "kanban", nome: "Mover no Kanban", categoria: "Kanban / CRM", descricao: "Quadro e etapa destino" },
   { tipo: "atribuir", nome: "Atribuir atendente", categoria: "Kanban / CRM", descricao: "Departamento, roleta ou pessoa" },
@@ -59,6 +61,7 @@ export function saidasDoNo(tipo: TipoNo, dados: DadosNo): { id: string; rotulo: 
       return [{ id: "respondeu", rotulo: "Respondeu" }, { id: "nao_sabe", rotulo: "Não soube" }];
     case "transbordo":
     case "encerrar":
+    case "subfluxo":
       return [];
     default:
       return [{ id: "saida", rotulo: "" }];
@@ -84,8 +87,9 @@ export function dadosPadrao(tipo: TipoNo): DadosNo {
 }
 
 /** Resumo exibido no corpo do bloco. */
-export function resumoNo(tipo: TipoNo, d: DadosNo, nomes: { etapa?: string | undefined; quadro?: string | undefined }): string {
+export function resumoNo(tipo: TipoNo, d: DadosNo, nomes: { etapa?: string | undefined; quadro?: string | undefined; fluxo?: string | undefined }): string {
   switch (tipo) {
+    case "subfluxo": return nomes.fluxo ? `→ ${nomes.fluxo}` : "Escolha o fluxo";
     case "gatilho":
       return d["gatilho"] === "palavra_chave" ? `Palavra-chave: ${d["palavras"] ?? "—"}` : d["gatilho"] === "novo_contato" ? "Novo contato" : "Mensagem recebida";
     case "mensagem": case "menu": case "pergunta": case "transbordo": case "encerrar":
