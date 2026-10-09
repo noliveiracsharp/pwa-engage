@@ -1,11 +1,11 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Code, Loader2, Pencil, Plus, QrCode, Search, Trash2, Unplug } from "lucide-react";
+import { Code, Inbox, Loader2, Pencil, Plus, QrCode, Search, Trash2, Unplug } from "lucide-react";
 import { digitsOnly } from "@/lib/input-masks";
 import { useServerFn } from "@tanstack/react-start";
 import { QrCodeDialog } from "@/components/empresas/QrCodeDialog";
 import { WidgetChatDialog } from "@/components/empresas/WidgetChatDialog";
-import { desconectarWhatsApp } from "@/lib/zapi.functions";
+import { configurarWebhookZapi, desconectarWhatsApp } from "@/lib/zapi.functions";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -179,6 +179,7 @@ export function ChildTable({ config, empresa, perms = FULL }: { config: ChildCon
   const [qrInst, setQrInst] = useState<Row | null>(null);
   const [widgetInst, setWidgetInst] = useState<Row | null>(null);
   const desconectarFn = useServerFn(desconectarWhatsApp);
+  const webhookFn = useServerFn(configurarWebhookZapi);
 
   const { data: rows = [], isError } = useQuery({
     queryKey: ["child", config.table, text(empresaId)],
@@ -279,6 +280,24 @@ export function ChildTable({ config, empresa, perms = FULL }: { config: ChildCon
     refresh();
   };
 
+  // Liga o recebimento: aponta a Z-API para o Atende.ai (mensagens entram e os fluxos respondem).
+  const ativarRecebimento = async (row: Row) => {
+    const k = text(pick(row, ["webhook_token"]));
+    if (!k) {
+      toast.error("Rode o script atendeai-fluxos-motor.sql no banco para liberar o recebimento.");
+      return;
+    }
+    const host = window.location.hostname;
+    const origem = /id-preview|lovableproject|localhost/.test(host) ? "https://pwa-engage.lovable.app" : window.location.origin;
+    const url = `${origem}/api/public/zapi-webhook?k=${k}`;
+    void navigator.clipboard?.writeText(url).catch(() => undefined);
+    const clientToken = text(pick(row, ["client_token"]));
+    const token = text(pick(row, ["token"])) || clientToken;
+    const r = await webhookFn({ data: { instanceId: text(pick(row, ["instance_id"])), token, clientToken: clientToken || undefined, url } });
+    if (r.ok) toast.success("Recebimento ativado na Z-API. Endereço copiado.");
+    else toast.error(`A Z-API recusou (${r.message ?? ""}). O endereço foi copiado: cole em "Ao receber" no painel da Z-API.`);
+  };
+
   const desconectar = async (row: Row) => {
     if (!window.confirm("Deseja desconectar este WhatsApp?")) return;
     const clientToken = text(pick(row, ["client_token"]));
@@ -362,6 +381,9 @@ export function ChildTable({ config, empresa, perms = FULL }: { config: ChildCon
                   (text(pick(row, ["status_conexao"])).toLowerCase() === "conectado" ? (
                     <>
                       <Badge className="bg-success text-success-foreground hover:bg-success">WhatsApp Conectado</Badge>
+                      <Button variant="outline" size="sm" onClick={() => void ativarRecebimento(row)} title="Faz as mensagens recebidas entrarem no Atende.ai e acionarem os fluxos">
+                        <Inbox className="mr-1 h-4 w-4" /> Ativar recebimento
+                      </Button>
                       <Button variant="outline" size="sm" onClick={() => void desconectar(row)}>
                         <Unplug className="mr-1 h-4 w-4" /> Desconectar
                       </Button>

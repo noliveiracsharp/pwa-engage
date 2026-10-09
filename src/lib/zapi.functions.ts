@@ -62,3 +62,28 @@ export const desconectarWhatsApp = createServerFn({ method: "POST" })
       return { ok: false, message: e instanceof Error ? e.message : "Falha ao contatar a Z-API" };
     }
   });
+
+/** Aponta o "Ao receber" da Z-API para o endereço de recebimento do Atende.ai. */
+export const configurarWebhookZapi = createServerFn({ method: "POST" })
+  .inputValidator((d) =>
+    z
+      .object({
+        instanceId: z.string().min(1).max(200),
+        token: z.string().min(1).max(500),
+        clientToken: z.string().max(500).optional(),
+        url: z.string().url().max(500),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }): Promise<{ ok: boolean; message?: string }> => {
+    const base = `https://api.z-api.io/instances/${encodeURIComponent(data.instanceId)}/token/${encodeURIComponent(data.token)}`;
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (data.clientToken) headers["Client-Token"] = data.clientToken;
+    try {
+      const r = await fetch(`${base}/update-webhook-received`, { method: "PUT", headers, body: JSON.stringify({ value: data.url }) });
+      if (r.ok) return { ok: true };
+      return { ok: false, message: (await r.text()).slice(0, 200) || `HTTP ${r.status}` };
+    } catch (e) {
+      return { ok: false, message: e instanceof Error ? e.message : "Falha ao contatar a Z-API" };
+    }
+  });
