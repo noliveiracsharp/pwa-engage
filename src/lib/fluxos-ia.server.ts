@@ -56,7 +56,7 @@ export async function montarBase(d: Record<string, unknown>) {
 }
 
 export async function perguntarIA(d: Record<string, unknown>, vars: Record<string, string>) {
-  const chave = process.env.LOVABLE_API_KEY;
+  const chave = process.env["LOVABLE_API_KEY"];
   if (!chave) throw new Error("Chave da IA não configurada");
   const modelo = String(d["modelo"] || MODELO_IA_PADRAO);
   const base = await montarBase(d);
