@@ -214,13 +214,13 @@ function FluxosPage() {
     setInstanciaId(fluxo["instancia_id"] ? String(fluxo["instancia_id"]) : "todas");
     const ns = ((fluxo["nos"] as FluxoNode[]) ?? []).map((n) => ({ ...n, type: "bloco", data: comResumo(n.data) }));
     setNodes(ns);
-    setEdges(((fluxo["conexoes"] as Edge[]) ?? []).map((e) => ({ ...e, animated: true })));
+    setEdges(((fluxo["conexoes"] as Edge[]) ?? []).map((e) => ({ ...e, type: "ligacao" })));
     setSelId(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fluxoId, fluxo?.["updated_at"]]);
 
   const onConnect = useCallback(
-    (c: Connection) => setEdges((es) => addEdge({ ...c, animated: true }, es.filter((e) => !(e.source === c.source && e.sourceHandle === c.sourceHandle)))),
+    (c: Connection) => setEdges((es) => addEdge({ ...c, type: "ligacao" }, es.filter((e) => !(e.source === c.source && e.sourceHandle === c.sourceHandle)))),
     [setEdges],
   );
 
@@ -356,6 +356,7 @@ function FluxosPage() {
               <ReactFlow
                 nodes={nodes} edges={edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes}
                 defaultEdgeOptions={{ type: "ligacao" }}
+                onBeforeDelete={async ({ nodes: ns, edges: es }) => ({ nodes: ns.filter((n) => (n.data as NoData).tipo !== "gatilho"), edges: es })}
                 onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect}
                 onNodeClick={(_, n) => setSelId(n.id)} onPaneClick={() => setSelId(null)}
                 fitView deleteKeyCode={["Delete", "Backspace"]} proOptions={{ hideAttribution: true }}
