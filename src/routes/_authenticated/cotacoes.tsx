@@ -47,6 +47,7 @@ function CotacoesPage() {
   const { data: laudos = [] } = useTableRows("laudos_tecnicos");
   const { data: parceiros = [] } = useTableRows("parceiros");
   const { data: itens = [] } = useTableRows("itens");
+  const { data: pedidos = [] } = useTableRows("pedidos_compra");
   const remove = useDeleteRecord("cotacoes");
   const saveOrc = useSaveOrcamento();
   const { empresaId } = useAudit();
@@ -248,6 +249,8 @@ function CotacoesPage() {
         precos={deCot(precos, selId)}
         parceiros={parceiros}
         itens={itens}
+        pedidos={pedidos}
+        empresaId={empresaId}
         canUpdate={perms.canUpdate}
         aprovando={aprovando}
         onAprovar={aprovar}

@@ -33,7 +33,7 @@ export const cotacaoStatusMeta = (v: unknown) =>
 
 /** Próximo número sequencial por ano/empresa: PREFIXO-AAAA-001. */
 export async function proximoNumero(
-  tabela: "laudos_tecnicos" | "cotacoes",
+  tabela: "laudos_tecnicos" | "cotacoes" | "pedidos_compra",
   prefixo: string,
   empresaId: string | number | undefined,
 ) {
