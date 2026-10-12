@@ -78,6 +78,7 @@ function VeiculosPage() {
   const [f, setF] = useState({ busca: "", status: "todos" });
   const [fd, setFd] = useState({ busca: "", veiculo: "todos" });
   const [abastecendo, setAbastecendo] = useState(false);
+  const [aba, setAba] = useState("veiculos");
   const { usuarioId } = useAudit();
 
   const veiculoById = useMemo(() => new Map(veiculos.map((v) => [String(rowId(v)), v])), [veiculos]);
@@ -147,13 +148,13 @@ function VeiculosPage() {
         <Button size="lg" variant="secondary" disabled={!minhaAberta || !perms.canUpdate} onClick={() => minhaAberta && setViagem({ modo: "chegada", registro: minhaAberta })}>
           <LogIn className="mr-2 size-4" /> Registrar chegada
         </Button>
-        <Button size="lg" variant="outline" disabled={!perms.canCreate} onClick={() => setAbastecendo(true)}>
+        <Button size="lg" variant="outline" disabled={!perms.canCreate} onClick={() => { setAba("abastecimentos"); setAbastecendo(true); }}>
           <Fuel className="mr-2 size-4" /> Abastecer
         </Button>
         {abertas.length > 0 && <span className="text-muted-foreground text-sm">{abertas.length} veículo(s) em rota</span>}
       </div>
 
-      <Tabs defaultValue="veiculos">
+      <Tabs value={aba} onValueChange={setAba}>
         <TabsList>
           <TabsTrigger value="veiculos">Veículos</TabsTrigger>
           <TabsTrigger value="diario">Diário de bordo</TabsTrigger>
