@@ -31,7 +31,7 @@ export async function executarHttp(d: Record<string, unknown>, vars: Record<stri
     if (corpo && !Object.keys(headers).some((k) => k.toLowerCase() === "content-type")) headers["Content-Type"] = "application/json";
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), 10000);
-    const resp = await f(url.toString(), { method: metodo, headers, body: corpo, signal: ctrl.signal }).finally(() => clearTimeout(t));
+    const resp = await f(url.toString(), { method: metodo, headers, body: corpo ?? null, signal: ctrl.signal }).finally(() => clearTimeout(t));
     const texto = (await resp.text()).slice(0, 100_000);
     novas[variavel] = texto;
     novas[`${variavel}_status`] = String(resp.status);
