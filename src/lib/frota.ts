@@ -8,7 +8,7 @@ export type Abastecimento = { id?: string; km: number; litros: number; tanque_ch
 export function consumoReal(anteriores: Abastecimento[], atual: Abastecimento): number | null {
   if (!atual.tanque_cheio) return null;
   const antes = anteriores
-    .filter((a) => a.id !== atual.id && a.km < atual.km)
+    .filter((a) => (atual.id == null || a.id !== atual.id) && a.km < atual.km)
     .sort((a, b) => a.km - b.km);
   let idx = -1;
   for (let i = antes.length - 1; i >= 0; i--) if (antes[i]!.tanque_cheio) { idx = i; break; }
