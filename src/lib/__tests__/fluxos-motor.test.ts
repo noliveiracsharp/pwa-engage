@@ -46,3 +46,44 @@ describe("subfluxo", () => {
     expect(r.acoes).toEqual([{ tipo: "mensagem", texto: "Oi" }]);
   });
 });
+
+describe("blocos HTTP e JavaScript", () => {
+  it("motor pausa no bloco http e retoma no próximo bloco", async () => {
+    const { proximoNoId } = await import("../fluxos-motor");
+    const nos: NoFluxo[] = [
+      { id: "g", data: { tipo: "gatilho" } },
+      { id: "h", data: { tipo: "http", url: "https://x", variavel: "resposta" } },
+      { id: "m", data: { tipo: "mensagem", texto: "Total: {{resposta.itens.1.nome}}" } },
+    ];
+    const cx: ConexaoFluxo[] = [{ source: "g", target: "h" }, { source: "h", target: "m", sourceHandle: "sucesso" }];
+    const r1 = executarFluxo({ nos, conexoes: cx, estado: null, texto: "oi" });
+    expect(r1.externo?.no.id).toBe("h");
+    const prox = proximoNoId(cx, "h", "sucesso");
+    const r2 = executarFluxo({ nos, conexoes: cx, estado: { no_atual: prox, status: "ativo", variaveis: { resposta: '{"itens":[{"nome":"A"},{"nome":"B"}]}' } }, texto: "oi" });
+    expect(r2.acoes[0]).toEqual({ tipo: "mensagem", texto: "Total: B" });
+  });
+  it("JavaScript transforma lista JSON em texto e cria variáveis", async () => {
+    const { executarCodigo } = await import("../fluxos-externo");
+    const r = executarCodigo(
+      { codigo: "return { lista: input.resposta.faturas.map((f, i) => `${i + 1}. ${f.valor}`).join('\\n'), qtd: input.resposta.faturas.length };" },
+      { resposta: '{"faturas":[{"valor":"150,00"},{"valor":"90,00"}]}' },
+    );
+    expect(r.saida).toBe("sucesso");
+    expect(r.variaveis["lista"]).toBe("1. 150,00\n2. 90,00");
+    expect(r.variaveis["qtd"]).toBe("2");
+  });
+  it("JavaScript com erro segue pela saída erro", async () => {
+    const { executarCodigo } = await import("../fluxos-externo");
+    expect(executarCodigo({ codigo: "throw new Error('x')" }, {}).saida).toBe("erro");
+  });
+  it("HTTP guarda resposta e segue por sucesso/falha conforme status", async () => {
+    const { executarHttp } = await import("../fluxos-externo");
+    const f = (async () => new Response('{"ok":1}', { status: 200 })) as unknown as typeof fetch;
+    const r = await executarHttp({ url: "https://api.exemplo.com/{{id}}", variavel: "api" }, { id: "7" }, f);
+    expect(r.saida).toBe("sucesso");
+    expect(r.variaveis["api"]).toBe('{"ok":1}');
+    const f2 = (async () => new Response("x", { status: 500 })) as unknown as typeof fetch;
+    expect((await executarHttp({ url: "https://a.com" }, {}, f2)).saida).toBe("falha");
+    expect((await executarHttp({ url: "http://localhost/x" }, {}, f2)).saida).toBe("falha");
+  });
+});
