@@ -87,3 +87,23 @@ describe("blocos HTTP e JavaScript", () => {
     expect((await executarHttp({ url: "http://localhost/x" }, {}, f2)).saida).toBe("falha");
   });
 });
+
+describe("bloco de IA", () => {
+  const nos: NoFluxo[] = [
+    { id: "g", data: { tipo: "gatilho" } },
+    { id: "i", data: { tipo: "ia", modelo: "openai/gpt-6-astra" } },
+  ];
+  const cx: ConexaoFluxo[] = [{ source: "g", target: "i" }];
+  it("motor pausa no bloco de IA para o servidor responder", () => {
+    expect(executarFluxo({ nos, conexoes: cx, estado: null, texto: "qual o horário?" }).externo?.no.id).toBe("i");
+  });
+  it("nova mensagem com a IA aguardando volta ao mesmo bloco", () => {
+    const r = executarFluxo({ nos, conexoes: cx, estado: { no_atual: "i", status: "aguardando", variaveis: {} }, texto: "e no sábado?" });
+    expect(r.externo?.no.id).toBe("i");
+    expect(r.estado.variaveis["ultima_mensagem"]).toBe("e no sábado?");
+  });
+  it("texto de site vira texto limpo para a base", async () => {
+    const { htmlParaTexto } = await import("../fluxos-ia.server");
+    expect(htmlParaTexto("<script>x()</script><h1>Suporte</h1><p>Horário: 8h&nbsp;às 18h</p>")).toBe("Suporte\nHorário: 8h às 18h");
+  });
+});

@@ -122,7 +122,7 @@ export function resumoNo(tipo: TipoNo, d: DadosNo, nomes: { etapa?: string | und
     case "campo": return `${d["chave"] || "?"} = ${d["valor"] ?? ""}`;
     case "http": return `${d["metodo"] ?? "GET"} ${d["url"] ?? ""} → {{${d["variavel"] || "resposta"}}}`;
     case "codigo": return String(d["codigo"] ?? "").split("\n").find((l) => l.trim() && !l.trim().startsWith("//")) ?? "Código";
-    case "ia": return String(d["instrucoes"] ?? "Usa a base de conhecimento da empresa");
+    case "ia": return `${MODELOS_IA.find((m) => m.id === d["modelo"])?.nome.split(" (")[0] ?? "IA"} · ${String(d["instrucoes"] ?? "")}`;
     default: return "";
   }
 }
