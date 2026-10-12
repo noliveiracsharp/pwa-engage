@@ -5,7 +5,7 @@
 import Sval from "sval";
 import { interpolar, paraTexto, valorVar, type NoFluxo } from "@/lib/fluxos-motor";
 
-export type ResultadoExterno = { saida: string; variaveis: Record<string, string>; erro?: string };
+export type ResultadoExterno = { saida: string; variaveis: Record<string, string>; erro?: string; mensagem?: string };
 
 const HOST_BLOQUEADO = /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|0\.|\[?::1\]?$)/i;
 
@@ -65,7 +65,23 @@ export function executarCodigo(d: Record<string, unknown>, vars: Record<string, 
   }
 }
 
+export async function executarIA(d: Record<string, unknown>, vars: Record<string, string>): Promise<ResultadoExterno> {
+  const novas = { ...vars };
+  try {
+    const { perguntarIA } = await import("@/lib/fluxos-ia.server");
+    const r = await perguntarIA(d, vars);
+    novas["resposta_ia"] = r.texto;
+    return r.naoSabe ? { saida: "nao_sabe", variaveis: novas } : { saida: "respondeu", variaveis: novas, mensagem: r.texto };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    novas["erro_ia"] = msg;
+    return { saida: "nao_sabe", variaveis: novas, erro: msg };
+  }
+}
+
 export function executarExterno(no: NoFluxo, vars: Record<string, string>) {
   const tipo = no.data?.tipo ?? no.type;
-  return tipo === "http" ? executarHttp(no.data, vars) : Promise.resolve(executarCodigo(no.data, vars));
+  if (tipo === "http") return executarHttp(no.data, vars);
+  if (tipo === "ia") return executarIA(no.data, vars);
+  return Promise.resolve(executarCodigo(no.data, vars));
 }

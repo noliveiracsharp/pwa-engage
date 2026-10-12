@@ -40,6 +40,15 @@ export const CATALOGO: { tipo: TipoNo; nome: string; categoria: CategoriaNo; des
   { tipo: "encerrar", nome: "Encerrar atendimento", categoria: "Fim", descricao: "Finaliza a conversa" },
 ];
 
+/** Modelos de IA oferecidos no bloco "Perguntar à IA" (IDs do Lovable AI Gateway). */
+export const MODELO_IA_PADRAO = "openai/gpt-6-astra";
+export const MODELOS_IA: { id: string; nome: string }[] = [
+  { id: "openai/gpt-6-astra", nome: "GPT-6 Astra (OpenAI) — recomendado" },
+  { id: "openai/gpt-5.4-mini", nome: "GPT-5.4 mini (OpenAI) — rápido e econômico" },
+  { id: "google/gemini-3-flash-preview", nome: "Gemini 3 Flash (Google) — rápido" },
+  { id: "google/gemini-3.1-pro-preview", nome: "Gemini 3.1 Pro (Google) — mais completo" },
+];
+
 export const nomeTipo = (t: TipoNo) => CATALOGO.find((c) => c.tipo === t)?.nome ?? t;
 
 /** Opções do menu: uma por linha. */
@@ -90,6 +99,7 @@ export function dadosPadrao(tipo: TipoNo): DadosNo {
     case "atribuir": return { modo: "roleta" };
     case "transbordo": return { texto: "Vou te transferir para um atendente." };
     case "encerrar": return { texto: "Obrigado pelo contato!" };
+    case "ia": return { modelo: MODELO_IA_PADRAO, instrucoes: "Você é o assistente virtual da empresa. Seja cordial e objetivo.", base_texto: "", base_urls: "", base_arquivos: [] };
     case "http": return { metodo: "GET", url: "https://", cabecalhos: "", corpo: "", variavel: "resposta" };
     case "codigo": return { codigo: "// input traz todas as variáveis (JSON já convertido)\nconst lista = (input.resposta?.itens ?? [])\n  .map((it, i) => `${i + 1}. ${it.nome}`)\n  .join(\"\\n\");\nreturn { lista };" };
     default: return {};
