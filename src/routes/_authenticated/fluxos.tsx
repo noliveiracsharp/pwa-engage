@@ -4,12 +4,13 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ReactFlow, Background, Controls, MiniMap, Handle, Position, addEdge,
   useNodesState, useEdgesState, ReactFlowProvider, useReactFlow,
-  type Node, type Edge, type Connection, type NodeProps,
+  BaseEdge, EdgeLabelRenderer, getBezierPath,
+  type Node, type Edge, type Connection, type NodeProps, type EdgeProps,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import {
   Bot, Clock, GitBranch, Hourglass, KanbanSquare, ListOrdered, MessageSquare,
-  MessageCircleQuestion, PhoneForwarded, Plus, Save, Trash2, UserPlus, Workflow, Zap, PenLine, CircleStop, Globe, Code2,
+  MessageCircleQuestion, PhoneForwarded, Plus, Save, Trash2, UserPlus, Workflow, Zap, PenLine, CircleStop, Globe, Code2, X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -67,18 +68,30 @@ const COR_CATEGORIA: Record<CategoriaNo, string> = {
 type NoData = DadosNo & { tipo: TipoNo; resumo?: string };
 type FluxoNode = Node<NoData>;
 
-function BlocoNo({ data, selected }: NodeProps<FluxoNode>) {
+function BlocoNo({ id, data, selected }: NodeProps<FluxoNode>) {
+  const { deleteElements } = useReactFlow();
   const cat = CATALOGO.find((c) => c.tipo === data.tipo)!.categoria;
   const Icone = ICONES[data.tipo];
   const saidas = saidasDoNo(data.tipo, data);
   return (
-    <div className={cn("w-60 rounded-lg border bg-card text-card-foreground shadow-sm", selected && "ring-2 ring-primary")}>
+    <div className={cn("group w-60 rounded-lg border bg-card text-card-foreground shadow-sm", selected && "ring-2 ring-primary")}>
       {temEntrada(data.tipo) && <Handle type="target" position={Position.Left} className="!size-3 !bg-muted-foreground" />}
       <div className="flex items-center gap-2 border-b px-3 py-2">
         <span className={cn("flex size-6 shrink-0 items-center justify-center rounded", COR_CATEGORIA[cat])}>
           <Icone className="size-3.5" />
         </span>
-        <span className="truncate text-sm font-medium">{data.titulo || nomeTipo(data.tipo)}</span>
+        <span className="min-w-0 flex-1 truncate text-sm font-medium">{data.titulo || nomeTipo(data.tipo)}</span>
+        {data.tipo !== "gatilho" && (
+          <button
+            type="button"
+            aria-label="Excluir bloco"
+            title="Excluir bloco"
+            className="nodrag flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-destructive hover:text-destructive-foreground"
+            onClick={(e) => { e.stopPropagation(); void deleteElements({ nodes: [{ id }] }); }}
+          >
+            <X className="size-3.5" />
+          </button>
+        )}
       </div>
       {data.resumo ? <p className="line-clamp-3 whitespace-pre-line px-3 py-2 text-xs text-muted-foreground">{data.resumo}</p> : null}
       {saidas.length === 1 && saidas[0]!.rotulo === "" ? (
@@ -96,7 +109,40 @@ function BlocoNo({ data, selected }: NodeProps<FluxoNode>) {
     </div>
   );
 }
+
+function LigacaoEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, selected, markerEnd }: EdgeProps) {
+  const { deleteElements } = useReactFlow();
+  const [path, lx, ly] = getBezierPath({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition });
+  return (
+    <>
+      <BaseEdge
+        id={id}
+        path={path}
+        {...(markerEnd ? { markerEnd } : {})}
+        interactionWidth={24}
+        style={selected
+          ? { stroke: "var(--primary)", strokeWidth: 3, strokeDasharray: "6 4", animation: "dashdraw 0.6s linear infinite" }
+          : { strokeWidth: 2 }}
+      />
+      {selected && (
+        <EdgeLabelRenderer>
+          <button
+            type="button"
+            aria-label="Excluir ligação"
+            title="Excluir ligação (Del)"
+            className="nodrag nopan absolute flex size-5 items-center justify-center rounded-full border bg-destructive text-destructive-foreground shadow"
+            style={{ transform: `translate(-50%, -50%) translate(${lx}px, ${ly}px)`, pointerEvents: "all" }}
+            onClick={() => void deleteElements({ edges: [{ id }] })}
+          >
+            <X className="size-3" />
+          </button>
+        </EdgeLabelRenderer>
+      )}
+    </>
+  );
+}
 const nodeTypes = { bloco: BlocoNo };
+const edgeTypes = { ligacao: LigacaoEdge };
 
 function useRows(table: string) {
   return useQuery({
@@ -168,13 +214,13 @@ function FluxosPage() {
     setInstanciaId(fluxo["instancia_id"] ? String(fluxo["instancia_id"]) : "todas");
     const ns = ((fluxo["nos"] as FluxoNode[]) ?? []).map((n) => ({ ...n, type: "bloco", data: comResumo(n.data) }));
     setNodes(ns);
-    setEdges(((fluxo["conexoes"] as Edge[]) ?? []).map((e) => ({ ...e, animated: true })));
+    setEdges(((fluxo["conexoes"] as Edge[]) ?? []).map((e) => ({ ...e, type: "ligacao" })));
     setSelId(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fluxoId, fluxo?.["updated_at"]]);
 
   const onConnect = useCallback(
-    (c: Connection) => setEdges((es) => addEdge({ ...c, animated: true }, es.filter((e) => !(e.source === c.source && e.sourceHandle === c.sourceHandle)))),
+    (c: Connection) => setEdges((es) => addEdge({ ...c, type: "ligacao" }, es.filter((e) => !(e.source === c.source && e.sourceHandle === c.sourceHandle)))),
     [setEdges],
   );
 
@@ -308,10 +354,12 @@ function FluxosPage() {
           <div className="relative min-w-0 flex-1 overflow-hidden rounded-lg border bg-muted/30" onDragOver={(e) => e.preventDefault()} onDrop={onDrop}>
             {fluxo ? (
               <ReactFlow
-                nodes={nodes} edges={edges} nodeTypes={nodeTypes}
+                nodes={nodes} edges={edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes}
+                defaultEdgeOptions={{ type: "ligacao" }}
+                onBeforeDelete={async ({ nodes: ns, edges: es }) => ({ nodes: ns.filter((n) => (n.data as NoData).tipo !== "gatilho"), edges: es })}
                 onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect}
                 onNodeClick={(_, n) => setSelId(n.id)} onPaneClick={() => setSelId(null)}
-                fitView deleteKeyCode={["Delete"]} proOptions={{ hideAttribution: true }}
+                fitView deleteKeyCode={["Delete", "Backspace"]} proOptions={{ hideAttribution: true }}
               >
                 <Background gap={18} />
                 <Controls />
