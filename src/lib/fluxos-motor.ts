@@ -20,8 +20,37 @@ const tipoDe = (n: NoFluxo): TipoNo => (n.data?.tipo ?? n.type) as TipoNo;
 const str = (v: unknown) => (v == null ? "" : String(v));
 const norm = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 
+/** Converte valores guardados como texto JSON ("{...}" ou "[...]") de volta em objeto/lista. */
+export function valorVar(v: string | undefined): unknown {
+  if (v == null) return undefined;
+  const t = v.trim();
+  if ((t.startsWith("{") && t.endsWith("}")) || (t.startsWith("[") && t.endsWith("]"))) {
+    try { return JSON.parse(t); } catch { return v; }
+  }
+  return v;
+}
+
+/** Lê "resposta.itens.0.nome" percorrendo o JSON guardado na variável. */
+export function lerCaminho(vars: Record<string, string>, caminho: string): unknown {
+  if (caminho in vars) return valorVar(vars[caminho]);
+  const [raiz, ...resto] = caminho.split(".");
+  let atual: unknown = valorVar(vars[raiz ?? ""]);
+  for (const k of resto) {
+    if (atual == null || typeof atual !== "object") return undefined;
+    atual = (atual as Record<string, unknown>)[k];
+  }
+  return atual;
+}
+
+export const paraTexto = (v: unknown) => (v == null ? "" : typeof v === "object" ? JSON.stringify(v) : String(v));
+
 export function interpolar(texto: string, vars: Record<string, string>) {
-  return texto.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_, k: string) => vars[k] ?? "");
+  return texto.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_, k: string) => paraTexto(lerCaminho(vars, k)));
+}
+
+/** Próximo bloco ligado à saída `handle` de `de`. */
+export function proximoNoId(conexoes: ConexaoFluxo[], de: string, handle: string) {
+  return conexoes.find((e) => e.source === de && (e.sourceHandle ?? "saida") === handle)?.target ?? null;
 }
 
 export function textoMenu(d: DadosNo) {
@@ -56,7 +85,7 @@ export function dentroHorario(d: DadosNo, agora: Date) {
 }
 
 function avaliarCondicao(d: DadosNo, vars: Record<string, string>) {
-  const v = norm(vars[str(d["variavel"])] ?? "");
+  const v = norm(paraTexto(lerCaminho(vars, str(d["variavel"]))));
   const alvo = norm(str(d["valor"]));
   switch (str(d["operador"])) {
     case "diferente": return v !== alvo;
@@ -73,7 +102,7 @@ export function executarFluxo(p: {
   estado: EstadoExec | null;
   texto: string;
   agora?: Date;
-}): { acoes: Acao[]; estado: EstadoExec; subfluxo?: string } {
+}): { acoes: Acao[]; estado: EstadoExec; subfluxo?: string; externo?: { no: NoFluxo } } {
   const agora = p.agora ?? new Date();
   const acoes: Acao[] = [];
   const vars: Record<string, string> = { ...(p.estado?.variaveis ?? {}), ultima_mensagem: p.texto };
@@ -108,6 +137,9 @@ export function executarFluxo(p: {
       if (variavel && d["salvar_campo"] !== false) acoes.push({ tipo: "campo", chave: variavel, valor: p.texto });
       atual = proximo(esperando.id);
     }
+  } else if (p.estado?.status === "ativo" && p.estado.no_atual) {
+    // Retomada após um bloco externo (HTTP/JavaScript) executado pelo servidor.
+    atual = porId.get(p.estado.no_atual);
   } else {
     const inicio = p.nos.find((n) => tipoDe(n) === "gatilho");
     atual = inicio ? proximo(inicio.id) : undefined;
@@ -160,6 +192,10 @@ export function executarFluxo(p: {
         if (str(d["texto"])) acoes.push({ tipo: "mensagem", texto: interpolar(str(d["texto"]), vars) });
         acoes.push({ tipo: "encerrar" });
         return fim("finalizado");
+      case "http":
+      case "codigo":
+        // Executado fora do motor (precisa de rede/sandbox); o servidor retoma depois.
+        return { ...fim("ativo", atual.id), externo: { no: atual } };
       case "subfluxo":
         if (str(d["fluxo_id"])) return { ...fim("finalizado"), subfluxo: str(d["fluxo_id"]) };
         atual = undefined;

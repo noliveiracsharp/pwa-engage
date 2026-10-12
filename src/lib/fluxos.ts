@@ -13,11 +13,13 @@ export type TipoNo =
   | "ia"
   | "transbordo"
   | "encerrar"
-  | "subfluxo";
+  | "subfluxo"
+  | "http"
+  | "codigo";
 
 export type DadosNo = Record<string, unknown> & { titulo?: string };
 
-export type CategoriaNo = "Gatilhos" | "Mensagens" | "Lógica" | "Kanban / CRM" | "IA" | "Fim";
+export type CategoriaNo = "Gatilhos" | "Mensagens" | "Lógica" | "Kanban / CRM" | "Integrações" | "IA" | "Fim";
 
 export const CATALOGO: { tipo: TipoNo; nome: string; categoria: CategoriaNo; descricao: string }[] = [
   { tipo: "gatilho", nome: "Início", categoria: "Gatilhos", descricao: "Mensagem recebida, palavra-chave ou novo contato" },
@@ -27,10 +29,12 @@ export const CATALOGO: { tipo: TipoNo; nome: string; categoria: CategoriaNo; des
   { tipo: "condicao", nome: "Condição", categoria: "Lógica", descricao: "Se / Senão" },
   { tipo: "horario", nome: "Horário de atendimento", categoria: "Lógica", descricao: "Aberto / Fechado" },
   { tipo: "subfluxo", nome: "Executar outro fluxo", categoria: "Lógica", descricao: "Continua a conversa em outro fluxo" },
+  { tipo: "codigo", nome: "Executar JavaScript", categoria: "Lógica", descricao: "Transforma dados e listas com código" },
   { tipo: "atraso", nome: "Aguardar", categoria: "Lógica", descricao: "Pausa em segundos" },
   { tipo: "kanban", nome: "Mover no Kanban", categoria: "Kanban / CRM", descricao: "Quadro e etapa destino" },
   { tipo: "atribuir", nome: "Atribuir atendente", categoria: "Kanban / CRM", descricao: "Departamento, roleta ou pessoa" },
   { tipo: "campo", nome: "Preencher campo", categoria: "Kanban / CRM", descricao: "Campo personalizado do contato" },
+  { tipo: "http", nome: "Requisição HTTP / API", categoria: "Integrações", descricao: "Chama uma API e guarda a resposta" },
   { tipo: "ia", nome: "Perguntar à IA", categoria: "IA", descricao: "Responde com a base de conhecimento" },
   { tipo: "transbordo", nome: "Transferir p/ humano", categoria: "Fim", descricao: "Encerra o bot e avisa a equipe" },
   { tipo: "encerrar", nome: "Encerrar atendimento", categoria: "Fim", descricao: "Finaliza a conversa" },
@@ -59,6 +63,10 @@ export function saidasDoNo(tipo: TipoNo, dados: DadosNo): { id: string; rotulo: 
       return [{ id: "aberto", rotulo: "Aberto" }, { id: "fechado", rotulo: "Fechado" }];
     case "ia":
       return [{ id: "respondeu", rotulo: "Respondeu" }, { id: "nao_sabe", rotulo: "Não soube" }];
+    case "http":
+      return [{ id: "sucesso", rotulo: "Sucesso" }, { id: "falha", rotulo: "Falha" }];
+    case "codigo":
+      return [{ id: "sucesso", rotulo: "Sucesso" }, { id: "erro", rotulo: "Erro" }];
     case "transbordo":
     case "encerrar":
     case "subfluxo":
@@ -82,6 +90,8 @@ export function dadosPadrao(tipo: TipoNo): DadosNo {
     case "atribuir": return { modo: "roleta" };
     case "transbordo": return { texto: "Vou te transferir para um atendente." };
     case "encerrar": return { texto: "Obrigado pelo contato!" };
+    case "http": return { metodo: "GET", url: "https://", cabecalhos: "", corpo: "", variavel: "resposta" };
+    case "codigo": return { codigo: "// input traz todas as variáveis (JSON já convertido)\nconst lista = (input.resposta?.itens ?? [])\n  .map((it, i) => `${i + 1}. ${it.nome}`)\n  .join(\"\\n\");\nreturn { lista };" };
     default: return {};
   }
 }
@@ -100,6 +110,8 @@ export function resumoNo(tipo: TipoNo, d: DadosNo, nomes: { etapa?: string | und
     case "kanban": return nomes.quadro ? `${nomes.quadro} → ${nomes.etapa ?? "?"}` : "Escolha o quadro";
     case "atribuir": return d["modo"] === "roleta" ? "Roleta entre atendentes" : "Fila do departamento";
     case "campo": return `${d["chave"] || "?"} = ${d["valor"] ?? ""}`;
+    case "http": return `${d["metodo"] ?? "GET"} ${d["url"] ?? ""} → {{${d["variavel"] || "resposta"}}}`;
+    case "codigo": return String(d["codigo"] ?? "").split("\n").find((l) => l.trim() && !l.trim().startsWith("//")) ?? "Código";
     case "ia": return String(d["instrucoes"] ?? "Usa a base de conhecimento da empresa");
     default: return "";
   }
