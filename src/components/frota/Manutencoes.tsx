@@ -55,7 +55,7 @@ export function ManutencoesTab({ veiculos, perms }: { veiculos: Row[]; perms: Pe
     () =>
       planos
         .filter((p) => p["ativo"] !== false && (veic === "todos" || String(p["veiculo_id"]) === veic))
-        .map((p) => ({ ...p, _st: statusManutencao(p as never, Number(vById.get(String(p["veiculo_id"]))?.["km_atual"] ?? 0)) }))
+        .map((p): Row & { _st: ReturnType<typeof statusManutencao> } => ({ ...p, _st: statusManutencao(p as never, Number(vById.get(String(p["veiculo_id"]))?.["km_atual"] ?? 0)) }))
         .sort((a, b) => ["vencido", "proximo", "ok"].indexOf(a._st.status) - ["vencido", "proximo", "ok"].indexOf(b._st.status)),
     [planos, veic, vById],
   );
