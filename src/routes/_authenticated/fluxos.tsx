@@ -354,10 +354,11 @@ function FluxosPage() {
           <div className="relative min-w-0 flex-1 overflow-hidden rounded-lg border bg-muted/30" onDragOver={(e) => e.preventDefault()} onDrop={onDrop}>
             {fluxo ? (
               <ReactFlow
-                nodes={nodes} edges={edges} nodeTypes={nodeTypes}
+                nodes={nodes} edges={edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes}
+                defaultEdgeOptions={{ type: "ligacao" }}
                 onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect}
                 onNodeClick={(_, n) => setSelId(n.id)} onPaneClick={() => setSelId(null)}
-                fitView deleteKeyCode={["Delete"]} proOptions={{ hideAttribution: true }}
+                fitView deleteKeyCode={["Delete", "Backspace"]} proOptions={{ hideAttribution: true }}
               >
                 <Background gap={18} />
                 <Controls />
