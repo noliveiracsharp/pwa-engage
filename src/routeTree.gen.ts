@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as CheckoutRouteImport } from './routes/checkout'
+import { Route as FornecedorRouteImport } from './routes/fornecedor'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as PortalRouteImport } from './routes/portal'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
@@ -64,6 +65,11 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const CheckoutRoute = CheckoutRouteImport.update({
   id: '/checkout',
   path: '/checkout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FornecedorRoute = FornecedorRouteImport.update({
+  id: '/fornecedor',
+  path: '/fornecedor',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -273,6 +279,7 @@ const ApiPublicZapiWebhookRoute = ApiPublicZapiWebhookRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/checkout': typeof CheckoutRoute
+  '/fornecedor': typeof FornecedorRoute
   '/login': typeof LoginRoute
   '/portal': typeof PortalRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -316,6 +323,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/checkout': typeof CheckoutRoute
+  '/fornecedor': typeof FornecedorRoute
   '/login': typeof LoginRoute
   '/portal': typeof PortalRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -361,6 +369,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/checkout': typeof CheckoutRoute
+  '/fornecedor': typeof FornecedorRoute
   '/login': typeof LoginRoute
   '/portal': typeof PortalRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -406,6 +415,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/checkout'
+    | '/fornecedor'
     | '/login'
     | '/portal'
     | '/reset-password'
@@ -449,6 +459,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/checkout'
+    | '/fornecedor'
     | '/login'
     | '/portal'
     | '/reset-password'
@@ -493,6 +504,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/checkout'
+    | '/fornecedor'
     | '/login'
     | '/portal'
     | '/reset-password'
@@ -538,6 +550,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   CheckoutRoute: typeof CheckoutRoute
+  FornecedorRoute: typeof FornecedorRoute
   LoginRoute: typeof LoginRoute
   PortalRoute: typeof PortalRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
@@ -571,6 +584,13 @@ declare module '@tanstack/react-router' {
       path: '/checkout'
       fullPath: '/checkout'
       preLoaderRoute: typeof CheckoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/fornecedor': {
+      id: '/fornecedor'
+      path: '/fornecedor'
+      fullPath: '/fornecedor'
+      preLoaderRoute: typeof FornecedorRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -920,6 +940,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   CheckoutRoute: CheckoutRoute,
+  FornecedorRoute: FornecedorRoute,
   LoginRoute: LoginRoute,
   PortalRoute: PortalRoute,
   ResetPasswordRoute: ResetPasswordRoute,
