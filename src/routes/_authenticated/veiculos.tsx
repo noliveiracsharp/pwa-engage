@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Camera, Car, Fuel, Loader2, LogIn, LogOut } from "lucide-react";
 import { AbastecimentosTab } from "@/components/frota/Abastecimentos";
+import { ManutencoesTab } from "@/components/frota/Manutencoes";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -159,7 +160,11 @@ function VeiculosPage() {
           <TabsTrigger value="veiculos">Veículos</TabsTrigger>
           <TabsTrigger value="diario">Diário de bordo</TabsTrigger>
           <TabsTrigger value="abastecimentos">Abastecimentos</TabsTrigger>
+          <TabsTrigger value="manutencoes">Manutenções</TabsTrigger>
         </TabsList>
+        <TabsContent value="manutencoes">
+          <ManutencoesTab veiculos={veiculos} perms={perms} />
+        </TabsContent>
         <TabsContent value="abastecimentos">
           <AbastecimentosTab veiculos={veiculos} perms={perms} aberto={abastecendo} setAberto={setAbastecendo} />
         </TabsContent>
