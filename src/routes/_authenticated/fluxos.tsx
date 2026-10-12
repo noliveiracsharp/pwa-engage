@@ -9,7 +9,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import {
   Bot, Clock, GitBranch, Hourglass, KanbanSquare, ListOrdered, MessageSquare,
-  MessageCircleQuestion, PhoneForwarded, Plus, Save, Trash2, UserPlus, Workflow, Zap, PenLine, CircleStop,
+  MessageCircleQuestion, PhoneForwarded, Plus, Save, Trash2, UserPlus, Workflow, Zap, PenLine, CircleStop, Globe, Code2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -51,13 +51,14 @@ export const Route = createFileRoute("/_authenticated/fluxos")({
 const ICONES: Record<TipoNo, typeof Zap> = {
   gatilho: Zap, mensagem: MessageSquare, menu: ListOrdered, pergunta: MessageCircleQuestion,
   condicao: GitBranch, horario: Clock, atraso: Hourglass, kanban: KanbanSquare, atribuir: UserPlus,
-  campo: PenLine, ia: Bot, transbordo: PhoneForwarded, encerrar: CircleStop, subfluxo: Workflow,
+  campo: PenLine, ia: Bot, transbordo: PhoneForwarded, encerrar: CircleStop, subfluxo: Workflow, http: Globe, codigo: Code2,
 };
 const COR_CATEGORIA: Record<CategoriaNo, string> = {
   Gatilhos: "bg-warning text-warning-foreground",
   Mensagens: "bg-primary text-primary-foreground",
   "Lógica": "bg-stage-violet text-primary-foreground",
   "Kanban / CRM": "bg-stage-cyan text-primary-foreground",
+  "Integrações": "bg-stage-pink text-primary-foreground",
   IA: "bg-stage-pink text-primary-foreground",
   Fim: "bg-destructive text-destructive-foreground",
 };
@@ -388,6 +389,39 @@ function Propriedades({ no, atualizar, quadros, etapas, campos, fluxos }: {
             <Campo label="Palavras-chave" ajuda="Separe por vírgula"><Input value={s("palavras")} onChange={(e) => atualizar({ palavras: e.target.value })} /></Campo>
           )}
         </>
+      );
+    case "http":
+      return (
+        <>
+          <Campo label="Método">
+            <Select value={s("metodo") || "GET"} onValueChange={(v) => atualizar({ metodo: v })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {["GET", "POST", "PUT", "PATCH", "DELETE"].map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </Campo>
+          <Campo label="Endereço (URL)" ajuda="Aceita variáveis, ex.: https://api.site.com/clientes?tel={{telefone}}">
+            <Input value={s("url")} onChange={(e) => atualizar({ url: e.target.value })} />
+          </Campo>
+          <Campo label="Cabeçalhos" ajuda="Um por linha, ex.: Authorization: Bearer SEU_TOKEN">
+            <Textarea rows={3} className="font-mono text-xs" value={s("cabecalhos")} onChange={(e) => atualizar({ cabecalhos: e.target.value })} />
+          </Campo>
+          {!["GET", "DELETE"].includes(s("metodo") || "GET") && (
+            <Campo label="Corpo (JSON)" ajuda='Ex.: {"telefone": "{{telefone}}"}'>
+              <Textarea rows={5} className="font-mono text-xs" value={s("corpo")} onChange={(e) => atualizar({ corpo: e.target.value })} />
+            </Campo>
+          )}
+          <Campo label="Guardar resposta em" ajuda={`Use {{${s("variavel") || "resposta"}.campo}} nas mensagens, ou trate listas no bloco JavaScript. O status fica em {{${s("variavel") || "resposta"}_status}}.`}>
+            <Input value={s("variavel")} onChange={(e) => atualizar({ variavel: e.target.value })} />
+          </Campo>
+        </>
+      );
+    case "codigo":
+      return (
+        <Campo label="Código JavaScript" ajuda="Use input.<variável> (respostas de API já vêm como objeto/lista). Faça return { nome: valor } — cada chave vira uma variável para os próximos blocos, ex.: {{lista}}.">
+          <Textarea rows={16} spellCheck={false} className="font-mono text-xs" value={s("codigo")} onChange={(e) => atualizar({ codigo: e.target.value })} />
+        </Campo>
       );
     case "mensagem": case "transbordo": case "encerrar":
       return texto("Mensagem", "texto", "Use {{nome}} para inserir variáveis");
