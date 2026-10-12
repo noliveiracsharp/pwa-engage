@@ -24,6 +24,7 @@ import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle, SheetDescrip
 import { cn } from "@/lib/utils";
 import { pick, type Row } from "@/lib/row";
 import { corEtapa } from "@/lib/kanban-cores";
+import { IaPropriedades } from "@/components/fluxos/IaPropriedades";
 import {
   CATALOGO, dadosPadrao, nomeTipo, resumoNo, saidasDoNo, temEntrada,
   type CategoriaNo, type DadosNo, type TipoNo,
@@ -547,7 +548,7 @@ function Propriedades({ no, atualizar, quadros, etapas, campos, fluxos }: {
         </Campo>
       );
     case "ia":
-      return texto("Instruções para a IA", "instrucoes", "A resposta usará a base de conhecimento da empresa (próxima etapa).");
+      return <IaPropriedades d={d} atualizar={atualizar} />;
     default:
       return null;
   }

@@ -99,8 +99,14 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
             const no = res.externo.no;
             const ext = await executarExterno(no, res.estado.variaveis);
             if (ext.erro) console.error("zapi-webhook bloco", no.id, ext.erro);
+            if (ext.mensagem) acoes.push({ tipo: "mensagem", texto: ext.mensagem });
             const prox = proximoNoId(fluxoAtual.conexoes ?? [], no.id, ext.saida);
-            if (!prox) { res = { acoes: [], estado: { no_atual: null, status: "finalizado", variaveis: ext.variaveis } }; break; }
+            if (!prox) {
+              // IA respondeu e não há próximo bloco: aguarda a próxima pergunta no mesmo bloco.
+              const continua = (no.data?.tipo ?? no.type) === "ia" && ext.saida === "respondeu";
+              res = { acoes: [], estado: { no_atual: continua ? no.id : null, status: continua ? "aguardando" : "finalizado", variaveis: ext.variaveis } };
+              break;
+            }
             res = executarFluxo({
               nos: fluxoAtual.nos ?? [], conexoes: fluxoAtual.conexoes ?? [],
               estado: { no_atual: prox, status: "ativo", variaveis: ext.variaveis }, texto: textoMotor,

@@ -119,6 +119,10 @@ export function executarFluxo(p: {
     const esperando = porId.get(p.estado.no_atual);
     if (!esperando) return fim("finalizado");
     const d = esperando.data;
+    if (tipoDe(esperando) === "ia") {
+      // Conversa contínua com a IA: cada nova mensagem volta ao bloco.
+      return { ...fim("ativo", esperando.id), externo: { no: esperando } };
+    }
     if (tipoDe(esperando) === "menu") {
       const i = escolhaMenu(d, p.texto);
       if (i < 0) {
@@ -180,10 +184,6 @@ export function executarFluxo(p: {
         if (str(d["chave"])) acoes.push({ tipo: "campo", chave: str(d["chave"]), valor: interpolar(str(d["valor"]), vars) });
         atual = proximo(atual.id);
         break;
-      case "ia":
-        // Base de conhecimento ainda não ligada: segue pela saída "Não soube".
-        atual = proximo(atual.id, "nao_sabe");
-        break;
       case "transbordo":
         if (str(d["texto"])) acoes.push({ tipo: "mensagem", texto: interpolar(str(d["texto"]), vars) });
         acoes.push({ tipo: "modo", modo: "Humano" });
@@ -194,7 +194,8 @@ export function executarFluxo(p: {
         return fim("finalizado");
       case "http":
       case "codigo":
-        // Executado fora do motor (precisa de rede/sandbox); o servidor retoma depois.
+      case "ia":
+        // Executado fora do motor (precisa de rede/sandbox/IA); o servidor retoma depois.
         return { ...fim("ativo", atual.id), externo: { no: atual } };
       case "subfluxo":
         if (str(d["fluxo_id"])) return { ...fim("finalizado"), subfluxo: str(d["fluxo_id"]) };
