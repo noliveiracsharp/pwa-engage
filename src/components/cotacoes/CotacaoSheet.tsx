@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Download, Link2, Loader2, MessageCircle, Trash2, Trophy, Upload } from "lucide-react";
+import { CheckCircle2, Circle, CircleDot, Download, Link2, Loader2, MessageCircle, ShoppingCart, Trash2, Trophy, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { SearchSelect } from "@/components/data-table/SearchSelect";
 import { supabase } from "@/integrations/supabase/client";
 import { rowId } from "@/lib/crud";
-import { baixarArquivo, cotacaoStatusMeta, parseCsv, toCsv } from "@/lib/laudos";
+import { baixarArquivo, cotacaoStatusMeta, parseCsv, proximoNumero, toCsv } from "@/lib/laudos";
 import { formatBRL, formatQtd, num, round2 } from "@/lib/orcamentos";
 import { pick, type Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
@@ -22,6 +22,8 @@ type Props = {
   precos: Row[];
   parceiros: Row[];
   itens: Row[];
+  pedidos: Row[];
+  empresaId: string | number | undefined;
   canUpdate: boolean;
   aprovando: boolean;
   onAprovar: (melhores: Array<{ cotacaoItem: Row; preco: number; fornecedorId: string }>) => void;
@@ -29,12 +31,14 @@ type Props = {
 
 const nomeParc = (p: Row | undefined) => String(pick(p ?? {}, ["nome_fantasia", "razao_social"]) ?? "—");
 
-export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, precos, parceiros, itens, canUpdate, aprovando, onAprovar }: Props) {
+export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, precos, parceiros, itens, pedidos, empresaId, canUpdate, aprovando, onAprovar }: Props) {
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const [novoForn, setNovoForn] = useState("");
   const [novoItem, setNovoItem] = useState("");
   const [busy, setBusy] = useState(false);
+  const [criterio, setCriterio] = useState<"preco" | "prazo">("preco");
+  const [gerando, setGerando] = useState(false);
   const cid = cotacao ? String(rowId(cotacao)) : "";
   const aprovada = cotacao?.["status"] === "aprovado";
   const editavel = canUpdate && !aprovada;
@@ -55,7 +59,7 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
   );
 
   const invalidar = () => {
-    for (const t of ["cotacoes", "cotacoes_itens", "cotacoes_fornecedores", "cotacoes_precos"]) qc.invalidateQueries({ queryKey: ["table", t] });
+    for (const t of ["cotacoes", "cotacoes_itens", "cotacoes_fornecedores", "cotacoes_precos", "pedidos_compra"]) qc.invalidateQueries({ queryKey: ["table", t] });
   };
   const precoDe = (itemCotId: string, fornId: string) =>
     precos.find((p) => String(p["cotacao_item_id"]) === itemCotId && String(p["fornecedor_id"]) === fornId);
@@ -82,11 +86,119 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
     const split = melhores.reduce((s, m) => s + m.preco * num(m.cotacaoItem["quantidade"]), 0);
     let vencedor: string | null = null;
     for (const [fid, t] of totais) if (t.completo && t.total > 0 && (!vencedor || t.total < totais.get(vencedor)!.total)) vencedor = fid;
-    return { totais, melhores, split: round2(split), vencedor };
+    // escolha por item: manual (fornecedor_escolhido_id) ou automática pelo critério
+    const escolhas: Array<{ cotacaoItem: Row; preco: number; prazo: number; fornecedorId: string; manual: boolean }> = [];
+    for (const it of itensCot) {
+      const ofertas = fornCot
+        .map((f) => {
+          const fid = String(f["fornecedor_id"]);
+          const p = precoDe(String(it["id"]), fid);
+          return { fid, p, v: num(p?.["preco_unitario"]), d: num(p?.["prazo_dias"]) };
+        })
+        .filter((o) => o.p && o.p["disponivel"] !== false && o.v > 0);
+      if (!ofertas.length) continue;
+      const manualId = it["fornecedor_escolhido_id"] ? String(it["fornecedor_escolhido_id"]) : "";
+      let o = ofertas.find((x) => x.fid === manualId);
+      const manual = !!o;
+      if (!o) o = [...ofertas].sort((a, b) => (criterio === "prazo" ? a.d - b.d || a.v - b.v : a.v - b.v || a.d - b.d))[0]!;
+      escolhas.push({ cotacaoItem: it, preco: o.v, prazo: o.d, fornecedorId: o.fid, manual });
+    }
+    const porForn = new Map<string, { itens: typeof escolhas; total: number; prazo: number }>();
+    for (const e of escolhas) {
+      const g = porForn.get(e.fornecedorId) ?? { itens: [], total: 0, prazo: 0 };
+      g.itens.push(e);
+      g.total = round2(g.total + e.preco * num(e.cotacaoItem["quantidade"]));
+      g.prazo = Math.max(g.prazo, e.prazo);
+      porForn.set(e.fornecedorId, g);
+    }
+    return { totais, melhores, split: round2(split), vencedor, escolhas, porForn };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [itensCot, fornCot, precos]);
+  }, [itensCot, fornCot, precos, criterio]);
 
   if (!cotacao) return null;
+
+  const escolher = async (it: Row, fid: string | null) => {
+    const { error } = await supabase.from("cotacoes_itens").update({ fornecedor_escolhido_id: fid } as never).eq("id", String(it["id"]));
+    if (error) return void toast.error(error.message.includes("fornecedor_escolhido_id") ? "Rode o script atendeai-pedidos-compra.sql no banco." : error.message);
+    invalidar();
+  };
+  const usarCriterioEmTudo = async () => {
+    const { error } = await supabase.from("cotacoes_itens").update({ fornecedor_escolhido_id: null } as never).eq("cotacao_id", cid);
+    if (error) return void toast.error(error.message);
+    invalidar();
+  };
+
+  const pedidosCot = pedidos.filter((p) => String(p["cotacao_id"]) === cid);
+  const gerarPedidos = async () => {
+    if (pedidosCot.length && !confirm("Já existem pedidos desta cotação. Gerar novamente substituirá os pedidos em aberto. Continuar?")) return;
+    setGerando(true);
+    try {
+      const abertos = pedidosCot.filter((p) => p["status"] !== "enviado" && p["status"] !== "recebido").map((p) => String(p["id"]));
+      if (abertos.length) await supabase.from("pedidos_compra").delete().in("id", abertos);
+      const jaEnviados = new Set(pedidosCot.filter((p) => !abertos.includes(String(p["id"]))).map((p) => String(p["fornecedor_id"])));
+      let n = 0;
+      for (const [fid, g] of analise.porForn) {
+        if (jaEnviados.has(fid)) continue;
+        const fc = fornCot.find((x) => String(x["fornecedor_id"]) === fid);
+        const numero = await proximoNumero("pedidos_compra", "PC", empresaId);
+        const { data, error } = await supabase
+          .from("pedidos_compra")
+          .insert({
+            empresa_id: empresaId, cotacao_id: cid, fornecedor_id: fid, numero, status: "rascunho",
+            condicao_pagamento: fc?.["condicao_pagamento"] ?? null, frete: fc?.["frete"] ?? null,
+            prazo_entrega_dias: g.prazo, total: g.total,
+          } as never)
+          .select("id")
+          .single();
+        if (error) throw error;
+        const pid = String((data as Row)["id"]);
+        const { error: e2 } = await supabase.from("pedidos_compra_itens").insert(
+          g.itens.map((e) => ({
+            pedido_id: pid, cotacao_item_id: String(e.cotacaoItem["id"]), item_id: e.cotacaoItem["item_id"] ?? null,
+            quantidade: num(e.cotacaoItem["quantidade"]), preco_unitario: e.preco, prazo_dias: e.prazo,
+            total: round2(e.preco * num(e.cotacaoItem["quantidade"])),
+          })) as never,
+        );
+        if (e2) throw e2;
+        n++;
+      }
+      toast.success(n === 1 ? "1 pedido de compra gerado." : `${n} pedidos de compra gerados.`);
+      invalidar();
+    } catch (e) {
+      const m = e instanceof Error ? e.message : String((e as { message?: string })?.message ?? "");
+      toast.error(m.includes("pedidos_compra") ? "Rode o script atendeai-pedidos-compra.sql no banco." : m || "Falha ao gerar pedidos.");
+    } finally {
+      setGerando(false);
+    }
+  };
+  const enviarPedido = async (p: Row) => {
+    const parc = parceiroById.get(String(p["fornecedor_id"]));
+    const g = analise.porForn.get(String(p["fornecedor_id"]));
+    const linhas = (g?.itens ?? []).map((e) => {
+      const item = itemById.get(String(e.cotacaoItem["item_id"]));
+      return `• ${formatQtd(e.cotacaoItem["quantidade"])} x ${String(item?.["descricao"] ?? "Item")} — ${formatBRL(e.preco)}`;
+    });
+    const texto = [
+      `Olá, ${nomeParc(parc)}! Segue o pedido de compra ${String(p["numero"] ?? "")} (cotação ${String(cotacao["numero"] ?? "")}):`,
+      ...linhas,
+      `Total: ${formatBRL(p["total"])}`,
+      p["condicao_pagamento"] ? `Pagamento: ${String(p["condicao_pagamento"])}` : "",
+      p["frete"] ? `Frete: ${String(p["frete"])}` : "",
+      num(p["prazo_entrega_dias"]) > 0 ? `Prazo de entrega: ${num(p["prazo_entrega_dias"])} dias` : "",
+    ].filter(Boolean).join("\n");
+    const fone = String(pick(parc ?? {}, ["whatsapp", "celular", "telefone"]) ?? "").replace(/\D/g, "");
+    const numero = fone && !fone.startsWith("55") ? `55${fone}` : fone;
+    window.open(`https://wa.me/${numero}?text=${encodeURIComponent(texto)}`, "_blank", "noopener");
+    if (p["status"] === "rascunho") {
+      await supabase.from("pedidos_compra").update({ status: "enviado", enviado_em: new Date().toISOString() } as never).eq("id", String(p["id"]));
+      invalidar();
+    }
+  };
+  const marcarRecebido = async (p: Row) => {
+    const { error } = await supabase.from("pedidos_compra").update({ status: "recebido" } as never).eq("id", String(p["id"]));
+    if (error) return void toast.error(error.message);
+    invalidar();
+  };
 
   const addFornecedor = async (fid: string) => {
     if (!fid) return;
@@ -267,7 +379,21 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
           </section>
 
           <section className="space-y-3">
-            <h3 className="font-semibold">Comparativo de preços</h3>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h3 className="font-semibold">Comparativo e escolha por item</h3>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-muted-foreground">Escolher automaticamente por</span>
+                <div className="inline-flex rounded-md border p-0.5">
+                  {(["preco", "prazo"] as const).map((c) => (
+                    <button key={c} type="button" onClick={() => setCriterio(c)} className={cn("rounded px-2.5 py-1 text-xs font-medium", criterio === c ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>
+                      {c === "preco" ? "Menor preço" : "Menor prazo"}
+                    </button>
+                  ))}
+                </div>
+                {editavel && analise.escolhas.some((e) => e.manual) && <Button size="sm" variant="ghost" onClick={usarCriterioEmTudo}>Limpar escolhas manuais</Button>}
+              </div>
+            </div>
+            <p className="text-muted-foreground text-xs">Clique no círculo ao lado do preço para escolher de qual fornecedor comprar cada item.</p>
             {editavel && <SearchSelect value={novoItem} onChange={addItem} options={itemOpts} placeholder="Adicionar item à cotação" />}
             <div className="overflow-x-auto rounded-lg border">
               <table className="w-full text-sm">
@@ -285,7 +411,7 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
                 <tbody>
                   {itensCot.map((it) => {
                     const item = itemById.get(String(it["item_id"]));
-                    const best = analise.melhores.find((m) => m.cotacaoItem === it);
+                    const best = analise.escolhas.find((m) => m.cotacaoItem === it);
                     return (
                       <tr key={String(it["id"])} className="border-t">
                         <td className="px-3 py-2">
@@ -304,8 +430,15 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
                           const fid = String(f["fornecedor_id"]);
                           const p = precoDe(String(it["id"]), fid);
                           const melhor = best?.fornecedorId === fid;
+                          const valido = !!p && p["disponivel"] !== false && num(p["preco_unitario"]) > 0;
                           return (
                             <td key={fid} className={cn("px-2 py-1.5 text-right", melhor && "bg-success/15")}>
+                              <div className="flex items-center justify-end gap-1">
+                              {editavel && valido && (
+                                <button type="button" aria-label="Comprar deste fornecedor" title="Comprar deste fornecedor" onClick={() => escolher(it, melhor && best?.manual ? null : fid)} className={cn("shrink-0", melhor ? "text-success" : "text-muted-foreground hover:text-foreground")}>
+                                  {melhor ? <CircleDot className="h-4 w-4" /> : <Circle className="h-4 w-4" />}
+                                </button>
+                              )}
                               {editavel ? (
                                 <Input
                                   key={String(p?.["preco_unitario"] ?? "")}
@@ -321,6 +454,8 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
                                   {p && num(p["preco_unitario"]) > 0 ? formatBRL(p["preco_unitario"]) : "—"}
                                 </span>
                               )}
+                              </div>
+                              {valido && num(p!["prazo_dias"]) > 0 && <div className="text-muted-foreground mt-0.5 text-xs">{num(p!["prazo_dias"])} dias</div>}
                             </td>
                           );
                         })}
@@ -365,16 +500,62 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
               </div>
             </div>
           </section>
+
+          <section className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h3 className="font-semibold">Pedidos de compra</h3>
+              {canUpdate && (
+                <Button size="sm" disabled={gerando || analise.escolhas.length === 0} onClick={gerarPedidos}>
+                  {gerando ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <ShoppingCart className="mr-1 h-4 w-4" />}
+                  {pedidosCot.length ? "Gerar novamente" : "Gerar pedidos de compra"}
+                </Button>
+              )}
+            </div>
+            <div className="grid gap-2 md:grid-cols-2">
+              {[...analise.porForn].map(([fid, g]) => {
+                const fc = fornCot.find((x) => String(x["fornecedor_id"]) === fid);
+                const ped = pedidosCot.find((p) => String(p["fornecedor_id"]) === fid);
+                return (
+                  <div key={fid} className="space-y-1 rounded-lg border p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="truncate font-medium">{nomeParc(parceiroById.get(fid))}</div>
+                        <div className="text-muted-foreground text-xs">
+                          {g.itens.length} {g.itens.length === 1 ? "item" : "itens"} · prazo até {g.prazo} dias
+                          {fc?.["condicao_pagamento"] ? ` · ${String(fc["condicao_pagamento"])}` : ""}
+                          {fc?.["frete"] ? ` · frete ${String(fc["frete"])}` : ""}
+                        </div>
+                      </div>
+                      <div className="text-right font-semibold tabular-nums">{formatBRL(g.total)}</div>
+                    </div>
+                    {ped ? (
+                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                        <span className="text-sm font-semibold tabular-nums">{String(ped["numero"] ?? "")}</span>
+                        <span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", ped["status"] === "recebido" ? "bg-success/15 text-success" : ped["status"] === "enviado" ? "bg-primary/15 text-primary" : "bg-warning/15 text-warning")}>
+                          {ped["status"] === "recebido" ? "Recebido" : ped["status"] === "enviado" ? "Enviado" : "Rascunho"}
+                        </span>
+                        <Button size="sm" variant="outline" onClick={() => enviarPedido(ped)}><MessageCircle className="mr-1 h-4 w-4" />Enviar</Button>
+                        {ped["status"] === "enviado" && canUpdate && <Button size="sm" variant="ghost" onClick={() => marcarRecebido(ped)}>Marcar recebido</Button>}
+                      </div>
+                    ) : (
+                      <div className="text-muted-foreground pt-1 text-xs">Pedido ainda não gerado.</div>
+                    )}
+                  </div>
+                );
+              })}
+              {analise.porForn.size === 0 && <p className="text-muted-foreground rounded-md border border-dashed p-4 text-center text-sm md:col-span-2">Os pedidos aparecem aqui quando houver preços cotados.</p>}
+            </div>
+          </section>
         </div>
 
         <div className="flex justify-end gap-2 border-t px-6 py-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Fechar</Button>
           {editavel && (
             <Button
-              disabled={aprovando || analise.melhores.length === 0}
+              disabled={aprovando || analise.escolhas.length === 0}
               onClick={() => {
-                if (analise.melhores.length < itensCot.length && !confirm("Alguns itens estão sem preço e ficarão sem custo na oferta. Aprovar mesmo assim?")) return;
-                onAprovar(analise.melhores);
+                if (analise.escolhas.length < itensCot.length && !confirm("Alguns itens estão sem preço e ficarão sem custo na oferta. Aprovar mesmo assim?")) return;
+                onAprovar(analise.escolhas);
               }}
             >
               {aprovando ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
