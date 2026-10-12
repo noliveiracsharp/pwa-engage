@@ -129,13 +129,13 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
   const semToken = () => toast.error("Link indisponível: rode o script atendeai-cotacao-online.sql no banco.");
   const copiarLink = async (f: Row) => {
     const url = linkDe(f);
-    if (!url) return semToken();
+    if (!url) { semToken(); return; }
     await navigator.clipboard.writeText(url);
     toast.success("Link copiado.");
   };
   const enviarWhats = (f: Row) => {
     const url = linkDe(f);
-    if (!url) return semToken();
+    if (!url) { semToken(); return; }
     const p = parceiroById.get(String(f["fornecedor_id"]));
     const fone = String(pick(p ?? {}, ["whatsapp", "celular", "telefone"]) ?? "").replace(/\D/g, "");
     const numero = fone && !fone.startsWith("55") ? `55${fone}` : fone;
@@ -248,7 +248,7 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
                     </div>
                     {editavel && <Button size="icon" variant="ghost" aria-label="Remover fornecedor" onClick={() => removerForn(f)}><Trash2 className="h-4 w-4" /></Button>}
                   </div>
-                  {(f["condicao_pagamento"] || f["frete"]) && (
+                  {Boolean(f["condicao_pagamento"] || f["frete"]) && (
                     <div className="text-muted-foreground text-xs">
                       {f["condicao_pagamento"] ? `Pagamento: ${String(f["condicao_pagamento"])}` : ""}
                       {f["condicao_pagamento"] && f["frete"] ? " · " : ""}
