@@ -42,6 +42,7 @@ import { Route as AuthenticatedUnid_medidaRouteImport } from './routes/_authenti
 import { Route as AuthenticatedUsuariosRouteImport } from './routes/_authenticated/usuarios'
 import { Route as ChamadaSalaRouteImport } from './routes/chamada.$sala'
 import { Route as CompartilhadoTokenRouteImport } from './routes/compartilhado.$token'
+import { Route as CotacaoTokenRouteImport } from './routes/cotacao.$token'
 import { Route as PropostaTokenRouteImport } from './routes/proposta.$token'
 import { Route as WidgetInstanciaIdRouteImport } from './routes/widget.$instanciaId'
 import { Route as AuthenticatedAdminClientesRouteImport } from './routes/_authenticated/admin.clientes'
@@ -218,6 +219,11 @@ const CompartilhadoTokenRoute = CompartilhadoTokenRouteImport.update({
   path: '/compartilhado/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CotacaoTokenRoute = CotacaoTokenRouteImport.update({
+  id: '/cotacao/$token',
+  path: '/cotacao/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PropostaTokenRoute = PropostaTokenRouteImport.update({
   id: '/proposta/$token',
   path: '/proposta/$token',
@@ -297,6 +303,7 @@ export interface FileRoutesByFullPath {
   '/usuarios': typeof AuthenticatedUsuariosRoute
   '/chamada/$sala': typeof ChamadaSalaRoute
   '/compartilhado/$token': typeof CompartilhadoTokenRoute
+  '/cotacao/$token': typeof CotacaoTokenRoute
   '/proposta/$token': typeof PropostaTokenRoute
   '/widget/$instanciaId': typeof WidgetInstanciaIdRoute
   '/admin/clientes': typeof AuthenticatedAdminClientesRoute
@@ -339,6 +346,7 @@ export interface FileRoutesByTo {
   '/usuarios': typeof AuthenticatedUsuariosRoute
   '/chamada/$sala': typeof ChamadaSalaRoute
   '/compartilhado/$token': typeof CompartilhadoTokenRoute
+  '/cotacao/$token': typeof CotacaoTokenRoute
   '/proposta/$token': typeof PropostaTokenRoute
   '/widget/$instanciaId': typeof WidgetInstanciaIdRoute
   '/admin/clientes': typeof AuthenticatedAdminClientesRoute
@@ -383,6 +391,7 @@ export interface FileRoutesById {
   '/_authenticated/usuarios': typeof AuthenticatedUsuariosRoute
   '/chamada/$sala': typeof ChamadaSalaRoute
   '/compartilhado/$token': typeof CompartilhadoTokenRoute
+  '/cotacao/$token': typeof CotacaoTokenRoute
   '/proposta/$token': typeof PropostaTokenRoute
   '/widget/$instanciaId': typeof WidgetInstanciaIdRoute
   '/_authenticated/admin/clientes': typeof AuthenticatedAdminClientesRoute
@@ -427,6 +436,7 @@ export interface FileRouteTypes {
     | '/usuarios'
     | '/chamada/$sala'
     | '/compartilhado/$token'
+    | '/cotacao/$token'
     | '/proposta/$token'
     | '/widget/$instanciaId'
     | '/admin/clientes'
@@ -469,6 +479,7 @@ export interface FileRouteTypes {
     | '/usuarios'
     | '/chamada/$sala'
     | '/compartilhado/$token'
+    | '/cotacao/$token'
     | '/proposta/$token'
     | '/widget/$instanciaId'
     | '/admin/clientes'
@@ -512,6 +523,7 @@ export interface FileRouteTypes {
     | '/_authenticated/usuarios'
     | '/chamada/$sala'
     | '/compartilhado/$token'
+    | '/cotacao/$token'
     | '/proposta/$token'
     | '/widget/$instanciaId'
     | '/_authenticated/admin/clientes'
@@ -532,6 +544,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   ChamadaSalaRoute: typeof ChamadaSalaRoute
   CompartilhadoTokenRoute: typeof CompartilhadoTokenRoute
+  CotacaoTokenRoute: typeof CotacaoTokenRoute
   PropostaTokenRoute: typeof PropostaTokenRoute
   WidgetInstanciaIdRoute: typeof WidgetInstanciaIdRoute
   ApiPublicZapiWebhookRoute: typeof ApiPublicZapiWebhookRoute
@@ -770,6 +783,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CompartilhadoTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/cotacao/$token': {
+      id: '/cotacao/$token'
+      path: '/cotacao/$token'
+      fullPath: '/cotacao/$token'
+      preLoaderRoute: typeof CotacaoTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/proposta/$token': {
       id: '/proposta/$token'
       path: '/proposta/$token'
@@ -906,6 +926,7 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   ChamadaSalaRoute: ChamadaSalaRoute,
   CompartilhadoTokenRoute: CompartilhadoTokenRoute,
+  CotacaoTokenRoute: CotacaoTokenRoute,
   PropostaTokenRoute: PropostaTokenRoute,
   WidgetInstanciaIdRoute: WidgetInstanciaIdRoute,
   ApiPublicZapiWebhookRoute: ApiPublicZapiWebhookRoute,

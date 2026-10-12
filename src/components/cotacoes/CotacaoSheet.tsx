@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Download, Loader2, Trash2, Trophy, Upload } from "lucide-react";
+import { CheckCircle2, Download, Link2, Loader2, MessageCircle, Trash2, Trophy, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -125,6 +125,24 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
     invalidar();
   };
 
+  const linkDe = (f: Row) => (f["token_publico"] ? `${window.location.origin}/cotacao/${String(f["token_publico"])}` : null);
+  const semToken = () => toast.error("Link indisponível: rode o script atendeai-cotacao-online.sql no banco.");
+  const copiarLink = async (f: Row) => {
+    const url = linkDe(f);
+    if (!url) return semToken();
+    await navigator.clipboard.writeText(url);
+    toast.success("Link copiado.");
+  };
+  const enviarWhats = (f: Row) => {
+    const url = linkDe(f);
+    if (!url) return semToken();
+    const p = parceiroById.get(String(f["fornecedor_id"]));
+    const fone = String(pick(p ?? {}, ["whatsapp", "celular", "telefone"]) ?? "").replace(/\D/g, "");
+    const numero = fone && !fone.startsWith("55") ? `55${fone}` : fone;
+    const texto = `Olá, ${nomeParc(p)}! Segue a cotação ${String(cotacao["numero"] ?? "")}. Informe preços, prazos e condições por este link: ${url}`;
+    window.open(`https://wa.me/${numero}?text=${encodeURIComponent(texto)}`, "_blank", "noopener");
+  };
+
   const exportar = (f: Row) => {
     const linhas: Array<Array<string | number>> = [
       ["codigo_envio", "fornecedor", "cotacao_item_id", "codigo_item", "descricao", "quantidade", "preco_unitario", "prazo_dias", "observacao"],
@@ -217,15 +235,32 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
             {fornCot.length === 0 && <p className="text-muted-foreground rounded-md border border-dashed p-4 text-center text-sm">Adicione fornecedores para gerar os arquivos de cotação.</p>}
             <div className="grid gap-2 md:grid-cols-2">
               {fornCot.map((f) => (
-                <div key={String(f["id"])} className="flex items-center gap-2 rounded-lg border p-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate font-medium">{nomeParc(parceiroById.get(String(f["fornecedor_id"])))}</div>
-                    <div className="text-muted-foreground text-xs">
-                      Código {String(f["codigo_envio"] ?? "—")} · {f["respondido"] ? <span className="text-success font-medium">respondido</span> : "aguardando"}
+                <div key={String(f["id"])} className="space-y-2 rounded-lg border p-3">
+                  <div className="flex items-center gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate font-medium">{nomeParc(parceiroById.get(String(f["fornecedor_id"])))}</div>
+                      <div className="text-muted-foreground text-xs">
+                        Código {String(f["codigo_envio"] ?? "—")} ·{" "}
+                        {f["respondido"] ? (
+                          <span className="text-success font-medium">respondido{f["data_resposta"] ? ` em ${new Date(String(f["data_resposta"])).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}` : ""}</span>
+                        ) : f["visualizado_em"] ? "link aberto, aguardando" : "aguardando"}
+                      </div>
                     </div>
+                    {editavel && <Button size="icon" variant="ghost" aria-label="Remover fornecedor" onClick={() => removerForn(f)}><Trash2 className="h-4 w-4" /></Button>}
                   </div>
-                  <Button size="sm" variant="outline" onClick={() => exportar(f)}><Download className="mr-1 h-4 w-4" />CSV</Button>
-                  {editavel && <Button size="icon" variant="ghost" aria-label="Remover fornecedor" onClick={() => removerForn(f)}><Trash2 className="h-4 w-4" /></Button>}
+                  {(f["condicao_pagamento"] || f["frete"]) && (
+                    <div className="text-muted-foreground text-xs">
+                      {f["condicao_pagamento"] ? `Pagamento: ${String(f["condicao_pagamento"])}` : ""}
+                      {f["condicao_pagamento"] && f["frete"] ? " · " : ""}
+                      {f["frete"] ? `Frete: ${String(f["frete"])}` : ""}
+                      {f["observacao_geral"] ? ` · ${String(f["observacao_geral"])}` : ""}
+                    </div>
+                  )}
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" variant="outline" onClick={() => copiarLink(f)}><Link2 className="mr-1 h-4 w-4" />Copiar link</Button>
+                    <Button size="sm" variant="outline" onClick={() => enviarWhats(f)}><MessageCircle className="mr-1 h-4 w-4" />WhatsApp</Button>
+                    <Button size="sm" variant="ghost" onClick={() => exportar(f)}><Download className="mr-1 h-4 w-4" />CSV</Button>
+                  </div>
                 </div>
               ))}
             </div>
