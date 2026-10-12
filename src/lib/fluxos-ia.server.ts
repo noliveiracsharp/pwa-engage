@@ -21,7 +21,7 @@ export function htmlParaTexto(html: string) {
     .replace(/<[^>]+>/g, " ")
     .replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'")
     .replace(/[ \t]+/g, " ")
-    .replace(/\n\s*\n+/g, "\n")
+    .replace(/ *\n[\s]*/g, "\n")
     .trim();
 }
 
