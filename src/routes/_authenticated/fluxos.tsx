@@ -118,7 +118,7 @@ function LigacaoEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, t
       <BaseEdge
         id={id}
         path={path}
-        markerEnd={markerEnd}
+        {...(markerEnd ? { markerEnd } : {})}
         interactionWidth={24}
         style={selected
           ? { stroke: "var(--primary)", strokeWidth: 3, strokeDasharray: "6 4", animation: "dashdraw 0.6s linear infinite" }
