@@ -3,7 +3,8 @@ import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/integrations/supabase/client";
 import { dispararMensagem } from "@/lib/atendimentos-envio";
-import { executarFluxo, type ConexaoFluxo, type EstadoExec, type NoFluxo } from "@/lib/fluxos-motor";
+import { executarExterno } from "@/lib/fluxos-externo";
+import { executarFluxo, proximoNoId, type ConexaoFluxo, type EstadoExec, type NoFluxo } from "@/lib/fluxos-motor";
 
 // Recebe as mensagens da Z-API ("Ao receber"). A chave ?k= identifica a instância.
 const Payload = z
@@ -92,8 +93,21 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
         let fluxoAtual = r.fluxo;
         let res = executarFluxo({ nos: fluxoAtual.nos ?? [], conexoes: fluxoAtual.conexoes ?? [], estado: r.execucao, texto: textoMotor });
         const acoes = [...res.acoes];
-        // Bloco "Executar outro fluxo": continua no fluxo escolhido (até 5 saltos, evita laço).
-        for (let saltos = 0; res.subfluxo && saltos < 5; saltos++) {
+        // Blocos externos (HTTP/JavaScript) e "Executar outro fluxo" (limite evita laço).
+        for (let passos = 0; (res.subfluxo || res.externo) && passos < 20; passos++) {
+          if (res.externo) {
+            const no = res.externo.no;
+            const ext = await executarExterno(no, res.estado.variaveis);
+            if (ext.erro) console.error("zapi-webhook bloco", no.id, ext.erro);
+            const prox = proximoNoId(fluxoAtual.conexoes ?? [], no.id, ext.saida);
+            if (!prox) { res = { acoes: [], estado: { no_atual: null, status: "finalizado", variaveis: ext.variaveis } }; break; }
+            res = executarFluxo({
+              nos: fluxoAtual.nos ?? [], conexoes: fluxoAtual.conexoes ?? [],
+              estado: { no_atual: prox, status: "ativo", variaveis: ext.variaveis }, texto: textoMotor,
+            });
+            acoes.push(...res.acoes);
+            continue;
+          }
           const { data: sub } = await db.rpc("fluxo_webhook_subfluxo", { p_token: k, p_fluxo: res.subfluxo });
           const f = sub as Recebido["fluxo"];
           if (!f) break;
