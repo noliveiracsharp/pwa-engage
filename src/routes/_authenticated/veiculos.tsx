@@ -63,7 +63,7 @@ function duracao(a: unknown, b: unknown) {
 }
 
 function StatusPill({ value }: { value: unknown }) {
-  const s = STATUS.find((x) => x.value === value) ?? STATUS[3];
+  const s = STATUS.find((x) => x.value === value) ?? STATUS[3]!;
   return <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", s.cls)}>{s.label}</span>;
 }
 
@@ -327,7 +327,7 @@ function ViagemSheet({ modo, registro, veiculos, onClose }: { modo: "saida" | "c
   const saida = modo === "saida";
   const disponiveis = veiculos.filter((v) => v["status"] === "disponivel");
   const veiculoReg = registro ? veiculos.find((v) => String(rowId(v)) === String(registro["veiculo_id"])) : undefined;
-  const [veiculoId, setVeiculoId] = useState(registro ? String(registro["veiculo_id"]) : disponiveis.length === 1 ? String(rowId(disponiveis[0])) : "");
+  const [veiculoId, setVeiculoId] = useState(registro ? String(registro["veiculo_id"]) : disponiveis.length === 1 ? String(rowId(disponiveis[0]!)) : "");
   const [foto, setFoto] = useState("");
   const [km, setKm] = useState("");
   const [finalidade, setFinalidade] = useState("");
