@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export const Route = createFileRoute("/fornecedor")({
+  staticData: { sitemap: false },
   ssr: false,
   head: () => ({
     meta: [
