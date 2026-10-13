@@ -60,6 +60,7 @@ export async function registrarEventoProjeto(e: Evento) {
         `Olá ${text(pick(u, ["nome"])).split(" ")[0]}, você foi atribuído(a) à ${itemLabel} *${e.titulo}*${e.projetoNome ? ` no projeto *${e.projetoNome}*` : ""} por ${e.autorNome || "um colega"}.`,
         prazo ? `Prazo: ${prazo}.` : "",
         link ? `Acesse: ${link}` : "",
+        "\n_Mensagem automática do sistema. Não é preciso responder._",
       ].filter(Boolean).join("\n");
       await dispararMensagem({ instancia: inst, mensagemId: null, atendimentoId: null, telefone: tel, texto: msg }).catch(() => false);
     }
