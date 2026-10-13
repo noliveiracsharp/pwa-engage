@@ -40,7 +40,7 @@ export function montarMensagem(c: Credenciais, url: string) {
     `📧 E-mail: ${c.email}`,
   ];
   if (c.senha) linhas.push(`🔑 Senha: ${c.senha}`);
-  linhas.push("", "Por segurança, altere sua senha no primeiro acesso em \"Meus Dados\".");
+  linhas.push("", "Por segurança, altere sua senha no primeiro acesso em \"Meus Dados\".", "", "_Mensagem automática do sistema. Não é preciso responder._");
   return linhas.join("\n");
 }
 
