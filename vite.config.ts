@@ -13,6 +13,7 @@ export default defineConfig({
     server: { entry: "server" },
   },
   vite: {
+    define: { __BUILD_ID__: JSON.stringify(String(Date.now())) },
     optimizeDeps: { include: ["@radix-ui/react-alert-dialog", "@radix-ui/react-accordion"] },
   },
 });
