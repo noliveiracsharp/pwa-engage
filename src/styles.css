@@ -186,6 +186,16 @@
     max-width: 60vw !important;
   }
 }
+[data-panel-side][data-panel-full]:not([data-sidebar]) {
+  width: 100vw !important;
+  max-width: 100vw !important;
+}
+@media (min-width: 1024px) {
+  [data-panel-side][data-panel-full]:not([data-sidebar]) {
+    width: 97vw !important;
+    max-width: 97vw !important;
+  }
+}
 
 /* ------------------------------------------------------------------ */
 /* Documento do orçamento (visualização e impressão A4)                */

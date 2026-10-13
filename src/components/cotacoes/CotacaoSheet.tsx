@@ -323,7 +323,7 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-5xl">
+      <SheetContent data-panel-full="" className="flex w-full flex-col gap-0 p-0 sm:max-w-none">
         <SheetHeader className="border-b px-6 py-4">
           <SheetTitle className="flex flex-wrap items-center gap-2">
             Cotação {String(cotacao["numero"] ?? "")}
@@ -409,7 +409,7 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
                   </tr>
                 </thead>
                 <tbody>
-                  {itensCot.map((it) => {
+                  {[...itensCot].sort((a, b) => String(b["created_at"] ?? "").localeCompare(String(a["created_at"] ?? ""))).map((it) => {
                     const item = itemById.get(String(it["item_id"]));
                     const best = analise.escolhas.find((m) => m.cotacaoItem === it);
                     return (

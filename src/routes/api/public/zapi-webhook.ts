@@ -86,6 +86,13 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
           return new Response("Erro ao registrar", { status: 500 });
         }
         const r = data as Recebido;
+        // Foto do contato enviada pela Z-API (atualiza o cadastro; ignora se o banco não tiver a função).
+        const raw = body as Record<string, unknown>;
+        const foto = [raw["senderPhoto"], raw["photo"], raw["photoUrl"]].find((v) => typeof v === "string" && /^https?:\/\//.test(v)) as string | undefined;
+        if (foto && r.atendimento_id && !r.interno) {
+          const { error: eF } = await db.rpc("fluxo_webhook_foto", { p_token: k, p_atendimento: r.atendimento_id, p_foto: foto });
+          if (eF) console.error("zapi-webhook foto", eF.message);
+        }
         if (r.duplicada || r.interno || !r.fluxo) return ok();
 
         const acao = (nome: string, dados: Record<string, unknown>) =>
