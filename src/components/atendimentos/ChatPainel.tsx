@@ -366,36 +366,37 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
 
   return (
     <section className="flex min-w-0 flex-1 flex-col bg-background">
-      <header className="flex items-center gap-3 border-b border-border bg-card px-3 py-2">
-        <Button variant="ghost" size="icon" className="md:hidden" onClick={onVoltar} aria-label="Voltar">
+      <header className="flex min-h-16 items-center gap-2 border-b border-border bg-card px-3 py-2">
+        <Button variant="ghost" size="icon" className="shrink-0 md:hidden" onClick={onVoltar} aria-label="Voltar">
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <Avatar className="h-10 w-10">
+        <Avatar className="h-10 w-10 shrink-0">
           {fotoPessoa(pessoa) && <AvatarImage src={fotoPessoa(pessoa)} alt={nome} />}
           <AvatarFallback>{iniciais(nome)}</AvatarFallback>
         </Avatar>
         <div className="min-w-0 flex-1">
-          <p className="flex items-center gap-1.5 truncate font-semibold text-foreground">
+          <div className="flex min-w-0 items-center gap-2">
             {pessoa?.["is_group"] === true && <Users className="h-4 w-4 shrink-0 text-muted-foreground" aria-label="Grupo" />}
-            <span className="truncate">{nome}</span>
-            <ProtocoloBadge protocolo={atendimento?.["protocolo"]} />
-          </p>
-          <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-            {kanban && <span>{text(pick(kanban, ["nome", "descricao"]))}</span>}
-            {instancia && <Badge variant="outline" className="h-5 px-1.5 text-[10px]">{text(pick(instancia, ["nome", "descricao"]))}</Badge>}
-            <Badge variant={encerrado ? "secondary" : "outline"} className="h-5 px-1.5 text-[10px]">
+            <span className="min-w-0 truncate font-semibold text-foreground">{nome}</span>
+            <ProtocoloBadge protocolo={atendimento?.["protocolo"]} className="shrink-0" />
+          </div>
+          <div className="mt-0.5 flex min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap text-xs text-muted-foreground">
+            {kanban && <span className="truncate">{text(pick(kanban, ["nome", "descricao"]))}</span>}
+            {instancia && <Badge variant="outline" className="h-5 shrink-0 px-1.5 text-[10px]">{text(pick(instancia, ["nome", "descricao"]))}</Badge>}
+            <Badge variant={encerrado ? "secondary" : "outline"} className="h-5 max-w-40 shrink-0 truncate px-1.5 text-[10px]">
               {status}
             </Badge>
             <AvaliacaoSelo atendimento={atendimento} encerrado={encerrado} />
             {ia && !encerrado && (
-              <span className="inline-flex items-center gap-1 text-primary"><Bot className="h-3 w-3" /> IA</span>
+              <span className="inline-flex shrink-0 items-center gap-1 text-primary"><Bot className="h-3 w-3" /> IA</span>
             )}
           </div>
         </div>
+        <div className="flex shrink-0 items-center gap-1">
         {!encerrado && !chamada && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label="Iniciar chamada"><Video className="h-5 w-5" /></Button>
+              <Button variant="ghost" size="icon" aria-label="Iniciar chamada" title="Iniciar chamada"><Video className="h-5 w-5" /></Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onSelect={() => iniciarChamada(true)}><Video className="mr-2 h-4 w-4" /> Vídeo e áudio</DropdownMenuItem>
@@ -412,29 +413,30 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
             onParticipante={(n) => participantesRef.current.add(n)}
           />
         )}
-        <Button variant="outline" size="sm" onClick={() => setMoverAberto(true)} className="hidden sm:inline-flex">
-          <MoveRight className="mr-1 h-4 w-4" /> Mover
-        </Button>
-        {!encerrado && !ia && (
-          <Button variant="outline" size="sm" onClick={devolverRobo} aria-label="Devolver para o Robô">
-            <Bot className="h-4 w-4 sm:mr-1" /> <span className="hidden sm:inline">Devolver para o Robô</span>
-          </Button>
-        )}
         {!encerrado && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="hidden lg:inline-flex"
-            onClick={encerrar}
-          >
+          <Button variant="outline" size="sm" onClick={encerrar} className="hidden xl:inline-flex">
             <CheckCircle2 className="mr-1 h-4 w-4" /> Encerrar
           </Button>
         )}
-        {perms.canDelete && (
-          <Button variant="ghost" size="icon" onClick={() => setExcluirAberto(true)} aria-label="Excluir atendimento" className="text-destructive hover:text-destructive">
-            <Trash2 className="h-5 w-5" />
-          </Button>
-        )}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" aria-label="Mais ações" title="Mais ações"><MoreVertical className="h-5 w-5" /></Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem onSelect={() => setMoverAberto(true)}><MoveRight className="mr-2 h-4 w-4" /> Mover etapa</DropdownMenuItem>
+            {!encerrado && !ia && (
+              <DropdownMenuItem onSelect={() => void devolverRobo()}><Bot className="mr-2 h-4 w-4" /> Devolver para o Robô</DropdownMenuItem>
+            )}
+            {!encerrado && (
+              <DropdownMenuItem onSelect={() => void encerrar()}><CheckCircle2 className="mr-2 h-4 w-4" /> Encerrar atendimento</DropdownMenuItem>
+            )}
+            {perms.canDelete && (
+              <DropdownMenuItem onSelect={() => setExcluirAberto(true)} className="text-destructive focus:text-destructive">
+                <Trash2 className="mr-2 h-4 w-4" /> Excluir atendimento
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
         <AlertDialog open={excluirAberto} onOpenChange={(o) => !excluindo && setExcluirAberto(o)}>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -454,6 +456,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
         <Button variant="ghost" size="icon" onClick={onTogglePainel} aria-label="Painel do contato">
           {painelAberto ? <PanelRightClose className="h-5 w-5" /> : <PanelRightOpen className="h-5 w-5" />}
         </Button>
+        </div>
       </header>
 
       <div className="flex-1 space-y-2 overflow-y-auto px-3 py-4 sm:px-6">
