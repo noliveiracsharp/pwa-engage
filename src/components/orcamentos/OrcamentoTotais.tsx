@@ -196,6 +196,12 @@ export function OrcamentoTotais({
             />
           </>
         )}
+        {descontoAvista >= 0.01 && (
+          <Linha label="Desconto à vista" value={`− ${formatBRL(descontoAvista)}`} />
+        )}
+        {comissoes >= 0.01 && (
+          <Linha label="Comissões previstas" value={`− ${formatBRL(comissoes)}`} />
+        )}
         <Separator />
         <Linha
           label={comJuros ? "Lucro final (com juros)" : "Lucro líquido"}
@@ -204,8 +210,8 @@ export function OrcamentoTotais({
           className={prejuizo ? "text-destructive" : "text-success"}
         />
         <p className="text-muted-foreground text-xs">
-          Fórmula por linha: lucro = preço de venda − custo − imposto. Frete e valores adicionais
-          não entram na lucratividade.
+          Fórmula por linha: lucro = preço de venda − custo − imposto. O lucro líquido também
+          desconta as comissões previstas. Frete e valores adicionais não entram na lucratividade.
           {comJuros &&
             " Com juros, o acréscimo do parcelamento (juros + custo operacional embutidos na parcela) soma ao lucro."}
         </p>
