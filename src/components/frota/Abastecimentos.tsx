@@ -29,7 +29,7 @@ const COMB = [
   { value: "gnv", label: "GNV" },
 ];
 const brl = (v: unknown) => Number(v ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-const num = (s: string) => Number(String(s).replace(/\./g, "").replace(",", ".")) || 0;
+import { num } from "@/lib/orcamentos";
 const fmtDt = (v: unknown) => (v ? new Date(String(v)).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : "—");
 const placaDe = (v: Row | undefined) => (v ? `${String(v["placa"] ?? "")} · ${String(v["modelo"] ?? "")}` : "—");
 
