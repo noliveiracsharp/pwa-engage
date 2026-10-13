@@ -26,6 +26,8 @@ const Payload = z
 
 type Recebido = {
   duplicada?: boolean;
+  interno?: boolean;
+  protocolo?: string | null;
   atendimento_id: string;
   telefone: string;
   instancia: Record<string, unknown>;
@@ -84,14 +86,17 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
           return new Response("Erro ao registrar", { status: 500 });
         }
         const r = data as Recebido;
-        if (r.duplicada || !r.fluxo) return ok();
+        if (r.duplicada || r.interno || !r.fluxo) return ok();
 
         const acao = (nome: string, dados: Record<string, unknown>) =>
           db.rpc("fluxo_webhook_acao", { p_token: k, p_atendimento: r.atendimento_id, p_acao: nome, p_dados: dados });
 
         const textoMotor = tipo === "texto" ? texto : texto || tipo;
         let fluxoAtual = r.fluxo;
-        let res = executarFluxo({ nos: fluxoAtual.nos ?? [], conexoes: fluxoAtual.conexoes ?? [], estado: r.execucao, texto: textoMotor });
+        const estadoIni = r.execucao
+          ? { ...r.execucao, variaveis: { ...(r.execucao.variaveis ?? {}), protocolo: r.protocolo ?? "" } }
+          : { no_atual: null, status: "ativo" as const, variaveis: { protocolo: r.protocolo ?? "" } };
+        let res = executarFluxo({ nos: fluxoAtual.nos ?? [], conexoes: fluxoAtual.conexoes ?? [], estado: estadoIni, texto: textoMotor });
         const acoes = [...res.acoes];
         // Blocos externos (HTTP/JavaScript) e "Executar outro fluxo" (limite evita laço).
         for (let passos = 0; (res.subfluxo || res.externo) && passos < 20; passos++) {
