@@ -30,6 +30,11 @@ function LoginPage() {
   const [senha, setSenha] = useState("");
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [atualizado, setAtualizado] = useState(false);
+
+  useEffect(() => {
+    setAtualizado(new URLSearchParams(window.location.search).get("motivo") === "atualizacao");
+  }, []);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -79,6 +84,12 @@ function LoginPage() {
             <h1 className="text-2xl font-bold text-foreground">Bem-vindo de volta</h1>
             <p className="text-sm text-muted-foreground">Entre com seu e-mail e senha para continuar.</p>
           </div>
+
+          {atualizado && (
+            <div className="rounded-md border border-primary/40 bg-primary/10 p-3 text-sm text-foreground">
+              Você foi desconectado para carregar a nova versão do sistema. Faça login para continuar.
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="email">E-mail</Label>
