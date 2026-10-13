@@ -45,6 +45,8 @@ import {
   round2,
   formatBRL,
   gerarParcelas,
+  calcEntrada,
+  type Parcela,
   somaParcelas,
   linhaFromRow,
   novaLinha,
@@ -429,8 +431,10 @@ export function OrcamentoSheet({
         primeiraData: h.primeira_parcela,
         comJuros: !ehAvista && h.tem_juros,
         coeficiente: h.coeficiente_juros,
+        entrada: ehAvista ? 0 : entradaValor,
+        fixas: ehAvista ? {} : h.fixas,
       }),
-    [ehAvista, avista.total, totais.total_liquido, h.qtd_parcelas, h.primeira_parcela, h.tem_juros, h.coeficiente_juros],
+    [ehAvista, avista.total, totais.total_liquido, h.qtd_parcelas, h.primeira_parcela, h.tem_juros, h.coeficiente_juros, entradaValor, h.fixas],
   );
 
   // Acréscimo financeiro quando o parcelamento é "Com juros".
