@@ -361,26 +361,62 @@ export function gerarParcelas(opts: {
   primeiraData: string;
   comJuros: boolean;
   coeficiente?: unknown;
+  /** Entrada em R$ paga na 1ª parcela; juros incidem só sobre o saldo. */
+  entrada?: number;
+  /** Valores fixados à mão por número de parcela; o saldo é rateado nas demais. */
+  fixas?: Record<number, number>;
 }): Parcela[] {
   const qtd = Math.max(1, Math.floor(num(opts.quantidade)));
   const total = round2(Math.max(0, num(opts.total)));
   const primeira = toISODate(opts.primeiraData);
   if (!primeira || total <= 0) return [];
 
-  const coef = round2(num(opts.coeficiente) * 100000) / 100000;
+  const entrada = qtd >= 2 ? round2(Math.min(Math.max(0, num(opts.entrada)), total)) : 0;
+  const saldo = round2(total - entrada);
+  const n = entrada > 0 ? qtd - 1 : qtd;
+  const coef = num(opts.coeficiente);
   const valorParcela =
-    opts.comJuros && coef > 0 ? round2(total * num(opts.coeficiente)) : round2(total / qtd);
-  const totalParcelado = round2(valorParcela * qtd);
+    opts.comJuros && coef > 0 ? round2(saldo * coef) : round2(saldo / n);
+  const totalParcelado = round2(entrada + valorParcela * n);
 
-  const parcelas: Parcela[] = [];
-  let acumulado = 0;
+  const valores: number[] = [];
+  for (let i = 0; i < qtd; i += 1) valores.push(entrada > 0 && i === 0 ? entrada : valorParcela);
+
+  // Valores fixados manualmente: o restante é rateado entre as parcelas livres.
+  const fixas = opts.fixas ?? {};
+  const livres: number[] = [];
+  let somaFixas = 0;
   for (let i = 0; i < qtd; i += 1) {
-    const ultima = i === qtd - 1;
-    const valor = ultima ? round2(totalParcelado - acumulado) : valorParcela;
-    acumulado = round2(acumulado + valor);
-    parcelas.push({ numero: i + 1, vencimento: addMonthsISO(primeira, i), valor });
+    const f = fixas[i + 1];
+    if (entrada > 0 && i === 0) somaFixas += entrada;
+    else if (f !== undefined && Number.isFinite(f)) {
+      valores[i] = round2(Math.max(0, f));
+      somaFixas += valores[i]!;
+    } else livres.push(i);
   }
-  return parcelas;
+  if (livres.length > 0) {
+    const resto = Math.max(0, round2(totalParcelado - somaFixas));
+    const cada = round2(resto / livres.length);
+    let acc = 0;
+    livres.forEach((idx, k) => {
+      const v = k === livres.length - 1 ? round2(resto - acc) : cada;
+      valores[idx] = v;
+      acc = round2(acc + v);
+    });
+  }
+
+  return valores.map((valor, i) => ({
+    numero: i + 1,
+    vencimento: addMonthsISO(primeira, i),
+    valor,
+  }));
+}
+
+/** Entrada em R$ a partir do tipo (percentual do total ou valor). */
+export function calcEntrada(total: number, tipo: string, entrada: unknown): number {
+  const v = Math.max(0, num(entrada));
+  const t = Math.max(0, num(total));
+  return round2(Math.min(t, tipo === "percentual" ? (t * Math.min(100, v)) / 100 : v));
 }
 
 export const somaParcelas = (parcelas: Parcela[]) =>
