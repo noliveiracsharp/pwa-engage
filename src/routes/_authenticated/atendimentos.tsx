@@ -271,7 +271,7 @@ function AtendimentosPage() {
                 </Avatar>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="flex min-w-0 items-center gap-1 font-medium text-foreground">{p?.["is_group"] === true && <Users className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-label="Grupo" />}<span className="truncate">{nome}</span></p>
+                    <p className="flex min-w-0 items-center gap-1 font-medium text-foreground">{p?.["is_group"] === true && <Users className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-label="Grupo" />}<span className="truncate">{nome}</span><ProtocoloBadge compacto protocolo={a["protocolo"]} /></p>
                     <span className={cn("shrink-0 text-[11px]", naoLidas > 0 ? "text-primary" : "text-muted-foreground")}>{horaCurta(quando)}</span>
                   </div>
                   <div className="flex items-center justify-between gap-2">

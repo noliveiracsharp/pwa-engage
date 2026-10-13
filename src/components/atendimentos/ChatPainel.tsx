@@ -31,6 +31,7 @@ import {
 } from "@/lib/atendimentos";
 import { dispararMensagem, marcarEnvio } from "@/lib/atendimentos-envio";
 import { GravadorAudio } from "./GravadorAudio";
+import { ProtocoloBadge } from "./ProtocoloBadge";
 import { AvaliacaoSelo, usePesquisaSatisfacao } from "./Pesquisa";
 import { ChecklistEventoCard, dataChecklist, useChecklistsAtendimento } from "./ChecklistRespostas";
 
@@ -341,6 +342,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
           <p className="flex items-center gap-1.5 truncate font-semibold text-foreground">
             {pessoa?.["is_group"] === true && <Users className="h-4 w-4 shrink-0 text-muted-foreground" aria-label="Grupo" />}
             <span className="truncate">{nome}</span>
+            <ProtocoloBadge protocolo={atendimento?.["protocolo"]} />
           </p>
           <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
             {kanban && <span>{text(pick(kanban, ["nome", "descricao"]))}</span>}
