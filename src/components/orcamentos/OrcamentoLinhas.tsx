@@ -544,17 +544,19 @@ export function OrcamentoLinhas({
           )}
           <span className="ml-auto text-sm font-semibold tabular-nums">Subtotal: {formatBRL(subtotal)}</span>
         </div>
-        {rows.length > 0 && cabecalhoTabela}
-        {rows.length === 0 && (
-          <p className="text-muted-foreground p-4 text-center text-xs">Nenhum item neste ambiente ainda.</p>
-        )}
-        {rows.map((l) => renderLinha(l, numero.get(l.key) ?? 0))}
         {!readOnly && (
-          <div className="border-t p-2">
+          <div className="border-b p-2">
             <Button type="button" variant="ghost" size="sm" className="text-primary w-full" onClick={() => onAdd(bloco)}>
               <Plus className="mr-1 h-4 w-4" /> Adicionar item {bloco ? `em "${bloco}"` : "geral"}
             </Button>
           </div>
+        )}
+        {rows.length > 0 && cabecalhoTabela}
+        {rows.length === 0 && (
+          <p className="text-muted-foreground p-4 text-center text-xs">Nenhum item neste ambiente ainda.</p>
+        )}
+        {[...rows.filter((l) => novas.current.has(l.key)), ...rows.filter((l) => !novas.current.has(l.key))].map((l) =>
+          renderLinha(l, numero.get(l.key) ?? 0),
         )}
       </div>
     );
