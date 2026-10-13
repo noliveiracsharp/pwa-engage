@@ -2,7 +2,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { registrarEventoProjeto } from "@/lib/projetos-eventos";
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { FileIcon, Paperclip, Plus, Trash2, Upload, X } from "lucide-react";
+import { Copy, FileIcon, Paperclip, Plus, Trash2, Upload, X } from "lucide-react";
+import { SortableList, salvarOrdem, useSortableRow } from "@/lib/reorder";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "
 import { ResponsaveisPicker } from "@/components/projetos/ResponsaveisPicker";
 import { useTableRows, rowId, idColumn } from "@/lib/crud";
 import { useAudit } from "@/lib/audit";
+import { duplicarAtividade } from "@/lib/projetos";
 import { ATIVIDADES, ATIV_DEPS, C, PRIORIDADES, atividadePct, doneValue, filterPayload, isDone, prioridadeClass, progressoCor, resolveCol, sincronizarTarefa, useCols } from "@/lib/projetos";
 import type { Row } from "@/lib/row";
 import type { Perms } from "@/hooks/usePagePermissions";
@@ -45,7 +47,8 @@ export function AtividadeSheet({ atividade, isNew, tarefaId, projetoId, atividad
   const aid = atividade ? String(rowId(atividade)) : "";
   const tid = atividade ? String(atividade["tarefa_id"]) : tarefaId;
 
-  async function salvar() {
+  const nomeRef = useRef<HTMLInputElement>(null);
+  async function salvar(outra = false) {
     if (!String(form["nome"] ?? "").trim()) { toast.error("Informe o nome da atividade."); return; }
     if (form["dt_inicio"] && form["dt_fim"] && String(form["dt_fim"]) < String(form["dt_inicio"])) { toast.error("A data fim deve ser igual ou posterior ao início."); return; }
     const base: Row = {
@@ -70,7 +73,23 @@ export function AtividadeSheet({ atividade, isNew, tarefaId, projetoId, atividad
     toast.success("Atividade salva.");
     qc.invalidateQueries({ queryKey: ["table", ATIVIDADES] });
     qc.invalidateQueries({ queryKey: ["table", "projetos_tarefas"] });
+    if (outra && !atividade) {
+      setForm({ prioridade: base["prioridade"], responsaveis: resps, dt_inicio: base["dt_inicio"], dt_fim: base["dt_fim"] });
+      setTimeout(() => nomeRef.current?.focus(), 50);
+      return;
+    }
     onClose();
+  }
+  async function duplicar() {
+    if (!atividade) return;
+    try {
+      await duplicarAtividade(atividade, tid);
+      await sincronizarTarefa(tid, tCols);
+      toast.success("Atividade duplicada.");
+      qc.invalidateQueries({ queryKey: ["table", ATIVIDADES] });
+      qc.invalidateQueries({ queryKey: ["table", "projetos_tarefas_checklists"] });
+      onClose();
+    } catch (e) { toast.error((e as Error).message); }
   }
 
   return (
@@ -85,7 +104,7 @@ export function AtividadeSheet({ atividade, isNew, tarefaId, projetoId, atividad
           <section className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1 sm:col-span-2">
               <Label>Nome da atividade *</Label>
-              <Input disabled={readOnly} value={String(form["nome"] ?? "")} onChange={(e) => set("nome", e.target.value)} />
+              <Input ref={nomeRef} disabled={readOnly} value={String(form["nome"] ?? "")} onChange={(e) => set("nome", e.target.value)} />
             </div>
             <div className="space-y-1 sm:col-span-2">
               <Label>Descrição</Label>
@@ -125,9 +144,11 @@ export function AtividadeSheet({ atividade, isNew, tarefaId, projetoId, atividad
             </p>
           )}
         </div>
-        <div className="flex justify-end gap-2 border-t border-border p-4">
+        <div className="flex flex-wrap justify-end gap-2 border-t border-border p-4">
+          {atividade && perms.canCreate && <Button variant="outline" className="mr-auto" onClick={duplicar}><Copy className="mr-1 h-4 w-4" />Duplicar</Button>}
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          {!readOnly && <Button onClick={salvar}>Salvar</Button>}
+          {!readOnly && isNew && <Button variant="secondary" onClick={() => salvar(true)}>Salvar e adicionar outra</Button>}
+          {!readOnly && <Button onClick={() => salvar()}>Salvar</Button>}
         </div>
       </SheetContent>
     </Sheet>
