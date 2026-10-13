@@ -212,15 +212,22 @@ function Checklist({ atividadeId, tarefaId, readOnly }: { atividadeId: string; t
   const tC = resolveCol(cols, all, C.check.tarefa);
   const dC = resolveCol(cols, all, C.check.descricao);
   const okC = resolveCol(cols, all, C.check.concluido);
+  const temOrdem = Boolean(cols?.includes("ordem"));
   const items = all.filter((r) => String(r["atividade_id"] ?? "") === atividadeId)
-    .sort((a, b) => String(rowId(a)).localeCompare(String(rowId(b)), undefined, { numeric: true }));
+    .sort((a, b) => (Number(a["ordem"] ?? 1e9) - Number(b["ordem"] ?? 1e9)) || String(rowId(a)).localeCompare(String(rowId(b)), undefined, { numeric: true }));
   const [txt, setTxt] = useState("");
   const done = items.filter((i) => isDone(i[okC])).length;
   const refresh = () => qc.invalidateQueries({ queryKey: ["table", T] });
+  async function reordenar(novo: Row[]) {
+    const pos = new Map(novo.map((r, i) => [String(rowId(r)), i]));
+    qc.setQueryData<Row[]>(["table", T], (old = []) => old.map((r) => (pos.has(String(rowId(r))) ? { ...r, ordem: pos.get(String(rowId(r))) } : r)));
+    try { await salvarOrdem(T, novo); } catch (e) { toast.error((e as Error).message); refresh(); }
+  }
 
   async function add() {
     if (!txt.trim()) return;
-    const payload = filterPayload(stamp({ [tC]: tarefaId, atividade_id: atividadeId, [dC]: txt.trim(), [okC]: doneValue(okC, false) }, true), cols?.length ? [...cols, "atividade_id"] : cols);
+    const ordem = items.reduce((m, r) => Math.max(m, Number(r["ordem"] ?? -1)), -1) + 1;
+    const payload = filterPayload(stamp({ [tC]: tarefaId, atividade_id: atividadeId, [dC]: txt.trim(), [okC]: doneValue(okC, false), ordem }, true), cols?.length ? [...cols, "atividade_id"] : cols);
     const { error } = await supabase.from(T).insert(payload as never);
     if (error) { toast.error(error.message); return; }
     setTxt(""); refresh();
@@ -241,9 +248,10 @@ function Checklist({ atividadeId, tarefaId, readOnly }: { atividadeId: string; t
         <h3 className="font-semibold text-foreground">Checklist</h3>
         <span className="text-xs text-muted-foreground">{done}/{items.length}</span>
       </div>
+      <SortableList rows={items} onReorder={reordenar}>
       <ul className="space-y-1">
         {items.map((r) => (
-          <li key={String(rowId(r))} className="group flex items-center gap-2 rounded px-1 py-1 hover:bg-muted/50">
+          <CheckItem key={String(rowId(r))} id={String(rowId(r))} disabled={readOnly || !temOrdem}>
             <Checkbox disabled={readOnly} checked={isDone(r[okC])} onCheckedChange={(v) => toggle(r, v === true)} />
             <span className={`flex-1 text-sm ${isDone(r[okC]) ? "font-medium" : ""}`} style={isDone(r[okC]) ? { color: "var(--progress-100)" } : undefined}>{String(r[dC] ?? "")}</span>
             {!readOnly && (
@@ -251,9 +259,10 @@ function Checklist({ atividadeId, tarefaId, readOnly }: { atividadeId: string; t
                 <Trash2 className="h-3.5 w-3.5 text-destructive" />
               </button>
             )}
-          </li>
+          </CheckItem>
         ))}
       </ul>
+      </SortableList>
       {!readOnly && (
         <div className="flex gap-2">
           <Input placeholder="Adicionar item…" value={txt} onChange={(e) => setTxt(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()} />
