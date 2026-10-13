@@ -377,7 +377,7 @@ export function gerarParcelas(opts: {
   const coef = num(opts.coeficiente);
   const valorParcela =
     opts.comJuros && coef > 0 ? round2(saldo * coef) : round2(saldo / n);
-  const totalParcelado = round2(entrada + valorParcela * n);
+  const totalParcelado = opts.comJuros && coef > 0 ? round2(entrada + valorParcela * n) : total;
 
   const valores: number[] = [];
   for (let i = 0; i < qtd; i += 1) valores.push(entrada > 0 && i === 0 ? entrada : valorParcela);
