@@ -45,6 +45,8 @@ import {
   round2,
   formatBRL,
   gerarParcelas,
+  calcEntrada,
+  type Parcela,
   somaParcelas,
   linhaFromRow,
   novaLinha,
@@ -104,6 +106,9 @@ const emptyHeader = (vendedorId: string): Header => {
     tem_juros: false,
     coeficiente_juros: "",
     primeira_parcela: hoje,
+    entrada_tipo: "percentual",
+    entrada: "",
+    fixas: {},
     modalidade: "prazo",
     desconto_avista_tipo: "percentual",
     desconto_avista: "",
@@ -111,6 +116,23 @@ const emptyHeader = (vendedorId: string): Header => {
     taxa_instalacao_isenta: false,
     vigencia_meses: "36",
     reajuste_indice: "IPCA",
+  };
+};
+
+/** Reconstrói entrada e valores fixados a partir do cronograma gravado. */
+const entradaDoCronograma = (parcelas: Parcela[]) => {
+  const vazio = { entrada_tipo: "percentual" as const, entrada: "", fixas: {} as Record<number, number> };
+  if (parcelas.length < 3) return vazio;
+  const ref = parcelas[parcelas.length - 2]!.valor;
+  const fixas: Record<number, number> = {};
+  parcelas.slice(1, -1).forEach((p) => {
+    if (Math.abs(p.valor - ref) > 0.05) fixas[p.numero] = p.valor;
+  });
+  const temEntrada = Math.abs(parcelas[0]!.valor - ref) > 0.05;
+  return {
+    entrada_tipo: "valor" as const,
+    entrada: temEntrada ? String(parcelas[0]!.valor) : "",
+    fixas,
   };
 };
 
@@ -136,6 +158,7 @@ const headerFromRecord = (r: Row): Header => {
     tem_juros: r["tem_juros"] === true,
     coeficiente_juros: num(r["coeficiente_juros"]) ? String(num(r["coeficiente_juros"])) : "",
     primeira_parcela: parcelas[0]?.vencimento || dt,
+    ...entradaDoCronograma(parcelas),
     modalidade: modalidadeOf(r["modalidade"]),
     desconto_avista_tipo: String(r["desconto_avista_tipo"] ?? "") === "valor" ? "valor" : "percentual",
     desconto_avista: num(r["desconto_avista"]) ? String(num(r["desconto_avista"])) : "",
@@ -400,6 +423,10 @@ export function OrcamentoSheet({
 
   /* ----------------------------- parcelas ----------------------------- */
 
+  const qtdNum = Math.floor(num(h.qtd_parcelas) || 1);
+  const entradaValor =
+    !ehAvista && qtdNum >= 2 ? calcEntrada(totais.total_liquido, h.entrada_tipo, h.entrada) : 0;
+
   const parcelas = useMemo(
     () =>
       gerarParcelas({
@@ -408,8 +435,10 @@ export function OrcamentoSheet({
         primeiraData: h.primeira_parcela,
         comJuros: !ehAvista && h.tem_juros,
         coeficiente: h.coeficiente_juros,
+        entrada: ehAvista ? 0 : entradaValor,
+        fixas: ehAvista ? {} : h.fixas,
       }),
-    [ehAvista, avista.total, totais.total_liquido, h.qtd_parcelas, h.primeira_parcela, h.tem_juros, h.coeficiente_juros],
+    [ehAvista, avista.total, totais.total_liquido, h.qtd_parcelas, h.primeira_parcela, h.tem_juros, h.coeficiente_juros, entradaValor, h.fixas],
   );
 
   // Acréscimo financeiro quando o parcelamento é "Com juros".
@@ -697,6 +726,7 @@ export function OrcamentoSheet({
             value={h}
             parcelas={parcelas}
             totalLiquido={ehAvista ? avista.total : totais.total_liquido}
+            entradaValor={entradaValor}
             modalidade={h.modalidade}
             readOnly={readOnly}
             onChange={(patch) => patchHeader(patch)}

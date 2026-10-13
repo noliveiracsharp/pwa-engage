@@ -86,19 +86,26 @@ export type PagamentoState = {
   tem_juros: boolean;
   coeficiente_juros: string;
   primeira_parcela: string;
+  /** Entrada na 1ª parcela: percentual do total ou valor em R$. */
+  entrada_tipo: "percentual" | "valor";
+  entrada: string;
+  /** Valores digitados à mão no cronograma (número da parcela → R$). */
+  fixas: Record<number, number>;
 };
 
 type Props = {
   value: PagamentoState;
   parcelas: Parcela[];
   totalLiquido: number;
+  /** Entrada já calculada em R$ (0 quando não há). */
+  entradaValor?: number;
   modalidade?: "avista" | "prazo" | "comodato";
   readOnly?: boolean | undefined;
   onChange: (patch: Partial<PagamentoState>) => void;
 };
 
 /** Observações fiscais, forma de pagamento e geração automática das parcelas. */
-export function OrcamentoPagamento({ value, parcelas, totalLiquido, modalidade = "prazo", readOnly, onChange }: Props) {
+export function OrcamentoPagamento({ value, parcelas, totalLiquido, entradaValor = 0, modalidade = "prazo", readOnly, onChange }: Props) {
   const avista = modalidade === "avista";
   const comodato = modalidade === "comodato";
   const total = somaParcelas(parcelas);
@@ -140,8 +147,8 @@ export function OrcamentoPagamento({ value, parcelas, totalLiquido, modalidade =
   // parcelas ou o toggle "Com juros" mudarem. Preenche e trava o campo quando
   // "Com juros"; limpa quando volta para "Sem juros" (divisão simples).
   const { parcelaFinal, coeficienteGlobal } = calcularParcelamentoComJuros(
-    totalLiquido,
-    qtdParcelas,
+    totalLiquido - entradaValor,
+    entradaValor > 0 ? qtdParcelas - 1 : qtdParcelas,
     configComercial,
   );
   useEffect(() => {
@@ -153,7 +160,15 @@ export function OrcamentoPagamento({ value, parcelas, totalLiquido, modalidade =
       onChange({ coeficiente_juros: "" });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value.tem_juros, qtdParcelas, totalLiquido, coeficienteGlobal]);
+  }, [value.tem_juros, qtdParcelas, totalLiquido, entradaValor, coeficienteGlobal]);
+
+  const temFixas = Object.keys(value.fixas ?? {}).length > 0;
+  const fixarParcela = (numero: number, texto: string) => {
+    const fixas = { ...(value.fixas ?? {}) };
+    if (texto.trim() === "") delete fixas[numero];
+    else fixas[numero] = num(texto);
+    onChange({ fixas });
+  };
 
   // Configuração completa o suficiente para o cálculo (markup precisa ser > 0).
   const cfg =
@@ -270,6 +285,38 @@ export function OrcamentoPagamento({ value, parcelas, totalLiquido, modalidade =
             />
           </div>
 
+          {!avista && qtdParcelas >= 2 && (
+            <div className="min-w-0 space-y-1.5 sm:col-span-2">
+              <Label htmlFor="entrada" className="block text-sm font-medium">
+                Entrada (1ª parcela)
+              </Label>
+              <div className="flex gap-2">
+                <ToggleGroup
+                  type="single"
+                  variant="outline"
+                  value={value.entrada_tipo}
+                  onValueChange={(v) => v && onChange({ entrada_tipo: v as "percentual" | "valor" })}
+                  disabled={Boolean(readOnly)}
+                >
+                  <ToggleGroupItem value="percentual" className="px-3">%</ToggleGroupItem>
+                  <ToggleGroupItem value="valor" className="px-3">R$</ToggleGroupItem>
+                </ToggleGroup>
+                <Input
+                  id="entrada"
+                  inputMode="decimal"
+                  placeholder={value.entrada_tipo === "percentual" ? "Ex.: 40" : "Ex.: 4.000,00"}
+                  value={value.entrada}
+                  onChange={(e) => onChange({ entrada: e.target.value })}
+                />
+              </div>
+              <p className="text-muted-foreground text-xs">
+                {entradaValor > 0
+                  ? `Entrada de ${formatBRL(entradaValor)}; o saldo de ${formatBRL(totalLiquido - entradaValor)} é dividido nas ${qtdParcelas - 1} parcelas seguintes${value.tem_juros ? " (juros só sobre o saldo)" : ""}.`
+                  : "Deixe em branco para dividir o total em parcelas iguais."}
+              </p>
+            </div>
+          )}
+
           {!avista && value.tem_juros && (
             <div className="min-w-0 space-y-1.5 sm:col-span-2">
               <Label htmlFor="coeficiente_juros" className="block text-sm font-medium">
@@ -341,7 +388,26 @@ export function OrcamentoPagamento({ value, parcelas, totalLiquido, modalidade =
                       {p.numero}/{parcelas.length}
                     </td>
                     <td className="px-3 py-2 tabular-nums">{formatDate(p.vencimento)}</td>
-                    <td className="px-3 py-2 text-right tabular-nums">{formatBRL(p.valor)}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">
+                      {readOnly || avista || parcelas.length < 2 || (entradaValor > 0 && p.numero === 1) ? (
+                        formatBRL(p.valor)
+                      ) : (
+                        <Input
+                          key={`${p.numero}-${p.valor}`}
+                          inputMode="decimal"
+                          aria-label={`Valor da parcela ${p.numero}`}
+                          defaultValue={p.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          className={`ml-auto h-8 w-32 text-right tabular-nums ${value.fixas?.[p.numero] !== undefined ? "border-primary" : ""}`}
+                          onBlur={(e) => {
+                            const novo = num(e.target.value);
+                            if (Math.abs(novo - p.valor) >= 0.01) fixarParcela(p.numero, e.target.value);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                          }}
+                        />
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -359,6 +425,21 @@ export function OrcamentoPagamento({ value, parcelas, totalLiquido, modalidade =
           <p className="text-muted-foreground text-xs">
             Informe a data da 1ª parcela e adicione itens para gerar o cronograma automaticamente.
           </p>
+        )}
+
+        {!avista && parcelas.length >= 2 && !readOnly && (
+          <div className="text-muted-foreground flex flex-wrap items-center gap-2 text-xs">
+            <span>Altere o valor de qualquer parcela: o saldo é rateado automaticamente nas demais.</span>
+            {temFixas && (
+              <button
+                type="button"
+                className="text-primary underline underline-offset-2"
+                onClick={() => onChange({ fixas: {} })}
+              >
+                Recalcular parcelas iguais
+              </button>
+            )}
+          </div>
         )}
 
         {parcelas.length > 0 && Math.abs(acrescimo) >= 0.01 && (
