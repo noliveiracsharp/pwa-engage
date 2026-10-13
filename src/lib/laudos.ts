@@ -1,3 +1,4 @@
+import { comprimirImagem } from "@/lib/image-compress";
 import { supabase } from "@/integrations/supabase/client";
 
 export const OBJETIVO_LEVANTAMENTO = "levantamento_tecnico";
@@ -50,7 +51,8 @@ export async function proximoNumero(
 }
 
 /** Envia uma foto ao bucket público e devolve a URL. */
-export async function uploadFoto(file: File): Promise<string> {
+export async function uploadFoto(original: File): Promise<string> {
+  const file = await comprimirImagem(original, "laudo");
   const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
   const path = `laudos/${crypto.randomUUID()}.${ext}`;
   const { error } = await supabase.storage.from("chat_media").upload(path, file, { upsert: false });

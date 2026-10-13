@@ -1,3 +1,4 @@
+import { UploadInfo } from "@/components/ui/upload-info";
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
@@ -435,7 +436,7 @@ function ViagemSheet({ modo, registro, veiculos, onClose }: { modo: "saida" | "c
               ) : (
                 <>
                   <Camera className="size-8 text-muted-foreground" />
-                  <span className="text-sm font-medium">Tocar para tirar a foto do painel</span>
+                  <span className="inline-flex items-center gap-1 text-sm font-medium">Tocar para tirar a foto do painel<UploadInfo perfil="laudo" /></span>
                 </>
               )}
               <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => onFoto(e.target.files?.[0])} />

@@ -1,3 +1,4 @@
+import { UploadInfo } from "@/components/ui/upload-info";
 import { useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ClipboardCheck, Loader2, Paperclip, X } from "lucide-react";
@@ -157,7 +158,7 @@ export function useChecklistGate() {
                 const url = String(valores[id] ?? "");
                 return (
                   <div key={id} className="space-y-1">
-                    <Label>{rotulo}</Label>
+                    <Label className="flex items-center gap-1">{rotulo}<UploadInfo perfil="laudo" arquivos /></Label>
                     {url ? (
                       <div className="flex items-center gap-2 rounded-md border border-border p-2 text-sm">
                         <Paperclip className="h-4 w-4 shrink-0" />

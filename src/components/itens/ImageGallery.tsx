@@ -4,6 +4,7 @@ import { ImagePlus, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { UploadInfo } from "@/components/ui/upload-info";
 
 const BUCKET = "itens-imagens";
 const MAX_BYTES = 280 * 1024;
@@ -108,7 +109,7 @@ export function ImageGallery({ value, onChange, disabled }: Props) {
           <ImagePlus className="text-muted-foreground h-6 w-6" />
         )}
         <span className="text-muted-foreground">
-          {busy ? "Comprimindo e enviando…" : "Arraste imagens aqui ou clique para selecionar"}
+          <span className="inline-flex items-center gap-1">{busy ? "Comprimindo e enviando…" : "Arraste imagens aqui ou clique para selecionar"}<UploadInfo perfil="produto" /></span>
         </span>
         <input
           ref={inputRef}
