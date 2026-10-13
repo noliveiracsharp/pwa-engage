@@ -1,4 +1,8 @@
 import { Linkify } from "@/components/ui/linkify";
+import { usePagePermissions } from "@/hooks/usePagePermissions";
+import {
+  AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useChecklistGate } from "@/components/kanban/ChecklistGate";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -64,6 +68,9 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
   const [fimChamada, setFimChamada] = useState<{ c: Chamada; fim: number; participantes: string[] } | null>(null);
   const [anotacoes, setAnotacoes] = useState("");
   const pesquisa = usePesquisaSatisfacao();
+  const perms = usePagePermissions("/atendimentos");
+  const [excluirAberto, setExcluirAberto] = useState(false);
+  const [excluindo, setExcluindo] = useState(false);
   const checklist = useChecklistGate();
   const fimRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -341,6 +348,21 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
     await registrarInterna(`🤖 ${quem} devolveu o atendimento para o robô.`);
   }
 
+  // Exclui o atendimento e tudo que está atrelado a ele (função no banco, em uma única transação).
+  async function excluirAtendimento() {
+    setExcluindo(true);
+    const { error } = await supabase.rpc("excluir_atendimento" as never, { p_id: id } as never);
+    setExcluindo(false);
+    if (error) {
+      toast.error(`Não foi possível excluir: ${error.message}`);
+      return;
+    }
+    setExcluirAberto(false);
+    toast.success("Atendimento excluído.");
+    onVoltar();
+    qc.invalidateQueries({ queryKey: ["table"] });
+  }
+
 
   return (
     <section className="flex min-w-0 flex-1 flex-col bg-background">
@@ -408,6 +430,27 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
             <CheckCircle2 className="mr-1 h-4 w-4" /> Encerrar
           </Button>
         )}
+        {perms.canDelete && (
+          <Button variant="ghost" size="icon" onClick={() => setExcluirAberto(true)} aria-label="Excluir atendimento" className="text-destructive hover:text-destructive">
+            <Trash2 className="h-5 w-5" />
+          </Button>
+        )}
+        <AlertDialog open={excluirAberto} onOpenChange={(o) => !excluindo && setExcluirAberto(o)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Excluir atendimento?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Deseja excluir este atendimento permanentemente? Todas as mensagens, anotações internas, etiquetas, participantes, checklists e o andamento do robô serão removidos. Esta ação não poderá ser desfeita.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={excluindo}>Cancelar</AlertDialogCancel>
+              <Button variant="destructive" disabled={excluindo} onClick={excluirAtendimento}>
+                {excluindo ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Trash2 className="mr-1 h-4 w-4" />} Sim, excluir tudo
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
         <Button variant="ghost" size="icon" onClick={onTogglePainel} aria-label="Painel do contato">
           {painelAberto ? <PanelRightClose className="h-5 w-5" /> : <PanelRightOpen className="h-5 w-5" />}
         </Button>
