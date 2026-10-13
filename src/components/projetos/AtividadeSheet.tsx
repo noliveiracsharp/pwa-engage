@@ -1,3 +1,5 @@
+import { comprimirImagem } from "@/lib/image-compress";
+import { UploadInfo } from "@/components/ui/upload-info";
 import { useAuth } from "@/hooks/useAuth";
 import { registrarEventoProjeto } from "@/lib/projetos-eventos";
 import { useEffect, useRef, useState } from "react";
@@ -343,7 +345,8 @@ function Anexos({ atividadeId, tarefaId, projetoId, readOnly }: { atividadeId: s
 
   async function upload(files: FileList | File[]) {
     setBusy(true);
-    for (const f of Array.from(files)) {
+    for (const orig of Array.from(files)) {
+      const f = await comprimirImagem(orig, "laudo");
       const safe = f.name.normalize("NFD").replace(/[^\w.-]+/g, "_");
       const path = `${projetoId}/${tarefaId}/${atividadeId}/${Date.now()}-${safe}`;
       const up = await supabase.storage.from(BUCKET).upload(path, f, f.type ? { contentType: f.type } : {});
@@ -385,7 +388,7 @@ function Anexos({ atividadeId, tarefaId, projetoId, readOnly }: { atividadeId: s
           className={`flex cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed p-6 text-center text-sm transition-colors ${drag ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"}`}
         >
           <Upload className="h-6 w-6 text-muted-foreground" />
-          <span>{busy ? "Enviando…" : "Arraste arquivos aqui ou clique para escolher"}</span>
+          <span className="inline-flex items-center gap-1">{busy ? "Enviando…" : "Arraste arquivos aqui ou clique para escolher"}<UploadInfo perfil="laudo" arquivos /></span>
           <input ref={input} type="file" multiple hidden onChange={(e) => e.target.files && upload(e.target.files)} />
         </div>
       )}

@@ -1,3 +1,5 @@
+import { comprimirImagem } from "@/lib/image-compress";
+import { UploadInfo } from "@/components/ui/upload-info";
 import { Linkify } from "@/components/ui/linkify";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 import {
@@ -295,7 +297,8 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
     await registrarInterna(linhas.join("\n"));
   }
 
-  async function anexar(file: File) {
+  async function anexar(original: File) {
+    const file = await comprimirImagem(original, "chat");
     setEnviando(true);
     const path = `${empresaId ?? "geral"}/${id}/${Date.now()}-${file.name.replace(/[^\w.-]/g, "_")}`;
     const up = await supabase.storage.from("chat_media").upload(path, file, file.type ? { contentType: file.type } : undefined);
@@ -531,6 +534,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
           <Button variant="ghost" size="icon" aria-label="Anexar" onClick={() => fileRef.current?.click()}>
             <Paperclip className="h-5 w-5" />
           </Button>
+          <UploadInfo perfil="chat" arquivos className="hidden sm:inline-flex" />
           <input
             ref={fileRef}
             type="file"

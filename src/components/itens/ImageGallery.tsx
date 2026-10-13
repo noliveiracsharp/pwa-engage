@@ -4,6 +4,7 @@ import { ImagePlus, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { UploadInfo } from "@/components/ui/upload-info";
 
 const BUCKET = "itens-imagens";
 const MAX_BYTES = 280 * 1024;

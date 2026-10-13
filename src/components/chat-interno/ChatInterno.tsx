@@ -1,3 +1,5 @@
+import { comprimirImagem } from "@/lib/image-compress";
+import { UploadInfo } from "@/components/ui/upload-info";
 import { Linkify } from "@/components/ui/linkify";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -475,7 +477,8 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack }: { me: stri
     void qc.invalidateQueries({ queryKey: key });
   };
 
-  const anexar = async (file: File) => {
+  const anexar = async (original: File) => {
+    const file = await comprimirImagem(original, "chat");
     setEnviando(true);
     const path = `interno/${crypto.randomUUID()}-${file.name.replace(/[^\w.-]/g, "_")}`;
     const up = await supabase.storage.from("chat_media").upload(path, file, file.type ? { contentType: file.type } : undefined);
@@ -610,6 +613,7 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack }: { me: stri
         <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => fileRef.current?.click()} aria-label="Anexar arquivo" disabled={enviando || !canalId}>
           <Paperclip className="h-4 w-4" />
         </Button>
+        <UploadInfo perfil="chat" arquivos />
         <Input value={texto} onChange={(e) => setTexto(e.target.value)} placeholder="Digite uma mensagem..." className="flex-1" />
         <Button type="submit" size="icon" className="h-9 w-9 shrink-0" disabled={enviando || !texto.trim() || !canalId} aria-label="Enviar">
           {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}

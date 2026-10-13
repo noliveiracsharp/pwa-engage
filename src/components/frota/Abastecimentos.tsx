@@ -1,3 +1,4 @@
+import { UploadInfo } from "@/components/ui/upload-info";
 import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -147,7 +148,7 @@ export function AbastecimentosTab({ veiculos, perms, aberto, setAberto }: { veic
 function FotoBox({ label, foto, loading, onFile }: { label: string; foto: string; loading: boolean; onFile: (f: File | undefined) => void }) {
   return (
     <div className="space-y-2">
-      <Label>{label}</Label>
+      <Label className="flex items-center gap-1">{label}<UploadInfo perfil="laudo" /></Label>
       <label className={cn("flex min-h-32 cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-3 text-center", foto && "border-solid")}>
         {foto ? <img src={foto} alt={label} className="max-h-48 rounded object-contain" /> : loading ? <Loader2 className="size-7 animate-spin text-muted-foreground" /> : (
           <><Camera className="size-7 text-muted-foreground" /><span className="text-sm">Tocar para tirar a foto</span></>

@@ -3,6 +3,8 @@ import { Camera, Trash2, User } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { comprimirImagem } from "@/lib/image-compress";
+import { UploadInfo } from "@/components/ui/upload-info";
 
 const BUCKET = "avatars";
 
@@ -17,12 +19,13 @@ export function PhotoUpload({ value, onChange, alt = "Foto" }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
-  const upload = async (file: File) => {
+  const upload = async (original: File) => {
+    const file = await comprimirImagem(original, "avatar");
     if (!file.type.startsWith("image/")) {
       toast.error("Selecione um arquivo de imagem.");
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
+    if (file.size > 5 * 1024 * 1024 && !original.type.startsWith("image/")) {
       toast.error("A imagem deve ter no máximo 5 MB.");
       return;
     }
@@ -85,6 +88,7 @@ export function PhotoUpload({ value, onChange, alt = "Foto" }: Props) {
             <Trash2 className="h-4 w-4" />
           </Button>
         )}
+        <UploadInfo perfil="avatar" />
       </div>
       <input
         ref={inputRef}

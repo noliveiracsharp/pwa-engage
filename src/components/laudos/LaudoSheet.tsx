@@ -1,3 +1,4 @@
+import { UploadInfo } from "@/components/ui/upload-info";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Camera, Check, Loader2, Pencil, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
@@ -87,6 +88,7 @@ function FotoStrip({ fotos, onChange }: { fotos: string[]; onChange: (f: string[
         {busy ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Camera className="mr-1 h-4 w-4" />}
         Foto
       </Button>
+      <UploadInfo perfil="laudo" />
       <input ref={ref} type="file" accept="image/*" capture="environment" multiple hidden onChange={(e) => add(e.target.files)} />
     </div>
   );
