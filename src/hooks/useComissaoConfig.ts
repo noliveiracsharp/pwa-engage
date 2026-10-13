@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useTableRows, rowId } from "@/lib/crud";
 import { num } from "@/lib/orcamentos";
 import type { Natureza } from "@/lib/orcamentos";
-import { PARAMETROS_PADRAO, type BaseComissao, type Papel, type ParametroNatureza } from "@/lib/comissoes";
+import { PARAMETROS_PADRAO, type BaseComissao, type RegraLiberacao, type Papel, type ParametroNatureza } from "@/lib/comissoes";
 
 /** Parâmetros e papéis de comissão da empresa ativa (com padrões quando não configurado). */
 export function useComissaoConfig() {
@@ -36,8 +36,14 @@ export function useComissaoConfig() {
     [papeisQ.data],
   );
 
+  const primeiro = (paramsQ.data ?? [])[0];
+  const liberacao: RegraLiberacao = primeiro?.["liberacao"] === "fechamento" ? "fechamento" : "recebimento";
+  const entradaPct = num(primeiro?.["entrada_pct"]);
+
   return {
     parametros,
+    liberacao,
+    entradaPct,
     papeis,
     paramRows: paramsQ.data ?? [],
     papelRows: papeisQ.data ?? [],
