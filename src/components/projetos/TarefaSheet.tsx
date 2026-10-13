@@ -4,6 +4,8 @@ import { ResponsaveisPicker, responsaveisDe } from "@/components/projetos/Respon
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { Copy } from "lucide-react";
+import { duplicarTarefa } from "@/lib/projetos";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -135,7 +137,17 @@ export function TarefaSheet({ tarefa, tarefasDoProjeto, projetoId, perms, onClos
           </p>
           {tarefa && isDone(tarefa[tc.done]) && <Badge className="bg-success text-success-foreground">Concluída</Badge>}
         </div>
-        <div className="flex justify-end gap-2 border-t border-border p-4">
+        <div className="flex flex-wrap justify-end gap-2 border-t border-border p-4">
+          {tarefa && perms.canCreate && (
+            <Button variant="outline" className="mr-auto" onClick={async () => {
+              try {
+                await duplicarTarefa(tarefa, tc.nome, tarefasDoProjeto.reduce((mx, t) => Math.max(mx, Number(t["ordem"] ?? 0)), -1) + 1);
+                toast.success("Tarefa duplicada com as atividades.");
+                qc.invalidateQueries();
+                onClose();
+              } catch (e) { toast.error((e as Error).message); }
+            }}><Copy className="mr-1 h-4 w-4" />Duplicar</Button>
+          )}
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
           {!readOnly && <Button onClick={salvar}>Salvar</Button>}
         </div>
