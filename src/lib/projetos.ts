@@ -161,3 +161,43 @@ export async function sincronizarTarefa(tarefaId: string, tCols?: string[]): Pro
   const payload: Row = { progresso: media, situacao: media >= 100 ? "Concluída" : "Em andamento" };
   await supabase.from("projetos_tarefas").update(filterPayload(payload, tCols?.length ? [...tCols, "progresso"] : tCols) as never).eq("id", tarefaId as never);
 }
+
+const CHECKLISTS = "projetos_tarefas_checklists";
+const SEM_COPIA = ["id", "created_at", "updated_at", "criado_em", "atualizado_em", "token_compartilhamento"];
+function limpar(r: Row): Row {
+  const c: Row = { ...r };
+  for (const k of SEM_COPIA) delete c[k];
+  return c;
+}
+
+/** Copia uma atividade (com checklist) para a tarefa informada, no fim da lista. */
+export async function duplicarAtividade(a: Row, tarefaId: string, sufixo = " (Cópia)"): Promise<string> {
+  const { data: irmas } = await supabase.from(ATIVIDADES as never).select("ordem").eq("tarefa_id", tarefaId as never);
+  const ordem = ((irmas ?? []) as Row[]).reduce((m, x) => Math.max(m, Number(x["ordem"] ?? 0)), -1) + 1;
+  const { data, error } = await supabase.from(ATIVIDADES as never)
+    .insert({ ...limpar(a), tarefa_id: tarefaId, nome: `${String(a["nome"] ?? "")}${sufixo}`, ordem } as never).select("id").single();
+  if (error) throw error;
+  const novoId = String((data as Row)["id"]);
+  const { data: itens } = await supabase.from(CHECKLISTS).select("*").eq("atividade_id", String(a["id"]) as never);
+  if (itens?.length) {
+    const novos = (itens as Row[]).map((i) => {
+      const c = limpar(i);
+      for (const k of C.check.tarefa) if (k in c) c[k] = tarefaId;
+      c["atividade_id"] = novoId;
+      return c;
+    });
+    const { error: e2 } = await supabase.from(CHECKLISTS).insert(novos as never);
+    if (e2) throw e2;
+  }
+  return novoId;
+}
+
+/** Copia uma tarefa com todas as atividades e checklists, no fim do projeto. */
+export async function duplicarTarefa(t: Row, nomeCol: string, ordem: number): Promise<void> {
+  const { data, error } = await supabase.from("projetos_tarefas")
+    .insert({ ...limpar(t), [nomeCol]: `${String(t[nomeCol] ?? "")} (Cópia)`, ordem } as never).select("id").single();
+  if (error) throw error;
+  const novoId = String((data as Row)["id"]);
+  const { data: ativs } = await supabase.from(ATIVIDADES as never).select("*").eq("tarefa_id", String(t["id"]) as never).order("ordem");
+  for (const a of (ativs ?? []) as Row[]) await duplicarAtividade(a, novoId, "");
+}

@@ -4,6 +4,7 @@ import { pick, type Row } from "@/lib/row";
 import { M, nomePessoa } from "@/lib/atendimentos";
 import { toast } from "sonner";
 import { tocarSom } from "@/lib/som-notificacao";
+import { adicionarAviso } from "@/lib/avisos";
 
 /** Pede permissão e mostra notificação nativa quando chega mensagem de cliente com a aba oculta. */
 export function useNotificacoesChat() {
@@ -29,6 +30,7 @@ export function useNotificacoesChat() {
         }
         const corpo = String(pick(m, M.texto) ?? "") || "Nova mensagem";
         const curto = corpo.length > 120 ? `${corpo.slice(0, 117)}…` : corpo;
+        adicionarAviso({ titulo: `Mensagem de ${nome}`, texto: curto, link: "/atendimentos" });
         tocarSom("cliente");
         toast(`Nova mensagem de ${nome}`, {
           description: curto,

@@ -21,6 +21,7 @@ import { Building2 } from "lucide-react";
 import { useState } from "react";
 import { MeusDadosSheet } from "@/components/perfil/MeusDadosSheet";
 import { useEmpresaAtiva } from "@/hooks/useEmpresaAtiva";
+import { AvisosButton } from "@/components/layout/AvisosButton";
 
 export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) {
   const { usuario, empresa, user, isMaster, empresaContextoId, setEmpresaContexto } = useAuth();
@@ -111,6 +112,7 @@ export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) 
         >
           <RotateCw className={`h-5 w-5 ${recarregando ? "animate-spin" : ""}`} />
         </Button>
+        <AvisosButton />
         <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Alternar tema">
           {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
         </Button>

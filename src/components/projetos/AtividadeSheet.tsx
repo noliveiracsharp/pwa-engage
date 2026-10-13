@@ -2,7 +2,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { registrarEventoProjeto } from "@/lib/projetos-eventos";
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { FileIcon, Paperclip, Plus, Trash2, Upload, X } from "lucide-react";
+import { Copy, FileIcon, Paperclip, Plus, Trash2, Upload, X } from "lucide-react";
+import { SortableList, salvarOrdem, useSortableRow } from "@/lib/reorder";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "
 import { ResponsaveisPicker } from "@/components/projetos/ResponsaveisPicker";
 import { useTableRows, rowId, idColumn } from "@/lib/crud";
 import { useAudit } from "@/lib/audit";
+import { duplicarAtividade } from "@/lib/projetos";
 import { ATIVIDADES, ATIV_DEPS, C, PRIORIDADES, atividadePct, doneValue, filterPayload, isDone, prioridadeClass, progressoCor, resolveCol, sincronizarTarefa, useCols } from "@/lib/projetos";
 import type { Row } from "@/lib/row";
 import type { Perms } from "@/hooks/usePagePermissions";
@@ -45,7 +47,8 @@ export function AtividadeSheet({ atividade, isNew, tarefaId, projetoId, atividad
   const aid = atividade ? String(rowId(atividade)) : "";
   const tid = atividade ? String(atividade["tarefa_id"]) : tarefaId;
 
-  async function salvar() {
+  const nomeRef = useRef<HTMLInputElement>(null);
+  async function salvar(outra = false) {
     if (!String(form["nome"] ?? "").trim()) { toast.error("Informe o nome da atividade."); return; }
     if (form["dt_inicio"] && form["dt_fim"] && String(form["dt_fim"]) < String(form["dt_inicio"])) { toast.error("A data fim deve ser igual ou posterior ao início."); return; }
     const base: Row = {
@@ -70,7 +73,23 @@ export function AtividadeSheet({ atividade, isNew, tarefaId, projetoId, atividad
     toast.success("Atividade salva.");
     qc.invalidateQueries({ queryKey: ["table", ATIVIDADES] });
     qc.invalidateQueries({ queryKey: ["table", "projetos_tarefas"] });
+    if (outra && !atividade) {
+      setForm({ prioridade: base["prioridade"], responsaveis: resps, dt_inicio: base["dt_inicio"], dt_fim: base["dt_fim"] });
+      setTimeout(() => nomeRef.current?.focus(), 50);
+      return;
+    }
     onClose();
+  }
+  async function duplicar() {
+    if (!atividade) return;
+    try {
+      await duplicarAtividade(atividade, tid);
+      await sincronizarTarefa(tid, tCols);
+      toast.success("Atividade duplicada.");
+      qc.invalidateQueries({ queryKey: ["table", ATIVIDADES] });
+      qc.invalidateQueries({ queryKey: ["table", "projetos_tarefas_checklists"] });
+      onClose();
+    } catch (e) { toast.error((e as Error).message); }
   }
 
   return (
@@ -85,7 +104,7 @@ export function AtividadeSheet({ atividade, isNew, tarefaId, projetoId, atividad
           <section className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1 sm:col-span-2">
               <Label>Nome da atividade *</Label>
-              <Input disabled={readOnly} value={String(form["nome"] ?? "")} onChange={(e) => set("nome", e.target.value)} />
+              <Input ref={nomeRef} disabled={readOnly} value={String(form["nome"] ?? "")} onChange={(e) => set("nome", e.target.value)} />
             </div>
             <div className="space-y-1 sm:col-span-2">
               <Label>Descrição</Label>
@@ -125,9 +144,11 @@ export function AtividadeSheet({ atividade, isNew, tarefaId, projetoId, atividad
             </p>
           )}
         </div>
-        <div className="flex justify-end gap-2 border-t border-border p-4">
+        <div className="flex flex-wrap justify-end gap-2 border-t border-border p-4">
+          {atividade && perms.canCreate && <Button variant="outline" className="mr-auto" onClick={duplicar}><Copy className="mr-1 h-4 w-4" />Duplicar</Button>}
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          {!readOnly && <Button onClick={salvar}>Salvar</Button>}
+          {!readOnly && isNew && <Button variant="secondary" onClick={() => salvar(true)}>Salvar e adicionar outra</Button>}
+          {!readOnly && <Button onClick={() => salvar()}>Salvar</Button>}
         </div>
       </SheetContent>
     </Sheet>
@@ -191,15 +212,22 @@ function Checklist({ atividadeId, tarefaId, readOnly }: { atividadeId: string; t
   const tC = resolveCol(cols, all, C.check.tarefa);
   const dC = resolveCol(cols, all, C.check.descricao);
   const okC = resolveCol(cols, all, C.check.concluido);
+  const temOrdem = Boolean(cols?.includes("ordem"));
   const items = all.filter((r) => String(r["atividade_id"] ?? "") === atividadeId)
-    .sort((a, b) => String(rowId(a)).localeCompare(String(rowId(b)), undefined, { numeric: true }));
+    .sort((a, b) => (Number(a["ordem"] ?? 1e9) - Number(b["ordem"] ?? 1e9)) || String(rowId(a)).localeCompare(String(rowId(b)), undefined, { numeric: true }));
   const [txt, setTxt] = useState("");
   const done = items.filter((i) => isDone(i[okC])).length;
   const refresh = () => qc.invalidateQueries({ queryKey: ["table", T] });
+  async function reordenar(novo: Row[]) {
+    const pos = new Map(novo.map((r, i) => [String(rowId(r)), i]));
+    qc.setQueryData<Row[]>(["table", T], (old = []) => old.map((r) => (pos.has(String(rowId(r))) ? { ...r, ordem: pos.get(String(rowId(r))) } : r)));
+    try { await salvarOrdem(T, novo); } catch (e) { toast.error((e as Error).message); refresh(); }
+  }
 
   async function add() {
     if (!txt.trim()) return;
-    const payload = filterPayload(stamp({ [tC]: tarefaId, atividade_id: atividadeId, [dC]: txt.trim(), [okC]: doneValue(okC, false) }, true), cols?.length ? [...cols, "atividade_id"] : cols);
+    const ordem = items.reduce((m, r) => Math.max(m, Number(r["ordem"] ?? -1)), -1) + 1;
+    const payload = filterPayload(stamp({ [tC]: tarefaId, atividade_id: atividadeId, [dC]: txt.trim(), [okC]: doneValue(okC, false), ordem }, true), cols?.length ? [...cols, "atividade_id"] : cols);
     const { error } = await supabase.from(T).insert(payload as never);
     if (error) { toast.error(error.message); return; }
     setTxt(""); refresh();
@@ -220,9 +248,10 @@ function Checklist({ atividadeId, tarefaId, readOnly }: { atividadeId: string; t
         <h3 className="font-semibold text-foreground">Checklist</h3>
         <span className="text-xs text-muted-foreground">{done}/{items.length}</span>
       </div>
+      <SortableList rows={items} onReorder={reordenar}>
       <ul className="space-y-1">
         {items.map((r) => (
-          <li key={String(rowId(r))} className="group flex items-center gap-2 rounded px-1 py-1 hover:bg-muted/50">
+          <CheckItem key={String(rowId(r))} id={String(rowId(r))} disabled={readOnly || !temOrdem}>
             <Checkbox disabled={readOnly} checked={isDone(r[okC])} onCheckedChange={(v) => toggle(r, v === true)} />
             <span className={`flex-1 text-sm ${isDone(r[okC]) ? "font-medium" : ""}`} style={isDone(r[okC]) ? { color: "var(--progress-100)" } : undefined}>{String(r[dC] ?? "")}</span>
             {!readOnly && (
@@ -230,9 +259,10 @@ function Checklist({ atividadeId, tarefaId, readOnly }: { atividadeId: string; t
                 <Trash2 className="h-3.5 w-3.5 text-destructive" />
               </button>
             )}
-          </li>
+          </CheckItem>
         ))}
       </ul>
+      </SortableList>
       {!readOnly && (
         <div className="flex gap-2">
           <Input placeholder="Adicionar item…" value={txt} onChange={(e) => setTxt(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()} />
@@ -371,5 +401,14 @@ function Anexos({ atividadeId, tarefaId, projetoId, readOnly }: { atividadeId: s
         {mine.length === 0 && <li className="flex items-center gap-2 text-sm text-muted-foreground"><Paperclip className="h-4 w-4" />Nenhum anexo.</li>}
       </ul>
     </section>
+  );
+}
+
+function CheckItem({ id, disabled, children }: { id: string; disabled: boolean; children: React.ReactNode }) {
+  const { setNodeRef, style, handle } = useSortableRow(id, disabled);
+  return (
+    <li ref={setNodeRef} style={style} className="group flex items-center gap-2 rounded bg-background px-1 py-1 hover:bg-muted/50">
+      {handle}{children}
+    </li>
   );
 }

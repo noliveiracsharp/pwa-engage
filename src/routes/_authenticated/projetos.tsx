@@ -39,7 +39,8 @@ import { useTableRows, rowId, idColumn, matches } from "@/lib/crud";
 import { SortableList, salvarOrdem, useSortableRow } from "@/lib/reorder";
 import { useAudit } from "@/lib/audit";
 import { usePagePermissions, type Perms } from "@/hooks/usePagePermissions";
-import { ATIVIDADES, atividadePct, periodo, C, doneValue, filterPayload, fmtDate, isDone, nomePessoa, prioridadeClass, progressoCor, resolveCol, sincronizarTarefa, tarefaPct, useCols } from "@/lib/projetos";
+import { ATIVIDADES, atividadePct, periodo, C, doneValue, duplicarAtividade, duplicarTarefa, filterPayload, fmtDate, isDone, nomePessoa, prioridadeClass, progressoCor, resolveCol, sincronizarTarefa, tarefaPct, useCols } from "@/lib/projetos";
+import { ArrowDown, ArrowUp, Copy } from "lucide-react";
 import type { Row } from "@/lib/row";
 
 export const Route = createFileRoute("/_authenticated/projetos")({
@@ -542,6 +543,29 @@ function Detalhe({ projeto, d, perms, onBack }: { projeto: Row; d: D; perms: Per
     if (error) { toast.error(error.message); return; }
     refresh();
   }
+  async function duplicarTar(t: Row) {
+    try {
+      await duplicarTarefa(t, d.tc.nome, tarefas.reduce((mx, x) => Math.max(mx, Number(x["ordem"] ?? 0)), -1) + 1);
+      toast.success("Tarefa duplicada com as atividades.");
+      qc.invalidateQueries();
+    } catch (e) { toast.error((e as Error).message); }
+  }
+  async function duplicarAtiv(a: Row) {
+    try {
+      await duplicarAtividade(a, String(a["tarefa_id"]));
+      await sincronizarTarefa(String(a["tarefa_id"]), d.tCols);
+      toast.success("Atividade duplicada.");
+      qc.invalidateQueries();
+    } catch (e) { toast.error((e as Error).message); }
+  }
+  async function moverAtividade(lista: Row[], idx: number, dir: -1 | 1) {
+    const novo = [...lista];
+    const [x] = novo.splice(idx, 1);
+    novo.splice(idx + dir, 0, x!);
+    const pos = new Map(novo.map((r, i) => [String(rowId(r)), i]));
+    qc.setQueryData<Row[]>(["table", ATIVIDADES], (old = []) => old.map((r) => (pos.has(String(rowId(r))) ? { ...r, ordem: pos.get(String(rowId(r))) } : r)));
+    try { await salvarOrdem(ATIVIDADES, novo); } catch (e) { toast.error((e as Error).message); qc.invalidateQueries({ queryKey: ["table", ATIVIDADES] }); }
+  }
   async function excluir(t: Row) {
     if (!confirm(`Excluir a tarefa "${t[d.tc.nome]}"?`)) return;
     const { error } = await supabase.from("projetos_tarefas").delete().eq(idColumn(t), rowId(t) as never);
@@ -642,11 +666,12 @@ function Detalhe({ projeto, d, perms, onBack }: { projeto: Row; d: D; perms: Per
                   <TableCell><Badge className={prioridadeClass(t[d.tc.prio])}>{String(t[d.tc.prio] ?? "Normal")}</Badge></TableCell>
                   <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                     {perms.canCreate && <Button size="icon" variant="ghost" onClick={() => { setExpandidas((s) => new Set(s).add(id)); setAtivAberta({ id: null, tarefa: id }); }} aria-label="Nova atividade" title="Nova atividade"><Plus className="h-4 w-4" /></Button>}
+                    {perms.canCreate && <Button size="icon" variant="ghost" onClick={() => duplicarTar(t)} aria-label="Duplicar tarefa" title="Duplicar tarefa"><Copy className="h-4 w-4" /></Button>}
                     <Button size="icon" variant="ghost" onClick={() => setAberta(id)} aria-label="Abrir"><Pencil className="h-4 w-4" /></Button>
                     {perms.canDelete && <Button size="icon" variant="ghost" onClick={() => excluir(t)} aria-label="Excluir"><Trash2 className="h-4 w-4 text-destructive" /></Button>}
                   </TableCell>
                 </SortRow>
-                {!fechada && filhas.map((a) => {
+                {!fechada && filhas.map((a, idx) => {
                   const aid = String(rowId(a));
                   const ap = atividadePct(a);
                   const ok = ap >= 100;
@@ -667,6 +692,11 @@ function Detalhe({ projeto, d, perms, onBack }: { projeto: Row; d: D; perms: Per
                       <TableCell className="text-sm">{fmtDate(a["dt_fim"])}</TableCell>
                       <TableCell><Badge className={prioridadeClass(a["prioridade"])}>{String(a["prioridade"] ?? "Normal")}</Badge></TableCell>
                       <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                        {perms.canUpdate && !busca.trim() && <>
+                          <Button size="icon" variant="ghost" disabled={idx === 0} onClick={() => moverAtividade(filhas, idx, -1)} aria-label="Subir atividade" title="Subir"><ArrowUp className="h-4 w-4" /></Button>
+                          <Button size="icon" variant="ghost" disabled={idx === filhas.length - 1} onClick={() => moverAtividade(filhas, idx, 1)} aria-label="Descer atividade" title="Descer"><ArrowDown className="h-4 w-4" /></Button>
+                        </>}
+                        {perms.canCreate && <Button size="icon" variant="ghost" onClick={() => duplicarAtiv(a)} aria-label="Duplicar atividade" title="Duplicar"><Copy className="h-4 w-4" /></Button>}
                         <Button size="icon" variant="ghost" onClick={() => setAtivAberta({ id: aid, tarefa: id })} aria-label="Abrir atividade"><Pencil className="h-4 w-4" /></Button>
                         {perms.canDelete && <Button size="icon" variant="ghost" onClick={() => excluirAtividade(a)} aria-label="Excluir atividade"><Trash2 className="h-4 w-4 text-destructive" /></Button>}
                       </TableCell>
