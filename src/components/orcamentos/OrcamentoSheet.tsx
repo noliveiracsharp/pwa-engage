@@ -423,6 +423,10 @@ export function OrcamentoSheet({
 
   /* ----------------------------- parcelas ----------------------------- */
 
+  const qtdNum = Math.floor(num(h.qtd_parcelas) || 1);
+  const entradaValor =
+    !ehAvista && qtdNum >= 2 ? calcEntrada(totais.total_liquido, h.entrada_tipo, h.entrada) : 0;
+
   const parcelas = useMemo(
     () =>
       gerarParcelas({
@@ -722,6 +726,7 @@ export function OrcamentoSheet({
             value={h}
             parcelas={parcelas}
             totalLiquido={ehAvista ? avista.total : totais.total_liquido}
+            entradaValor={entradaValor}
             modalidade={h.modalidade}
             readOnly={readOnly}
             onChange={(patch) => patchHeader(patch)}
