@@ -1,15 +1,31 @@
 import { useEffect, useState } from "react";
-import { Bell, CheckCheck, Trash2 } from "lucide-react";
+import { Bell, Car, CheckCheck, MessageCircle, Trash2, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { type Aviso, limparAvisos, listarAvisos, marcarLido, marcarTodosLidos, onAvisos, removerAviso } from "@/lib/avisos";
+import { type Aviso, EVT_ABRIR_CHAT, limparAvisos, listarAvisos, marcarLido, marcarTodosLidos, onAvisos, removerAviso } from "@/lib/avisos";
+import { useAuth } from "@/hooks/useAuth";
+import { useAvisosFrota } from "@/hooks/useAvisosFrota";
+
+function Icone({ a }: { a: Aviso }) {
+  if (a.tipo === "equipe") return <Users className="h-4 w-4 text-primary" />;
+  if (a.tipo === "frota") return <Car className={`h-4 w-4 ${a.titulo.startsWith("Manutenção vencida") ? "text-destructive" : "text-warning"}`} />;
+  return <MessageCircle className="h-4 w-4 text-success" />;
+}
 
 export function AvisosButton() {
+  const { usuario } = useAuth();
+  useAvisosFrota(!!usuario);
   const [avisos, setAvisos] = useState<Aviso[]>([]);
+  const [open, setOpen] = useState(false);
   useEffect(() => { setAvisos(listarAvisos()); return onAvisos(() => setAvisos(listarAvisos())); }, []);
   const naoLidos = avisos.filter((a) => !a.lido).length;
+  const abrir = (a: Aviso) => {
+    marcarLido(a.id);
+    if (a.chat) { setOpen(false); window.dispatchEvent(new CustomEvent(EVT_ABRIR_CHAT, { detail: a.chat })); return; }
+    if (a.link) window.location.href = a.link;
+  };
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="icon" className="relative" aria-label="Avisos" title="Avisos">
           <Bell className="h-5 w-5" />
@@ -32,7 +48,8 @@ export function AvisosButton() {
           {avisos.length === 0 && <li className="p-6 text-center text-sm text-muted-foreground">Nenhum aviso.</li>}
           {avisos.map((a) => (
             <li key={a.id} className={`group flex gap-2 border-b border-border px-3 py-2 last:border-0 ${a.lido ? "" : "bg-primary/5"}`}>
-              <button type="button" className="min-w-0 flex-1 text-left" onClick={() => { marcarLido(a.id); if (a.link) window.location.href = a.link; }}>
+              <span className="mt-0.5 shrink-0"><Icone a={a} /></span>
+              <button type="button" className="min-w-0 flex-1 text-left" onClick={() => abrir(a)}>
                 <p className={`truncate text-sm ${a.lido ? "text-foreground" : "font-semibold text-foreground"}`}>{a.titulo}</p>
                 <p className="line-clamp-2 text-xs text-muted-foreground">{a.texto}</p>
                 <p className="mt-0.5 text-[10px] text-muted-foreground">{new Date(a.em).toLocaleString("pt-BR")}</p>

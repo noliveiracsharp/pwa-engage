@@ -30,7 +30,7 @@ export function useNotificacoesChat() {
         }
         const corpo = String(pick(m, M.texto) ?? "") || "Nova mensagem";
         const curto = corpo.length > 120 ? `${corpo.slice(0, 117)}…` : corpo;
-        adicionarAviso({ titulo: `Mensagem de ${nome}`, texto: curto, link: "/atendimentos" });
+        adicionarAviso({ tipo: "cliente", titulo: `Mensagem de ${nome}`, texto: curto, link: "/atendimentos" });
         tocarSom("cliente");
         toast(`Nova mensagem de ${nome}`, {
           description: curto,

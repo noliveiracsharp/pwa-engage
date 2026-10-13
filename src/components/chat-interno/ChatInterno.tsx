@@ -19,6 +19,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { tocarSom } from "@/lib/som-notificacao";
+import { adicionarAviso, EVT_ABRIR_CHAT } from "@/lib/avisos";
 
 /** Canal da conversa aberta no momento (para não notificar o que já está na tela). */
 let canalAberto = "";
@@ -150,6 +151,12 @@ export function ChatInterno({ sidebarOpen, onAbrir }: { sidebarOpen: boolean; on
           const t = setInterval(() => { tocarSom("cliente"); if (++n >= 6 || !document.hidden && canalAberto === canal) clearInterval(t); }, 1500);
         }
         const titulo = ehChamada ? `📞 Chamada de ${nomeAutor}` : grupo ? `${nomeAutor} em ${String(grupo["nome"] ?? "Grupo")}` : `Mensagem de ${nomeAutor}`;
+        adicionarAviso({
+          tipo: "equipe",
+          titulo: ehChamada ? titulo : `Chat: ${titulo}`,
+          texto: txt.length > 120 ? `${txt.slice(0, 117)}…` : txt,
+          chat: grupo ? { grupo: canal } : { usuario: rem },
+        });
         toast(titulo, {
           description: txt.length > 100 ? `${txt.slice(0, 97)}…` : txt,
           duration: ehChamada ? 20000 : 8000,
@@ -170,6 +177,20 @@ export function ChatInterno({ sidebarOpen, onAbrir }: { sidebarOpen: boolean; on
       void supabase.removeChannel(ch);
     };
   }, [me]);
+
+  // Abrir conversa a partir da Central de Avisos.
+  useEffect(() => {
+    const fn = (e: Event) => {
+      const d = (e as CustomEvent<{ grupo?: string; usuario?: string }>).detail ?? {};
+      const { usuarios: us, grupos: gs } = ctxRef.current;
+      setOpen(true);
+      if (d.grupo) { const g = gs.find((x) => String(x["id"]) === d.grupo); if (g) setSel({ tipo: "grupo", canal: g }); }
+      else if (d.usuario) { const u = us.find((x) => String(x["id"]) === d.usuario); if (u) setSel({ tipo: "direto", outro: u }); }
+    };
+    window.addEventListener(EVT_ABRIR_CHAT, fn);
+    return () => window.removeEventListener(EVT_ABRIR_CHAT, fn);
+  }, []);
+
 
   // Ao abrir uma conversa, zera as não lidas dela.
   useEffect(() => {
