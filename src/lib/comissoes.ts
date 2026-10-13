@@ -105,3 +105,38 @@ export function calcMemoria(
   }
   return out;
 }
+
+/* ------------------------------------------------------------------ */
+/* Liberação da comissão conforme o recebimento                        */
+/* ------------------------------------------------------------------ */
+
+/** "recebimento": libera junto com o que o cliente pagou; "fechamento": tudo na aprovação. */
+export type RegraLiberacao = "recebimento" | "fechamento";
+
+export const REGRAS_LIBERACAO: Array<{ value: RegraLiberacao; label: string }> = [
+  { value: "recebimento", label: "Conforme o cliente paga as parcelas" },
+  { value: "fechamento", label: "Tudo no fechamento da oferta" },
+];
+
+/**
+ * Quanto da comissão já pode ser pago.
+ *  - fechamento: 100%.
+ *  - recebimento: entrada% da comissão no fechamento + o restante na proporção recebido / total da oferta.
+ * Nunca passa do valor da comissão.
+ */
+export function comissaoLiberada(opts: {
+  comissao: number;
+  totalOferta: number;
+  recebido: number;
+  regra: RegraLiberacao;
+  entradaPct?: number;
+}): number {
+  const comissao = Math.max(0, opts.comissao);
+  if (opts.regra === "fechamento") return round2(comissao);
+  const entrada = (comissao * Math.min(100, Math.max(0, opts.entradaPct ?? 0))) / 100;
+  const prop = opts.totalOferta > 0 ? Math.min(1, Math.max(0, opts.recebido / opts.totalOferta)) : 0;
+  return round2(Math.min(comissao, entrada + (comissao - entrada) * prop));
+}
+
+/** Valor que pode ser pago agora = liberado − já pago (nunca negativo). */
+export const comissaoDisponivel = (liberado: number, pago: number) => round2(Math.max(0, liberado - pago));

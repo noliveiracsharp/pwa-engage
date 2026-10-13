@@ -15,10 +15,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useComissaoConfig } from "@/hooks/useComissaoConfig";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { useAudit } from "@/lib/audit";
-import { NATUREZAS_COMISSAO, STATUS_COMISSAO, type ParametroNatureza } from "@/lib/comissoes";
+import { comissaoDisponivel, comissaoLiberada, NATUREZAS_COMISSAO, REGRAS_LIBERACAO, type ParametroNatureza, type RegraLiberacao } from "@/lib/comissoes";
 import { rowId, text, useTableRows } from "@/lib/crud";
 import { matchesAny } from "@/lib/input-masks";
-import { formatBRL, formatDate, formatPct, num } from "@/lib/orcamentos";
+import { formatBRL, formatDate, formatPct, num, parcelasFromValue, round2 } from "@/lib/orcamentos";
 import type { Natureza } from "@/lib/orcamentos";
 import { pick, type Row } from "@/lib/row";
 
@@ -47,9 +47,11 @@ function ComissoesPage() {
     <Tabs defaultValue="extrato" className="space-y-4">
       <TabsList>
         <TabsTrigger value="extrato">Extrato</TabsTrigger>
+        <TabsTrigger value="recebimentos">Recebimentos</TabsTrigger>
         <TabsTrigger value="config">Configuração</TabsTrigger>
       </TabsList>
       <TabsContent value="extrato"><Extrato canUpdate={perms.canUpdate} canDelete={perms.canDelete} /></TabsContent>
+      <TabsContent value="recebimentos"><Recebimentos canEdit={perms.canUpdate} /></TabsContent>
       <TabsContent value="config"><Configuracao canEdit={perms.canUpdate || perms.canCreate} /></TabsContent>
     </Tabs>
   );
@@ -79,14 +81,37 @@ function Extrato({ canUpdate, canDelete }: { canUpdate: boolean; canDelete: bool
         .sort((a, b) => text(b["created_at"]).localeCompare(text(a["created_at"]))),
     [rowsDb, orcById, userById, f],
   );
-  const total = (s: string) => rows.filter((r) => s === "todos" || r["status"] === s).reduce((t, r) => t + num(r["valor"]), 0);
+  const { data: recebs = [] } = useTableRows("orcamento_recebimentos");
+  const { liberacao, entradaPct } = useComissaoConfig();
+  const recebidoPorOrc = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const r of recebs) m.set(text(r["orcamento_id"]), (m.get(text(r["orcamento_id"])) ?? 0) + num(r["valor"]));
+    return m;
+  }, [recebs]);
+  const calc = (r: Row) => {
+    const orc = orcById.get(text(r["orcamento_id"]));
+    const parcelas = parcelasFromValue(orc?.["parcelas"]);
+    const totalOferta = parcelas.length ? parcelas.reduce((t, p) => t + p.valor, 0) : num(orc?.["total_liquido"]);
+    const recebido = recebidoPorOrc.get(text(r["orcamento_id"])) ?? 0;
+    const valor = num(r["valor"]);
+    const pago = Math.min(valor, num(r["valor_pago"]) || (r["status"] === "paga" ? valor : 0));
+    const liberado = Math.max(pago, comissaoLiberada({ comissao: valor, totalOferta, recebido, regra: liberacao, entradaPct }));
+    return { valor, pago, liberado, disponivel: comissaoDisponivel(liberado, pago), aguardando: round2(valor - liberado) };
+  };
+  const soma = (k: "aguardando" | "disponivel" | "pago") => rows.reduce((t, r) => t + calc(r)[k], 0);
 
-  const setStatus = async (r: Row, status: string) => {
+  const pagar = async (r: Row) => {
+    const c = calc(r);
+    if (c.disponivel <= 0) return;
+    if (!window.confirm(`Registrar pagamento de ${formatBRL(c.disponivel)}?`)) return;
+    const novoPago = round2(c.pago + c.disponivel);
+    const status = novoPago >= c.valor ? "paga" : "a_pagar";
     const { error } = await supabase
       .from("orcamento_comissoes")
-      .update({ status, pago_em: status === "paga" ? new Date().toISOString().slice(0, 10) : null } as never)
+      .update({ valor_pago: novoPago, status, pago_em: new Date().toISOString().slice(0, 10) } as never)
       .eq("id", text(rowId(r)));
     if (error) return void toast.error(error.message);
+    toast.success("Pagamento registrado.");
     qc.invalidateQueries({ queryKey: ["table", "orcamento_comissoes"] });
   };
 
@@ -107,14 +132,22 @@ function Extrato({ canUpdate, canDelete }: { canUpdate: boolean; canDelete: bool
     { key: "base", header: "Base", fields: ["base_valor"], render: (r) => formatBRL(r["base_valor"]) },
     { key: "pct", header: "%", fields: ["pct"], render: (r) => formatPct(r["pct"]) },
     { key: "valor", header: "Comissão", fields: ["valor"], render: (r) => <span className="font-semibold">{formatBRL(r["valor"])}</span> },
+    { key: "liberado", header: "Liberado", fields: [], render: (r) => formatBRL(calc(r).liberado) },
+    { key: "pago", header: "Pago", fields: [], render: (r) => formatBRL(calc(r).pago) },
     {
-      key: "status", header: "Status", fields: ["status"],
-      render: (r) => (
-        <Select value={text(r["status"])} onValueChange={(v) => void setStatus(r, v)} disabled={!canUpdate}>
-          <SelectTrigger className="h-8 w-28" onClick={(e) => e.stopPropagation()}><SelectValue /></SelectTrigger>
-          <SelectContent>{STATUS_COMISSAO.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent>
-        </Select>
-      ),
+      key: "disp", header: "Pode pagar agora", fields: [],
+      render: (r) => {
+        const c = calc(r);
+        if (c.pago >= c.valor) return <span className="text-success text-sm font-medium">Quitada</span>;
+        return (
+          <div className="flex items-center gap-2">
+            <span className="font-semibold tabular-nums">{formatBRL(c.disponivel)}</span>
+            {canUpdate && c.disponivel > 0 && (
+              <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); void pagar(r); }}>Pagar</Button>
+            )}
+          </div>
+        );
+      },
     },
     ...(canDelete
       ? [{
@@ -137,10 +170,14 @@ function Extrato({ canUpdate, canDelete }: { canUpdate: boolean; canDelete: bool
   return (
     <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-3">
-        {STATUS_COMISSAO.map((s) => (
-          <div key={s.value} className="rounded-lg border p-3">
-            <div className="text-muted-foreground text-xs">{s.label}</div>
-            <div className="text-lg font-semibold tabular-nums">{formatBRL(total(s.value))}</div>
+        {([
+          ["aguardando", "Aguardando o cliente pagar"],
+          ["disponivel", "Pode pagar agora"],
+          ["pago", "Já pago"],
+        ] as const).map(([k, label]) => (
+          <div key={k} className="rounded-lg border p-3">
+            <div className="text-muted-foreground text-xs">{label}</div>
+            <div className="text-lg font-semibold tabular-nums">{formatBRL(soma(k))}</div>
           </div>
         ))}
       </div>
@@ -154,7 +191,7 @@ function Extrato({ canUpdate, canDelete }: { canUpdate: boolean; canDelete: bool
         filters={
           <>
             <FilterInput label="Buscar" value={f.busca} onChange={(v) => setF({ ...f, busca: v })} placeholder="Oferta, papel ou beneficiário" />
-            <FilterSelect label="Status" value={f.status} onChange={(v) => setF({ ...f, status: v })} options={[{ value: "todos", label: "Todos" }, ...STATUS_COMISSAO]} />
+            <FilterSelect label="Status" value={f.status} onChange={(v) => setF({ ...f, status: v })} options={[{ value: "todos", label: "Todos" }, { value: "prevista", label: "Prevista" }, { value: "a_pagar", label: "Paga em parte" }, { value: "paga", label: "Quitada" }]} />
             <FilterSelect
               label="Beneficiário"
               value={f.benef}
@@ -173,8 +210,11 @@ type PapelEdit = { id?: string; nome: string; ativo: boolean; ordem: number; pct
 function Configuracao({ canEdit }: { canEdit: boolean }) {
   const qc = useQueryClient();
   const { empresaId } = useAudit();
-  const { parametros, paramRows, papelRows, loading } = useComissaoConfig();
+  const { parametros, paramRows, papelRows, loading, liberacao, entradaPct } = useComissaoConfig();
   const [params, setParams] = useState<Record<Natureza, ParametroNatureza>>(parametros);
+  const [regra, setRegra] = useState<RegraLiberacao>(liberacao);
+  const [entrada, setEntrada] = useState(String(entradaPct));
+  useEffect(() => { setRegra(liberacao); setEntrada(String(entradaPct)); }, [liberacao, entradaPct]);
   const [papeis, setPapeis] = useState<PapelEdit[]>([]);
   const [removidos, setRemovidos] = useState<string[]>([]);
   const [salvando, setSalvando] = useState(false);
@@ -205,7 +245,7 @@ function Configuracao({ canEdit }: { canEdit: boolean }) {
       const existentes = new Map(paramRows.map((r) => [text(r["natureza"]), text(rowId(r))]));
       for (const { value } of NATUREZAS_COMISSAO) {
         const p = params[value];
-        const payload = { empresa_id: empresaId, natureza: value, imposto_pct: p.imposto_pct, outros_custos_pct: p.outros_custos_pct, base: p.base };
+        const payload = { empresa_id: empresaId, natureza: value, imposto_pct: p.imposto_pct, outros_custos_pct: p.outros_custos_pct, base: p.base, liberacao: regra, entrada_pct: Math.min(100, Math.max(0, num(entrada))) };
         const id = existentes.get(value);
         const { error } = id
           ? await supabase.from("comissao_parametros").update(payload as never).eq("id", id)
@@ -271,6 +311,26 @@ function Configuracao({ canEdit }: { canEdit: boolean }) {
       </section>
 
       <section className="space-y-3">
+        <h2 className="font-semibold">Quando pagar a comissão</h2>
+        <p className="text-muted-foreground text-sm">
+          Com "Conforme o cliente paga", a comissão é liberada na mesma proporção do que entrou no caixa. Ex.: oferta de R$ 10.000 em 10x e comissão de R$ 1.500 — cada parcela paga libera R$ 150. A entrada libera uma parte já no fechamento.
+        </p>
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="space-y-1"><Label className="text-xs">Regra</Label>
+            <Select value={regra} onValueChange={(v) => setRegra(v as RegraLiberacao)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>{REGRAS_LIBERACAO.map((r) => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+          {regra === "recebimento" && (
+            <div className="space-y-1"><Label className="text-xs">Entrada no fechamento (% da comissão)</Label>
+              <Input type="number" step="1" min="0" max="100" value={entrada} onChange={(e) => setEntrada(e.target.value)} />
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="font-semibold">Papéis comissionados</h2>
           {papeis.length === 0 && <Button variant="outline" size="sm" onClick={padrao} className="ml-auto">Usar padrão (Vendas, Compras, Integrador)</Button>}
@@ -308,5 +368,73 @@ function Configuracao({ canEdit }: { canEdit: boolean }) {
         <Button onClick={() => void salvar()} disabled={salvando}>{salvando ? "Salvando…" : "Salvar"}</Button>
       </div>
     </fieldset>
+  );
+}
+
+/* ---------------- Recebimentos ---------------- */
+function Recebimentos({ canEdit }: { canEdit: boolean }) {
+  const qc = useQueryClient();
+  const { empresaId } = useAudit();
+  const { data: comissoes = [] } = useTableRows("orcamento_comissoes");
+  const { data: orcs = [] } = useTableRows("orcamentos");
+  const { data: recebs = [], isError } = useTableRows("orcamento_recebimentos");
+  const [busca, setBusca] = useState("");
+  const comComissao = useMemo(() => new Set(comissoes.map((c) => text(c["orcamento_id"]))), [comissoes]);
+  const ofertas = useMemo(
+    () =>
+      orcs
+        .filter((o) => comComissao.has(text(rowId(o))) && matchesAny([o["numero"], o["descricao"]], busca))
+        .sort((a, b) => text(b["dt_orcamento"]).localeCompare(text(a["dt_orcamento"]))),
+    [orcs, comComissao, busca],
+  );
+  const recebMap = useMemo(() => new Map(recebs.map((r) => [`${text(r["orcamento_id"])}:${num(r["parcela_numero"])}`, r])), [recebs]);
+
+  const marcar = async (orc: Row, numero: number, valor: number, pago: boolean) => {
+    const oid = text(rowId(orc));
+    const existente = recebMap.get(`${oid}:${numero}`);
+    const { error } = pago
+      ? await supabase.from("orcamento_recebimentos").insert({ empresa_id: orc["empresa_id"] ?? empresaId, orcamento_id: oid, parcela_numero: numero, valor } as never)
+      : await supabase.from("orcamento_recebimentos").delete().eq("id", text(rowId(existente ?? {})));
+    if (error) return void toast.error(error.message);
+    qc.invalidateQueries({ queryKey: ["table", "orcamento_recebimentos"] });
+  };
+
+  if (isError) return <p className="text-muted-foreground text-sm">Rode o script de recebimentos no banco para usar esta aba.</p>;
+
+  return (
+    <div className="space-y-4">
+      <p className="text-muted-foreground text-sm">Marque as parcelas que o cliente já pagou. A comissão é liberada no Extrato na mesma proporção.</p>
+      <div className="max-w-sm"><FilterInput label="Buscar" value={busca} onChange={setBusca} placeholder="Número ou descrição da oferta" /></div>
+      {ofertas.length === 0 && <p className="text-muted-foreground text-sm">Nenhuma oferta com comissão registrada.</p>}
+      {ofertas.map((o) => {
+        const parcelas = parcelasFromValue(o["parcelas"]);
+        const lista = parcelas.length ? parcelas : [{ numero: 1, vencimento: text(o["dt_orcamento"]), valor: num(o["total_liquido"]) }];
+        const total = lista.reduce((t, p) => t + p.valor, 0);
+        const recebido = lista.reduce((t, p) => t + (recebMap.has(`${text(rowId(o))}:${p.numero}`) ? p.valor : 0), 0);
+        return (
+          <div key={text(rowId(o))} className="space-y-2 rounded-lg border p-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-semibold tabular-nums">{text(o["numero"]) || "—"}</span>
+              <span className="text-muted-foreground truncate text-sm">{text(o["descricao"])}</span>
+              <span className="ml-auto text-sm tabular-nums">Recebido {formatBRL(recebido)} de {formatBRL(total)}</span>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              {lista.map((p) => {
+                const ok = recebMap.has(`${text(rowId(o))}:${p.numero}`);
+                return (
+                  <label key={p.numero} className="flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm">
+                    <span>
+                      <span className="font-medium">{p.numero}ª</span> · {formatDate(p.vencimento)}
+                      <span className="block tabular-nums">{formatBRL(p.valor)}</span>
+                    </span>
+                    <Switch checked={ok} disabled={!canEdit} onCheckedChange={(v) => void marcar(o, p.numero, p.valor, v)} aria-label={`Parcela ${p.numero} recebida`} />
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 }
