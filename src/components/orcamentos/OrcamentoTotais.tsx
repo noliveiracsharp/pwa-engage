@@ -18,6 +18,8 @@ type Props = {
   acrescimoJuros?: number;
   /** Desconto da venda à vista (reduz o lucro final). */
   descontoAvista?: number;
+  /** Comissões previstas da equipe (reduzem o lucro final). */
+  comissoes?: number;
   onChange: (patch: {
     desconto_tipo?: DescontoTipo;
     desconto?: string;
@@ -56,11 +58,12 @@ export function OrcamentoTotais({
   itensSemCusto,
   acrescimoJuros = 0,
   descontoAvista = 0,
+  comissoes = 0,
   onChange,
 }: Props) {
   const comJuros = acrescimoJuros >= 0.01;
   // Com juros, o cliente paga o acréscimo do parcelamento — ele entra no lucro final.
-  const lucroFinal = totais.total_lucro + (comJuros ? acrescimoJuros : 0) - descontoAvista;
+  const lucroFinal = totais.total_lucro + (comJuros ? acrescimoJuros : 0) - descontoAvista - comissoes;
   const baseFinal = totais.total_liquido + (comJuros ? acrescimoJuros : 0) - descontoAvista;
   const margemFinal = baseFinal > 0 ? (lucroFinal / baseFinal) * 100 : 0;
   const prejuizo = lucroFinal < 0 && totais.total_itens > 0;
@@ -193,6 +196,12 @@ export function OrcamentoTotais({
             />
           </>
         )}
+        {descontoAvista >= 0.01 && (
+          <Linha label="Desconto à vista" value={`− ${formatBRL(descontoAvista)}`} />
+        )}
+        {comissoes >= 0.01 && (
+          <Linha label="Comissões previstas" value={`− ${formatBRL(comissoes)}`} />
+        )}
         <Separator />
         <Linha
           label={comJuros ? "Lucro final (com juros)" : "Lucro líquido"}
@@ -201,8 +210,8 @@ export function OrcamentoTotais({
           className={prejuizo ? "text-destructive" : "text-success"}
         />
         <p className="text-muted-foreground text-xs">
-          Fórmula por linha: lucro = preço de venda − custo − imposto. Frete e valores adicionais
-          não entram na lucratividade.
+          Fórmula por linha: lucro = preço de venda − custo − imposto. O lucro líquido também
+          desconta as comissões previstas. Frete e valores adicionais não entram na lucratividade.
           {comJuros &&
             " Com juros, o acréscimo do parcelamento (juros + custo operacional embutidos na parcela) soma ao lucro."}
         </p>
