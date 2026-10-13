@@ -23,6 +23,8 @@ import { SearchSelect, type SearchOption } from "@/components/data-table/SearchS
 import { OrcamentoLinhas } from "@/components/orcamentos/OrcamentoLinhas";
 import { OrcamentoTotais } from "@/components/orcamentos/OrcamentoTotais";
 import { OrcamentoComissoes } from "@/components/orcamentos/OrcamentoComissoes";
+import { useComissaoConfig } from "@/hooks/useComissaoConfig";
+import { calcMemoria } from "@/lib/comissoes";
 import {
   OrcamentoPagamento,
   type PagamentoState,
@@ -416,6 +418,19 @@ export function OrcamentoSheet({
       return { natureza, venda: natureza === "recorrente" ? c.total_linha : c.total_linha * fator, compra: c.custo_total };
     });
   }, [calcs, linhasValidas, totais.total_itens, totais.desconto_valor]);
+  const comissaoCfg = useComissaoConfig();
+  const totalComissoes = useMemo(
+    () =>
+      comissaoCfg.disponivel
+        ? round2(
+            calcMemoria(linhasComissao, comissaoCfg.parametros, comissaoCfg.papeis).reduce(
+              (s, g) => s + g.total_comissoes,
+              0,
+            ),
+          )
+        : 0,
+    [linhasComissao, comissaoCfg.disponivel, comissaoCfg.parametros, comissaoCfg.papeis],
+  );
   const avista = calcAvista(totais.total_liquido, h.desconto_avista_tipo, h.desconto_avista);
   const ehAvista = h.modalidade === "avista";
   const ehComodato = h.modalidade === "comodato";
@@ -700,6 +715,7 @@ export function OrcamentoSheet({
             itensSemCusto={itensSemCusto}
             acrescimoJuros={acrescimoJuros}
             descontoAvista={ehAvista ? avista.desconto_valor : 0}
+            comissoes={totalComissoes}
             onChange={(patch) => patchHeader(patch)}
           />
 

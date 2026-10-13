@@ -18,6 +18,8 @@ type Props = {
   acrescimoJuros?: number;
   /** Desconto da venda à vista (reduz o lucro final). */
   descontoAvista?: number;
+  /** Comissões previstas da equipe (reduzem o lucro final). */
+  comissoes?: number;
   onChange: (patch: {
     desconto_tipo?: DescontoTipo;
     desconto?: string;
@@ -56,11 +58,12 @@ export function OrcamentoTotais({
   itensSemCusto,
   acrescimoJuros = 0,
   descontoAvista = 0,
+  comissoes = 0,
   onChange,
 }: Props) {
   const comJuros = acrescimoJuros >= 0.01;
   // Com juros, o cliente paga o acréscimo do parcelamento — ele entra no lucro final.
-  const lucroFinal = totais.total_lucro + (comJuros ? acrescimoJuros : 0) - descontoAvista;
+  const lucroFinal = totais.total_lucro + (comJuros ? acrescimoJuros : 0) - descontoAvista - comissoes;
   const baseFinal = totais.total_liquido + (comJuros ? acrescimoJuros : 0) - descontoAvista;
   const margemFinal = baseFinal > 0 ? (lucroFinal / baseFinal) * 100 : 0;
   const prejuizo = lucroFinal < 0 && totais.total_itens > 0;
