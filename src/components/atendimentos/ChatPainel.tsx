@@ -456,6 +456,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
         <Button variant="ghost" size="icon" onClick={onTogglePainel} aria-label="Painel do contato">
           {painelAberto ? <PanelRightClose className="h-5 w-5" /> : <PanelRightOpen className="h-5 w-5" />}
         </Button>
+        </div>
       </header>
 
       <div className="flex-1 space-y-2 overflow-y-auto px-3 py-4 sm:px-6">
