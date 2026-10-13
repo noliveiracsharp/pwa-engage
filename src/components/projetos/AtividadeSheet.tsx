@@ -403,3 +403,12 @@ function Anexos({ atividadeId, tarefaId, projetoId, readOnly }: { atividadeId: s
     </section>
   );
 }
+
+function CheckItem({ id, disabled, children }: { id: string; disabled: boolean; children: React.ReactNode }) {
+  const { setNodeRef, style, handle } = useSortableRow(id, disabled);
+  return (
+    <li ref={setNodeRef} style={style} className="group flex items-center gap-2 rounded bg-background px-1 py-1 hover:bg-muted/50">
+      {handle}{children}
+    </li>
+  );
+}
