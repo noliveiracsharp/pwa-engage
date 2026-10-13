@@ -34,13 +34,69 @@ const buttonVariants = cva(
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {
   asChild?: boolean;
+  /** Bloqueia novos cliques até a ação terminar (padrão: true). */
+  autoLock?: boolean;
 }
 
+const LOCK_MS = 500;
+
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
+  ({ className, variant, size, asChild = false, autoLock = true, onClick, disabled, ...props }, ref) => {
     const Comp = asChild ? Slot : "button";
+    const lockRef = React.useRef(false);
+    const [locked, setLocked] = React.useState(false);
+    const mounted = React.useRef(true);
+    React.useEffect(() => {
+      mounted.current = true;
+      return () => {
+        mounted.current = false;
+      };
+    }, []);
+
+    const handleClick = React.useCallback(
+      (e: React.MouseEvent<HTMLButtonElement>) => {
+        if (!onClick) return;
+        if (!autoLock) return onClick(e);
+        if (lockRef.current) {
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
+        lockRef.current = true;
+        setLocked(true);
+        const inicio = Date.now();
+        const liberar = () => {
+          const resto = Math.max(0, LOCK_MS - (Date.now() - inicio));
+          setTimeout(() => {
+            lockRef.current = false;
+            if (mounted.current) setLocked(false);
+          }, resto);
+        };
+        let r: unknown;
+        try {
+          r = (onClick as (e: React.MouseEvent<HTMLButtonElement>) => unknown)(e);
+        } catch (err) {
+          liberar();
+          throw err;
+        }
+        if (r && typeof (r as Promise<unknown>).then === "function") {
+          (r as Promise<unknown>).finally(liberar);
+        } else {
+          liberar();
+        }
+      },
+      [onClick, autoLock],
+    );
+
     return (
-      <Comp className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...props} />
+      <Comp
+        className={cn(buttonVariants({ variant, size, className }))}
+        ref={ref}
+        onClick={onClick ? handleClick : undefined}
+        disabled={disabled || (autoLock && locked && !asChild) || undefined}
+        aria-busy={locked || undefined}
+        {...props}
+      />
     );
   },
 );
