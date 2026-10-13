@@ -328,6 +328,20 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
     }
   }
 
+  // Devolve a conversa ao robô: a próxima mensagem do cliente reinicia o fluxo automático.
+  async function devolverRobo() {
+    const ok = await atualizarAtendimento(
+      { modo: "IA", modo_atendimento: "IA", usuario_responsavel_id: null },
+      "Atendimento devolvido para o robô.",
+    );
+    if (!ok) return;
+    const { error } = await supabase.from("fluxos_execucoes").delete().eq("atendimento_id", id);
+    if (error) console.warn("devolverRobo: execuções", error.message);
+    const quem = autores.get(text(usuarioId)) || "Atendente";
+    await registrarInterna(`🤖 ${quem} devolveu o atendimento para o robô.`);
+  }
+
+
   return (
     <section className="flex min-w-0 flex-1 flex-col bg-background">
       <header className="flex items-center gap-3 border-b border-border bg-card px-3 py-2">
@@ -379,6 +393,11 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
         <Button variant="outline" size="sm" onClick={() => setMoverAberto(true)} className="hidden sm:inline-flex">
           <MoveRight className="mr-1 h-4 w-4" /> Mover
         </Button>
+        {!encerrado && !ia && (
+          <Button variant="outline" size="sm" onClick={devolverRobo} aria-label="Devolver para o Robô">
+            <Bot className="h-4 w-4 sm:mr-1" /> <span className="hidden sm:inline">Devolver para o Robô</span>
+          </Button>
+        )}
         {!encerrado && (
           <Button
             variant="ghost"
