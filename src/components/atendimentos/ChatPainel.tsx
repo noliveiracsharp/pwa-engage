@@ -628,7 +628,8 @@ function Balao({ m, autores }: { m: Row; autores: Map<string, string> }) {
   const corpo = text(pick(m, M.texto));
   const hora = dataDe(m, M.data)?.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
   const uid = text(pick(m, M.usuario));
-  const autor = cliente ? "" : (uid && autores.get(uid)) || (interna ? "" : "Sistema");
+  const robo = /ia|bot|robo/.test(text(m["remetente_tipo"]).toLowerCase());
+  const autor = cliente ? "" : (uid && autores.get(uid)) || (interna ? "" : robo ? "🤖 Robô" : "Sistema");
   const qc = useQueryClient();
   const [menu, setMenu] = useState(false);
   const [apagando, setApagando] = useState(false);

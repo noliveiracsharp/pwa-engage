@@ -58,6 +58,8 @@ export function isIA(a: Row) {
 
 /** Mensagem do cliente (entrada) x atendente/sistema (saída). */
 export function isCliente(m: Row) {
+  const rt = text(m["remetente_tipo"]).toLowerCase();
+  if (rt) return rt === "cliente" || rt === "contato";
   const fromMe = m["from_me"] ?? m["fromMe"] ?? m["enviada"];
   if (typeof fromMe === "boolean") return !fromMe;
   const dir = text(pick(m, ["direcao", "remetente", "origem", "autor"])).toLowerCase();
