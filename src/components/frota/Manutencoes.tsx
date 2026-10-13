@@ -26,7 +26,7 @@ type ItemCk = { descricao: string; ok?: boolean };
 const brl = (v: unknown) => Number(v ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 import { num as numDec } from "@/lib/orcamentos";
 /** KM e dias são inteiros: aceita "10.000" ou "10000". Valores decimais usam numDec. */
-const num = (v: unknown) => Number(String(v ?? "").replace(/\D/g, "")) || 0;
+const num = (v: unknown) => (v === "" || v == null ? null : Number(String(v).replace(/\D/g, "")) || null);
 const fmtD = (v: unknown) => (v ? new Date(`${String(v).slice(0, 10)}T00:00:00`).toLocaleDateString("pt-BR") : "—");
 const placaDe = (v: Row | undefined) => (v ? `${String(v["placa"] ?? "")} · ${String(v["modelo"] ?? "")}` : "—");
 const itensDe = (v: unknown): ItemCk[] => (Array.isArray(v) ? (v as ItemCk[]) : []);
@@ -227,7 +227,7 @@ function RegistroSheet({ base, veiculos, modelos, onClose }: { base: Row | null;
     setSalvando(true);
     const { error } = await supabase.from("veiculos_manutencoes").insert({
       empresa_id: empresaId, veiculo_id: veiculoId, plano_id: planoId ?? null, descricao: descricao.trim(),
-      realizada_em: data, km: num(km), oficina: oficina || null, valor: numDec(valor), checklist: itens,
+      realizada_em: data, km: num(km), oficina: oficina || null, valor: valor === "" || valor == null ? null : numDec(valor) || null, checklist: itens,
       observacao: obs || null, responsavel_nome: String(pick(usuario ?? {}, ["nome", "name", "email"]) ?? ""),
     } as never);
     setSalvando(false);
