@@ -67,8 +67,11 @@ export function VisualizadorGlobal() {
     <div
       data-visualizador
       className="fixed inset-0 z-[9999] flex flex-col bg-foreground/90 pointer-events-auto"
-      onPointerDown={(e) => e.stopPropagation()}
-      onClick={(e) => e.stopPropagation()}
+      ref={(el) => {
+        if (!el || el.dataset.ok) return;
+        el.dataset.ok = "1";
+        for (const ev of ["pointerdown", "mousedown", "focusin"]) el.addEventListener(ev, (e) => e.stopPropagation());
+      }}
     >
       <TransformWrapper key={src} minScale={0.5} maxScale={8} doubleClick={{ mode: "toggle", step: 2 }} centerOnInit>
         {({ zoomIn, zoomOut, resetTransform }) => (
