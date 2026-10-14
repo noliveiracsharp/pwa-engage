@@ -35,7 +35,7 @@ export function OrcamentoCompra({ value, custo, cronograma, readOnly, onChange }
         variant="outline"
         className="flex flex-wrap justify-start"
         value={value.modo}
-        disabled={readOnly}
+        disabled={!!readOnly}
         onValueChange={(v) => v && set({ modo: v as CompraModo })}
       >
         {COMPRA_MODOS.map((m) => (
