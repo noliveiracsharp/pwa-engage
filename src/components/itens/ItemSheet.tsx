@@ -107,11 +107,13 @@ type Props = {
   record: Row | null;
   saving?: boolean;
   readOnly?: boolean;
+  /** Abre o record como cópia (novo cadastro). */
+  duplicando?: boolean;
   canCreateApoio: boolean;
   onSave: (values: Row) => void;
 };
 
-export function ItemSheet({ open, onOpenChange, record, saving, readOnly, canCreateApoio, onSave }: Props) {
+export function ItemSheet({ open, onOpenChange, record, saving, readOnly, duplicando, canCreateApoio, onSave }: Props) {
   const [v, setV] = useState<Values>(EMPTY);
   const [quick, setQuick] = useState<null | "unidade" | "centro" | "marca">(null);
 
@@ -154,8 +156,8 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, canCre
     }
     setV({
       tipo: text(pick(record, ["tipo"], "Produto")),
-      codigo: text(pick(record, ["codigo"], "")),
-      descricao: text(pick(record, ["descricao"], "")),
+      codigo: duplicando ? nextCodigoFor(text(pick(record, ["tipo"], "Produto"))) : text(pick(record, ["codigo"], "")),
+      descricao: text(pick(record, ["descricao"], "")) + (duplicando ? " (Cópia)" : ""),
       unidade_medida_id: text(pick(record, ["unidade_medida_id"], "")) || NONE,
       centro_custo_id: text(pick(record, ["centro_custo_id"], "")) || NONE,
       itens_marcas_id: text(pick(record, ["itens_marcas_id"], "")) || NONE,
@@ -178,7 +180,7 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, canCre
       cod_tributacao_municipio: text(pick(record, ["cod_tributacao_municipio"], "")),
       aliquota_iss: text(pick(record, ["aliquota_iss"], "")),
     });
-  }, [open, record]);
+  }, [open, record, duplicando]);
 
   const options = useMemo(() => {
     const alfa = (a: { label: string }, b: { label: string }) => a.label.localeCompare(b.label, "pt-BR");
@@ -334,7 +336,7 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, canCre
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full overflow-y-auto sm:max-w-[85vw] lg:max-w-3xl">
         <SheetHeader className="px-6 pb-4">
-          <SheetTitle>{record ? "Editar item" : "Novo item"}</SheetTitle>
+          <SheetTitle>{duplicando ? "Duplicar item" : record ? "Editar item" : "Novo item"}</SheetTitle>
         </SheetHeader>
 
         <fieldset disabled={readOnly} className="min-w-0 px-6 disabled:opacity-70">

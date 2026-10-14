@@ -49,6 +49,8 @@ type Props = {
   onSelectItem: (key: string, itemId: string) => void;
   onAdd: (bloco?: string) => void;
   onRemove: (key: string) => void;
+  /** Chamado ao confirmar um item (grava a oferta e mantém aberta). */
+  onItemSalvo?: () => void;
 };
 
 /** Editor das linhas do orçamento: tabela compacta com edição por linha. */
@@ -63,6 +65,7 @@ export function OrcamentoLinhas({
   onSelectItem,
   onAdd,
   onRemove,
+  onItemSalvo,
 }: Props) {
   const [quickFor, setQuickFor] = useState<string | null>(null);
   const [abertas, setAbertas] = useState<Set<string>>(() => new Set());
@@ -396,7 +399,7 @@ export function OrcamentoLinhas({
                       >
                         <X className="mr-1 h-4 w-4" /> Cancelar edição
                       </Button>
-                      <Button type="button" size="sm" onClick={() => toggleAberta(l.key)}>
+                      <Button type="button" size="sm" onClick={() => { toggleAberta(l.key); onItemSalvo?.(); }}>
                         <Check className="mr-1 h-4 w-4" /> Salvar item
                       </Button>
                     </div>

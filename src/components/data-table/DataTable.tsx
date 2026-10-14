@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, ChevronsUpDown, Eye, GripVertical, Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, ChevronsUpDown, Copy, Eye, GripVertical, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -35,6 +35,8 @@ type Props = {
   /** Omit to hide the edit button (no can_update). */
   onEdit?: ((row: Row) => void) | undefined;
   editReadOnly?: boolean;
+  /** When set, shows a duplicate button per row (can_create). */
+  onDuplicate?: ((row: Row) => void) | undefined;
   /** When set, shows a delete button per row (can_delete). */
   onDelete?: ((row: Row) => void) | undefined;
   /** Skips the built-in confirm (the page shows its own dialog). */
@@ -59,6 +61,7 @@ export function DataTable({
   onEdit,
   editReadOnly,
   onDelete,
+  onDuplicate,
   skipDeleteConfirm,
   rowKey,
   onReorder,
@@ -252,6 +255,11 @@ export function DataTable({
                       {onEdit && (
                         <Button variant="ghost" size="icon" aria-label={editReadOnly ? "Visualizar" : "Editar"} title={editReadOnly ? "Visualizar" : "Editar"} onClick={() => onEdit(row)}>
                           {editReadOnly ? <Eye className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
+                        </Button>
+                      )}
+                      {onDuplicate && (
+                        <Button variant="ghost" size="icon" aria-label="Duplicar" title="Duplicar" onClick={() => onDuplicate(row)}>
+                          <Copy className="h-4 w-4" />
                         </Button>
                       )}
                       {onDelete && (

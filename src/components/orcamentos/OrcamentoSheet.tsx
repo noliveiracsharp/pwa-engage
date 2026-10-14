@@ -195,7 +195,7 @@ type Props = {
   vendedorPadraoId?: string | undefined;
   /** Abre a pré-visualização/PDF do orçamento em edição. */
   onPreview?: (() => void) | undefined;
-  onSave: (input: { header: Row; linhas: LinhaPayload[] }) => void;
+  onSave: (input: { header: Row; linhas: LinhaPayload[]; manterAberto?: boolean }) => void;
   /** Quando informado (e record = null), abre um novo rascunho copiando esta oferta. */
   duplicarDe?: { record: Row; linhas: Row[] } | null;
 };
@@ -467,7 +467,8 @@ export function OrcamentoSheet({
 
   /* ------------------------------ salvar ------------------------------ */
 
-  const submit = () => {
+  const submit = (manterAberto = false) => {
+    if (manterAberto && (!h.parceiro_id || !h.dt_orcamento || readOnly)) return;
     if (!h.parceiro_id) {
       toast.error("Selecione o cliente da oferta.");
       return;
@@ -550,7 +551,7 @@ export function OrcamentoSheet({
       };
     });
 
-    onSave({ header, linhas: payloadLinhas });
+    onSave({ header, linhas: payloadLinhas, manterAberto });
   };
 
   const numero = record ? String(record["numero"] ?? "") : "";
@@ -701,6 +702,7 @@ export function OrcamentoSheet({
             onSelectItem={selectItem}
             onAdd={addLinha}
             onRemove={removeLinha}
+            onItemSalvo={() => submit(true)}
           />
 
           {/* -------------------------- totais ------------------------- */}
@@ -759,7 +761,7 @@ export function OrcamentoSheet({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={submit} disabled={saving || readOnly}>
+          <Button onClick={() => submit()} disabled={saving || readOnly}>
             {saving ? "Salvando…" : "Salvar"}
           </Button>
         </div>
