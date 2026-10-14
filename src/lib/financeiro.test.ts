@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { caixaPorMes, resumoTitulos, situacaoTitulo, titulosDaOferta, titulosDoPedido, valorBaixa } from "./financeiro";
+import { caixaPorMes, resumoTitulos, situacaoTitulo, titulosDaOferta, titulosDoPedido, valorBaixa, parcelasManuais } from "./financeiro";
 
 describe("financeiro", () => {
   it("aberto vencido antes de hoje fica atrasado", () => {
@@ -50,5 +50,23 @@ describe("financeiro", () => {
     const c = caixaPorMes(tit);
     expect(c.find((x) => x.mes === "2026-05")?.entradas).toBe(110);
     expect(c.find((x) => x.mes === "2026-06")?.saidasPrev).toBe(50);
+  });
+});
+
+describe("financeiro — fornecedor e manual", () => {
+  it("oferta gera contas a pagar do fornecedor espelhando o cliente", () => {
+    const t = titulosDaOferta({
+      id: "o1", numero: "#1", total_custo: 1000, compra_condicao: { modo: "espelhar" },
+      parcelas: [{ numero: 1, vencimento: "2026-02-10", valor: 4000 }, { numero: 2, vencimento: "2026-03-10", valor: 6000 }],
+    });
+    const f = t.filter((x) => x.tipo === "pagar" && x.categoria === "Fornecedores");
+    expect(f.map((x) => [x.vencimento, x.valor])).toEqual([["2026-02-10", 400], ["2026-03-10", 600]]);
+  });
+  it("parcelado divide o total; recorrente repete o mensal", () => {
+    const p = parcelasManuais({ modo: "parcelado", valor: 100, quantidade: 3, primeira: "2026-01-10" });
+    expect(p.map((x) => x.valor)).toEqual([33.33, 33.33, 33.34]);
+    const r = parcelasManuais({ modo: "recorrente", valor: 350, quantidade: 12, primeira: "2026-01-10" });
+    expect(r).toHaveLength(12);
+    expect(r[11]).toEqual({ vencimento: "2026-12-10", valor: 350 });
   });
 });
