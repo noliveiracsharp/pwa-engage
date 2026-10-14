@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { etapasDoKanban, kanbanDoModuloOrcamentos } from "@/lib/orcamento-kanban";
 import { corEtapa } from "@/lib/kanban-cores";
 import { createFileRoute } from "@tanstack/react-router";
-import { ChevronDown, Copy, FileSignature, FileText } from "lucide-react";
+import { ChevronDown, Copy, FileSignature, FileText, ScrollText } from "lucide-react";
 import { toast } from "sonner";
 import { DataTable, type Column } from "@/components/data-table/DataTable";
 import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
@@ -17,6 +17,7 @@ import {
 import { OrcamentoSheet } from "@/components/orcamentos/OrcamentoSheet";
 import { OrcamentoPDF } from "@/components/orcamentos/OrcamentoPDF";
 import { PropostaDialog } from "@/components/orcamentos/PropostaDialog";
+import { MinutaDialog } from "@/components/orcamentos/MinutaDialog";
 import { SituacaoBadge } from "@/components/orcamentos/SituacaoBadge";
 import { useAlterarSituacao, useSaveOrcamento } from "@/hooks/useSaveOrcamento";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
@@ -115,6 +116,7 @@ function OrcamentosPage() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [preview, setPreview] = useState<Row | null>(null);
   const [propostaOpen, setPropostaOpen] = useState(false);
+  const [minutaOpen, setMinutaOpen] = useState(false);
   const [f, setF] = useState({ busca: "", situacao: "todos", vendedor: "todos", ano: "todos" });
   const [duplicarDe, setDuplicarDe] = useState<{ record: Row; linhas: Row[] } | null>(null);
 
@@ -365,6 +367,18 @@ function OrcamentosPage() {
         >
           <FileSignature className="h-4 w-4" />
         </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Minuta de contrato"
+          title="Minuta de contrato"
+          onClick={() => {
+            setPreview(r);
+            setMinutaOpen(true);
+          }}
+        >
+          <ScrollText className="h-4 w-4" />
+        </Button>
         {perms.canCreate && (
           <Button
             variant="ghost"
@@ -507,6 +521,17 @@ function OrcamentosPage() {
         itens={itens}
         unidades={unidades}
         marcas={marcas}
+      />
+
+      <MinutaDialog
+        open={minutaOpen}
+        onOpenChange={setMinutaOpen}
+        orcamento={preview ? (todos.find((t) => rowId(t) === rowId(preview)) ?? preview) : null}
+        linhas={linhasPreview}
+        empresa={empresas.find((e) => String(rowId(e) ?? "") === String(preview?.["empresa_id"] ?? empresaId ?? "")) ?? empresa}
+        cliente={parceiroById.get(String(preview ? (pick(preview, ["parceiro_id", "parceiros_id"]) ?? "") : ""))}
+        vendedor={usuarioById.get(String(preview ? (pick(preview, ["usuario_id", "vendedor_id"]) ?? "") : ""))}
+        itens={itens}
       />
 
       <PropostaDialog

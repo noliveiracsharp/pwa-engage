@@ -22,12 +22,14 @@ type Props = {
   link: string;
   /** Salva a proposta antes do envio; retorna false se falhar. */
   antesDeEnviar: () => Promise<boolean>;
+  titulo?: string;
+  mensagemInicial?: string;
 };
 
 const brl = (v: unknown) => Number(v ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 /** Envio da proposta digital (Oferta + contrato) por WhatsApp: instância da empresa ou wa.me. */
-export function EnviarPropostaDialog({ open, onOpenChange, orcamento, empresa, cliente, link, antesDeEnviar }: Props) {
+export function EnviarPropostaDialog({ open, onOpenChange, orcamento, empresa, cliente, link, antesDeEnviar, titulo, mensagemInicial }: Props) {
   const empresaId = text(orcamento["empresa_id"] ?? rowId(empresa ?? {}));
   const [telefone, setTelefone] = useState("");
   const [mensagem, setMensagem] = useState("");
@@ -39,6 +41,7 @@ export function EnviarPropostaDialog({ open, onOpenChange, orcamento, empresa, c
     const nome = text(pick(cliente ?? {}, ["nome_fantasia", "razao_social", "nome"]));
     const emp = text(pick(empresa ?? {}, ["nome_fantasia", "razao_social", "nome"]));
     setTelefone(text(pick(cliente ?? {}, ["whatsapp", "celular", "telefone"])));
+    if (mensagemInicial) return setMensagem(mensagemInicial);
     setMensagem(
       [
         `Olá${nome ? `, ${nome}` : ""}!`,
@@ -51,7 +54,7 @@ export function EnviarPropostaDialog({ open, onOpenChange, orcamento, empresa, c
         "Qualquer dúvida, é só responder esta mensagem.",
       ].join("\n"),
     );
-  }, [open, orcamento, cliente, empresa, link]);
+  }, [open, orcamento, cliente, empresa, link, mensagemInicial]);
 
   const { data: instancias = [] } = useQuery({
     queryKey: ["proposta-instancias", empresaId],
@@ -80,7 +83,7 @@ export function EnviarPropostaDialog({ open, onOpenChange, orcamento, empresa, c
     try {
       const inst = instancias.find((i) => text(rowId(i)) === instId);
       await dispararMensagem({ instancia: inst, mensagemId: null, atendimentoId: null, telefone, texto: mensagem });
-      toast.success("Oferta enviada pelo WhatsApp da empresa.");
+      toast.success("Mensagem enviada pelo WhatsApp da empresa.");
       onOpenChange(false);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Falha ao enviar.");
@@ -99,7 +102,7 @@ export function EnviarPropostaDialog({ open, onOpenChange, orcamento, empresa, c
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Enviar Oferta por WhatsApp</DialogTitle>
+          <DialogTitle>{titulo ?? "Enviar Oferta por WhatsApp"}</DialogTitle>
           <DialogDescription>O cliente recebe o link para conferir e assinar a Oferta e o contrato.</DialogDescription>
         </DialogHeader>
         <div className="space-y-3">

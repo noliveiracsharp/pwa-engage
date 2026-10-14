@@ -45,6 +45,7 @@ import { Route as AuthenticatedVeiculosRouteImport } from './routes/_authenticat
 import { Route as ChamadaSalaRouteImport } from './routes/chamada.$sala'
 import { Route as CompartilhadoTokenRouteImport } from './routes/compartilhado.$token'
 import { Route as CotacaoTokenRouteImport } from './routes/cotacao.$token'
+import { Route as MinutaTokenRouteImport } from './routes/minuta.$token'
 import { Route as PropostaTokenRouteImport } from './routes/proposta.$token'
 import { Route as WidgetInstanciaIdRouteImport } from './routes/widget.$instanciaId'
 import { Route as AuthenticatedAdminClientesRouteImport } from './routes/_authenticated/admin.clientes'
@@ -237,6 +238,11 @@ const CotacaoTokenRoute = CotacaoTokenRouteImport.update({
   path: '/cotacao/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MinutaTokenRoute = MinutaTokenRouteImport.update({
+  id: '/minuta/$token',
+  path: '/minuta/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PropostaTokenRoute = PropostaTokenRouteImport.update({
   id: '/proposta/$token',
   path: '/proposta/$token',
@@ -324,6 +330,7 @@ export interface FileRoutesByFullPath {
   '/chamada/$sala': typeof ChamadaSalaRoute
   '/compartilhado/$token': typeof CompartilhadoTokenRoute
   '/cotacao/$token': typeof CotacaoTokenRoute
+  '/minuta/$token': typeof MinutaTokenRoute
   '/proposta/$token': typeof PropostaTokenRoute
   '/widget/$instanciaId': typeof WidgetInstanciaIdRoute
   '/admin/clientes': typeof AuthenticatedAdminClientesRoute
@@ -370,6 +377,7 @@ export interface FileRoutesByTo {
   '/chamada/$sala': typeof ChamadaSalaRoute
   '/compartilhado/$token': typeof CompartilhadoTokenRoute
   '/cotacao/$token': typeof CotacaoTokenRoute
+  '/minuta/$token': typeof MinutaTokenRoute
   '/proposta/$token': typeof PropostaTokenRoute
   '/widget/$instanciaId': typeof WidgetInstanciaIdRoute
   '/admin/clientes': typeof AuthenticatedAdminClientesRoute
@@ -418,6 +426,7 @@ export interface FileRoutesById {
   '/chamada/$sala': typeof ChamadaSalaRoute
   '/compartilhado/$token': typeof CompartilhadoTokenRoute
   '/cotacao/$token': typeof CotacaoTokenRoute
+  '/minuta/$token': typeof MinutaTokenRoute
   '/proposta/$token': typeof PropostaTokenRoute
   '/widget/$instanciaId': typeof WidgetInstanciaIdRoute
   '/_authenticated/admin/clientes': typeof AuthenticatedAdminClientesRoute
@@ -466,6 +475,7 @@ export interface FileRouteTypes {
     | '/chamada/$sala'
     | '/compartilhado/$token'
     | '/cotacao/$token'
+    | '/minuta/$token'
     | '/proposta/$token'
     | '/widget/$instanciaId'
     | '/admin/clientes'
@@ -512,6 +522,7 @@ export interface FileRouteTypes {
     | '/chamada/$sala'
     | '/compartilhado/$token'
     | '/cotacao/$token'
+    | '/minuta/$token'
     | '/proposta/$token'
     | '/widget/$instanciaId'
     | '/admin/clientes'
@@ -559,6 +570,7 @@ export interface FileRouteTypes {
     | '/chamada/$sala'
     | '/compartilhado/$token'
     | '/cotacao/$token'
+    | '/minuta/$token'
     | '/proposta/$token'
     | '/widget/$instanciaId'
     | '/_authenticated/admin/clientes'
@@ -582,6 +594,7 @@ export interface RootRouteChildren {
   ChamadaSalaRoute: typeof ChamadaSalaRoute
   CompartilhadoTokenRoute: typeof CompartilhadoTokenRoute
   CotacaoTokenRoute: typeof CotacaoTokenRoute
+  MinutaTokenRoute: typeof MinutaTokenRoute
   PropostaTokenRoute: typeof PropostaTokenRoute
   WidgetInstanciaIdRoute: typeof WidgetInstanciaIdRoute
   ApiPublicVersaoRoute: typeof ApiPublicVersaoRoute
@@ -842,6 +855,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CotacaoTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/minuta/$token': {
+      id: '/minuta/$token'
+      path: '/minuta/$token'
+      fullPath: '/minuta/$token'
+      preLoaderRoute: typeof MinutaTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/proposta/$token': {
       id: '/proposta/$token'
       path: '/proposta/$token'
@@ -989,6 +1009,7 @@ const rootRouteChildren: RootRouteChildren = {
   ChamadaSalaRoute: ChamadaSalaRoute,
   CompartilhadoTokenRoute: CompartilhadoTokenRoute,
   CotacaoTokenRoute: CotacaoTokenRoute,
+  MinutaTokenRoute: MinutaTokenRoute,
   PropostaTokenRoute: PropostaTokenRoute,
   WidgetInstanciaIdRoute: WidgetInstanciaIdRoute,
   ApiPublicVersaoRoute: ApiPublicVersaoRoute,
