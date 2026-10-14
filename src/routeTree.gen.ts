@@ -53,6 +53,7 @@ import { Route as AuthenticatedAdminModulosRouteImport } from './routes/_authent
 import { Route as AuthenticatedAdminPlanosRouteImport } from './routes/_authenticated/admin.planos'
 import { Route as AuthenticatedAdminVersoesRouteImport } from './routes/_authenticated/admin.versoes'
 import { Route as AuthenticatedProjetosTemplatesRouteImport } from './routes/_authenticated/projetos_.templates'
+import { Route as AuthenticatedRelatoriosDreOfertasRouteImport } from './routes/_authenticated/relatorios_.dre-ofertas'
 import { Route as ApiPublicVersaoRouteImport } from './routes/api/public/versao'
 import { Route as ApiPublicZapiWebhookRouteImport } from './routes/api/public/zapi-webhook'
 
@@ -283,6 +284,12 @@ const AuthenticatedProjetosTemplatesRoute =
     path: '/projetos/templates',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedRelatoriosDreOfertasRoute =
+  AuthenticatedRelatoriosDreOfertasRouteImport.update({
+    id: '/relatorios_/dre-ofertas',
+    path: '/relatorios/dre-ofertas',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const ApiPublicVersaoRoute = ApiPublicVersaoRouteImport.update({
   id: '/api/public/versao',
   path: '/api/public/versao',
@@ -338,6 +345,7 @@ export interface FileRoutesByFullPath {
   '/admin/planos': typeof AuthenticatedAdminPlanosRoute
   '/admin/versoes': typeof AuthenticatedAdminVersoesRoute
   '/projetos/templates': typeof AuthenticatedProjetosTemplatesRoute
+  '/relatorios/dre-ofertas': typeof AuthenticatedRelatoriosDreOfertasRoute
   '/api/public/versao': typeof ApiPublicVersaoRoute
   '/api/public/zapi-webhook': typeof ApiPublicZapiWebhookRoute
 }
@@ -385,6 +393,7 @@ export interface FileRoutesByTo {
   '/admin/planos': typeof AuthenticatedAdminPlanosRoute
   '/admin/versoes': typeof AuthenticatedAdminVersoesRoute
   '/projetos/templates': typeof AuthenticatedProjetosTemplatesRoute
+  '/relatorios/dre-ofertas': typeof AuthenticatedRelatoriosDreOfertasRoute
   '/api/public/versao': typeof ApiPublicVersaoRoute
   '/api/public/zapi-webhook': typeof ApiPublicZapiWebhookRoute
 }
@@ -434,6 +443,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/planos': typeof AuthenticatedAdminPlanosRoute
   '/_authenticated/admin/versoes': typeof AuthenticatedAdminVersoesRoute
   '/_authenticated/projetos_/templates': typeof AuthenticatedProjetosTemplatesRoute
+  '/_authenticated/relatorios_/dre-ofertas': typeof AuthenticatedRelatoriosDreOfertasRoute
   '/api/public/versao': typeof ApiPublicVersaoRoute
   '/api/public/zapi-webhook': typeof ApiPublicZapiWebhookRoute
 }
@@ -483,6 +493,7 @@ export interface FileRouteTypes {
     | '/admin/planos'
     | '/admin/versoes'
     | '/projetos/templates'
+    | '/relatorios/dre-ofertas'
     | '/api/public/versao'
     | '/api/public/zapi-webhook'
   fileRoutesByTo: FileRoutesByTo
@@ -530,6 +541,7 @@ export interface FileRouteTypes {
     | '/admin/planos'
     | '/admin/versoes'
     | '/projetos/templates'
+    | '/relatorios/dre-ofertas'
     | '/api/public/versao'
     | '/api/public/zapi-webhook'
   id:
@@ -578,6 +590,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/planos'
     | '/_authenticated/admin/versoes'
     | '/_authenticated/projetos_/templates'
+    | '/_authenticated/relatorios_/dre-ofertas'
     | '/api/public/versao'
     | '/api/public/zapi-webhook'
   fileRoutesById: FileRoutesById
@@ -911,6 +924,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjetosTemplatesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/relatorios_/dre-ofertas': {
+      id: '/_authenticated/relatorios_/dre-ofertas'
+      path: '/relatorios/dre-ofertas'
+      fullPath: '/relatorios/dre-ofertas'
+      preLoaderRoute: typeof AuthenticatedRelatoriosDreOfertasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/api/public/versao': {
       id: '/api/public/versao'
       path: '/api/public/versao'
@@ -959,6 +979,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminPlanosRoute: typeof AuthenticatedAdminPlanosRoute
   AuthenticatedAdminVersoesRoute: typeof AuthenticatedAdminVersoesRoute
   AuthenticatedProjetosTemplatesRoute: typeof AuthenticatedProjetosTemplatesRoute
+  AuthenticatedRelatoriosDreOfertasRoute: typeof AuthenticatedRelatoriosDreOfertasRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -992,6 +1013,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminPlanosRoute: AuthenticatedAdminPlanosRoute,
   AuthenticatedAdminVersoesRoute: AuthenticatedAdminVersoesRoute,
   AuthenticatedProjetosTemplatesRoute: AuthenticatedProjetosTemplatesRoute,
+  AuthenticatedRelatoriosDreOfertasRoute:
+    AuthenticatedRelatoriosDreOfertasRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
