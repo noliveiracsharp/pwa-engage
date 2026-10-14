@@ -175,7 +175,7 @@ function DreOfertasPage() {
 
       <div className="dre-print-src" aria-hidden>
         <DreRelatorioDocumento
-          empresa={{ nome: emp.nome, logo: emp.logo }}
+          empresa={{ nome: emp.nome ?? "", logo: emp.logo ?? "" }}
           periodo={periodo}
           filtros={`Situação: ${f.situacao === "todos" ? "Todas" : f.situacao} • Vendedor: ${f.vendedor === "todos" ? "Todos" : nome(usuarios, f.vendedor)}`}
           tot={tot}
