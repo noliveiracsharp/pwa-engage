@@ -91,3 +91,9 @@ export function trimestreDe(value: unknown): number | null {
   const m = String(value ?? "").match(/^\d{4}-(\d{2})/);
   return m ? Math.floor((Number(m[1]) - 1) / 3) + 1 : null;
 }
+
+/** Etapa do Kanban que representa negócio perdido (desistência, perdido, cancelado, recusado). */
+export function etapaPerdida(descricao: unknown): boolean {
+  const s = String(descricao ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  return /desist|perdid|perda|cancel|recusad|reprovad/.test(s);
+}
