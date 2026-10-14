@@ -419,18 +419,7 @@ export function OrcamentoSheet({
     });
   }, [calcs, linhasValidas, totais.total_itens, totais.desconto_valor]);
   const comissaoCfg = useComissaoConfig();
-  const totalComissoes = useMemo(
-    () =>
-      comissaoCfg.disponivel
-        ? round2(
-            calcMemoria(linhasComissao, comissaoCfg.parametros, comissaoCfg.papeis).reduce(
-              (s, g) => s + g.total_comissoes,
-              0,
-            ),
-          )
-        : 0,
-    [linhasComissao, comissaoCfg.disponivel, comissaoCfg.parametros, comissaoCfg.papeis],
-  );
+  const [totalComissoes, setTotalComissoes] = useState(0);
   const avista = calcAvista(totais.total_liquido, h.desconto_avista_tipo, h.desconto_avista);
   const ehAvista = h.modalidade === "avista";
   const ehComodato = h.modalidade === "comodato";
@@ -725,6 +714,7 @@ export function OrcamentoSheet({
             orcamentoId={record ? String(rowId(record) ?? "") || undefined : undefined}
             vendedorId={h.usuario_id || undefined}
             usuarios={vendedores}
+            onTotalChange={setTotalComissoes}
           />
 
           {/* ------------- modalidade e serviços recorrentes ------------- */}
