@@ -63,6 +63,7 @@ import {
   type Situacao,
 } from "@/lib/orcamentos";
 import { pick, type Row } from "@/lib/row";
+import { addMonthsISO } from "@/lib/orcamentos";
 import { useQuery } from "@tanstack/react-query";
 import { etapasDoKanban, kanbanDoModuloOrcamentos } from "@/lib/orcamento-kanban";
 import { cn } from "@/lib/utils";
@@ -124,7 +125,12 @@ const emptyHeader = (vendedorId: string): Header => {
 
 /** Reconstrói entrada e valores fixados a partir do cronograma gravado. */
 const entradaDoCronograma = (parcelas: Parcela[]) => {
-  const vazio = { entrada_tipo: "percentual" as const, entrada: "", fixas: {} as Record<number, number> };
+  const datas: Record<number, string> = {};
+  const p1 = parcelas[0]?.vencimento ?? "";
+  parcelas.forEach((p, i) => {
+    if (i > 0 && p1 && p.vencimento !== addMonthsISO(p1, i)) datas[p.numero] = p.vencimento;
+  });
+  const vazio = { entrada_tipo: "percentual" as const, entrada: "", fixas: {} as Record<number, number>, datas };
   if (parcelas.length < 3) return vazio;
   const ref = parcelas[parcelas.length - 2]!.valor;
   const fixas: Record<number, number> = {};
@@ -136,6 +142,7 @@ const entradaDoCronograma = (parcelas: Parcela[]) => {
     entrada_tipo: "valor" as const,
     entrada: temEntrada ? String(parcelas[0]!.valor) : "",
     fixas,
+    datas,
   };
 };
 
@@ -345,6 +352,7 @@ export function OrcamentoSheet({
             label: codigo ? `${codigo} — ${descricao}` : descricao,
             hint: formatBRL(num(i["preco_venda"])),
             keywords: [codigo, String(i["tipo"] ?? "")].filter(Boolean),
+            images: Array.isArray(i["imagens"]) ? (i["imagens"] as unknown[]).map(String).filter(Boolean) : [],
           };
         })
         .sort((a, b) => a.label.localeCompare(b.label, "pt-BR", { numeric: true })),
