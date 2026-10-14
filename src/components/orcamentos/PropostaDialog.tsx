@@ -25,7 +25,7 @@ import {
   TAGS,
   type Bloco,
 } from "@/lib/propostas";
-import { pick, type Row } from "@/lib/row";
+import type { Row } from "@/lib/row";
 import { PropostaDocumento } from "./PropostaDocumento";
 import { CapaEstiloEditor } from "./CapaEstiloEditor";
 import { EnviarPropostaDialog } from "./EnviarPropostaDialog";
