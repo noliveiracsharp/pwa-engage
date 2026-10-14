@@ -20,11 +20,13 @@ type Props = {
   orcamentoId?: string | undefined;
   vendedorId?: string | undefined;
   usuarios: Row[];
+  /** Soma só das comissões com beneficiário informado (para a memória de cálculo). */
+  onTotalChange?: (total: number) => void;
 };
 
 const NONE = "__none__";
 
-export function OrcamentoComissoes({ linhas, orcamentoId, vendedorId, usuarios }: Props) {
+export function OrcamentoComissoes({ linhas, orcamentoId, vendedorId, usuarios, onTotalChange }: Props) {
   const perms = usePagePermissions("/comissoes");
   const { parametros, papeis, disponivel } = useComissaoConfig();
   const { empresaId } = useAudit();
@@ -55,6 +57,15 @@ export function OrcamentoComissoes({ linhas, orcamentoId, vendedorId, usuarios }
   const temRegistro = (registradas.data?.length ?? 0) > 0;
 
   const memoria = useMemo(() => calcMemoria(linhas, parametros, papeis), [linhas, parametros, papeis]);
+
+  const benefCalc = (papelId: string, nome: string) =>
+    benef[papelId] ?? (temRegistro ? "" : /vend|comerc/i.test(nome) && vendedorId ? vendedorId : "");
+  const totalInformado = disponivel
+    ? Math.round(memoria.flatMap((g) => g.comissoes).filter((c) => !!benefCalc(c.papel_id, c.nome)).reduce((s, c) => s + c.valor, 0) * 100) / 100
+    : 0;
+  useEffect(() => {
+    onTotalChange?.(totalInformado);
+  }, [totalInformado, onTotalChange]);
 
   if (perms.loading || !perms.canRead || !disponivel) return null;
 
