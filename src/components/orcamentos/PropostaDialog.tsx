@@ -299,6 +299,17 @@ export function PropostaDialog(props: Props) {
           </div>
         </div>
       </DialogContent>
+      {link && (
+        <EnviarPropostaDialog
+          open={envioOpen}
+          onOpenChange={setEnvioOpen}
+          orcamento={orcamento}
+          empresa={empresa}
+          cliente={cliente}
+          link={link}
+          antesDeEnviar={() => salvar(true)}
+        />
+      )}
     </Dialog>
   );
 }
