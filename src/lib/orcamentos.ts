@@ -557,3 +557,87 @@ export function despesasToValue(despesas: DespesaOperacional[]) {
     .filter((d) => num(d.valor) > 0)
     .map((d) => ({ categoria: d.categoria, descricao: d.descricao.trim(), valor: round2(num(d.valor)) }));
 }
+
+/* ------------------------------------------------------------------ */
+/* Condição de pagamento ao fornecedor (custo dos itens)               */
+/* ------------------------------------------------------------------ */
+
+export type CompraModo = "espelhar" | "avista" | "personalizado";
+
+export type CondicaoCompra = {
+  modo: CompraModo;
+  /** Quantidade de parcelas (modo personalizado). */
+  parcelas: string;
+  /** 1º vencimento (avista/personalizado), yyyy-mm-dd. */
+  primeira: string;
+  obs: string;
+};
+
+export const COMPRA_MODOS: Array<{ value: CompraModo; label: string }> = [
+  { value: "espelhar", label: "Acompanhar parcelas do cliente" },
+  { value: "avista", label: "À vista / Entrada" },
+  { value: "personalizado", label: "Parcelado com o fornecedor" },
+];
+
+export const condicaoCompraPadrao = (): CondicaoCompra => ({ modo: "espelhar", parcelas: "1", primeira: "", obs: "" });
+
+export function condicaoCompraFromValue(value: unknown): CondicaoCompra {
+  let v: unknown = value;
+  if (typeof value === "string") {
+    try { v = JSON.parse(value); } catch { v = null; }
+  }
+  const base = condicaoCompraPadrao();
+  if (!v || typeof v !== "object") return base;
+  const r = v as Row;
+  const modo = COMPRA_MODOS.some((m) => m.value === r["modo"]) ? (r["modo"] as CompraModo) : "espelhar";
+  return {
+    modo,
+    parcelas: String(Math.max(1, Math.floor(num(r["parcelas"]) || 1))),
+    primeira: toISODate(r["primeira"]) || "",
+    obs: String(r["obs"] ?? ""),
+  };
+}
+
+export function condicaoCompraToValue(c: CondicaoCompra) {
+  return {
+    modo: c.modo,
+    parcelas: Math.max(1, Math.floor(num(c.parcelas) || 1)),
+    primeira: toISODate(c.primeira) || null,
+    obs: c.obs.trim(),
+  };
+}
+
+/**
+ * Cronograma de pagamento do custo ao fornecedor.
+ *  - espelhar: mesmas datas e mesma proporção das parcelas do cliente;
+ *  - avista: tudo na data informada (ou no 1º vencimento do cliente);
+ *  - personalizado: N parcelas mensais iguais a partir da data informada.
+ */
+export function cronogramaCompra(opts: {
+  custo: number;
+  condicao: CondicaoCompra;
+  parcelasCliente: Parcela[];
+  dataPadrao: string;
+}): Parcela[] {
+  const custo = round2(Math.max(0, num(opts.custo)));
+  if (custo <= 0) return [];
+  const c = opts.condicao;
+  const inicio = toISODate(c.primeira) || opts.parcelasCliente[0]?.vencimento || toISODate(opts.dataPadrao);
+  if (c.modo === "espelhar" && opts.parcelasCliente.length > 0) {
+    const totalCli = opts.parcelasCliente.reduce((s, p) => s + Math.max(0, p.valor), 0);
+    if (totalCli > 0) {
+      let acc = 0;
+      const n = opts.parcelasCliente.length;
+      return opts.parcelasCliente.map((p, i) => {
+        const valor = i === n - 1 ? round2(custo - acc) : round2((custo * Math.max(0, p.valor)) / totalCli);
+        acc = round2(acc + valor);
+        return { numero: i + 1, vencimento: p.vencimento, valor };
+      });
+    }
+  }
+  if (!inicio) return [];
+  if (c.modo === "personalizado") {
+    return gerarParcelas({ total: custo, quantidade: num(c.parcelas) || 1, primeiraData: inicio, comJuros: false });
+  }
+  return [{ numero: 1, vencimento: inicio, valor: custo }];
+}
