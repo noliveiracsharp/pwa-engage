@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { etapasDoKanban, kanbanDoModuloOrcamentos } from "@/lib/orcamento-kanban";
 import { corEtapa } from "@/lib/kanban-cores";
 import { createFileRoute } from "@tanstack/react-router";
@@ -103,16 +103,15 @@ function OrcamentosPage() {
 
   const [open, setOpen] = useState(false);
   const [record, setRecord] = useState<Row | null>(null);
-  // Oferta gravada ao confirmar um item: reabre com o registro atualizado do banco.
-  const [manterId, setManterId] = useState<string | null>(null);
-  useEffect(() => {
-    if (!manterId) return;
-    const achado = todos.find((t) => String(rowId(t)) === manterId);
-    if (achado) {
-      setRecord(achado);
-      setManterId(null);
+  const qcOrc = useQueryClient();
+  // Oferta gravada ao confirmar um item: recarrega e mantém o painel aberto com o registro atualizado.
+  const manterAbertoCom = async (id: string) => {
+    await qcOrc.refetchQueries({ queryKey: ["table", "orcamentos"] });
+    for (const [, data] of qcOrc.getQueriesData<Row[]>({ queryKey: ["table", "orcamentos"] })) {
+      const achado = Array.isArray(data) ? data.find((t) => String(rowId(t)) === id) : undefined;
+      if (achado) { setRecord(achado); return; }
     }
-  }, [manterId, todos]);
+  };
   const [previewOpen, setPreviewOpen] = useState(false);
   const [preview, setPreview] = useState<Row | null>(null);
   const [propostaOpen, setPropostaOpen] = useState(false);
@@ -481,7 +480,7 @@ function OrcamentosPage() {
               onSuccess: ({ id }) => {
                 if (manterAberto) {
                   setDuplicarDe(null);
-                  setManterId(id);
+                  void manterAbertoCom(id);
                   return;
                 }
                 setOpen(false);
