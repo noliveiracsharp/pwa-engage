@@ -1,4 +1,6 @@
 import { OrcamentoDespesas } from "@/components/orcamentos/OrcamentoDespesas";
+import { OrcamentoCompra } from "@/components/orcamentos/OrcamentoCompra";
+import { condicaoCompraFromValue, condicaoCompraPadrao, condicaoCompraToValue, cronogramaCompra, type CondicaoCompra } from "@/lib/orcamentos";
 import {
   despesasFromValue,
   despesasToValue,
@@ -93,6 +95,7 @@ type Header = {
   frete: string;
   valores_adicionais: string;
   despesas: DespesaOperacional[];
+  compra: CondicaoCompra;
 } & PagamentoState &
   ModalidadeState;
 
@@ -111,6 +114,7 @@ const emptyHeader = (vendedorId: string): Header => {
     frete: "",
     valores_adicionais: "",
     despesas: [],
+    compra: condicaoCompraPadrao(),
     obs_nota_fiscal: "",
     forma_pagamento: "",
     forma_pagamento_obs: "",
@@ -171,6 +175,7 @@ const headerFromRecord = (r: Row): Header => {
     frete: num(r["frete"]) ? String(num(r["frete"])) : "",
     valores_adicionais: num(r["valores_adicionais"]) ? String(num(r["valores_adicionais"])) : "",
     despesas: despesasFromValue(r["despesas_operacionais"]),
+    compra: condicaoCompraFromValue(r["compra_condicao"]),
     obs_nota_fiscal: String(pick(r, ["obs_nota_fiscal"]) ?? ""),
     forma_pagamento: String(pick(r, ["forma_pagamento"]) ?? ""),
     forma_pagamento_obs: String(pick(r, ["forma_pagamento_obs"]) ?? ""),
@@ -472,6 +477,10 @@ export function OrcamentoSheet({
   );
 
   // Acréscimo financeiro quando o parcelamento é "Com juros".
+  const compraParcelas = useMemo(
+    () => cronogramaCompra({ custo: totais.total_custo, condicao: h.compra, parcelasCliente: parcelas, dataPadrao: h.dt_orcamento }),
+    [totais.total_custo, h.compra, parcelas, h.dt_orcamento],
+  );
   const acrescimoJuros = !ehAvista && h.tem_juros
     ? Math.max(0, somaParcelas(parcelas) - totais.total_liquido)
     : 0;
@@ -528,6 +537,8 @@ export function OrcamentoSheet({
       margem_pct: totais.margem_pct,
       despesas_operacionais: despesasToValue(h.despesas),
       total_despesas: totalDespesas(h.despesas),
+      compra_condicao: condicaoCompraToValue(h.compra),
+      compra_parcelas: compraParcelas,
       obs_nota_fiscal: h.obs_nota_fiscal.trim() || null,
       forma_pagamento: h.forma_pagamento || null,
       forma_pagamento_obs: h.forma_pagamento_obs.trim() || null,
@@ -743,6 +754,14 @@ export function OrcamentoSheet({
             despesas={h.despesas}
             readOnly={readOnly}
             onChange={(despesas) => patchHeader({ despesas })}
+          />
+
+          <OrcamentoCompra
+            value={h.compra}
+            custo={totais.total_custo}
+            cronograma={compraParcelas}
+            readOnly={readOnly}
+            onChange={(compra) => patchHeader({ compra })}
           />
 
           {/* ------------- memória de cálculo e comissões ------------- */}
