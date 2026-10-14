@@ -257,7 +257,7 @@ export const ANEXOS_PADRAO: AnexoContrato[] = ["A", "B", "C", "D"];
  * (todos por padrão). O texto resultante continua editável no editor da proposta.
  */
 export function gerarContratoModular(
-  c: Contexto & { linhas: Row[]; itens: Row[]; anexos?: AnexoContrato[] },
+  c: Contexto & { linhas: Row[]; itens: Row[]; anexos?: AnexoContrato[]; reindexar?: boolean },
 ): string {
   const o = c.orcamento;
   const anexos = c.anexos ?? ANEXOS_PADRAO;
@@ -338,5 +338,27 @@ ${temTaxa ? `<li>Taxa de instalação: {{taxa_instalacao}}${isenta ? `, isenta s
 <li>Reserva de domínio (art. 521 do Código Civil): a propriedade só passa ao CONTRATANTE após a quitação integral.</li>
 <li>Inadimplência superior a 30 (trinta) dias autoriza a CONTRATADA a retomar os equipamentos.</li></ul>`);
 
+  if (c.reindexar) {
+    const romanos = ["I", "II", "III", "IV"];
+    let n = 0;
+    for (let i = 1; i < partes.length; i++) {
+      const m = /Anexo ([A-D]) —/.exec(partes[i]!);
+      if (!m) continue;
+      const L = m[1]!;
+      const R = romanos[n++]!;
+      partes[i] = partes[i]!.replace(`Anexo ${L} —`, `Anexo ${R} —`).replace(new RegExp(`\\b${L}\\.(\\d)`, "g"), `${R}.$1`);
+    }
+  }
   return partes.join("\n");
 }
+
+/** Letras de anexos ↔ parâmetro curto de URL (ex.: "BC"). */
+export const anexosDeParam = (s: unknown): AnexoContrato[] =>
+  ANEXOS_PADRAO.filter((a) => String(s ?? "").toUpperCase().includes(a));
+
+export const linkMinuta = (token: unknown, anexos: AnexoContrato[]) =>
+  `${typeof window !== "undefined" ? window.location.origin : ""}/minuta/${String(token ?? "")}?a=${anexos.join("")}`;
+
+/** Título curto do anexo sem a letra (para mensagens). */
+export const nomeAnexo = (a: AnexoContrato) =>
+  (ANEXOS_CONTRATO.find((x) => x.id === a)?.label ?? "").replace(/^Anexo [A-D] — /, "");
