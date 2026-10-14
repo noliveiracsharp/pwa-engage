@@ -678,3 +678,8 @@ table img { cursor: zoom-in; }
   html.dre-printing body > *:not(.dre-print-host) { display: none !important; }
   html.dre-printing .dre-print-host { display: block !important; }
 }
+
+/* Fluxo de caixa no PDF do DRE */
+.dre-fluxo { font-size: 7.5px; }
+.dre-fluxo th, .dre-fluxo td { padding: 3px 4px; white-space: nowrap; }
+.dre-fluxo .dre-sub td { font-weight: 700; border-top: 1px solid #0f3b5c; }
