@@ -109,7 +109,7 @@ const PADRAO: Record<BlocoTipo, Omit<Bloco, "tipo">> = {
   },
 
   CONTRATO: {
-    ativo: false,
+    ativo: true,
     titulo: "Contrato de prestação de serviços",
     conteudo:
       "CONTRATANTE: {{cliente_nome}}, inscrito sob {{cliente_documento}}.\nCONTRATADA: {{empresa_nome}}, inscrita sob {{empresa_documento}}.\n\nCláusula 1ª — Objeto: fornecimento dos itens e serviços descritos na proposta nº {{numero}}.\nCláusula 2ª — Valor: {{valor_total}}, pago conforme {{forma_pagamento}}.\nCláusula 3ª — Garantia: conforme seção de prazos e garantia desta proposta.\nCláusula 4ª — Foro: fica eleito o foro da comarca da CONTRATADA.",
@@ -236,79 +236,100 @@ export function htmlSeguro(html: string): string {
 const por = (n: number) =>
   ({ 12: "doze", 24: "vinte e quatro", 36: "trinta e seis", 48: "quarenta e oito", 60: "sessenta" })[n];
 
+export type AnexoContrato = "A" | "B" | "C" | "D";
+export const ANEXOS_CONTRATO: Array<{ id: AnexoContrato; label: string; descricao: string }> = [
+  { id: "A", label: "Anexo A — Licença de software (SaaS)", descricao: "Licença de uso, nuvem, SLA 98% e suporte do aplicativo" },
+  { id: "B", label: "Anexo B — Manutenção física e SLA", descricao: "Preventiva/corretiva, tabela de atendimento e exclusões" },
+  { id: "C", label: "Anexo C — Comodato de equipamentos", descricao: "Cessão gratuita, guarda, devolução e taxa de instalação" },
+  { id: "D", label: "Anexo D — Venda com reserva de domínio", descricao: "Garantias e propriedade só após a quitação" },
+];
+export const ANEXOS_PADRAO: AnexoContrato[] = ["A", "B", "C", "D"];
+
 /**
- * Monta o contrato em HTML injetando somente os anexos aplicáveis:
- *  A (licença de software) e B (manutenção) pelos serviços recorrentes,
- *  C (comodato) pela modalidade, D (venda com reserva de domínio) quando há produtos vendidos.
- * O texto resultante continua editável no editor da proposta.
+ * Contrato guarda-chuva: condições gerais fixas + anexos marcados pelo vendedor
+ * (todos por padrão). O texto resultante continua editável no editor da proposta.
  */
-export function gerarContratoModular(c: Contexto & { linhas: Row[]; itens: Row[] }): string {
+export function gerarContratoModular(
+  c: Contexto & { linhas: Row[]; itens: Row[]; anexos?: AnexoContrato[] },
+): string {
   const o = c.orcamento;
+  const anexos = c.anexos ?? ANEXOS_PADRAO;
   const itemById = new Map(c.itens.map((i) => [String(i["id"] ?? ""), i]));
-  const desc = (l: Row) => {
+  const nomeItem = (l: Row) => {
     const it = itemById.get(String(l["item_id"] ?? ""));
-    return { it, nome: `${txt(it?.["descricao"])} ${txt(l["detalhe"])}`.toLowerCase() };
+    return [txt(it?.["descricao"]), txt(l["detalhe"])].filter(Boolean).join(" — ") || "Item";
   };
-  const nat = (l: Row) => naturezaOf(l["natureza"], desc(l).it?.["tipo"]);
+  const nat = (l: Row) => naturezaOf(l["natureza"], itemById.get(String(l["item_id"] ?? ""))?.["tipo"]);
   const recorrentes = c.linhas.filter((l) => nat(l) === "recorrente");
   const produtos = c.linhas.filter((l) => nat(l) === "produto");
-  const modalidade = modalidadeOf(o["modalidade"]);
   const meses = num(o["vigencia_meses"]) || 36;
   const reajuste = txt(o["reajuste_indice"]) || "IPCA";
   const extenso = por(meses);
   const mesesTxt = extenso ? `${meses} (${extenso})` : String(meses);
-
-  const ehSoftware = (l: Row) => /licen|software|app|saas|sistema|plataforma|shield/.test(desc(l).nome);
-  const ehManut = (l: Row) => /manuten|blindagem|suporte|preventiv|corretiv/.test(desc(l).nome);
-  let anexoA = recorrentes.some(ehSoftware);
-  let anexoB = recorrentes.some(ehManut);
-  if (recorrentes.length && !anexoA && !anexoB) anexoA = anexoB = true;
-  const anexoC = modalidade === "comodato";
-  const anexoD = !anexoC && produtos.length > 0;
-  const isenta = o["taxa_instalacao_isenta"] === true && num(o["taxa_instalacao"]) > 0;
+  const temTaxa = num(o["taxa_instalacao"]) > 0;
+  const isenta = o["taxa_instalacao_isenta"] === true && temTaxa;
+  const listaEquip = produtos.length
+    ? `<table><thead><tr><th>Equipamento</th><th>Qtd.</th></tr></thead><tbody>${produtos
+        .map((l) => `<tr><td>${escapar(nomeItem(l))}</td><td>${escapar(String(l["quantidade"] ?? "1"))}</td></tr>`)
+        .join("")}</tbody></table>`
+    : "<p>Conforme relação de equipamentos da oferta {{numero}}.</p>";
 
   const partes: string[] = [];
   partes.push(`<h2>Condições gerais de prestação de serviços e tecnologia</h2>
-<h3>1. Partes</h3>
-<p><strong>CONTRATADA:</strong> {{empresa_nome}}, inscrita sob o n.º {{empresa_documento}}.<br><strong>CONTRATANTE:</strong> {{cliente_nome}}, inscrito sob o n.º {{cliente_documento}}, identificado na oferta {{numero}}.</p>
-<h3>2. Objeto do contrato</h3>
-<p>O presente instrumento estabelece as condições gerais que regem a relação comercial entre as partes. Os serviços, licenças e equipamentos contratados estão detalhados na oferta {{numero}} e são regidos pelos anexos modulares vinculados a este documento.</p>
-<h3>3. Vigência e rescisão</h3>
-<p>3.1. O contrato tem duração de ${mesesTxt} meses, com início na data de ativação dos serviços, renovando-se automaticamente por períodos iguais e sucessivos.</p>
-<p>3.2. Qualquer das partes poderá rescindir este contrato imotivadamente, mediante aviso prévio escrito de 30 (trinta) dias.</p>
-${isenta ? `<p>3.3. A taxa de instalação, no valor de {{taxa_instalacao}}, foi isentada mediante permanência mínima de ${mesesTxt} meses. A rescisão antecipada por parte do CONTRATANTE implicará a cobrança integral e corrigida dessa taxa.</p>` : ""}
-<h3>4. Condições financeiras e faturamento</h3>
-<p>4.1. Implantação na modalidade <strong>{{modalidade}}</strong>, no valor de {{valor_total}}, conforme {{forma_pagamento}}.</p>
-${recorrentes.length ? `<p>4.2. Mensalidade dos serviços recorrentes: <strong>{{mensalidade}}</strong>, reajustada a cada 12 (doze) meses pela variação do ${reajuste}.</p>` : ""}
-<p>4.3. O atraso no pagamento sujeitará o CONTRATANTE a multa moratória de 2% (dois por cento) e juros de 1% (um por cento) ao mês.</p>
-<p>4.4. A inadimplência superior a 10 (dez) dias corridos confere à CONTRATADA o direito de suspender os acessos e serviços de suporte, mediante notificação prévia, com reativação após a regularização.</p>
-<h3>5. Confidencialidade e proteção de dados (LGPD)</h3>
-<p>5.1. A CONTRATADA atua em conformidade com a Lei n.º 13.709/2018 (LGPD), garantindo a confidencialidade e a segurança no tratamento dos dados do CONTRATANTE, moradores e colaboradores.</p>
-<p>5.2. As partes comprometem-se a utilizar os dados a que tenham acesso exclusivamente para a execução deste contrato.</p>
-<h3>6. Disposições gerais e foro</h3>
-<p>6.1. Este contrato não estabelece vínculo trabalhista ou societário entre as partes.</p>
-<p>6.2. Elege-se o foro da Comarca de São Paulo/SP para dirimir eventuais litígios deste contrato.</p>`);
+<p>Este instrumento único reúne as regras comuns da relação entre as partes. Os serviços efetivamente contratados são definidos pela oferta {{numero}} e pelos anexos abaixo, que dela fazem parte integrante.</p>
+<h3>1. Partes e objeto</h3>
+<p><strong>CONTRATADA:</strong> {{empresa_nome}}, inscrita sob o n.º {{empresa_documento}}.<br><strong>CONTRATANTE:</strong> {{cliente_nome}}, inscrito sob o n.º {{cliente_documento}}.</p>
+<p>1.1. Objeto: fornecimento dos serviços, licenças e equipamentos descritos na oferta {{numero}}, nos termos dos anexos vinculados.</p>
+<h3>2. Vigência e rescisão</h3>
+<p>2.1. Prazo de ${mesesTxt} meses a partir da ativação dos serviços, renovável automaticamente por iguais períodos.</p>
+<p>2.2. Qualquer parte pode rescindir mediante aviso prévio escrito de 30 (trinta) dias.</p>
+<p>2.3. A rescisão antecipada imotivada pelo CONTRATANTE gera multa de 20% (vinte por cento) sobre as mensalidades restantes até o fim da vigência.</p>
+${isenta ? `<p>2.4. A taxa de instalação de {{taxa_instalacao}} foi isentada mediante permanência mínima de ${mesesTxt} meses; havendo rescisão antecipada, será cobrada integralmente e corrigida.</p>` : ""}
+<h3>3. Condições financeiras</h3>
+<p>3.1. Implantação na modalidade <strong>{{modalidade}}</strong>, no valor de {{valor_total}}, conforme {{forma_pagamento}}.</p>
+${recorrentes.length ? `<p>3.2. Mensalidade dos serviços recorrentes: <strong>{{mensalidade}}</strong>.</p>` : ""}
+<p>3.3. Reajuste anual a cada 12 (doze) meses pela variação do ${reajuste}.</p>
+<p>3.4. Atrasos sujeitam o CONTRATANTE a multa de 2% (dois por cento) e juros de 1% (um por cento) ao mês.</p>
+<p>3.5. Inadimplência superior a 10 (dez) dias permite à CONTRATADA suspender serviços e acessos, mediante aviso prévio, até a regularização.</p>
+<h3>4. Proteção de dados (LGPD) e confidencialidade</h3>
+<p>4.1. As partes tratarão os dados pessoais de moradores, colaboradores e visitantes conforme a Lei n.º 13.709/2018, exclusivamente para a execução deste contrato.</p>
+<p>4.2. Informações técnicas, senhas e dados de acesso são confidenciais durante a vigência e por 2 (dois) anos após o término.</p>
+<h3>5. Disposições gerais e foro</h3>
+<p>5.1. Não há vínculo trabalhista ou societário entre as partes.</p>
+<p>5.2. Este contrato pode ser assinado eletronicamente, com plena validade jurídica.</p>
+<p>5.3. Fica eleito o foro da comarca da sede da CONTRATADA para dirimir quaisquer litígios.</p>`);
 
-  if (anexoA)
-    partes.push(`<h3>Anexo A — Licenciamento de software (SaaS)</h3>
-<p>A.1. A CONTRATADA concede ao CONTRATANTE licença de uso do sistema (web e aplicativo), de caráter não exclusivo e intransferível. Todos os direitos de propriedade intelectual pertencem à CONTRATADA.</p>
-<p>A.2. A CONTRATADA assegura disponibilidade (SLA) de 98% do sistema, salvo força maior ou falhas dos fornecedores de internet do CONTRATANTE.</p>
-<p>A.3. A gestão de acessos, a guarda das credenciais e a inserção de dados são de responsabilidade exclusiva dos usuários.</p>`);
-  if (anexoB)
-    partes.push(`<h3>Anexo B — Manutenção preventiva e corretiva</h3>
-<p>B.1. A CONTRATADA executará a manutenção preventiva e corretiva dos equipamentos e da infraestrutura indicados na oferta.</p>
-<p>B.2. Exclusões: não estão cobertos danos por vandalismo, descargas atmosféricas, picos de tensão, pragas, mau uso, obras civis ou intervenções de terceiros, que serão objeto de oferta à parte.</p>
-<p>B.3. Os tempos de resposta para emergências respeitarão a matriz de criticidade estipulada na proposta técnica.</p>`);
-  if (anexoC)
+  if (anexos.includes("A"))
+    partes.push(`<h3>Anexo A — Licença de software (SaaS)</h3>
+<ul><li>Licença de uso do sistema (web e aplicativo), não exclusiva e intransferível, durante a vigência.</li>
+<li>Disponibilidade mínima de 98% ao mês, salvo manutenções programadas, força maior ou falhas de internet do CONTRATANTE.</li>
+<li>Atualizações e melhorias incluídas; suporte técnico da plataforma em horário comercial.</li>
+<li>Guarda de senhas e cadastro de usuários são de responsabilidade do CONTRATANTE.</li>
+<li>Toda propriedade intelectual do software pertence à CONTRATADA.</li></ul>`);
+  if (anexos.includes("B"))
+    partes.push(`<h3>Anexo B — Manutenção física e nível de serviço</h3>
+<p>B.1. Manutenção preventiva e corretiva dos equipamentos e sistemas indicados na oferta (ex.: portões automáticos, CFTV, controle de acesso).</p>
+<table><thead><tr><th>Prioridade</th><th>Exemplo</th><th>Atendimento</th></tr></thead><tbody>
+<tr><td><strong>Crítica</strong></td><td>Portão travado, sistema de acesso parado</td><td>até 4 horas</td></tr>
+<tr><td><strong>Alta</strong></td><td>Câmera ou gravação com falha parcial</td><td>até 24 horas</td></tr>
+<tr><td><strong>Normal</strong></td><td>Ajustes, dúvidas e melhorias</td><td>até 72 horas úteis</td></tr>
+<tr><td><strong>Preventiva</strong></td><td>Revisão programada</td><td>conforme agenda</td></tr></tbody></table>
+<p>B.2. <strong>Não cobertos:</strong> vandalismo, descargas atmosféricas e picos de energia, mau uso, obras civis, pragas e intervenção de terceiros — orçados à parte.</p>
+<p>B.3. Peças substituídas fora da garantia serão orçadas previamente ao CONTRATANTE.</p>`);
+  if (anexos.includes("C"))
     partes.push(`<h3>Anexo C — Comodato de equipamentos</h3>
-<p>C.1. A CONTRATADA cede ao CONTRATANTE, a título de comodato, os equipamentos listados na oferta, destinados exclusivamente à operação do sistema contratado.</p>
-<p>C.2. Os bens permanecem propriedade da CONTRATADA. O CONTRATANTE obriga-se a guardá-los e conservá-los, sendo proibida sua cessão, venda ou remoção para outro endereço.</p>
-<p>C.3. Ao final do contrato, por qualquer motivo, o CONTRATANTE devolverá os equipamentos em estado normal de conservação, sob pena de indenização pelo valor de reposição.</p>`);
-  if (anexoD)
-    partes.push(`<h3>Anexo D — Venda de equipamentos e instalação</h3>
-<p>D.1. Este anexo rege a venda e a instalação dos equipamentos detalhados na oferta.</p>
-<p>D.2. Garantia: equipamentos novos possuem garantia de 12 (doze) meses contra defeitos de fabricação; a instalação possui garantia de 90 (noventa) dias.</p>
-<p>D.3. Reserva de domínio: nos termos do art. 521 do Código Civil, a propriedade dos bens só será transferida ao CONTRATANTE após o pagamento integral. Em caso de inadimplência superior a 30 (trinta) dias, a CONTRATADA poderá reaver os equipamentos.</p>`);
+<p>C.1. A CONTRATADA empresta gratuitamente ao CONTRATANTE, durante a vigência, os equipamentos abaixo:</p>
+${listaEquip}
+<ul><li>Os bens continuam de propriedade da CONTRATADA.</li>
+<li>O CONTRATANTE deve guardá-los e conservá-los, sendo proibido vender, ceder ou retirá-los do local.</li>
+<li>Ao término, os equipamentos serão devolvidos em bom estado, sob pena de indenização pelo valor de reposição.</li>
+${temTaxa ? `<li>Taxa de instalação: {{taxa_instalacao}}${isenta ? `, isenta se cumprida a permanência de ${mesesTxt} meses` : ""}.</li>` : ""}</ul>`);
+  if (anexos.includes("D"))
+    partes.push(`<h3>Anexo D — Venda de equipamentos com reserva de domínio</h3>
+<ul><li>Venda e instalação dos equipamentos detalhados na oferta {{numero}}.</li>
+<li>Garantia de 90 (noventa) dias da instalação e garantia do fabricante para os equipamentos (mínimo 12 meses).</li>
+<li>Reserva de domínio (art. 521 do Código Civil): a propriedade só passa ao CONTRATANTE após a quitação integral.</li>
+<li>Inadimplência superior a 30 (trinta) dias autoriza a CONTRATADA a retomar os equipamentos.</li></ul>`);
 
   return partes.join("\n");
 }
