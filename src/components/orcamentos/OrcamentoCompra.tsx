@@ -5,7 +5,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   COMPRA_MODOS,
   formatBRL,
-  formatDateBR,
+  formatDate,
   type CompraModo,
   type CondicaoCompra,
   type Parcela,
@@ -90,7 +90,7 @@ export function OrcamentoCompra({ value, custo, cronograma, readOnly, onChange }
         <div className="flex flex-wrap gap-2">
           {cronograma.map((p) => (
             <span key={p.numero} className="bg-muted rounded-md px-2 py-1 text-xs tabular-nums">
-              {p.numero}ª {formatDateBR(p.vencimento)} · {formatBRL(p.valor)}
+              {p.numero}ª {formatDate(p.vencimento)} · {formatBRL(p.valor)}
             </span>
           ))}
         </div>
