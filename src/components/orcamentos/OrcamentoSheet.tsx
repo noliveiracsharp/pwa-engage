@@ -702,6 +702,7 @@ export function OrcamentoSheet({
             onSelectItem={selectItem}
             onAdd={addLinha}
             onRemove={removeLinha}
+            onItemSalvo={() => submit(true)}
           />
 
           {/* -------------------------- totais ------------------------- */}
@@ -760,7 +761,7 @@ export function OrcamentoSheet({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={submit} disabled={saving || readOnly}>
+          <Button onClick={() => submit()} disabled={saving || readOnly}>
             {saving ? "Salvando…" : "Salvar"}
           </Button>
         </div>

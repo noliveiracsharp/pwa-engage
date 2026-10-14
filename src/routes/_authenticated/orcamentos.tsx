@@ -103,6 +103,16 @@ function OrcamentosPage() {
 
   const [open, setOpen] = useState(false);
   const [record, setRecord] = useState<Row | null>(null);
+  // Oferta gravada ao confirmar um item: reabre com o registro atualizado do banco.
+  const [manterId, setManterId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!manterId) return;
+    const achado = todos.find((t) => String(rowId(t)) === manterId);
+    if (achado) {
+      setRecord(achado);
+      setManterId(null);
+    }
+  }, [manterId, todos]);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [preview, setPreview] = useState<Row | null>(null);
   const [propostaOpen, setPropostaOpen] = useState(false);
@@ -464,11 +474,16 @@ function OrcamentosPage() {
             : undefined
         }
         duplicarDe={duplicarDe}
-        onSave={({ header, linhas }) =>
+        onSave={({ header, linhas, manterAberto }) =>
           save.mutate(
             { header, linhas, original: record },
             {
-              onSuccess: () => {
+              onSuccess: ({ id }) => {
+                if (manterAberto) {
+                  setDuplicarDe(null);
+                  setManterId(id);
+                  return;
+                }
                 setOpen(false);
                 setRecord(null);
                 setDuplicarDe(null);
