@@ -91,6 +91,8 @@ export type PagamentoState = {
   entrada: string;
   /** Valores digitados à mão no cronograma (número da parcela → R$). */
   fixas: Record<number, number>;
+  /** Vencimentos alterados à mão (número da parcela → yyyy-mm-dd). */
+  datas: Record<number, string>;
 };
 
 type Props = {
@@ -387,7 +389,24 @@ export function OrcamentoPagamento({ value, parcelas, totalLiquido, entradaValor
                     <td className="px-3 py-2 tabular-nums">
                       {p.numero}/{parcelas.length}
                     </td>
-                    <td className="px-3 py-2 tabular-nums">{formatDate(p.vencimento)}</td>
+                    <td className="px-3 py-2 tabular-nums">
+                      {readOnly ? (
+                        formatDate(p.vencimento)
+                      ) : (
+                        <Input
+                          type="date"
+                          aria-label={`Vencimento da parcela ${p.numero}`}
+                          className={`h-8 w-40 tabular-nums ${value.datas?.[p.numero] ? "border-primary" : ""}`}
+                          value={p.vencimento}
+                          onChange={(e) => {
+                            const datas = { ...(value.datas ?? {}) };
+                            if (e.target.value) datas[p.numero] = e.target.value;
+                            else delete datas[p.numero];
+                            onChange({ datas });
+                          }}
+                        />
+                      )}
+                    </td>
                     <td className="px-3 py-2 text-right tabular-nums">
                       {readOnly || avista || parcelas.length < 2 || (entradaValor > 0 && p.numero === 1) ? (
                         formatBRL(p.valor)
@@ -429,7 +448,12 @@ export function OrcamentoPagamento({ value, parcelas, totalLiquido, entradaValor
 
         {!avista && parcelas.length >= 2 && !readOnly && (
           <div className="text-muted-foreground flex flex-wrap items-center gap-2 text-xs">
-            <span>Altere o valor de qualquer parcela: o saldo é rateado automaticamente nas demais.</span>
+            <span>Altere o valor ou a data de qualquer parcela: o saldo é rateado automaticamente nas demais.</span>
+            {Object.keys(value.datas ?? {}).length > 0 && (
+              <button type="button" className="text-primary underline underline-offset-2" onClick={() => onChange({ datas: {} })}>
+                Restaurar datas mensais
+              </button>
+            )}
             {temFixas && (
               <button
                 type="button"

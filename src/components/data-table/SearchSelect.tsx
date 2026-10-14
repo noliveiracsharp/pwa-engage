@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Check, ChevronsUpDown, X } from "lucide-react";
+import { Check, ChevronsUpDown, X, ZoomIn } from "lucide-react";
+import { ImagensCarrosselDialog } from "@/components/itens/ImagensCarrosselDialog";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
@@ -21,6 +22,8 @@ export type SearchOption = {
   keywords?: string[] | undefined;
   /** Nível na hierarquia (recuo visual na lista). */
   depth?: number | undefined;
+  /** Fotos da opção: mostra miniatura e permite ampliar. */
+  images?: string[] | undefined;
 };
 
 type Props = {
@@ -51,8 +54,31 @@ export function SearchSelect({
 }: Props) {
   const [open, setOpen] = useState(false);
   const selected = options.find((o) => o.value === value);
+  const [zoom, setZoom] = useState<SearchOption | null>(null);
+  const thumb = (opt: SearchOption, size: string) =>
+    opt.images?.[0] ? (
+      <span
+        role="button"
+        tabIndex={-1}
+        title="Ampliar foto"
+        aria-label="Ampliar foto"
+        className={cn("group relative shrink-0 cursor-zoom-in overflow-hidden rounded border", size)}
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setZoom(opt);
+        }}
+      >
+        <img src={opt.images[0]} alt="" className="h-full w-full object-cover" />
+        <span className="bg-background/60 absolute inset-0 hidden items-center justify-center group-hover:flex">
+          <ZoomIn className="h-3.5 w-3.5" />
+        </span>
+      </span>
+    ) : null;
 
   return (
+    <>
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
@@ -68,7 +94,10 @@ export function SearchSelect({
             className,
           )}
         >
-          <span className="truncate">{selected ? selected.label : placeholder}</span>
+          <span className="flex min-w-0 items-center gap-2">
+            {selected && thumb(selected, "h-7 w-7")}
+            <span className="truncate">{selected ? selected.label : placeholder}</span>
+          </span>
           <span className="ml-2 flex shrink-0 items-center gap-1">
             {allowClear && selected && !disabled && (
               <span
@@ -110,6 +139,7 @@ export function SearchSelect({
                       opt.value === value ? "opacity-100" : "opacity-0",
                     )}
                   />
+                  {thumb(opt, "mr-2 h-10 w-10")}
                   <span
                     className="flex min-w-0 flex-1 flex-col"
                     style={opt.depth ? { paddingLeft: `${opt.depth * 1.1}rem` } : undefined}
@@ -131,5 +161,12 @@ export function SearchSelect({
         </Command>
       </PopoverContent>
     </Popover>
+    <ImagensCarrosselDialog
+      open={!!zoom}
+      onOpenChange={(o) => !o && setZoom(null)}
+      titulo={zoom?.label ?? ""}
+      imagens={zoom?.images ?? []}
+    />
+    </>
   );
 }
