@@ -33,6 +33,8 @@ import {
   SITUACAO_META,
   situacaoTitulo,
   valorBaixa,
+  parcelasManuais,
+  type ModoLancamento,
   type Situacao,
   type TipoTitulo,
 } from "@/lib/financeiro";
@@ -240,6 +242,7 @@ function TituloSheet({ tipo, registro, parceiros, readOnly, onClose, onSaved }: 
     vencimento: text(registro?.["vencimento"]).slice(0, 10) || hojeISO(),
     valor: registro ? String(num(registro["valor"])).replace(".", ",") : "",
     repetir: "1",
+    modo: "unico" as ModoLancamento,
     status: text(registro?.["status"]) || "aberto",
     observacao: text(registro?.["observacao"]),
   });
@@ -247,10 +250,13 @@ function TituloSheet({ tipo, registro, parceiros, readOnly, onClose, onSaved }: 
   const opcoes = parceiros
     .filter((p) => (tipo === "receber" ? p["is_cliente"] !== false : p["is_fornecedor"] === true) || text(rowId(p)) === v.parceiro_id)
     .map((p) => ({ value: text(rowId(p)), label: text(p["nome_fantasia"] || p["razao_social"]) || "—" }));
+  const previa = registro ? [] : parcelasManuais({ modo: v.modo, valor: num(v.valor), quantidade: num(v.repetir), primeira: v.vencimento });
+  const papel = tipo === "receber" ? "cliente" : "fornecedor";
 
   const salvar = async () => {
     const valor = round2(num(v.valor));
     if (!v.descricao.trim()) return void toast.error("Informe a descrição.");
+    if (!v.parceiro_id) return void toast.error(`Escolha o ${papel}.`);
     if (valor <= 0) return void toast.error("Informe o valor.");
     setSalvando(true);
     try {
@@ -260,18 +266,17 @@ function TituloSheet({ tipo, registro, parceiros, readOnly, onClose, onSaved }: 
         const { error } = await supabase.from("financeiro_titulos").update(base as never).eq("id", text(rowId(registro)));
         if (error) throw error;
       } else {
-        const n = Math.max(1, Math.min(60, Math.floor(num(v.repetir)) || 1));
-        const { addMonthsISO } = await import("@/lib/orcamentos");
+        const n = previa.length;
         const emp = isMaster && empresa ? rowId(empresa) : empresaId;
-        const lote = Array.from({ length: n }, (_, i) => ({
+        const lote = previa.map((p, i) => ({
           ...base, empresa_id: emp, origem_tipo: "manual", parcela_n: i + 1,
           descricao: n > 1 ? `${base.descricao} (${i + 1}/${n})` : base.descricao,
-          vencimento: addMonthsISO(v.vencimento, i),
+          vencimento: p.vencimento, valor: p.valor,
         }));
         const { error } = await supabase.from("financeiro_titulos").insert(lote as never);
         if (error) throw error;
       }
-      toast.success("Título salvo."); onSaved(); onClose();
+      toast.success(previa.length > 1 ? `${previa.length} parcelas salvas.` : "Conta salva."); onSaved(); onClose();
     } catch (e) {
       toast.error(erroFinanceiro(e));
     } finally { setSalvando(false); }
@@ -287,20 +292,43 @@ function TituloSheet({ tipo, registro, parceiros, readOnly, onClose, onSaved }: 
         <div className="grid flex-1 content-start gap-4 overflow-y-auto p-4 sm:grid-cols-2">
           <div className="space-y-1 sm:col-span-2"><Label>Descrição</Label>
             <Input value={v.descricao} disabled={readOnly} onChange={(e) => setV({ ...v, descricao: e.target.value })} /></div>
-          <div className="space-y-1"><Label>{tipo === "receber" ? "Cliente" : "Fornecedor"}</Label>
-            <SearchSelect value={v.parceiro_id} disabled={readOnly} allowClear options={opcoes} placeholder="Opcional" onChange={(x) => setV({ ...v, parceiro_id: x })} /></div>
+          <div className="space-y-1"><Label>{tipo === "receber" ? "Cliente" : "Fornecedor"} *</Label>
+            <SearchSelect value={v.parceiro_id} disabled={readOnly} options={opcoes} placeholder={`Escolha o ${papel}`} onChange={(x) => setV({ ...v, parceiro_id: x })} /></div>
           <div className="space-y-1"><Label>Categoria</Label>
             <Select value={v.categoria} disabled={readOnly} onValueChange={(x) => setV({ ...v, categoria: x })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>{[...new Set([...CATEGORIAS_FINANCEIRO[tipo], v.categoria].filter(Boolean))].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
             </Select></div>
-          <div className="space-y-1"><Label>Vencimento</Label>
-            <Input type="date" value={v.vencimento} disabled={readOnly} onChange={(e) => setV({ ...v, vencimento: e.target.value })} /></div>
-          <div className="space-y-1"><Label>Valor (R$)</Label>
-            <Input inputMode="decimal" value={v.valor} disabled={readOnly} onChange={(e) => setV({ ...v, valor: e.target.value })} placeholder="0,00" /></div>
           {!registro && (
-            <div className="space-y-1"><Label>Repetir por (meses)</Label>
-              <Input type="number" min={1} max={60} value={v.repetir} onChange={(e) => setV({ ...v, repetir: e.target.value })} /></div>
+            <div className="space-y-1 sm:col-span-2"><Label>Tipo de lançamento</Label>
+              <Select value={v.modo} onValueChange={(x) => setV({ ...v, modo: x as ModoLancamento, repetir: x === "unico" ? "1" : v.repetir === "1" ? "12" : v.repetir })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unico">Único</SelectItem>
+                  <SelectItem value="parcelado">Parcelado (divide o valor total)</SelectItem>
+                  <SelectItem value="recorrente">Mensal recorrente (mesmo valor todo mês)</SelectItem>
+                </SelectContent>
+              </Select></div>
+          )}
+          <div className="space-y-1"><Label>{registro || v.modo === "unico" ? "Vencimento" : "1º vencimento"}</Label>
+            <Input type="date" value={v.vencimento} disabled={readOnly} onChange={(e) => setV({ ...v, vencimento: e.target.value })} /></div>
+          <div className="space-y-1"><Label>{v.modo === "parcelado" && !registro ? "Valor total (R$)" : v.modo === "recorrente" && !registro ? "Valor mensal (R$)" : "Valor (R$)"}</Label>
+            <Input inputMode="decimal" value={v.valor} disabled={readOnly} onChange={(e) => setV({ ...v, valor: e.target.value })} placeholder="0,00" /></div>
+          {!registro && v.modo !== "unico" && (
+            <div className="space-y-1"><Label>{v.modo === "parcelado" ? "Nº de parcelas" : "Nº de meses"}</Label>
+              <Input type="number" min={1} max={120} value={v.repetir} onChange={(e) => setV({ ...v, repetir: e.target.value })} /></div>
+          )}
+          {!registro && previa.length > 1 && (
+            <div className="bg-muted/40 max-h-48 overflow-y-auto rounded-md border p-2 text-sm sm:col-span-2">
+              {previa.map((p, i) => (
+                <div key={i} className="flex justify-between py-0.5 tabular-nums">
+                  <span>{i + 1}/{previa.length} — {formatDate(p.vencimento)}</span><span>{formatBRL(p.valor)}</span>
+                </div>
+              ))}
+              <div className="mt-1 flex justify-between border-t pt-1 font-semibold">
+                <span>Total</span><span>{formatBRL(previa.reduce((s, p) => s + p.valor, 0))}</span>
+              </div>
+            </div>
           )}
           {registro && registro["status"] !== "pago" && (
             <div className="space-y-1"><Label>Situação</Label>
