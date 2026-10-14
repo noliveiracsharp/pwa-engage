@@ -116,6 +116,7 @@ function OrcamentosPage() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [preview, setPreview] = useState<Row | null>(null);
   const [propostaOpen, setPropostaOpen] = useState(false);
+  const [minutaOpen, setMinutaOpen] = useState(false);
   const [f, setF] = useState({ busca: "", situacao: "todos", vendedor: "todos", ano: "todos" });
   const [duplicarDe, setDuplicarDe] = useState<{ record: Row; linhas: Row[] } | null>(null);
 
