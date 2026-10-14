@@ -19,6 +19,8 @@ import {
   round2,
 } from "@/lib/orcamentos";
 import { rowId } from "@/lib/crud";
+import { titulosDoPedido } from "@/lib/financeiro";
+import { inserirTitulos } from "@/lib/financeiro-db";
 import type { Row } from "@/lib/row";
 
 type Props = {
@@ -98,6 +100,7 @@ export function GerarPedidosDialog({ open, onOpenChange, orcamento, linhas, iten
     try {
       const empresaId = orcamento["empresa_id"] as string | undefined;
       let n = 0;
+      let semFinanceiro = false;
       for (const [fid, ls] of grupos) {
         const totalG = round2(ls.reduce((s, l) => s + l.qtd * l.custo, 0));
         const numero = await proximoNumero("pedidos_compra", "PC", empresaId);
@@ -119,10 +122,18 @@ export function GerarPedidosDialog({ open, onOpenChange, orcamento, linhas, iten
           })) as never,
         );
         if (e2) throw e2;
+        try {
+          await inserirTitulos(String(empresaId), titulosDoPedido({ pedidoId: pid, numero, fornecedorId: fid, total: totalG, cronograma }));
+        } catch {
+          semFinanceiro = true;
+        }
         n++;
       }
       toast.success(n === 1 ? "1 pedido de compra gerado (em Cotações › Pedidos)." : `${n} pedidos de compra gerados.`);
+      if (semFinanceiro) toast.warning("Contas a pagar não lançadas: rode o script atendeai-financeiro.sql.");
+      else toast.success("Contas a pagar lançadas no Financeiro.");
       qc.invalidateQueries({ queryKey: ["table", "pedidos_compra"] });
+      qc.invalidateQueries({ queryKey: ["table", "financeiro_titulos"] });
       onOpenChange(false);
     } catch (e) {
       const m = e instanceof Error ? e.message : String((e as { message?: string })?.message ?? "");
