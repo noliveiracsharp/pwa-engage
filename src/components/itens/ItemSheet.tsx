@@ -156,7 +156,7 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, duplic
     }
     setV({
       tipo: text(pick(record, ["tipo"], "Produto")),
-      codigo: duplicando ? "" : text(pick(record, ["codigo"], "")),
+      codigo: duplicando ? nextCodigoFor(text(pick(record, ["tipo"], "Produto"))) : text(pick(record, ["codigo"], "")),
       descricao: text(pick(record, ["descricao"], "")) + (duplicando ? " (Cópia)" : ""),
       unidade_medida_id: text(pick(record, ["unidade_medida_id"], "")) || NONE,
       centro_custo_id: text(pick(record, ["centro_custo_id"], "")) || NONE,
