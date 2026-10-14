@@ -10,7 +10,7 @@ import type { Row } from "@/lib/row";
 export const Route = createFileRoute("/minuta/$token")({
   staticData: { sitemap: false },
   ssr: false,
-  validateSearch: (s: Record<string, unknown>) => ({ a: typeof s.a === "string" ? s.a : "" }),
+  validateSearch: (s: Record<string, unknown>) => ({ a: typeof s["a"] === "string" ? s["a"] : "" }),
   head: () => ({
     meta: [
       { title: "Minuta de contrato — Atende.ai" },

@@ -4,9 +4,9 @@ import type { Row } from "@/lib/row";
 type Props = {
   id: string;
   orcamento: Row;
-  empresa?: Row | null;
-  cliente?: Row | null;
-  vendedor?: Row | null;
+  empresa?: Row | null | undefined;
+  cliente?: Row | null | undefined;
+  vendedor?: Row | null | undefined;
   linhas: Row[];
   itens: Row[];
   anexos: AnexoContrato[];
