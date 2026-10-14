@@ -12,8 +12,11 @@ const MIN_PX = 56;
 
 function elegivel(img: HTMLImageElement) {
   if (img.closest("[data-no-zoom],[data-visualizador],[data-sidebar],header,nav,button:not([data-zoom])")) return false;
+  if (!img.currentSrc) return false;
+  // Fotos em tabelas (ex.: avatares de Usuários/Pessoas) e marcadas com data-zoom abrem mesmo pequenas.
+  if (img.closest("[data-zoom],table")) return true;
   const r = img.getBoundingClientRect();
-  return r.width >= MIN_PX && r.height >= MIN_PX && !!img.currentSrc;
+  return r.width >= MIN_PX && r.height >= MIN_PX;
 }
 
 export function VisualizadorGlobal() {
