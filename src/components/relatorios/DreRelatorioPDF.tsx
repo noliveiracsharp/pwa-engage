@@ -1,5 +1,7 @@
 import { formatBRL, categoriaDespesaLabel } from "@/lib/orcamentos";
 import type { DreLinha } from "@/lib/dre-ofertas";
+import type { MesCaixa } from "@/lib/fluxo-caixa";
+import { TabelaFluxo } from "@/components/relatorios/FluxoCaixaMensal";
 
 type Soma = ReturnType<typeof import("@/lib/dre-ofertas").somarDre>;
 const pct = (v: number) => `${v.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`;
@@ -13,6 +15,7 @@ export type DreRelatorioProps = {
   etapas: { nome: string; s: Soma }[];
   vendedores: { nome: string; s: Soma }[];
   despesas: [string, number][];
+  fluxo?: MesCaixa[];
   projetos: { numero: string; cliente: string; vendedor: string; situacao: string; l: DreLinha }[];
 };
 
@@ -121,6 +124,13 @@ export function DreRelatorioDocumento(p: DreRelatorioProps) {
           ))}
         </tbody>
       </table>
+
+      {p.fluxo && (
+        <>
+          <h2>6. Fluxo de caixa projetado — mês a mês</h2>
+          <TabelaFluxo meses={p.fluxo} print />
+        </>
+      )}
 
       <footer className="dre-rodape">
         Valores previstos com base na memória de cálculo gravada em cada oferta. Comissões consideradas apenas quando o papel possui beneficiário.

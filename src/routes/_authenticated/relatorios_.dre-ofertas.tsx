@@ -24,6 +24,8 @@ import { type Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
 import { useEmpresaAtiva } from "@/hooks/useEmpresaAtiva";
 import { DreRelatorioDocumento, imprimirDre } from "@/components/relatorios/DreRelatorioPDF";
+import { FluxoCaixaSecao } from "@/components/relatorios/FluxoCaixaMensal";
+import { fluxoCaixaMensal } from "@/lib/fluxo-caixa";
 
 export const Route = createFileRoute("/_authenticated/relatorios_/dre-ofertas")({
   staticData: { sitemap: false },
@@ -97,6 +99,7 @@ function DreOfertasPage() {
   });
   const linhas = filtradas.map((o) => ({ o, l: linhaDre(o, comissoesDaOferta(comissoes, String(o["id"]))) }));
   const tot = somarDre(linhas.map((x) => x.l));
+  const fluxo = fluxoCaixaMensal(linhas);
 
   const porEtapa = (etapas.length ? etapas : []).filter((e) => f.situacao !== "todos" || f.escopo === "todas" || !etapaPerdida(e.descricao)).map((e) => {
     const ls = linhas.filter((x) => etapaDe(x.o)?.id === e.id).map((x) => x.l);
@@ -186,6 +189,7 @@ function DreOfertasPage() {
           etapas={porEtapa.map(({ e, s }) => ({ nome: e.descricao, s }))}
           vendedores={porVendedor.map(({ id, s }) => ({ nome: id ? nome(usuarios, id) : "Sem vendedor", s }))}
           despesas={despCat}
+          fluxo={fluxo}
           projetos={[...linhas].sort((a, b) => b.l.liquido - a.l.liquido).map(({ o, l }) => ({
             numero: String(o["numero"] ?? "—"), cliente: nome(parceiros, o["parceiro_id"]), vendedor: nome(usuarios, o["usuario_id"]),
             situacao: String(etapaDe(o)?.descricao ?? o["situacao"] ?? "—"), l,
@@ -214,6 +218,8 @@ function DreOfertasPage() {
         <Kpi titulo="Resultado previsto" valor={formatBRL(tot.resultado)}
           sub={<span className={cn("rounded px-1.5 py-0.5 text-xs font-medium", FAROL[farolMargem(tot.margem)])}>Margem {pct(tot.margem)}</span>} />
       </div>
+
+      <FluxoCaixaSecao meses={fluxo} />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <section className="bg-card rounded-lg border p-4">
