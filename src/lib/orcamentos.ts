@@ -365,6 +365,8 @@ export function gerarParcelas(opts: {
   entrada?: number;
   /** Valores fixados à mão por número de parcela; o saldo é rateado nas demais. */
   fixas?: Record<number, number>;
+  /** Datas de vencimento alteradas à mão (número da parcela → yyyy-mm-dd). */
+  datas?: Record<number, string>;
 }): Parcela[] {
   const qtd = Math.max(1, Math.floor(num(opts.quantidade)));
   const total = round2(Math.max(0, num(opts.total)));
@@ -407,7 +409,7 @@ export function gerarParcelas(opts: {
 
   return valores.map((valor, i) => ({
     numero: i + 1,
-    vencimento: addMonthsISO(primeira, i),
+    vencimento: toISODate(opts.datas?.[i + 1]) || addMonthsISO(primeira, i),
     valor,
   }));
 }

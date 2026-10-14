@@ -111,6 +111,7 @@ const emptyHeader = (vendedorId: string): Header => {
     entrada_tipo: "percentual",
     entrada: "",
     fixas: {},
+    datas: {},
     modalidade: "prazo",
     desconto_avista_tipo: "percentual",
     desconto_avista: "",
@@ -441,8 +442,9 @@ export function OrcamentoSheet({
         coeficiente: h.coeficiente_juros,
         entrada: ehAvista ? 0 : entradaValor,
         fixas: ehAvista ? {} : h.fixas,
+        datas: h.datas,
       }),
-    [ehAvista, avista.total, totais.total_liquido, h.qtd_parcelas, h.primeira_parcela, h.tem_juros, h.coeficiente_juros, entradaValor, h.fixas],
+    [h.datas, ehAvista, avista.total, totais.total_liquido, h.qtd_parcelas, h.primeira_parcela, h.tem_juros, h.coeficiente_juros, entradaValor, h.fixas],
   );
 
   // Acréscimo financeiro quando o parcelamento é "Com juros".
