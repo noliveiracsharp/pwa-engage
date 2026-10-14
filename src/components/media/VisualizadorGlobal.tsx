@@ -68,8 +68,8 @@ export function VisualizadorGlobal() {
       data-visualizador
       className="fixed inset-0 z-[9999] flex flex-col bg-foreground/90 pointer-events-auto"
       ref={(el) => {
-        if (!el || el.dataset.ok) return;
-        el.dataset.ok = "1";
+        if (!el || el.dataset["ok"]) return;
+        el.dataset["ok"] = "1";
         for (const ev of ["pointerdown", "mousedown", "focusin"]) el.addEventListener(ev, (e) => e.stopPropagation());
       }}
     >
