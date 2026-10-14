@@ -46,8 +46,8 @@ export function AppSidebar({ open, onNavigate }: Props) {
       >
         {open && (
           <div className="mb-2 flex items-center justify-center border-b border-sidebar-border px-2 pb-3 pt-1">
-            {ativa.logo
-              ? <img src={ativa.logo} alt={ativa.nome} className="h-10 w-auto max-w-full object-contain" />
+            {ativa.logoAtivo
+              ? <img src={ativa.logoAtivo} alt={ativa.nome} className="h-10 w-auto max-w-full object-contain" />
               : <span className="truncate text-base font-bold text-sidebar-foreground">{ativa.nome}</span>}
           </div>
         )}

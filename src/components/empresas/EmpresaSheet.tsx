@@ -669,12 +669,24 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
             t.kind === "dados" ? (
           <TabsContent key={t.key} value={t.key} className="mt-4">
             <fieldset disabled={dadosLocked} className="min-w-0 disabled:opacity-70">
-            <div className="border-border mb-5 border-b pb-5">
-              <PhotoUpload
-                value={values["logo"] ?? ""}
-                alt={values["nome"] ? `Logo de ${values["nome"]}` : "Logo da empresa"}
-                onChange={(url) => setValues((current) => ({ ...current, logo: url }))}
-              />
+            <div className="border-border mb-5 grid gap-4 border-b pb-5 sm:grid-cols-2">
+              <div className="light rounded-lg border border-border bg-background p-3 text-foreground">
+                <p className="mb-2 text-sm font-medium">Logo — modo claro (padrão)</p>
+                <PhotoUpload
+                  value={values["logo"] ?? ""}
+                  alt={values["nome"] ? `Logo de ${values["nome"]}` : "Logo da empresa"}
+                  onChange={(url) => setValues((current) => ({ ...current, logo: url }))}
+                />
+              </div>
+              <div className="dark rounded-lg border border-border bg-background p-3 text-foreground">
+                <p className="mb-2 text-sm font-medium">Logo — modo escuro (opcional)</p>
+                <PhotoUpload
+                  value={values["logo_escuro"] ?? ""}
+                  alt="Logo para o modo escuro"
+                  onChange={(url) => setValues((current) => ({ ...current, logo_escuro: url }))}
+                />
+                <p className="mt-2 text-xs text-muted-foreground">Sem logo escuro, o logo padrão é usado.</p>
+              </div>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
             {EMPRESA_FIELDS.filter((field) => field.type !== "photo")
