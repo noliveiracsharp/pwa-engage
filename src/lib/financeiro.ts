@@ -1,4 +1,19 @@
-import { categoriaDespesaLabel, despesasFromValue, num, parcelasFromValue, round2, type Parcela } from "@/lib/orcamentos";
+import { addMonthsISO, categoriaDespesaLabel, condicaoCompraFromValue, cronogramaCompra, despesasFromValue, num, parcelasFromValue, round2, type Parcela } from "@/lib/orcamentos";
+
+export type ModoLancamento = "unico" | "parcelado" | "recorrente";
+
+/** Lançamento manual: único, valor total dividido em N parcelas mensais, ou valor mensal repetido por N meses. */
+export function parcelasManuais(opts: { modo: ModoLancamento; valor: number; quantidade: number; primeira: string }): { vencimento: string; valor: number }[] {
+  const v = round2(Math.max(0, num(opts.valor)));
+  if (v <= 0) return [];
+  const n = opts.modo === "unico" ? 1 : Math.max(1, Math.min(120, Math.floor(num(opts.quantidade)) || 1));
+  if (opts.modo !== "parcelado") return Array.from({ length: n }, (_, i) => ({ vencimento: addMonthsISO(opts.primeira, i), valor: v }));
+  const base = Math.floor((v / n) * 100) / 100;
+  return Array.from({ length: n }, (_, i) => ({
+    vencimento: addMonthsISO(opts.primeira, i),
+    valor: i === n - 1 ? round2(v - base * (n - 1)) : base,
+  }));
+}
 import type { Row } from "@/lib/row";
 
 export type TipoTitulo = "receber" | "pagar";
@@ -67,6 +82,26 @@ export function titulosDaOferta(orc: Row): NovoTitulo[] {
     origem_id: id,
     parcela_n: p.numero,
   }));
+  const forn = cronogramaCompra({
+    custo: num(orc["total_custo"]),
+    condicao: condicaoCompraFromValue(orc["compra_condicao"]),
+    parcelasCliente: parcelas,
+    dataPadrao: iso(orc["dt_orcamento"] ?? orc["created_at"]) || hojeISO(),
+  });
+  forn.forEach((p, i) => {
+    if (round2(p.valor) <= 0) return;
+    out.push({
+      tipo: "pagar",
+      descricao: `Oferta ${numero} — Produtos / Fornecedor (${i + 1}/${forn.length})`,
+      categoria: "Fornecedores",
+      vencimento: p.vencimento || hojeISO(),
+      valor: round2(p.valor),
+      parceiro_id: null,
+      origem_tipo: "oferta",
+      origem_id: id,
+      parcela_n: i + 1,
+    });
+  });
   const vencDesp = parcelas[0]?.vencimento || hojeISO();
   despesasFromValue(orc["despesas_operacionais"]).forEach((d, i) => {
     const v = round2(Math.max(0, num(d.valor)));
