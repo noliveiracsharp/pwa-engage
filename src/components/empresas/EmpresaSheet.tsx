@@ -31,10 +31,12 @@ type EmpresaField = {
   key: string;
   label: string;
   full?: boolean;
-  type?: "text" | "boolean" | "photo" | "tel" | "document" | "select";
+  type?: "text" | "boolean" | "photo" | "tel" | "document" | "select" | "color" | "favicon";
   options?: Array<{ value: string; label: string }>;
   numeric?: boolean;
   fiscal?: boolean;
+  /** Campo de white label: vazio grava null (volta ao padrão). */
+  wl?: boolean;
 };
 
 export const EMPRESA_FIELDS: EmpresaField[] = [
@@ -47,6 +49,10 @@ export const EMPRESA_FIELDS: EmpresaField[] = [
   { key: "telefone2", label: "Telefone 2", type: "tel" },
   { key: "logo", label: "Logo", type: "photo", full: true },
   { key: "titulo", label: "Título exibido", full: true },
+  { key: "site_url", label: "URL / site da empresa", full: true, wl: true },
+  { key: "cor_primaria_claro", label: "Cor primária — modo claro", type: "color", wl: true },
+  { key: "cor_primaria_escuro", label: "Cor primária — modo escuro", type: "color", wl: true },
+  { key: "favicon", label: "Favicon (ícone da aba)", type: "favicon", full: true, wl: true },
   { key: "inscricao_estadual", label: "Inscrição Estadual (IE)", fiscal: true },
   { key: "inscricao_municipal", label: "Inscrição Municipal (IM)", fiscal: true },
   {
@@ -636,7 +642,7 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
         payload[field.key] = raw === "true";
       } else if (field.numeric) {
         payload[field.key] = raw === "" ? null : Number(digitsOnly(raw)) || 0;
-      } else if (field.fiscal) {
+      } else if (field.fiscal || field.wl) {
         payload[field.key] = raw.trim() || null;
       } else {
         payload[field.key] = raw;
@@ -675,6 +681,14 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
               .filter((field) => field.key !== "compartilhar_catalogo_filiais" || !empresa?.["empresa_pai_id"])
               .map((field) => (
               <Fragment key={field.key}>
+              {field.key === "site_url" && (
+                <div className="border-border mt-2 border-t pt-4 sm:col-span-2">
+                  <h3 className="text-sm font-semibold">White label (identidade visual)</h3>
+                  <p className="text-muted-foreground text-xs">
+                    Cores, ícone e site aplicados ao sistema para os usuários desta empresa. Deixe vazio para usar o padrão.
+                  </p>
+                </div>
+              )}
               {field.key === "inscricao_estadual" && (
                 <div className="border-border mt-2 border-t pt-4 sm:col-span-2">
                   <h3 className="text-sm font-semibold">Dados fiscais (emissão de notas)</h3>
@@ -701,6 +715,37 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
                       ))}
                     </SelectContent>
                   </Select>
+                ) : field.type === "color" ? (
+                  <div className="flex gap-2">
+                    <input
+                      type="color"
+                      aria-label={field.label}
+                      className="h-10 w-12 shrink-0 cursor-pointer rounded-md border bg-background p-1"
+                      value={/^#[0-9a-f]{6}$/i.test(values[field.key] ?? "") ? values[field.key] : "#2563eb"}
+                      onChange={(e) => setValues((c) => ({ ...c, [field.key]: e.target.value }))}
+                    />
+                    <Input
+                      id={field.key}
+                      placeholder="Padrão do sistema"
+                      value={values[field.key] ?? ""}
+                      onChange={(e) => setValues((c) => ({ ...c, [field.key]: e.target.value }))}
+                    />
+                    {values[field.key] && (
+                      <Button type="button" variant="ghost" size="icon" title="Restaurar padrão"
+                        onClick={() => setValues((c) => ({ ...c, [field.key]: "" }))}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                ) : field.type === "favicon" ? (
+                  <div className="space-y-1">
+                    <PhotoUpload
+                      value={values[field.key] ?? ""}
+                      alt="Favicon da empresa"
+                      onChange={(url) => setValues((c) => ({ ...c, [field.key]: url }))}
+                    />
+                    <p className="text-muted-foreground text-xs">Use uma imagem quadrada simples (ex.: 512×512). Sem favicon, o logo é usado.</p>
+                  </div>
                 ) : field.type === "boolean" ? (
                   <div className="flex h-10 items-center justify-between gap-3 rounded-md border bg-background px-3 py-2">
                     <span className="text-sm text-muted-foreground">

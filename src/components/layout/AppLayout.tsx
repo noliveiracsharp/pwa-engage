@@ -6,12 +6,14 @@ import { PullToRefresh } from "./PullToRefresh";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useNotificacoesChat } from "@/hooks/useNotificacoesChat";
+import { useWhiteLabel } from "@/hooks/useWhiteLabel";
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const isMobile = useIsMobile();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   useNotificacoesChat();
+  useWhiteLabel();
 
   // No celular, qualquer navegação fecha o menu.
   useEffect(() => { if (isMobile) setOpen(false); }, [pathname, isMobile]);
