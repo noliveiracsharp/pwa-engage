@@ -1,3 +1,10 @@
+import { OrcamentoDespesas } from "@/components/orcamentos/OrcamentoDespesas";
+import {
+  despesasFromValue,
+  despesasToValue,
+  totalDespesas,
+  type DespesaOperacional,
+} from "@/lib/orcamentos";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FileText } from "lucide-react";
 import { toast } from "sonner";
@@ -85,6 +92,7 @@ type Header = {
   desconto: string;
   frete: string;
   valores_adicionais: string;
+  despesas: DespesaOperacional[];
 } & PagamentoState &
   ModalidadeState;
 
@@ -102,6 +110,7 @@ const emptyHeader = (vendedorId: string): Header => {
     desconto: "",
     frete: "",
     valores_adicionais: "",
+    despesas: [],
     obs_nota_fiscal: "",
     forma_pagamento: "",
     forma_pagamento_obs: "",
@@ -161,6 +170,7 @@ const headerFromRecord = (r: Row): Header => {
     desconto: num(r["desconto"]) ? String(num(r["desconto"])) : "",
     frete: num(r["frete"]) ? String(num(r["frete"])) : "",
     valores_adicionais: num(r["valores_adicionais"]) ? String(num(r["valores_adicionais"])) : "",
+    despesas: despesasFromValue(r["despesas_operacionais"]),
     obs_nota_fiscal: String(pick(r, ["obs_nota_fiscal"]) ?? ""),
     forma_pagamento: String(pick(r, ["forma_pagamento"]) ?? ""),
     forma_pagamento_obs: String(pick(r, ["forma_pagamento_obs"]) ?? ""),
@@ -516,6 +526,8 @@ export function OrcamentoSheet({
       total_imposto: totais.total_imposto,
       total_lucro: totais.total_lucro,
       margem_pct: totais.margem_pct,
+      despesas_operacionais: despesasToValue(h.despesas),
+      total_despesas: totalDespesas(h.despesas),
       obs_nota_fiscal: h.obs_nota_fiscal.trim() || null,
       forma_pagamento: h.forma_pagamento || null,
       forma_pagamento_obs: h.forma_pagamento_obs.trim() || null,
@@ -723,7 +735,14 @@ export function OrcamentoSheet({
             acrescimoJuros={acrescimoJuros}
             descontoAvista={ehAvista ? avista.desconto_valor : 0}
             comissoes={totalComissoes}
+            despesas={totalDespesas(h.despesas)}
             onChange={(patch) => patchHeader(patch)}
+          />
+
+          <OrcamentoDespesas
+            despesas={h.despesas}
+            readOnly={readOnly}
+            onChange={(despesas) => patchHeader({ despesas })}
           />
 
           {/* ------------- memória de cálculo e comissões ------------- */}
