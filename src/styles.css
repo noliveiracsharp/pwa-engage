@@ -633,3 +633,5 @@
 .prop-logo-centro { align-self: center !important; }
 .prop-logo-direita { align-self: flex-end !important; }
 .prop-capa-centralizada .prop-capa-centro, .prop-capa-centralizada .prop-capa-rodape { text-align: center; }
+
+table img { cursor: zoom-in; }
