@@ -31,10 +31,12 @@ type EmpresaField = {
   key: string;
   label: string;
   full?: boolean;
-  type?: "text" | "boolean" | "photo" | "tel" | "document" | "select";
+  type?: "text" | "boolean" | "photo" | "tel" | "document" | "select" | "color" | "favicon";
   options?: Array<{ value: string; label: string }>;
   numeric?: boolean;
   fiscal?: boolean;
+  /** Campo de white label: vazio grava null (volta ao padrão). */
+  wl?: boolean;
 };
 
 export const EMPRESA_FIELDS: EmpresaField[] = [
@@ -47,6 +49,10 @@ export const EMPRESA_FIELDS: EmpresaField[] = [
   { key: "telefone2", label: "Telefone 2", type: "tel" },
   { key: "logo", label: "Logo", type: "photo", full: true },
   { key: "titulo", label: "Título exibido", full: true },
+  { key: "site_url", label: "URL / site da empresa", full: true, wl: true },
+  { key: "cor_primaria_claro", label: "Cor primária — modo claro", type: "color", wl: true },
+  { key: "cor_primaria_escuro", label: "Cor primária — modo escuro", type: "color", wl: true },
+  { key: "favicon", label: "Favicon (ícone da aba)", type: "favicon", full: true, wl: true },
   { key: "inscricao_estadual", label: "Inscrição Estadual (IE)", fiscal: true },
   { key: "inscricao_municipal", label: "Inscrição Municipal (IM)", fiscal: true },
   {
