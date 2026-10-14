@@ -340,6 +340,10 @@ export function OrcamentoSheet({
   );
 
   const selecionados = useMemo(() => new Set(linhas.map((l) => l.item_id)), [linhas]);
+  const marcaNome = useMemo(
+    () => new Map(marcas.map((m) => [String(rowId(m) ?? ""), String(m["descricao"] ?? "")])),
+    [marcas],
+  );
   const itemOptions = useMemo<SearchOption[]>(
     () =>
       itens
@@ -347,16 +351,18 @@ export function OrcamentoSheet({
         .map((i) => {
           const codigo = String(i["codigo"] ?? "");
           const descricao = String(i["descricao"] ?? "—");
+          const marca = marcaNome.get(String(i["itens_marcas_id"] ?? "")) ?? "";
+          const preco = formatBRL(num(i["preco_venda"]));
           return {
             value: String(rowId(i) ?? ""),
             label: codigo ? `${codigo} — ${descricao}` : descricao,
-            hint: formatBRL(num(i["preco_venda"])),
-            keywords: [codigo, String(i["tipo"] ?? "")].filter(Boolean),
+            hint: marca ? `${marca} • ${preco}` : preco,
+            keywords: [codigo, String(i["tipo"] ?? ""), marca].filter(Boolean),
             images: Array.isArray(i["imagens"]) ? (i["imagens"] as unknown[]).map(String).filter(Boolean) : [],
           };
         })
         .sort((a, b) => a.label.localeCompare(b.label, "pt-BR", { numeric: true })),
-    [itens, selecionados],
+    [itens, selecionados, marcaNome],
   );
 
   const unidadeOptions = useMemo(
