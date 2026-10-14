@@ -26,6 +26,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { SearchSelect } from "@/components/data-table/SearchSelect";
@@ -410,13 +411,13 @@ function ProjetoDialog({ d, espacoId, original, onClose }: { d: D; espacoId: str
   }
 
   return (
-    <Dialog open onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{original ? "Editar projeto" : "Novo projeto"}</DialogTitle>
-          <DialogDescription>Nome, cliente, gestor, status e período do projeto.</DialogDescription>
-        </DialogHeader>
-        <div className="grid gap-3 sm:grid-cols-2">
+    <Sheet open onOpenChange={(v) => !v && onClose()}>
+      <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-2xl">
+        <SheetHeader className="border-b p-6">
+          <SheetTitle>{original ? "Editar projeto" : "Novo projeto"}</SheetTitle>
+          <SheetDescription>Nome, cliente, gestor, status e período do projeto.</SheetDescription>
+        </SheetHeader>
+        <div className="grid flex-1 content-start gap-4 overflow-y-auto p-6 sm:grid-cols-2">
           <div className="space-y-1 sm:col-span-2"><Label>Nome</Label><Input value={String(f[d.pc.nome] ?? "")} onChange={(e) => set(d.pc.nome, e.target.value)} /></div>
           <div className="space-y-1 sm:col-span-2">
             <Label>Espaço *</Label>
@@ -462,12 +463,12 @@ function ProjetoDialog({ d, espacoId, original, onClose }: { d: D; espacoId: str
             <div className="space-y-1 sm:col-span-2"><Label>Descrição</Label><Textarea rows={3} value={String(f[d.pc.descricao] ?? "")} onChange={(e) => set(d.pc.descricao, e.target.value)} /></div>
           )}
         </div>
-        <DialogFooter>
+        <div className="flex justify-end gap-2 border-t p-4">
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
           <Button onClick={salvar}>Salvar</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }
 

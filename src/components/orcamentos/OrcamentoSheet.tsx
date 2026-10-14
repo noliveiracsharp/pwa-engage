@@ -739,7 +739,7 @@ export function OrcamentoSheet({
           />
         </fieldset>
 
-        <div className="bg-background sticky bottom-0 mt-4 flex flex-wrap justify-end gap-2 px-6 py-4">
+        <div className="mt-6 flex flex-wrap justify-end gap-2 border-t px-6 py-4">
           {record && onPreview && (
             <Button variant="secondary" onClick={onPreview} className="mr-auto">
               <FileText className="mr-2 h-4 w-4" />
