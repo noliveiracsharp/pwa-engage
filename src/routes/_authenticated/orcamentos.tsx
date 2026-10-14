@@ -132,7 +132,7 @@ function OrcamentosPage() {
       if (ja > 0) {
         if (!window.confirm(`Esta oferta já gerou ${ja} conta(s). Regerar apenas as que estão em aberto?`)) return;
         await apagarAbertosDaOrigem([id], [...tipos]);
-      } else if (!window.confirm("Lançar no Financeiro as parcelas do cliente (a receber) e as despesas operacionais (a pagar)?")) return;
+      } else if (!window.confirm("Lançar no Financeiro as parcelas do cliente (a receber), as parcelas do fornecedor/produtos e as despesas operacionais (a pagar)?\n\nSe você também gerar Pedidos de Compra desta oferta, apague as parcelas de produtos para não pagar em dobro.")) return;
       const atual = todos.find((t) => rowId(t) === rowId(r)) ?? r;
       const n = await inserirTitulos(String(atual["empresa_id"] ?? empresaId ?? ""), titulosDaOferta({ ...atual, id }));
       toast.success(n ? `${n} conta(s) lançada(s) no Financeiro.` : "Nada a lançar nesta oferta.");
