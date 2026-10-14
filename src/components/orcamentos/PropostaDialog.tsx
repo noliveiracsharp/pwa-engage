@@ -28,6 +28,7 @@ import {
 import { pick, type Row } from "@/lib/row";
 import { PropostaDocumento } from "./PropostaDocumento";
 import { CapaEstiloEditor } from "./CapaEstiloEditor";
+import { EnviarPropostaDialog } from "./EnviarPropostaDialog";
 
 type Props = {
   open: boolean;
@@ -51,6 +52,7 @@ export function PropostaDialog(props: Props) {
   const qc = useQueryClient();
   const [blocos, setBlocos] = useState<Bloco[]>([]);
   const [salvando, setSalvando] = useState(false);
+  const [envioOpen, setEnvioOpen] = useState(false);
   const empresaId = String(orcamento?.["empresa_id"] ?? rowId(empresa ?? {}) ?? "");
 
   useEffect(() => {
@@ -147,14 +149,7 @@ export function PropostaDialog(props: Props) {
     toast.success("Link copiado");
   };
 
-  const whatsapp = async () => {
-    if (!(await salvar(true))) return;
-    const tel = String(pick(cliente ?? {}, ["celular", "telefone", "whatsapp"]) ?? "").replace(/\D/g, "");
-    const nome = String(pick(cliente ?? {}, ["nome_fantasia", "razao_social", "nome"]) ?? "");
-    const msg = `Olá${nome ? `, ${nome}` : ""}! Segue a proposta ${String(orcamento["numero"] ?? "")}: ${link}`;
-    const num = tel ? (tel.startsWith("55") ? tel : `55${tel}`) : "";
-    window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, "_blank");
-  };
+  const whatsapp = () => setEnvioOpen(true);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
