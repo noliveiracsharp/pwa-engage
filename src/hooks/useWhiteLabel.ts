@@ -27,7 +27,7 @@ export function useWhiteLabel() {
   useEffect(() => {
     const id = "white-label-cores";
     let el = document.getElementById(id) as HTMLStyleElement | null;
-    const css = bloco(":root", claro) + bloco(".dark", escuro || claro);
+    const css = bloco(":root", claro ?? "") + bloco(".dark", escuro || claro || "");
     if (!css) { el?.remove(); return; }
     if (!el) { el = document.createElement("style"); el.id = id; document.head.appendChild(el); }
     el.textContent = css;
