@@ -21,6 +21,8 @@ import {
 } from "@/lib/dre-ofertas";
 import { type Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
+import { useEmpresaAtiva } from "@/hooks/useEmpresaAtiva";
+import { DreRelatorioDocumento, imprimirDre } from "@/components/relatorios/DreRelatorioPDF";
 
 export const Route = createFileRoute("/_authenticated/relatorios_/dre-ofertas")({
   staticData: { sitemap: false },
@@ -60,6 +62,7 @@ function DreOfertasPage() {
   const [f, setF] = useState({ ano: String(new Date().getFullYear()), tri: "todos", situacao: "todos", vendedor: "todos" });
   const [apresentar, setApresentar] = useState(false);
   const areaRef = useRef<HTMLDivElement>(null);
+  const emp = useEmpresaAtiva();
 
   const nome = (lista: Row[], id: unknown) => {
     const r = lista.find((x) => String(x["id"]) === String(id ?? ""));
@@ -162,12 +165,29 @@ function DreOfertasPage() {
         </div>
         <div className="flex flex-wrap gap-2 print:hidden">
           <Button variant="outline" size="sm" onClick={exportarCsv}><Download className="mr-1 h-4 w-4" />Planilha</Button>
-          <Button variant="outline" size="sm" onClick={() => window.print()}><Printer className="mr-1 h-4 w-4" />PDF</Button>
+          <Button variant="outline" size="sm" onClick={imprimirDre}><Printer className="mr-1 h-4 w-4" />PDF</Button>
           <Button size="sm" onClick={alternarApresentacao}>
             {apresentar ? <Minimize2 className="mr-1 h-4 w-4" /> : <Maximize2 className="mr-1 h-4 w-4" />}
             {apresentar ? "Sair da apresentação" : "Modo apresentação"}
           </Button>
         </div>
+      </div>
+
+      <div className="dre-print-src" aria-hidden>
+        <DreRelatorioDocumento
+          empresa={{ nome: emp.nome ?? "", logo: emp.logo ?? "" }}
+          periodo={periodo}
+          filtros={`Situação: ${f.situacao === "todos" ? "Todas" : f.situacao} • Vendedor: ${f.vendedor === "todos" ? "Todos" : nome(usuarios, f.vendedor)}`}
+          tot={tot}
+          cascata={cascata}
+          etapas={porEtapa.map(({ e, s }) => ({ nome: e.descricao, s }))}
+          vendedores={porVendedor.map(({ id, s }) => ({ nome: id ? nome(usuarios, id) : "Sem vendedor", s }))}
+          despesas={despCat}
+          projetos={[...linhas].sort((a, b) => b.l.liquido - a.l.liquido).map(({ o, l }) => ({
+            numero: String(o["numero"] ?? "—"), cliente: nome(parceiros, o["parceiro_id"]), vendedor: nome(usuarios, o["usuario_id"]),
+            situacao: String(etapaDe(o)?.descricao ?? o["situacao"] ?? "—"), l,
+          }))}
+        />
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 print:hidden">
