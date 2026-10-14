@@ -15,6 +15,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider } from "@/hooks/useAuth";
 import { Toaster } from "@/components/ui/sonner";
+import { VisualizadorGlobal } from "@/components/media/VisualizadorGlobal";
 import { NovaVersaoAviso } from "@/components/layout/NovaVersaoAviso";
 
 function NotFoundComponent() {
@@ -132,6 +133,7 @@ function RootComponent() {
           {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
           <Outlet />
           <Toaster richColors position="top-right" />
+          <VisualizadorGlobal />
           <NovaVersaoAviso />
         </AuthProvider>
       </ThemeProvider>
