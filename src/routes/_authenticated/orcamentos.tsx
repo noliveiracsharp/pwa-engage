@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { etapasDoKanban, kanbanDoModuloOrcamentos } from "@/lib/orcamento-kanban";
 import { corEtapa } from "@/lib/kanban-cores";
 import { createFileRoute } from "@tanstack/react-router";
-import { ChevronDown, Copy, FileSignature, FileText, ScrollText } from "lucide-react";
+import { ChevronDown, Copy, FileSignature, FileText, ScrollText, ShoppingCart } from "lucide-react";
 import { toast } from "sonner";
 import { DataTable, type Column } from "@/components/data-table/DataTable";
 import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
@@ -18,6 +18,7 @@ import { OrcamentoSheet } from "@/components/orcamentos/OrcamentoSheet";
 import { OrcamentoPDF } from "@/components/orcamentos/OrcamentoPDF";
 import { PropostaDialog } from "@/components/orcamentos/PropostaDialog";
 import { MinutaDialog } from "@/components/orcamentos/MinutaDialog";
+import { GerarPedidosDialog } from "@/components/orcamentos/GerarPedidosDialog";
 import { SituacaoBadge } from "@/components/orcamentos/SituacaoBadge";
 import { useAlterarSituacao, useSaveOrcamento } from "@/hooks/useSaveOrcamento";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
@@ -117,6 +118,7 @@ function OrcamentosPage() {
   const [preview, setPreview] = useState<Row | null>(null);
   const [propostaOpen, setPropostaOpen] = useState(false);
   const [minutaOpen, setMinutaOpen] = useState(false);
+  const [pedidosOpen, setPedidosOpen] = useState(false);
   const [f, setF] = useState({ busca: "", situacao: "todos", vendedor: "todos", ano: "todos" });
   const [duplicarDe, setDuplicarDe] = useState<{ record: Row; linhas: Row[] } | null>(null);
 
@@ -383,6 +385,20 @@ function OrcamentosPage() {
           <Button
             variant="ghost"
             size="icon"
+            aria-label="Gerar pedidos de compra"
+            title="Gerar pedidos de compra"
+            onClick={() => {
+              setPreview(r);
+              setPedidosOpen(true);
+            }}
+          >
+            <ShoppingCart className="h-4 w-4" />
+          </Button>
+        )}
+        {perms.canCreate && (
+          <Button
+            variant="ghost"
+            size="icon"
             aria-label="Duplicar oferta"
             title="Duplicar oferta"
             onClick={() => duplicar(r)}
@@ -564,6 +580,15 @@ function OrcamentosPage() {
         itens={itens}
         unidades={unidades}
         marcas={marcas}
+      />
+
+      <GerarPedidosDialog
+        open={pedidosOpen}
+        onOpenChange={setPedidosOpen}
+        orcamento={preview ? (todos.find((t) => rowId(t) === rowId(preview)) ?? preview) : null}
+        linhas={linhasPreview}
+        itens={itens}
+        parceiros={parceiros}
       />
 
       <MinutaDialog
