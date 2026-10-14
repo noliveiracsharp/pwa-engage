@@ -399,8 +399,51 @@ function OrcamentosPage() {
     return <p className="text-muted-foreground text-sm">Você não tem acesso a esta página.</p>;
   }
 
+  const baseCards = escopo.filter(
+    (r) =>
+      matchesAny([r["numero"], nomeCliente(r), nomeVendedor(r), r["descricao"]], f.busca) &&
+      (f.vendedor === "todos" || String(pick(r, ["usuario_id", "vendedor_id"]) ?? "") === f.vendedor) &&
+      (f.ano === "todos" || String(yearOf(r["dt_orcamento"]) ?? "") === f.ano),
+  );
+  const somar = (lista: Row[]) => lista.reduce((s, r) => s + (Number(r["total_liquido"]) || 0), 0);
+  const cards = [
+    { value: "todos", label: "Total geral", dot: "bg-foreground", lista: baseCards },
+    ...situacoes.map((s) => ({
+      value: s.value,
+      label: s.label,
+      dot: s.dot,
+      lista: baseCards.filter((r) => normSit(r["situacao"]) === normSit(s.value)),
+    })),
+  ];
+
   return (
     <>
+      <div className="mb-4 flex gap-3 overflow-x-auto pb-1">
+        {cards.map((c) => {
+          const ativo = f.situacao === c.value;
+          return (
+            <button
+              key={c.value}
+              type="button"
+              onClick={() => setF({ ...f, situacao: ativo && c.value !== "todos" ? "todos" : c.value })}
+              className={cn(
+                "bg-card relative min-w-44 flex-1 overflow-hidden rounded-lg border p-3 text-left transition hover:shadow-md",
+                ativo && "ring-primary ring-2",
+              )}
+            >
+              <span className={cn("absolute inset-x-0 top-0 h-1", c.dot)} />
+              <div className="text-muted-foreground flex items-center gap-2 text-xs font-medium">
+                <span className={cn("h-2.5 w-2.5 rounded-full", c.dot)} />
+                <span className="truncate">{c.label}</span>
+              </div>
+              <div className="mt-1 text-lg font-semibold tabular-nums">{formatBRL(somar(c.lista))}</div>
+              <div className="text-muted-foreground text-xs">
+                {c.lista.length} {c.lista.length === 1 ? "oferta" : "ofertas"}
+              </div>
+            </button>
+          );
+        })}
+      </div>
       <DataTable
         title="Ofertas"
         columns={columns}
