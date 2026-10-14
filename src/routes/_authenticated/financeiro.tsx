@@ -1,0 +1,427 @@
+import { useMemo, useState } from "react";
+import { createFileRoute } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
+import { CheckCircle2, Paperclip, Undo2 } from "lucide-react";
+import { toast } from "sonner";
+import { DataTable, type Column } from "@/components/data-table/DataTable";
+import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
+import { SearchSelect } from "@/components/data-table/SearchSelect";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { UploadInfo } from "@/components/ui/upload-info";
+import { supabase } from "@/integrations/supabase/client";
+import { usePagePermissions } from "@/hooks/usePagePermissions";
+import { useAuth } from "@/hooks/useAuth";
+import { useAudit } from "@/lib/audit";
+import { rowId, text, useTableRows } from "@/lib/crud";
+import { matchesAny } from "@/lib/input-masks";
+import { formatBRL, formatDate, num, round2 } from "@/lib/orcamentos";
+import { uploadFoto } from "@/lib/laudos";
+import { erroFinanceiro } from "@/lib/financeiro-db";
+import {
+  caixaPorMes,
+  CATEGORIAS_FINANCEIRO,
+  FORMAS_PAGAMENTO,
+  hojeISO,
+  resumoTitulos,
+  SITUACAO_META,
+  situacaoTitulo,
+  valorBaixa,
+  type Situacao,
+  type TipoTitulo,
+} from "@/lib/financeiro";
+import type { Row } from "@/lib/row";
+import { cn } from "@/lib/utils";
+
+export const Route = createFileRoute("/_authenticated/financeiro")({
+  staticData: { sitemap: false },
+  head: () => ({
+    meta: [
+      { title: "Financeiro — Atende.ai" },
+      { name: "description", content: "Contas a receber, contas a pagar e fluxo de caixa realizado da empresa." },
+      { property: "og:title", content: "Financeiro — Atende.ai" },
+      { property: "og:description", content: "Contas a receber, contas a pagar e fluxo de caixa realizado da empresa." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+      { name: "robots", content: "noindex" },
+    ],
+  }),
+  component: FinanceiroPage,
+});
+
+type Perms = { canCreate: boolean; canUpdate: boolean; canDelete: boolean };
+
+function FinanceiroPage() {
+  const perms = usePagePermissions("/financeiro");
+  const { data: titulos = [], isLoading } = useTableRows("financeiro_titulos");
+  if (!perms.loading && !perms.canRead) return <p className="text-muted-foreground text-sm">Você não tem acesso a esta página.</p>;
+  return (
+    <Tabs defaultValue="receber" className="space-y-4">
+      <TabsList>
+        <TabsTrigger value="receber">Contas a Receber</TabsTrigger>
+        <TabsTrigger value="pagar">Contas a Pagar</TabsTrigger>
+        <TabsTrigger value="caixa">Fluxo de Caixa</TabsTrigger>
+      </TabsList>
+      <TabsContent value="receber"><Titulos tipo="receber" todos={titulos} loading={isLoading} perms={perms} /></TabsContent>
+      <TabsContent value="pagar"><Titulos tipo="pagar" todos={titulos} loading={isLoading} perms={perms} /></TabsContent>
+      <TabsContent value="caixa"><Caixa titulos={titulos} /></TabsContent>
+    </Tabs>
+  );
+}
+
+const ORIGEM_LABEL: Record<string, string> = { manual: "Manual", oferta: "Oferta", pedido: "Pedido", despesa: "Despesa", comissao: "Comissão" };
+
+function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row[]; loading: boolean; perms: Perms }) {
+  const qc = useQueryClient();
+  const { data: parceiros = [] } = useTableRows("parceiros");
+  const parceiroById = useMemo(() => new Map(parceiros.map((p) => [text(rowId(p)), p])), [parceiros]);
+  const nomeParc = (id: unknown) => {
+    const p = parceiroById.get(text(id));
+    return p ? text(p["nome_fantasia"] || p["razao_social"]) : "";
+  };
+  const [f, setF] = useState({ busca: "", situacao: "todos", categoria: "todos", de: "", ate: "" });
+  const [editar, setEditar] = useState<Row | null | undefined>(undefined);
+  const [baixar, setBaixar] = useState<Row | null>(null);
+  const hoje = hojeISO();
+
+  const doTipo = useMemo(() => todos.filter((t) => t["tipo"] === tipo), [todos, tipo]);
+  const rows = useMemo(
+    () =>
+      doTipo
+        .filter((t) => {
+          const v = text(t["vencimento"]).slice(0, 10);
+          return (
+            matchesAny([t["descricao"], nomeParc(t["parceiro_id"]), t["categoria"]], f.busca) &&
+            (f.situacao === "todos" || situacaoTitulo(t, hoje) === f.situacao) &&
+            (f.categoria === "todos" || t["categoria"] === f.categoria) &&
+            (!f.de || v >= f.de) && (!f.ate || v <= f.ate)
+          );
+        })
+        .sort((a, b) => text(a["vencimento"]).localeCompare(text(b["vencimento"]))),
+    [doTipo, f, hoje], // eslint-disable-line react-hooks/exhaustive-deps
+  );
+  const resumo = resumoTitulos(rows, hoje);
+  const invalidar = () => qc.invalidateQueries({ queryKey: ["table", "financeiro_titulos"] });
+
+  const estornar = async (t: Row) => {
+    if (!window.confirm("Estornar a baixa deste título?")) return;
+    const { error } = await supabase.from("financeiro_titulos")
+      .update({ status: "aberto", pago_em: null, valor_pago: null, juros: 0, desconto: 0 } as never).eq("id", text(rowId(t)));
+    if (error) return void toast.error(erroFinanceiro(error));
+    toast.success("Baixa estornada."); invalidar();
+  };
+  const excluir = async (t: Row) => {
+    const { error } = await supabase.from("financeiro_titulos").delete().eq("id", text(rowId(t)));
+    if (error) return void toast.error(erroFinanceiro(error));
+    toast.success("Título excluído."); invalidar();
+  };
+
+  const pagoLabel = tipo === "receber" ? "Recebido" : "Pago";
+  const cards: Array<{ label: string; valor: number; sit: string; cls: string }> = [
+    { label: "A vencer", valor: resumo.aVencer, sit: "aberto", cls: "border-l-primary" },
+    { label: "Vencidos", valor: resumo.vencidos, sit: "atrasado", cls: "border-l-destructive" },
+    { label: `${pagoLabel} no mês`, valor: resumo.pagoMes, sit: "pago", cls: "border-l-success" },
+    { label: "Total em aberto", valor: resumo.emAberto, sit: "todos", cls: "border-l-warning" },
+  ];
+
+  const columns: Column[] = [
+    { key: "venc", header: "Vencimento", fields: ["vencimento"], render: (t) => <span className="tabular-nums">{formatDate(t["vencimento"])}</span> },
+    { key: "desc", header: "Descrição", fields: ["descricao"], render: (t) => (
+      <div className="min-w-0">
+        <p className="truncate font-medium">{text(t["descricao"])}</p>
+        <p className="text-muted-foreground text-xs">{ORIGEM_LABEL[text(t["origem_tipo"])] ?? "Manual"}{t["categoria"] ? ` • ${text(t["categoria"])}` : ""}</p>
+      </div>
+    ) },
+    { key: "parc", header: tipo === "receber" ? "Cliente" : "Fornecedor", fields: [], render: (t) => nomeParc(t["parceiro_id"]) || "—" },
+    { key: "valor", header: "Valor", fields: ["valor"], render: (t) => <span className="font-semibold tabular-nums">{formatBRL(t["valor"])}</span> },
+    { key: "sit", header: "Situação", fields: [], render: (t) => {
+      const s = situacaoTitulo(t, hoje);
+      return (
+        <div>
+          <span className={cn("rounded px-2 py-0.5 text-xs font-medium", SITUACAO_META[s].badge)}>{SITUACAO_META[s].label(tipo)}</span>
+          {s === "pago" && <p className="text-muted-foreground mt-1 text-xs">{formatDate(t["pago_em"])} • {formatBRL(t["valor_pago"])}</p>}
+        </div>
+      );
+    } },
+    { key: "acoes", header: "", fields: [], render: (t) => {
+      const s = situacaoTitulo(t, hoje);
+      return (
+        <div className="flex justify-end gap-1">
+          {t["comprovante"] ? (
+            <Button variant="ghost" size="icon" asChild title="Comprovante"><a href={text(t["comprovante"])} target="_blank" rel="noreferrer"><Paperclip className="h-4 w-4" /></a></Button>
+          ) : null}
+          {perms.canUpdate && (s === "aberto" || s === "atrasado") && (
+            <Button variant="ghost" size="icon" title={tipo === "receber" ? "Receber" : "Pagar"} aria-label="Baixar" onClick={() => setBaixar(t)}>
+              <CheckCircle2 className="text-success h-4 w-4" />
+            </Button>
+          )}
+          {perms.canUpdate && s === "pago" && (
+            <Button variant="ghost" size="icon" title="Estornar baixa" aria-label="Estornar baixa" onClick={() => estornar(t)}><Undo2 className="h-4 w-4" /></Button>
+          )}
+        </div>
+      );
+    } },
+  ];
+
+  const exportarCsv = () => {
+    const linhas = [["Vencimento", "Descrição", "Parceiro", "Categoria", "Valor", "Situação", "Pago em", "Valor pago"]];
+    for (const t of rows) {
+      const s = situacaoTitulo(t, hoje);
+      linhas.push([formatDate(t["vencimento"]), text(t["descricao"]), nomeParc(t["parceiro_id"]), text(t["categoria"]),
+        num(t["valor"]).toFixed(2).replace(".", ","), SITUACAO_META[s].label(tipo), formatDate(t["pago_em"]), t["valor_pago"] ? num(t["valor_pago"]).toFixed(2).replace(".", ",") : ""]);
+    }
+    const csv = "\uFEFF" + linhas.map((l) => l.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(";")).join("\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    a.download = `contas-a-${tipo}.csv`; a.click();
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {cards.map((c) => (
+          <button key={c.label} type="button" onClick={() => setF((s) => ({ ...s, situacao: s.situacao === c.sit ? "todos" : c.sit }))}
+            className={cn("bg-card rounded-lg border border-l-4 p-3 text-left transition hover:shadow-sm", c.cls, f.situacao === c.sit && "ring-primary ring-2")}>
+            <p className="text-muted-foreground text-xs">{c.label}</p>
+            <p className="text-lg font-bold tabular-nums">{formatBRL(c.valor)}</p>
+          </button>
+        ))}
+      </div>
+
+      <DataTable
+        title={tipo === "receber" ? "Contas a Receber" : "Contas a Pagar"}
+        columns={columns}
+        rows={rows}
+        loading={loading}
+        getValue={(r, fs) => r[fs[0] ?? ""]}
+        rowKey={(r, i) => text(rowId(r)) || String(i)}
+        onAdd={perms.canCreate ? () => setEditar(null) : undefined}
+        onEdit={(r) => setEditar(r)}
+        editReadOnly={!perms.canUpdate}
+        onDelete={perms.canDelete ? excluir : undefined}
+        filters={
+          <>
+            <FilterInput label="Busca" value={f.busca} onChange={(v) => setF((s) => ({ ...s, busca: v }))} placeholder="Descrição, parceiro, categoria" />
+            <FilterSelect label="Situação" value={f.situacao} onChange={(v) => setF((s) => ({ ...s, situacao: v }))}
+              options={[{ value: "todos", label: "Todas" }, ...(["aberto", "atrasado", "pago", "cancelado"] as Situacao[]).map((s) => ({ value: s, label: SITUACAO_META[s].label(tipo) }))]} />
+            <FilterSelect label="Categoria" value={f.categoria} onChange={(v) => setF((s) => ({ ...s, categoria: v }))}
+              options={[{ value: "todos", label: "Todas" }, ...CATEGORIAS_FINANCEIRO[tipo].map((c) => ({ value: c, label: c }))]} />
+            <div className="space-y-1"><Label className="text-xs">Vence de</Label><Input type="date" value={f.de} onChange={(e) => setF((s) => ({ ...s, de: e.target.value }))} /></div>
+            <div className="space-y-1"><Label className="text-xs">até</Label><Input type="date" value={f.ate} onChange={(e) => setF((s) => ({ ...s, ate: e.target.value }))} /></div>
+            <div className="flex items-end"><Button variant="outline" onClick={exportarCsv}>CSV</Button></div>
+          </>
+        }
+      />
+
+      {editar !== undefined && (
+        <TituloSheet tipo={tipo} registro={editar} parceiros={parceiros} readOnly={!!editar && !perms.canUpdate}
+          onClose={() => setEditar(undefined)} onSaved={invalidar} />
+      )}
+      {baixar && <BaixaDialog tipo={tipo} titulo={baixar} onClose={() => setBaixar(null)} onSaved={invalidar} />}
+    </div>
+  );
+}
+
+function TituloSheet({ tipo, registro, parceiros, readOnly, onClose, onSaved }: {
+  tipo: TipoTitulo; registro: Row | null; parceiros: Row[]; readOnly: boolean; onClose: () => void; onSaved: () => void;
+}) {
+  const { isMaster, empresa } = useAuth();
+  const { empresaId } = useAudit();
+  const [v, setV] = useState({
+    descricao: text(registro?.["descricao"]),
+    categoria: text(registro?.["categoria"]) || (CATEGORIAS_FINANCEIRO[tipo][0] ?? ""),
+    parceiro_id: text(registro?.["parceiro_id"]),
+    vencimento: text(registro?.["vencimento"]).slice(0, 10) || hojeISO(),
+    valor: registro ? String(num(registro["valor"])).replace(".", ",") : "",
+    repetir: "1",
+    status: text(registro?.["status"]) || "aberto",
+    observacao: text(registro?.["observacao"]),
+  });
+  const [salvando, setSalvando] = useState(false);
+  const opcoes = parceiros
+    .filter((p) => (tipo === "receber" ? p["is_cliente"] !== false : p["is_fornecedor"] === true) || text(rowId(p)) === v.parceiro_id)
+    .map((p) => ({ value: text(rowId(p)), label: text(p["nome_fantasia"] || p["razao_social"]) || "—" }));
+
+  const salvar = async () => {
+    const valor = round2(num(v.valor));
+    if (!v.descricao.trim()) return void toast.error("Informe a descrição.");
+    if (valor <= 0) return void toast.error("Informe o valor.");
+    setSalvando(true);
+    try {
+      const base = { tipo, descricao: v.descricao.trim(), categoria: v.categoria, parceiro_id: v.parceiro_id || null,
+        vencimento: v.vencimento, valor, observacao: v.observacao || null, status: v.status };
+      if (registro) {
+        const { error } = await supabase.from("financeiro_titulos").update(base as never).eq("id", text(rowId(registro)));
+        if (error) throw error;
+      } else {
+        const n = Math.max(1, Math.min(60, Math.floor(num(v.repetir)) || 1));
+        const { addMonthsISO } = await import("@/lib/orcamentos");
+        const emp = isMaster && empresa ? rowId(empresa) : empresaId;
+        const lote = Array.from({ length: n }, (_, i) => ({
+          ...base, empresa_id: emp, origem_tipo: "manual", parcela_n: i + 1,
+          descricao: n > 1 ? `${base.descricao} (${i + 1}/${n})` : base.descricao,
+          vencimento: addMonthsISO(v.vencimento, i),
+        }));
+        const { error } = await supabase.from("financeiro_titulos").insert(lote as never);
+        if (error) throw error;
+      }
+      toast.success("Título salvo."); onSaved(); onClose();
+    } catch (e) {
+      toast.error(erroFinanceiro(e));
+    } finally { setSalvando(false); }
+  };
+
+  return (
+    <Sheet open onOpenChange={(o) => !o && onClose()}>
+      <SheetContent side="right" className="flex flex-col gap-0 p-0">
+        <SheetHeader className="border-b p-4">
+          <SheetTitle>{registro ? "Editar" : "Nova"} conta a {tipo}</SheetTitle>
+          <SheetDescription>{registro ? `Origem: ${ORIGEM_LABEL[text(registro["origem_tipo"])] ?? "Manual"}` : "Lançamento manual"}</SheetDescription>
+        </SheetHeader>
+        <div className="grid flex-1 content-start gap-4 overflow-y-auto p-4 sm:grid-cols-2">
+          <div className="space-y-1 sm:col-span-2"><Label>Descrição</Label>
+            <Input value={v.descricao} disabled={readOnly} onChange={(e) => setV({ ...v, descricao: e.target.value })} /></div>
+          <div className="space-y-1"><Label>{tipo === "receber" ? "Cliente" : "Fornecedor"}</Label>
+            <SearchSelect value={v.parceiro_id} disabled={readOnly} allowClear options={opcoes} placeholder="Opcional" onChange={(x) => setV({ ...v, parceiro_id: x })} /></div>
+          <div className="space-y-1"><Label>Categoria</Label>
+            <Select value={v.categoria} disabled={readOnly} onValueChange={(x) => setV({ ...v, categoria: x })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>{[...new Set([...CATEGORIAS_FINANCEIRO[tipo], v.categoria].filter(Boolean))].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+            </Select></div>
+          <div className="space-y-1"><Label>Vencimento</Label>
+            <Input type="date" value={v.vencimento} disabled={readOnly} onChange={(e) => setV({ ...v, vencimento: e.target.value })} /></div>
+          <div className="space-y-1"><Label>Valor (R$)</Label>
+            <Input inputMode="decimal" value={v.valor} disabled={readOnly} onChange={(e) => setV({ ...v, valor: e.target.value })} placeholder="0,00" /></div>
+          {!registro && (
+            <div className="space-y-1"><Label>Repetir por (meses)</Label>
+              <Input type="number" min={1} max={60} value={v.repetir} onChange={(e) => setV({ ...v, repetir: e.target.value })} /></div>
+          )}
+          {registro && registro["status"] !== "pago" && (
+            <div className="space-y-1"><Label>Situação</Label>
+              <Select value={v.status} disabled={readOnly} onValueChange={(x) => setV({ ...v, status: x })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent><SelectItem value="aberto">Em aberto</SelectItem><SelectItem value="cancelado">Cancelado</SelectItem></SelectContent>
+              </Select></div>
+          )}
+          <div className="space-y-1 sm:col-span-2"><Label>Observação</Label>
+            <Textarea value={v.observacao} disabled={readOnly} onChange={(e) => setV({ ...v, observacao: e.target.value })} /></div>
+        </div>
+        <div className="flex justify-end gap-2 border-t p-4">
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          {!readOnly && <Button disabled={salvando} onClick={salvar}>{salvando ? "Salvando…" : "Salvar"}</Button>}
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function BaixaDialog({ tipo, titulo, onClose, onSaved }: { tipo: TipoTitulo; titulo: Row; onClose: () => void; onSaved: () => void }) {
+  const [v, setV] = useState({ data: hojeISO(), juros: "", desconto: "", forma: FORMAS_PAGAMENTO[0] ?? "Pix", comprovante: "" });
+  const [enviando, setEnviando] = useState(false);
+  const total = valorBaixa(num(titulo["valor"]), num(v.juros), num(v.desconto));
+
+  const anexar = async (file?: File) => {
+    if (!file) return;
+    setEnviando(true);
+    try { setV((s) => ({ ...s, comprovante: "" })); const url = await uploadFoto(file); setV((s) => ({ ...s, comprovante: url })); }
+    catch (e) { toast.error(e instanceof Error ? e.message : "Falha no envio."); }
+    finally { setEnviando(false); }
+  };
+  const confirmar = async () => {
+    const { error } = await supabase.from("financeiro_titulos").update({
+      status: "pago", pago_em: v.data, valor_pago: total, juros: round2(num(v.juros)), desconto: round2(num(v.desconto)),
+      forma_pagamento: v.forma, comprovante: v.comprovante || titulo["comprovante"] || null,
+    } as never).eq("id", text(rowId(titulo)));
+    if (error) return void toast.error(erroFinanceiro(error));
+    toast.success(tipo === "receber" ? "Recebimento registrado." : "Pagamento registrado.");
+    onSaved(); onClose();
+  };
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent>
+        <DialogHeader><DialogTitle>{tipo === "receber" ? "Registrar recebimento" : "Registrar pagamento"}</DialogTitle></DialogHeader>
+        <p className="text-muted-foreground text-sm">{text(titulo["descricao"])} — {formatBRL(titulo["valor"])}</p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1"><Label>Data</Label><Input type="date" value={v.data} onChange={(e) => setV({ ...v, data: e.target.value })} /></div>
+          <div className="space-y-1"><Label>Forma</Label>
+            <Select value={v.forma} onValueChange={(x) => setV({ ...v, forma: x })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>{FORMAS_PAGAMENTO.map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
+            </Select></div>
+          <div className="space-y-1"><Label>Juros / multa (R$)</Label><Input inputMode="decimal" value={v.juros} onChange={(e) => setV({ ...v, juros: e.target.value })} placeholder="0,00" /></div>
+          <div className="space-y-1"><Label>Desconto (R$)</Label><Input inputMode="decimal" value={v.desconto} onChange={(e) => setV({ ...v, desconto: e.target.value })} placeholder="0,00" /></div>
+          <div className="space-y-1 sm:col-span-2">
+            <Label className="flex items-center gap-1">Comprovante (foto) <UploadInfo perfil="laudo" /></Label>
+            <Input type="file" accept="image/*" disabled={enviando} onChange={(e) => anexar(e.target.files?.[0])} />
+            {v.comprovante && <img src={v.comprovante} alt="Comprovante" className="mt-2 h-20 rounded border object-cover" />}
+          </div>
+        </div>
+        <p className="text-sm">Valor da baixa: <strong>{formatBRL(total)}</strong></p>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button disabled={enviando} onClick={confirmar}>Confirmar</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+const nomeMes = (k: string) => {
+  const [y, m] = k.split("-").map(Number);
+  return new Date(y ?? 2000, (m ?? 1) - 1, 1).toLocaleDateString("pt-BR", { month: "short", year: "2-digit" });
+};
+
+function Caixa({ titulos }: { titulos: Row[] }) {
+  const [saldoInicial, setSaldoInicial] = useState("");
+  const meses = caixaPorMes(titulos);
+  let acum = num(saldoInicial);
+  const linhas = meses.map((m) => {
+    const saldo = round2(m.entradas + m.entradasPrev - m.saidas - m.saidasPrev);
+    acum = round2(acum + saldo);
+    return { ...m, saldo, acum };
+  });
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="space-y-1"><Label>Saldo inicial (R$)</Label>
+          <Input className="w-48" inputMode="decimal" value={saldoInicial} onChange={(e) => setSaldoInicial(e.target.value)} placeholder="0,00" /></div>
+        <p className="text-muted-foreground text-xs">Realizado = baixas pela data do pagamento. Previsto = contas em aberto pelo vencimento.</p>
+      </div>
+      {linhas.length === 0 ? (
+        <p className="text-muted-foreground text-sm">Nenhuma conta lançada ainda.</p>
+      ) : (
+        <div className="overflow-x-auto rounded-lg border">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/50">
+              <tr className="text-left">
+                {["Mês", "Entradas realizadas", "Entradas previstas", "Saídas realizadas", "Saídas previstas", "Saldo do mês", "Acumulado"].map((h) => (
+                  <th key={h} className="px-3 py-2 font-medium">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {linhas.map((l) => (
+                <tr key={l.mes} className={cn("border-t", l.acum < 0 && "bg-destructive/10")}>
+                  <td className="px-3 py-2 font-medium capitalize">{nomeMes(l.mes)}</td>
+                  <td className="text-success px-3 py-2 tabular-nums">{formatBRL(l.entradas)}</td>
+                  <td className="text-muted-foreground px-3 py-2 tabular-nums">{formatBRL(l.entradasPrev)}</td>
+                  <td className="text-destructive px-3 py-2 tabular-nums">{formatBRL(l.saidas)}</td>
+                  <td className="text-muted-foreground px-3 py-2 tabular-nums">{formatBRL(l.saidasPrev)}</td>
+                  <td className={cn("px-3 py-2 font-semibold tabular-nums", l.saldo < 0 && "text-destructive")}>{formatBRL(l.saldo)}</td>
+                  <td className={cn("px-3 py-2 font-semibold tabular-nums", l.acum < 0 && "text-destructive")}>{formatBRL(l.acum)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}

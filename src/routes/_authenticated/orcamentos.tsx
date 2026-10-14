@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { etapasDoKanban, kanbanDoModuloOrcamentos } from "@/lib/orcamento-kanban";
 import { corEtapa } from "@/lib/kanban-cores";
 import { createFileRoute } from "@tanstack/react-router";
-import { ChevronDown, Copy, FileSignature, FileText, ScrollText, ShoppingCart } from "lucide-react";
+import { ChevronDown, Copy, FileSignature, FileText, ScrollText, ShoppingCart, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { DataTable, type Column } from "@/components/data-table/DataTable";
 import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
@@ -18,6 +18,8 @@ import { OrcamentoSheet } from "@/components/orcamentos/OrcamentoSheet";
 import { OrcamentoPDF } from "@/components/orcamentos/OrcamentoPDF";
 import { PropostaDialog } from "@/components/orcamentos/PropostaDialog";
 import { MinutaDialog } from "@/components/orcamentos/MinutaDialog";
+import { titulosDaOferta } from "@/lib/financeiro";
+import { apagarAbertosDaOrigem, contarTitulosDaOrigem, erroFinanceiro, inserirTitulos } from "@/lib/financeiro-db";
 import { GerarPedidosDialog } from "@/components/orcamentos/GerarPedidosDialog";
 import { SituacaoBadge } from "@/components/orcamentos/SituacaoBadge";
 import { useAlterarSituacao, useSaveOrcamento } from "@/hooks/useSaveOrcamento";
@@ -121,6 +123,24 @@ function OrcamentosPage() {
   const [pedidosOpen, setPedidosOpen] = useState(false);
   const [f, setF] = useState({ busca: "", situacao: "todos", vendedor: "todos", ano: "todos" });
   const [duplicarDe, setDuplicarDe] = useState<{ record: Row; linhas: Row[] } | null>(null);
+
+  const gerarContas = async (r: Row) => {
+    const id = String(rowId(r) ?? "");
+    const tipos = ["oferta", "despesa"] as const;
+    try {
+      const ja = await contarTitulosDaOrigem([id], [...tipos]);
+      if (ja > 0) {
+        if (!window.confirm(`Esta oferta já gerou ${ja} conta(s). Regerar apenas as que estão em aberto?`)) return;
+        await apagarAbertosDaOrigem([id], [...tipos]);
+      } else if (!window.confirm("Lançar no Financeiro as parcelas do cliente (a receber) e as despesas operacionais (a pagar)?")) return;
+      const atual = todos.find((t) => rowId(t) === rowId(r)) ?? r;
+      const n = await inserirTitulos(String(atual["empresa_id"] ?? empresaId ?? ""), titulosDaOferta({ ...atual, id }));
+      toast.success(n ? `${n} conta(s) lançada(s) no Financeiro.` : "Nada a lançar nesta oferta.");
+      qcOrc.invalidateQueries({ queryKey: ["table", "financeiro_titulos"] });
+    } catch (e) {
+      toast.error(erroFinanceiro(e));
+    }
+  };
 
   const duplicar = (r: Row) => {
     const id = String(rowId(r) ?? "");
@@ -393,6 +413,17 @@ function OrcamentosPage() {
             }}
           >
             <ShoppingCart className="h-4 w-4" />
+          </Button>
+        )}
+        {perms.canCreate && (
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Gerar contas no Financeiro"
+            title="Gerar contas a receber/pagar no Financeiro"
+            onClick={() => gerarContas(r)}
+          >
+            <Wallet className="h-4 w-4" />
           </Button>
         )}
         {perms.canCreate && (
