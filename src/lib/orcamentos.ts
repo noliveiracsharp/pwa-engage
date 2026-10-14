@@ -497,3 +497,63 @@ export function calcAvista(totalLiquido: number, tipo: DescontoTipo, desconto: u
   valor = Math.min(valor, totalLiquido);
   return { desconto_valor: valor, total: round2(totalLiquido - valor) };
 }
+
+/* ------------------------------------------------------------------ */
+/* Despesas operacionais (alimentação, transporte…)                     */
+/* ------------------------------------------------------------------ */
+
+export const CATEGORIAS_DESPESA = [
+  { value: "transporte", label: "Transporte / Combustível / Km" },
+  { value: "alimentacao", label: "Alimentação / Diárias" },
+  { value: "hospedagem", label: "Hospedagem" },
+  { value: "locacao", label: "Locação de equipamentos / Andaimes" },
+  { value: "taxas", label: "Taxas / ART / Licenças" },
+  { value: "outros", label: "Outros" },
+] as const;
+
+export type CategoriaDespesa = (typeof CATEGORIAS_DESPESA)[number]["value"];
+
+export type DespesaOperacional = {
+  key: string;
+  categoria: CategoriaDespesa;
+  descricao: string;
+  valor: string;
+};
+
+export const categoriaDespesaLabel = (v: unknown) =>
+  CATEGORIAS_DESPESA.find((c) => c.value === v)?.label ?? "Outros";
+
+export function novaDespesa(): DespesaOperacional {
+  return { key: newKey(), categoria: "transporte", descricao: "", valor: "" };
+}
+
+/** Soma das despesas (valores negativos/ inválidos contam como 0). */
+export function totalDespesas(despesas: Array<{ valor: unknown }>): number {
+  return round2(despesas.reduce((s, d) => s + Math.max(0, num(d.valor)), 0));
+}
+
+/** Lê o JSONB gravado em orcamentos.despesas_operacionais. */
+export function despesasFromValue(value: unknown): DespesaOperacional[] {
+  let arr: unknown = value;
+  if (typeof value === "string") {
+    try {
+      arr = JSON.parse(value);
+    } catch {
+      return [];
+    }
+  }
+  if (!Array.isArray(arr)) return [];
+  return arr.map((d: Row) => {
+    const cat = CATEGORIAS_DESPESA.some((c) => c.value === d["categoria"])
+      ? (d["categoria"] as CategoriaDespesa)
+      : "outros";
+    return { key: newKey(), categoria: cat, descricao: String(d["descricao"] ?? ""), valor: String(num(d["valor"]) || "") };
+  });
+}
+
+/** Formato gravado: só linhas com valor > 0. */
+export function despesasToValue(despesas: DespesaOperacional[]) {
+  return despesas
+    .filter((d) => num(d.valor) > 0)
+    .map((d) => ({ categoria: d.categoria, descricao: d.descricao.trim(), valor: round2(num(d.valor)) }));
+}
