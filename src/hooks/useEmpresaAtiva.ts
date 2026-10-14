@@ -12,5 +12,9 @@ export function useEmpresaAtiva() {
     nome: pick<string>(atual, ["nome_fantasia", "nome", "empresa_nome", "razao_social"], "Atende.ai"),
     titulo: pick<string>(atual, ["titulo", "nome_fantasia", "nome", "razao_social"], "Atende.ai"),
     logo: pick<string>(atual, ["logo", "logo_url", "url_logo", "imagem", "avatar"]),
+    favicon: pick<string>(atual, ["favicon"], ""),
+    claro: pick<string>(atual, ["cor_primaria_claro"], ""),
+    escuro: pick<string>(atual, ["cor_primaria_escuro"], ""),
+    site: pick<string>(atual, ["site_url"], ""),
   };
 }
