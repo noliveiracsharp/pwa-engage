@@ -24,6 +24,8 @@ export type Bloco = {
   titulo: string;
   conteudo: string;
   estilo?: EstiloCapa;
+  /** Anexos do contrato marcados pelo vendedor (ausente = todos). */
+  anexos?: AnexoContrato[];
 };
 
 export const FUNDOS_CAPA: Record<string, { nome: string; css: string; texto: "claro" | "escuro" }> = {
@@ -117,6 +119,10 @@ const PADRAO: Record<BlocoTipo, Omit<Bloco, "tipo">> = {
 };
 
 /** Normaliza o JSON salvo, completando blocos ausentes na ordem padrão. */
+/** Contrato ainda no texto antigo/vazio: deve receber o modelo guarda-chuva padrão. */
+export const contratoPadraoPendente = (b: Bloco) =>
+  b.tipo === "CONTRATO" && (!b.conteudo.trim() || b.conteudo.startsWith("CONTRATANTE: {{cliente_nome}}"));
+
 export function blocosDe(valor: unknown): Bloco[] {
   let arr: unknown = valor;
   if (typeof arr === "string") {
@@ -137,6 +143,7 @@ export function blocosDe(valor: unknown): Bloco[] {
         titulo: s.titulo ?? p.titulo,
         conteudo: s.conteudo ?? p.conteudo,
         ...(s.estilo && typeof s.estilo === "object" ? { estilo: s.estilo } : {}),
+        ...(Array.isArray(s.anexos) ? { anexos: s.anexos } : {}),
       });
     }
   }

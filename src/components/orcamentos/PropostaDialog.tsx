@@ -6,6 +6,7 @@ import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle } from "@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { RichEditor } from "./RichEditor";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -14,7 +15,11 @@ import { rowId } from "@/lib/crud";
 import {
   BLOCO_LABEL,
   blocosDe,
+  ANEXOS_CONTRATO,
+  ANEXOS_PADRAO,
+  contratoPadraoPendente,
   gerarContratoModular,
+  type AnexoContrato,
   imprimirElemento,
   linkProposta,
   TAGS,
@@ -49,7 +54,21 @@ export function PropostaDialog(props: Props) {
   const empresaId = String(orcamento?.["empresa_id"] ?? rowId(empresa ?? {}) ?? "");
 
   useEffect(() => {
-    if (open && orcamento) setBlocos(blocosDe(orcamento["blocos_selecionados"]));
+    if (!open || !orcamento) return;
+    setBlocos(
+      blocosDe(orcamento["blocos_selecionados"]).map((b) =>
+        contratoPadraoPendente(b)
+          ? {
+              ...b,
+              ativo: true,
+              titulo: "Contrato de prestação de serviços e tecnologia",
+              anexos: b.anexos ?? ANEXOS_PADRAO,
+              conteudo: gerarContratoModular({ ...props, orcamento, anexos: b.anexos ?? ANEXOS_PADRAO }),
+            }
+          : b,
+      ),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, orcamento]);
 
   const templates = useQuery({
@@ -202,6 +221,38 @@ export function PropostaDialog(props: Props) {
                         onChange={(html) => set(i, { conteudo: html })}
                         minHeight={b.tipo === "CONTRATO" ? 260 : 160}
                       />
+                      {b.tipo === "CONTRATO" && (
+                        <div className="bg-muted/40 space-y-2 rounded-md border p-2">
+                          <p className="text-xs font-medium">Anexos incluídos (desmarque o que não foi vendido)</p>
+                          {ANEXOS_CONTRATO.map((a) => {
+                            const sel = b.anexos ?? ANEXOS_PADRAO;
+                            return (
+                              <label key={a.id} className="flex cursor-pointer items-start gap-2 text-xs">
+                                <Checkbox
+                                  className="mt-0.5"
+                                  checked={sel.includes(a.id)}
+                                  onCheckedChange={(v) => {
+                                    const anexos: AnexoContrato[] = ANEXOS_CONTRATO.map((x) => x.id).filter((id) =>
+                                      id === a.id ? v === true : sel.includes(id),
+                                    );
+                                    set(i, {
+                                      anexos,
+                                      conteudo: gerarContratoModular({ ...props, orcamento, anexos }),
+                                    });
+                                  }}
+                                />
+                                <span>
+                                  <span className="font-medium">{a.label}</span>
+                                  <span className="text-muted-foreground block">{a.descricao}</span>
+                                </span>
+                              </label>
+                            );
+                          })}
+                          <p className="text-muted-foreground text-[11px]">
+                            Marcar ou desmarcar refaz o contrato; ajustes manuais no texto devem ser feitos depois.
+                          </p>
+                        </div>
+                      )}
                       <div className="flex flex-wrap gap-2">
                         {b.tipo === "CONTRATO" && (
                           <Button
@@ -212,11 +263,11 @@ export function PropostaDialog(props: Props) {
                               if (b.conteudo.trim() && !window.confirm("Substituir o texto atual pelo contrato gerado a partir da oferta?")) return;
                               set(i, {
                                 titulo: "Contrato de prestação de serviços e tecnologia",
-                                conteudo: gerarContratoModular({ ...props, orcamento, linhas: props.linhas, itens: props.itens }),
+                                conteudo: gerarContratoModular({ ...props, orcamento, anexos: b.anexos ?? ANEXOS_PADRAO }),
                               });
                             }}
                           >
-                            Gerar pela oferta
+                            Restaurar modelo padrão
                           </Button>
                         )}
                         {tpls.length > 0 && (
