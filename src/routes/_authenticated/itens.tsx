@@ -60,6 +60,7 @@ function ItensPage() {
   const { stamp } = useAudit();
   const [open, setOpen] = useState(false);
   const [record, setRecord] = useState<Row | null>(null);
+  const [duplicando, setDuplicando] = useState(false);
   const [f, setF] = useState({ busca: "", tipo: "todos", status: "todos" });
   const [precOpen, setPrecOpen] = useState(false);
   const [galeria, setGaleria] = useState<{ titulo: string; imagens: string[] } | null>(null);
@@ -185,11 +186,22 @@ function ItensPage() {
             perms.canCreate
               ? () => {
                   setRecord(null);
+                  setDuplicando(false);
+                  setOpen(true);
+                }
+              : undefined
+          }
+          onDuplicate={
+            perms.canCreate
+              ? (row) => {
+                  setRecord(row);
+                  setDuplicando(true);
                   setOpen(true);
                 }
               : undefined
           }
           onEdit={(row) => {
+            setDuplicando(false);
             setRecord(row);
             setOpen(true);
           }}
@@ -226,10 +238,11 @@ function ItensPage() {
         onOpenChange={setOpen}
         record={record}
         saving={save.isPending}
-        readOnly={record ? !perms.canUpdate : !perms.canCreate}
+        readOnly={record && !duplicando ? !perms.canUpdate : !perms.canCreate}
+        duplicando={duplicando}
         canCreateApoio={perms.canCreate}
         onSave={(values) =>
-          save.mutate({ values: stamp(values, !record), original: record }, { onSuccess: () => { setOpen(false); setRecord(null); } })
+          save.mutate({ values: stamp(values, !record || duplicando), original: duplicando ? null : record }, { onSuccess: () => { setOpen(false); setRecord(null); setDuplicando(false); } })
         }
       />
       <PrecificacaoDialog open={precOpen} onOpenChange={setPrecOpen} />
