@@ -239,7 +239,7 @@ function DespesaSheet({ registro, cartoes, lanc, readOnly, onClose, onSaved }: {
       const file = pdf ? original : await comprimirImagem(original, "laudo");
       const ext = file.name.split(".").pop()?.toLowerCase() || (pdf ? "pdf" : "jpg");
       const path = `reembolsos/${crypto.randomUUID()}.${ext}`;
-      const { error } = await supabase.storage.from("chat_media").upload(path, file, { upsert: false, contentType: file.type || undefined });
+      const { error } = await supabase.storage.from("chat_media").upload(path, file, { upsert: false, contentType: file.type || "application/octet-stream" });
       if (error) throw error;
       const url = supabase.storage.from("chat_media").getPublicUrl(path).data.publicUrl;
       setV((s) => ({ ...s, comprovante: url }));

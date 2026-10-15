@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Paperclip, Undo2 } from "lucide-react";
+import { CheckCircle2, Paperclip, QrCode, Undo2 } from "lucide-react";
+import { ContasBancarias } from "@/components/financeiro/ContasBancarias";
+import { CobrancaDialog } from "@/components/financeiro/CobrancaDialog";
 import { toast } from "sonner";
 import { DataTable, type Column } from "@/components/data-table/DataTable";
 import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
@@ -69,10 +71,12 @@ function FinanceiroPage() {
         <TabsTrigger value="receber">Contas a Receber</TabsTrigger>
         <TabsTrigger value="pagar">Contas a Pagar</TabsTrigger>
         <TabsTrigger value="caixa">Fluxo de Caixa</TabsTrigger>
+        <TabsTrigger value="bancos">Contas Bancárias</TabsTrigger>
       </TabsList>
       <TabsContent value="receber"><Titulos tipo="receber" todos={titulos} loading={isLoading} perms={perms} /></TabsContent>
       <TabsContent value="pagar"><Titulos tipo="pagar" todos={titulos} loading={isLoading} perms={perms} /></TabsContent>
       <TabsContent value="caixa"><Caixa titulos={titulos} /></TabsContent>
+      <TabsContent value="bancos"><ContasBancarias perms={perms} /></TabsContent>
     </Tabs>
   );
 }
@@ -90,6 +94,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
   const [f, setF] = useState({ busca: "", situacao: "todos", categoria: "todos", de: "", ate: "" });
   const [editar, setEditar] = useState<Row | null | undefined>(undefined);
   const [baixar, setBaixar] = useState<Row | null>(null);
+  const [cobrar, setCobrar] = useState<Row | null>(null);
   const hoje = hojeISO();
 
   const doTipo = useMemo(() => todos.filter((t) => t["tipo"] === tipo), [todos, tipo]);
@@ -158,6 +163,11 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
           {t["comprovante"] ? (
             <Button variant="ghost" size="icon" asChild title="Comprovante"><a href={text(t["comprovante"])} target="_blank" rel="noreferrer"><Paperclip className="h-4 w-4" /></a></Button>
           ) : null}
+          {tipo === "receber" && perms.canUpdate && (s === "aberto" || s === "atrasado") && (
+            <Button variant="ghost" size="icon" title="Cobrança Boleto + Pix" aria-label="Cobrança Boleto + Pix" onClick={() => setCobrar(t)}>
+              <QrCode className={cn("h-4 w-4", t["cobranca_enviada_em"] ? "text-primary" : "")} />
+            </Button>
+          )}
           {perms.canUpdate && (s === "aberto" || s === "atrasado") && (
             <Button variant="ghost" size="icon" title={tipo === "receber" ? "Receber" : "Pagar"} aria-label="Baixar" onClick={() => setBaixar(t)}>
               <CheckCircle2 className="text-success h-4 w-4" />
@@ -225,6 +235,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
         <TituloSheet tipo={tipo} registro={editar} parceiros={parceiros} readOnly={!!editar && !perms.canUpdate}
           onClose={() => setEditar(undefined)} onSaved={invalidar} />
       )}
+      {cobrar && <CobrancaDialog titulo={cobrar} parceiro={parceiroById.get(text(cobrar["parceiro_id"]))} onClose={() => setCobrar(null)} onSaved={invalidar} />}
       {baixar && <BaixaDialog tipo={tipo} titulo={baixar} onClose={() => setBaixar(null)} onSaved={invalidar} />}
     </div>
   );
