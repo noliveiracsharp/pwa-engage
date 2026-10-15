@@ -21,7 +21,7 @@ import { matchesAny } from "@/lib/input-masks";
 import { imprimirElemento } from "@/lib/propostas";
 import { pick, type Row } from "@/lib/row";
 import {
-  FREQUENCIAS, checklistDoModelo, linkAtivo, meta, prazoSla, preventivasAGerar, proximoNumeroOs, type PlanoPreventiva,
+  FREQUENCIAS, checklistDoModelo, linkAtivo, prazoSla, preventivasAGerar, proximoNumeroOs, type PlanoPreventiva,
 } from "@/lib/manutencoes";
 
 const fmtData = (v: unknown) => (v ? new Date(`${text(v).slice(0, 10)}T12:00:00`).toLocaleDateString("pt-BR") : "—");
@@ -297,5 +297,3 @@ export function Planos({ podeEditar, podeExcluir }: { podeEditar: boolean; podeE
     </div>
   );
 }
-
-export { meta };

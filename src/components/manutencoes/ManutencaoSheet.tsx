@@ -51,12 +51,13 @@ export function ManutencaoSheet({ open, onOpenChange, record, inicial, onSaved }
   const { data: parceiros = [] } = useTableRows("parceiros");
   const { data: usuarios = [] } = useTableRows("usuarios");
   const { data: modelos = [] } = useTableRows("manutencao_modelos");
+  const { data: ativosEq = [] } = useTableRows("manutencao_ativos");
   const { empresa } = useAuth();
   const [avisar, setAvisar] = useState(true);
   const [preview, setPreview] = useState(false);
   const [envio, setEnvio] = useState(false);
   const [f, setF] = useState({
-    tipo: "corretiva", prioridade: "normal", status: "agendada", parceiro_id: "", tecnico_usuario_id: "", modelo_id: "",
+    tipo: "corretiva", prioridade: "normal", status: "agendada", parceiro_id: "", tecnico_usuario_id: "", modelo_id: "", ativo_id: "",
     equipamento: "", local: "", descricao: "", data_prevista: "", observacoes: "",
   });
   const [checklist, setChecklist] = useState<ItemChecklist[]>([]);
@@ -76,6 +77,7 @@ export function ManutencaoSheet({ open, onOpenChange, record, inicial, onSaved }
       parceiro_id: text(r["parceiro_id"]) || inicial?.parceiro_id || "",
       tecnico_usuario_id: text(r["tecnico_usuario_id"]),
       modelo_id: text(r["modelo_id"]),
+      ativo_id: text(r["ativo_id"]),
       equipamento: text(r["equipamento"]),
       local: text(r["local"]),
       descricao: text(r["descricao"]) || inicial?.descricao || "",
@@ -125,7 +127,7 @@ export function ManutencaoSheet({ open, onOpenChange, record, inicial, onSaved }
       if (!f.parceiro_id) throw new Error("Selecione o cliente.");
       const payload: Row = {
         tipo: f.tipo, prioridade: f.prioridade, status: f.status,
-        parceiro_id: f.parceiro_id || null, tecnico_usuario_id: f.tecnico_usuario_id || null, modelo_id: f.modelo_id || null,
+        parceiro_id: f.parceiro_id || null, tecnico_usuario_id: f.tecnico_usuario_id || null, modelo_id: f.modelo_id || null, ...(f.ativo_id ? { ativo_id: f.ativo_id } : record?.["ativo_id"] ? { ativo_id: null } : {}),
         equipamento: f.equipamento.trim() || null, local: f.local.trim() || null, descricao: f.descricao.trim() || null,
         data_prevista: f.data_prevista ? new Date(f.data_prevista).toISOString() : null,
         observacoes: f.observacoes.trim() || null, checklist, anexos, ...datas, ...extra,
@@ -209,6 +211,10 @@ export function ManutencaoSheet({ open, onOpenChange, record, inicial, onSaved }
               <Select value={f.tecnico_usuario_id || "_"} onValueChange={(v) => setF({ ...f, tecnico_usuario_id: v === "_" ? "" : v })}><SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent><SelectItem value="_">Não definido</SelectItem>
                   {usuarios.map((u) => <SelectItem key={text(rowId(u))} value={text(rowId(u))}>{text(pick(u, ["nome", "nome_completo", "email"]))}</SelectItem>)}</SelectContent></Select></div>
+            <div className="space-y-1.5 sm:col-span-3"><Label>Equipamento cadastrado</Label>
+              <SearchSelect value={f.ativo_id} placeholder="Escolha um equipamento do cliente (opcional)"
+                options={ativosEq.filter((a) => !f.parceiro_id || text(a["parceiro_id"]) === f.parceiro_id).map((a) => ({ value: text(rowId(a)), label: `${text(a["nome"])}${a["local"] ? ` · ${text(a["local"])}` : ""}`, keywords: [text(a["numero_serie"])] }))}
+                onChange={(v) => { const a = ativosEq.find((x) => text(rowId(x)) === v); setF((s) => ({ ...s, ativo_id: v, ...(a ? { equipamento: text(a["nome"]), local: text(a["local"]) || s.local, parceiro_id: s.parceiro_id || text(a["parceiro_id"]) } : {}) })); }} /></div>
             <div className="space-y-1.5"><Label>Equipamento</Label>
               <Input value={f.equipamento} onChange={(e) => setF({ ...f, equipamento: e.target.value })} placeholder="Ex.: Motor portão principal" /></div>
             <div className="space-y-1.5"><Label>Local</Label>
