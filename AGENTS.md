@@ -40,3 +40,4 @@ Comissões: cálculo puro em `src/lib/comissoes.ts` (líquido = venda − compra
 - Financeiro: títulos em `financeiro_titulos` (receber/pagar, origem_tipo/origem_id), cálculo puro em src/lib/financeiro.ts; Oferta e Pedidos geram via `inserirTitulos`, para baixa e caixa lerem uma só tabela.
 
 Manutenções: OS/modelos/ativos/planos em `manutencao_*`, regras puras em src/lib/manutencoes.ts, `ManutencaoSheet` único (/manutencoes e Atendimento) para a OS nascer igual; links públicos /os e /ativo só por RPCs SECURITY DEFINER; preventivas geradas no cliente ao abrir /manutencoes (banco sem agendador).
+- Reembolsos (/reembolsos): despesas em `despesas_lancamentos` e cartões em `despesas_cartoes`, cálculo puro em src/lib/reembolsos.ts e OCR do comprovante em src/lib/reembolsos.functions.ts; aprovar reembolso cria título `origem_tipo=reembolso` no Financeiro, para o pagamento seguir o mesmo fluxo de baixa.
