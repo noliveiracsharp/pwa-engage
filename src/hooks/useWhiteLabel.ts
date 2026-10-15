@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useEmpresaAtiva } from "@/hooks/useEmpresaAtiva";
+import { aplicarManifesto, observarTitulo, slugLembrado } from "@/lib/marca-publica";
 
 const HEX = /^#([0-9a-f]{6})$/i;
 
@@ -22,7 +23,7 @@ function bloco(seletor: string, cor: string) {
 
 /** Aplica cores, favicon e título da empresa ativa à interface. */
 export function useWhiteLabel() {
-  const { claro, escuro, favicon, logo, titulo } = useEmpresaAtiva();
+  const { claro, escuro, favicon, logo, titulo, slug } = useEmpresaAtiva();
 
   useEffect(() => {
     const id = "white-label-cores";
@@ -48,6 +49,12 @@ export function useWhiteLabel() {
   }, [favicon, logo]);
 
   useEffect(() => {
-    if (titulo && !document.title.includes(titulo)) document.title = titulo;
+    if (!titulo || titulo === "Atende.ai") return;
+    return observarTitulo(titulo);
   }, [titulo]);
+
+  useEffect(() => {
+    const s = slug || slugLembrado();
+    if (s) aplicarManifesto(s, favicon || logo || undefined);
+  }, [slug, favicon, logo]);
 }

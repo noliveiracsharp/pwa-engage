@@ -23,5 +23,6 @@ export function useEmpresaAtiva() {
     claro: pick<string>(atual, ["cor_primaria_claro"], ""),
     escuro: pick<string>(atual, ["cor_primaria_escuro"], ""),
     site: pick<string>(atual, ["site_url"], ""),
+    slug: pick<string>(atual, ["slug"], ""),
   };
 }

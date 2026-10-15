@@ -69,4 +69,32 @@ export function aplicarMarca(m: MarcaPublica) {
   }
   const t = m.titulo || m.nome;
   if (t) document.title = `Entrar — ${t}`;
+  const s = slugLembrado();
+  if (s) aplicarManifesto(s, icon || undefined);
+}
+
+/** Troca o manifesto do app instalável e o ícone da tela inicial pelos da empresa. */
+export function aplicarManifesto(slug: string, icone?: string) {
+  const href = `/api/public/manifest?s=${encodeURIComponent(slug)}`;
+  let link = document.querySelector<HTMLLinkElement>("link[rel='manifest']");
+  if (!link) { link = document.createElement("link"); link.rel = "manifest"; document.head.appendChild(link); }
+  if (link.getAttribute("href") !== href) link.setAttribute("href", href);
+  if (icone) {
+    document.querySelectorAll<HTMLLinkElement>("link[rel='apple-touch-icon']").forEach((l) => { l.href = icone; });
+  }
+}
+
+/** Mantém o nome da empresa no título da aba, trocando "Atende.ai" a cada navegação. */
+export function observarTitulo(titulo: string) {
+  const ajustar = () => {
+    const atual = document.title;
+    if (atual.includes("Atende.ai")) {
+      const novo = atual.replace(/Atende\.ai/g, titulo);
+      if (novo !== atual) document.title = novo;
+    } else if (!atual) document.title = titulo;
+  };
+  ajustar();
+  const obs = new MutationObserver(ajustar);
+  obs.observe(document.head, { subtree: true, childList: true, characterData: true });
+  return () => obs.disconnect();
 }
