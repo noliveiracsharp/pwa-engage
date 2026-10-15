@@ -12,6 +12,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { OrcamentoSheet } from "@/components/orcamentos/OrcamentoSheet";
@@ -368,88 +369,35 @@ function OrcamentosPage() {
           <SituacaoBadge value={r["situacao"]} cor={corSituacao(r)} />
         ),
     },
-    {
-      key: "pdf",
-      header: "Proposta",
-      fields: [],
-      render: (r) => (
-        <div className="flex">
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label="Visualizar proposta em PDF"
-          title="Visualizar proposta em PDF"
-          onClick={() => {
-            setPreview(r);
-            setPreviewOpen(true);
-          }}
-        >
-          <FileText className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label="Proposta digital e contrato"
-          title="Proposta digital e contrato"
-          onClick={() => {
-            setPreview(r);
-            setPropostaOpen(true);
-          }}
-        >
-          <FileSignature className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label="Minuta de contrato"
-          title="Minuta de contrato"
-          onClick={() => {
-            setPreview(r);
-            setMinutaOpen(true);
-          }}
-        >
-          <ScrollText className="h-4 w-4" />
-        </Button>
-        {perms.canCreate && (
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Gerar pedidos de compra"
-            title="Gerar pedidos de compra"
-            onClick={() => {
-              setPreview(r);
-              setPedidosOpen(true);
-            }}
-          >
-            <ShoppingCart className="h-4 w-4" />
-          </Button>
-        )}
-        {perms.canCreate && (
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Gerar contas no Financeiro"
-            title="Gerar contas a receber/pagar no Financeiro"
-            onClick={() => gerarContas(r)}
-          >
-            <Wallet className="h-4 w-4" />
-          </Button>
-        )}
-        {perms.canCreate && (
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Duplicar oferta"
-            title="Duplicar oferta"
-            onClick={() => duplicar(r)}
-          >
-            <Copy className="h-4 w-4" />
-          </Button>
-        )}
-        </div>
-      ),
-    },
   ];
+
+  const rowMenu = (r: Row) => (
+    <>
+      <DropdownMenuItem onClick={() => { setPreview(r); setPreviewOpen(true); }}>
+        <FileText className="h-4 w-4" /> Visualizar PDF da proposta
+      </DropdownMenuItem>
+      <DropdownMenuItem onClick={() => { setPreview(r); setPropostaOpen(true); }}>
+        <FileSignature className="h-4 w-4" /> Proposta digital e assinatura
+      </DropdownMenuItem>
+      <DropdownMenuItem onClick={() => { setPreview(r); setMinutaOpen(true); }}>
+        <ScrollText className="h-4 w-4" /> Minuta de contrato
+      </DropdownMenuItem>
+      {perms.canCreate && (
+        <>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => { setPreview(r); setPedidosOpen(true); }}>
+            <ShoppingCart className="h-4 w-4" /> Gerar pedidos de compra
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => gerarContas(r)}>
+            <Wallet className="h-4 w-4" /> Gerar contas no Financeiro
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => duplicar(r)}>
+            <Copy className="h-4 w-4" /> Duplicar oferta
+          </DropdownMenuItem>
+        </>
+      )}
+    </>
+  );
 
   if (!perms.loading && !perms.canRead) {
     return <p className="text-muted-foreground text-sm">Você não tem acesso a esta página.</p>;
@@ -522,6 +470,7 @@ function OrcamentosPage() {
           setOpen(true);
         }}
         editReadOnly={!perms.canUpdate}
+        rowMenu={rowMenu}
         onDelete={perms.canDelete ? (row) => remove.mutate(row) : undefined}
         filters={
           <>
