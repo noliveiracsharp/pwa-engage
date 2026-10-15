@@ -227,7 +227,7 @@ export function ManutencaoSheet({ open, onOpenChange, record, inicial, onSaved }
 
           <section className="space-y-3 rounded-lg border p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3 className="flex items-center gap-1 font-semibold">Fotos e documentos <UploadInfo perfil="laudo" /></h3>
+              <h3 className="flex items-center gap-1 font-semibold">Fotos e documentos <UploadInfo perfil="laudo" arquivos /></h3>
               <div className="flex flex-wrap gap-2">
                 <Button type="button" size="sm" variant="outline" disabled={subindo} onClick={() => escolher("antes")}><Camera className="mr-1 h-4 w-4" /> Antes</Button>
                 <Button type="button" size="sm" variant="outline" disabled={subindo} onClick={() => escolher("depois")}><Camera className="mr-1 h-4 w-4" /> Depois</Button>
