@@ -167,7 +167,7 @@ export function ManutencaoSheet({ open, onOpenChange, record, inicial, onSaved }
     });
   };
   async function avisarCliente(os: Row, evento: "agendada" | "concluida") {
-    if (!os["token"]) return toast.warning("Aviso ao cliente não enviado: rode o script da Fase 2 de Manutenções.");
+    if (!os["token"]) { toast.warning("Aviso ao cliente não enviado: rode o script da Fase 2 de Manutenções."); return; }
     try {
       const motivo = await enviarWhatsappEmpresa(os["empresa_id"] ?? empresaId, foneCliente(os["parceiro_id"]), textoPara(os, evento));
       if (motivo) toast.warning(`Cliente não avisado: ${motivo}`);
