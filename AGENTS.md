@@ -41,3 +41,4 @@ Comissões: cálculo puro em `src/lib/comissoes.ts` (líquido = venda − compra
 
 Manutenções: OS/modelos/ativos/planos em `manutencao_*`, regras puras em src/lib/manutencoes.ts, `ManutencaoSheet` único (/manutencoes e Atendimento) para a OS nascer igual; links públicos /os e /ativo só por RPCs SECURITY DEFINER; preventivas geradas no cliente ao abrir /manutencoes (banco sem agendador).
 - Reembolsos (/reembolsos): despesas em `despesas_lancamentos` e cartões em `despesas_cartoes`, cálculo puro em src/lib/reembolsos.ts e OCR do comprovante em src/lib/reembolsos.functions.ts; aprovar reembolso cria título `origem_tipo=reembolso` no Financeiro, para o pagamento seguir o mesmo fluxo de baixa.
+- Financeiro/Cobrança: contas em `financeiro_contas_bancarias`; Pix copia e cola gerado localmente (BR Code EMV, src/lib/pix.ts) e linha digitável do boleto colada no título, porque o servidor não suporta o certificado mTLS exigido pelas APIs do Inter/Santander.
