@@ -4,6 +4,7 @@ import { Loader2 } from "lucide-react";
 import { buscarMarca, lembrarSlug, normalizarSlug, SLUGS_RESERVADOS } from "@/lib/marca-publica";
 
 export const Route = createFileRoute("/$slug")({
+  staticData: { sitemap: false },
   ssr: false,
   head: () => ({
     meta: [
