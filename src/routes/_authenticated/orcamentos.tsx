@@ -31,6 +31,7 @@ import { matchesAny } from "@/lib/input-masks";
 import { daysUntil, formatBRL, formatDate, situacaoOf, SITUACOES, yearOf } from "@/lib/orcamentos";
 import { pick, type Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
+import { iniciais } from "@/components/projetos/ResponsaveisPicker";
 
 export const Route = createFileRoute("/_authenticated/orcamentos")({
   staticData: { sitemap: false },
@@ -281,7 +282,15 @@ function OrcamentosPage() {
       key: "vendedor",
       header: "Vendedor",
       fields: ["usuario_id"],
-      render: (r) => nomeVendedor(r) || <span className="text-muted-foreground">—</span>,
+      render: (r) => {
+        const n = nomeVendedor(r);
+        if (!n) return <span className="text-muted-foreground">—</span>;
+        return (
+          <span title={n} className="grid h-7 w-7 place-items-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground">
+            {iniciais(n)}
+          </span>
+        );
+      },
     },
     {
       key: "validade_orcamento",

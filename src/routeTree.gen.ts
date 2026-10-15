@@ -56,6 +56,7 @@ import { Route as AuthenticatedAdminPlanosRouteImport } from './routes/_authenti
 import { Route as AuthenticatedAdminVersoesRouteImport } from './routes/_authenticated/admin.versoes'
 import { Route as AuthenticatedProjetosTemplatesRouteImport } from './routes/_authenticated/projetos_.templates'
 import { Route as AuthenticatedRelatoriosDreOfertasRouteImport } from './routes/_authenticated/relatorios_.dre-ofertas'
+import { Route as ApiPublicManifestRouteImport } from './routes/api/public/manifest'
 import { Route as ApiPublicVersaoRouteImport } from './routes/api/public/versao'
 import { Route as ApiPublicZapiWebhookRouteImport } from './routes/api/public/zapi-webhook'
 
@@ -302,6 +303,11 @@ const AuthenticatedRelatoriosDreOfertasRoute =
     path: '/relatorios/dre-ofertas',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiPublicManifestRoute = ApiPublicManifestRouteImport.update({
+  id: '/api/public/manifest',
+  path: '/api/public/manifest',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicVersaoRoute = ApiPublicVersaoRouteImport.update({
   id: '/api/public/versao',
   path: '/api/public/versao',
@@ -360,6 +366,7 @@ export interface FileRoutesByFullPath {
   '/admin/versoes': typeof AuthenticatedAdminVersoesRoute
   '/projetos/templates': typeof AuthenticatedProjetosTemplatesRoute
   '/relatorios/dre-ofertas': typeof AuthenticatedRelatoriosDreOfertasRoute
+  '/api/public/manifest': typeof ApiPublicManifestRoute
   '/api/public/versao': typeof ApiPublicVersaoRoute
   '/api/public/zapi-webhook': typeof ApiPublicZapiWebhookRoute
 }
@@ -410,6 +417,7 @@ export interface FileRoutesByTo {
   '/admin/versoes': typeof AuthenticatedAdminVersoesRoute
   '/projetos/templates': typeof AuthenticatedProjetosTemplatesRoute
   '/relatorios/dre-ofertas': typeof AuthenticatedRelatoriosDreOfertasRoute
+  '/api/public/manifest': typeof ApiPublicManifestRoute
   '/api/public/versao': typeof ApiPublicVersaoRoute
   '/api/public/zapi-webhook': typeof ApiPublicZapiWebhookRoute
 }
@@ -462,6 +470,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/versoes': typeof AuthenticatedAdminVersoesRoute
   '/_authenticated/projetos_/templates': typeof AuthenticatedProjetosTemplatesRoute
   '/_authenticated/relatorios_/dre-ofertas': typeof AuthenticatedRelatoriosDreOfertasRoute
+  '/api/public/manifest': typeof ApiPublicManifestRoute
   '/api/public/versao': typeof ApiPublicVersaoRoute
   '/api/public/zapi-webhook': typeof ApiPublicZapiWebhookRoute
 }
@@ -514,6 +523,7 @@ export interface FileRouteTypes {
     | '/admin/versoes'
     | '/projetos/templates'
     | '/relatorios/dre-ofertas'
+    | '/api/public/manifest'
     | '/api/public/versao'
     | '/api/public/zapi-webhook'
   fileRoutesByTo: FileRoutesByTo
@@ -564,6 +574,7 @@ export interface FileRouteTypes {
     | '/admin/versoes'
     | '/projetos/templates'
     | '/relatorios/dre-ofertas'
+    | '/api/public/manifest'
     | '/api/public/versao'
     | '/api/public/zapi-webhook'
   id:
@@ -615,6 +626,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/versoes'
     | '/_authenticated/projetos_/templates'
     | '/_authenticated/relatorios_/dre-ofertas'
+    | '/api/public/manifest'
     | '/api/public/versao'
     | '/api/public/zapi-webhook'
   fileRoutesById: FileRoutesById
@@ -635,6 +647,7 @@ export interface RootRouteChildren {
   MinutaTokenRoute: typeof MinutaTokenRoute
   PropostaTokenRoute: typeof PropostaTokenRoute
   WidgetInstanciaIdRoute: typeof WidgetInstanciaIdRoute
+  ApiPublicManifestRoute: typeof ApiPublicManifestRoute
   ApiPublicVersaoRoute: typeof ApiPublicVersaoRoute
   ApiPublicZapiWebhookRoute: typeof ApiPublicZapiWebhookRoute
 }
@@ -970,6 +983,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRelatoriosDreOfertasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/manifest': {
+      id: '/api/public/manifest'
+      path: '/api/public/manifest'
+      fullPath: '/api/public/manifest'
+      preLoaderRoute: typeof ApiPublicManifestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/versao': {
       id: '/api/public/versao'
       path: '/api/public/versao'
@@ -1077,6 +1097,7 @@ const rootRouteChildren: RootRouteChildren = {
   MinutaTokenRoute: MinutaTokenRoute,
   PropostaTokenRoute: PropostaTokenRoute,
   WidgetInstanciaIdRoute: WidgetInstanciaIdRoute,
+  ApiPublicManifestRoute: ApiPublicManifestRoute,
   ApiPublicVersaoRoute: ApiPublicVersaoRoute,
   ApiPublicZapiWebhookRoute: ApiPublicZapiWebhookRoute,
 }
