@@ -23,7 +23,6 @@ export function normalizarChavePix(chave: string): string {
   if (/^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(c)) return c.toLowerCase();
   const d = c.replace(/\D/g, "");
   if (c.startsWith("+")) return `+${d}`;
-  if (d.length === 11 && /^\d{2}9/.test(d) && !/[.\-]/.test(c) && c.replace(/\D/g, "") !== c) return `+55${d}`;
   return d || c;
 }
 
