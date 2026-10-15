@@ -1,6 +1,13 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, ChevronsUpDown, Copy, Eye, GripVertical, Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, ChevronsUpDown, Copy, Eye, GripVertical, MoreVertical, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -48,6 +55,8 @@ type Props = {
   rowHasChildren?: (row: Row) => boolean;
   rowExpanded?: (row: Row) => boolean;
   onToggleRow?: (row: Row) => void;
+  /** When set, row actions collapse into a ⋮ menu with these items plus Editar/Excluir. */
+  rowMenu?: (row: Row) => ReactNode;
 };
 
 export function DataTable({
@@ -63,6 +72,7 @@ export function DataTable({
   onDelete,
   onDuplicate,
   skipDeleteConfirm,
+  rowMenu,
   rowKey,
   onReorder,
   rowDepth,
@@ -251,6 +261,36 @@ export function DataTable({
                     );
                   })}
                   <TableCell className="text-right">
+                    {rowMenu ? (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" aria-label="Ações" title="Ações">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-60">
+                          {rowMenu(row)}
+                          {(onEdit || onDelete) && <DropdownMenuSeparator />}
+                          {onEdit && (
+                            <DropdownMenuItem onClick={() => onEdit(row)}>
+                              {editReadOnly ? <Eye className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
+                              {editReadOnly ? "Visualizar" : "Editar"}
+                            </DropdownMenuItem>
+                          )}
+                          {onDelete && (
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onClick={() => {
+                                if (skipDeleteConfirm || window.confirm("Deseja realmente excluir este registro?")) onDelete(row);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              Excluir
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    ) : (
                     <div className="flex justify-end gap-1">
                       {onEdit && (
                         <Button variant="ghost" size="icon" aria-label={editReadOnly ? "Visualizar" : "Editar"} title={editReadOnly ? "Visualizar" : "Editar"} onClick={() => onEdit(row)}>
@@ -275,6 +315,7 @@ export function DataTable({
                         </Button>
                       )}
                     </div>
+                    )}
                   </TableCell>
                 </TableRow>
                 );
