@@ -26,3 +26,20 @@ describe("mensagem ao cliente", () => {
     expect(m).toContain("https://x/os/abc");
   });
 });
+
+import { preventivasAGerar, somarMeses } from "./manutencoes";
+describe("preventivas recorrentes", () => {
+  it("ajusta fim de mês", () => { expect(somarMeses("2026-01-31", 1)).toBe("2026-02-28"); expect(somarMeses("2026-11-15", 3)).toBe("2027-02-15"); });
+  it("gera com antecedência e avança a próxima data", () => {
+    const r = preventivasAGerar([{ id: "a", ativo: true, proxima_data: "2026-10-20", frequencia_meses: 1, antecedencia_dias: 7 }], "2026-10-15");
+    expect(r).toEqual([{ id: "a", datas: ["2026-10-20"], proxima: "2026-11-20" }]);
+  });
+  it("não gera antes da antecedência nem para plano inativo", () => {
+    expect(preventivasAGerar([{ id: "a", ativo: true, proxima_data: "2026-10-30", frequencia_meses: 1, antecedencia_dias: 7 }], "2026-10-15")).toEqual([]);
+    expect(preventivasAGerar([{ id: "b", ativo: false, proxima_data: "2026-01-01", frequencia_meses: 1, antecedencia_dias: 0 }], "2026-10-15")).toEqual([]);
+  });
+  it("recupera ciclos atrasados", () => {
+    const r = preventivasAGerar([{ id: "a", ativo: true, proxima_data: "2026-07-01", frequencia_meses: 3, antecedencia_dias: 0 }], "2026-10-15");
+    expect(r[0]!.datas).toEqual(["2026-07-01", "2026-10-01"]); expect(r[0]!.proxima).toBe("2027-01-01");
+  });
+});
