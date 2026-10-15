@@ -38,3 +38,5 @@ Comissões: cálculo puro em `src/lib/comissoes.ts` (líquido = venda − compra
 - Imagens: toda compressão passa por `comprimirImagem(file, perfil)` em src/lib/image-compress.ts e o (i) por `UploadInfo`; perfis num só lugar mantêm limites e explicação iguais.
 - DRE de Ofertas (/relatorios/dre-ofertas): cálculo puro em src/lib/dre-ofertas.ts sobre os valores gravados, para bater com a memória de cálculo.
 - Financeiro: títulos em `financeiro_titulos` (receber/pagar, origem_tipo/origem_id), cálculo puro em src/lib/financeiro.ts; Oferta e Pedidos geram via `inserirTitulos`, para baixa e caixa lerem uma só tabela.
+
+Manutenções: OS em `manutencao_os` com checklist e anexos em jsonb (respostas C/NC/NA ou valor medido), modelos em `manutencao_modelos`; regras puras em src/lib/manutencoes.ts e o formulário único `ManutencaoSheet` é reutilizado em /manutencoes e no Atendimento, para que a OS nasça igual pelos dois caminhos.
