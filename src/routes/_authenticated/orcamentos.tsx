@@ -470,6 +470,7 @@ function OrcamentosPage() {
           setOpen(true);
         }}
         editReadOnly={!perms.canUpdate}
+        rowMenu={rowMenu}
         onDelete={perms.canDelete ? (row) => remove.mutate(row) : undefined}
         filters={
           <>
