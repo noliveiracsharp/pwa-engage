@@ -19,7 +19,7 @@ import type { Row } from "@/lib/row";
 export type TipoTitulo = "receber" | "pagar";
 export type StatusTitulo = "aberto" | "pago" | "cancelado";
 export type Situacao = "aberto" | "atrasado" | "pago" | "cancelado";
-export type OrigemTitulo = "manual" | "oferta" | "pedido" | "despesa" | "comissao";
+export type OrigemTitulo = "manual" | "oferta" | "pedido" | "despesa" | "comissao" | "reembolso";
 
 export type NovoTitulo = {
   tipo: TipoTitulo;
@@ -35,7 +35,7 @@ export type NovoTitulo = {
 
 export const CATEGORIAS_FINANCEIRO: Record<TipoTitulo, string[]> = {
   receber: ["Venda / Oferta", "Mensalidade", "Serviço avulso", "Outras receitas"],
-  pagar: ["Fornecedores", "Despesas operacionais", "Comissões", "Impostos", "Folha", "Aluguel", "Energia / Água / Internet", "Outras despesas"],
+  pagar: ["Fornecedores", "Despesas operacionais", "Comissões", "Reembolsos", "Impostos", "Folha", "Aluguel", "Energia / Água / Internet", "Outras despesas"],
 };
 
 export const FORMAS_PAGAMENTO = ["Pix", "Boleto", "Cartão de crédito", "Cartão de débito", "Transferência", "Dinheiro", "Cheque"];
