@@ -16,3 +16,13 @@ describe("manutenções", () => {
     expect(prazoSla(a, "urgente").toISOString()).toBe("2026-10-15T14:00:00.000Z");
   });
 });
+
+import { mensagemOs } from "./manutencoes";
+describe("mensagem ao cliente", () => {
+  it("conclusão traz número, pendências e link", () => {
+    const m = mensagemOs("concluida", { cliente: "Solar", numero: "OS-2026-001", tipo: "preventiva", link: "https://x/os/abc", itens: 14, naoConformes: 2 });
+    expect(m).toContain("*OS-2026-001* foi concluída");
+    expect(m).toContain("Itens verificados: 14 (2 com pendência)");
+    expect(m).toContain("https://x/os/abc");
+  });
+});

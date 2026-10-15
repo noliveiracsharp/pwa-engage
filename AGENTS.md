@@ -19,7 +19,7 @@ Listas longas usam `SearchSelect`; `Select` simples só para listas curtas.
 
 Estados usam tokens `success`/`warning` de `src/styles.css`; nunca cores fixas.
 
-Laudos/Cotações: helpers (numeração PREFIXO-AAAA-NNN, CSV, upload de fotos) ficam em `src/lib/laudos.ts`; a aprovação da cotação cria o orçamento via `useSaveOrcamento` para reaproveitar numeração e sincronização de linhas.
+Laudos/Cotações: helpers em `src/lib/laudos.ts`; aprovar cotação cria o orçamento via `useSaveOrcamento` para reaproveitar numeração e linhas.
 
 Stage-Gate de etapas: toda mudança manual de etapa de atendimento passa por `useChecklistGate` (`src/components/kanban/ChecklistGate.tsx`) antes do fluxo de CSAT; isso garante a mesma regra no Kanban, no painel do contato e no "Mover".
 
@@ -39,4 +39,4 @@ Comissões: cálculo puro em `src/lib/comissoes.ts` (líquido = venda − compra
 - DRE de Ofertas (/relatorios/dre-ofertas): cálculo puro em src/lib/dre-ofertas.ts sobre os valores gravados, para bater com a memória de cálculo.
 - Financeiro: títulos em `financeiro_titulos` (receber/pagar, origem_tipo/origem_id), cálculo puro em src/lib/financeiro.ts; Oferta e Pedidos geram via `inserirTitulos`, para baixa e caixa lerem uma só tabela.
 
-Manutenções: OS em `manutencao_os` com checklist e anexos em jsonb (respostas C/NC/NA ou valor medido), modelos em `manutencao_modelos`; regras puras em src/lib/manutencoes.ts e o formulário único `ManutencaoSheet` é reutilizado em /manutencoes e no Atendimento, para que a OS nasça igual pelos dois caminhos.
+Manutenções: OS em `manutencao_os` com checklist e anexos em jsonb (respostas C/NC/NA ou valor medido), modelos em `manutencao_modelos`; regras puras em src/lib/manutencoes.ts e o formulário único `ManutencaoSheet` é reutilizado em /manutencoes e no Atendimento, para que a OS nasça igual pelos dois caminhos; o link público /os/$token lê e assina só por RPCs SECURITY DEFINER.

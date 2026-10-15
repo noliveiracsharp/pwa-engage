@@ -105,3 +105,44 @@ export async function uploadAnexo(original: File): Promise<string> {
   if (error) throw error;
   return supabase.storage.from("chat_media").getPublicUrl(path).data.publicUrl;
 }
+
+/* ---------------------- Relatório e aviso ao cliente ---------------------- */
+
+export const linkOs = (token: unknown, origem = typeof window !== "undefined" ? window.location.origin : "") =>
+  `${origem}/os/${String(token ?? "")}`;
+
+const quando = (v: unknown) =>
+  v ? new Date(String(v)).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : "";
+
+/** Texto do WhatsApp por evento; o mesmo texto serve para o envio automático e o manual. */
+export function mensagemOs(evento: "agendada" | "concluida", d: { cliente?: string; empresa?: string; numero?: string; tipo?: string; data?: unknown; tecnico?: string; link: string; itens?: number; naoConformes?: number }) {
+  const ola = `Olá${d.cliente ? `, ${d.cliente}` : ""}!`;
+  const tipo = meta(TIPOS, d.tipo).label.toLowerCase();
+  if (evento === "agendada") {
+    return [
+      ola, "",
+      `Sua manutenção ${tipo} *${d.numero ?? ""}* foi agendada${d.data ? ` para *${quando(d.data)}*` : ""}${d.tecnico ? ` com o técnico *${d.tecnico}*` : ""}.`,
+      "", `Acompanhe pelo link: ${d.link}`,
+      d.empresa ? `\n_${d.empresa}_` : "",
+    ].join("\n").trim();
+  }
+  return [
+    ola, "",
+    `A manutenção ${tipo} *${d.numero ?? ""}* foi concluída ✅`,
+    d.tecnico ? `Técnico: ${d.tecnico}` : "",
+    d.itens ? `Itens verificados: ${d.itens}${d.naoConformes ? ` (${d.naoConformes} com pendência)` : ""}` : "",
+    "", "Veja o relatório com as fotos e assine pelo link:", `🔗 ${d.link}`,
+    d.empresa ? `\n_${d.empresa}_` : "",
+  ].filter((l, i, a) => l !== "" || a[i - 1] !== "").join("\n").trim();
+}
+
+/** Envia pela primeira instância ativa de WhatsApp da empresa. Retorna o motivo quando não envia. */
+export async function enviarWhatsappEmpresa(empresaId: unknown, telefone: string, texto: string): Promise<string | null> {
+  const { dispararMensagem, sanitizarTelefone } = await import("@/lib/atendimentos-envio");
+  if (!sanitizarTelefone(telefone)) return "Cliente sem telefone cadastrado.";
+  const { data } = await supabase.from("empresas_instancias").select("*").eq("empresa_id", String(empresaId) as never);
+  const inst = ((data ?? []) as Record<string, unknown>[]).find((i) => i["status"] !== false && i["ativo"] !== false && String(i["tipo"] ?? "") !== "chat");
+  if (!inst) return "Nenhum WhatsApp da empresa conectado.";
+  await dispararMensagem({ instancia: inst, mensagemId: null, atendimentoId: null, telefone, texto });
+  return null;
+}

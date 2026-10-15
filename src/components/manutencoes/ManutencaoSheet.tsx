@@ -1,7 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Camera, FileText, Loader2, Paperclip, Play, CheckCircle2, X } from "lucide-react";
+import { Camera, FileText, Loader2, Paperclip, Play, CheckCircle2, X, Eye, Link2, Printer, Send } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { EnviarPropostaDialog } from "@/components/orcamentos/EnviarPropostaDialog";
+import { OsDocumento } from "./OsDocumento";
+import { imprimirElemento } from "@/lib/propostas";
+import { useAuth } from "@/hooks/useAuth";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +23,7 @@ import { rowId, text, useTableRows } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
 import {
-  PRIORIDADES, STATUS, TIPOS, checklistDoModelo, prazoSla, proximoNumeroOs, resumoChecklist, uploadAnexo,
+  PRIORIDADES, STATUS, TIPOS, checklistDoModelo, enviarWhatsappEmpresa, linkOs, mensagemOs, prazoSla, proximoNumeroOs, resumoChecklist, uploadAnexo,
   type Anexo, type ItemChecklist,
 } from "@/lib/manutencoes";
 
@@ -45,6 +51,10 @@ export function ManutencaoSheet({ open, onOpenChange, record, inicial, onSaved }
   const { data: parceiros = [] } = useTableRows("parceiros");
   const { data: usuarios = [] } = useTableRows("usuarios");
   const { data: modelos = [] } = useTableRows("manutencao_modelos");
+  const { empresa } = useAuth();
+  const [avisar, setAvisar] = useState(true);
+  const [preview, setPreview] = useState(false);
+  const [envio, setEnvio] = useState(false);
   const [f, setF] = useState({
     tipo: "corretiva", prioridade: "normal", status: "agendada", parceiro_id: "", tecnico_usuario_id: "", modelo_id: "",
     equipamento: "", local: "", descricao: "", data_prevista: "", observacoes: "",
@@ -137,11 +147,36 @@ export function ManutencaoSheet({ open, onOpenChange, record, inicial, onSaved }
     onSuccess: (os) => {
       qc.invalidateQueries({ queryKey: ["table", "manutencao_os"] });
       toast.success(`Ordem ${text(os["numero"])} salva.`);
+      const evento = !record && os["data_prevista"] ? "agendada" : os["status"] === "concluida" && record?.["status"] !== "concluida" ? "concluida" : null;
+      if (avisar && evento) void avisarCliente(os, evento);
       onSaved?.(os);
       onOpenChange(false);
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Não foi possível salvar a ordem."),
   });
+
+  const nomeCliente = (id: unknown) => text(pick(parceiros.find((p) => text(rowId(p)) === text(id)) ?? {}, ["nome_fantasia", "razao_social"]));
+  const foneCliente = (id: unknown) => text(pick(parceiros.find((p) => text(rowId(p)) === text(id)) ?? {}, ["whatsapp", "celular", "telefone", "telefone2"]));
+  const nomeTecnico = (id: unknown) => text(pick(usuarios.find((u) => text(rowId(u)) === text(id)) ?? {}, ["nome", "nome_completo"]));
+  const empresaNome = text(pick(empresa ?? {}, ["titulo", "nome"]));
+  const textoPara = (os: Row, evento: "agendada" | "concluida") => {
+    const r = resumoChecklist(Array.isArray(os["checklist"]) ? (os["checklist"] as ItemChecklist[]) : []);
+    return mensagemOs(evento, {
+      cliente: nomeCliente(os["parceiro_id"]), empresa: empresaNome, numero: text(os["numero"]), tipo: text(os["tipo"]),
+      data: os["data_prevista"], tecnico: nomeTecnico(os["tecnico_usuario_id"]), link: linkOs(os["token"]), itens: r.total, naoConformes: r.naoConformes,
+    });
+  };
+  async function avisarCliente(os: Row, evento: "agendada" | "concluida") {
+    if (!os["token"]) { toast.warning("Aviso ao cliente não enviado: rode o script da Fase 2 de Manutenções."); return; }
+    try {
+      const motivo = await enviarWhatsappEmpresa(os["empresa_id"] ?? empresaId, foneCliente(os["parceiro_id"]), textoPara(os, evento));
+      if (motivo) toast.warning(`Cliente não avisado: ${motivo}`);
+      else toast.success(evento === "agendada" ? "Cliente avisado do agendamento pelo WhatsApp." : "Relatório enviado ao cliente pelo WhatsApp.");
+    } catch (e) {
+      toast.warning(`Cliente não avisado: ${e instanceof Error ? e.message : "falha no envio"}`);
+    }
+  }
+  const atual: Row = { ...(record ?? {}), ...f, checklist, anexos, ...datas };
 
   const iniciar = () => { const agora = new Date().toISOString(); setDatas((d) => ({ ...d, iniciado_em: agora })); setF((s) => ({ ...s, status: "em_execucao" })); };
   const concluir = () => {
@@ -265,7 +300,16 @@ export function ManutencaoSheet({ open, onOpenChange, record, inicial, onSaved }
           <div className="space-y-1.5"><Label>Observações do técnico</Label>
             <Textarea rows={3} value={f.observacoes} onChange={(e) => setF({ ...f, observacoes: e.target.value })} /></div>
         </div>
-        <div className="flex flex-wrap justify-end gap-2 border-t p-4">
+        <div className="flex flex-wrap items-center justify-end gap-2 border-t p-4">
+          <label className="mr-auto flex items-center gap-2 text-sm">
+            <Switch checked={avisar} onCheckedChange={setAvisar} /> Avisar cliente pelo WhatsApp
+          </label>
+          {record && !!record["token"] && (
+            <>
+              <Button variant="outline" onClick={() => setPreview(true)}><Eye className="mr-1 h-4 w-4" /> Relatório</Button>
+              <Button variant="outline" onClick={() => setEnvio(true)}><Send className="mr-1 h-4 w-4" /> Enviar</Button>
+            </>
+          )}
           {record && !datas.iniciado_em && <Button variant="outline" onClick={iniciar}><Play className="mr-1 h-4 w-4" /> Iniciar</Button>}
           {record && f.status !== "concluida" && (
             <Button variant="outline" onClick={concluir} disabled={save.isPending}><CheckCircle2 className="mr-1 h-4 w-4" /> Concluir</Button>
@@ -276,6 +320,29 @@ export function ManutencaoSheet({ open, onOpenChange, record, inicial, onSaved }
           </Button>
         </div>
       </SheetContent>
+      {record && (
+        <>
+          <Dialog open={preview} onOpenChange={setPreview}>
+            <DialogContent className="max-h-[92vh] w-[96vw] max-w-4xl overflow-y-auto p-0">
+              <DialogHeader className="sticky top-0 z-20 flex-row items-center justify-between gap-2 space-y-0 border-b bg-background px-6 py-4">
+                <DialogTitle>Relatório {text(record["numero"])}</DialogTitle>
+                <div className="flex gap-2 pr-8">
+                  <Button variant="outline" size="sm" onClick={() => { void navigator.clipboard.writeText(linkOs(record["token"])); toast.success("Link copiado."); }}><Link2 className="mr-1 h-4 w-4" /> Copiar link</Button>
+                  <Button size="sm" onClick={() => imprimirElemento("os-interna")}><Printer className="mr-1 h-4 w-4" /> PDF</Button>
+                </div>
+              </DialogHeader>
+              <OsDocumento id="os-interna" os={atual} empresa={{ nome: empresaNome, razao_social: pick(empresa ?? {}, ["nome"]), logo: pick(empresa ?? {}, ["logo"]), cnpj: pick(empresa ?? {}, ["cnpj_cpf"]) }}
+                cliente={nomeCliente(f.parceiro_id)} tecnico={nomeTecnico(f.tecnico_usuario_id)} />
+            </DialogContent>
+          </Dialog>
+          <EnviarPropostaDialog
+            open={envio} onOpenChange={setEnvio} orcamento={record} empresa={empresa}
+            cliente={parceiros.find((p) => text(rowId(p)) === f.parceiro_id)} link={linkOs(record["token"])}
+            antesDeEnviar={async () => true} titulo="Enviar ordem ao cliente"
+            mensagemInicial={textoPara(atual, f.status === "concluida" ? "concluida" : "agendada")}
+          />
+        </>
+      )}
     </Sheet>
   );
 }
