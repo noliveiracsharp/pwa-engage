@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import loginHero from "@/assets/login-hero.jpg";
+import { useTheme } from "@/components/theme-provider";
+import { aplicarMarca, buscarMarca, lembrarSlug, slugDoHost, slugLembrado, type MarcaPublica } from "@/lib/marca-publica";
 
 export const Route = createFileRoute("/login")({
   staticData: { sitemap: true },
@@ -32,9 +34,24 @@ function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [atualizado, setAtualizado] = useState(false);
 
+  const [marca, setMarca] = useState<MarcaPublica | null>(null);
+  const { theme } = useTheme();
+
   useEffect(() => {
-    setAtualizado(new URLSearchParams(window.location.search).get("motivo") === "atualizacao");
+    const qs = new URLSearchParams(window.location.search);
+    setAtualizado(qs.get("motivo") === "atualizacao");
+    const slug = slugDoHost(window.location.hostname) || qs.get("e") || slugLembrado();
+    if (!slug) return;
+    buscarMarca(slug).then((m) => {
+      if (!m) { lembrarSlug(null); return; }
+      lembrarSlug(slug);
+      setMarca(m);
+      aplicarMarca(m);
+    });
   }, []);
+
+  const nomeMarca = marca?.titulo || marca?.nome || "Atende.ai";
+  const logoMarca = (theme === "dark" && marca?.logo_escuro) || marca?.logo || "";
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -71,7 +88,7 @@ function LoginPage() {
       <div className="relative hidden h-full min-h-0 w-1/2 overflow-hidden lg:block">
         <img src={loginHero} alt="Atendimento multicanal" width={1024} height={1536} className="absolute inset-0 h-full w-full object-cover" />
         <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-primary/80 to-transparent p-10">
-          <h2 className="text-3xl font-bold text-primary-foreground">Atende.ai</h2>
+          <h2 className="text-3xl font-bold text-primary-foreground">{nomeMarca}</h2>
           <p className="mt-2 max-w-md text-primary-foreground/90">
             Suporte e atendimento multicanal para todas as suas empresas, em um só lugar.
           </p>
@@ -81,6 +98,7 @@ function LoginPage() {
       <div className="flex h-full min-h-0 w-full items-center justify-center overflow-y-auto p-6 lg:w-1/2">
         <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-5">
           <div className="space-y-1 text-center lg:text-left">
+            {logoMarca && <img src={logoMarca} alt={nomeMarca} data-no-zoom className="mx-auto mb-4 h-14 w-auto object-contain lg:mx-0" />}
             <h1 className="text-2xl font-bold text-foreground">Bem-vindo de volta</h1>
             <p className="text-sm text-muted-foreground">Entre com seu e-mail e senha para continuar.</p>
           </div>
