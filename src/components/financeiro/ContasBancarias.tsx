@@ -126,7 +126,7 @@ function ContaSheet({ registro, readOnly, onClose, onSaved }: { registro: Row | 
             {campo("descricao", "Nome da conta *", "Ex.: Inter PJ principal")}
             <div className="space-y-1">
               <Label>Banco</Label>
-              <Select value={v["banco"]} onValueChange={(b) => setV((s) => ({ ...s, banco: b }))} disabled={readOnly}>
+              <Select value={v["banco"] ?? "077"} onValueChange={(b) => setV((s) => ({ ...s, banco: b }))} disabled={readOnly}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>{BANCOS.map((b) => <SelectItem key={b.codigo} value={b.codigo}>{b.codigo} — {b.nome}</SelectItem>)}</SelectContent>
               </Select>
