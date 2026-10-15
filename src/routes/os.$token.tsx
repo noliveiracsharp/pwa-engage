@@ -124,7 +124,7 @@ function OsPublica() {
                 <div className="flex items-center justify-between"><Label>Assine com o dedo ou o mouse</Label>
                   <Button variant="ghost" size="sm" onClick={limpar}><Eraser className="mr-1 h-4 w-4" /> Limpar</Button></div>
                 <canvas ref={canvas} width={800} height={220} onPointerDown={inicio} onPointerMove={mover} onPointerUp={() => (desenhando.current = false)}
-                  className="h-40 w-full touch-none rounded-md border bg-background" data-no-zoom />
+                  className="h-40 w-full touch-none rounded-md border" style={{ background: "#fff" }} data-no-zoom />
               </div>
               {msg && <p className="text-sm text-destructive">{msg}</p>}
               <Button onClick={assinar} disabled={enviando || nome.trim().length < 3 || !rabiscou}>
