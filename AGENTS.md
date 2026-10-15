@@ -9,15 +9,15 @@
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
 
-Centro de custo usa `buildTree` e o `DataTable` compartilhado com expansão por ID em `ApoioCrud`; isso mantém a árvore estável nas telas de gestão e na aba de Itens sem alterar as demais tabelas.
+Centro de custo: `buildTree` + `DataTable` com expansão por ID em `ApoioCrud`, para árvore estável sem afetar outras tabelas.
 
 Orçamentos: toda a matemática (linha, totais, desconto R$/%, lucro = venda − custo − imposto) vive em `src/lib/orcamentos.ts` como funções puras e os valores calculados são gravados nas colunas de `orcamentos`/`orcamento_itens`; relatórios leem esses valores sem recalcular.
 
 Orçamentos: gravação multi-tabela (cabeçalho + sincronização das linhas) fica em `src/hooks/useSaveOrcamento.ts`, fora de `useSaveRecord`; o número `#ano-seq` é gerado por gatilho no banco (`orcamentos_gerar_numero`, com lock por empresa/ano) e o hook só numera no cliente como fallback se o gatilho não devolver `numero`.
 
-Selects com muitas opções (clientes, itens) usam `SearchSelect` (Popover + Command) em `src/components/data-table/`; o `Select` simples continua para listas curtas (vendedor, unidade, situação).
+Listas longas usam `SearchSelect`; `Select` simples só para listas curtas.
 
-Cores semânticas `success` e `warning` existem em `src/styles.css` (claro/escuro) para estados como situação do orçamento; nunca usar classes de cor fixas (green-500 etc.).
+Estados usam tokens `success`/`warning` de `src/styles.css`; nunca cores fixas.
 
 Laudos/Cotações: helpers (numeração PREFIXO-AAAA-NNN, CSV, upload de fotos) ficam em `src/lib/laudos.ts`; a aprovação da cotação cria o orçamento via `useSaveOrcamento` para reaproveitar numeração e sincronização de linhas.
 
