@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, Plus, Trash2, Download } from "lucide-react"
 import { DataTable, type Column } from "@/components/data-table/DataTable";
 import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
 import { ManutencaoSheet } from "@/components/manutencoes/ManutencaoSheet";
+import { Ativos, Planos, gerarPreventivas } from "@/components/manutencoes/AtivosPlanos";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -60,6 +61,18 @@ function ManutencoesPage() {
     [os, f, nomeP],
   );
   const abrir = (r: Row | null) => { setRecord(r); setAberto(true); };
+  const qc = useQueryClient();
+  const { empresaId } = useAudit();
+  const gerou = useRef(false);
+  useEffect(() => {
+    if (gerou.current || !perms.canCreate || !empresaId) return;
+    gerou.current = true;
+    gerarPreventivas(empresaId).then((n) => {
+      if (!n) return;
+      qc.invalidateQueries({ queryKey: ["table", "manutencao_os"] }); qc.invalidateQueries({ queryKey: ["table", "manutencao_planos"] });
+      toast.success(`${n} ordem(ns) preventiva(s) criada(s) pelos planos.`);
+    }).catch(() => { /* tabelas da Fase 3 ainda não criadas */ });
+  }, [perms.canCreate, empresaId, qc]);
 
   const columns: Column[] = [
     { key: "numero", header: "OS", fields: ["numero"], render: (r) => <span className="font-semibold tabular-nums">{text(r["numero"]) || "—"}</span> },
@@ -82,7 +95,7 @@ function ManutencoesPage() {
   return (
     <div className="space-y-4 p-4 md:p-6">
       <Tabs defaultValue="ordens">
-        <TabsList><TabsTrigger value="ordens">Ordens de serviço</TabsTrigger><TabsTrigger value="calendario">Calendário</TabsTrigger><TabsTrigger value="modelos">Modelos de checklist</TabsTrigger></TabsList>
+        <TabsList className="h-auto flex-wrap"><TabsTrigger value="ordens">Ordens de serviço</TabsTrigger><TabsTrigger value="calendario">Calendário</TabsTrigger><TabsTrigger value="equipamentos">Equipamentos</TabsTrigger><TabsTrigger value="planos">Preventivas</TabsTrigger><TabsTrigger value="modelos">Modelos de checklist</TabsTrigger></TabsList>
         <TabsContent value="ordens">
           <DataTable
             title="Ordens de manutenção" columns={columns} rows={rows} loading={isLoading}
@@ -98,6 +111,8 @@ function ManutencoesPage() {
           />
         </TabsContent>
         <TabsContent value="calendario"><Calendario os={os} nomeP={nomeP} onOpen={abrir} /></TabsContent>
+        <TabsContent value="equipamentos"><Ativos podeEditar={perms.canCreate || perms.canUpdate} podeExcluir={perms.canDelete} /></TabsContent>
+        <TabsContent value="planos"><Planos podeEditar={perms.canCreate || perms.canUpdate} podeExcluir={perms.canDelete} /></TabsContent>
         <TabsContent value="modelos"><Modelos podeEditar={perms.canCreate || perms.canUpdate} /></TabsContent>
       </Tabs>
       <ManutencaoSheet open={aberto} onOpenChange={setAberto} record={record} />

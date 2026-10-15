@@ -146,3 +146,47 @@ export async function enviarWhatsappEmpresa(empresaId: unknown, telefone: string
   await dispararMensagem({ instancia: inst, mensagemId: null, atendimentoId: null, telefone, texto });
   return null;
 }
+
+/* ---------------------- Fase 3: ativos e preventivas recorrentes ---------------------- */
+
+export const FREQUENCIAS = [
+  { value: "1", label: "Mensal" }, { value: "2", label: "Bimestral" }, { value: "3", label: "Trimestral" },
+  { value: "6", label: "Semestral" }, { value: "12", label: "Anual" },
+];
+
+/** Soma meses a uma data AAAA-MM-DD, ajustando o fim do mês (31/01 + 1 = 28/02). */
+export function somarMeses(iso: string, meses: number): string {
+  const [a, m, d] = iso.slice(0, 10).split("-").map(Number) as [number, number, number];
+  const alvo = new Date(Date.UTC(a, m - 1 + meses, 1));
+  const ultimo = new Date(Date.UTC(alvo.getUTCFullYear(), alvo.getUTCMonth() + 1, 0)).getUTCDate();
+  alvo.setUTCDate(Math.min(d, ultimo));
+  return alvo.toISOString().slice(0, 10);
+}
+
+export type PlanoPreventiva = { id: string; ativo: boolean; proxima_data: string; frequencia_meses: number; antecedencia_dias: number };
+
+/**
+ * Datas de OS que cada plano ativo precisa gerar hoje: toda ocorrência cuja data menos a
+ * antecedência já chegou. Devolve também a nova próxima data do plano (máx. 24 por plano).
+ */
+export function preventivasAGerar(planos: PlanoPreventiva[], hojeIso: string) {
+  const hoje = hojeIso.slice(0, 10);
+  const out: { id: string; datas: string[]; proxima: string }[] = [];
+  for (const p of planos) {
+    if (!p.ativo || !p.proxima_data || !(p.frequencia_meses > 0)) continue;
+    const datas: string[] = [];
+    let prox = p.proxima_data.slice(0, 10);
+    while (datas.length < 24) {
+      const d = new Date(`${prox}T00:00:00Z`);
+      d.setUTCDate(d.getUTCDate() - Math.max(0, p.antecedencia_dias || 0));
+      if (d.toISOString().slice(0, 10) > hoje) break;
+      datas.push(prox);
+      prox = somarMeses(prox, p.frequencia_meses);
+    }
+    if (datas.length) out.push({ id: p.id, datas, proxima: prox });
+  }
+  return out;
+}
+
+export const linkAtivo = (token: unknown, origem = typeof window !== "undefined" ? window.location.origin : "") =>
+  `${origem}/ativo/${String(token ?? "")}`;
