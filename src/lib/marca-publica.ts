@@ -80,7 +80,7 @@ export function aplicarManifesto(slug: string, icone?: string) {
   if (!link) { link = document.createElement("link"); link.rel = "manifest"; document.head.appendChild(link); }
   if (link.getAttribute("href") !== href) link.setAttribute("href", href);
   if (icone) {
-    document.querySelectorAll<HTMLLinkElement>("link[rel='apple-touch-icon']").forEach((l) => { l.href = icone; });
+    document.querySelectorAll<HTMLLinkElement>("link[rel='apple-touch-icon']").forEach((l) => { l.href = `/api/public/icone?s=${encodeURIComponent(slug)}`; });
   }
 }
 
