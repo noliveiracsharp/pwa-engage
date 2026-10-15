@@ -2,7 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { comprimirImagem } from "@/lib/image-compress";
 
 export type TipoResposta = "cnc" | "numero";
-export type ItemModelo = { texto: string; tipo: TipoResposta; unidade?: string };
+export type ItemModelo = { texto: string; tipo: TipoResposta; unidade?: string | undefined };
 export type ItemChecklist = ItemModelo & { resposta?: "C" | "NC" | "NA" | null; valor?: string; obs?: string };
 export type Anexo = { url: string; nome: string; grupo: "antes" | "depois" | "documento" };
 

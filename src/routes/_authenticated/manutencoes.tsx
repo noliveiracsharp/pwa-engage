@@ -69,7 +69,7 @@ function ManutencoesPage() {
     { key: "data", header: "Previsto", fields: ["data_prevista"], render: (r) => fmt(r["data_prevista"]) },
     { key: "prio", header: "Prioridade", fields: ["prioridade"], render: (r) => {
       const atrasada = r["prazo_sla"] && r["status"] !== "concluida" && new Date(text(r["prazo_sla"])) < new Date();
-      return <span className={cn(atrasada && "font-semibold text-destructive")}>{meta(PRIORIDADES, r["prioridade"]).label}{atrasada ? " · SLA vencido" : ""}</span>;
+      return <span className={cn(!!atrasada && "font-semibold text-destructive")}>{meta(PRIORIDADES, r["prioridade"]).label}{atrasada ? " · SLA vencido" : ""}</span>;
     } },
     { key: "tec", header: "Técnico", fields: ["tecnico_usuario_id"], render: (r) => nomeU.get(text(r["tecnico_usuario_id"])) || "—" },
     { key: "check", header: "Checklist", fields: ["checklist"], render: (r) => {
