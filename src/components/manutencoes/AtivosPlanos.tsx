@@ -136,7 +136,7 @@ function EtiquetasDialog({ ativos, clientes, onClose }: { ativos: Row[] | null; 
       <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
         <DialogHeader><DialogTitle>Etiquetas com QR Code</DialogTitle></DialogHeader>
         <p className="text-sm text-muted-foreground">Imprima e cole no equipamento. Ao apontar a câmera, o cliente vê a ficha, o histórico e pode abrir um chamado.</p>
-        <div ref={ref} className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div ref={ref} id="etiquetas-qr" className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {(ativos ?? []).map((a) => (
             <div key={text(rowId(a))} className="flex flex-col items-center gap-1 rounded-lg border p-3 text-center" style={{ breakInside: "avoid" }}>
               {qrs[text(rowId(a))] ? <img data-no-zoom src={qrs[text(rowId(a))]} alt="QR Code do equipamento" className="h-32 w-32" /> : <div className="h-32 w-32 animate-pulse rounded bg-muted" />}
@@ -148,7 +148,7 @@ function EtiquetasDialog({ ativos, clientes, onClose }: { ativos: Row[] | null; 
         </div>
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={onClose}>Fechar</Button>
-          <Button onClick={() => ref.current && imprimirElemento(ref.current, "Etiquetas QR Code")}><Printer className="mr-1 h-4 w-4" /> Imprimir</Button>
+          <Button onClick={() => imprimirElemento("etiquetas-qr")}><Printer className="mr-1 h-4 w-4" /> Imprimir</Button>
         </div>
       </DialogContent>
     </Dialog>
