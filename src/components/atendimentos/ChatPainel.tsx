@@ -10,7 +10,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-  ArrowLeft, Bot, Check, CheckCheck, FileText, Hand, Lock, MoreVertical, MoveRight, Paperclip, PanelRightClose, PanelRightOpen, Send, Smile, CheckCircle2, Loader2, Trash2, Users, Video, Phone,
+  ArrowLeft, Bot, Check, CheckCheck, FileText, Hand, Lock, MoreVertical, MoveRight, Paperclip, PanelRightClose, PanelRightOpen, Send, Smile, CheckCircle2, Loader2, Trash2, Users, Video, Phone, Wrench,
 } from "lucide-react";
 import { ChamadaFlutuante, duracao, linkConvite, novaSala, type Chamada } from "./ChamadaFlutuante";
 import {
@@ -38,6 +38,7 @@ import {
 import { dispararMensagem, marcarEnvio } from "@/lib/atendimentos-envio";
 import { GravadorAudio } from "./GravadorAudio";
 import { ProtocoloBadge } from "./ProtocoloBadge";
+import { ManutencaoSheet } from "@/components/manutencoes/ManutencaoSheet";
 import { AvaliacaoSelo, usePesquisaSatisfacao } from "./Pesquisa";
 import { ChecklistEventoCard, dataChecklist, useChecklistsAtendimento } from "./ChecklistRespostas";
 
@@ -73,6 +74,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
   const perms = usePagePermissions("/atendimentos");
   const [excluirAberto, setExcluirAberto] = useState(false);
   const [excluindo, setExcluindo] = useState(false);
+  const [osAberta, setOsAberta] = useState(false);
   const checklist = useChecklistGate();
   const fimRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -427,6 +429,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuItem onSelect={() => setMoverAberto(true)}><MoveRight className="mr-2 h-4 w-4" /> Mover etapa</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setOsAberta(true)}><Wrench className="mr-2 h-4 w-4" /> Abrir ordem de manutenção</DropdownMenuItem>
             {!encerrado && !ia && (
               <DropdownMenuItem onSelect={() => void devolverRobo()}><Bot className="mr-2 h-4 w-4" /> Devolver para o Robô</DropdownMenuItem>
             )}
@@ -440,6 +443,23 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
             )}
           </DropdownMenuContent>
         </DropdownMenu>
+        <ManutencaoSheet
+          open={osAberta}
+          onOpenChange={setOsAberta}
+          record={null}
+          inicial={osAberta ? {
+            tipo: "corretiva",
+            atendimento_id: id,
+            pessoa_id: text(rowId(pessoa ?? {})),
+            parceiro_id: text(pessoa?.["parceiro_id"]),
+            descricao: text(pick([...mensagens].reverse().find((m) => isCliente(m)) ?? {}, ["mensagem", "conteudo", "texto"])),
+          } : undefined}
+          onSaved={(os) => {
+            void supabase.from("atendimentos_mensagem").insert(
+              filterPayload({ atendimento_id: id, mensagem: `🔧 Ordem de manutenção ${text(os["numero"])} aberta.`, conteudo: `🔧 Ordem de manutenção ${text(os["numero"])} aberta.`, texto: `🔧 Ordem de manutenção ${text(os["numero"])} aberta.`, tipo: "texto", msg_interna: true, usuario_id: usuarioId, empresa_id: empresaId }, colsMsg),
+            ).then(() => qc.invalidateQueries({ queryKey: ["table", "atendimentos_mensagem", "at", id] }));
+          }}
+        />
         <AlertDialog open={excluirAberto} onOpenChange={(o) => !excluindo && setExcluirAberto(o)}>
           <AlertDialogContent>
             <AlertDialogHeader>

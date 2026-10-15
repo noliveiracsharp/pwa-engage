@@ -32,6 +32,7 @@ import { Route as AuthenticatedInstanciasRouteImport } from './routes/_authentic
 import { Route as AuthenticatedItensRouteImport } from './routes/_authenticated/itens'
 import { Route as AuthenticatedKanbanRouteImport } from './routes/_authenticated/kanban'
 import { Route as AuthenticatedLaudosRouteImport } from './routes/_authenticated/laudos'
+import { Route as AuthenticatedManutencoesRouteImport } from './routes/_authenticated/manutencoes'
 import { Route as AuthenticatedMarcasRouteImport } from './routes/_authenticated/marcas'
 import { Route as AuthenticatedMeusDadosRouteImport } from './routes/_authenticated/meus-dados'
 import { Route as AuthenticatedOrcamentosRouteImport } from './routes/_authenticated/orcamentos'
@@ -177,6 +178,12 @@ const AuthenticatedLaudosRoute = AuthenticatedLaudosRouteImport.update({
   path: '/laudos',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedManutencoesRoute =
+  AuthenticatedManutencoesRouteImport.update({
+    id: '/manutencoes',
+    path: '/manutencoes',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedMarcasRoute = AuthenticatedMarcasRouteImport.update({
   id: '/marcas',
   path: '/marcas',
@@ -348,6 +355,7 @@ export interface FileRoutesByFullPath {
   '/itens': typeof AuthenticatedItensRoute
   '/kanban': typeof AuthenticatedKanbanRoute
   '/laudos': typeof AuthenticatedLaudosRoute
+  '/manutencoes': typeof AuthenticatedManutencoesRoute
   '/marcas': typeof AuthenticatedMarcasRoute
   '/meus-dados': typeof AuthenticatedMeusDadosRoute
   '/orcamentos': typeof AuthenticatedOrcamentosRoute
@@ -400,6 +408,7 @@ export interface FileRoutesByTo {
   '/itens': typeof AuthenticatedItensRoute
   '/kanban': typeof AuthenticatedKanbanRoute
   '/laudos': typeof AuthenticatedLaudosRoute
+  '/manutencoes': typeof AuthenticatedManutencoesRoute
   '/marcas': typeof AuthenticatedMarcasRoute
   '/meus-dados': typeof AuthenticatedMeusDadosRoute
   '/orcamentos': typeof AuthenticatedOrcamentosRoute
@@ -454,6 +463,7 @@ export interface FileRoutesById {
   '/_authenticated/itens': typeof AuthenticatedItensRoute
   '/_authenticated/kanban': typeof AuthenticatedKanbanRoute
   '/_authenticated/laudos': typeof AuthenticatedLaudosRoute
+  '/_authenticated/manutencoes': typeof AuthenticatedManutencoesRoute
   '/_authenticated/marcas': typeof AuthenticatedMarcasRoute
   '/_authenticated/meus-dados': typeof AuthenticatedMeusDadosRoute
   '/_authenticated/orcamentos': typeof AuthenticatedOrcamentosRoute
@@ -508,6 +518,7 @@ export interface FileRouteTypes {
     | '/itens'
     | '/kanban'
     | '/laudos'
+    | '/manutencoes'
     | '/marcas'
     | '/meus-dados'
     | '/orcamentos'
@@ -560,6 +571,7 @@ export interface FileRouteTypes {
     | '/itens'
     | '/kanban'
     | '/laudos'
+    | '/manutencoes'
     | '/marcas'
     | '/meus-dados'
     | '/orcamentos'
@@ -613,6 +625,7 @@ export interface FileRouteTypes {
     | '/_authenticated/itens'
     | '/_authenticated/kanban'
     | '/_authenticated/laudos'
+    | '/_authenticated/manutencoes'
     | '/_authenticated/marcas'
     | '/_authenticated/meus-dados'
     | '/_authenticated/orcamentos'
@@ -826,6 +839,13 @@ declare module '@tanstack/react-router' {
       path: '/laudos'
       fullPath: '/laudos'
       preLoaderRoute: typeof AuthenticatedLaudosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/manutencoes': {
+      id: '/_authenticated/manutencoes'
+      path: '/manutencoes'
+      fullPath: '/manutencoes'
+      preLoaderRoute: typeof AuthenticatedManutencoesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/marcas': {
@@ -1042,6 +1062,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedItensRoute: typeof AuthenticatedItensRoute
   AuthenticatedKanbanRoute: typeof AuthenticatedKanbanRoute
   AuthenticatedLaudosRoute: typeof AuthenticatedLaudosRoute
+  AuthenticatedManutencoesRoute: typeof AuthenticatedManutencoesRoute
   AuthenticatedMarcasRoute: typeof AuthenticatedMarcasRoute
   AuthenticatedMeusDadosRoute: typeof AuthenticatedMeusDadosRoute
   AuthenticatedOrcamentosRoute: typeof AuthenticatedOrcamentosRoute
@@ -1077,6 +1098,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedItensRoute: AuthenticatedItensRoute,
   AuthenticatedKanbanRoute: AuthenticatedKanbanRoute,
   AuthenticatedLaudosRoute: AuthenticatedLaudosRoute,
+  AuthenticatedManutencoesRoute: AuthenticatedManutencoesRoute,
   AuthenticatedMarcasRoute: AuthenticatedMarcasRoute,
   AuthenticatedMeusDadosRoute: AuthenticatedMeusDadosRoute,
   AuthenticatedOrcamentosRoute: AuthenticatedOrcamentosRoute,

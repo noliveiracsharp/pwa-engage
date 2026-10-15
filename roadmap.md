@@ -24,3 +24,6 @@
 
 - [x] Fluxos: motor de execução no WhatsApp (aguarda atendeai-fluxos-motor.sql e "Ativar recebimento"); widget do site pendente
 - [ ] Fluxos: base de conhecimento + nó de IA
+
+- [ ] Manutenções Fase 2: relatório público/PDF da OS, assinatura e envio automático por WhatsApp
+- [ ] Manutenções Fase 3: cadastro de ativos, preventivas recorrentes e QR Code
