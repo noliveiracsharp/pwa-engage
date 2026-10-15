@@ -68,7 +68,16 @@ export function CredenciaisDialog({ dados, onClose }: { dados: Credenciais | nul
     if (!instId && instancias.length) setInstId(text(rowId(instancias[0]!)));
   }, [instancias, instId]);
 
-  const url = typeof window !== "undefined" ? `${window.location.origin}/login` : "/login";
+  const { data: slugEmpresa = "" } = useQuery({
+    queryKey: ["credenciais-slug", dados?.empresaId],
+    enabled: !!dados?.empresaId,
+    queryFn: async () => {
+      const { data } = await supabase.from("empresas").select("*").eq("id", dados!.empresaId as never).maybeSingle();
+      return text((data as Row | null)?.["slug"] ?? "").trim();
+    },
+  });
+  const origem = typeof window !== "undefined" ? window.location.origin : "";
+  const url = `${origem}/${slugEmpresa ? encodeURIComponent(slugEmpresa) : "login"}`;
   const mensagem = useMemo(() => (dados ? montarMensagem(dados, url) : ""), [dados, url]);
 
   if (!dados) return null;
