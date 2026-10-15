@@ -23,6 +23,7 @@ const resposta = (m: unknown) =>
 
 /** Manifesto do app instalável com nome e ícone da empresa (só dados visuais públicos). */
 export const Route = createFileRoute("/api/public/manifest")({
+  staticData: { sitemap: false },
   server: {
     handlers: {
       GET: async ({ request }) => {
