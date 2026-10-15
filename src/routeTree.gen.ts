@@ -40,6 +40,7 @@ import { Route as AuthenticatedParceirosRouteImport } from './routes/_authentica
 import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated/perfil'
 import { Route as AuthenticatedPessoasRouteImport } from './routes/_authenticated/pessoas'
 import { Route as AuthenticatedProjetosRouteImport } from './routes/_authenticated/projetos'
+import { Route as AuthenticatedReembolsosRouteImport } from './routes/_authenticated/reembolsos'
 import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authenticated/relatorios'
 import { Route as AuthenticatedSemAcessoRouteImport } from './routes/_authenticated/sem-acesso'
 import { Route as AuthenticatedUnid_medidaRouteImport } from './routes/_authenticated/unid_medida'
@@ -221,6 +222,11 @@ const AuthenticatedProjetosRoute = AuthenticatedProjetosRouteImport.update({
   path: '/projetos',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedReembolsosRoute = AuthenticatedReembolsosRouteImport.update({
+  id: '/reembolsos',
+  path: '/reembolsos',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedRelatoriosRoute = AuthenticatedRelatoriosRouteImport.update({
   id: '/relatorios',
   path: '/relatorios',
@@ -375,6 +381,7 @@ export interface FileRoutesByFullPath {
   '/perfil': typeof AuthenticatedPerfilRoute
   '/pessoas': typeof AuthenticatedPessoasRoute
   '/projetos': typeof AuthenticatedProjetosRoute
+  '/reembolsos': typeof AuthenticatedReembolsosRoute
   '/relatorios': typeof AuthenticatedRelatoriosRoute
   '/sem-acesso': typeof AuthenticatedSemAcessoRoute
   '/unid_medida': typeof AuthenticatedUnid_medidaRoute
@@ -430,6 +437,7 @@ export interface FileRoutesByTo {
   '/perfil': typeof AuthenticatedPerfilRoute
   '/pessoas': typeof AuthenticatedPessoasRoute
   '/projetos': typeof AuthenticatedProjetosRoute
+  '/reembolsos': typeof AuthenticatedReembolsosRoute
   '/relatorios': typeof AuthenticatedRelatoriosRoute
   '/sem-acesso': typeof AuthenticatedSemAcessoRoute
   '/unid_medida': typeof AuthenticatedUnid_medidaRoute
@@ -487,6 +495,7 @@ export interface FileRoutesById {
   '/_authenticated/perfil': typeof AuthenticatedPerfilRoute
   '/_authenticated/pessoas': typeof AuthenticatedPessoasRoute
   '/_authenticated/projetos': typeof AuthenticatedProjetosRoute
+  '/_authenticated/reembolsos': typeof AuthenticatedReembolsosRoute
   '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRoute
   '/_authenticated/sem-acesso': typeof AuthenticatedSemAcessoRoute
   '/_authenticated/unid_medida': typeof AuthenticatedUnid_medidaRoute
@@ -544,6 +553,7 @@ export interface FileRouteTypes {
     | '/perfil'
     | '/pessoas'
     | '/projetos'
+    | '/reembolsos'
     | '/relatorios'
     | '/sem-acesso'
     | '/unid_medida'
@@ -599,6 +609,7 @@ export interface FileRouteTypes {
     | '/perfil'
     | '/pessoas'
     | '/projetos'
+    | '/reembolsos'
     | '/relatorios'
     | '/sem-acesso'
     | '/unid_medida'
@@ -655,6 +666,7 @@ export interface FileRouteTypes {
     | '/_authenticated/perfil'
     | '/_authenticated/pessoas'
     | '/_authenticated/projetos'
+    | '/_authenticated/reembolsos'
     | '/_authenticated/relatorios'
     | '/_authenticated/sem-acesso'
     | '/_authenticated/unid_medida'
@@ -923,6 +935,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjetosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/reembolsos': {
+      id: '/_authenticated/reembolsos'
+      path: '/reembolsos'
+      fullPath: '/reembolsos'
+      preLoaderRoute: typeof AuthenticatedReembolsosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/relatorios': {
       id: '/_authenticated/relatorios'
       path: '/relatorios'
@@ -1110,6 +1129,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedPerfilRoute: typeof AuthenticatedPerfilRoute
   AuthenticatedPessoasRoute: typeof AuthenticatedPessoasRoute
   AuthenticatedProjetosRoute: typeof AuthenticatedProjetosRoute
+  AuthenticatedReembolsosRoute: typeof AuthenticatedReembolsosRoute
   AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRoute
   AuthenticatedSemAcessoRoute: typeof AuthenticatedSemAcessoRoute
   AuthenticatedUnid_medidaRoute: typeof AuthenticatedUnid_medidaRoute
@@ -1146,6 +1166,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedPerfilRoute: AuthenticatedPerfilRoute,
   AuthenticatedPessoasRoute: AuthenticatedPessoasRoute,
   AuthenticatedProjetosRoute: AuthenticatedProjetosRoute,
+  AuthenticatedReembolsosRoute: AuthenticatedReembolsosRoute,
   AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRoute,
   AuthenticatedSemAcessoRoute: AuthenticatedSemAcessoRoute,
   AuthenticatedUnid_medidaRoute: AuthenticatedUnid_medidaRoute,
