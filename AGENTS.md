@@ -19,7 +19,7 @@ Listas longas usam `SearchSelect`; `Select` simples só para listas curtas.
 
 Estados usam tokens `success`/`warning` de `src/styles.css`; nunca cores fixas.
 
-Laudos/Cotações: helpers (numeração PREFIXO-AAAA-NNN, CSV, upload de fotos) ficam em `src/lib/laudos.ts`; a aprovação da cotação cria o orçamento via `useSaveOrcamento` para reaproveitar numeração e sincronização de linhas.
+Laudos/Cotações: helpers em `src/lib/laudos.ts`; aprovar cotação cria o orçamento via `useSaveOrcamento` para reaproveitar numeração e linhas.
 
 Stage-Gate de etapas: toda mudança manual de etapa de atendimento passa por `useChecklistGate` (`src/components/kanban/ChecklistGate.tsx`) antes do fluxo de CSAT; isso garante a mesma regra no Kanban, no painel do contato e no "Mover".
 
