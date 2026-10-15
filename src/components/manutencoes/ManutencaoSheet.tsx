@@ -41,7 +41,7 @@ const toLocal = (v: unknown) => {
 
 export function ManutencaoSheet({ open, onOpenChange, record, inicial, onSaved }: Props) {
   const qc = useQueryClient();
-  const { empresaId, usuarioId } = useAudit();
+  const { empresaId } = useAudit();
   const { data: parceiros = [] } = useTableRows("parceiros");
   const { data: usuarios = [] } = useTableRows("usuarios");
   const { data: modelos = [] } = useTableRows("manutencao_modelos");
@@ -280,5 +280,3 @@ export function ManutencaoSheet({ open, onOpenChange, record, inicial, onSaved }
   );
 }
 
-export { usuarioIdUnused };
-const usuarioIdUnused = undefined;
