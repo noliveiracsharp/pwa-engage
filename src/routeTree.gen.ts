@@ -45,6 +45,7 @@ import { Route as AuthenticatedSemAcessoRouteImport } from './routes/_authentica
 import { Route as AuthenticatedUnid_medidaRouteImport } from './routes/_authenticated/unid_medida'
 import { Route as AuthenticatedUsuariosRouteImport } from './routes/_authenticated/usuarios'
 import { Route as AuthenticatedVeiculosRouteImport } from './routes/_authenticated/veiculos'
+import { Route as AtivoTokenRouteImport } from './routes/ativo.$token'
 import { Route as ChamadaSalaRouteImport } from './routes/chamada.$sala'
 import { Route as CompartilhadoTokenRouteImport } from './routes/compartilhado.$token'
 import { Route as CotacaoTokenRouteImport } from './routes/cotacao.$token'
@@ -246,6 +247,11 @@ const AuthenticatedVeiculosRoute = AuthenticatedVeiculosRouteImport.update({
   path: '/veiculos',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AtivoTokenRoute = AtivoTokenRouteImport.update({
+  id: '/ativo/$token',
+  path: '/ativo/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ChamadaSalaRoute = ChamadaSalaRouteImport.update({
   id: '/chamada/$sala',
   path: '/chamada/$sala',
@@ -374,6 +380,7 @@ export interface FileRoutesByFullPath {
   '/unid_medida': typeof AuthenticatedUnid_medidaRoute
   '/usuarios': typeof AuthenticatedUsuariosRoute
   '/veiculos': typeof AuthenticatedVeiculosRoute
+  '/ativo/$token': typeof AtivoTokenRoute
   '/chamada/$sala': typeof ChamadaSalaRoute
   '/compartilhado/$token': typeof CompartilhadoTokenRoute
   '/cotacao/$token': typeof CotacaoTokenRoute
@@ -428,6 +435,7 @@ export interface FileRoutesByTo {
   '/unid_medida': typeof AuthenticatedUnid_medidaRoute
   '/usuarios': typeof AuthenticatedUsuariosRoute
   '/veiculos': typeof AuthenticatedVeiculosRoute
+  '/ativo/$token': typeof AtivoTokenRoute
   '/chamada/$sala': typeof ChamadaSalaRoute
   '/compartilhado/$token': typeof CompartilhadoTokenRoute
   '/cotacao/$token': typeof CotacaoTokenRoute
@@ -484,6 +492,7 @@ export interface FileRoutesById {
   '/_authenticated/unid_medida': typeof AuthenticatedUnid_medidaRoute
   '/_authenticated/usuarios': typeof AuthenticatedUsuariosRoute
   '/_authenticated/veiculos': typeof AuthenticatedVeiculosRoute
+  '/ativo/$token': typeof AtivoTokenRoute
   '/chamada/$sala': typeof ChamadaSalaRoute
   '/compartilhado/$token': typeof CompartilhadoTokenRoute
   '/cotacao/$token': typeof CotacaoTokenRoute
@@ -540,6 +549,7 @@ export interface FileRouteTypes {
     | '/unid_medida'
     | '/usuarios'
     | '/veiculos'
+    | '/ativo/$token'
     | '/chamada/$sala'
     | '/compartilhado/$token'
     | '/cotacao/$token'
@@ -594,6 +604,7 @@ export interface FileRouteTypes {
     | '/unid_medida'
     | '/usuarios'
     | '/veiculos'
+    | '/ativo/$token'
     | '/chamada/$sala'
     | '/compartilhado/$token'
     | '/cotacao/$token'
@@ -649,6 +660,7 @@ export interface FileRouteTypes {
     | '/_authenticated/unid_medida'
     | '/_authenticated/usuarios'
     | '/_authenticated/veiculos'
+    | '/ativo/$token'
     | '/chamada/$sala'
     | '/compartilhado/$token'
     | '/cotacao/$token'
@@ -678,6 +690,7 @@ export interface RootRouteChildren {
   PortalRoute: typeof PortalRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  AtivoTokenRoute: typeof AtivoTokenRoute
   ChamadaSalaRoute: typeof ChamadaSalaRoute
   CompartilhadoTokenRoute: typeof CompartilhadoTokenRoute
   CotacaoTokenRoute: typeof CotacaoTokenRoute
@@ -945,6 +958,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedVeiculosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/ativo/$token': {
+      id: '/ativo/$token'
+      path: '/ativo/$token'
+      fullPath: '/ativo/$token'
+      preLoaderRoute: typeof AtivoTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/chamada/$sala': {
       id: '/chamada/$sala'
       path: '/chamada/$sala'
@@ -1153,6 +1173,7 @@ const rootRouteChildren: RootRouteChildren = {
   PortalRoute: PortalRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  AtivoTokenRoute: AtivoTokenRoute,
   ChamadaSalaRoute: ChamadaSalaRoute,
   CompartilhadoTokenRoute: CompartilhadoTokenRoute,
   CotacaoTokenRoute: CotacaoTokenRoute,
