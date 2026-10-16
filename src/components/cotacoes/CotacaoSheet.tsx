@@ -1,6 +1,8 @@
 import { useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Circle, CircleDot, Download, Link2, Loader2, MessageCircle, PencilLine, ShoppingCart, Trash2, Trophy, Upload } from "lucide-react";
+import { CheckCircle2, Circle, CircleDot, Download, Link2, Loader2, MessageCircle, PencilLine, Plus, ShoppingCart, Trash2, Trophy, Upload } from "lucide-react";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { PreencherCotacaoDialog } from "@/components/cotacoes/PreencherCotacaoDialog";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -36,6 +38,7 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const [novoForn, setNovoForn] = useState("");
+  const [novoParc, setNovoParc] = useState<{ nome: string; doc: string; tel: string } | null>(null);
   const [novoItem, setNovoItem] = useState("");
   const [busy, setBusy] = useState(false);
   const [criterio, setCriterio] = useState<"preco" | "prazo">("preco");
@@ -212,6 +215,37 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
     invalidar();
   };
 
+  const salvarTitulo = async (v: string) => {
+    const t = v.trim();
+    if (!t || t === String(cotacao["titulo"] ?? "")) return;
+    const { error } = await supabase.from("cotacoes").update({ titulo: t }).eq("id", cid);
+    if (error) return void toast.error(error.message);
+    toast.success("Título atualizado.");
+    invalidar();
+  };
+
+  const criarFornecedor = async () => {
+    if (!novoParc) return;
+    const nome = novoParc.nome.trim();
+    if (!nome) return void toast.error("Informe o nome do fornecedor.");
+    const doc = novoParc.doc.replace(/\D/g, "");
+    const tel = novoParc.tel.replace(/\D/g, "");
+    const { data, error } = await supabase
+      .from("parceiros")
+      .insert({
+        empresa_id: empresaId, razao_social: nome, nome_fantasia: nome,
+        documento: doc || null, telefone: tel ? (tel.startsWith("55") ? `+${tel}` : `+55${tel}`) : null,
+        tipo_pessoa: doc.length === 11 ? "Física" : "Jurídica", is_fornecedor: true, status: true,
+      } as never)
+      .select("id")
+      .single();
+    if (error) return void toast.error(error.message);
+    qc.invalidateQueries({ queryKey: ["table", "parceiros"] });
+    setNovoParc(null);
+    toast.success("Fornecedor cadastrado.");
+    await addFornecedor(String((data as { id: string }).id));
+  };
+
   const addItem = async (itemId: string) => {
     if (!itemId) return;
     setNovoItem("");
@@ -331,7 +365,18 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
             Cotação {String(cotacao["numero"] ?? "")}
             <span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", st.badge)}>{st.label}</span>
           </SheetTitle>
-          <p className="text-muted-foreground text-sm">{String(cotacao["titulo"] ?? "")}</p>
+          {canUpdate ? (
+            <Input
+              key={cid + String(cotacao["titulo"] ?? "")}
+              aria-label="Título da cotação"
+              defaultValue={String(cotacao["titulo"] ?? "")}
+              className="h-8 max-w-xl text-sm"
+              onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+              onBlur={(e) => void salvarTitulo(e.target.value)}
+            />
+          ) : (
+            <p className="text-muted-foreground text-sm">{String(cotacao["titulo"] ?? "")}</p>
+          )}
         </SheetHeader>
 
         <div className="flex-1 space-y-6 overflow-y-auto px-6 py-5">
@@ -345,7 +390,28 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
               )}
               <input ref={fileRef} type="file" accept=".csv,text/csv" hidden onChange={(e) => importar(e.target.files?.[0])} />
             </div>
-            {editavel && <SearchSelect value={novoForn} onChange={addFornecedor} options={fornecedoresOpts} placeholder="Adicionar fornecedor" />}
+            {editavel && (
+              <div className="flex gap-2">
+                <div className="flex-1"><SearchSelect value={novoForn} onChange={addFornecedor} options={fornecedoresOpts} placeholder="Adicionar fornecedor" /></div>
+                <Button variant="outline" onClick={() => setNovoParc({ nome: "", doc: "", tel: "" })}><Plus className="mr-1 h-4 w-4" /> Novo fornecedor</Button>
+              </div>
+            )}
+            <Dialog open={!!novoParc} onOpenChange={(o) => !o && setNovoParc(null)}>
+              <DialogContent>
+                <DialogHeader><DialogTitle>Novo fornecedor</DialogTitle></DialogHeader>
+                {novoParc && (
+                  <div className="space-y-3">
+                    <div className="space-y-1"><Label>Nome / Razão social</Label><Input autoFocus value={novoParc.nome} onChange={(e) => setNovoParc({ ...novoParc, nome: e.target.value })} /></div>
+                    <div className="space-y-1"><Label>CNPJ / CPF</Label><Input value={novoParc.doc} onChange={(e) => setNovoParc({ ...novoParc, doc: e.target.value })} /></div>
+                    <div className="space-y-1"><Label>Telefone / WhatsApp</Label><Input value={novoParc.tel} onChange={(e) => setNovoParc({ ...novoParc, tel: e.target.value })} /></div>
+                  </div>
+                )}
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setNovoParc(null)}>Cancelar</Button>
+                  <Button onClick={criarFornecedor}>Salvar e adicionar</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
             {fornCot.length === 0 && <p className="text-muted-foreground rounded-md border border-dashed p-4 text-center text-sm">Adicione fornecedores para gerar os arquivos de cotação.</p>}
             <div className="grid gap-2 md:grid-cols-2">
               {fornCot.map((f) => (
