@@ -8,7 +8,7 @@ import { SituacaoBadge } from "@/components/orcamentos/SituacaoBadge";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { useAudit } from "@/lib/audit";
 import { useTableRows } from "@/lib/crud";
-import { etapaPerdida } from "@/lib/dre-ofertas";
+import { etapaPerdida, etapaGanha } from "@/lib/dre-ofertas";
 import { corEtapa } from "@/lib/kanban-cores";
 import { etapasDoKanban, kanbanDoModuloOrcamentos } from "@/lib/orcamento-kanban";
 import { categoriaDespesaLabel, formatBRL, yearOf } from "@/lib/orcamentos";
@@ -26,6 +26,13 @@ import { useEmpresaAtiva } from "@/hooks/useEmpresaAtiva";
 import { DreRelatorioDocumento, imprimirDre } from "@/components/relatorios/DreRelatorioPDF";
 import { FluxoCaixaSecao } from "@/components/relatorios/FluxoCaixaMensal";
 import { fluxoCaixaMensal } from "@/lib/fluxo-caixa";
+
+const ESCOPOS = [
+  { value: "ganhas", label: "Vendas ganhas / contratos fechados" },
+  { value: "pipeline", label: "Pipeline em aberto" },
+  { value: "ativas", label: "Ganhas + pipeline (sem perdidas)" },
+  { value: "todas", label: "Todas (inclui perdidas)" },
+];
 
 export const Route = createFileRoute("/_authenticated/relatorios_/dre-ofertas")({
   staticData: { sitemap: false },
@@ -62,7 +69,7 @@ function DreOfertasPage() {
     queryKey: ["orcamentos-etapas-kanban"],
     queryFn: async () => etapasDoKanban(await kanbanDoModuloOrcamentos()),
   });
-  const [f, setF] = useState({ ano: String(new Date().getFullYear()), tri: "todos", situacao: "todos", vendedor: "todos", escopo: "ativas" });
+  const [f, setF] = useState({ ano: String(new Date().getFullYear()), tri: "todos", situacao: "todos", vendedor: "todos", escopo: "ganhas" });
   const [apresentar, setApresentar] = useState(false);
   const areaRef = useRef<HTMLDivElement>(null);
   const emp = useEmpresaAtiva();
@@ -88,20 +95,29 @@ function DreOfertasPage() {
     [escopo],
   );
 
+  const algumaMarcada = etapas.some((e) => e.ganha === true);
+  const noEscopo = (e: { descricao: string; ganha?: boolean } | undefined, desc: unknown) => {
+    const ganha = e ? etapaGanha(e, algumaMarcada) : etapaGanha({ descricao: desc }, false);
+    const perdida = etapaPerdida(desc);
+    if (f.escopo === "ganhas") return ganha;
+    if (f.escopo === "pipeline") return !ganha && !perdida;
+    if (f.escopo === "ativas") return !perdida;
+    return true;
+  };
   const filtradas = escopo.filter((o) => {
     if (f.ano !== "todos" && String(yearOf(o["dt_orcamento"])) !== f.ano) return false;
     if (f.tri !== "todos" && String(trimestreDe(o["dt_orcamento"])) !== f.tri) return false;
     if (f.vendedor !== "todos" && String(o["usuario_id"] ?? "") !== f.vendedor) return false;
     const desc = etapaDe(o)?.descricao ?? o["situacao"];
     if (f.situacao !== "todos" && norm(desc) !== norm(f.situacao)) return false;
-    if (f.situacao === "todos" && f.escopo === "ativas" && etapaPerdida(desc)) return false;
+    if (f.situacao === "todos" && !noEscopo(etapaDe(o), desc)) return false;
     return true;
   });
   const linhas = filtradas.map((o) => ({ o, l: linhaDre(o, comissoesDaOferta(comissoes, String(o["id"]))) }));
   const tot = somarDre(linhas.map((x) => x.l));
   const fluxo = fluxoCaixaMensal(linhas);
 
-  const porEtapa = (etapas.length ? etapas : []).filter((e) => f.situacao !== "todos" || f.escopo === "todas" || !etapaPerdida(e.descricao)).map((e) => {
+  const porEtapa = (etapas.length ? etapas : []).filter((e) => f.situacao !== "todos" || noEscopo(e, e.descricao)).map((e) => {
     const ls = linhas.filter((x) => etapaDe(x.o)?.id === e.id).map((x) => x.l);
     const s = somarDre(ls);
     return { e, s };
@@ -183,7 +199,7 @@ function DreOfertasPage() {
         <DreRelatorioDocumento
           empresa={{ nome: emp.nome ?? "", logo: emp.logo ?? "" }}
           periodo={periodo}
-          filtros={`Escopo: ${f.escopo === "ativas" ? "Sem perdidas/desistências" : "Todas"} • Situação: ${f.situacao === "todos" ? "Todas" : f.situacao} • Vendedor: ${f.vendedor === "todos" ? "Todos" : nome(usuarios, f.vendedor)}`}
+          filtros={`Escopo: ${ESCOPOS.find((x) => x.value === f.escopo)?.label ?? "Todas"} • Situação: ${f.situacao === "todos" ? "Todas" : f.situacao} • Vendedor: ${f.vendedor === "todos" ? "Todos" : nome(usuarios, f.vendedor)}`}
           tot={tot}
           cascata={cascata}
           etapas={porEtapa.map(({ e, s }) => ({ nome: e.descricao, s }))}
@@ -199,7 +215,7 @@ function DreOfertasPage() {
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5 print:hidden">
         <FilterSelect label="Escopo" value={f.escopo} onChange={(v) => setF({ ...f, escopo: v })}
-          options={[{ value: "ativas", label: "Sem perdidas/desistências" }, { value: "todas", label: "Todas (inclui perdidas)" }]} />
+          options={ESCOPOS} />
         <FilterSelect label="Ano" value={f.ano} onChange={(v) => setF({ ...f, ano: v })}
           options={[{ value: "todos", label: "Todos" }, ...anos.map((a) => ({ value: a, label: a }))]} />
         <FilterSelect label="Trimestre" value={f.tri} onChange={(v) => setF({ ...f, tri: v })}

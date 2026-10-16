@@ -97,3 +97,11 @@ export function etapaPerdida(descricao: unknown): boolean {
   const s = String(descricao ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   return /desist|perdid|perda|cancel|recusad|reprovad/.test(s);
 }
+
+/** Etapa que representa venda ganha/contrato fechado. Usa o switch `etapa_ganha`; se nenhuma etapa
+ *  estiver marcada, cai no nome (fechamento, ganha, aprovada, ativação) para não zerar o relatório. */
+export function etapaGanha(e: { descricao: unknown; ganha?: boolean }, algumaMarcada: boolean): boolean {
+  if (algumaMarcada) return e.ganha === true;
+  const s = String(e.descricao ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  return /fechament|ganh|aprovad|ativac|assinad|contratad/.test(s);
+}
