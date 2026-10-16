@@ -24,7 +24,7 @@ import type { Perms } from "@/hooks/usePagePermissions";
 export function TarefaSheet({ tarefa, tarefasDoProjeto, projetoId, perms, onClose, isNew, espacoId, statusId, statusOpcoes, statusNomeCol }: {
   tarefa: Row | null; tarefasDoProjeto: Row[]; projetoId: string; perms: Perms; onClose: () => void; isNew: boolean;
   /** Tarefa direto no espaço (sem projeto), estilo ClickUp. */
-  espacoId?: string | null; statusId?: string; statusOpcoes?: Row[]; statusNomeCol?: string;
+  espacoId?: string | null; statusId?: string | undefined; statusOpcoes?: Row[]; statusNomeCol?: string;
 }) {
   const qc = useQueryClient();
   const { stamp, empresaId, usuarioId } = useAudit();
