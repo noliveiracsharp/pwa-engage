@@ -141,24 +141,27 @@ export function EspacosSidebar({ espacos, ativo, onSelect, perms, onMoverProjeto
       </button>
       {renderNivel("", 0)}
       {espacos.length === 0 && <p className="px-2 py-3 text-xs text-muted-foreground">Nenhum espaço criado.</p>}
-      {form && <EspacoDialog original={form.row} pai={form.pai} total={espacos.length} onClose={() => setForm(null)} />}
+      {form && <EspacoDialog original={form.row} pai={form.pai} paiTipo={form.paiTipo} total={espacos.length} onClose={() => setForm(null)} />}
     </aside>
   );
 }
 
-function EspacoDialog({ original, pai, total, onClose }: { original: Row | null; pai: string | null; total: number; onClose: () => void }) {
+function EspacoDialog({ original, pai, paiTipo, total, onClose }: { original: Row | null; pai: string | null; paiTipo?: string; total: number; onClose: () => void }) {
   const qc = useQueryClient();
   const { stamp } = useAudit();
   const { data: cols } = useCols(ESPACOS);
   const [nome, setNome] = useState(String(original?.["nome"] ?? ""));
-  const [icone, setIcone] = useState(String(original?.["icone"] ?? "Folder"));
+  const sugerido = !pai ? "espaco" : paiTipo === "projeto" || paiTipo === "pasta" ? "lista" : "projeto";
+  const [tipo, setTipo] = useState(original ? tipoEspaco(original) : sugerido);
+  const [icone, setIcone] = useState(String(original?.["icone"] ?? "") || "Folder");
   const [cor, setCor] = useState(String(original?.["cor"] ?? "#3b82f6"));
   const [saving, setSaving] = useState(false);
+  const semTipo = !!cols?.length && !cols.includes("tipo");
 
   async function salvar() {
     if (!nome.trim()) { toast.error("Informe o nome."); return; }
     setSaving(true);
-    const v: Row = { nome: nome.trim(), icone, cor };
+    const v: Row = { nome: nome.trim(), icone, cor, tipo };
     if (!original) { v[PAI] = pai; v["ordem"] = total; }
     const payload = filterPayload(stamp(v, !original), cols);
     const { error } = original
@@ -166,7 +169,7 @@ function EspacoDialog({ original, pai, total, onClose }: { original: Row | null;
       : await supabase.from(ESPACOS).insert(payload as never);
     setSaving(false);
     if (error) { console.error(error); toast.error(error.message); return; }
-    toast.success("Espaço salvo.");
+    toast.success(`${TIPOS_ESPACO.find((x) => x.v === tipo)?.label ?? "Espaço"} salvo.`);
     qc.invalidateQueries({ queryKey: ["table", ESPACOS] });
     onClose();
   }
@@ -175,12 +178,28 @@ function EspacoDialog({ original, pai, total, onClose }: { original: Row | null;
     <Dialog open onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{original ? "Editar espaço" : pai ? "Novo subespaço" : "Novo espaço"}</DialogTitle>
-          <DialogDescription>Nome, ícone e cor do espaço.</DialogDescription>
+          <DialogTitle>{original ? "Editar" : "Novo item"}</DialogTitle>
+          <DialogDescription>Escolha o tipo, nome, ícone e cor.</DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
+          <div className="space-y-1">
+            <Label>Tipo</Label>
+            <div className="grid grid-cols-2 gap-2">
+              {TIPOS_ESPACO.map((t) => {
+                const TI = getIcon(t.icone);
+                return (
+                  <button key={t.v} type="button" onClick={() => setTipo(t.v)}
+                    className={cn("rounded-md border border-border p-2 text-left text-sm hover:bg-accent", tipo === t.v && "border-primary bg-primary/10")}>
+                    <div className="flex items-center gap-2 font-medium"><TI className="h-4 w-4" />{t.label}</div>
+                    <p className="mt-0.5 text-xs text-muted-foreground">{t.desc}</p>
+                  </button>
+                );
+              })}
+            </div>
+            {semTipo && <p className="text-xs text-warning">Para gravar o tipo, rode o script atendeai-espacos-tipo.sql no SQL Editor.</p>}
+          </div>
           <div className="space-y-1"><Label htmlFor="esp-nome">Nome</Label><Input id="esp-nome" autoFocus value={nome} onChange={(e) => setNome(e.target.value)} /></div>
-          <div className="space-y-1"><Label htmlFor="esp-icone">Ícone</Label><IconPicker id="esp-icone" value={icone} onChange={setIcone} /></div>
+          <div className="space-y-1"><Label htmlFor="esp-icone">Ícone (opcional — o padrão segue o tipo)</Label><IconPicker id="esp-icone" value={icone} onChange={setIcone} /></div>
           <div className="space-y-1"><Label htmlFor="esp-cor">Cor</Label>
             <div className="flex items-center gap-2"><input id="esp-cor" type="color" value={cor} onChange={(e) => setCor(e.target.value)} className="h-9 w-12 rounded border border-border" /><span className="text-sm text-muted-foreground">{cor}</span></div>
           </div>
