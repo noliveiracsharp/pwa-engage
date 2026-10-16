@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
-import { Bell, Car, CheckCheck, MessageCircle, Trash2, Users } from "lucide-react";
+import { Bell, Car, CheckCheck, FolderKanban, MessageCircle, Trash2, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { type Aviso, EVT_ABRIR_CHAT, limparAvisos, listarAvisos, marcarLido, marcarTodosLidos, onAvisos, removerAviso } from "@/lib/avisos";
 import { useAuth } from "@/hooks/useAuth";
 import { useAvisosFrota } from "@/hooks/useAvisosFrota";
+import { useAvisosProjetos } from "@/hooks/useAvisosProjetos";
 
 function Icone({ a }: { a: Aviso }) {
   if (a.tipo === "equipe") return <Users className="h-4 w-4 text-primary" />;
+  if (a.tipo === "projeto") return <FolderKanban className="h-4 w-4 text-primary" />;
   if (a.tipo === "frota") return <Car className={`h-4 w-4 ${a.titulo.startsWith("Manutenção vencida") ? "text-destructive" : "text-warning"}`} />;
   return <MessageCircle className="h-4 w-4 text-success" />;
 }
@@ -15,6 +17,7 @@ function Icone({ a }: { a: Aviso }) {
 export function AvisosButton() {
   const { usuario } = useAuth();
   useAvisosFrota(!!usuario);
+  useAvisosProjetos(usuario?.["id"]);
   const [avisos, setAvisos] = useState<Aviso[]>([]);
   const [open, setOpen] = useState(false);
   useEffect(() => { setAvisos(listarAvisos()); return onAvisos(() => setAvisos(listarAvisos())); }, []);
