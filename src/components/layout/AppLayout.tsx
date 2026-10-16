@@ -43,7 +43,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
         ) : (
           <AppSidebar open={open} />
         )}
+        {/* Encaixes do Chat da equipe acoplado: ocupam espaço e empurram o conteúdo. */}
+        <div id="chat-dock-esquerda" className="hidden shrink-0 md:flex empty:hidden" />
         <PullToRefresh className="min-w-0 flex-1 overflow-y-auto overscroll-y-contain p-4 sm:p-6">{children}</PullToRefresh>
+        <div id="chat-dock-direita" className="hidden shrink-0 md:flex empty:hidden" />
       </div>
     </div>
   );

@@ -4,7 +4,7 @@ import { Linkify } from "@/components/ui/linkify";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Check, ArrowLeft, Maximize2, MessageSquare, Minimize2, Paperclip, Search, Send, Users, X, FileText, Loader2, Phone, Video } from "lucide-react";
+import { Plus, Check, ArrowLeftRight, ArrowLeft, Maximize2, MessageSquare, Minimize2, Paperclip, Search, Send, Users, X, FileText, Loader2, Phone, Video } from "lucide-react";
 import { ChamadaFlutuante, duracao, novaSala, type Chamada } from "@/components/atendimentos/ChamadaFlutuante";
 
 const CONVITE = "📞CONVITE|";
@@ -70,7 +70,24 @@ export function ChatInterno({ sidebarOpen, onAbrir }: { sidebarOpen: boolean; on
   const me = String(pick(usuario, ["id"]) ?? "");
   const empresaId = String(pick(usuario, ["empresa_id", "id_empresa"]) ?? "");
   const [open, setOpen] = useState(false);
+  // Modo acoplado: o chat vira coluna lateral e empurra o conteúdo (só desktop).
   const [expanded, setExpanded] = useState(false);
+  const [lado, setLado] = useState<"direita" | "esquerda">("direita");
+  const [dockEl, setDockEl] = useState<HTMLElement | null>(null);
+  const [desktop, setDesktop] = useState(false);
+  useEffect(() => {
+    const v = localStorage.getItem("chat-dock");
+    if (v === "direita" || v === "esquerda") { setLado(v); setExpanded(true); }
+    const mq = window.matchMedia("(min-width: 768px)");
+    const f = () => setDesktop(mq.matches);
+    f(); mq.addEventListener("change", f);
+    return () => mq.removeEventListener("change", f);
+  }, []);
+  useEffect(() => {
+    localStorage.setItem("chat-dock", expanded ? lado : "");
+    setDockEl(document.getElementById(`chat-dock-${lado}`));
+  }, [expanded, lado]);
+  const acoplado = expanded && desktop && !!dockEl;
   const [busca, setBusca] = useState("");
   const [sel, setSel] = useState<Sel | null>(null);
   const [criando, setCriando] = useState(false);
@@ -272,11 +289,14 @@ export function ChatInterno({ sidebarOpen, onAbrir }: { sidebarOpen: boolean; on
         <div
           ref={painelRef}
           className={cn(
-            "fixed bottom-4 z-50 flex flex-col overflow-hidden rounded-2xl border border-border bg-popover text-popover-foreground shadow-2xl transition-all duration-300 animate-in fade-in slide-in-from-bottom-4",
-            "max-md:inset-x-2 max-md:bottom-2 max-md:top-20 max-md:h-auto max-md:w-auto max-md:max-w-none",
-            sidebarOpen ? "md:left-[15.5rem]" : "md:left-[4.5rem]",
-            expanded ? "md:h-[85vh] md:w-[640px]" : "md:h-[560px] md:w-[380px]",
-            "md:max-h-[calc(100vh-2rem)] md:max-w-[calc(100vw-5.5rem)]",
+            acoplado
+              ? cn("flex h-full w-[400px] flex-col overflow-hidden bg-popover text-popover-foreground animate-in fade-in", lado === "direita" ? "border-l border-border slide-in-from-right-4" : "border-r border-border slide-in-from-left-4")
+              : cn(
+                  "fixed bottom-4 z-50 flex flex-col overflow-hidden rounded-2xl border border-border bg-popover text-popover-foreground shadow-2xl transition-all duration-300 animate-in fade-in slide-in-from-bottom-4",
+                  "max-md:inset-x-2 max-md:bottom-2 max-md:top-20 max-md:h-auto max-md:w-auto max-md:max-w-none",
+                  sidebarOpen ? "md:left-[15.5rem]" : "md:left-[4.5rem]",
+                  "md:h-[560px] md:w-[380px] md:max-h-[calc(100vh-2rem)] md:max-w-[calc(100vw-5.5rem)]",
+                ),
           )}
         >
           <div className="flex items-center justify-between border-b border-border px-4 py-3">
@@ -287,7 +307,12 @@ export function ChatInterno({ sidebarOpen, onAbrir }: { sidebarOpen: boolean; on
               </p>
             </div>
             <div className="flex gap-1">
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setExpanded((e) => !e)} aria-label={expanded ? "Minimizar" : "Expandir"}>
+              {acoplado && (
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setLado((l) => (l === "direita" ? "esquerda" : "direita"))} aria-label="Trocar de lado" title={lado === "direita" ? "Mover para a esquerda" : "Mover para a direita"}>
+                  <ArrowLeftRight className="h-4 w-4" />
+                </Button>
+              )}
+              <Button variant="ghost" size="icon" className="h-8 w-8 max-md:hidden" onClick={() => setExpanded((e) => !e)} aria-label={expanded ? "Voltar a flutuar" : "Fixar na lateral"} title={expanded ? "Voltar a flutuar" : "Fixar na lateral"}>
                 {expanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
               </Button>
               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setOpen(false)} aria-label="Fechar">
@@ -401,7 +426,7 @@ export function ChatInterno({ sidebarOpen, onAbrir }: { sidebarOpen: boolean; on
             </Tabs>
           )}
         </div>,
-        document.body,
+        acoplado && dockEl ? dockEl : document.body,
       )}
     </>
   );
