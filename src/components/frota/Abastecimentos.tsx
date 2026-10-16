@@ -1,3 +1,4 @@
+import { periodoMesVigente } from "@/lib/utils";
 import { UploadInfo } from "@/components/ui/upload-info";
 import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -39,7 +40,7 @@ type Perms = { canCreate: boolean; canUpdate: boolean; canDelete: boolean };
 export function AbastecimentosTab({ veiculos, perms, aberto, setAberto }: { veiculos: Row[]; perms: Perms; aberto: boolean; setAberto: (b: boolean) => void }) {
   const { data: lista = [], isLoading } = useTableRows("veiculos_abastecimentos");
   const remove = useDeleteRecord("veiculos_abastecimentos");
-  const [f, setF] = useState({ busca: "", veiculo: "todos", de: "", ate: "" });
+  const [f, setF] = useState({ busca: "", veiculo: "todos", ...periodoMesVigente() });
   const vById = useMemo(() => new Map(veiculos.map((v) => [String(rowId(v)), v])), [veiculos]);
 
   const rows = useMemo(

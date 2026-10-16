@@ -1,3 +1,4 @@
+import { periodoMesVigente } from "@/lib/utils";
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
@@ -91,7 +92,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
     const p = parceiroById.get(text(id));
     return p ? text(p["nome_fantasia"] || p["razao_social"]) : "";
   };
-  const [f, setF] = useState({ busca: "", situacao: "todos", categoria: "todos", de: "", ate: "" });
+  const [f, setF] = useState({ busca: "", situacao: "todos", categoria: "todos", ...periodoMesVigente() });
   const [editar, setEditar] = useState<Row | null | undefined>(undefined);
   const [baixar, setBaixar] = useState<Row | null>(null);
   const [cobrar, setCobrar] = useState<Row | null>(null);
