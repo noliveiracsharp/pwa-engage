@@ -5,6 +5,8 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { ArrowLeft, Barcode, Check, Copy, CreditCard, Loader2, MailCheck, QrCode } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useModulosPublicos } from "@/lib/modulos-publicos";
+import { Checkbox } from "@/components/ui/checkbox";
 import { formatBRL, num } from "@/lib/orcamentos";
 import { digitsOnly, formatCpfCnpj, isCompletePhone, isValidCpfCnpj } from "@/lib/input-masks";
 import { DocumentInput } from "@/components/data-table/DocumentInput";
@@ -93,6 +95,12 @@ function CheckoutPage() {
     },
   });
 
+  const { data: modulos = [] } = useModulosPublicos();
+  const [selecionados, setSelecionados] = useState<string[]>([]);
+  const escolhidos = modulos.filter((m) => selecionados.includes(m.id));
+  const total = Number(plano?.valor_mensal ?? 0) + escolhidos.reduce((t, m) => t + m.valor, 0);
+  const alternar = (id: string) => setSelecionados((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
+
   const setD = (k: keyof typeof dados, v: string) => setDados((d) => ({ ...d, [k]: v }));
   const setC = (k: keyof typeof cartao, v: string) => setCartao((d) => ({ ...d, [k]: v }));
 
@@ -116,6 +124,7 @@ function CheckoutPage() {
       const { data, error } = await supabase.functions.invoke("asaas-checkout", {
         body: {
           planoId,
+          modulos: selecionados,
           empresa: { nome_empresa: dados.nome_empresa, cnpj_cpf: digitsOnly(dados.cnpj_cpf), telefone: dados.telefone },
           usuario: { nome_usuario: dados.nome_usuario, email: dados.email.trim(), senha: dados.senha },
           forma_pagamento: metodo,
@@ -150,8 +159,8 @@ function CheckoutPage() {
       <header className="border-b">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
           <Link to="/" className="flex items-center gap-2 font-bold">
-            <img src="/icon-192.png" alt="Atende.ai" className="h-8 w-8 rounded-lg" />
-            Atende<span className="text-primary">.ai</span>
+            <img src="/logo-atendeai-azulesc.png" alt="Atende.ai" className="h-9 w-auto dark:hidden" />
+            <img src="/logo-atendeai-azul.png" alt="Atende.ai" className="hidden h-9 w-auto dark:block" />
           </Link>
           <Button asChild variant="ghost" size="sm">
             <Link to="/"><ArrowLeft className="mr-1 h-4 w-4" /> Voltar</Link>
@@ -264,6 +273,24 @@ function CheckoutPage() {
                 <p className="text-3xl font-extrabold">{formatBRL(plano.valor_mensal)}<span className="text-muted-foreground text-sm font-normal">/mês</span></p>
                 <p className="flex items-center gap-2"><Check className="text-primary h-4 w-4" />{num(plano.usuarios_inclusos)} usuários inclusos</p>
                 <p className="flex items-center gap-2"><Check className="text-primary h-4 w-4" />Cobrança mensal recorrente</p>
+                {modulos.length > 0 && (
+                  <div className="border-t pt-3">
+                    <p className="mb-2 font-semibold">Módulos adicionais</p>
+                    <div className="space-y-2">
+                      {modulos.map((m) => (
+                        <label key={m.id} className="flex cursor-pointer items-start gap-2">
+                          <Checkbox checked={selecionados.includes(m.id)} onCheckedChange={() => alternar(m.id)} disabled={!!resultado} className="mt-0.5" />
+                          <span className="flex-1">{m.nome}</span>
+                          <span className="text-muted-foreground whitespace-nowrap">+{formatBRL(m.valor)}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div className="flex items-baseline justify-between border-t pt-3">
+                  <span className="font-semibold">Total mensal</span>
+                  <span className="text-xl font-extrabold">{formatBRL(total)}</span>
+                </div>
               </>
             ) : (
               <p className="text-muted-foreground">Plano não encontrado. <Link to="/" hash="planos" className="text-primary underline">Escolha um plano</Link>.</p>
