@@ -3,22 +3,28 @@ import { createClient } from "@supabase/supabase-js";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/integrations/supabase/client";
 
 const PADRAO = {
+  id: "/",
   name: "Atende.ai",
   short_name: "Atende.ai",
   description: "Suporte e atendimento multicanal multiempresa",
   start_url: "/dashboard",
+  scope: "/",
   display: "standalone",
-  background_color: "#0b1220",
-  theme_color: "#1f6fe0",
+  background_color: "#000040",
+  theme_color: "#3166D6",
   icons: [
-    { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
-    { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+    { src: "/icon-192.png?v=2", sizes: "192x192", type: "image/png", purpose: "any" },
+    { src: "/icon-512.png?v=2", sizes: "512x512", type: "image/png", purpose: "any" },
   ],
 };
 
 const resposta = (m: unknown) =>
   new Response(JSON.stringify(m), {
-    headers: { "Content-Type": "application/manifest+json", "Cache-Control": "no-cache" },
+    headers: {
+      "Content-Type": "application/manifest+json",
+      "Cache-Control": "no-cache",
+      "Access-Control-Allow-Origin": "*",
+    },
   });
 
 /** Manifesto do app instalável com nome e ícone da empresa (só dados visuais públicos). */
