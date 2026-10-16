@@ -33,6 +33,8 @@ import { daysUntil, formatBRL, formatDate, situacaoOf, SITUACOES, yearOf } from 
 import { pick, type Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
 import { iniciais } from "@/components/projetos/ResponsaveisPicker";
+import { AtivacaoOfertaDialog } from "@/components/orcamentos/AtivacaoOfertaDialog";
+import { ofertaTravada, situacaoAtivada } from "@/lib/oferta-ativacao";
 
 export const Route = createFileRoute("/_authenticated/orcamentos")({
   staticData: { sitemap: false },
@@ -125,6 +127,7 @@ function OrcamentosPage() {
   const [pedidosOpen, setPedidosOpen] = useState(false);
   const [f, setF] = useState({ busca: "", situacao: "todos", vendedor: "todos", ano: "todos" });
   const [duplicarDe, setDuplicarDe] = useState<{ record: Row; linhas: Row[] } | null>(null);
+  const [ativar, setAtivar] = useState<Row | null>(null);
 
   const gerarContas = async (r: Row) => {
     const id = String(rowId(r) ?? "");
@@ -357,7 +360,17 @@ function OrcamentosPage() {
                 <DropdownMenuItem
                   key={s.value}
                   disabled={normSit(r["situacao"]) === normSit(s.value) || alterarSituacao.isPending}
-                  onClick={() => alterarSituacao.mutate({ row: r, situacao: s.value })}
+                  onClick={() =>
+                    alterarSituacao.mutate(
+                      { row: r, situacao: s.value },
+                      {
+                        onSuccess: () => {
+                          const et = etapasKanban.find((e) => normSit(e.descricao) === normSit(s.value));
+                          if (situacaoAtivada(s.value, et) && !ofertaTravada(r, etapasKanban)) setAtivar(r);
+                        },
+                      },
+                    )
+                  }
                 >
                   <span className={cn("mr-2 h-2.5 w-2.5 rounded-full", s.dot)} />
                   {s.label}
@@ -471,7 +484,19 @@ function OrcamentosPage() {
         }}
         editReadOnly={!perms.canUpdate}
         rowMenu={rowMenu}
-        onDelete={perms.canDelete ? (row) => remove.mutate(row) : undefined}
+        onDelete={
+          perms.canDelete
+            ? (row) => {
+                if (ofertaTravada(row, etapasKanban)) {
+                  toast.error("Ofertas em Ativação ou ganhas não podem ser excluídas.", {
+                    description: "Se a negociação foi cancelada, mude a situação para Desistência/Perdida.",
+                  });
+                  return;
+                }
+                remove.mutate(row);
+              }
+            : undefined
+        }
         filters={
           <>
             <FilterInput
