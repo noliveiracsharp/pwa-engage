@@ -519,3 +519,8 @@ function Caixa({ titulos }: { titulos: Row[] }) {
     </div>
   );
 }
+
+function nomeCartao(c: Row | undefined): string {
+  if (!c) return "—";
+  return [text(c["descricao"]), c["final4"] ? `final ${text(c["final4"])}` : ""].filter(Boolean).join(" • ");
+}
