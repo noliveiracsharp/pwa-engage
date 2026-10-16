@@ -67,7 +67,7 @@ type Props = { espacos: Row[]; ativo: string | null; onSelect: (id: string | nul
 export function EspacosSidebar({ espacos, ativo, onSelect, perms, onMoverProjeto }: Props) {
   const [alvo, setAlvo] = useState<string | null>(null);
   const [abertos, setAbertos] = useState<Set<string>>(new Set());
-  const [form, setForm] = useState<{ row: Row | null; pai: string | null; paiTipo?: string } | null>(null);
+  const [form, setForm] = useState<{ row: Row | null; pai: string | null; paiTipo?: string | undefined } | null>(null);
   const qc = useQueryClient();
 
   const filhos = useMemo(() => {
@@ -146,7 +146,7 @@ export function EspacosSidebar({ espacos, ativo, onSelect, perms, onMoverProjeto
   );
 }
 
-function EspacoDialog({ original, pai, paiTipo, total, onClose }: { original: Row | null; pai: string | null; paiTipo?: string; total: number; onClose: () => void }) {
+function EspacoDialog({ original, pai, paiTipo, total, onClose }: { original: Row | null; pai: string | null; paiTipo?: string | undefined; total: number; onClose: () => void }) {
   const qc = useQueryClient();
   const { stamp } = useAudit();
   const { data: cols } = useCols(ESPACOS);
