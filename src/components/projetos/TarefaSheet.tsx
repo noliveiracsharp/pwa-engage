@@ -149,7 +149,7 @@ export function TarefaSheet({ tarefa, tarefasDoProjeto, projetoId, perms, onClos
           </section>
 
           <p className="rounded-md border border-dashed border-border p-3 text-sm text-muted-foreground">
-            As atividades (com checklist, dependências e anexos) são criadas na lista do projeto, logo abaixo de cada tarefa.
+            As atividades (com checklist, dependências e anexos) são criadas pelo botão + de cada tarefa na lista.
           </p>
           {tarefa && isDone(tarefa[tc.done]) && <Badge className="bg-success text-success-foreground">Concluída</Badge>}
         </div>

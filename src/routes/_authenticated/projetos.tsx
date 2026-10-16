@@ -36,6 +36,7 @@ import { EspacosSidebar, ESPACOS, cadeiaEspaco, espacoEDescendentes } from "@/co
 import { TarefaSheet } from "@/components/projetos/TarefaSheet";
 import { AtividadeSheet } from "@/components/projetos/AtividadeSheet";
 import { EspacoDashboard } from "@/components/projetos/EspacoDashboard";
+import { TarefasEspaco } from "@/components/projetos/TarefasEspaco";
 import { useTableRows, rowId, idColumn, matches } from "@/lib/crud";
 import { SortableList, salvarOrdem, useSortableRow } from "@/lib/reorder";
 import { useAudit } from "@/lib/audit";
@@ -105,6 +106,7 @@ function ProjetosPage() {
   const qc = useQueryClient();
   const espacoId = espaco && d.espacos.some((e) => String(rowId(e)) === espaco) ? espaco : null;
   const [selId, setSelId] = useState<string | null>(null);
+  const [aba, setAba] = useState<"painel" | "tarefas" | "projetos" | null>(null);
   const sel = d.projetos.find((p) => String(rowId(p)) === selId);
   if (sel) return <Detalhe projeto={sel} d={d} perms={perms} onBack={() => setSelId(null)} />;
   const espAtual = espacoId ? d.espacos.find((e) => String(rowId(e)) === espacoId) : undefined;
