@@ -632,6 +632,13 @@ function OrcamentosPage() {
         unidades={unidades}
         marcas={marcas}
       />
+      <AtivacaoOfertaDialog
+        open={!!ativar}
+        onOpenChange={(v) => !v && setAtivar(null)}
+        oferta={ativar ? (todos.find((t) => rowId(t) === rowId(ativar)) ?? ativar) : null}
+        cliente={ativar ? nomeCliente(ativar) : ""}
+        empresaId={String(ativar?.["empresa_id"] ?? empresaId ?? "")}
+      />
     </>
   );
 }
