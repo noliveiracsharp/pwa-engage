@@ -113,7 +113,7 @@ function CardTarefa({ t, me, nome, onAtualizar }: {
   const souResp = String(t["responsavel_id"]) === me;
   const titulo = String(t["titulo"] ?? "");
   const anexos = (Array.isArray(t["anexos"]) ? t["anexos"] : []) as Anexo[];
-  const atrasada = t["status"] === "andamento" && t["data_entrega"] && String(t["data_entrega"]) < hoje();
+  const atrasada = t["status"] === "andamento" && !!t["data_entrega"] && String(t["data_entrega"]) < hoje();
 
   return (
     <div className="rounded-xl border border-border bg-card p-3 text-sm">
