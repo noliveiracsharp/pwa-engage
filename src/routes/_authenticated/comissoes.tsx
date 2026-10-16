@@ -233,7 +233,7 @@ function Extrato({ canUpdate, canDelete }: { canUpdate: boolean; canDelete: bool
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
         <Button size="icon" variant="outline" aria-label="Mês anterior" disabled={mes === "todos" ? !meses.length : idxMes >= meses.length - 1}
-          onClick={() => setMes(mes === "todos" ? meses[0] : meses[idxMes + 1])}><ChevronLeft className="h-4 w-4" /></Button>
+          onClick={() => setMes(mes === "todos" ? meses[0] : meses[idxMes + 1] ?? mes)}><ChevronLeft className="h-4 w-4" /></Button>
         <Select value={mes} onValueChange={setMes}>
           <SelectTrigger className="w-52"><SelectValue /></SelectTrigger>
           <SelectContent>
@@ -242,7 +242,7 @@ function Extrato({ canUpdate, canDelete }: { canUpdate: boolean; canDelete: bool
           </SelectContent>
         </Select>
         <Button size="icon" variant="outline" aria-label="Próximo mês" disabled={mes === "todos" || idxMes <= 0}
-          onClick={() => setMes(meses[idxMes - 1])}><ChevronRight className="h-4 w-4" /></Button>
+          onClick={() => setMes(meses[idxMes - 1] ?? mes)}><ChevronRight className="h-4 w-4" /></Button>
         <Tabs value={visao} onValueChange={(v) => setVisao(v as "benef" | "detalhe")} className="ml-auto">
           <TabsList>
             <TabsTrigger value="benef">Por beneficiário</TabsTrigger>
