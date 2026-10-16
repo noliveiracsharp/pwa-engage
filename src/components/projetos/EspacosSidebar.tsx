@@ -19,6 +19,23 @@ import type { Perms } from "@/hooks/usePagePermissions";
 export const ESPACOS = "projetos_espacos";
 const PAI = "espaco_pai_id";
 
+/** Natureza do nó da árvore: Espaço/Pasta/Projeto abrem a visão geral; Lista abre as tarefas por status. */
+export const TIPOS_ESPACO = [
+  { v: "espaco", label: "Espaço", icone: "Folder", desc: "Agrupador macro (ex.: Testes de Usabilidade)." },
+  { v: "projeto", label: "Projeto", icone: "Rocket", desc: "Projeto ou versão, com visão geral própria (ex.: 6.0.11 App Novo)." },
+  { v: "pasta", label: "Pasta", icone: "FolderOpen", desc: "Só organiza itens, com visão geral." },
+  { v: "lista", label: "Lista", icone: "ListChecks", desc: "Onde ficam os status e as tarefas (ex.: Plano de testes)." },
+] as const;
+export function tipoEspaco(e: Row | undefined): string {
+  const t = String(e?.["tipo"] ?? "");
+  return TIPOS_ESPACO.some((x) => x.v === t) ? t : "espaco";
+}
+export const rotuloTipo = (e: Row | undefined) => TIPOS_ESPACO.find((x) => x.v === tipoEspaco(e))!.label;
+export function iconeEspaco(e: Row): string {
+  const ic = String(e["icone"] ?? "");
+  return ic && ic !== "Folder" ? ic : TIPOS_ESPACO.find((x) => x.v === tipoEspaco(e))!.icone;
+}
+
 /** Id do espaço e de todos os subespaços abaixo dele. */
 export function espacoEDescendentes(espacos: Row[], id: string): Set<string> {
   const out = new Set([id]);
@@ -50,7 +67,7 @@ type Props = { espacos: Row[]; ativo: string | null; onSelect: (id: string | nul
 export function EspacosSidebar({ espacos, ativo, onSelect, perms, onMoverProjeto }: Props) {
   const [alvo, setAlvo] = useState<string | null>(null);
   const [abertos, setAbertos] = useState<Set<string>>(new Set());
-  const [form, setForm] = useState<{ row: Row | null; pai: string | null } | null>(null);
+  const [form, setForm] = useState<{ row: Row | null; pai: string | null; paiTipo?: string } | null>(null);
   const qc = useQueryClient();
 
   const filhos = useMemo(() => {
@@ -83,7 +100,7 @@ export function EspacosSidebar({ espacos, ativo, onSelect, perms, onMoverProjeto
       const id = String(rowId(e));
       const temFilhos = (filhos.get(id) ?? []).length > 0;
       const aberto = abertos.has(id);
-      const Icon = getIcon(String(e["icone"] ?? "") || "Folder");
+      const Icon = getIcon(iconeEspaco(e));
       return (
         <div key={id}>
           <div
@@ -102,8 +119,8 @@ export function EspacosSidebar({ espacos, ativo, onSelect, perms, onMoverProjeto
               <span className="truncate">{String(e["nome"] ?? "")}</span>
             </button>
             <div className="flex opacity-0 transition-opacity group-hover:opacity-100">
-              {perms.canCreate && <Button size="icon" variant="ghost" className="h-6 w-6" title="Novo subespaço" aria-label="Novo subespaço"
-                onClick={() => { setForm({ row: null, pai: id }); setAbertos((s) => new Set(s).add(id)); }}><Plus className="h-3.5 w-3.5" /></Button>}
+              {perms.canCreate && <Button size="icon" variant="ghost" className="h-6 w-6" title="Novo item dentro (Projeto, Pasta ou Lista)" aria-label="Novo item dentro"
+                onClick={() => { setForm({ row: null, pai: id, paiTipo: tipoEspaco(e) }); setAbertos((s) => new Set(s).add(id)); }}><Plus className="h-3.5 w-3.5" /></Button>}
               {perms.canUpdate && <Button size="icon" variant="ghost" className="h-6 w-6" aria-label="Editar espaço" onClick={() => setForm({ row: e, pai: e[PAI] ? String(e[PAI]) : null })}><Pencil className="h-3.5 w-3.5" /></Button>}
               {perms.canDelete && <Button size="icon" variant="ghost" className="h-6 w-6" aria-label="Excluir espaço" onClick={() => excluir(e)}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>}
             </div>
