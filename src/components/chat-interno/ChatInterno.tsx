@@ -22,6 +22,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { tocarSom } from "@/lib/som-notificacao";
 import { adicionarAviso, EVT_ABRIR_CHAT } from "@/lib/avisos";
+import { TarefasChat } from "@/components/chat-interno/TarefasChat";
 
 /** Canal da conversa aberta no momento (para não notificar o que já está na tela). */
 let canalAberto = "";
@@ -210,6 +211,12 @@ export function ChatInterno({ sidebarOpen, onAbrir }: { sidebarOpen: boolean; on
   const painelRef = useRef<HTMLDivElement>(null);
   const botaoRef = useRef<HTMLButtonElement>(null);
 
+  /** Envia uma mensagem automática na conversa direta (avisos de tarefas). */
+  const avisar = async (outroId: string, texto: string) => {
+    const canal = await canalDireto(me, outroId, empresaId);
+    await supabase.from(TABLE).insert({ empresa_id: empresaId, canal_id: canal, remetente_id: me, mensagem: texto, anexos: [], lida_por: [me] });
+  };
+
   const criarGrupo = async () => {
     if (!gNome.trim() || !gMembros.size) { toast.error("Informe o nome e ao menos um participante."); return; }
     const id = crypto.randomUUID();
@@ -301,9 +308,10 @@ export function ChatInterno({ sidebarOpen, onAbrir }: { sidebarOpen: boolean; on
             />
           ) : (
             <Tabs defaultValue="atendentes" className="flex min-h-0 flex-1 flex-col animate-in fade-in">
-              <TabsList className="mx-4 mt-3 grid grid-cols-2">
+              <TabsList className="mx-4 mt-3 grid grid-cols-3">
                 <TabsTrigger value="atendentes" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Atendentes</TabsTrigger>
                 <TabsTrigger value="grupos" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Grupos</TabsTrigger>
+                <TabsTrigger value="tarefas" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Tarefas</TabsTrigger>
               </TabsList>
               <TabsContent value="atendentes" className="flex min-h-0 flex-1 flex-col">
                 <div className="relative mx-4 my-3">
@@ -386,6 +394,9 @@ export function ChatInterno({ sidebarOpen, onAbrir }: { sidebarOpen: boolean; on
                     </ScrollArea>
                   </>
                 )}
+              </TabsContent>
+              <TabsContent value="tarefas" className="flex min-h-0 flex-1 flex-col">
+                <TarefasChat me={me} empresaId={empresaId} usuarios={usuarios} onAvisar={avisar} />
               </TabsContent>
             </Tabs>
           )}
