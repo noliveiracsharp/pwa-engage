@@ -32,7 +32,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { SearchSelect } from "@/components/data-table/SearchSelect";
 import { StatusDialog } from "@/components/projetos/StatusDialog";
 import { TAREFAS_PADRAO, diasDoModelo } from "@/components/projetos/TarefasPadraoDialog";
-import { EspacosSidebar, ESPACOS, cadeiaEspaco, espacoEDescendentes } from "@/components/projetos/EspacosSidebar";
+import { EspacosSidebar, ESPACOS, cadeiaEspaco, espacoEDescendentes, tipoEspaco } from "@/components/projetos/EspacosSidebar";
 import { TarefaSheet } from "@/components/projetos/TarefaSheet";
 import { AtividadeSheet } from "@/components/projetos/AtividadeSheet";
 import { EspacoDashboard } from "@/components/projetos/EspacoDashboard";
