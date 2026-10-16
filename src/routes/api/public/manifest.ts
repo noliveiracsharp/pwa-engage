@@ -52,9 +52,8 @@ export const Route = createFileRoute("/api/public/manifest")({
             theme_color: cor,
             icons: icone
               ? [
-                  { src: `/api/public/icone?s=${s}`, sizes: "192x192", type: "image/png", purpose: "any" },
-                  { src: `/api/public/icone?s=${s}`, sizes: "512x512", type: "image/png", purpose: "any" },
-                  { src: `/api/public/icone?s=${s}`, sizes: "any", type: "image/png", purpose: "any" },
+                  { src: `/api/public/icone?s=${s}&dim=192`, sizes: "192x192", type: "image/png", purpose: "any" },
+                  { src: `/api/public/icone?s=${s}&dim=512`, sizes: "512x512", type: "image/png", purpose: "any" },
                 ]
               : PADRAO.icons,
           });
