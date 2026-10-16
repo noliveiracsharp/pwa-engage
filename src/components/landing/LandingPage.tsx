@@ -14,9 +14,6 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import logoAzul from "@/assets/logo-azul.png.asset.json";
-import logoAzulEsc from "@/assets/logo-azulesc.png.asset.json";
-import logoBco from "@/assets/logo-bco.png.asset.json";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 /** Número do WhatsApp comercial (somente dígitos, com 55). */
@@ -142,11 +139,11 @@ function scrollTo(id: string) {
 }
 
 function Logo({ variante = "auto" }: { variante?: "auto" | "branco" }) {
-  if (variante === "branco") return <img src={logoBco.url} alt="Atende.ai" className="h-9 w-auto" />;
+  if (variante === "branco") return <img src="/logo-atendeai-bco.png" alt="Atende.ai" className="h-9 w-auto" />;
   return (
     <>
-      <img src={logoAzulEsc.url} alt="Atende.ai" className="h-9 w-auto dark:hidden" />
-      <img src={logoAzul.url} alt="Atende.ai" className="hidden h-9 w-auto dark:block" />
+      <img src="/logo-atendeai-azulesc.png" alt="Atende.ai" className="h-9 w-auto dark:hidden" />
+      <img src="/logo-atendeai-azul.png" alt="Atende.ai" className="hidden h-9 w-auto dark:block" />
     </>
   );
 }

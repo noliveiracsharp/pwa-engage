@@ -6,16 +6,27 @@ import { buscarMarca, lembrarSlug, normalizarSlug, SLUGS_RESERVADOS } from "@/li
 export const Route = createFileRoute("/$slug")({
   staticData: { sitemap: false },
   ssr: false,
-  head: () => ({
-    meta: [
-      { title: "Acesso da empresa — Atende.ai" },
-      { name: "description", content: "Entre no Atende.ai pelo endereço exclusivo da sua empresa." },
-      { property: "og:title", content: "Acesso da empresa — Atende.ai" },
-      { property: "og:description", content: "Entre no Atende.ai pelo endereço exclusivo da sua empresa." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-    ],
-  }),
+  head: ({ params }) => {
+    const s = normalizarSlug(params.slug);
+    const ok = !!s && !SLUGS_RESERVADOS.has(s);
+    return {
+      meta: [
+        { title: "Acesso da empresa — Atende.ai" },
+        { name: "description", content: "Entre no Atende.ai pelo endereço exclusivo da sua empresa." },
+        { property: "og:title", content: "Acesso da empresa — Atende.ai" },
+        { property: "og:description", content: "Entre no Atende.ai pelo endereço exclusivo da sua empresa." },
+        { property: "og:type", content: "website" },
+        { name: "twitter:card", content: "summary" },
+      ],
+      links: ok
+        ? [
+            { rel: "icon", href: `/api/public/icone?s=${s}`, type: "image/png" },
+            { rel: "apple-touch-icon", href: `/api/public/icone?s=${s}` },
+            { rel: "manifest", href: `/api/public/manifest?s=${s}` },
+          ]
+        : [],
+    };
+  },
   component: SlugPage,
 });
 

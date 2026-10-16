@@ -10,7 +10,7 @@ export const Route = createFileRoute("/api/public/icone")({
       GET: async ({ request }) => {
         const url = new URL(request.url);
         const s = (url.searchParams.get("s") ?? "").toLowerCase();
-        const fallback = () => Response.redirect(new URL("/icon-512.png", url.origin).toString(), 302);
+        const fallback = () => Response.redirect(new URL("/icon-512.png?v=2", url.origin).toString(), 302);
         if (!/^[a-z0-9-]{1,50}$/.test(s)) return fallback();
         try {
           const sb = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, { auth: { persistSession: false } });
@@ -22,7 +22,7 @@ export const Route = createFileRoute("/api/public/icone")({
           const tipo = r.headers.get("content-type") ?? "";
           if (!r.ok || !tipo.startsWith("image/")) return fallback();
           return new Response(await r.arrayBuffer(), {
-            headers: { "Content-Type": tipo, "Cache-Control": "public, max-age=3600" },
+            headers: { "Content-Type": tipo, "Cache-Control": "public, max-age=3600", "Access-Control-Allow-Origin": "*" },
           });
         } catch {
           return fallback();
