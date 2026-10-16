@@ -107,6 +107,7 @@ export function KanbanConfigDialog({
   const [editIA, setEditIA] = useState(false);
   const [editHum, setEditHum] = useState(false);
   const [editCk, setEditCk] = useState(false);
+  const [editGanha, setEditGanha] = useState(false);
   const [editTpl, setEditTpl] = useState("");
   const { data: templates = [] } = useChecklistTemplates(empresaId);
   const [funcaoId, setFuncaoId] = useState("");
@@ -567,6 +568,10 @@ export function KanbanConfigDialog({
                         <label className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 text-sm">
                           <span>Exigir checklist para entrar</span><Switch checked={editCk} onCheckedChange={setEditCk} />
                         </label>
+                        <label className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 text-sm">
+                          <span>Venda ganha / fechamento<span className="block text-xs text-muted-foreground">Entra na DRE do Board e no faturamento</span></span>
+                          <Switch checked={editGanha} onCheckedChange={setEditGanha} />
+                        </label>
                         {editCk && (
                           <Select value={editTpl} onValueChange={setEditTpl}>
                             <SelectTrigger className="w-full"><SelectValue placeholder={templates.length ? "Escolha o checklist" : "Crie na aba Checklists"} /></SelectTrigger>
@@ -583,7 +588,7 @@ export function KanbanConfigDialog({
                           onClick={() =>
                             updEtapa.mutate({ id, patch: {
                               descricao: editDesc.trim(), cor: editCor, is_default_ia: editIA, is_default_humano: editHum,
-                              exige_checklist: editCk, checklist_template_id: editCk ? editTpl : null,
+                              exige_checklist: editCk, checklist_template_id: editCk ? editTpl : null, etapa_ganha: editGanha,
                             } })
                           }
                         >
@@ -625,6 +630,7 @@ export function KanbanConfigDialog({
                             setEditHum(e["is_default_humano"] === true);
                             setEditCk([true, 1, "true", "t"].includes(e["exige_checklist"] as never));
                             setEditTpl(String(e["checklist_template_id"] ?? ""));
+                            setEditGanha([true, 1, "true", "t"].includes(e["etapa_ganha"] as never));
                           }}
                         >
                           <Pencil className="h-4 w-4" />
