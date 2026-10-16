@@ -705,3 +705,21 @@ table img { cursor: zoom-in; }
 }
 @utility bg-brand-hero { background: var(--gradient-brand-hero); }
 @utility bg-brand-cta { background: var(--gradient-brand-cta); }
+
+/* Toast: barra de tempo restante (pausa ao passar o mouse) */
+[data-sonner-toast]:not([data-type="loading"])::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  width: 100%;
+  background: currentColor;
+  opacity: 0.35;
+  transform-origin: left;
+  animation: toast-tempo 4s linear forwards;
+  border-radius: 0 0 var(--radius) var(--radius);
+  pointer-events: none;
+}
+[data-sonner-toast][data-expanded="true"]::after { animation-play-state: paused; }
+@keyframes toast-tempo { from { transform: scaleX(1); } to { transform: scaleX(0); } }

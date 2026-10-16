@@ -132,7 +132,7 @@ function RootComponent() {
         <AuthProvider>
           {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
           <Outlet />
-          <Toaster richColors position="top-right" />
+          <Toaster richColors closeButton duration={4000} position="top-right" offset={{ top: 72, right: 16 }} />
           <VisualizadorGlobal />
           <NovaVersaoAviso />
         </AuthProvider>
