@@ -69,7 +69,10 @@ export function EspacoDashboard({ espaco, espacos, projetos, tarefas, status, pc
         if (!incluirConcluidos && projDone(p)) return false;
         return true;
       });
-      const ts = ps.flatMap((p) => tarefasDe(String(rowId(p))).map((t) => ({ t, p })));
+      const ts = [
+        ...ps.flatMap((p) => tarefasDe(String(rowId(p))).map((t) => ({ t, sid: String(p[pc.status] ?? "") }))),
+        ...tarefas.filter((t) => !t[tc.projeto] && ids.has(String(t["espaco_id"] ?? ""))).map((t) => ({ t, sid: String(t["status_id"] ?? "") })),
+      ];
       return { f, ps, ts };
     });
 
@@ -77,10 +80,14 @@ export function EspacoDashboard({ espaco, espacos, projetos, tarefas, status, pc
     const pizza: Record<string, number> = { a_fazer: 0, progresso: 0, concluido: 0, erro: 0 };
     const barras = porFilho.map(({ f, ps, ts }) => {
       let e = 0, a = 0;
-      for (const { t, p } of ts) {
+      for (const { t, sid } of ts) {
         e += num(t, EST); a += num(t, APT);
         const pct = tarefaPct(t, tc.done);
-        const tipo = tipoStatus.get(String(p[pc.status] ?? ""));
+        const tipo = tipoStatus.get(sid);
+        if (!t[tc.projeto]) {
+          const fim = String(t["dt_fim"] ?? t["data_fim"] ?? "").slice(0, 10);
+          if (pct >= 100 || tipo === "concluido") noPrazo++; else if (fim && fim < hoje) atraso++; else ativos++;
+        }
         pizza[pct >= 100 ? "concluido" : tipo === "erro" ? "erro" : pct > 0 ? "progresso" : "a_fazer"]! += 1;
       }
       for (const p of ps) {
@@ -96,6 +103,7 @@ export function EspacoDashboard({ espaco, espacos, projetos, tarefas, status, pc
     const cards = porFilho.map(({ f, ps, ts }) => ({
       f,
       projetos: ps.length,
+      tarefas: ts.length,
       horas: ts.reduce((s, { t }) => s + num(t, APT), 0),
       pct: ts.length ? Math.round((ts.filter(({ t }) => tarefaPct(t, tc.done) >= 100).length / ts.length) * 100) : 0,
     }));
@@ -187,22 +195,22 @@ export function EspacoDashboard({ espaco, espacos, projetos, tarefas, status, pc
       </div>
 
       <div>
-        <h2 className="mb-2 text-sm font-semibold">Subespaços</h2>
+        <h2 className="mb-2 text-sm font-semibold">Itens deste {rotuloTipo(espaco).toLowerCase()}</h2>
         {dados.cards.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">Esta pasta ainda não tem subespaços. Passe o mouse sobre ela na lista à esquerda e clique em "+" para criar.</p>
+          <p className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">Ainda não há itens aqui. Passe o mouse sobre o nome na lista à esquerda e clique em "+" para criar um Projeto, Pasta ou Lista.</p>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {dados.cards.map(({ f, projetos, horas, pct }) => {
-              const FI = getIcon(String(f["icone"] ?? "") || "Folder");
+            {dados.cards.map(({ f, tarefas: nt, horas, pct }) => {
+              const FI = getIcon(iconeEspaco(f));
               return (
                 <div key={String(rowId(f))} className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4">
-                  <div className="flex items-center gap-2 font-semibold"><FI className="h-4 w-4" style={{ color: String(f["cor"] ?? "") || undefined }} />{String(f["nome"] ?? "")}</div>
+                  <div className="flex items-center gap-2 font-semibold"><FI className="h-4 w-4" style={{ color: String(f["cor"] ?? "") || undefined }} />{String(f["nome"] ?? "")}<span className="ml-auto text-xs font-normal text-muted-foreground">{rotuloTipo(f)}</span></div>
                   <div>
                     <div className="mb-1 flex justify-between text-xs text-muted-foreground"><span>Tarefas concluídas</span><span>{pct}%</span></div>
                     <Progress value={pct} />
                   </div>
-                  <div className="flex justify-between text-sm text-muted-foreground"><span>{fmtH(horas)} gastas</span><span>{projetos} projeto(s)</span></div>
-                  <Button variant="outline" size="sm" onClick={() => onAcessar(String(rowId(f)))}>Acessar subespaço<ArrowRight className="ml-1 h-4 w-4" /></Button>
+                  <div className="flex justify-between text-sm text-muted-foreground"><span>{fmtH(horas)} gastas</span><span>{nt} tarefa(s)</span></div>
+                  <Button variant="outline" size="sm" onClick={() => onAcessar(String(rowId(f)))}>Abrir {rotuloTipo(f).toLowerCase()}<ArrowRight className="ml-1 h-4 w-4" /></Button>
                 </div>
               );
             })}
