@@ -14,10 +14,8 @@ export function destinoDaEtapa(etapa: Row | null | undefined): { kanban: string;
 /** Monta o card do quadro de destino a partir do card de origem. Devolve null se faltar o contato. */
 export function cardDestino(origem: Row, tipo: OrigemHandoff, tabelaDestino: string, destino: { kanban: string; etapa: string }, descEtapa: string): Row | null {
   const empresa_id = origem["empresa_id"] ?? null;
-  if (tabelaDestino === "orcamentos") {
-    if (tipo === "orcamentos") return null; // não duplica oferta em outro quadro de ofertas
-    return null;
-  }
+  void tipo;
+  if (tabelaDestino === "orcamentos") return null; // Oferta nasce só pelo fluxo comercial
   // Destino = atendimentos: precisa de contato (pessoa).
   const pessoa = pick(origem, ["pessoa_id", "pessoas_id", "contato_id"]);
   if (!pessoa) return null;

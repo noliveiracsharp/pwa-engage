@@ -35,6 +35,7 @@ import { cn } from "@/lib/utils";
 import { iniciais } from "@/components/projetos/ResponsaveisPicker";
 import { AtivacaoOfertaDialog } from "@/components/orcamentos/AtivacaoOfertaDialog";
 import { ofertaTravada, situacaoAtivada } from "@/lib/oferta-ativacao";
+import { executarHandoff } from "@/lib/kanban-handoff";
 
 export const Route = createFileRoute("/_authenticated/orcamentos")({
   staticData: { sitemap: false },
@@ -367,6 +368,7 @@ function OrcamentosPage() {
                         onSuccess: () => {
                           const et = etapasKanban.find((e) => normSit(e.descricao) === normSit(s.value));
                           if (situacaoAtivada(s.value, et) && !ofertaTravada(r, etapasKanban)) setAtivar(r);
+                          if (et) void executarHandoff(et.id, r, "orcamentos").then((h) => h && (h.ok ? toast.success : toast.warning)(h.msg));
                         },
                       },
                     )
@@ -565,6 +567,14 @@ function OrcamentosPage() {
             { header, linhas, original: record },
             {
               onSuccess: ({ id }) => {
+                const antes = String(record?.["situacao"] ?? "");
+                const depois = String(header["situacao"] ?? "");
+                if (normSit(antes) !== normSit(depois)) {
+                  const et = etapasKanban.find((e) => normSit(e.descricao) === normSit(depois));
+                  const linha = { ...(record ?? {}), ...header, id } as Row;
+                  if (situacaoAtivada(depois, et) && !(record && ofertaTravada(record, etapasKanban))) setAtivar(linha);
+                  if (et) void executarHandoff(et.id, linha, "orcamentos").then((h) => h && (h.ok ? toast.success : toast.warning)(h.msg));
+                }
                 if (manterAberto) {
                   setDuplicarDe(null);
                   void manterAbertoCom(id);

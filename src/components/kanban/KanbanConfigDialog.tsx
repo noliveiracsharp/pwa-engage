@@ -109,6 +109,8 @@ export function KanbanConfigDialog({
   const [editCk, setEditCk] = useState(false);
   const [editGanha, setEditGanha] = useState(false);
   const [editTpl, setEditTpl] = useState("");
+  const [editDestK, setEditDestK] = useState("");
+  const [editDestE, setEditDestE] = useState("");
   const { data: templates = [] } = useChecklistTemplates(empresaId);
   const [funcaoId, setFuncaoId] = useState("");
   const [sel, setSel] = useState<CampoCardTipado[]>([]);
@@ -572,6 +574,24 @@ export function KanbanConfigDialog({
                           <span>Venda ganha / fechamento<span className="block text-xs text-muted-foreground">Entra na DRE do Board e no faturamento</span></span>
                           <Switch checked={editGanha} onCheckedChange={setEditGanha} />
                         </label>
+                        <div className="space-y-2 rounded-md border p-3">
+                          <span className="block text-sm">Ao entrar nesta etapa, criar card em outro quadro<span className="block text-xs text-muted-foreground">Ex.: Comercial → Implantação. Leva contato e responsável.</span></span>
+                          <Select value={editDestK || "nenhum"} onValueChange={(v) => { setEditDestK(v === "nenhum" ? "" : v); setEditDestE(""); }}>
+                            <SelectTrigger className="w-full"><SelectValue placeholder="Quadro de destino" /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="nenhum">Não criar</SelectItem>
+                              {kanbans.filter((k) => String(k["id"]) !== kanbanId).map((k) => <SelectItem key={String(k["id"])} value={String(k["id"])}>{String(k["nome"] ?? k["descricao"] ?? "")}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                          {editDestK && (
+                            <Select value={editDestE} onValueChange={setEditDestE}>
+                              <SelectTrigger className="w-full"><SelectValue placeholder="Etapa inicial no destino" /></SelectTrigger>
+                              <SelectContent>
+                                {todasEtapas.filter((x) => String(x["kanban_nome_id"] ?? "") === editDestK).sort((a, b) => Number(a["ordem"] ?? 0) - Number(b["ordem"] ?? 0)).map((x) => <SelectItem key={String(x["id"])} value={String(x["id"])}>{String(x["descricao"] ?? "")}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </div>
                         {editCk && (
                           <Select value={editTpl} onValueChange={setEditTpl}>
                             <SelectTrigger className="w-full"><SelectValue placeholder={templates.length ? "Escolha o checklist" : "Crie na aba Checklists"} /></SelectTrigger>
@@ -584,11 +604,12 @@ export function KanbanConfigDialog({
                           size="icon"
                           variant="ghost"
                           aria-label="Salvar etapa"
-                          disabled={updEtapa.isPending || !editDesc.trim() || (editCk && !editTpl)}
+                          disabled={updEtapa.isPending || !editDesc.trim() || (editCk && !editTpl) || (!!editDestK && !editDestE)}
                           onClick={() =>
                             updEtapa.mutate({ id, patch: {
                               descricao: editDesc.trim(), cor: editCor, is_default_ia: editIA, is_default_humano: editHum,
                               exige_checklist: editCk, checklist_template_id: editCk ? editTpl : null, etapa_ganha: editGanha,
+                              acao_kanban_destino_id: editDestK || null, acao_etapa_destino_id: editDestK ? editDestE : null,
                             } })
                           }
                         >
@@ -631,6 +652,8 @@ export function KanbanConfigDialog({
                             setEditCk([true, 1, "true", "t"].includes(e["exige_checklist"] as never));
                             setEditTpl(String(e["checklist_template_id"] ?? ""));
                             setEditGanha([true, 1, "true", "t"].includes(e["etapa_ganha"] as never));
+                            setEditDestK(String(e["acao_kanban_destino_id"] ?? ""));
+                            setEditDestE(String(e["acao_etapa_destino_id"] ?? ""));
                           }}
                         >
                           <Pencil className="h-4 w-4" />
@@ -654,6 +677,7 @@ export function KanbanConfigDialog({
                         {e["is_default_humano"] === true && <Badge variant="secondary" className="gap-1 text-[10px]"><Users className="h-3 w-3" /> Padrão Equipe</Badge>}
                         {e["is_default_encerrado"] === true && <Badge variant="secondary" className="gap-1 text-[10px]"><Check className="h-3 w-3" /> Encerramento</Badge>}
                         {[true, 1, "true", "t"].includes(e["exige_checklist"] as never) && <Badge variant="secondary" className="gap-1 text-[10px]"><ClipboardCheck className="h-3 w-3" /> Checklist</Badge>}
+                        {!!e["acao_kanban_destino_id"] && <Badge variant="secondary" className="text-[10px]">→ {String(kanbans.find((k) => String(k["id"]) === String(e["acao_kanban_destino_id"]))?.["nome"] ?? "Outro quadro")}</Badge>}
                         </div>
                       </div>
                     )}
