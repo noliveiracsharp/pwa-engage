@@ -8,6 +8,7 @@ function quadrado(buf: Buffer, alvo: number): Buffer {
   const src = PNG.sync.read(buf);
   const lado = Math.max(src.width, src.height);
   const sq = new PNG({ width: lado, height: lado });
+  const p = sq.data as unknown as number[];
   sq.data.fill(0);
   PNG.bitblt(src, sq, 0, 0, src.width, src.height, Math.floor((lado - src.width) / 2), Math.floor((lado - src.height) / 2));
   if (lado === alvo) return PNG.sync.write(sq);
@@ -20,8 +21,8 @@ function quadrado(buf: Buffer, alvo: number): Buffer {
       const d = (y * alvo + x) * 4;
       const a = (y0 * lado + x0) * 4, b = (y0 * lado + x1) * 4, c = (y1 * lado + x0) * 4, e = (y1 * lado + x1) * 4;
       for (let k = 0; k < 4; k++) {
-        const t = sq.data[a + k] * (1 - dx) + sq.data[b + k] * dx;
-        const u = sq.data[c + k] * (1 - dx) + sq.data[e + k] * dx;
+        const t = p[a + k] * (1 - dx) + p[b + k] * dx;
+        const u = p[c + k] * (1 - dx) + p[e + k] * dx;
         dst.data[d + k] = Math.round(t * (1 - dy) + u * dy);
       }
     }
@@ -50,7 +51,7 @@ export const Route = createFileRoute("/api/public/icone")({
           const tipo = r.headers.get("content-type") ?? "";
           if (!r.ok || !tipo.startsWith("image/")) return fallback();
           const bruto = Buffer.from(await r.arrayBuffer());
-          let corpo: Uint8Array = bruto;
+          let corpo: Buffer = bruto;
           let ct = tipo;
           try {
             corpo = quadrado(bruto, dim);
@@ -58,7 +59,7 @@ export const Route = createFileRoute("/api/public/icone")({
           } catch {
             // não-PNG (ex.: webp): entrega como veio
           }
-          return new Response(corpo, {
+          return new Response(new Uint8Array(corpo), {
             headers: { "Content-Type": ct, "Cache-Control": "public, max-age=3600", "Access-Control-Allow-Origin": "*" },
           });
         } catch {
