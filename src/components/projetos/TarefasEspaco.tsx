@@ -1,6 +1,8 @@
 import { Fragment, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, ChevronRight, Pencil, Plus, Trash2, List, Columns3 } from "lucide-react";
+import { ChevronDown, ChevronRight, Pencil, Plus, Trash2, List, Columns3, Settings, ListChecks } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { StatusDialog } from "@/components/projetos/StatusDialog";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -36,6 +38,7 @@ export function TarefasEspaco({ espacoId, espacos, projetos, tarefas, atividades
   const [expandidas, setExpandidas] = useState<Set<string>>(new Set());
   const [fechados, setFechados] = useState<Set<string>>(new Set());
   const [arrastando, setArrastando] = useState<string | null>(null);
+  const [statusOpen, setStatusOpen] = useState(false);
   const semColunas = !!tCols?.length && !tCols.includes("espaco_id");
 
   const ids = useMemo(() => espacoEDescendentes(espacos, espacoId), [espacos, espacoId]);
@@ -136,8 +139,14 @@ export function TarefasEspaco({ espacoId, espacos, projetos, tarefas, atividades
           <Button size="sm" variant={modo === "lista" ? "secondary" : "ghost"} onClick={() => setModo("lista")}><List className="mr-1 h-4 w-4" />Lista</Button>
           <Button size="sm" variant={modo === "kanban" ? "secondary" : "ghost"} onClick={() => setModo("kanban")}><Columns3 className="mr-1 h-4 w-4" />Kanban</Button>
         </div>
-        {perms.canCreate && <Button className="ml-auto" onClick={() => setNova(ordenados[0] ? String(rowId(ordenados[0])) : "")}><Plus className="mr-1 h-4 w-4" />Nova tarefa</Button>}
+        <div className="ml-auto flex gap-2">
+          <Button variant="outline" size="icon" onClick={() => setStatusOpen(true)} aria-label="Gerenciar status" title="Gerenciar status"><Settings className="h-4 w-4" /></Button>
+          <Button asChild variant="outline"><Link to="/projetos/templates"><ListChecks className="mr-1 h-4 w-4" />Templates</Link></Button>
+          {perms.canCreate && <Button onClick={() => setNova(ordenados[0] ? String(rowId(ordenados[0])) : "")}><Plus className="mr-1 h-4 w-4" />Nova tarefa</Button>}
+        </div>
       </div>
+      <StatusDialog open={statusOpen} onOpenChange={setStatusOpen} perms={perms} projetos={projetos} statusCol="status_id"
+        espacoId={espacoId} espacoNome={String(espacos.find((e) => String(rowId(e)) === espacoId)?.["nome"] ?? "")} />
 
       {modo === "kanban" ? (
         <div className="flex gap-3 overflow-x-auto pb-2">
