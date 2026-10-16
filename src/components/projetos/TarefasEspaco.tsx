@@ -162,7 +162,9 @@ export function TarefasEspaco({ espacoId, espacos, projetos, tarefas, atividades
           {grupos.map((g) => {
             const closed = fechados.has(g.id);
             return (
-              <section key={g.id || "sem"} className="rounded-lg border border-border bg-card">
+              <section key={g.id || "sem"} className={`rounded-lg border bg-card ${arrastando ? "border-dashed border-primary" : "border-border"}`}
+                onDragOver={(e) => { if (arrastando) e.preventDefault(); }}
+                onDrop={() => { if (arrastando) void moverStatus(arrastando, g.id); setArrastando(null); }}>
                 <button className="flex w-full items-center gap-2 px-4 py-3 text-left"
                   onClick={() => setFechados((s) => { const n = new Set(s); if (n.has(g.id)) n.delete(g.id); else n.add(g.id); return n; })}>
                   {closed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -184,7 +186,10 @@ export function TarefasEspaco({ espacoId, espacos, projetos, tarefas, atividades
                           const pct = tarefaPct(t, tc.done);
                           return (
                             <Fragment key={id}>
-                              <TableRow className="cursor-pointer" onClick={() => setAberta(id)}>
+                              <TableRow className={`cursor-pointer ${arrastando === id ? "opacity-50" : ""}`} onClick={() => setAberta(id)}
+                                draggable={perms.canUpdate}
+                                onDragStart={(e) => { e.dataTransfer.effectAllowed = "move"; setArrastando(id); }}
+                                onDragEnd={() => setArrastando(null)}>
                                 <TableCell className="font-medium">
                                   <div className="flex items-center gap-1">
                                     <button type="button" className="rounded p-0.5 hover:bg-muted" aria-label={fechada ? "Expandir" : "Recolher"}
