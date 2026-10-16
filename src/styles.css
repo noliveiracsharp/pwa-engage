@@ -722,5 +722,4 @@ table img { cursor: zoom-in; }
   pointer-events: none;
 }
 [data-sonner-toast][data-expanded="true"]::after { animation-play-state: paused; }
-[data-sonner-toast] { overflow: hidden; }
 @keyframes toast-tempo { from { transform: scaleX(1); } to { transform: scaleX(0); } }
