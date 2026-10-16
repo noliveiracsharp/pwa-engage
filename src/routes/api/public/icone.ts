@@ -21,8 +21,8 @@ function quadrado(buf: Buffer, alvo: number): Buffer {
       const d = (y * alvo + x) * 4;
       const a = (y0 * lado + x0) * 4, b = (y0 * lado + x1) * 4, c = (y1 * lado + x0) * 4, e = (y1 * lado + x1) * 4;
       for (let k = 0; k < 4; k++) {
-        const t = p[a + k] * (1 - dx) + p[b + k] * dx;
-        const u = p[c + k] * (1 - dx) + p[e + k] * dx;
+        const t = (p[a + k] ?? 0) * (1 - dx) + (p[b + k] ?? 0) * dx;
+        const u = (p[c + k] ?? 0) * (1 - dx) + (p[e + k] ?? 0) * dx;
         dst.data[d + k] = Math.round(t * (1 - dy) + u * dy);
       }
     }
