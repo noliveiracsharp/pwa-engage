@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { DataTable, type Column } from "@/components/data-table/DataTable";
 import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
@@ -63,6 +63,9 @@ function Extrato({ canUpdate, canDelete }: { canUpdate: boolean; canDelete: bool
   const { data: orcs = [] } = useTableRows("orcamentos");
   const { data: usuarios = [] } = useTableRows("usuarios");
   const [f, setF] = useState({ busca: "", status: "todos", benef: "todos" });
+  const [mes, setMes] = useState(() => new Date().toISOString().slice(0, 7));
+  const [visao, setVisao] = useState<"benef" | "detalhe">("benef");
+  const [abertos, setAbertos] = useState<Set<string>>(new Set());
   const orcById = useMemo(() => new Map(orcs.map((o) => [text(rowId(o)), o])), [orcs]);
   const userById = useMemo(() => new Map(usuarios.map((u) => [text(rowId(u)), u])), [usuarios]);
 
@@ -167,8 +170,86 @@ function Extrato({ canUpdate, canDelete }: { canUpdate: boolean; canDelete: bool
       : []),
   ];
 
+  const meses = Array.from(new Set(rowsDb.map((r) => text(r["created_at"]).slice(0, 7)).filter(Boolean))).sort().reverse();
+  const doMes = rows.filter((r) => mes === "todos" || text(r["created_at"]).slice(0, 7) === mes);
+  const somaMes = (k: "aguardando" | "disponivel" | "pago") => doMes.reduce((t, r) => t + calc(r)[k], 0);
+  const nomeMes = (m: string) => {
+    const [a = 0, mm = 1] = m.split("-").map(Number);
+    const s = new Date(a, mm - 1, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  };
+  const idxMes = meses.indexOf(mes);
+  const grupos = useMemo(() => {
+    const m = new Map<string, Row[]>();
+    for (const r of doMes) {
+      const k = text(r["beneficiario_id"]) || "—";
+      m.set(k, [...(m.get(k) ?? []), r]);
+    }
+    return [...m.entries()]
+      .map(([id, itens]) => ({
+        id, itens,
+        nome: text(pick(userById.get(id) ?? {}, ["nome", "email"])) || "Sem beneficiário",
+        valor: itens.reduce((t, r) => t + calc(r).valor, 0),
+        liberado: itens.reduce((t, r) => t + calc(r).liberado, 0),
+        pago: itens.reduce((t, r) => t + calc(r).pago, 0),
+        disponivel: itens.reduce((t, r) => t + calc(r).disponivel, 0),
+      }))
+      .sort((a, b) => a.nome.localeCompare(b.nome));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [doMes, userById, recebidoPorOrc, liberacao, entradaPct]);
+
+  const pagarLote = async (g: { nome: string; itens: Row[]; disponivel: number }) => {
+    if (g.disponivel <= 0) return;
+    if (!window.confirm(`Registrar pagamento de ${formatBRL(g.disponivel)} para ${g.nome}?`)) return;
+    const hoje = new Date().toISOString().slice(0, 10);
+    for (const r of g.itens) {
+      const c = calc(r);
+      if (c.disponivel <= 0) continue;
+      const novoPago = round2(c.pago + c.disponivel);
+      const { error } = await supabase
+        .from("orcamento_comissoes")
+        .update({ valor_pago: novoPago, status: novoPago >= c.valor ? "paga" : "a_pagar", pago_em: hoje } as never)
+        .eq("id", text(rowId(r)));
+      if (error) return void toast.error(error.message);
+    }
+    toast.success("Pagamento registrado.");
+    qc.invalidateQueries({ queryKey: ["table", "orcamento_comissoes"] });
+  };
+
+  const filtros = (
+    <>
+      <FilterInput label="Buscar" value={f.busca} onChange={(v) => setF({ ...f, busca: v })} placeholder="Oferta, papel ou beneficiário" />
+      <FilterSelect label="Status" value={f.status} onChange={(v) => setF({ ...f, status: v })} options={[{ value: "todos", label: "Todos" }, { value: "prevista", label: "Prevista" }, { value: "a_pagar", label: "Paga em parte" }, { value: "paga", label: "Quitada" }]} />
+      <FilterSelect
+        label="Beneficiário"
+        value={f.benef}
+        onChange={(v) => setF({ ...f, benef: v })}
+        options={[{ value: "todos", label: "Todos" }, ...usuarios.map((u) => ({ value: text(rowId(u)), label: text(pick(u, ["nome", "email"])) }))]}
+      />
+    </>
+  );
+
   return (
     <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <Button size="icon" variant="outline" aria-label="Mês anterior" disabled={mes === "todos" ? !meses.length : idxMes >= meses.length - 1}
+          onClick={() => setMes(mes === "todos" ? (meses[0] ?? "todos") : meses[idxMes + 1] ?? mes)}><ChevronLeft className="h-4 w-4" /></Button>
+        <Select value={mes} onValueChange={setMes}>
+          <SelectTrigger className="w-52"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todos os meses</SelectItem>
+            {meses.map((m) => <SelectItem key={m} value={m}>{nomeMes(m)}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Button size="icon" variant="outline" aria-label="Próximo mês" disabled={mes === "todos" || idxMes <= 0}
+          onClick={() => setMes(meses[idxMes - 1] ?? mes)}><ChevronRight className="h-4 w-4" /></Button>
+        <Tabs value={visao} onValueChange={(v) => setVisao(v as "benef" | "detalhe")} className="ml-auto">
+          <TabsList>
+            <TabsTrigger value="benef">Por beneficiário</TabsTrigger>
+            <TabsTrigger value="detalhe">Detalhada</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
       <div className="grid gap-3 sm:grid-cols-3">
         {([
           ["aguardando", "Aguardando o cliente pagar"],
@@ -177,30 +258,81 @@ function Extrato({ canUpdate, canDelete }: { canUpdate: boolean; canDelete: bool
         ] as const).map(([k, label]) => (
           <div key={k} className="rounded-lg border p-3">
             <div className="text-muted-foreground text-xs">{label}</div>
-            <div className="text-lg font-semibold tabular-nums">{formatBRL(soma(k))}</div>
+            <div className="text-lg font-semibold tabular-nums">{formatBRL(somaMes(k))}</div>
           </div>
         ))}
       </div>
-      <DataTable
-        title="Extrato de Comissões"
-        columns={columns}
-        rows={rows}
-        loading={isLoading}
-        getValue={(row, keys) => pick(row, keys)}
-        rowKey={(row, i) => String(rowId(row) ?? i)}
-        filters={
-          <>
-            <FilterInput label="Buscar" value={f.busca} onChange={(v) => setF({ ...f, busca: v })} placeholder="Oferta, papel ou beneficiário" />
-            <FilterSelect label="Status" value={f.status} onChange={(v) => setF({ ...f, status: v })} options={[{ value: "todos", label: "Todos" }, { value: "prevista", label: "Prevista" }, { value: "a_pagar", label: "Paga em parte" }, { value: "paga", label: "Quitada" }]} />
-            <FilterSelect
-              label="Beneficiário"
-              value={f.benef}
-              onChange={(v) => setF({ ...f, benef: v })}
-              options={[{ value: "todos", label: "Todos" }, ...usuarios.map((u) => ({ value: text(rowId(u)), label: text(pick(u, ["nome", "email"])) }))]}
-            />
-          </>
-        }
-      />
+      {visao === "detalhe" ? (
+        <DataTable
+          title="Extrato de Comissões"
+          columns={columns}
+          rows={doMes}
+          loading={isLoading}
+          getValue={(row, keys) => pick(row, keys)}
+          rowKey={(row, i) => String(rowId(row) ?? i)}
+          filters={filtros}
+        />
+      ) : (
+        <div className="space-y-3">
+          <h2 className="text-xl font-semibold">Comissões por beneficiário</h2>
+          <div className="grid gap-3 rounded-lg border p-3 sm:grid-cols-3">{filtros}</div>
+          {isLoading && <p className="text-muted-foreground text-sm">Carregando…</p>}
+          {!isLoading && grupos.length === 0 && <p className="text-muted-foreground text-sm">Nenhuma comissão neste período.</p>}
+          {grupos.map((g) => {
+            const aberto = abertos.has(g.id);
+            return (
+              <div key={g.id} className="rounded-lg border">
+                <div className="flex flex-wrap items-center gap-x-6 gap-y-2 p-3">
+                  <button type="button" className="flex min-w-48 items-center gap-2 text-left font-semibold"
+                    onClick={() => setAbertos((s) => { const n = new Set(s); if (n.has(g.id)) n.delete(g.id); else n.add(g.id); return n; })}>
+                    <ChevronDown className={`h-4 w-4 transition-transform ${aberto ? "" : "-rotate-90"}`} />
+                    {g.nome}
+                    <span className="text-muted-foreground text-xs font-normal">({g.itens.length})</span>
+                  </button>
+                  {([["Comissão", g.valor], ["Liberado", g.liberado], ["Pago", g.pago], ["Pode pagar agora", g.disponivel]] as const).map(([l, v]) => (
+                    <div key={l}><div className="text-muted-foreground text-xs">{l}</div><div className="font-semibold tabular-nums">{formatBRL(v)}</div></div>
+                  ))}
+                  <div className="ml-auto">
+                    {g.pago >= g.valor && g.valor > 0 ? (
+                      <span className="text-success text-sm font-medium">Quitado</span>
+                    ) : canUpdate && g.disponivel > 0 ? (
+                      <Button size="sm" onClick={() => void pagarLote(g)}>Pagar liberado ({formatBRL(g.disponivel)})</Button>
+                    ) : null}
+                  </div>
+                </div>
+                {aberto && (
+                  <div className="overflow-x-auto border-t">
+                    <table className="w-full text-sm">
+                      <thead className="bg-muted/50 text-left">
+                        <tr>{["Oferta", "Data", "Papel", "Natureza", "Base", "%", "Comissão", "Liberado", "Pago", "Pode pagar"].map((h) => <th key={h} className="p-2 font-medium">{h}</th>)}</tr>
+                      </thead>
+                      <tbody>
+                        {g.itens.map((r) => {
+                          const c = calc(r);
+                          return (
+                            <tr key={text(rowId(r))} className="border-t">
+                              <td className="p-2 font-semibold tabular-nums">{text(orcById.get(text(r["orcamento_id"]))?.["numero"]) || "—"}</td>
+                              <td className="p-2">{formatDate(r["created_at"])}</td>
+                              <td className="p-2">{text(r["papel_nome"])}</td>
+                              <td className="p-2">{NAT_LABEL[text(r["natureza"])] ?? "—"}</td>
+                              <td className="p-2 tabular-nums">{formatBRL(r["base_valor"])}</td>
+                              <td className="p-2">{formatPct(r["pct"])}</td>
+                              <td className="p-2 font-semibold tabular-nums">{formatBRL(c.valor)}</td>
+                              <td className="p-2 tabular-nums">{formatBRL(c.liberado)}</td>
+                              <td className="p-2 tabular-nums">{formatBRL(c.pago)}</td>
+                              <td className="p-2 tabular-nums">{c.pago >= c.valor ? <span className="text-success">Quitada</span> : formatBRL(c.disponivel)}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
