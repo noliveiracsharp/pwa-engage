@@ -32,7 +32,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { SearchSelect } from "@/components/data-table/SearchSelect";
 import { StatusDialog } from "@/components/projetos/StatusDialog";
 import { TAREFAS_PADRAO, diasDoModelo } from "@/components/projetos/TarefasPadraoDialog";
-import { EspacosSidebar, ESPACOS, cadeiaEspaco, espacoEDescendentes } from "@/components/projetos/EspacosSidebar";
+import { EspacosSidebar, ESPACOS, cadeiaEspaco, espacoEDescendentes, tipoEspaco } from "@/components/projetos/EspacosSidebar";
 import { TarefaSheet } from "@/components/projetos/TarefaSheet";
 import { AtividadeSheet } from "@/components/projetos/AtividadeSheet";
 import { EspacoDashboard } from "@/components/projetos/EspacoDashboard";
@@ -126,7 +126,8 @@ function ProjetosPage() {
     toast.success(`Projeto "${String(p[d.pc.nome] ?? "")}" movido para ${nome}.`);
     qc.invalidateQueries({ queryKey: ["table", "projetos"] });
   }
-  const raiz = !!espAtual && !espAtual["espaco_pai_id"];
+  // Lista abre as tarefas por status; Espaço, Pasta e Projeto abrem a visão geral.
+  const raiz = !!espAtual && tipoEspaco(espAtual) !== "lista";
   const abaAtual = !espacoId ? "projetos" : aba ?? (raiz ? "painel" : "tarefas");
   return (
     <div className="flex flex-col gap-4 md:flex-row md:items-start">
