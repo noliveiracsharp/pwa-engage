@@ -468,7 +468,7 @@ export function LandingPage() {
 function Mockup() {
   return (
     <div className="relative">
-      <div className="rounded-2xl border border-border bg-card p-3 shadow-2xl">
+      <div className="rounded-2xl border border-border bg-card p-3 text-foreground shadow-2xl">
         <div className="mb-3 flex items-center gap-1.5 px-1">
           <span className="h-3 w-3 rounded-full bg-destructive/70" />
           <span className="h-3 w-3 rounded-full bg-warning/80" />
@@ -491,11 +491,11 @@ function Mockup() {
           </div>
         </div>
       </div>
-      <div className="absolute -bottom-5 -left-4 hidden rounded-xl border border-border bg-card px-4 py-3 shadow-lg sm:block">
+      <div className="absolute -bottom-5 -left-4 hidden rounded-xl border border-border bg-card text-foreground px-4 py-3 shadow-lg sm:block">
         <p className="text-xs text-muted-foreground">Orçamento aprovado</p>
         <p className="font-bold text-success">R$ 12.480,00</p>
       </div>
-      <div className="absolute -right-3 -top-4 hidden rounded-xl border border-border bg-card px-4 py-3 shadow-lg sm:block">
+      <div className="absolute -right-3 -top-4 hidden rounded-xl border border-border bg-card text-foreground px-4 py-3 shadow-lg sm:block">
         <p className="text-xs text-muted-foreground">Atendimentos hoje</p>
         <p className="font-bold text-primary">128</p>
       </div>
