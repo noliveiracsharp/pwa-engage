@@ -174,7 +174,7 @@ function Extrato({ canUpdate, canDelete }: { canUpdate: boolean; canDelete: bool
   const doMes = rows.filter((r) => mes === "todos" || text(r["created_at"]).slice(0, 7) === mes);
   const somaMes = (k: "aguardando" | "disponivel" | "pago") => doMes.reduce((t, r) => t + calc(r)[k], 0);
   const nomeMes = (m: string) => {
-    const [a, mm] = m.split("-").map(Number);
+    const [a = 0, mm = 1] = m.split("-").map(Number);
     const s = new Date(a, mm - 1, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
     return s.charAt(0).toUpperCase() + s.slice(1);
   };
@@ -233,7 +233,7 @@ function Extrato({ canUpdate, canDelete }: { canUpdate: boolean; canDelete: bool
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
         <Button size="icon" variant="outline" aria-label="Mês anterior" disabled={mes === "todos" ? !meses.length : idxMes >= meses.length - 1}
-          onClick={() => setMes(mes === "todos" ? meses[0] : meses[idxMes + 1] ?? mes)}><ChevronLeft className="h-4 w-4" /></Button>
+          onClick={() => setMes(mes === "todos" ? (meses[0] ?? "todos") : meses[idxMes + 1] ?? mes)}><ChevronLeft className="h-4 w-4" /></Button>
         <Select value={mes} onValueChange={setMes}>
           <SelectTrigger className="w-52"><SelectValue /></SelectTrigger>
           <SelectContent>
