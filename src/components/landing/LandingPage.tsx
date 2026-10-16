@@ -109,7 +109,6 @@ function Comparativo() {
           </tbody>
         </table>
       </div>
-      <ModulosAvulsos />
     </div>
   );
 }
@@ -399,6 +398,7 @@ export function LandingPage() {
               <MessageCircle className="h-4 w-4" /> Fale no WhatsApp
             </a>
           </p>
+          <ModulosAvulsos />
           <Comparativo />
         </div>
       </section>
