@@ -49,7 +49,7 @@ export function TarefaSheet({ tarefa, tarefasDoProjeto, projetoId, perms, onClos
   // (progresso, checklist) não podem apagar o que está sendo digitado.
   const formKey = isNew ? "nova" : tarefa ? String(rowId(tarefa)) : "";
   useEffect(() => {
-    setForm(tarefa ? { ...tarefa } : { [tc.prio]: "Normal" });
+    setForm(tarefa ? { ...tarefa } : { [tc.prio]: "Normal", status_id: statusId ?? "" });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formKey]);
   const set = (k: string, v: unknown) => setForm((f) => ({ ...f, [k]: v }));
@@ -61,12 +61,14 @@ export function TarefaSheet({ tarefa, tarefasDoProjeto, projetoId, perms, onClos
       [tc.nome]: form[tc.nome], [tc.descricao]: form[tc.descricao] ?? null, [tc.resp]: resps[0] ?? null, responsaveis: resps,
       [tc.ini]: form[tc.ini] || null, [tc.fim]: form[tc.fim] || null, [tc.prio]: form[tc.prio] ?? "Normal",
     };
+    if (statusOpcoes) base["status_id"] = form["status_id"] || null;
     if (tc.nome === tc.descricao) delete base[tc.descricao];
     let error;
     if (tarefa) {
       ({ error } = await supabase.from("projetos_tarefas").update(filterPayload(stamp(base, false), tCols)).eq(idColumn(tarefa), rowId(tarefa) as never));
     } else {
-      base[tc.projeto] = projetoId;
+      base[tc.projeto] = projetoId || null;
+      if (!projetoId && espacoId) base["espaco_id"] = espacoId;
       ({ error } = await supabase.from("projetos_tarefas").insert(filterPayload(stamp({ ...base, ordem: tarefasDoProjeto.reduce((mx, t) => Math.max(mx, Number(t["ordem"] ?? -1) || 0), -1) + 1 }, true), tCols)));
     }
     if (error) { toast.error(error.message); return; }
@@ -101,8 +103,20 @@ export function TarefaSheet({ tarefa, tarefasDoProjeto, projetoId, perms, onClos
           <section className="grid gap-3 sm:grid-cols-2">
             <div className="sm:col-span-2 space-y-1">
               <Label>Nome da tarefa</Label>
-              <Input disabled={readOnly} value={String(form[tc.nome] ?? "")} onChange={(e) => set(tc.nome, e.target.value)} />
+              <Input disabled={readOnly} autoFocus={isNew} value={String(form[tc.nome] ?? "")} onChange={(e) => set(tc.nome, e.target.value)} />
             </div>
+            {statusOpcoes && (
+              <div className="sm:col-span-2 space-y-1">
+                <Label>Status</Label>
+                <Select disabled={readOnly} value={String(form["status_id"] ?? "") || "none"} onValueChange={(v) => set("status_id", v === "none" ? "" : v)}>
+                  <SelectTrigger><SelectValue placeholder="Sem status" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sem status</SelectItem>
+                    {statusOpcoes.map((s) => <SelectItem key={String(rowId(s))} value={String(rowId(s))}>{String(s[statusNomeCol ?? "nome"] ?? "")}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             {tc.descricao !== tc.nome && (
               <div className="sm:col-span-2 space-y-1">
                 <Label>Descrição</Label>
