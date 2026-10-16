@@ -70,7 +70,24 @@ export function ChatInterno({ sidebarOpen, onAbrir }: { sidebarOpen: boolean; on
   const me = String(pick(usuario, ["id"]) ?? "");
   const empresaId = String(pick(usuario, ["empresa_id", "id_empresa"]) ?? "");
   const [open, setOpen] = useState(false);
+  // Modo acoplado: o chat vira coluna lateral e empurra o conteúdo (só desktop).
   const [expanded, setExpanded] = useState(false);
+  const [lado, setLado] = useState<"direita" | "esquerda">("direita");
+  const [dockEl, setDockEl] = useState<HTMLElement | null>(null);
+  const [desktop, setDesktop] = useState(false);
+  useEffect(() => {
+    const v = localStorage.getItem("chat-dock");
+    if (v === "direita" || v === "esquerda") { setLado(v); setExpanded(true); }
+    const mq = window.matchMedia("(min-width: 768px)");
+    const f = () => setDesktop(mq.matches);
+    f(); mq.addEventListener("change", f);
+    return () => mq.removeEventListener("change", f);
+  }, []);
+  useEffect(() => {
+    localStorage.setItem("chat-dock", expanded ? lado : "");
+    setDockEl(document.getElementById(`chat-dock-${lado}`));
+  }, [expanded, lado]);
+  const acoplado = expanded && desktop && !!dockEl;
   const [busca, setBusca] = useState("");
   const [sel, setSel] = useState<Sel | null>(null);
   const [criando, setCriando] = useState(false);
