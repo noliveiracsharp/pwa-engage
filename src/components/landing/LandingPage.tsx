@@ -6,6 +6,7 @@ import {
   Bot, ShieldCheck, Zap, BarChart3, ArrowRight,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useModulosPublicos } from "@/lib/modulos-publicos";
 import { useTheme } from "@/components/theme-provider";
 import { formatBRL, num } from "@/lib/orcamentos";
 import { Button } from "@/components/ui/button";
@@ -52,20 +53,29 @@ function Celula({ v }: { v: Cel }) {
 }
 
 function ModulosAvulsos() {
-  const { data: modulos = [] } = useQuery({
-    queryKey: ["landing-modulos"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("modulos_adicionais" as never).select("*");
-      if (error) throw error;
-      return ((data ?? []) as Record<string, unknown>[])
-        .filter((m) => m["status"] !== false && m["ativo"] !== false)
-        .sort((a, b) => Number(a["valor_mensal_fixo"] ?? a["valor_mensal"] ?? 0) - Number(b["valor_mensal_fixo"] ?? b["valor_mensal"] ?? 0));
-    },
-  });
+  const { data: modulos = [] } = useModulosPublicos();
   if (modulos.length === 0) return null;
-  const itens = modulos.map((m) => `${String(m["nome"] ?? "")} (+${formatBRL(m["valor_mensal_fixo"] ?? m["valor_mensal"])})`);
-  const lista = itens.length > 1 ? `${itens.slice(0, -1).join(", ")} e ${itens[itens.length - 1]}` : itens[0];
-  return <p className="mt-4 text-center text-sm text-muted-foreground">Módulos avulsos: {lista} por mês.</p>;
+  return (
+    <div className="mt-16">
+      <div className="mx-auto mb-8 max-w-2xl text-center">
+        <Badge variant="outline" className="mb-3">Módulos adicionais</Badge>
+        <h3 className="text-2xl font-bold tracking-tight">Personalize seu plano</h3>
+        <p className="mt-2 text-muted-foreground">Some ao seu plano apenas o que sua operação precisa. Você escolhe na contratação.</p>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {modulos.map((m) => (
+          <Card key={m.id} className="flex flex-col transition-all hover:-translate-y-1 hover:border-primary/50">
+            <CardHeader className="pb-2">
+              <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary"><Zap className="h-5 w-5" /></div>
+              <CardTitle className="text-base">{m.nome}</CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1 text-sm text-muted-foreground">{m.descricao}</CardContent>
+            <CardFooter><p className="font-semibold text-primary">+{formatBRL(m.valor)}<span className="text-xs font-normal text-muted-foreground">/mês</span></p></CardFooter>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function Comparativo() {
@@ -99,7 +109,6 @@ function Comparativo() {
           </tbody>
         </table>
       </div>
-      <ModulosAvulsos />
     </div>
   );
 }
@@ -389,6 +398,7 @@ export function LandingPage() {
               <MessageCircle className="h-4 w-4" /> Fale no WhatsApp
             </a>
           </p>
+          <ModulosAvulsos />
           <Comparativo />
         </div>
       </section>
