@@ -426,7 +426,7 @@ export function ChatInterno({ sidebarOpen, onAbrir }: { sidebarOpen: boolean; on
             </Tabs>
           )}
         </div>,
-        document.body,
+        acoplado && dockEl ? dockEl : document.body,
       )}
     </>
   );
