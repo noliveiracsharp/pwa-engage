@@ -23,3 +23,23 @@ describe("comissaoLiberada", () => {
     expect(comissaoDisponivel(100, 150)).toBe(0);
   });
 });
+
+import { recebidoPorOferta as _rpo } from "./comissoes";
+describe("recebidoPorOferta (Financeiro como fonte única)", () => {
+  const tit = (n: number, status: string) => ({ tipo: "receber", origem_tipo: "oferta", origem_id: "o1", valor: 12000, status, parcela_n: n });
+  it("2 de 5 parcelas baixadas = 24.000 recebidos", () => {
+    const m = _rpo([tit(1, "pago"), tit(2, "pago"), tit(3, "aberto"), tit(4, "aberto"), tit(5, "aberto")]);
+    expect(m.get("o1")).toBe(24000);
+  });
+  it("ignora marcação manual quando a oferta tem títulos", () => {
+    const m = _rpo([tit(1, "aberto")], [{ orcamento_id: "o1", valor: 5000 }]);
+    expect(m.get("o1")).toBe(0);
+  });
+  it("usa marcação manual quando não há títulos", () => {
+    expect(_rpo([], [{ orcamento_id: "o2", valor: 5000 }]).get("o2")).toBe(5000);
+  });
+  it("ignora títulos a pagar e cancelados", () => {
+    const m = _rpo([{ tipo: "pagar", origem_tipo: "oferta", origem_id: "o1", valor: 100, status: "pago" }, tit(1, "cancelado")]);
+    expect(m.get("o1")).toBe(0);
+  });
+});

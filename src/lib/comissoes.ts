@@ -140,3 +140,29 @@ export function comissaoLiberada(opts: {
 
 /** Valor que pode ser pago agora = liberado − já pago (nunca negativo). */
 export const comissaoDisponivel = (liberado: number, pago: number) => round2(Math.max(0, liberado - pago));
+
+/**
+ * Recebido por oferta a partir do Financeiro (fonte única): soma o valor dos títulos
+ * a receber de origem "oferta" já baixados. Ofertas sem títulos no Financeiro
+ * usam as marcações manuais antigas como reserva.
+ */
+export function recebidoPorOferta(
+  titulos: Array<Record<string, unknown>>,
+  manuais: Array<Record<string, unknown>> = [],
+): Map<string, number> {
+  const m = new Map<string, number>();
+  const comTitulo = new Set<string>();
+  for (const t of titulos) {
+    if (t["tipo"] !== "receber" || t["origem_tipo"] !== "oferta" || !t["origem_id"]) continue;
+    const id = String(t["origem_id"]);
+    comTitulo.add(id);
+    if (t["status"] === "pago") m.set(id, Math.round(((m.get(id) ?? 0) + (Number(t["valor"]) || 0)) * 100) / 100);
+    else if (!m.has(id)) m.set(id, 0);
+  }
+  for (const r of manuais) {
+    const id = String(r["orcamento_id"] ?? "");
+    if (!id || comTitulo.has(id)) continue;
+    m.set(id, Math.round(((m.get(id) ?? 0) + (Number(r["valor"]) || 0)) * 100) / 100);
+  }
+  return m;
+}

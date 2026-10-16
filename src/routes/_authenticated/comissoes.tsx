@@ -15,7 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useComissaoConfig } from "@/hooks/useComissaoConfig";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { useAudit } from "@/lib/audit";
-import { comissaoDisponivel, comissaoLiberada, NATUREZAS_COMISSAO, REGRAS_LIBERACAO, type ParametroNatureza, type RegraLiberacao } from "@/lib/comissoes";
+import { comissaoDisponivel, comissaoLiberada, recebidoPorOferta, NATUREZAS_COMISSAO, REGRAS_LIBERACAO, type ParametroNatureza, type RegraLiberacao } from "@/lib/comissoes";
 import { rowId, text, useTableRows } from "@/lib/crud";
 import { matchesAny } from "@/lib/input-masks";
 import { formatBRL, formatDate, formatPct, num, parcelasFromValue, round2 } from "@/lib/orcamentos";
@@ -86,11 +86,8 @@ function Extrato({ canUpdate, canDelete }: { canUpdate: boolean; canDelete: bool
   );
   const { data: recebs = [] } = useTableRows("orcamento_recebimentos");
   const { liberacao, entradaPct } = useComissaoConfig();
-  const recebidoPorOrc = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const r of recebs) m.set(text(r["orcamento_id"]), (m.get(text(r["orcamento_id"])) ?? 0) + num(r["valor"]));
-    return m;
-  }, [recebs]);
+  const { data: titulos = [] } = useTableRows("financeiro_titulos");
+  const recebidoPorOrc = useMemo(() => recebidoPorOferta(titulos, recebs), [titulos, recebs]);
   const calc = (r: Row) => {
     const orc = orcById.get(text(r["orcamento_id"]));
     const parcelas = parcelasFromValue(orc?.["parcelas"]);
@@ -510,6 +507,13 @@ function Recebimentos({ canEdit }: { canEdit: boolean }) {
   const { data: comissoes = [] } = useTableRows("orcamento_comissoes");
   const { data: orcs = [] } = useTableRows("orcamentos");
   const { data: recebs = [], isError } = useTableRows("orcamento_recebimentos");
+  const { data: titulos = [] } = useTableRows("financeiro_titulos");
+  const titMap = useMemo(() => {
+    const m = new Map<string, Row>();
+    for (const t of titulos) if (t["tipo"] === "receber" && t["origem_tipo"] === "oferta" && t["origem_id"]) m.set(`${text(t["origem_id"])}:${num(t["parcela_n"])}`, t);
+    return m;
+  }, [titulos]);
+  const ofertasComTitulo = useMemo(() => new Set([...titMap.keys()].map((k) => k.split(":")[0])), [titMap]);
   const [busca, setBusca] = useState("");
   const comComissao = useMemo(() => new Set(comissoes.map((c) => text(c["orcamento_id"]))), [comissoes]);
   const ofertas = useMemo(
@@ -535,31 +539,35 @@ function Recebimentos({ canEdit }: { canEdit: boolean }) {
 
   return (
     <div className="space-y-4">
-      <p className="text-muted-foreground text-sm">Marque as parcelas que o cliente já pagou. A comissão é liberada no Extrato na mesma proporção.</p>
+      <p className="text-muted-foreground text-sm">As parcelas ficam recebidas automaticamente quando o título é baixado no Financeiro, e a comissão é liberada no Extrato na mesma proporção. Ofertas sem títulos no Financeiro podem ser marcadas aqui.</p>
       <div className="max-w-sm"><FilterInput label="Buscar" value={busca} onChange={setBusca} placeholder="Número ou descrição da oferta" /></div>
       {ofertas.length === 0 && <p className="text-muted-foreground text-sm">Nenhuma oferta com comissão registrada.</p>}
       {ofertas.map((o) => {
         const parcelas = parcelasFromValue(o["parcelas"]);
         const lista = parcelas.length ? parcelas : [{ numero: 1, vencimento: text(o["dt_orcamento"]), valor: num(o["total_liquido"]) }];
         const total = lista.reduce((t, p) => t + p.valor, 0);
-        const recebido = lista.reduce((t, p) => t + (recebMap.has(`${text(rowId(o))}:${p.numero}`) ? p.valor : 0), 0);
+        const oid = text(rowId(o));
+        const viaFin = ofertasComTitulo.has(oid);
+        const recebeu = (n: number) => (viaFin ? titMap.get(`${oid}:${n}`)?.["status"] === "pago" : recebMap.has(`${oid}:${n}`));
+        const recebido = lista.reduce((t, p) => t + (recebeu(p.numero) ? p.valor : 0), 0);
         return (
           <div key={text(rowId(o))} className="space-y-2 rounded-lg border p-3">
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-semibold tabular-nums">{text(o["numero"]) || "—"}</span>
               <span className="text-muted-foreground truncate text-sm">{text(o["descricao"])}</span>
+              {viaFin && <span className="bg-success/15 text-success rounded px-2 py-0.5 text-xs">Pelo Financeiro</span>}
               <span className="ml-auto text-sm tabular-nums">Recebido {formatBRL(recebido)} de {formatBRL(total)}</span>
             </div>
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
               {lista.map((p) => {
-                const ok = recebMap.has(`${text(rowId(o))}:${p.numero}`);
+                const ok = recebeu(p.numero);
                 return (
                   <label key={p.numero} className="flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm">
                     <span>
                       <span className="font-medium">{p.numero}ª</span> · {formatDate(p.vencimento)}
                       <span className="block tabular-nums">{formatBRL(p.valor)}</span>
                     </span>
-                    <Switch checked={ok} disabled={!canEdit} onCheckedChange={(v) => void marcar(o, p.numero, p.valor, v)} aria-label={`Parcela ${p.numero} recebida`} />
+                    <Switch checked={ok} disabled={!canEdit || viaFin} onCheckedChange={(v) => void marcar(o, p.numero, p.valor, v)} aria-label={`Parcela ${p.numero} recebida`} />
                   </label>
                 );
               })}
