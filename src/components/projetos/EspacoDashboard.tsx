@@ -10,7 +10,7 @@ import { getIcon } from "@/components/layout/icon-map";
 import { rowId } from "@/lib/crud";
 import { tarefaPct } from "@/lib/projetos";
 import { pick, type Row } from "@/lib/row";
-import { espacoEDescendentes } from "./EspacosSidebar";
+import { espacoEDescendentes, iconeEspaco, rotuloTipo } from "./EspacosSidebar";
 
 type Props = {
   espaco: Row;
@@ -46,7 +46,7 @@ export function EspacoDashboard({ espaco, espacos, projetos, tarefas, status, pc
   const [periodo, setPeriodo] = useState("ano");
   const [incluirConcluidos, setIncluirConcluidos] = useState(true);
   const espId = String(rowId(espaco));
-  const Icon = getIcon(String(espaco["icone"] ?? "") || "Folder");
+  const Icon = getIcon(iconeEspaco(espaco));
 
   const dados = useMemo(() => {
     const filhos = espacos.filter((e) => String(e["espaco_pai_id"] ?? "") === espId);
@@ -155,7 +155,7 @@ export function EspacoDashboard({ espaco, espacos, projetos, tarefas, status, pc
         <div className="rounded-lg border border-border bg-card p-4">
           <div className="flex items-center gap-2 text-sm text-muted-foreground"><ListTodo className="h-4 w-4" />Total de tarefas</div>
           <div className="mt-1 text-2xl font-bold">{dados.totalTarefas}</div>
-          <div className="text-xs text-muted-foreground">em {dados.cards.length} subespaço(s)</div>
+          <div className="text-xs text-muted-foreground">em {dados.cards.length} item(ns)</div>
         </div>
       </div>
 
