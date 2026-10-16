@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
-import { ImageIcon, Package, Settings2 } from "lucide-react";
+import { ImageIcon, Landmark, Package, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PrecificacaoDialog } from "@/components/itens/PrecificacaoDialog";
+import { FiscalContadorDialog } from "@/components/itens/FiscalContadorDialog";
 import { createFileRoute } from "@tanstack/react-router";
 import { DataTable, type Column } from "@/components/data-table/DataTable";
 import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
@@ -63,6 +64,7 @@ function ItensPage() {
   const [duplicando, setDuplicando] = useState(false);
   const [f, setF] = useState({ busca: "", tipo: "todos", status: "todos" });
   const [precOpen, setPrecOpen] = useState(false);
+  const [fiscalOpen, setFiscalOpen] = useState(false);
   const [galeria, setGaleria] = useState<{ titulo: string; imagens: string[] } | null>(null);
 
   const marcaById = useMemo(() => {
@@ -169,7 +171,10 @@ function ItensPage() {
     <div className="space-y-4">
       <div className="space-y-3">
         {perms.canUpdate && (
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" size="sm" onClick={() => setFiscalOpen(true)}>
+              <Landmark className="mr-2 h-4 w-4" /> Dados fiscais (contador)
+            </Button>
             <Button variant="outline" size="sm" onClick={() => setPrecOpen(true)}>
               <Settings2 className="mr-2 h-4 w-4" /> Parâmetros de Precificação
             </Button>
@@ -246,6 +251,7 @@ function ItensPage() {
         }
       />
       <PrecificacaoDialog open={precOpen} onOpenChange={setPrecOpen} />
+      <FiscalContadorDialog open={fiscalOpen} onOpenChange={setFiscalOpen} itens={rows as Row[]} />
       <ImagensCarrosselDialog
         open={galeria !== null}
         onOpenChange={(o) => !o && setGaleria(null)}
