@@ -26,7 +26,8 @@ type Evento = {
  */
 export async function registrarEventoProjeto(e: Evento) {
   const autor = String(e.autorId ?? "");
-  const alvos = [...new Set(e.responsaveis.map(String))].filter((id) => id && id !== autor);
+  // Inclui o próprio autor quando ele se atribui, para receber WhatsApp e aviso no sininho.
+  const alvos = [...new Set(e.responsaveis.map(String))].filter(Boolean);
   if (alvos.length === 0) return;
   const novos = new Set(alvos.filter((id) => !e.anteriores.map(String).includes(id)));
   const itemLabel = e.tipo === "tarefa" ? "tarefa" : "atividade";
