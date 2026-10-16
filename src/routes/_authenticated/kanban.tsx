@@ -7,6 +7,8 @@ import { useChecklistGate } from "@/components/kanban/ChecklistGate";
 import { SituacaoBadge } from "@/components/orcamentos/SituacaoBadge";
 import { AvaliacaoSelo, usePesquisaSatisfacao } from "@/components/atendimentos/Pesquisa";
 import { formatBRL } from "@/lib/orcamentos";
+import { AtivacaoOfertaDialog } from "@/components/orcamentos/AtivacaoOfertaDialog";
+import { situacaoAtivada } from "@/lib/oferta-ativacao";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   CAMPOS_CARD_ORCAMENTO,
@@ -395,10 +397,19 @@ function KanbanPage() {
       const { error } = await supabase.from("orcamentos").update(patch).eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["table", "orcamentos"] }),
+    onSuccess: (_d, { id, etapaId }) => {
+      queryClient.invalidateQueries({ queryKey: ["table", "orcamentos"] });
+      const alvo = etapas.find((e) => String(e["id"]) === etapaId);
+      const o = orcamentos.find((r) => String(r["id"]) === id);
+      const ganha = [true, 1, "true", "t"].includes(alvo?.["etapa_ganha"] as never);
+      const antes = etapas.find((e) => String(e["id"]) === String(o?.["kanban_etapa_id"] ?? ""));
+      const jaGanha = [true, 1, "true", "t"].includes(antes?.["etapa_ganha"] as never) || situacaoAtivada(o?.["situacao"]);
+      if (o && !jaGanha && situacaoAtivada(alvo?.["descricao"], { id: etapaId, descricao: String(alvo?.["descricao"] ?? ""), ganha })) setAtivarOferta(o);
+    },
     onError: (e: unknown) =>
       toast.error(e instanceof Error ? e.message : "Não foi possível mover."),
   });
+  const [ativarOferta, setAtivarOferta] = useState<Row | null>(null);
 
   const onDrop = (etapaId: string) => {
     if (!dragId) return;
@@ -832,6 +843,13 @@ function KanbanPage() {
           </SheetFooter>
         </SheetContent>
       </Sheet>
+      <AtivacaoOfertaDialog
+        open={!!ativarOferta}
+        onOpenChange={(v) => !v && setAtivarOferta(null)}
+        oferta={ativarOferta}
+        cliente={(() => { const p = parceiros.find((r) => String(r["id"]) === String(ativarOferta?.["parceiro_id"] ?? "")); return p ? String(p["razao_social"] ?? p["nome_fantasia"] ?? "") : ""; })()}
+        empresaId={String(ativarOferta?.["empresa_id"] ?? empresaId ?? "")}
+      />
     </div>
   );
 }
