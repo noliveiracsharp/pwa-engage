@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Circle, CircleDot, Download, Link2, Loader2, MessageCircle, ShoppingCart, Trash2, Trophy, Upload } from "lucide-react";
+import { CheckCircle2, Circle, CircleDot, Download, Link2, Loader2, MessageCircle, PencilLine, ShoppingCart, Trash2, Trophy, Upload } from "lucide-react";
+import { PreencherCotacaoDialog } from "@/components/cotacoes/PreencherCotacaoDialog";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,6 +40,7 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
   const [busy, setBusy] = useState(false);
   const [criterio, setCriterio] = useState<"preco" | "prazo">("preco");
   const [gerando, setGerando] = useState(false);
+  const [preencher, setPreencher] = useState<Row | null>(null);
   const cid = cotacao ? String(rowId(cotacao)) : "";
   const aprovada = cotacao?.["status"] === "aprovado";
   const editavel = canUpdate && !aprovada;
@@ -369,6 +371,7 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
                     </div>
                   )}
                   <div className="flex flex-wrap gap-2">
+                    {editavel && <Button size="sm" onClick={() => setPreencher(f)}><PencilLine className="mr-1 h-4 w-4" />Preencher</Button>}
                     <Button size="sm" variant="outline" onClick={() => copiarLink(f)}><Link2 className="mr-1 h-4 w-4" />Copiar link</Button>
                     <Button size="sm" variant="outline" onClick={() => enviarWhats(f)}><MessageCircle className="mr-1 h-4 w-4" />WhatsApp</Button>
                     <Button size="sm" variant="ghost" onClick={() => exportar(f)}><Download className="mr-1 h-4 w-4" />CSV</Button>
@@ -564,6 +567,17 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
           )}
         </div>
       </SheetContent>
+      <PreencherCotacaoDialog
+        open={!!preencher}
+        onOpenChange={(o) => !o && setPreencher(null)}
+        cotacaoId={cid}
+        fornecedor={preencher}
+        fornecedorNome={preencher ? nomeParc(parceiroById.get(String(preencher["fornecedor_id"]))) : ""}
+        itensCot={itensCot}
+        precos={precos}
+        itemById={itemById}
+        onSaved={invalidar}
+      />
     </Sheet>
   );
 }
