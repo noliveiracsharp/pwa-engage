@@ -14,6 +14,9 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import logoAzul from "@/assets/logo-azul.png.asset.json";
+import logoAzulEsc from "@/assets/logo-azulesc.png.asset.json";
+import logoBco from "@/assets/logo-bco.png.asset.json";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 /** Número do WhatsApp comercial (somente dígitos, com 55). */
@@ -138,14 +141,13 @@ function scrollTo(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-function Logo() {
+function Logo({ variante = "auto" }: { variante?: "auto" | "branco" }) {
+  if (variante === "branco") return <img src={logoBco.url} alt="Atende.ai" className="h-9 w-auto" />;
   return (
-    <div className="flex items-center gap-2">
-      <img src="/icon-192.png" alt="Atende.ai" className="h-8 w-8 rounded-lg" />
-      <span className="text-lg font-bold tracking-tight text-foreground">
-        Atende<span className="text-primary">.ai</span>
-      </span>
-    </div>
+    <>
+      <img src={logoAzulEsc.url} alt="Atende.ai" className="h-9 w-auto dark:hidden" />
+      <img src={logoAzul.url} alt="Atende.ai" className="hidden h-9 w-auto dark:block" />
+    </>
   );
 }
 
@@ -215,7 +217,7 @@ export function LandingPage() {
             <Button variant="outline" asChild>
               <Link to={logado ? "/dashboard" : "/login"}>{logado ? "Ir para o Painel" : "Acessar Sistema"}</Link>
             </Button>
-            <Button onClick={testar}>Testar Grátis</Button>
+            <Button onClick={testar} className="bg-brand-magenta text-brand-on hover:bg-brand-magenta/90">Testar Grátis</Button>
           </div>
           <div className="flex items-center gap-1 md:hidden">
             <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Alternar tema">
@@ -237,44 +239,43 @@ export function LandingPage() {
               <Button variant="outline" asChild>
                 <Link to={logado ? "/dashboard" : "/login"}>{logado ? "Ir para o Painel" : "Acessar Sistema"}</Link>
               </Button>
-              <Button onClick={testar}>Testar Grátis</Button>
+              <Button onClick={testar} className="bg-brand-magenta text-brand-on hover:bg-brand-magenta/90">Testar Grátis</Button>
             </div>
           </div>
         )}
       </header>
 
       {/* Hero */}
-      <section className="relative overflow-hidden">
-        <div className="pointer-events-none absolute inset-0 -z-10">
-          <div className="absolute -top-32 left-1/2 h-[480px] w-[900px] -translate-x-1/2 rounded-full bg-primary/15 blur-3xl" />
-          <div className="absolute right-0 top-40 h-72 w-72 rounded-full bg-accent/60 blur-3xl" />
+      <section className="relative overflow-hidden bg-brand-hero text-brand-on">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute -bottom-40 -left-20 h-96 w-96 rounded-full bg-brand-magenta/30 blur-3xl" />
         </div>
-        <div className="mx-auto grid max-w-7xl items-center gap-12 px-4 py-16 sm:px-6 lg:grid-cols-2 lg:py-24">
+        <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-4 py-16 sm:px-6 lg:grid-cols-2 lg:py-24">
           <div className="space-y-6">
-            <Badge variant="secondary" className="gap-1 px-3 py-1">
-              <Bot className="h-3.5 w-3.5 text-primary" /> Atendimento com IA + WhatsApp
+            <Badge variant="outline" className="gap-1 border-brand-sky/50 bg-brand-on/10 px-3 py-1 text-brand-on">
+              <Bot className="h-3.5 w-3.5 text-brand-sky" /> Atendimento com IA + WhatsApp
             </Badge>
             <h1 className="text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl lg:text-[3.4rem]">
               Sua Empresa no Controle:{" "}
-              <span className="text-primary">Atendimentos WhatsApp, Orçamentos e Projetos</span> em uma só Plataforma
+              <span className="text-brand-sky">Atendimentos WhatsApp, Orçamentos e Projetos</span> em uma só Plataforma
             </h1>
-            <p className="max-w-xl text-lg text-muted-foreground">
+            <p className="max-w-xl text-lg text-brand-on/80">
               Centralize seus canais de atendimento, automatize processos com IA, gerencie funis de vendas e calcule orçamentos com taxa de juros automática.
             </p>
             <div className="flex flex-col gap-3 sm:flex-row">
-              <Button size="lg" onClick={() => go("planos")} className="gap-2">
+              <Button size="lg" onClick={() => go("planos")} className="gap-2 bg-brand-magenta text-brand-on shadow-lg shadow-brand-magenta/30 hover:bg-brand-magenta/90">
                 Ver Planos e Começar <ArrowRight className="h-4 w-4" />
               </Button>
-              <Button size="lg" variant="outline" asChild className="gap-2">
+              <Button size="lg" variant="outline" asChild className="gap-2 border-brand-on/40 bg-transparent text-brand-on hover:bg-brand-on/10 hover:text-brand-on">
                 <a href={waLink("Olá, gostaria de tirar dúvidas sobre os planos do Atende.ai")} target="_blank" rel="noreferrer">
                   <MessageCircle className="h-4 w-4" /> Falar com Consultor
                 </a>
               </Button>
             </div>
-            <div className="flex flex-wrap gap-x-6 gap-y-2 pt-2 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1.5"><Check className="h-4 w-4 text-primary" /> Sem cartão para testar</span>
-              <span className="flex items-center gap-1.5"><Check className="h-4 w-4 text-primary" /> Multiempresa</span>
-              <span className="flex items-center gap-1.5"><Check className="h-4 w-4 text-primary" /> Suporte em português</span>
+            <div className="flex flex-wrap gap-x-6 gap-y-2 pt-2 text-sm text-brand-on/80">
+              <span className="flex items-center gap-1.5"><Check className="h-4 w-4 text-brand-sky" /> Sem cartão para testar</span>
+              <span className="flex items-center gap-1.5"><Check className="h-4 w-4 text-brand-sky" /> Multiempresa</span>
+              <span className="flex items-center gap-1.5"><Check className="h-4 w-4 text-brand-sky" /> Suporte em português</span>
             </div>
           </div>
           <Mockup />
@@ -319,7 +320,7 @@ export function LandingPage() {
           ].map((m) => (
             <Card key={m.t} className="group transition-all duration-300 hover:-translate-y-1 hover:border-primary/50 hover:shadow-lg">
               <CardHeader>
-                <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground transition-transform group-hover:scale-110">
+                <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-brand-hero text-brand-on transition-transform group-hover:scale-110">
                   <m.icon className="h-6 w-6" />
                 </div>
                 <CardTitle className="text-lg">{m.t}</CardTitle>
@@ -354,8 +355,8 @@ export function LandingPage() {
               {planos.map((p, i) => {
                 const destaque = planos.length >= 3 && i === 1;
                 return (
-                  <Card key={p.id} className={`relative flex flex-col ${destaque ? "border-2 border-primary shadow-xl lg:scale-105" : ""}`}>
-                    {destaque && <Badge className="absolute -top-3 left-1/2 -translate-x-1/2">Mais escolhido</Badge>}
+                  <Card key={p.id} className={`relative flex flex-col ${destaque ? "border-2 border-brand-magenta shadow-xl shadow-brand-magenta/20 lg:scale-105" : ""}`}>
+                    {destaque && <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-brand-magenta text-brand-on">Mais escolhido</Badge>}
                     <CardHeader>
                       <CardTitle className="text-xl">{p.nome}</CardTitle>
                       {p.subtitulo && <p className="text-sm font-medium text-primary">{p.subtitulo}</p>}
@@ -397,7 +398,7 @@ export function LandingPage() {
 
       {/* CTA */}
       <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6">
-        <div className="rounded-3xl bg-primary px-6 py-14 text-center text-primary-foreground sm:px-12">
+        <div className="rounded-3xl bg-brand-cta px-6 py-14 text-center text-brand-on sm:px-12">
           <Zap className="mx-auto mb-4 h-10 w-10" />
           <h2 className="text-3xl font-bold sm:text-4xl">Pronto para organizar seu atendimento?</h2>
           <p className="mx-auto mt-3 max-w-xl opacity-90">Em poucos minutos sua equipe já atende pelo WhatsApp com tudo registrado.</p>
@@ -427,23 +428,23 @@ export function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer id="contato" className="scroll-mt-20 border-t border-border bg-muted/40">
+      <footer id="contato" className="scroll-mt-20 bg-brand-navy text-brand-on [&_.text-muted-foreground]:text-brand-on/70">
         <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
           <div className="space-y-3">
-            <Logo />
+            <Logo variante="branco" />
             <p className="text-sm text-muted-foreground">Atendimento, vendas e projetos em uma só plataforma.</p>
           </div>
           <div>
             <p className="mb-3 font-semibold">Produto</p>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              {NAV.slice(0, 3).map((n) => <li key={n.id}><button onClick={() => go(n.id)} className="hover:text-foreground">{n.label}</button></li>)}
+              {NAV.slice(0, 3).map((n) => <li key={n.id}><button onClick={() => go(n.id)} className="hover:text-brand-on">{n.label}</button></li>)}
             </ul>
           </div>
           <div>
             <p className="mb-3 font-semibold">Suporte</p>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><a href={waLink("Olá! Preciso de suporte no Atende.ai.")} target="_blank" rel="noreferrer" className="hover:text-foreground">WhatsApp</a></li>
-              <li><Link to="/login" className="hover:text-foreground">Acessar Sistema</Link></li>
+              <li><a href={waLink("Olá! Preciso de suporte no Atende.ai.")} target="_blank" rel="noreferrer" className="hover:text-brand-on">WhatsApp</a></li>
+              <li><Link to="/login" className="hover:text-brand-on">Acessar Sistema</Link></li>
             </ul>
           </div>
           <div>
@@ -454,7 +455,7 @@ export function LandingPage() {
             </ul>
           </div>
         </div>
-        <div className="border-t border-border py-6 text-center text-xs text-muted-foreground">
+        <div className="border-t border-brand-on/15 py-6 text-center text-xs text-muted-foreground">
           © {new Date().getFullYear()} Atende.ai. Todos os direitos reservados.
         </div>
       </footer>
@@ -467,7 +468,7 @@ export function LandingPage() {
 function Mockup() {
   return (
     <div className="relative">
-      <div className="rounded-2xl border border-border bg-card p-3 shadow-2xl">
+      <div className="rounded-2xl border border-border bg-card p-3 text-foreground shadow-2xl">
         <div className="mb-3 flex items-center gap-1.5 px-1">
           <span className="h-3 w-3 rounded-full bg-destructive/70" />
           <span className="h-3 w-3 rounded-full bg-warning/80" />
@@ -490,11 +491,11 @@ function Mockup() {
           </div>
         </div>
       </div>
-      <div className="absolute -bottom-5 -left-4 hidden rounded-xl border border-border bg-card px-4 py-3 shadow-lg sm:block">
+      <div className="absolute -bottom-5 -left-4 hidden rounded-xl border border-border bg-card text-foreground px-4 py-3 shadow-lg sm:block">
         <p className="text-xs text-muted-foreground">Orçamento aprovado</p>
         <p className="font-bold text-success">R$ 12.480,00</p>
       </div>
-      <div className="absolute -right-3 -top-4 hidden rounded-xl border border-border bg-card px-4 py-3 shadow-lg sm:block">
+      <div className="absolute -right-3 -top-4 hidden rounded-xl border border-border bg-card text-foreground px-4 py-3 shadow-lg sm:block">
         <p className="text-xs text-muted-foreground">Atendimentos hoje</p>
         <p className="font-bold text-primary">128</p>
       </div>

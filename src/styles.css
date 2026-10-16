@@ -683,3 +683,25 @@ table img { cursor: zoom-in; }
 .dre-fluxo { font-size: 7.5px; }
 .dre-fluxo th, .dre-fluxo td { padding: 3px 4px; white-space: nowrap; }
 .dre-fluxo .dre-sub td { font-weight: 700; border-top: 1px solid #0f3b5c; }
+
+/* Marca Atende.ai (site institucional) */
+:root {
+  --brand-navy: #002662;
+  --brand-blue: #3166D6;
+  --brand-sky: #4294F9;
+  --brand-purple: #471E68;
+  --brand-magenta: #B3066B;
+  --brand-on: #ffffff;
+  --gradient-brand-hero: radial-gradient(60% 60% at 80% 10%, color-mix(in oklab, var(--brand-sky) 45%, transparent), transparent 70%), linear-gradient(135deg, var(--brand-navy) 0%, var(--brand-purple) 100%);
+  --gradient-brand-cta: linear-gradient(120deg, var(--brand-purple) 0%, var(--brand-magenta) 100%);
+}
+@theme inline {
+  --color-brand-navy: var(--brand-navy);
+  --color-brand-blue: var(--brand-blue);
+  --color-brand-sky: var(--brand-sky);
+  --color-brand-purple: var(--brand-purple);
+  --color-brand-magenta: var(--brand-magenta);
+  --color-brand-on: var(--brand-on);
+}
+@utility bg-brand-hero { background: var(--gradient-brand-hero); }
+@utility bg-brand-cta { background: var(--gradient-brand-cta); }
