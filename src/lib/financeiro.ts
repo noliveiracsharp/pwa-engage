@@ -202,3 +202,33 @@ export function caixaPorMes(titulos: Row[]): MesCaixa[] {
     .map((x) => ({ ...x, entradas: round2(x.entradas), saidas: round2(x.saidas), entradasPrev: round2(x.entradasPrev), saidasPrev: round2(x.saidasPrev) }))
     .sort((a, b) => a.mes.localeCompare(b.mes));
 }
+
+const isoDe = (y: number, m0: number, d: number) => {
+  const a = new Date(y, m0, 1);
+  const ultimo = new Date(a.getFullYear(), a.getMonth() + 1, 0).getDate();
+  return `${a.getFullYear()}-${String(a.getMonth() + 1).padStart(2, "0")}-${String(Math.min(d, ultimo)).padStart(2, "0")}`;
+};
+
+/** Vencimento da fatura que recebe uma compra: compra no dia do fechamento ou depois vai para a fatura seguinte. */
+export function vencimentoFatura(dataCompra: string, diaFechamento: number, diaVencimento: number): string {
+  const [y, m, d] = dataCompra.split("-").map(Number);
+  if (!y || !m || !d) return dataCompra;
+  const f = Math.min(31, Math.max(1, Math.floor(diaFechamento) || 1));
+  const v = Math.min(31, Math.max(1, Math.floor(diaVencimento) || 1));
+  const mesFechamento = m - 1 + (d >= f ? 1 : 0);
+  return isoDe(y, mesFechamento + (v > f ? 0 : 1), v);
+}
+
+/** Compra parcelada no cartão: cada parcela vence numa fatura; centavos de sobra ficam na 1ª parcela. */
+export function parcelasCartao(opts: { valor: number; parcelas: number; dataCompra: string; diaFechamento: number; diaVencimento: number }): { vencimento: string; valor: number }[] {
+  const v = round2(Math.max(0, num(opts.valor)));
+  if (v <= 0) return [];
+  const n = Math.max(1, Math.min(48, Math.floor(num(opts.parcelas)) || 1));
+  const primeira = vencimentoFatura(opts.dataCompra, opts.diaFechamento, opts.diaVencimento);
+  const base = Math.floor((v / n) * 100) / 100;
+  const [y, m] = primeira.split("-").map(Number);
+  return Array.from({ length: n }, (_, i) => ({
+    vencimento: isoDe(y!, m! - 1 + i, Math.floor(opts.diaVencimento) || 1),
+    valor: i === 0 ? round2(v - base * (n - 1)) : base,
+  }));
+}
