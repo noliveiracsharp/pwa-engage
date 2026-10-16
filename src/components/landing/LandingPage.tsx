@@ -431,7 +431,7 @@ export function LandingPage() {
       <footer id="contato" className="scroll-mt-20 bg-brand-navy text-brand-on [&_.text-muted-foreground]:text-brand-on/70">
         <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
           <div className="space-y-3">
-            <Logo />
+            <Logo variante="branco" />
             <p className="text-sm text-muted-foreground">Atendimento, vendas e projetos em uma só plataforma.</p>
           </div>
           <div>
