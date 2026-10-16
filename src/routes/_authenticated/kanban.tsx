@@ -9,6 +9,7 @@ import { AvaliacaoSelo, usePesquisaSatisfacao } from "@/components/atendimentos/
 import { formatBRL } from "@/lib/orcamentos";
 import { AtivacaoOfertaDialog } from "@/components/orcamentos/AtivacaoOfertaDialog";
 import { situacaoAtivada } from "@/lib/oferta-ativacao";
+import { executarHandoff } from "@/lib/kanban-handoff";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   CAMPOS_CARD_ORCAMENTO,
@@ -404,6 +405,11 @@ function KanbanPage() {
       const ganha = [true, 1, "true", "t"].includes(alvo?.["etapa_ganha"] as never);
       const antes = etapas.find((e) => String(e["id"]) === String(o?.["kanban_etapa_id"] ?? ""));
       const jaGanha = [true, 1, "true", "t"].includes(antes?.["etapa_ganha"] as never) || situacaoAtivada(o?.["situacao"]);
+      if (o) void executarHandoff(etapaId, o, "orcamentos").then((r) => {
+        if (!r) return;
+        (r.ok ? toast.success : toast.warning)(r.msg);
+        queryClient.invalidateQueries({ queryKey: ["table", "atendimentos"] });
+      });
       if (o && !jaGanha && situacaoAtivada(alvo?.["descricao"], { id: etapaId, descricao: String(alvo?.["descricao"] ?? ""), ganha })) setAtivarOferta(o);
     },
     onError: (e: unknown) =>
