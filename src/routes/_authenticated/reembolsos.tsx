@@ -397,13 +397,14 @@ function CartaoSheet({ registro, usuarios, readOnly, onClose, onSaved }: { regis
   const [v, setV] = useState({
     descricao: text(registro?.["descricao"]), bandeira: text(registro?.["bandeira"]), final4: text(registro?.["final4"]),
     portador_id: text(registro?.["portador_id"]), limite: registro ? String(num(registro["limite_mensal"])).replace(".", ",") : "",
-    dia: text(registro?.["dia_fechamento"]), ativo: registro ? registro["ativo"] !== false : true,
+    dia: text(registro?.["dia_fechamento"]), venc: text(registro?.["dia_vencimento"]), ativo: registro ? registro["ativo"] !== false : true,
   });
   const salvar = async () => {
     if (!v.descricao.trim()) return void toast.error("Informe a descrição do cartão.");
+    const dia = (x: string) => (x ? Math.min(31, Math.max(1, Number(x))) : null);
     const base = {
       descricao: v.descricao.trim(), bandeira: v.bandeira || null, final4: v.final4.replace(/\D/g, "").slice(0, 4) || null,
-      portador_id: v.portador_id || null, limite_mensal: round2(num(v.limite)), dia_fechamento: v.dia ? Math.min(31, Math.max(1, Number(v.dia))) : null, ativo: v.ativo,
+      portador_id: v.portador_id || null, limite_mensal: round2(num(v.limite)), dia_fechamento: dia(v.dia), dia_vencimento: dia(v.venc), ativo: v.ativo,
     };
     const { error } = registro
       ? await supabase.from("despesas_cartoes").update(base as never).eq("id", text(rowId(registro)))
@@ -429,6 +430,7 @@ function CartaoSheet({ registro, usuarios, readOnly, onClose, onSaved }: { regis
             </Select></div>
           <div className="space-y-1"><Label>Limite mensal (R$)</Label><Input inputMode="decimal" value={v.limite} disabled={readOnly} onChange={(e) => setV({ ...v, limite: e.target.value })} /></div>
           <div className="space-y-1"><Label>Dia de fechamento</Label><Input type="number" min={1} max={31} value={v.dia} disabled={readOnly} onChange={(e) => setV({ ...v, dia: e.target.value })} /></div>
+          <div className="space-y-1"><Label>Dia de vencimento da fatura</Label><Input type="number" min={1} max={31} value={v.venc} disabled={readOnly} onChange={(e) => setV({ ...v, venc: e.target.value })} /></div>
           <div className="flex items-center gap-3 pt-6"><Switch id="cartao-ativo" checked={v.ativo} disabled={readOnly} onCheckedChange={(c) => setV({ ...v, ativo: c })} /><Label htmlFor="cartao-ativo">Ativo</Label></div>
         </div>
         <div className="flex justify-end gap-2 border-t p-4">
