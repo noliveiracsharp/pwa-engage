@@ -437,14 +437,14 @@ export function LandingPage() {
           <div>
             <p className="mb-3 font-semibold">Produto</p>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              {NAV.slice(0, 3).map((n) => <li key={n.id}><button onClick={() => go(n.id)} className="hover:text-foreground">{n.label}</button></li>)}
+              {NAV.slice(0, 3).map((n) => <li key={n.id}><button onClick={() => go(n.id)} className="hover:text-brand-on">{n.label}</button></li>)}
             </ul>
           </div>
           <div>
             <p className="mb-3 font-semibold">Suporte</p>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><a href={waLink("Olá! Preciso de suporte no Atende.ai.")} target="_blank" rel="noreferrer" className="hover:text-foreground">WhatsApp</a></li>
-              <li><Link to="/login" className="hover:text-foreground">Acessar Sistema</Link></li>
+              <li><a href={waLink("Olá! Preciso de suporte no Atende.ai.")} target="_blank" rel="noreferrer" className="hover:text-brand-on">WhatsApp</a></li>
+              <li><Link to="/login" className="hover:text-brand-on">Acessar Sistema</Link></li>
             </ul>
           </div>
           <div>
@@ -455,7 +455,7 @@ export function LandingPage() {
             </ul>
           </div>
         </div>
-        <div className="border-t border-border py-6 text-center text-xs text-muted-foreground">
+        <div className="border-t border-brand-on/15 py-6 text-center text-xs text-muted-foreground">
           © {new Date().getFullYear()} Atende.ai. Todos os direitos reservados.
         </div>
       </footer>
