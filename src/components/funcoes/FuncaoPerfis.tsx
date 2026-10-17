@@ -97,6 +97,72 @@ export function FuncaoPerfis({ funcaoId }: Props) {
     toast.success("Perfil criado.");
   };
 
+  const abrirEdicao = () => {
+    const p = perfis.find((x) => String(rowId(x)) === perfilId);
+    if (!p) {
+      toast.error("Selecione um perfil para editar.");
+      return;
+    }
+    setEdit({
+      descricao: text(pick(p, ["descricao", "nome"])),
+      ordem: String(p["ordem"] ?? ""),
+      status: p["status"] !== false,
+    });
+    setEditOpen(true);
+  };
+
+  const salvarEdicao = async () => {
+    const descricao = edit.descricao.trim();
+    const ordem = Number(edit.ordem);
+    if (!descricao) return toast.error("Informe a descrição.");
+    if (!(ordem > 0)) return toast.error("Informe um nível maior que zero.");
+    setSaving(true);
+    const { error } = await supabase
+      .from("perfil")
+      .update({ descricao, ordem, status: edit.status })
+      .eq("id", perfilId as never);
+    setSaving(false);
+    if (error) {
+      toast.error(/status/i.test(error.message) ? "Rode o script atendeai-perfil-status.sql para habilitar a inativação." : error.message);
+      return;
+    }
+    await queryClient.invalidateQueries({ queryKey: ["table", "perfil"] });
+    setEditOpen(false);
+    toast.success("Perfil atualizado.");
+  };
+
+  const liberarTodos = async () => {
+    if (!funcaoId) {
+      toast.error("Salve a função antes de liberar perfis.");
+      return;
+    }
+    const ja = new Set(vinculos.map((r) => String(pick(r, ["perfil_id"]) ?? "")));
+    const novos = perfisAtivos.filter((p) => !ja.has(String(rowId(p))));
+    if (novos.length === 0) {
+      toast.info("Todos os perfis já possuem acesso a esta função.");
+      return;
+    }
+    setSaving(true);
+    const { error } = await supabase.from("menu").insert(
+      novos.map((p) => ({
+        perfil_id: rowId(p),
+        funcoes_id: funcaoId,
+        can_create: true,
+        can_read: true,
+        can_update: true,
+        can_delete: true,
+        status: true,
+      })),
+    );
+    setSaving(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    await queryClient.invalidateQueries({ queryKey: ["table", "menu"] });
+    toast.success(`${novos.length} perfil(is) liberado(s) com acesso total.`);
+  };
+
   const vincular = async () => {
     if (!funcaoId) {
       toast.error("Salve a função antes de liberar perfis.");
