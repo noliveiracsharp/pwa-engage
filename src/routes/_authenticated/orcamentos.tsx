@@ -3,7 +3,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { etapasDoKanban, kanbanDoModuloOrcamentos } from "@/lib/orcamento-kanban";
 import { corEtapa } from "@/lib/kanban-cores";
 import { createFileRoute } from "@tanstack/react-router";
-import { ChevronDown, Copy, FileSignature, FileText, ScrollText, ShoppingCart, Wallet } from "lucide-react";
+import { ChevronDown, Copy, FileSignature, FileText, Info, ScrollText, ShoppingCart, Wallet } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
 import { DataTable, type Column } from "@/components/data-table/DataTable";
 import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
@@ -274,10 +275,19 @@ function OrcamentosPage() {
       render: (r) => {
         const nome = nomeCliente(r);
         return (
-          <div className="min-w-48 break-words" title={nome || undefined}>
+          <div className="min-w-48 whitespace-normal break-words" title={nome || undefined}>
             {nome || <span className="text-muted-foreground">—</span>}
             {r["descricao"] ? (
-              <div className="text-muted-foreground truncate text-xs">{String(r["descricao"])}</div>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button type="button" className="flex items-center gap-1 text-xs text-primary hover:underline">
+                    <Info className="h-3 w-3" /> Ver descrição
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent align="start" className="max-h-72 w-80 overflow-auto whitespace-pre-wrap text-sm">
+                  {String(r["descricao"])}
+                </PopoverContent>
+              </Popover>
             ) : null}
           </div>
         );
