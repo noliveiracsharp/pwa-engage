@@ -317,6 +317,11 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly, saving, on
                         </Button>
                       )}
                     </div>
+                    {duplicado && (
+                      <p className="text-destructive mt-1.5 text-xs font-medium">
+                        Já cadastrado para: {String(duplicado["razao_social"] ?? "—")}
+                      </p>
+                    )}
                   </div>
                   {!pf && field("inscricao_estadual", "Inscrição Estadual")}
                   {field("razao_social", pf ? "Nome Completo" : "Razão Social", "sm:col-span-2")}
