@@ -213,17 +213,32 @@ export function FuncaoPerfis({ funcaoId }: Props) {
               {perfis.map((p) => (
                 <SelectItem key={String(rowId(p))} value={String(rowId(p))}>
                   {text(pick(p, ["descricao", "nome", "titulo"]))}
+                  {p["status"] === false ? " (inativo)" : ""}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={abrirEdicao}
+            disabled={saving || !perfilId}
+            aria-label="Editar perfil"
+            title="Editar perfil"
+          >
+            <Pencil className="size-4" />
+          </Button>
           <Button type="button" variant="outline" onClick={() => setNovoOpen(true)} disabled={saving}>
             <Plus className="mr-1 size-4" /> Adicionar
           </Button>
-          <Button type="button" onClick={vincular} disabled={saving}>
+          <Button type="button" onClick={vincular} disabled={saving || !perfilId || perfis.find((p) => String(rowId(p)) === perfilId)?.["status"] === false}>
             Liberar
+          </Button>
+          <Button type="button" variant="secondary" onClick={liberarTodos} disabled={saving || !funcaoId}>
+            <Users className="mr-1 size-4" /> Liberar para todos
           </Button>
         </div>
       </div>
@@ -256,6 +271,51 @@ export function FuncaoPerfis({ funcaoId }: Props) {
             </Button>
             <Button type="button" onClick={criarPerfil} disabled={saving || !novoPerfil.trim()}>
               Cadastrar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar perfil</DialogTitle>
+            <DialogDescription>Quanto menor o nível, maior a hierarquia. Perfis inativos não podem ser liberados.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="perfil-edit-desc">Descrição</Label>
+              <Input
+                id="perfil-edit-desc"
+                value={edit.descricao}
+                onChange={(e) => setEdit({ ...edit, descricao: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="perfil-edit-ordem">Nível (ordem)</Label>
+              <Input
+                id="perfil-edit-ordem"
+                type="number"
+                min={1}
+                value={edit.ordem}
+                onChange={(e) => setEdit({ ...edit, ordem: e.target.value })}
+              />
+            </div>
+            <div className="flex items-center justify-between rounded-md border p-3">
+              <Label htmlFor="perfil-edit-status">Perfil ativo</Label>
+              <Switch
+                id="perfil-edit-status"
+                checked={edit.status}
+                onCheckedChange={(v) => setEdit({ ...edit, status: v })}
+              />
+            </div>
+          </div>
+          <DialogFooter className="border-t pt-4 mt-4">
+            <Button type="button" variant="outline" onClick={() => setEditOpen(false)} disabled={saving}>
+              Cancelar
+            </Button>
+            <Button type="button" onClick={salvarEdicao} disabled={saving}>
+              Salvar
             </Button>
           </DialogFooter>
         </DialogContent>
