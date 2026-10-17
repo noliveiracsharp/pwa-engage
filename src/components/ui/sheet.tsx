@@ -3,7 +3,7 @@
 import * as React from "react";
 import * as SheetPrimitive from "@radix-ui/react-dialog";
 import { cva, type VariantProps } from "class-variance-authority";
-import { X } from "lucide-react";
+import { Maximize2, Minimize2, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -54,21 +54,109 @@ interface SheetContentProps
     React.ComponentPropsWithoutRef<typeof SheetPrimitive.Content>,
     VariantProps<typeof sheetVariants> {}
 
+const PANEL_W_KEY = "atendeai:panel-width";
+const PANEL_MIN = 40;
+const PANEL_MAX = 98;
+
+function lerLargura(): number | null {
+  try {
+    const v = Number(window.localStorage.getItem(PANEL_W_KEY));
+    return v >= PANEL_MIN && v <= PANEL_MAX ? v : null;
+  } catch {
+    return null;
+  }
+}
+
 const SheetContent = React.forwardRef<
   React.ElementRef<typeof SheetPrimitive.Content>,
   SheetContentProps
->(({ side = "right", className, children, ...props }, ref) => (
-  <SheetPortal>
-    <SheetOverlay />
-    <SheetPrimitive.Content ref={ref} data-panel-side={side} className={cn(sheetVariants({ side }), className)} {...props}>
-      <SheetPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background cursor-pointer transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary">
-        <X className="h-4 w-4" />
-        <span className="sr-only">Close</span>
-      </SheetPrimitive.Close>
-      {children}
-    </SheetPrimitive.Content>
-  </SheetPortal>
-));
+>(({ side = "right", className, children, style, ...props }, ref) => {
+  const lateral = side === "right" || side === "left";
+  const [largura, setLargura] = React.useState<number | null>(null);
+  const [arrastando, setArrastando] = React.useState(false);
+
+  React.useEffect(() => {
+    if (lateral) setLargura(lerLargura());
+  }, [lateral]);
+
+  const salvar = (v: number | null) => {
+    setLargura(v);
+    try {
+      if (v == null) window.localStorage.removeItem(PANEL_W_KEY);
+      else window.localStorage.setItem(PANEL_W_KEY, String(v));
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const iniciarArraste = (e: React.PointerEvent) => {
+    e.preventDefault();
+    setArrastando(true);
+    let ultimo = largura;
+    const mover = (ev: PointerEvent) => {
+      const px = side === "right" ? window.innerWidth - ev.clientX : ev.clientX;
+      const vw = Math.min(PANEL_MAX, Math.max(PANEL_MIN, (px / window.innerWidth) * 100));
+      ultimo = Math.round(vw);
+      setLargura(ultimo);
+    };
+    const soltar = () => {
+      setArrastando(false);
+      window.removeEventListener("pointermove", mover);
+      window.removeEventListener("pointerup", soltar);
+      salvar(ultimo);
+    };
+    window.addEventListener("pointermove", mover);
+    window.addEventListener("pointerup", soltar);
+  };
+
+  const maximizado = (largura ?? 60) >= 95;
+  const panelStyle = lateral && largura != null
+    ? ({ ...style, ["--panel-w" as string]: `${largura}vw` } as React.CSSProperties)
+    : style;
+
+  return (
+    <SheetPortal>
+      <SheetOverlay />
+      <SheetPrimitive.Content
+        ref={ref}
+        data-panel-side={side}
+        data-panel-w={lateral && largura != null ? "" : undefined}
+        className={cn(sheetVariants({ side }), arrastando && "select-none transition-none", className)}
+        style={panelStyle}
+        {...props}
+      >
+        {lateral && (
+          <div
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Ajustar largura do painel"
+            title="Arraste para ajustar a largura (duplo clique restaura)"
+            className={cn("panel-resize-handle", side === "right" ? "left-0" : "right-0")}
+            data-dragging={arrastando ? "" : undefined}
+            onPointerDown={iniciarArraste}
+            onDoubleClick={() => salvar(null)}
+          />
+        )}
+        {lateral && (
+          <button
+            type="button"
+            onClick={() => salvar(maximizado ? null : 97)}
+            className="absolute right-11 top-4 hidden cursor-pointer rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring lg:block"
+            aria-label={maximizado ? "Restaurar largura" : "Maximizar painel"}
+            title={maximizado ? "Restaurar largura" : "Maximizar painel"}
+          >
+            {maximizado ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+          </button>
+        )}
+        <SheetPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background cursor-pointer transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary">
+          <X className="h-4 w-4" />
+          <span className="sr-only">Close</span>
+        </SheetPrimitive.Close>
+        {children}
+      </SheetPrimitive.Content>
+    </SheetPortal>
+  );
+});
 SheetContent.displayName = SheetPrimitive.Content.displayName;
 
 const SheetHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
