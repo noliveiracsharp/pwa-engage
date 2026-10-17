@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,6 +7,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { rowId, useTableRows } from "@/lib/crud";
+
+const isProduto = (t: unknown) => String(t ?? "") === "Produto";
+const calcVenda = (custo: number, margem: number, imposto: number) => {
+  const d = 1 - margem / 100 - imposto / 100;
+  return custo > 0 && d > 0 ? custo / d : null;
+};
 
 export type Precificacao = {
   id: string | null;
@@ -56,6 +65,21 @@ export function PrecificacaoDialog({ open, onOpenChange }: { open: boolean; onOp
   const qc = useQueryClient();
   const [v, setV] = useState({ margem_produto: "", imposto_produto: "", margem_servico: "", imposto_servico: "" });
   const [saving, setSaving] = useState(false);
+  const [aplicar, setAplicar] = useState(false);
+  const [escopo, setEscopo] = useState<"todos" | "produto" | "servico">("todos");
+  const [soAtivos, setSoAtivos] = useState(true);
+  const [progresso, setProgresso] = useState("");
+  const { data: itens = [] } = useTableRows("itens");
+  const alvos = useMemo(
+    () =>
+      itens.filter((it) => {
+        if (n(it["preco_custo"]) <= 0) return false;
+        if (soAtivos && (it["status"] === false || it["status"] === "false")) return false;
+        const prod = isProduto(it["tipo"]);
+        return escopo === "todos" || (escopo === "produto" ? prod : !prod);
+      }),
+    [itens, escopo, soAtivos],
+  );
 
   useEffect(() => {
     if (open && data)
@@ -82,13 +106,41 @@ export function PrecificacaoDialog({ open, onOpenChange }: { open: boolean; onOp
     const res = data?.id
       ? await supabase.from("empresas_configuracao").update(payload).eq("id", data.id)
       : await supabase.from("empresas_configuracao").insert({ ...payload, empresa_id: empresaId ?? null });
-    setSaving(false);
     if (res.error) {
+      setSaving(false);
       toast.error(`Não foi possível salvar: ${res.error.message}`);
       return;
     }
-    toast.success("Parâmetros de precificação salvos.");
     qc.invalidateQueries({ queryKey: ["precificacao"] });
+    if (aplicar && alvos.length) {
+      if (!window.confirm(`Recalcular o preço de venda de ${alvos.length} item(ns)? Esta ação não pode ser desfeita.`)) {
+        setSaving(false);
+        toast.success("Parâmetros salvos. Itens não alterados.");
+        onOpenChange(false);
+        return;
+      }
+      let ok = 0, falhas = 0;
+      for (const it of alvos) {
+        const prod = isProduto(it["tipo"]);
+        const margem = prod ? payload.margem_produto : payload.margem_servico;
+        const imposto = prod ? payload.imposto_produto : payload.imposto_servico;
+        const venda = calcVenda(n(it["preco_custo"]), margem, imposto);
+        if (venda == null) { falhas++; continue; }
+        const { error } = await supabase
+          .from("itens")
+          .update({ margem_lucro: margem, imposto, preco_venda: Math.round(venda * 100) / 100 } as never)
+          .eq("id", String(rowId(it)));
+        if (error) falhas++; else ok++;
+        setProgresso(`Atualizando ${ok + falhas}/${alvos.length}…`);
+      }
+      setProgresso("");
+      qc.invalidateQueries({ queryKey: ["table", "itens"] });
+      if (falhas) toast.warning(`${ok} item(ns) atualizados, ${falhas} com falha.`);
+      else toast.success(`Parâmetros salvos e ${ok} item(ns) recalculados.`);
+    } else {
+      toast.success("Parâmetros de precificação salvos.");
+    }
+    setSaving(false);
     onOpenChange(false);
   };
 
@@ -123,10 +175,40 @@ export function PrecificacaoDialog({ open, onOpenChange }: { open: boolean; onOp
               {campo("imposto_servico", "Imposto (%)")}
             </div>
           </div>
+          <div className="space-y-3 rounded-md border p-3">
+            <div className="flex items-center justify-between gap-3">
+              <Label htmlFor="aplicar" className="text-sm font-semibold">Aplicar aos itens já cadastrados</Label>
+              <Switch id="aplicar" checked={aplicar} onCheckedChange={setAplicar} />
+            </div>
+            {aplicar && (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label>Natureza</Label>
+                    <Select value={escopo} onValueChange={(x) => setEscopo(x as typeof escopo)}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="todos">Todos</SelectItem>
+                        <SelectItem value="produto">Apenas produtos</SelectItem>
+                        <SelectItem value="servico">Apenas serviços</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-end justify-between gap-2 pb-2">
+                    <Label htmlFor="soativos">Somente ativos</Label>
+                    <Switch id="soativos" checked={soAtivos} onCheckedChange={setSoAtivos} />
+                  </div>
+                </div>
+                <p className="text-muted-foreground text-xs">
+                  {alvos.length} item(ns) terão margem, imposto e preço de venda recalculados a partir do custo atual. Itens sem custo ficam de fora. Ofertas já gravadas não mudam.
+                </p>
+              </>
+            )}
+          </div>
         </div>
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={salvar} disabled={saving}>{saving ? "Salvando…" : "Salvar"}</Button>
+          <Button onClick={salvar} disabled={saving}>{saving ? progresso || "Salvando…" : "Salvar"}</Button>
         </div>
       </DialogContent>
     </Dialog>
