@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -39,6 +39,9 @@ export function FuncaoPerfis({ funcaoId }: Props) {
   const [novoPerfil, setNovoPerfil] = useState("");
   const [novoOpen, setNovoOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [edit, setEdit] = useState({ descricao: "", ordem: "", status: true });
+  const perfisAtivos = useMemo(() => perfis.filter((p) => p["status"] !== false), [perfis]);
   const [perms] = useState({
     can_create: true,
     can_read: true,
@@ -97,6 +100,72 @@ export function FuncaoPerfis({ funcaoId }: Props) {
     toast.success("Perfil criado.");
   };
 
+  const abrirEdicao = () => {
+    const p = perfis.find((x) => String(rowId(x)) === perfilId);
+    if (!p) {
+      toast.error("Selecione um perfil para editar.");
+      return;
+    }
+    setEdit({
+      descricao: text(pick(p, ["descricao", "nome"])),
+      ordem: String(p["ordem"] ?? ""),
+      status: p["status"] !== false,
+    });
+    setEditOpen(true);
+  };
+
+  const salvarEdicao = async () => {
+    const descricao = edit.descricao.trim();
+    const ordem = Number(edit.ordem);
+    if (!descricao) { toast.error("Informe a descrição."); return; }
+    if (!(ordem > 0)) { toast.error("Informe um nível maior que zero."); return; }
+    setSaving(true);
+    const { error } = await supabase
+      .from("perfil")
+      .update({ descricao, ordem, status: edit.status })
+      .eq("id", perfilId as never);
+    setSaving(false);
+    if (error) {
+      toast.error(/status/i.test(error.message) ? "Rode o script atendeai-perfil-status.sql para habilitar a inativação." : error.message);
+      return;
+    }
+    await queryClient.invalidateQueries({ queryKey: ["table", "perfil"] });
+    setEditOpen(false);
+    toast.success("Perfil atualizado.");
+  };
+
+  const liberarTodos = async () => {
+    if (!funcaoId) {
+      toast.error("Salve a função antes de liberar perfis.");
+      return;
+    }
+    const ja = new Set(vinculos.map((r) => String(pick(r, ["perfil_id"]) ?? "")));
+    const novos = perfisAtivos.filter((p) => !ja.has(String(rowId(p))));
+    if (novos.length === 0) {
+      toast.info("Todos os perfis já possuem acesso a esta função.");
+      return;
+    }
+    setSaving(true);
+    const { error } = await supabase.from("menu").insert(
+      novos.map((p) => ({
+        perfil_id: rowId(p),
+        funcoes_id: funcaoId,
+        can_create: true,
+        can_read: true,
+        can_update: true,
+        can_delete: true,
+        status: true,
+      })),
+    );
+    setSaving(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    await queryClient.invalidateQueries({ queryKey: ["table", "menu"] });
+    toast.success(`${novos.length} perfil(is) liberado(s) com acesso total.`);
+  };
+
   const vincular = async () => {
     if (!funcaoId) {
       toast.error("Salve a função antes de liberar perfis.");
@@ -144,17 +213,32 @@ export function FuncaoPerfis({ funcaoId }: Props) {
               {perfis.map((p) => (
                 <SelectItem key={String(rowId(p))} value={String(rowId(p))}>
                   {text(pick(p, ["descricao", "nome", "titulo"]))}
+                  {p["status"] === false ? " (inativo)" : ""}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={abrirEdicao}
+            disabled={saving || !perfilId}
+            aria-label="Editar perfil"
+            title="Editar perfil"
+          >
+            <Pencil className="size-4" />
+          </Button>
           <Button type="button" variant="outline" onClick={() => setNovoOpen(true)} disabled={saving}>
             <Plus className="mr-1 size-4" /> Adicionar
           </Button>
-          <Button type="button" onClick={vincular} disabled={saving}>
+          <Button type="button" onClick={vincular} disabled={saving || !perfilId || perfis.find((p) => String(rowId(p)) === perfilId)?.["status"] === false}>
             Liberar
+          </Button>
+          <Button type="button" variant="secondary" onClick={liberarTodos} disabled={saving || !funcaoId}>
+            <Users className="mr-1 size-4" /> Liberar para todos
           </Button>
         </div>
       </div>
@@ -187,6 +271,51 @@ export function FuncaoPerfis({ funcaoId }: Props) {
             </Button>
             <Button type="button" onClick={criarPerfil} disabled={saving || !novoPerfil.trim()}>
               Cadastrar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar perfil</DialogTitle>
+            <DialogDescription>Quanto menor o nível, maior a hierarquia. Perfis inativos não podem ser liberados.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="perfil-edit-desc">Descrição</Label>
+              <Input
+                id="perfil-edit-desc"
+                value={edit.descricao}
+                onChange={(e) => setEdit({ ...edit, descricao: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="perfil-edit-ordem">Nível (ordem)</Label>
+              <Input
+                id="perfil-edit-ordem"
+                type="number"
+                min={1}
+                value={edit.ordem}
+                onChange={(e) => setEdit({ ...edit, ordem: e.target.value })}
+              />
+            </div>
+            <div className="flex items-center justify-between rounded-md border p-3">
+              <Label htmlFor="perfil-edit-status">Perfil ativo</Label>
+              <Switch
+                id="perfil-edit-status"
+                checked={edit.status}
+                onCheckedChange={(v) => setEdit({ ...edit, status: v })}
+              />
+            </div>
+          </div>
+          <DialogFooter className="border-t pt-4 mt-4">
+            <Button type="button" variant="outline" onClick={() => setEditOpen(false)} disabled={saving}>
+              Cancelar
+            </Button>
+            <Button type="button" onClick={salvarEdicao} disabled={saving}>
+              Salvar
             </Button>
           </DialogFooter>
         </DialogContent>
