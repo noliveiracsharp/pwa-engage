@@ -117,8 +117,8 @@ export function FuncaoPerfis({ funcaoId }: Props) {
   const salvarEdicao = async () => {
     const descricao = edit.descricao.trim();
     const ordem = Number(edit.ordem);
-    if (!descricao) return toast.error("Informe a descrição.");
-    if (!(ordem > 0)) return toast.error("Informe um nível maior que zero.");
+    if (!descricao) { toast.error("Informe a descrição."); return; }
+    if (!(ordem > 0)) { toast.error("Informe um nível maior que zero."); return; }
     setSaving(true);
     const { error } = await supabase
       .from("perfil")
