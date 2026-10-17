@@ -110,7 +110,13 @@ export function useSaveRecord(table: string) {
       toast.success("Registro salvo com sucesso.");
     },
     onError: (error: unknown) => {
-      const message = error instanceof Error ? error.message : "Não foi possível salvar.";
+      const e = error as { code?: string; message?: string };
+      if (e?.code === "23505") {
+        const m = String(e.message ?? "");
+        toast.error(/documento|cpf|cnpj/i.test(m) ? "Já existe um cadastro com este CNPJ/CPF." : "Já existe um registro com estes dados.");
+        return;
+      }
+      const message = e?.message || "Não foi possível salvar.";
       toast.error(message);
     },
   });
