@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -39,6 +39,9 @@ export function FuncaoPerfis({ funcaoId }: Props) {
   const [novoPerfil, setNovoPerfil] = useState("");
   const [novoOpen, setNovoOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [edit, setEdit] = useState({ descricao: "", ordem: "", status: true });
+  const perfisAtivos = useMemo(() => perfis.filter((p) => p["status"] !== false), [perfis]);
   const [perms] = useState({
     can_create: true,
     can_read: true,
