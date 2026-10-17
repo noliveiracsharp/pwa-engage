@@ -127,6 +127,13 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly, saving, on
     return parceiroTree(parceiros).filter(({ row }) => !blocked.has(String(rowId(row))));
   }, [parceiros, record]);
 
+  const duplicado = useMemo(() => {
+    const d = digitsOnly(f.documento);
+    if (d.length < 11) return undefined;
+    const meuId = record ? String(rowId(record)) : "";
+    return parceiros.find((p) => String(rowId(p)) !== meuId && digitsOnly(String(p["documento"] ?? "")) === d);
+  }, [f.documento, parceiros, record]);
+
   async function lookupCep(value: string) {
     const cep = digitsOnly(value);
     if (cep.length !== 8) return;
@@ -209,6 +216,8 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly, saving, on
     const doc = digitsOnly(f.documento);
     if (doc && (doc.length !== (pf ? 11 : 14) || !isValidCpfCnpj(doc)))
       { toast.error(pf ? "CPF inválido." : "CNPJ inválido."); return; }
+    const dup = duplicado;
+    if (dup) { toast.error(`Este ${pf ? "CPF" : "CNPJ"} já está cadastrado para: ${String(dup["razao_social"] ?? "—")}.`); return; }
     if (!isCompletePhone(f.telefone)) { toast.error("Telefone principal incompleto."); return; }
     if (!isCompletePhone(f.telefone2)) { toast.error("Telefone secundário incompleto."); return; }
     if (f.email.trim() && !/^\S+@\S+\.\S+$/.test(f.email.trim())) { toast.error("E-mail inválido."); return; }
@@ -308,6 +317,11 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly, saving, on
                         </Button>
                       )}
                     </div>
+                    {duplicado && (
+                      <p className="text-destructive mt-1.5 text-xs font-medium">
+                        Já cadastrado para: {String(duplicado["razao_social"] ?? "—")}
+                      </p>
+                    )}
                   </div>
                   {!pf && field("inscricao_estadual", "Inscrição Estadual")}
                   {field("razao_social", pf ? "Nome Completo" : "Razão Social", "sm:col-span-2")}
