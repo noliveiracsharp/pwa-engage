@@ -70,13 +70,15 @@ export function FuncaoPerfis({ funcaoId }: Props) {
     await queryClient.invalidateQueries({ queryKey: ["table", "menu"] });
   };
 
-  const vinculos = useMemo(
-    () =>
-      menu
-        .filter((row) => String(pick(row, ["funcoes_id", "funcao_id"]) ?? "") === String(funcaoId ?? ""))
-        .sort((a, b) => String(rowId(a) ?? "").localeCompare(String(rowId(b) ?? ""))),
-    [menu, funcaoId],
-  );
+  const vinculos = useMemo(() => {
+    const nome = (id: unknown) =>
+      text(pick(perfis.find((p) => String(rowId(p)) === String(id)) ?? {}, ["descricao", "nome", "titulo"]));
+    return menu
+      .filter((row) => String(pick(row, ["funcoes_id", "funcao_id"]) ?? "") === String(funcaoId ?? ""))
+      .sort((a, b) =>
+        nome(pick(a, ["perfil_id"])).localeCompare(nome(pick(b, ["perfil_id"])), "pt-BR", { sensitivity: "base" }),
+      );
+  }, [menu, funcaoId, perfis]);
 
   const perfilNome = (id: unknown) => {
     const found = perfis.find((p) => String(rowId(p)) === String(id));

@@ -44,7 +44,7 @@ export function SearchSelect({
   id,
   value,
   onChange,
-  options,
+  options: rawOptions,
   placeholder = "Selecione",
   searchPlaceholder = "Buscar…",
   emptyText = "Nenhum resultado.",
@@ -53,7 +53,13 @@ export function SearchSelect({
   className,
 }: Props) {
   const [open, setOpen] = useState(false);
-  const selected = options.find((o) => o.value === value);
+  const selected = rawOptions.find((o) => o.value === value);
+  // Ordem alfabética, exceto listas hierárquicas (mantêm a árvore).
+  const options = rawOptions.some((o) => o.depth !== undefined)
+    ? rawOptions
+    : [...rawOptions].sort((a, b) =>
+        a.label.localeCompare(b.label, "pt-BR", { sensitivity: "base", numeric: true }),
+      );
   const [zoom, setZoom] = useState<SearchOption | null>(null);
   const thumb = (opt: SearchOption, size: string) =>
     opt.images?.[0] ? (
