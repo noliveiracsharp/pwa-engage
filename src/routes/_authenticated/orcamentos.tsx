@@ -274,7 +274,7 @@ function OrcamentosPage() {
       render: (r) => {
         const nome = nomeCliente(r);
         return (
-          <div className="max-w-64 truncate" title={nome || undefined}>
+          <div className="min-w-48 break-words" title={nome || undefined}>
             {nome || <span className="text-muted-foreground">—</span>}
             {r["descricao"] ? (
               <div className="text-muted-foreground truncate text-xs">{String(r["descricao"])}</div>

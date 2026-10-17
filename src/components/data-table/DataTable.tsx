@@ -185,7 +185,7 @@ export function DataTable({
                   )}
                 </TableHead>
               ))}
-              <TableHead className="w-24 text-right">Ações</TableHead>
+              <TableHead className="w-px whitespace-nowrap text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
