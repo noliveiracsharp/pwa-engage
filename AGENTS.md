@@ -9,6 +9,8 @@
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
 
+- Project notification dismissal is recorded by event key in the existing device-local notification store before deletion, so polling cannot recreate dismissed events.
+
 Centro de custo: `buildTree` + `DataTable` com expansão por ID em `ApoioCrud`, para árvore estável sem afetar outras tabelas.
 
 Orçamentos: toda a matemática (linha, totais, desconto R$/%, lucro = venda − custo − imposto) vive em `src/lib/orcamentos.ts` como funções puras e os valores calculados são gravados nas colunas de `orcamentos`/`orcamento_itens`; relatórios leem esses valores sem recalcular.
