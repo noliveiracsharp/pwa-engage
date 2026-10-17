@@ -15,6 +15,7 @@ export type Aviso = {
 };
 
 const KEY = "atendeai-avisos";
+const DESCARTADOS_KEY = "atendeai-avisos-projetos-descartados";
 const EVT = "atendeai-avisos-mudou";
 export const EVT_ABRIR_CHAT = "atendeai-abrir-chat";
 const MAX = 300;
@@ -27,15 +28,35 @@ function gravar(l: Aviso[]) {
   localStorage.setItem(KEY, JSON.stringify(l.slice(0, MAX)));
   window.dispatchEvent(new Event(EVT));
 }
+function projetosDescartados(): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const chaves: unknown = JSON.parse(localStorage.getItem(DESCARTADOS_KEY) ?? "[]");
+    return Array.isArray(chaves) ? chaves.filter((chave): chave is string => typeof chave === "string") : [];
+  } catch { return []; }
+}
+function descartarProjetos(avisos: Aviso[]) {
+  const chaves = avisos.flatMap((a) => a.chave?.startsWith("projeto:") ? [a.chave] : []);
+  if (chaves.length === 0) return;
+  // Guarda apenas IDs, antes de apagar: o polling não pode recriar eventos descartados.
+  localStorage.setItem(DESCARTADOS_KEY, JSON.stringify([...new Set([...projetosDescartados(), ...chaves])]));
+}
 export function adicionarAviso(a: Omit<Aviso, "id" | "em" | "lido">) {
   const atuais = listarAvisos();
-  if (a.chave && atuais.some((x) => x.chave === a.chave)) return;
+  if (a.chave && (atuais.some((x) => x.chave === a.chave) || projetosDescartados().includes(a.chave))) return;
   gravar([{ ...a, id: crypto.randomUUID(), em: new Date().toISOString(), lido: false }, ...atuais]);
 }
 export const marcarTodosLidos = () => gravar(listarAvisos().map((a) => ({ ...a, lido: true })));
 export const marcarLido = (id: string) => gravar(listarAvisos().map((a) => (a.id === id ? { ...a, lido: true } : a)));
-export const removerAviso = (id: string) => gravar(listarAvisos().filter((a) => a.id !== id));
-export const limparAvisos = () => gravar([]);
+export const removerAviso = (id: string) => {
+  const atuais = listarAvisos();
+  descartarProjetos(atuais.filter((a) => a.id === id));
+  gravar(atuais.filter((a) => a.id !== id));
+};
+export const limparAvisos = () => {
+  descartarProjetos(listarAvisos());
+  gravar([]);
+};
 export function onAvisos(fn: () => void) {
   window.addEventListener(EVT, fn);
   window.addEventListener("storage", fn);
