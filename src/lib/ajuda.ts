@@ -4,12 +4,12 @@ export type ArtigoAjuda = {
   modulo: string;
   titulo: string;
   resumo: string;
-  rota?: string;
-  perfil?: string;
+  rota?: string | undefined;
+  perfil?: string | undefined;
   passos: string[];
-  dica?: string;
+  dica?: string | undefined;
   faq?: { p: string; r: string }[];
-  video?: string;
+  video?: string | undefined;
   tags?: string[];
 };
 
