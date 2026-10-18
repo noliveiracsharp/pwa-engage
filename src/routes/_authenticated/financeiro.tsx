@@ -9,6 +9,7 @@ import { ParceiroSheet } from "@/components/parceiros/ParceiroSheet";
 import { buildTree } from "@/lib/hierarchy";
 import { formatCpfCnpj } from "@/lib/input-masks";
 import { ContasBancarias } from "@/components/financeiro/ContasBancarias";
+import { CartoesCredito } from "@/components/financeiro/CartoesCredito";
 import { ControllerPainel } from "@/components/financeiro/ControllerPainel";
 import { CategoriasDialog, useCategoriasFinanceiro } from "@/components/financeiro/CategoriasFinanceiro";
 import { CobrancaDialog } from "@/components/financeiro/CobrancaDialog";
@@ -49,7 +50,7 @@ import {
   situacaoTitulo,
   valorBaixa,
   parcelasManuais,
-  parcelasCartao,
+  parcelasCartao, parcelasItensCartao, limiteUsadoCartao, limiteDisponivelCartao,
   type ModoLancamento,
   type Situacao,
   type TipoTitulo,
@@ -94,7 +95,7 @@ function FinanceiroPage() {
       <TabsContent value="pagar"><Titulos tipo="pagar" todos={titulos} loading={isLoading} perms={perms} /></TabsContent>
       <TabsContent value="caixa"><Caixa titulos={titulos} /></TabsContent>
       <TabsContent value="controller"><ControllerPainel titulos={titulos} /></TabsContent>
-      <TabsContent value="bancos"><ContasBancarias perms={perms} /></TabsContent>
+      <TabsContent value="bancos" className="space-y-8"><ContasBancarias perms={perms} /><CartoesCredito perms={perms} /></TabsContent>
     </Tabs>
   );
 }
@@ -363,6 +364,7 @@ function TituloSheet({ tipo, registro, parceiros, cartoes, readOnly, onClose, on
   });
   const { data: centros = [] } = useTableRows("centro_custo");
   const { data: contas = [] } = useTableRows("financeiro_contas_bancarias");
+  const { data: titulosCartao = [] } = useTableRows("financeiro_titulos");
   const centroOpts = useMemo(() => buildTree(centros.filter((c) => c["status"] !== false || text(rowId(c)) === v.centro_custo_id), "centro_custo_pai_id").map((n) => {
     const parts = n.path.split(" > ");
     const pai = parts.length > 1 ? parts[parts.length - 2] : undefined;
@@ -395,20 +397,31 @@ function TituloSheet({ tipo, registro, parceiros, cartoes, readOnly, onClose, on
       keywords: [text(p["razao_social"]), text(p["nome_fantasia"]), text(p["documento"]), text(p["documento"]).replace(/\D/g, "")] }));
   const cartaoModo = !registro && v.modo === "cartao";
   const cartao = cartoes.find((c) => text(rowId(c)) === v.cartao_id);
-  const previa = registro ? [] : cartaoModo
-    ? (cartao && cartao["dia_fechamento"] && cartao["dia_vencimento"]
-      ? parcelasCartao({ valor: num(v.valor), parcelas: num(v.repetir), dataCompra: v.vencimento, diaFechamento: num(cartao["dia_fechamento"]), diaVencimento: num(cartao["dia_vencimento"]) })
-      : [])
+  const [porItem, setPorItem] = useState(false);
+  const [itens, setItens] = useState<{ descricao: string; categoria: string; valor: string; parcelas: string }[]>([{ descricao: "", categoria: "", valor: "", parcelas: "1" }]);
+  const itensModo = cartaoModo && porItem;
+  const cartaoOk = !!(cartao && cartao["dia_fechamento"] && cartao["dia_vencimento"]);
+  const optsCartao = { dataCompra: v.vencimento, diaFechamento: num(cartao?.["dia_fechamento"]), diaVencimento: num(cartao?.["dia_vencimento"]) };
+  const previa: { vencimento: string; valor: number; descricao?: string; categoria?: string; rotulo?: string }[] = registro ? [] : cartaoModo
+    ? (!cartaoOk ? [] : itensModo
+      ? parcelasItensCartao(itens.filter((i) => num(i.valor) > 0).map((i) => ({ descricao: i.descricao.trim() || v.descricao.trim(), categoria: i.categoria, valor: num(i.valor), parcelas: num(i.parcelas) || 1 })), optsCartao)
+        .map((p) => ({ vencimento: p.vencimento, valor: p.valor, descricao: p.total > 1 ? `${p.item.descricao} (${p.n}/${p.total})` : p.item.descricao, categoria: p.item.categoria, rotulo: `${p.item.descricao} ${p.n}/${p.total}` }))
+      : parcelasCartao({ valor: num(v.valor), parcelas: num(v.repetir), ...optsCartao }))
     : parcelasManuais({ modo: v.modo as ModoLancamento, valor: num(v.valor), quantidade: num(v.repetir), primeira: v.vencimento });
+  const totalItens = round2(itens.reduce((s, i) => s + num(i.valor), 0));
+  const usadoCartao = cartao ? limiteUsadoCartao(titulosCartao, text(rowId(cartao))) : 0;
+  const limiteCartao = num(cartao?.["limite_total"]) || num(cartao?.["limite_mensal"]);
+  const dispCartao = limiteDisponivelCartao(limiteCartao, usadoCartao);
   const papel = tipo === "receber" ? "cliente" : "fornecedor";
 
   const salvar = async (alcance?: EscopoRecorrencia) => {
-    const valor = round2(num(v.valor));
+    const valor = itensModo ? totalItens : round2(num(v.valor));
     if (!v.descricao.trim()) return void toast.error("Informe a descrição.");
     if (!v.parceiro_id) return void toast.error(`Escolha o ${papel}.`);
-    if (valor <= 0) return void toast.error("Informe o valor.");
+    if (valor <= 0) return void toast.error(itensModo ? "Informe o valor de pelo menos um item." : "Informe o valor.");
     if (cartaoModo && !cartao) return void toast.error("Escolha o cartão utilizado.");
     if (cartaoModo && !previa.length) return void toast.error("Informe o dia de fechamento e de vencimento do cartão.");
+    if (cartaoModo && limiteCartao > 0 && valor > dispCartao && !window.confirm(`Esta compra (${formatBRL(valor)}) passa do limite disponível do cartão (${formatBRL(dispCartao)}). Lançar mesmo assim?`)) return;
     if (temSerie && !alcance) { setEscopo("atual"); setConfirmarSerie(true); return; }
     setSalvando(true);
     try {
@@ -457,7 +470,8 @@ function TituloSheet({ tipo, registro, parceiros, cartoes, readOnly, onClose, on
         const serieId = n > 1 ? crypto.randomUUID() : null;
         const lote = previa.map((p, i) => ({
           ...base, ...extra, empresa_id: emp, origem_tipo: "manual", origem_id: serieId, parcela_n: i + 1,
-          descricao: n > 1 ? `${base.descricao} (${i + 1}/${n})` : base.descricao,
+          descricao: p.descricao ?? (n > 1 ? `${base.descricao} (${i + 1}/${n})` : base.descricao),
+          ...(p.categoria ? { categoria: p.categoria } : {}),
           vencimento: p.vencimento, valor: p.valor,
           ...(v.ja_pago && !cartaoModo && i === 0 ? { status: "pago", pago_em: p.vencimento, valor_pago: p.valor } : {}),
         }));
@@ -536,24 +550,67 @@ function TituloSheet({ tipo, registro, parceiros, cartoes, readOnly, onClose, on
           {cartaoModo && (
             <div className="space-y-1 sm:col-span-2"><Label>Cartão utilizado *</Label>
               <Select value={v.cartao_id} onValueChange={(x) => setV({ ...v, cartao_id: x })}>
-                <SelectTrigger><SelectValue placeholder={cartoes.length ? "Escolha o cartão" : "Cadastre um cartão em Reembolsos → Cartões"} /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={cartoes.length ? "Escolha o cartão" : "Cadastre um cartão em Financeiro → Bancos"} /></SelectTrigger>
                 <SelectContent>{cartoes.map((c) => <SelectItem key={text(rowId(c))} value={text(rowId(c))}>{nomeCartao(c)}</SelectItem>)}</SelectContent>
               </Select>
-              {cartao && (!cartao["dia_fechamento"] || !cartao["dia_vencimento"]) && (
-                <p className="text-warning text-xs">Informe o dia de fechamento e de vencimento deste cartão em Reembolsos → Cartões.</p>
+              {cartao && !cartaoOk && (
+                <p className="text-warning text-xs">Informe o dia de fechamento e de vencimento deste cartão em Financeiro → Bancos.</p>
+              )}
+              {cartao && limiteCartao > 0 && (
+                <p className={cn("text-xs", round2(itensModo ? totalItens : num(v.valor)) > dispCartao ? "text-destructive" : "text-muted-foreground")}>
+                  Limite disponível: {formatBRL(dispCartao)} de {formatBRL(limiteCartao)}
+                </p>
               )}
             </div>
+          )}
+          {cartaoModo && (
+            <div className="space-y-1 sm:col-span-2"><Label>Como lançar a compra</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <Button type="button" variant={!porItem ? "default" : "outline"} onClick={() => setPorItem(false)}>Valor total</Button>
+                <Button type="button" variant={porItem ? "default" : "outline"} onClick={() => setPorItem(true)}>Item a item</Button>
+              </div></div>
           )}
           {registro && text(registro["cartao_id"]) && (
             <p className="text-muted-foreground text-sm sm:col-span-2">Cartão: {nomeCartao(cartoes.find((c) => text(rowId(c)) === text(registro["cartao_id"])))}</p>
           )}
           <div className="space-y-1"><Label>{cartaoModo ? "Data da compra" : registro || v.modo === "unico" ? "Vencimento" : "1º vencimento"}</Label>
             <Input type="date" value={v.vencimento} disabled={readOnly} onChange={(e) => setV({ ...v, vencimento: e.target.value })} /></div>
-          <div className="space-y-1"><Label>{(v.modo === "parcelado" || cartaoModo) && !registro ? "Valor total (R$)" : v.modo === "recorrente" && !registro ? "Valor mensal (R$)" : "Valor (R$)"}</Label>
-            <Input inputMode="decimal" value={v.valor} disabled={readOnly} onChange={(e) => setV({ ...v, valor: e.target.value })} placeholder="0,00" /></div>
-          {!registro && v.modo !== "unico" && (
+          {!itensModo && (
+            <div className="space-y-1"><Label>{(v.modo === "parcelado" || cartaoModo) && !registro ? "Valor total (R$)" : v.modo === "recorrente" && !registro ? "Valor mensal (R$)" : "Valor (R$)"}</Label>
+              <Input inputMode="decimal" value={v.valor} disabled={readOnly} onChange={(e) => setV({ ...v, valor: e.target.value })} placeholder="0,00" /></div>
+          )}
+          {!registro && v.modo !== "unico" && !itensModo && (
             <div className="space-y-1"><Label>{v.modo === "recorrente" ? "Nº de meses" : "Nº de parcelas"}</Label>
               <Input type="number" min={1} max={cartaoModo ? 48 : 120} value={v.repetir} onChange={(e) => setV({ ...v, repetir: e.target.value })} /></div>
+          )}
+          {itensModo && (
+            <div className="space-y-2 rounded-lg border p-3 sm:col-span-2">
+              <p className="text-sm font-semibold">Itens da compra</p>
+              <div className="text-muted-foreground hidden grid-cols-[1fr_10rem_7rem_5rem_2.5rem] gap-2 text-xs font-medium sm:grid">
+                <span>Descrição</span><span>Categoria</span><span>Valor (R$)</span><span>Parcelas</span><span />
+              </div>
+              {itens.map((it, idx) => {
+                const up = (patch: Partial<typeof it>) => setItens((l) => l.map((x, j) => (j === idx ? { ...x, ...patch } : x)));
+                return (
+                  <div key={idx} className="grid gap-2 sm:grid-cols-[1fr_10rem_7rem_5rem_2.5rem]">
+                    <Input value={it.descricao} placeholder="Ex.: Monitor 27''" onChange={(e) => up({ descricao: e.target.value })} />
+                    <Select value={it.categoria} onValueChange={(x) => up({ categoria: x })}>
+                      <SelectTrigger><SelectValue placeholder="Categoria" /></SelectTrigger>
+                      <SelectContent>{categorias.ativas.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                    </Select>
+                    <Input inputMode="decimal" value={it.valor} placeholder="0,00" onChange={(e) => up({ valor: e.target.value })} />
+                    <Input type="number" min={1} max={48} value={it.parcelas} onChange={(e) => up({ parcelas: e.target.value })} />
+                    <Button type="button" variant="ghost" size="icon" aria-label="Remover item" disabled={itens.length === 1}
+                      onClick={() => setItens((l) => l.filter((_, j) => j !== idx))}><Trash2 className="text-destructive h-4 w-4" /></Button>
+                  </div>
+                );
+              })}
+              <div className="flex items-center justify-between">
+                <Button type="button" variant="outline" size="sm" onClick={() => setItens((l) => [...l, { descricao: "", categoria: v.categoria, valor: "", parcelas: "1" }])}>
+                  <Plus className="mr-1 h-4 w-4" />Adicionar item</Button>
+                <p className="text-sm">Valor final no cartão: <span className="text-base font-bold tabular-nums">{formatBRL(totalItens)}</span></p>
+              </div>
+            </div>
           )}
           {!registro && (previa.length > 1 || (cartaoModo && previa.length > 0)) && (
             <div className="rounded-lg border border-primary/30 bg-primary/5 text-sm sm:col-span-2">
@@ -567,7 +624,7 @@ function TituloSheet({ tipo, registro, parceiros, cartoes, readOnly, onClose, on
               <div className="max-h-40 overflow-y-auto px-3">
                 {previa.map((p, i) => (
                   <div key={i} className="grid grid-cols-3 py-0.5 tabular-nums">
-                    <span>{i + 1}/{previa.length}</span><span>{formatDate(p.vencimento)}</span><span className="text-right">{formatBRL(p.valor)}</span>
+                    <span className="truncate">{p.rotulo ?? `${i + 1}/${previa.length}`}</span><span>{formatDate(p.vencimento)}</span><span className="text-right">{formatBRL(p.valor)}</span>
                   </div>
                 ))}
               </div>
