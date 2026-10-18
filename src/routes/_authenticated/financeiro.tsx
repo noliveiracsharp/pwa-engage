@@ -310,13 +310,33 @@ function TituloSheet({ tipo, registro, parceiros, cartoes, readOnly, onClose, on
   });
   const { data: centros = [] } = useTableRows("centro_custo");
   const { data: contas = [] } = useTableRows("financeiro_contas_bancarias");
-  const centroOpts = centros.filter((c) => c["status"] !== false || text(rowId(c)) === v.centro_custo_id)
-    .map((c) => ({ value: text(rowId(c)), label: [text(c["codigo"]), text(c["descricao"])].filter(Boolean).join(" — ") || "—" }));
+  const centroOpts = useMemo(() => buildTree(centros.filter((c) => c["status"] !== false || text(rowId(c)) === v.centro_custo_id), "centro_custo_pai_id").map((n) => {
+    const parts = n.path.split(" > ");
+    const pai = parts.length > 1 ? parts[parts.length - 2] : undefined;
+    return { value: text(rowId(n.row)), label: parts[parts.length - 1] ?? n.path, depth: n.depth,
+      hint: pai ? `em ${pai.split(" — ").pop()}` : undefined, keywords: [n.path] };
+  }), [centros, v.centro_custo_id]);
   const contaOpts = contas.map((c) => ({ value: text(rowId(c)), label: text(c["descricao"]) || text(c["banco"]) || "—" }));
   const [salvando, setSalvando] = useState(false);
+  const [novoParc, setNovoParc] = useState(false);
+  const [salvandoParc, setSalvandoParc] = useState(false);
+  const { stamp } = useAudit();
+  const criarParceiro = async (values: Row) => {
+    setSalvandoParc(true);
+    const payload = stamp({ ...values, ...(tipo === "pagar" ? { is_fornecedor: true } : { is_cliente: true }) }, true);
+    const { data, error } = await supabase.from("parceiros").insert(payload as never).select("id").maybeSingle();
+    setSalvandoParc(false);
+    if (error) return void toast.error(error.code === "23505" ? "Já existe um parceiro com este CPF/CNPJ." : error.message);
+    await qc.invalidateQueries({ queryKey: ["table", "parceiros"] });
+    if (data) setV((s) => ({ ...s, parceiro_id: text((data as Row)["id"]) }));
+    setNovoParc(false); toast.success(`${tipo === "receber" ? "Cliente" : "Fornecedor"} cadastrado.`);
+  };
+  const qc = useQueryClient();
   const opcoes = parceiros
     .filter((p) => (tipo === "receber" ? p["is_cliente"] !== false : p["is_fornecedor"] === true) || text(rowId(p)) === v.parceiro_id)
-    .map((p) => ({ value: text(rowId(p)), label: text(p["nome_fantasia"] || p["razao_social"]) || "—" }));
+    .map((p) => ({ value: text(rowId(p)), label: text(p["nome_fantasia"] || p["razao_social"]) || "—",
+      hint: p["documento"] ? formatCpfCnpj(text(p["documento"])) : undefined,
+      keywords: [text(p["razao_social"]), text(p["nome_fantasia"]), text(p["documento"]), text(p["documento"]).replace(/\D/g, "")] }));
   const cartaoModo = !registro && v.modo === "cartao";
   const cartao = cartoes.find((c) => text(rowId(c)) === v.cartao_id);
   const previa = registro ? [] : cartaoModo
@@ -373,12 +393,19 @@ function TituloSheet({ tipo, registro, parceiros, cartoes, readOnly, onClose, on
           <div className="space-y-1 sm:col-span-2"><Label>Descrição</Label>
             <Input value={v.descricao} disabled={readOnly} onChange={(e) => setV({ ...v, descricao: e.target.value })} /></div>
           <div className="space-y-1"><Label>{tipo === "receber" ? "Cliente" : "Fornecedor"} *</Label>
-            <SearchSelect value={v.parceiro_id} disabled={readOnly} options={opcoes} placeholder={`Escolha o ${papel}`} onChange={(x) => setV({ ...v, parceiro_id: x })} /></div>
+            <div className="flex gap-2">
+              <SearchSelect value={v.parceiro_id} disabled={readOnly} options={opcoes} placeholder={`Escolha o ${papel}`} searchPlaceholder="Nome ou CPF/CNPJ…"
+                emptyText={`Não encontrado. Use o + para cadastrar.`} onChange={(x) => setV({ ...v, parceiro_id: x })} />
+              {!readOnly && <Button type="button" variant="outline" size="icon" title={`Cadastrar ${papel}`} aria-label={`Cadastrar ${papel}`} onClick={() => setNovoParc(true)}><Plus className="h-4 w-4" /></Button>}
+            </div></div>
           <div className="space-y-1"><Label>Categoria</Label>
-            <Select value={v.categoria} disabled={readOnly} onValueChange={(x) => setV({ ...v, categoria: x })}>
-              <SelectTrigger><SelectValue placeholder="Escolha a categoria" /></SelectTrigger>
-              <SelectContent>{[...new Set([...categorias.ativas, v.categoria].filter(Boolean))].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-            </Select></div>
+            <div className="flex gap-2">
+              <Select value={v.categoria} disabled={readOnly} onValueChange={(x) => setV({ ...v, categoria: x })}>
+                <SelectTrigger><SelectValue placeholder="Escolha a categoria" /></SelectTrigger>
+                <SelectContent>{[...new Set([...categorias.ativas, v.categoria].filter(Boolean))].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+              </Select>
+              {!readOnly && <CategoriasDialog tipo={tipo} podeEditar compacto />}
+            </div></div>
           <div className="space-y-1"><Label>Data de competência</Label>
             <Input type="date" value={v.data_competencia} disabled={readOnly} onChange={(e) => setV({ ...v, data_competencia: e.target.value })} /></div>
           <div className="space-y-1"><Label>Código de referência</Label>
