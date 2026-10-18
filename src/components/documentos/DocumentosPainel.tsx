@@ -205,7 +205,7 @@ export function DocumentoEditor({ open, onOpenChange, doc, canEdit }: EditorProp
               <Switch
                 checked={!!v.exige_assinatura_digital}
                 disabled={ro || !!v.assinado_em}
-                onCheckedChange={(c) => setV({ ...v, exige_assinatura_digital: c, token_publico: c ? v.token_publico || novoTokenDoc() : v.token_publico })}
+                onCheckedChange={(c) => setV({ ...v, exige_assinatura_digital: c, token_publico: c ? v.token_publico || novoTokenDoc() : v.token_publico ?? null })}
               />
             </div>
             {v.exige_assinatura_digital && v.token_publico && !v.assinado_em && (
