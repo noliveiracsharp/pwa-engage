@@ -16,8 +16,10 @@ import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as FornecedorRouteImport } from './routes/fornecedor'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as PortalRouteImport } from './routes/portal'
+import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as TermosRouteImport } from './routes/termos'
 import { Route as AuthenticatedAtendimentosRouteImport } from './routes/_authenticated/atendimentos'
 import { Route as AuthenticatedAuditoriaRouteImport } from './routes/_authenticated/auditoria'
 import { Route as AuthenticatedCentro_custosRouteImport } from './routes/_authenticated/centro_custos'
@@ -101,6 +103,11 @@ const PortalRoute = PortalRouteImport.update({
   path: '/portal',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PrivacidadeRoute = PrivacidadeRouteImport.update({
+  id: '/privacidade',
+  path: '/privacidade',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
@@ -109,6 +116,11 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermosRoute = TermosRouteImport.update({
+  id: '/termos',
+  path: '/termos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedAtendimentosRoute =
@@ -369,8 +381,10 @@ export interface FileRoutesByFullPath {
   '/fornecedor': typeof FornecedorRoute
   '/login': typeof LoginRoute
   '/portal': typeof PortalRoute
+  '/privacidade': typeof PrivacidadeRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/termos': typeof TermosRoute
   '/atendimentos': typeof AuthenticatedAtendimentosRoute
   '/auditoria': typeof AuthenticatedAuditoriaRoute
   '/centro_custos': typeof AuthenticatedCentro_custosRoute
@@ -427,8 +441,10 @@ export interface FileRoutesByTo {
   '/fornecedor': typeof FornecedorRoute
   '/login': typeof LoginRoute
   '/portal': typeof PortalRoute
+  '/privacidade': typeof PrivacidadeRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/termos': typeof TermosRoute
   '/atendimentos': typeof AuthenticatedAtendimentosRoute
   '/auditoria': typeof AuthenticatedAuditoriaRoute
   '/centro_custos': typeof AuthenticatedCentro_custosRoute
@@ -487,8 +503,10 @@ export interface FileRoutesById {
   '/fornecedor': typeof FornecedorRoute
   '/login': typeof LoginRoute
   '/portal': typeof PortalRoute
+  '/privacidade': typeof PrivacidadeRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/termos': typeof TermosRoute
   '/_authenticated/atendimentos': typeof AuthenticatedAtendimentosRoute
   '/_authenticated/auditoria': typeof AuthenticatedAuditoriaRoute
   '/_authenticated/centro_custos': typeof AuthenticatedCentro_custosRoute
@@ -547,8 +565,10 @@ export interface FileRouteTypes {
     | '/fornecedor'
     | '/login'
     | '/portal'
+    | '/privacidade'
     | '/reset-password'
     | '/sitemap.xml'
+    | '/termos'
     | '/atendimentos'
     | '/auditoria'
     | '/centro_custos'
@@ -605,8 +625,10 @@ export interface FileRouteTypes {
     | '/fornecedor'
     | '/login'
     | '/portal'
+    | '/privacidade'
     | '/reset-password'
     | '/sitemap.xml'
+    | '/termos'
     | '/atendimentos'
     | '/auditoria'
     | '/centro_custos'
@@ -664,8 +686,10 @@ export interface FileRouteTypes {
     | '/fornecedor'
     | '/login'
     | '/portal'
+    | '/privacidade'
     | '/reset-password'
     | '/sitemap.xml'
+    | '/termos'
     | '/_authenticated/atendimentos'
     | '/_authenticated/auditoria'
     | '/_authenticated/centro_custos'
@@ -724,8 +748,10 @@ export interface RootRouteChildren {
   FornecedorRoute: typeof FornecedorRoute
   LoginRoute: typeof LoginRoute
   PortalRoute: typeof PortalRoute
+  PrivacidadeRoute: typeof PrivacidadeRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  TermosRoute: typeof TermosRoute
   AtivoTokenRoute: typeof AtivoTokenRoute
   ChamadaSalaRoute: typeof ChamadaSalaRoute
   CompartilhadoTokenRoute: typeof CompartilhadoTokenRoute
@@ -792,6 +818,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PortalRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/privacidade': {
+      id: '/privacidade'
+      path: '/privacidade'
+      fullPath: '/privacidade'
+      preLoaderRoute: typeof PrivacidadeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/reset-password': {
       id: '/reset-password'
       path: '/reset-password'
@@ -804,6 +837,13 @@ declare module '@tanstack/react-router' {
       path: '/sitemap.xml'
       fullPath: '/sitemap.xml'
       preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/termos': {
+      id: '/termos'
+      path: '/termos'
+      fullPath: '/termos'
+      preLoaderRoute: typeof TermosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/atendimentos': {
@@ -1233,8 +1273,10 @@ const rootRouteChildren: RootRouteChildren = {
   FornecedorRoute: FornecedorRoute,
   LoginRoute: LoginRoute,
   PortalRoute: PortalRoute,
+  PrivacidadeRoute: PrivacidadeRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  TermosRoute: TermosRoute,
   AtivoTokenRoute: AtivoTokenRoute,
   ChamadaSalaRoute: ChamadaSalaRoute,
   CompartilhadoTokenRoute: CompartilhadoTokenRoute,
