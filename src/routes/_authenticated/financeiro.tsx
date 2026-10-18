@@ -3,7 +3,8 @@ import { periodoPreset, type Periodo } from "@/lib/periodo-vencimento";
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Paperclip, Plus, QrCode, Receipt, Trash2, Undo2 } from "lucide-react";
+import { CheckCircle2, Copy, Paperclip, Plus, QrCode, Receipt, Trash2, Undo2 } from "lucide-react";
+import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { ReciboDialog } from "@/components/financeiro/ReciboDialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ParceiroSheet } from "@/components/parceiros/ParceiroSheet";
@@ -235,31 +236,35 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
         </div>
       );
     } },
-    { key: "acoes", header: "", fields: [], render: (t) => {
-      const s = situacaoTitulo(t, hoje);
-      return (
-        <div className="flex justify-end gap-1">
-          {t["comprovante"] ? (
-            <Button variant="ghost" size="icon" asChild title="Comprovante"><a href={text(t["comprovante"])} target="_blank" rel="noreferrer"><Paperclip className="h-4 w-4" /></a></Button>
-          ) : null}
-          {tipo === "receber" && perms.canUpdate && (s === "aberto" || s === "atrasado") && (
-            <Button variant="ghost" size="icon" title="Cobrança Boleto + Pix" aria-label="Cobrança Boleto + Pix" onClick={() => setCobrar(t)}>
-              <QrCode className={cn("h-4 w-4", t["cobranca_enviada_em"] ? "text-primary" : "")} />
-            </Button>
-          )}
-          {perms.canUpdate && (s === "aberto" || s === "atrasado") && (
-            <Button variant="ghost" size="icon" title={tipo === "receber" ? "Receber" : "Pagar"} aria-label="Baixar" onClick={() => setBaixar(t)}>
-              <CheckCircle2 className="text-success h-4 w-4" />
-            </Button>
-          )}
-          {perms.canUpdate && s === "pago" && (
-            <Button variant="ghost" size="icon" title="Estornar baixa" aria-label="Estornar baixa" onClick={() => estornar(t)}><Undo2 className="h-4 w-4" /></Button>
-          )}
-          <Button variant="ghost" size="icon" title="Emitir recibo" aria-label="Emitir recibo" onClick={() => setRecibo(t)}><Receipt className="h-4 w-4" /></Button>
-        </div>
-      );
-    } },
   ];
+
+  const rowMenu = (t: Row) => {
+    const s = situacaoTitulo(t, hoje);
+    const aberto = s === "aberto" || s === "atrasado";
+    return (
+      <>
+        {perms.canUpdate && aberto && (
+          <DropdownMenuItem onClick={() => setBaixar(t)}><CheckCircle2 className="text-success h-4 w-4" /> {tipo === "receber" ? "Registrar recebimento" : "Registrar pagamento"}</DropdownMenuItem>
+        )}
+        {perms.canUpdate && s === "pago" && (
+          <DropdownMenuItem onClick={() => estornar(t)}><Undo2 className="h-4 w-4" /> Estornar baixa</DropdownMenuItem>
+        )}
+        {tipo === "receber" && perms.canUpdate && aberto && (
+          <DropdownMenuItem onClick={() => setCobrar(t)}><QrCode className="h-4 w-4" /> Cobrança Boleto + Pix</DropdownMenuItem>
+        )}
+        <DropdownMenuItem onClick={() => setRecibo(t)}><Receipt className="h-4 w-4" /> Emitir recibo</DropdownMenuItem>
+        {t["comprovante"] ? (
+          <DropdownMenuItem onClick={() => window.open(text(t["comprovante"]), "_blank", "noopener")}><Paperclip className="h-4 w-4" /> Ver comprovante</DropdownMenuItem>
+        ) : null}
+        {perms.canCreate && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => setClonar(t)}><Copy className="h-4 w-4" /> Duplicar lançamento</DropdownMenuItem>
+          </>
+        )}
+      </>
+    );
+  };
 
   const exportarCsv = () => {
     const linhas = [["Vencimento", "Descrição", "Parceiro", "Categoria", "Valor", "Situação", "Pago em", "Valor pago"]];
@@ -326,7 +331,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
         rowKey={(r, i) => text(rowId(r)) || String(i)}
         onAdd={perms.canCreate ? () => setEditar(null) : undefined}
         onEdit={(r) => setEditar(r)}
-        onDuplicate={perms.canCreate ? (r) => setClonar(r) : undefined}
+        rowMenu={rowMenu}
         editReadOnly={!perms.canUpdate}
         onDelete={perms.canDelete ? excluir : undefined}
         filters={
