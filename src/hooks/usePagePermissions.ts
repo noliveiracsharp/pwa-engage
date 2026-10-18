@@ -34,6 +34,8 @@ export function usePerfilMenuRows() {
   return useQuery({
     queryKey: ["table", "menu", "perfil-view", String(perfilId ?? ""), isMaster],
     enabled: Boolean(user && perfilId !== undefined && perfilId !== null),
+    retry: 4,
+    retryDelay: (n) => 1000 * (n + 1),
     queryFn: async (): Promise<Row[] | null> => {
       // Master: null = sem restrição (leitura, criação, edição e exclusão em tudo).
       if (isMaster) return null;
@@ -42,7 +44,7 @@ export function usePerfilMenuRows() {
         .select("*")
         .eq("perfil_id", perfilId as string)
         .order("ordem_hierarquia");
-      if (error) return [];
+      if (error) throw error; // tenta de novo e mantém as permissões anteriores
       return (data ?? []) as Row[];
     },
   });
@@ -53,7 +55,10 @@ export function usePerfilMenuRows() {
  * e submenus (funções filhas com menu_ativo = false) liberados ao perfil.
  */
 export function usePagePermissions(path: string) {
-  const { data: viewRows, isLoading } = usePerfilMenuRows();
+  const { user, usuario } = useAuth();
+  const { data: viewRows, isLoading: carregando } = usePerfilMenuRows();
+  // Enquanto o usuário/perfil ainda não chegou, a tela aguarda em vez de dizer "sem acesso".
+  const isLoading = carregando || (!!user && (!usuario || viewRows === undefined));
   const { data: funcoes = [] } = useTableRows("funcoes");
 
   return useMemo(() => {

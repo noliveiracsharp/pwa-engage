@@ -48,22 +48,20 @@ export function getAllowedPathsCached(userId: string, email?: string): Promise<s
   if (hit && Date.now() - hit.at < ACCESS_TTL) return hit.value;
   const value = getAllowedPaths(userId, email);
   accessCache.set(userId, { at: Date.now(), value });
-  value.catch(() => accessCache.delete(userId));
+  value.then((v) => { if (v === null) accessCache.delete(userId); }, () => accessCache.delete(userId));
   return value;
 }
 
 export async function getAllowedPaths(userId: string, email?: string): Promise<string[] | null> {
   try {
     let usuario: Row | null = null;
-    const byAuth = await supabase.from("usuarios").select("*").eq("auth_user_id", userId).maybeSingle();
-    usuario = (byAuth.data as Row) ?? null;
-    if (!usuario) {
-      const byId = await supabase.from("usuarios").select("*").eq("id", userId).maybeSingle();
-      usuario = (byId.data as Row) ?? null;
-    }
+    const byId = await supabase.from("usuarios").select("*").eq("id", userId).maybeSingle();
+    usuario = (byId.data as Row) ?? null;
+    if (byId.error && !email) throw byId.error;
     if (!usuario && email) {
       const byEmail = await supabase.from("usuarios").select("*").eq("email", email).maybeSingle();
       usuario = (byEmail.data as Row) ?? null;
+      if (!usuario && byEmail.error) throw byEmail.error;
     }
     if (!usuario) return [...ALWAYS_ALLOWED];
 
@@ -79,7 +77,7 @@ export async function getAllowedPaths(userId: string, email?: string): Promise<s
       .select("*")
       .eq("perfil_id", perfilId as string)
       .order("ordem_hierarquia");
-    if (error) return [...ALWAYS_ALLOWED];
+    if (error) throw error;
 
     const rows = ((data ?? []) as Row[]).filter(
       (row) => asBool(row["can_read"]) && asBool(row["funcao_status"]),
@@ -94,7 +92,8 @@ export async function getAllowedPaths(userId: string, email?: string): Promise<s
     );
     return [...new Set([...paths, ...ALWAYS_ALLOWED])];
   } catch {
-    return [...ALWAYS_ALLOWED];
+    // Falha temporária (rede/token renovando): não rebaixa o usuário; o banco continua protegendo os dados.
+    return null;
   }
 }
 
