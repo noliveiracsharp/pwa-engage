@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { FilePlus2, FileText, Paperclip, Printer, Trash2 } from "lucide-react";
+import { FilePlus2, FileText, Link2, Paperclip, Printer, Send, ShieldCheck, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SearchSelect } from "@/components/data-table/SearchSelect";
@@ -16,7 +17,10 @@ import { formatDate } from "@/lib/orcamentos";
 import { cn } from "@/lib/utils";
 import type { Row } from "@/lib/row";
 import {
+  carimboAssinatura,
   diasParaVencer,
+  linkAssinaturaDoc,
+  novoTokenDoc,
   renderModelo,
   STATUS_DOC,
   statusDoc,
@@ -40,6 +44,13 @@ export type DocumentoRow = {
   dt_vencimento: string | null;
   anexo_url: string | null;
   observacoes: string | null;
+  exige_assinatura_digital?: boolean;
+  token_publico?: string | null;
+  assinado_em?: string | null;
+  assinado_nome?: string | null;
+  assinado_documento?: string | null;
+  assinado_ip?: string | null;
+  assinado_hash?: string | null;
 };
 
 export function useModelos() {
@@ -132,6 +143,8 @@ export function DocumentoEditor({ open, onOpenChange, doc, canEdit }: EditorProp
       dt_vencimento: v.dt_vencimento || null,
       anexo_url: v.anexo_url || null,
       observacoes: v.observacoes || null,
+      exige_assinatura_digital: !!v.exige_assinatura_digital,
+      token_publico: v.token_publico || null,
     };
     const novo = !v.id;
     const q = novo ? db.from("documentos").insert(stamp(payload, true)) : db.from("documentos").update(stamp(payload, false)).eq("id", v.id);
@@ -183,6 +196,35 @@ export function DocumentoEditor({ open, onOpenChange, doc, canEdit }: EditorProp
             <Label>Texto do documento</Label>
             <Textarea rows={16} className="font-serif text-sm" value={v.conteudo ?? ""} disabled={ro} onChange={(e) => setV({ ...v, conteudo: e.target.value })} />
           </div>
+          <div className="space-y-3 rounded-md border p-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <Label>Coletar assinatura eletrônica por link</Label>
+                <p className="text-muted-foreground text-xs">Desligado: imprima, assine no papel e anexe a via assinada.</p>
+              </div>
+              <Switch
+                checked={!!v.exige_assinatura_digital}
+                disabled={ro || !!v.assinado_em}
+                onCheckedChange={(c) => setV({ ...v, exige_assinatura_digital: c, token_publico: c ? v.token_publico || novoTokenDoc() : v.token_publico })}
+              />
+            </div>
+            {v.exige_assinatura_digital && v.token_publico && !v.assinado_em && (
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" size="sm" variant="outline" className="gap-1" onClick={() => {
+                  void navigator.clipboard.writeText(linkAssinaturaDoc(window.location.origin, v.token_publico!));
+                  toast.success("Link copiado. Salve o documento antes de enviar.");
+                }}><Link2 className="size-4" /> Copiar link</Button>
+                <Button type="button" size="sm" variant="outline" className="gap-1" onClick={() => {
+                  const txt = `Olá! Segue o documento "${v.titulo ?? ""}" para assinatura eletrônica: ${linkAssinaturaDoc(window.location.origin, v.token_publico!)}`;
+                  window.open(`https://wa.me/?text=${encodeURIComponent(txt)}`, "_blank");
+                }}><Send className="size-4" /> Enviar por WhatsApp</Button>
+              </div>
+            )}
+            {v.assinado_em && (
+              <pre className="bg-success/10 text-foreground whitespace-pre-wrap rounded p-2 text-xs">{carimboAssinatura(v as Row)}</pre>
+            )}
+          </div>
+          {!v.exige_assinatura_digital && (
           <div className="space-y-1.5">
             <Label>Via assinada</Label>
             <div className="flex flex-wrap items-center gap-2">
@@ -198,6 +240,7 @@ export function DocumentoEditor({ open, onOpenChange, doc, canEdit }: EditorProp
               {enviando && <span className="text-muted-foreground text-xs">Enviando…</span>}
             </div>
           </div>
+          )}
           <div className="space-y-1.5">
             <Label>Observações</Label>
             <Textarea rows={2} value={v.observacoes ?? ""} disabled={ro} onChange={(e) => setV({ ...v, observacoes: e.target.value })} />
