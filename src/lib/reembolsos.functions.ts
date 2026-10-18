@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { exigirLogin } from "@/lib/auth-guard";
 import { z } from "zod";
 
 export type LeituraComprovante = {
@@ -30,6 +31,7 @@ const SCHEMA = {
 
 /** Lê cupom fiscal / recibo (imagem ou PDF por URL pública) e devolve os campos para pré-preencher a despesa. */
 export const lerComprovante = createServerFn({ method: "POST" })
+  .middleware([exigirLogin])
   .inputValidator((d) => z.object({ url: z.string().url().max(2000), pdf: z.boolean().optional() }).parse(d))
   .handler(async ({ data }): Promise<LeituraComprovante> => {
     const chave = process.env["LOVABLE_API_KEY"];

@@ -1,8 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
+import { exigirLogin } from "@/lib/auth-guard";
 import { z } from "zod";
 
 /** Lê a quilometragem do odômetro numa foto (URL pública) usando IA de visão. */
 export const lerOdometro = createServerFn({ method: "POST" })
+  .middleware([exigirLogin])
   .inputValidator((d) => z.object({ url: z.string().url().max(2000) }).parse(d))
   .handler(async ({ data }): Promise<{ km: number | null }> => {
     const chave = process.env["LOVABLE_API_KEY"];

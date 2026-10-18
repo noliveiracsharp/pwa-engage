@@ -1,9 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
+import { exigirLogin } from "@/lib/auth-guard";
 import { z } from "zod";
 
 export type QrResult = { status: "qr"; image: string } | { status: "connected" } | { status: "error"; message: string };
 
 export const buscarQrCode = createServerFn({ method: "POST" })
+  .middleware([exigirLogin])
   .inputValidator((d) =>
     z
       .object({
@@ -41,6 +43,7 @@ export const buscarQrCode = createServerFn({ method: "POST" })
   });
 
 export const desconectarWhatsApp = createServerFn({ method: "POST" })
+  .middleware([exigirLogin])
   .inputValidator((d) =>
     z
       .object({
@@ -65,6 +68,7 @@ export const desconectarWhatsApp = createServerFn({ method: "POST" })
 
 /** Aponta o "Ao receber" da Z-API para o endereço de recebimento do Atende.ai. */
 export const configurarWebhookZapi = createServerFn({ method: "POST" })
+  .middleware([exigirLogin])
   .inputValidator((d) =>
     z
       .object({
