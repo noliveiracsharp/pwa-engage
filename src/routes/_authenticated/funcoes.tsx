@@ -239,6 +239,7 @@ function FuncoesPage() {
       />
 
       <RecordSheet
+        auditTable="funcoes"
         open={open}
         onOpenChange={setOpen}
         title={record ? "Editar função" : "Nova função"}

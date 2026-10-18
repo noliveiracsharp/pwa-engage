@@ -239,6 +239,7 @@ function PessoasPage() {
       />
 
       <RecordSheet
+        auditTable="pessoas"
         open={open}
         onOpenChange={setOpen}
         title={record ? "Editar pessoa" : "Nova pessoa"}
