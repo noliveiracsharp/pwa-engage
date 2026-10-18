@@ -24,6 +24,7 @@ import type { Row } from "@/lib/row";
 const db = supabase as any;
 
 export const Route = createFileRoute("/_authenticated/documentos")({
+  staticData: { sitemap: false },
   head: () => ({
     meta: [
       { title: "Documentos — Atende.ai" },

@@ -9,6 +9,7 @@ import { configurarWebhookZapi, desconectarWhatsApp } from "@/lib/zapi.functions
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { DocumentosButton } from "@/components/documentos/DocumentosPainel";
+import { rowId } from "@/lib/crud";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";

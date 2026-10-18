@@ -8,9 +8,9 @@ describe("documentos", () => {
 
   it("monta variáveis do usuário e da empresa", () => {
     const v = variaveisDe("usuario", { nome: "Ana", cpf: "123" }, { razao_social: "ACME LTDA", cnpj: "1" }, new Date(2026, 9, 18));
-    expect(v.nome).toBe("Ana");
-    expect(v.empresa_razao).toBe("ACME LTDA");
-    expect(v.data_hoje).toBe("18/10/2026");
+    expect(v["nome"]).toBe("Ana");
+    expect(v["empresa_razao"]).toBe("ACME LTDA");
+    expect(v["data_hoje"]).toBe("18/10/2026");
   });
 
   it("calcula dias para vencer", () => {
