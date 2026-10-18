@@ -1,5 +1,4 @@
 import { HistoricoButton } from "@/components/auditoria/HistoricoButton";
-import { rowId } from "@/lib/crud";
 import { useEffect, useState, type ReactNode } from "react";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -15,7 +14,7 @@ import { PhotoUpload } from "@/components/data-table/PhotoUpload";
 import { PhoneInput } from "@/components/data-table/PhoneInput";
 import { DocumentInput } from "@/components/data-table/DocumentInput";
 import { findKey, pick, type Row } from "@/lib/row";
-import { text } from "@/lib/crud";
+import { rowId, text } from "@/lib/crud";
 import { isCompletePhone, isValidCpfCnpj } from "@/lib/input-masks";
 import { toast } from "sonner";
 

@@ -178,6 +178,7 @@ export function ApoioCrud({
       />
 
       <RecordSheet
+        auditTable={table}
         open={open}
         onOpenChange={setOpen}
         title={record ? `Editar ${singular}` : `Novo ${singular}`}
