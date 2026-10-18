@@ -100,7 +100,7 @@ export function ManutencaoSheet({ open, onOpenChange, record, inicial, onSaved }
   }, [parceiros]);
   const resumo = resumoChecklist(checklist);
 
-  function aplicarModelo(id: string) {
+  async function aplicarModelo(id: string) {
     setF((s) => ({ ...s, modelo_id: id }));
     const m = modelos.find((x) => text(rowId(x)) === id);
     if (m && (!checklist.length || await confirmar("Substituir o checklist atual pelo do modelo?"))) setChecklist(checklistDoModelo(m["itens"]));
