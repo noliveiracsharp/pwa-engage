@@ -26,12 +26,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { rowId, text, useDeleteRecord, useTableRows } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
 import { toast } from "sonner";
+import { useAudit } from "@/lib/audit";
 
 type Props = { funcaoId: string | number | undefined };
 
 export function FuncaoPerfis({ funcaoId }: Props) {
   const queryClient = useQueryClient();
-  const { data: perfis = [] } = useTableRows("perfil");
+  const { empresaId } = useAudit();
+  const { data: todosPerfis = [] } = useTableRows("perfil");
+  const perfis = useMemo(
+    () => todosPerfis.filter((p) => !p["empresa_id"] || empresaId === undefined || String(p["empresa_id"]) === String(empresaId)),
+    [todosPerfis, empresaId],
+  );
   const { data: menu = [] } = useTableRows("menu");
   const removeMenu = useDeleteRecord("menu");
 
@@ -89,7 +95,7 @@ export function FuncaoPerfis({ funcaoId }: Props) {
     const descricao = novoPerfil.trim();
     if (!descricao) return;
     setSaving(true);
-    const { data, error } = await supabase.from("perfil").insert({ descricao }).select().single();
+    const { data, error } = await supabase.from("perfil").insert(empresaId !== undefined ? { descricao, empresa_id: empresaId } : { descricao }).select().single();
     setSaving(false);
     if (error) {
       toast.error(error.message);

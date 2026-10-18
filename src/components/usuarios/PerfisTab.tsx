@@ -10,6 +10,7 @@ import { pick, type Row } from "@/lib/row";
 import { useAuth } from "@/hooks/useAuth";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { toast } from "sonner";
+import { useAudit } from "@/lib/audit";
 
 const fields: Field[] = [
   { fields: ["descricao"], label: "Descrição", full: true },
@@ -26,6 +27,7 @@ export function PerfisTab() {
   const [open, setOpen] = useState(false);
   const [record, setRecord] = useState<Row | null>(null);
   const [busca, setBusca] = useState("");
+  const { empresaId, stamp } = useAudit();
 
   const { data: minhaOrdem } = useQuery({
     queryKey: ["perfil-minha-ordem", text(pick(usuario, ["perfil_id", "id_perfil"]))],
@@ -43,14 +45,16 @@ export function PerfisTab() {
   const filtered = useMemo(
     () =>
       rows
+        .filter((r) => !r["empresa_id"] || empresaId === undefined || String(r["empresa_id"]) === String(empresaId))
         .filter((r) => matchesAny([pick(r, ["descricao"])], busca))
         .sort((a, b) => Number(a["ordem"] ?? 0) - Number(b["ordem"] ?? 0)),
-    [rows, busca],
+    [rows, busca, empresaId],
   );
 
   const columns: Column[] = [
     { key: "descricao", header: "Descrição", fields: ["descricao"] },
     { key: "ordem", header: "Nível", fields: ["ordem"] },
+    { key: "empresa_id", header: "Escopo", fields: ["empresa_id"], render: (r) => (r["empresa_id"] ? "Desta empresa" : "Padrão do sistema") },
   ];
 
   const handleSave = (values: Row) => {
@@ -63,7 +67,7 @@ export function PerfisTab() {
       toast.error("Você não pode cadastrar um perfil acima do seu nível.");
       return;
     }
-    save.mutate({ values: { ...values, ordem }, original: record }, { onSuccess: () => { setOpen(false); setRecord(null); } });
+    save.mutate({ values: record ? { ...values, ordem } : stamp({ ...values, ordem }, true), original: record }, { onSuccess: () => { setOpen(false); setRecord(null); } });
   };
 
   if (!perms.loading && !perms.canRead) {
