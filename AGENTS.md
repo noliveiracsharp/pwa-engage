@@ -40,3 +40,5 @@ Comissões: cálculo puro em `src/lib/comissoes.ts` (líquido = venda − compra
 
 Manutenções: OS/modelos/ativos/planos em `manutencao_*`, regras puras em src/lib/manutencoes.ts, `ManutencaoSheet` único (/manutencoes e Atendimento) para a OS nascer igual; links públicos /os e /ativo só por RPCs SECURITY DEFINER; preventivas geradas no cliente ao abrir /manutencoes (banco sem agendador).
 - Reembolsos (/reembolsos): despesas em `despesas_lancamentos` e cartões em `despesas_cartoes`, cálculo puro em src/lib/reembolsos.ts e OCR do comprovante em src/lib/reembolsos.functions.ts; aprovar reembolso cria título `origem_tipo=reembolso` no Financeiro, para o pagamento seguir o mesmo fluxo de baixa.
+
+- Auditoria LGPD: gatilhos no banco (`fn_carimbo_registro` carimba created_at/updated_at/criado_por/alterado_por; `fn_gravar_auditoria` grava em `auditoria_logs` imutável), nunca no cliente; telas só leem via `/auditoria` e `HistoricoButton` (prop `auditTable` do RecordSheet), para que nenhuma gravação escape do rastro.
