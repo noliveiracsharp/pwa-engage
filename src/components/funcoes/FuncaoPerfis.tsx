@@ -43,9 +43,9 @@ export function FuncaoPerfis({ funcaoId }: Props) {
   const [edit, setEdit] = useState({ descricao: "", ordem: "", status: true });
   const perfisAtivos = useMemo(() => perfis.filter((p) => p["status"] !== false), [perfis]);
   const [perms] = useState({
-    can_create: true,
-    can_read: true,
-    can_update: true,
+    can_create: false,
+    can_read: false,
+    can_update: false,
     can_delete: false,
     status: false,
   });
@@ -152,10 +152,10 @@ export function FuncaoPerfis({ funcaoId }: Props) {
       novos.map((p) => ({
         perfil_id: rowId(p),
         funcoes_id: funcaoId,
-        can_create: true,
-        can_read: true,
-        can_update: true,
-        can_delete: true,
+        can_create: false,
+        can_read: false,
+        can_update: false,
+        can_delete: false,
         status: false,
       })),
     );
