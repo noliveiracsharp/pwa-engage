@@ -134,7 +134,12 @@ function buildMenuTree(items: MenuItem[], funcoes: Row[]): MenuItem[] {
     list
       .sort((a, b) => a.order - b.order)
       .map((i) => ({ ...i, children: i.children?.length ? clean(i.children) : undefined }));
-  return clean(roots);
+  // Agrupador sem rota e sem subitens visíveis não tem ação: some do menu.
+  const semAcao = (list: MenuItem[]): MenuItem[] =>
+    list
+      .filter((i) => i.path || i.children?.length)
+      .map((i) => ({ ...i, children: i.children ? semAcao(i.children) : undefined }));
+  return semAcao(clean(roots));
 }
 
 /** Abas da página pai: funções filhas com menu_ativo = false que o perfil pode ler. */
