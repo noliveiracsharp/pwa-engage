@@ -413,12 +413,13 @@ function TituloSheet({ tipo, registro, parceiros, cartoes, readOnly, onClose, on
   const papel = tipo === "receber" ? "cliente" : "fornecedor";
 
   const salvar = async (alcance?: EscopoRecorrencia) => {
-    const valor = round2(num(v.valor));
+    const valor = itensModo ? totalItens : round2(num(v.valor));
     if (!v.descricao.trim()) return void toast.error("Informe a descrição.");
     if (!v.parceiro_id) return void toast.error(`Escolha o ${papel}.`);
-    if (valor <= 0) return void toast.error("Informe o valor.");
+    if (valor <= 0) return void toast.error(itensModo ? "Informe o valor de pelo menos um item." : "Informe o valor.");
     if (cartaoModo && !cartao) return void toast.error("Escolha o cartão utilizado.");
     if (cartaoModo && !previa.length) return void toast.error("Informe o dia de fechamento e de vencimento do cartão.");
+    if (cartaoModo && limiteCartao > 0 && valor > dispCartao && !window.confirm(`Esta compra (${formatBRL(valor)}) passa do limite disponível do cartão (${formatBRL(dispCartao)}). Lançar mesmo assim?`)) return;
     if (temSerie && !alcance) { setEscopo("atual"); setConfirmarSerie(true); return; }
     setSalvando(true);
     try {
