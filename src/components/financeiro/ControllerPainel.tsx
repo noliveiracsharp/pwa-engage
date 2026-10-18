@@ -12,6 +12,9 @@ import { parecerController } from "@/lib/controller.functions";
 import { supabase } from "@/integrations/supabase/client";
 import type { Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
+import { useEmpresaAtiva } from "@/hooks/useEmpresaAtiva";
+import { imprimirDre } from "@/components/relatorios/DreRelatorioPDF";
+import { ControllerRelatorioDocumento } from "./ControllerRelatorio";
 
 const SALDO_KEY = "controller_saldo";
 const NIVEL: Record<NivelAlerta, { cls: string; Icon: typeof AlertTriangle }> = {
@@ -38,6 +41,7 @@ export function ControllerPainel({ titulos }: { titulos: Row[] }) {
   const { data: parceiros = [] } = useTableRows("parceiros");
   const nomes = useMemo(() => new Map(parceiros.map((p) => [text(rowId(p)), text(p["nome_fantasia"] || p["razao_social"])])), [parceiros]);
   const [saldo, setSaldo] = useState("");
+  const emp = useEmpresaAtiva();
   useEffect(() => setSaldo(localStorage.getItem(SALDO_KEY) ?? ""), []);
   const d = useMemo(() => diagnosticar(titulos, num(saldo), (t) => nomes.get(text(t["parceiro_id"])) ?? ""), [titulos, saldo, nomes]);
   const gerar = useServerFn(parecerController);
@@ -78,7 +82,7 @@ export function ControllerPainel({ titulos }: { titulos: Row[] }) {
             onChange={(e) => { setSaldo(e.target.value); localStorage.setItem(SALDO_KEY, e.target.value); }} />
         </div>
         <div className="flex gap-2 print:hidden">
-          <Button variant="outline" onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" />Relatório gerencial</Button>
+          <Button variant="outline" onClick={imprimirDre}><Printer className="mr-2 h-4 w-4" />Relatório gerencial</Button>
           <Button onClick={pedirParecer} disabled={carregando}>
             {carregando ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <BrainCircuit className="mr-2 h-4 w-4" />}
             Parecer do Controller
@@ -127,6 +131,10 @@ export function ControllerPainel({ titulos }: { titulos: Row[] }) {
           <Markdown texto={parecer} />
         </div>
       )}
+
+      <div className="dre-print-src" aria-hidden>
+        <ControllerRelatorioDocumento empresa={{ nome: emp.nome ?? "", logo: emp.logo ?? "" }} d={d} saldo={num(saldo)} parecer={parecer} />
+      </div>
     </div>
   );
 }

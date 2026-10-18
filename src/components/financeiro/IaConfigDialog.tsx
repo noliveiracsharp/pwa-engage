@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { BrainCircuit, Loader2, Pencil, Trash2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+
+const PROVEDORES: Record<string, string> = { anthropic: "Anthropic (Claude)", gemini: "Google Gemini", openai: "OpenAI (ChatGPT)" };
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -28,6 +31,8 @@ export function IaConfigPainel({ readOnly }: { readOnly?: boolean }) {
     });
   useEffect(carregar, []);
 
+  const [editando, setEditando] = useState(false);
+
   const salvar = async () => {
     if (propria && !chave && !r?.tem_chave) { toast.error("Informe a chave de API."); return; }
     setSalvando(true);
@@ -35,10 +40,12 @@ export function IaConfigPainel({ readOnly }: { readOnly?: boolean }) {
     setSalvando(false);
     if (error) { toast.error("Não foi possível salvar."); return; }
     toast.success("Configuração de IA salva.");
+    setEditando(false);
     carregar();
   };
 
   const remover = async () => {
+    if (!window.confirm("Remover a chave própria e voltar a usar a IA do plano?")) return;
     const { error } = await supabase.rpc("ia_config_remover_chave" as never);
     if (error) { toast.error("Não foi possível remover."); return; }
     toast.success("Chave removida. Voltando a usar a IA do plano.");
@@ -48,8 +55,41 @@ export function IaConfigPainel({ readOnly }: { readOnly?: boolean }) {
   if (erro) return <p className="text-sm text-muted-foreground">Rode o script de IA por empresa no banco.</p>;
   if (!r) return <Loader2 className="mx-auto h-5 w-5 animate-spin" />;
 
+  if (!editando) {
+    const ativa = r.modo === "propria" && r.tem_chave;
+    return (
+      <div className="rounded-lg border bg-card p-4">
+        <div className="flex items-start gap-3">
+          <div className="rounded-md bg-primary/10 p-2 text-primary"><BrainCircuit className="h-5 w-5" /></div>
+          <div className="min-w-0 flex-1 space-y-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="font-semibold">{ativa ? PROVEDORES[r.provedor] ?? r.provedor : "IA incluída no plano Atende.ai"}</p>
+              <Badge className={ativa ? "bg-success text-success-foreground hover:bg-success" : ""} variant={ativa ? "default" : "secondary"}>
+                {ativa ? "Chave própria ativa" : "Plano"}
+              </Badge>
+            </div>
+            {ativa ? (
+              <>
+                <p className="text-sm text-muted-foreground">Chave: ••••••••{r.final_chave}</p>
+                <p className="text-sm text-muted-foreground">Modelo: {r.modelo || "padrão do provedor"}</p>
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">Usa a IA da Atende.ai com o limite mensal do plano contratado.</p>
+            )}
+          </div>
+        </div>
+        {!readOnly && (
+          <div className="mt-4 flex justify-end gap-2">
+            {r.tem_chave && <Button type="button" variant="ghost" onClick={remover}><Trash2 className="mr-1 h-4 w-4" />Remover chave</Button>}
+            <Button type="button" variant="outline" onClick={() => setEditando(true)}><Pencil className="mr-1 h-4 w-4" />Editar configuração</Button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
-    <fieldset disabled={readOnly} className="space-y-4">
+    <fieldset disabled={readOnly} className="space-y-4 rounded-lg border p-4">
       <div className="flex items-center justify-between gap-3 rounded-md border p-3">
         <div>
           <p className="text-sm font-medium">Usar chave própria da empresa</p>
@@ -83,7 +123,7 @@ export function IaConfigPainel({ readOnly }: { readOnly?: boolean }) {
         </>
       )}
       <div className="flex justify-end gap-2">
-        {r.tem_chave && <Button type="button" variant="ghost" onClick={remover}>Remover chave</Button>}
+        <Button type="button" variant="outline" onClick={() => { setEditando(false); carregar(); }}>Cancelar</Button>
         <Button type="button" onClick={salvar} disabled={salvando}>{salvando ? "Salvando…" : "Salvar configuração de IA"}</Button>
       </div>
     </fieldset>
