@@ -15,6 +15,7 @@ import { baixarArquivo, cotacaoStatusMeta, parseCsv, proximoNumero, toCsv } from
 import { formatBRL, formatQtd, num, round2 } from "@/lib/orcamentos";
 import { pick, type Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
+import { confirmar } from "@/components/layout/DialogoGlobal";
 
 type Props = {
   open: boolean;
@@ -135,7 +136,7 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
 
   const pedidosCot = pedidos.filter((p) => String(p["cotacao_id"]) === cid);
   const gerarPedidos = async () => {
-    if (pedidosCot.length && !confirm("Já existem pedidos desta cotação. Gerar novamente substituirá os pedidos em aberto. Continuar?")) return;
+    if (pedidosCot.length && !await confirmar("Já existem pedidos desta cotação. Gerar novamente substituirá os pedidos em aberto. Continuar?")) return;
     setGerando(true);
     try {
       const abertos = pedidosCot.filter((p) => p["status"] !== "enviado" && p["status"] !== "recebido").map((p) => String(p["id"]));
@@ -623,7 +624,7 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
             <Button
               disabled={aprovando || analise.escolhas.length === 0}
               onClick={() => {
-                if (analise.escolhas.length < itensCot.length && !confirm("Alguns itens estão sem preço e ficarão sem custo na oferta. Aprovar mesmo assim?")) return;
+                if (analise.escolhas.length < itensCot.length && !await confirmar("Alguns itens estão sem preço e ficarão sem custo na oferta. Aprovar mesmo assim?")) return;
                 onAprovar(analise.escolhas);
               }}
             >

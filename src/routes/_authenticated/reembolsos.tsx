@@ -29,6 +29,7 @@ import { lerComprovante } from "@/lib/reembolsos.functions";
 import { CATEGORIAS_DESPESA, STATUS_DESPESA, disponivelCartao, resumoDespesas, usoCartaoMes, type StatusDespesa } from "@/lib/reembolsos";
 import type { Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
+import { perguntar } from "@/components/layout/DialogoGlobal";
 
 export const Route = createFileRoute("/_authenticated/reembolsos")({
   staticData: { sitemap: false },
@@ -112,7 +113,7 @@ function Despesas({ lanc, cartoes, usuarios, loading, perms }: { lanc: Row[]; ca
     invalidar();
   };
   const reprovar = async (l: Row) => {
-    const motivo = window.prompt("Motivo da reprovação:");
+    const motivo = await perguntar("Motivo da reprovação:");
     if (motivo === null) return;
     const { error } = await supabase.from("despesas_lancamentos").update({ status: "reprovado", motivo: motivo || null, aprovado_por: usuarioId ?? null, aprovado_em: new Date().toISOString() } as never).eq("id", text(rowId(l)));
     if (error) return void toast.error(erroFinanceiro(error));

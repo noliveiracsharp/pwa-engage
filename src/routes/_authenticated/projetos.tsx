@@ -14,7 +14,7 @@ async function compartilhar(projeto: Row) {
   }
   const url = `${window.location.origin}/compartilhado/${token}`;
   try { await navigator.clipboard.writeText(url); toast.success("Link do cliente copiado!", { description: url }); }
-  catch { window.prompt("Copie o link do cliente:", url); }
+  catch { await perguntar("Copie o link do cliente:", url); }
 }
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -44,6 +44,7 @@ import { usePagePermissions, type Perms } from "@/hooks/usePagePermissions";
 import { ATIVIDADES, atividadePct, periodo, C, doneValue, duplicarAtividade, duplicarTarefa, filterPayload, fmtDate, isDone, nomePessoa, prioridadeClass, progressoCor, resolveCol, sincronizarTarefa, tarefaPct, useCols } from "@/lib/projetos";
 import { ArrowDown, ArrowUp, Copy } from "lucide-react";
 import type { Row } from "@/lib/row";
+import { confirmar, perguntar } from "@/components/layout/DialogoGlobal";
 
 export const Route = createFileRoute("/_authenticated/projetos")({
   staticData: { sitemap: false },
@@ -515,7 +516,7 @@ function Detalhe({ projeto, d, perms, onBack }: { projeto: Row; d: D; perms: Per
   const [ativAberta, setAtivAberta] = useState<{ id: string | null; tarefa: string } | null>(null);
   const atividadeAberta = ativAberta?.id ? ativs.find((a) => String(rowId(a)) === ativAberta.id) ?? null : null;
   async function excluirAtividade(a: Row) {
-    if (!confirm(`Excluir a atividade "${a["nome"]}"?`)) return;
+    if (!await confirmar(`Excluir a atividade "${a["nome"]}"?`)) return;
     const { error } = await supabase.from(ATIVIDADES as never).delete().eq("id", rowId(a) as never);
     if (error) { toast.error(error.message); return; }
     await sincronizarTarefa(String(a["tarefa_id"]), d.tCols);
@@ -587,7 +588,7 @@ function Detalhe({ projeto, d, perms, onBack }: { projeto: Row; d: D; perms: Per
     try { await salvarOrdem(ATIVIDADES, novo); } catch (e) { toast.error((e as Error).message); qc.invalidateQueries({ queryKey: ["table", ATIVIDADES] }); }
   }
   async function excluir(t: Row) {
-    if (!confirm(`Excluir a tarefa "${t[d.tc.nome]}"?`)) return;
+    if (!await confirmar(`Excluir a tarefa "${t[d.tc.nome]}"?`)) return;
     const { error } = await supabase.from("projetos_tarefas").delete().eq(idColumn(t), rowId(t) as never);
     if (error) { toast.error(error.message); return; }
     refresh();

@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/sheet";
 import { pick, type Row } from "@/lib/row";
 import { labelAmigavel, parseCamposCardTipado, type CampoCardTipado } from "@/lib/orcamento-kanban";
+import { confirmar } from "@/components/layout/DialogoGlobal";
 
 const errMsg = (e: unknown, f: string) => {
   const m = e && typeof e === "object" && "message" in e ? String((e as { message: unknown }).message) : "";
@@ -392,7 +393,7 @@ export function KanbanConfigDialog({
       setTransfer(true);
       return;
     }
-    if (confirm("Excluir este quadro e todas as suas etapas?")) delKanban.mutate();
+    if (await confirmar("Excluir este quadro e todas as suas etapas?")) delKanban.mutate();
   };
 
   const toggle = (c: { key: string; tipo: string }, on: boolean) =>
@@ -666,7 +667,7 @@ export function KanbanConfigDialog({
                           title={
                             etapasComCards.has(id) ? "Há cards vinculados a esta etapa" : "Excluir"
                           }
-                          onClick={() => confirm("Excluir esta etapa?") && delEtapa.mutate(id)}
+                          onClick={() => await confirmar("Excluir esta etapa?") && delEtapa.mutate(id)}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>}

@@ -15,6 +15,7 @@ import { filterPayload, useCols } from "@/lib/projetos";
 import { cn } from "@/lib/utils";
 import type { Row } from "@/lib/row";
 import type { Perms } from "@/hooks/usePagePermissions";
+import { confirmar } from "@/components/layout/DialogoGlobal";
 
 export const ESPACOS = "projetos_espacos";
 const PAI = "espaco_pai_id";
@@ -84,7 +85,7 @@ export function EspacosSidebar({ espacos, ativo, onSelect, perms, onMoverProjeto
   async function excluir(e: Row) {
     const id = String(rowId(e));
     if ((filhos.get(id) ?? []).length) { toast.error("Exclua ou mova os subespaços antes."); return; }
-    if (!confirm(`Excluir o espaço "${e["nome"]}"? Os projetos dele ficam sem espaço.`)) return;
+    if (!await confirmar(`Excluir o espaço "${e["nome"]}"? Os projetos dele ficam sem espaço.`)) return;
     await supabase.from("projetos").update({ espaco_id: null } as never).eq("espaco_id", id as never);
     await supabase.from("projetos_status").delete().eq("espaco_id", id as never);
     const { error } = await supabase.from(ESPACOS).delete().eq(idColumn(e), id as never);

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Row } from "@/lib/row";
+import { confirmar } from "@/components/layout/DialogoGlobal";
 
 export const TIPOS_ITEM = [
   { v: "checkbox", l: "Marcar (check)" },
@@ -93,7 +94,7 @@ export function ChecklistTemplates({ empresaId }: { empresaId: unknown }) {
   }
 
   async function excluir(t: Row) {
-    if (!confirm(`Excluir o checklist "${String(t["nome"])}"?`)) return;
+    if (!await confirmar(`Excluir o checklist "${String(t["nome"])}"?`)) return;
     const { error } = await supabase.from("checklists_templates").delete().eq("id", String(t["id"]));
     if (error) { toast.error(error.message); return; }
     qc.invalidateQueries({ queryKey: ["table", "checklists_templates"] });

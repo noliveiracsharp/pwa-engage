@@ -30,6 +30,7 @@ import { SortableList, useSortableRow, salvarOrdem, proximaOrdem } from "@/lib/r
 import { pick, type Row } from "@/lib/row";
 import { isCompletePhone, isValidCpfCnpj } from "@/lib/input-masks";
 import { formatPhoneDisplay } from "@/lib/input-masks";
+import { confirmar } from "@/components/layout/DialogoGlobal";
 
 type EmpresaField = {
   key: string;
@@ -311,7 +312,7 @@ export function ChildTable({ config, empresa, perms = FULL }: { config: ChildCon
   };
 
   const desconectar = async (row: Row) => {
-    if (!window.confirm("Deseja desconectar este WhatsApp?")) return;
+    if (!await confirmar("Deseja desconectar este WhatsApp?")) return;
     const clientToken = text(pick(row, ["client_token"]));
     const token = text(pick(row, ["token"])) || clientToken;
     const r = await desconectarFn({ data: { instanceId: text(pick(row, ["instance_id"])), token, clientToken: clientToken || undefined } });
@@ -416,7 +417,7 @@ export function ChildTable({ config, empresa, perms = FULL }: { config: ChildCon
                     size="icon"
                     aria-label="Remover"
                     onClick={() => {
-                      if (window.confirm("Deseja realmente excluir este registro?")) remove(row);
+                      if (await confirmar("Deseja realmente excluir este registro?")) remove(row);
                     }}
                   >
                     <Trash2 className="h-4 w-4 text-destructive" />

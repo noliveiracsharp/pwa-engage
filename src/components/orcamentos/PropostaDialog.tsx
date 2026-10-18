@@ -29,6 +29,7 @@ import type { Row } from "@/lib/row";
 import { PropostaDocumento } from "./PropostaDocumento";
 import { CapaEstiloEditor } from "./CapaEstiloEditor";
 import { EnviarPropostaDialog } from "./EnviarPropostaDialog";
+import { confirmar, perguntar } from "@/components/layout/DialogoGlobal";
 
 type Props = {
   open: boolean;
@@ -111,7 +112,7 @@ export function PropostaDialog(props: Props) {
   };
 
   const salvarModelo = async (b: Bloco) => {
-    const nome = window.prompt(`Nome do modelo de ${BLOCO_LABEL[b.tipo]}`, b.titulo);
+    const nome = await perguntar(`Nome do modelo de ${BLOCO_LABEL[b.tipo]}`, b.titulo);
     if (!nome) return;
     const { error } = await supabase.from("orcamentos_templates" as never).insert({
       empresa_id: empresaId,
@@ -255,7 +256,7 @@ export function PropostaDialog(props: Props) {
                             size="sm"
                             className="h-8 text-xs"
                             onClick={() => {
-                              if (b.conteudo.trim() && !window.confirm("Substituir o texto atual pelo contrato gerado a partir da oferta?")) return;
+                              if (b.conteudo.trim() && !await confirmar("Substituir o texto atual pelo contrato gerado a partir da oferta?")) return;
                               set(i, {
                                 titulo: "Contrato de prestação de serviços e tecnologia",
                                 conteudo: gerarContratoModular({ ...props, orcamento, anexos: b.anexos ?? ANEXOS_PADRAO }),

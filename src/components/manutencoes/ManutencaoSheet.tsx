@@ -26,6 +26,7 @@ import {
   PRIORIDADES, STATUS, TIPOS, checklistDoModelo, enviarWhatsappEmpresa, linkOs, mensagemOs, prazoSla, proximoNumeroOs, resumoChecklist, uploadAnexo,
   type Anexo, type ItemChecklist,
 } from "@/lib/manutencoes";
+import { confirmar } from "@/components/layout/DialogoGlobal";
 
 export type OsInicial = Partial<{
   tipo: string; prioridade: string; parceiro_id: string; pessoa_id: string; atendimento_id: string; descricao: string;
@@ -102,7 +103,7 @@ export function ManutencaoSheet({ open, onOpenChange, record, inicial, onSaved }
   function aplicarModelo(id: string) {
     setF((s) => ({ ...s, modelo_id: id }));
     const m = modelos.find((x) => text(rowId(x)) === id);
-    if (m && (!checklist.length || confirm("Substituir o checklist atual pelo do modelo?"))) setChecklist(checklistDoModelo(m["itens"]));
+    if (m && (!checklist.length || await confirmar("Substituir o checklist atual pelo do modelo?"))) setChecklist(checklistDoModelo(m["itens"]));
   }
   const setItem = (i: number, p: Partial<ItemChecklist>) => setChecklist((l) => l.map((x, j) => (j === i ? { ...x, ...p } : x)));
 
@@ -182,7 +183,7 @@ export function ManutencaoSheet({ open, onOpenChange, record, inicial, onSaved }
 
   const iniciar = () => { const agora = new Date().toISOString(); setDatas((d) => ({ ...d, iniciado_em: agora })); setF((s) => ({ ...s, status: "em_execucao" })); };
   const concluir = () => {
-    if (resumo.respondidos < resumo.total && !confirm("Há itens do checklist sem resposta. Concluir assim mesmo?")) return;
+    if (resumo.respondidos < resumo.total && !await confirmar("Há itens do checklist sem resposta. Concluir assim mesmo?")) return;
     save.mutate({ status: "concluida", concluido_em: new Date().toISOString(), iniciado_em: datas.iniciado_em ?? new Date().toISOString() });
   };
 

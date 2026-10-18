@@ -30,6 +30,7 @@ function NaturezaBadge({ n }: { n: Natureza }) {
 }
 import { pick, type Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
+import { confirmar } from "@/components/layout/DialogoGlobal";
 
 const NONE = "__none__";
 
@@ -495,7 +496,7 @@ export function OrcamentoLinhas({
   };
 
   const excluirAmbiente = (bloco: string, rows: Linha[]) => {
-    if (rows.length > 0 && !window.confirm(`Excluir o ambiente "${bloco}"? Os ${rows.length} item(ns) irão para "Itens gerais".`)) return;
+    if (rows.length > 0 && !await confirmar(`Excluir o ambiente "${bloco}"? Os ${rows.length} item(ns) irão para "Itens gerais".`)) return;
     for (const l of rows) onChange(l.key, { bloco: "" });
     setBlocosVazios((prev) => prev.filter((b) => b !== bloco));
   };

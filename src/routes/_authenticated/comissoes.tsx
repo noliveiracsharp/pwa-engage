@@ -21,6 +21,7 @@ import { matchesAny } from "@/lib/input-masks";
 import { formatBRL, formatDate, formatPct, num, parcelasFromValue, round2 } from "@/lib/orcamentos";
 import type { Natureza } from "@/lib/orcamentos";
 import { pick, type Row } from "@/lib/row";
+import { confirmar } from "@/components/layout/DialogoGlobal";
 
 export const Route = createFileRoute("/_authenticated/comissoes")({
   staticData: { sitemap: false },
@@ -103,7 +104,7 @@ function Extrato({ canUpdate, canDelete }: { canUpdate: boolean; canDelete: bool
   const pagar = async (r: Row) => {
     const c = calc(r);
     if (c.disponivel <= 0) return;
-    if (!window.confirm(`Registrar pagamento de ${formatBRL(c.disponivel)}?`)) return;
+    if (!await confirmar(`Registrar pagamento de ${formatBRL(c.disponivel)}?`)) return;
     const novoPago = round2(c.pago + c.disponivel);
     const status = novoPago >= c.valor ? "paga" : "a_pagar";
     const { error } = await supabase
@@ -116,7 +117,7 @@ function Extrato({ canUpdate, canDelete }: { canUpdate: boolean; canDelete: bool
   };
 
   const excluir = async (r: Row) => {
-    if (!window.confirm("Excluir este registro de comissão?")) return;
+    if (!await confirmar("Excluir este registro de comissão?")) return;
     const { error } = await supabase.from("orcamento_comissoes").delete().eq("id", text(rowId(r)));
     if (error) return void toast.error(error.message);
     toast.success("Comissão excluída.");
@@ -197,7 +198,7 @@ function Extrato({ canUpdate, canDelete }: { canUpdate: boolean; canDelete: bool
 
   const pagarLote = async (g: { nome: string; itens: Row[]; disponivel: number }) => {
     if (g.disponivel <= 0) return;
-    if (!window.confirm(`Registrar pagamento de ${formatBRL(g.disponivel)} para ${g.nome}?`)) return;
+    if (!await confirmar(`Registrar pagamento de ${formatBRL(g.disponivel)} para ${g.nome}?`)) return;
     const hoje = new Date().toISOString().slice(0, 10);
     for (const r of g.itens) {
       const c = calc(r);

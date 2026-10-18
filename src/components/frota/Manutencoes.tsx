@@ -25,6 +25,7 @@ type ItemCk = { descricao: string; ok?: boolean };
 
 const brl = (v: unknown) => Number(v ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 import { num as numDec } from "@/lib/orcamentos";
+import { confirmar } from "@/components/layout/DialogoGlobal";
 /** KM e dias são inteiros: aceita "10.000" ou "10000". Valores decimais usam numDec. */
 const num = (v: unknown) => (v === "" || v == null ? null : Number(String(v).replace(/\D/g, "")) || null);
 const fmtD = (v: unknown) => (v ? new Date(`${String(v).slice(0, 10)}T00:00:00`).toLocaleDateString("pt-BR") : "—");
@@ -309,7 +310,7 @@ function ModelosSheet({ modelos, perms, onClose }: { modelos: Row[]; perms: Perm
     setEdit(null);
   };
   const excluir = async (m: Row) => {
-    if (!confirm(`Excluir o checklist "${String(m["nome"])}"?`)) return;
+    if (!await confirmar(`Excluir o checklist "${String(m["nome"])}"?`)) return;
     const { error } = await supabase.from("frota_checklist_modelos").delete().eq("id", String(rowId(m)));
     if (error) return void toast.error(error.message);
     qc.invalidateQueries({ queryKey: ["table", "frota_checklist_modelos"] });

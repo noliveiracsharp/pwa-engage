@@ -13,6 +13,7 @@ import { useAudit } from "@/lib/audit";
 import { C, filterPayload, resolveCol, useCols } from "@/lib/projetos";
 import type { Row } from "@/lib/row";
 import type { Perms } from "@/hooks/usePagePermissions";
+import { confirmar } from "@/components/layout/DialogoGlobal";
 
 const T = "projetos_status";
 export const TIPOS_STATUS = [
@@ -63,7 +64,7 @@ export function StatusDialog({ open, onOpenChange, perms, projetos, espacoId, es
     if (projetos.some((p) => String(p[projStatusC] ?? "") === id)) {
       toast.error("Há projetos neste status. Mova-os antes de excluir."); return;
     }
-    if (!confirm(`Excluir o status "${r[nomeC]}"?`)) return;
+    if (!await confirmar(`Excluir o status "${r[nomeC]}"?`)) return;
     if (fail((await supabase.from(T).delete().eq(idColumn(r), rowId(r) as never)).error)) return;
     refresh();
   }

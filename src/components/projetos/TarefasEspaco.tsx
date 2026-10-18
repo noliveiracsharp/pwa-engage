@@ -20,6 +20,7 @@ import { useAudit } from "@/lib/audit";
 import { ATIVIDADES, atividadePct, filterPayload, fmtDate, prioridadeClass, progressoCor, sincronizarTarefa, tarefaPct } from "@/lib/projetos";
 import type { Row } from "@/lib/row";
 import type { Perms } from "@/hooks/usePagePermissions";
+import { confirmar } from "@/components/layout/DialogoGlobal";
 
 type Cols = { projeto: string; nome: string; resp: string; ini: string; fim: string; prio: string; done: string };
 
@@ -77,7 +78,7 @@ export function TarefasEspaco({ espacoId, espacos, projetos, tarefas, atividades
     refresh();
   }
   async function excluir(t: Row) {
-    if (!confirm(`Excluir a tarefa "${t[tc.nome]}"?`)) return;
+    if (!await confirmar(`Excluir a tarefa "${t[tc.nome]}"?`)) return;
     const { error } = await supabase.from("projetos_tarefas").delete().eq(idColumn(t), rowId(t) as never);
     if (error) { toast.error(error.message); return; }
     refresh();

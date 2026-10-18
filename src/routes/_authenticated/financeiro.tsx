@@ -59,6 +59,7 @@ import type { Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
 import { Bar, CartesianGrid, ComposedChart, Line, XAxis, YAxis } from "recharts";
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
+import { confirmar } from "@/components/layout/DialogoGlobal";
 
 export const Route = createFileRoute("/_authenticated/financeiro")({
   staticData: { sitemap: false },
@@ -144,7 +145,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
 
   const baixarFatura = async () => {
     const total = round2(faturaAberta.reduce((s, t) => s + num(t["valor"]), 0));
-    if (!window.confirm(`Baixar ${faturaAberta.length} parcela(s) da fatura, total ${formatBRL(total)}?`)) return;
+    if (!await confirmar(`Baixar ${faturaAberta.length} parcela(s) da fatura, total ${formatBRL(total)}?`)) return;
     for (const t of faturaAberta) {
       const { error } = await supabase.from("financeiro_titulos").update({
         status: "pago", pago_em: hoje, valor_pago: num(t["valor"]), juros: 0, desconto: 0, forma_pagamento: "Cartão de crédito",
@@ -155,7 +156,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
   };
 
   const estornar = async (t: Row) => {
-    if (!window.confirm("Estornar a baixa deste título?")) return;
+    if (!await confirmar("Estornar a baixa deste título?")) return;
     const { error } = await supabase.from("financeiro_titulos")
       .update({ status: "aberto", pago_em: null, valor_pago: null, juros: 0, desconto: 0 } as never).eq("id", text(rowId(t)));
     if (error) return void toast.error(erroFinanceiro(error));
@@ -421,7 +422,7 @@ function TituloSheet({ tipo, registro, parceiros, cartoes, readOnly, onClose, on
     if (valor <= 0) return void toast.error(itensModo ? "Informe o valor de pelo menos um item." : "Informe o valor.");
     if (cartaoModo && !cartao) return void toast.error("Escolha o cartão utilizado.");
     if (cartaoModo && !previa.length) return void toast.error("Informe o dia de fechamento e de vencimento do cartão.");
-    if (cartaoModo && limiteCartao > 0 && valor > dispCartao && !window.confirm(`Esta compra (${formatBRL(valor)}) passa do limite disponível do cartão (${formatBRL(dispCartao)}). Lançar mesmo assim?`)) return;
+    if (cartaoModo && limiteCartao > 0 && valor > dispCartao && !await confirmar(`Esta compra (${formatBRL(valor)}) passa do limite disponível do cartão (${formatBRL(dispCartao)}). Lançar mesmo assim?`)) return;
     if (temSerie && !alcance) { setEscopo("atual"); setConfirmarSerie(true); return; }
     setSalvando(true);
     try {

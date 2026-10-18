@@ -29,6 +29,7 @@ import { useAudit } from "@/lib/audit";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { labelAmigavel, normalizarColunas } from "@/lib/orcamento-kanban";
 import { pick, type Row } from "@/lib/row";
+import { confirmar } from "@/components/layout/DialogoGlobal";
 
 export const Route = createFileRoute("/_authenticated/relatorios")({
   staticData: { sitemap: false },
@@ -191,7 +192,7 @@ function Lista({
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => window.confirm("Excluir este relatório?") && del.mutate(r)}
+                        onClick={() => await confirmar("Excluir este relatório?") && del.mutate(r)}
                       >
                         <Trash2 className="mr-1 h-4 w-4 text-destructive" />
                         Excluir

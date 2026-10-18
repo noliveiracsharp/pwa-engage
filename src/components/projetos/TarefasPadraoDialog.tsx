@@ -15,6 +15,7 @@ import { filterPayload, PRIORIDADES, prioridadeClass, useCols } from "@/lib/proj
 import type { Row } from "@/lib/row";
 import type { Perms } from "@/hooks/usePagePermissions";
 import { SortableList, proximaOrdem, salvarOrdem, useSortableRow } from "@/lib/reorder";
+import { confirmar } from "@/components/layout/DialogoGlobal";
 
 export const TAREFAS_PADRAO = "projetos_tarefas_default";
 const VAZIO = { nome: "", descricao: "", prioridade: "Normal", estimativa: "1" };
@@ -85,7 +86,7 @@ export function TemplateTarefas({ templateId, perms }: { templateId: string; per
   }
 
   async function excluir(r: Row) {
-    if (!confirm(`Excluir a tarefa padrão "${r["nome"]}"?`)) return;
+    if (!await confirmar(`Excluir a tarefa padrão "${r["nome"]}"?`)) return;
     const { error } = await supabase.from(TAREFAS_PADRAO).delete().eq(idColumn(r), rowId(r) as never);
     if (error) { toast.error(error.message); return; }
     refresh();
