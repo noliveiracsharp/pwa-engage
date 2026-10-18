@@ -2,7 +2,10 @@ import { periodoMesVigente } from "@/lib/utils";
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Paperclip, QrCode, Undo2 } from "lucide-react";
+import { CheckCircle2, Paperclip, Plus, QrCode, Undo2 } from "lucide-react";
+import { ParceiroSheet } from "@/components/parceiros/ParceiroSheet";
+import { buildTree } from "@/lib/hierarchy";
+import { formatCpfCnpj } from "@/lib/input-masks";
 import { ContasBancarias } from "@/components/financeiro/ContasBancarias";
 import { ControllerPainel } from "@/components/financeiro/ControllerPainel";
 import { CategoriasDialog, useCategoriasFinanceiro } from "@/components/financeiro/CategoriasFinanceiro";
@@ -318,6 +321,7 @@ function TituloSheet({ tipo, registro, parceiros, cartoes, readOnly, onClose, on
   }), [centros, v.centro_custo_id]);
   const contaOpts = contas.map((c) => ({ value: text(rowId(c)), label: text(c["descricao"]) || text(c["banco"]) || "—" }));
   const [salvando, setSalvando] = useState(false);
+  const qc = useQueryClient();
   const [novoParc, setNovoParc] = useState(false);
   const [salvandoParc, setSalvandoParc] = useState(false);
   const { stamp } = useAudit();
@@ -331,7 +335,6 @@ function TituloSheet({ tipo, registro, parceiros, cartoes, readOnly, onClose, on
     if (data) setV((s) => ({ ...s, parceiro_id: text((data as Row)["id"]) }));
     setNovoParc(false); toast.success(`${tipo === "receber" ? "Cliente" : "Fornecedor"} cadastrado.`);
   };
-  const qc = useQueryClient();
   const opcoes = parceiros
     .filter((p) => (tipo === "receber" ? p["is_cliente"] !== false : p["is_fornecedor"] === true) || text(rowId(p)) === v.parceiro_id)
     .map((p) => ({ value: text(rowId(p)), label: text(p["nome_fantasia"] || p["razao_social"]) || "—",
@@ -383,6 +386,8 @@ function TituloSheet({ tipo, registro, parceiros, cartoes, readOnly, onClose, on
   };
 
   return (
+    <>
+    <ParceiroSheet open={novoParc} onOpenChange={setNovoParc} record={null} parceiros={parceiros} readOnly={false} saving={salvandoParc} onSave={(vals) => void criarParceiro(vals)} />
     <Sheet open onOpenChange={(o) => !o && onClose()}>
       <SheetContent side="right" className="flex flex-col gap-0 p-0">
         <SheetHeader className="border-b p-4">
@@ -488,6 +493,7 @@ function TituloSheet({ tipo, registro, parceiros, cartoes, readOnly, onClose, on
         </div>
       </SheetContent>
     </Sheet>
+    </>
   );
 }
 
