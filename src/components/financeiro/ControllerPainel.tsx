@@ -9,7 +9,6 @@ import { useTableRows, rowId, text } from "@/lib/crud";
 import { formatBRL, num } from "@/lib/orcamentos";
 import { diagnosticar, type NivelAlerta } from "@/lib/controller";
 import { parecerController } from "@/lib/controller.functions";
-import { IaConfigDialog } from "./IaConfigDialog";
 import { supabase } from "@/integrations/supabase/client";
 import type { Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
@@ -79,7 +78,6 @@ export function ControllerPainel({ titulos }: { titulos: Row[] }) {
             onChange={(e) => { setSaldo(e.target.value); localStorage.setItem(SALDO_KEY, e.target.value); }} />
         </div>
         <div className="flex gap-2 print:hidden">
-          <IaConfigDialog />
           <Button variant="outline" onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" />Relatório gerencial</Button>
           <Button onClick={pedirParecer} disabled={carregando}>
             {carregando ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <BrainCircuit className="mr-2 h-4 w-4" />}
