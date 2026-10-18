@@ -247,7 +247,7 @@ export function DocumentoEditor({ open, onOpenChange, doc, canEdit }: EditorProp
           </div>
         </div>
         <DialogFooter className="shrink-0 border-t px-6 py-4">
-          <Button variant="ghost" className="mr-auto gap-1" onClick={() => imprimirDocumento(v.titulo ?? "", v.conteudo ?? "")}>
+          <Button variant="ghost" className="mr-auto gap-1" onClick={() => imprimirDocumento(v.titulo ?? "", [v.conteudo ?? "", carimboAssinatura(v as Row)].filter(Boolean).join("\n\n"))}>
             <Printer className="size-4" /> Imprimir / PDF
           </Button>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
@@ -342,6 +342,7 @@ export function DocumentosPainel({ entidadeTipo, entidadeId, entidadeNome, regis
                   {d.dt_vencimento ? <> · vence <VencimentoInfo data={d.dt_vencimento} /></> : null}
                 </div>
               </button>
+              {d.exige_assinatura_digital && <ShieldCheck className={cn("size-4", d.assinado_em ? "text-success" : "text-muted-foreground")} aria-label="Assinatura eletrônica" />}
               {d.anexo_url && <Paperclip className="text-success size-4" aria-label="Via assinada anexada" />}
               <StatusDocBadge status={d.status} />
               <Button size="icon" variant="ghost" onClick={() => excluir(d)} aria-label="Excluir"><Trash2 className="size-4" /></Button>
