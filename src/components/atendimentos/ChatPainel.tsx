@@ -256,7 +256,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
     await enviarConvite(`${video ? "📹" : "📞"} ${quem} iniciou uma chamada ${video ? "de vídeo" : "de áudio"}. Toque no link para entrar:\n${link}`);
   }
 
-  async function enviarConvite(conteudo: string) {
+  async function enviarConvite(conteudo: string, ok = "Convite da chamada enviado ao cliente") {
     // Convite sempre vai para o cliente, mesmo se o modo nota interna estiver ligado.
     const payload: Row = {
       atendimento_id: id, mensagem: conteudo, conteudo, texto: conteudo, tipo: "texto", msg_interna: false,
@@ -268,7 +268,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
     try {
       await dispararMensagem({ instancia, mensagemId: mid, atendimentoId: id, telefone: telefonePessoa(pessoa), texto: conteudo });
       await marcarEnvio(mid, "enviado");
-      toast.success("Convite da chamada enviado ao cliente");
+      toast.success(ok);
     } catch (e) {
       await marcarEnvio(mid, "falha");
       toast.error(`Convite salvo, mas o envio falhou: ${(e as Error).message}`);
@@ -283,7 +283,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
   }
   async function enviarPortal() {
     const primeiro = nome.split(" ")[0] || "";
-    await enviarConvite(`Olá${primeiro ? ` ${primeiro}` : ""}! Você pode acompanhar este atendimento e todo o seu histórico pelo link:\n${linkPortal()}`);
+    await enviarConvite(`Olá${primeiro ? ` ${primeiro}` : ""}! Você pode acompanhar este atendimento e todo o seu histórico pelo link:\n${linkPortal()}`, "Link do Portal enviado ao cliente");
   }
 
   function encerrarChamada() {
