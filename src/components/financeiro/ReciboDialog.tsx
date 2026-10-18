@@ -16,7 +16,7 @@ import type { Row } from "@/lib/row";
 
 const db = supabase as any;
 
-export function ReciboDialog({ tipo, titulo, parceiro, onClose }: { tipo: "pagar" | "receber"; titulo: Row; parceiro?: Row; onClose: () => void }) {
+export function ReciboDialog({ tipo, titulo, parceiro, onClose }: { tipo: "pagar" | "receber"; titulo: Row; parceiro?: Row | undefined; onClose: () => void }) {
   const { empresa, usuario } = useAuth() as { empresa: Row | null; usuario: Row | null };
   const { stamp } = useAudit();
   const [link, setLink] = useState<string | null>(null);
