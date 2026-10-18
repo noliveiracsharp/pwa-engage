@@ -285,3 +285,31 @@ export function fluxoPeriodo(titulos: Row[], opts: { de: string; ate: string; mo
   }
   return out;
 }
+
+/** Limite usado no cartão: soma das parcelas em aberto (não pagas/canceladas) lançadas nele. */
+export function limiteUsadoCartao(titulos: Row[], cartaoId: string): number {
+  return round2(titulos.reduce((s, t) => {
+    const st = String(t["status"] ?? "aberto");
+    return String(t["cartao_id"] ?? "") === cartaoId && st !== "pago" && st !== "cancelado" ? s + num(t["valor"]) : s;
+  }, 0));
+}
+
+/** Limite disponível = limite total − usado; nunca negativo. */
+export function limiteDisponivelCartao(limite: unknown, usado: number): number {
+  return round2(Math.max(0, num(limite) - num(usado)));
+}
+
+/** Melhor dia de compra: o dia seguinte ao fechamento da fatura (31 volta para 1). */
+export function melhorDiaCompra(diaFechamento: number): number {
+  const d = Math.floor(num(diaFechamento));
+  if (d < 1 || d > 31) return 0;
+  return d >= 31 ? 1 : d + 1;
+}
+
+export type ItemCartao = { descricao: string; categoria: string; valor: number; parcelas: number };
+
+/** Gera as parcelas de cada item de uma compra no cartão, cada item com sua quantidade de parcelas. */
+export function parcelasItensCartao(itens: ItemCartao[], opts: { dataCompra: string; diaFechamento: number; diaVencimento: number }) {
+  return itens.flatMap((it) => parcelasCartao({ valor: it.valor, parcelas: it.parcelas, ...opts })
+    .map((p, i, arr) => ({ ...p, item: it, n: i + 1, total: arr.length })));
+}
