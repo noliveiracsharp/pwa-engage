@@ -395,11 +395,21 @@ function TituloSheet({ tipo, registro, parceiros, cartoes, readOnly, onClose, on
       keywords: [text(p["razao_social"]), text(p["nome_fantasia"]), text(p["documento"]), text(p["documento"]).replace(/\D/g, "")] }));
   const cartaoModo = !registro && v.modo === "cartao";
   const cartao = cartoes.find((c) => text(rowId(c)) === v.cartao_id);
-  const previa = registro ? [] : cartaoModo
-    ? (cartao && cartao["dia_fechamento"] && cartao["dia_vencimento"]
-      ? parcelasCartao({ valor: num(v.valor), parcelas: num(v.repetir), dataCompra: v.vencimento, diaFechamento: num(cartao["dia_fechamento"]), diaVencimento: num(cartao["dia_vencimento"]) })
-      : [])
+  const [porItem, setPorItem] = useState(false);
+  const [itens, setItens] = useState<{ descricao: string; categoria: string; valor: string; parcelas: string }[]>([{ descricao: "", categoria: "", valor: "", parcelas: "1" }]);
+  const itensModo = cartaoModo && porItem;
+  const cartaoOk = !!(cartao && cartao["dia_fechamento"] && cartao["dia_vencimento"]);
+  const optsCartao = { dataCompra: v.vencimento, diaFechamento: num(cartao?.["dia_fechamento"]), diaVencimento: num(cartao?.["dia_vencimento"]) };
+  const previa: { vencimento: string; valor: number; descricao?: string; categoria?: string; rotulo?: string }[] = registro ? [] : cartaoModo
+    ? (!cartaoOk ? [] : itensModo
+      ? parcelasItensCartao(itens.filter((i) => num(i.valor) > 0).map((i) => ({ descricao: i.descricao.trim() || v.descricao.trim(), categoria: i.categoria, valor: num(i.valor), parcelas: num(i.parcelas) || 1 })), optsCartao)
+        .map((p) => ({ vencimento: p.vencimento, valor: p.valor, descricao: p.total > 1 ? `${p.item.descricao} (${p.n}/${p.total})` : p.item.descricao, categoria: p.item.categoria, rotulo: `${p.item.descricao} ${p.n}/${p.total}` }))
+      : parcelasCartao({ valor: num(v.valor), parcelas: num(v.repetir), ...optsCartao }))
     : parcelasManuais({ modo: v.modo as ModoLancamento, valor: num(v.valor), quantidade: num(v.repetir), primeira: v.vencimento });
+  const totalItens = round2(itens.reduce((s, i) => s + num(i.valor), 0));
+  const usadoCartao = cartao ? limiteUsadoCartao(titulosCartao, text(rowId(cartao))) : 0;
+  const limiteCartao = num(cartao?.["limite_total"]) || num(cartao?.["limite_mensal"]);
+  const dispCartao = limiteDisponivelCartao(limiteCartao, usadoCartao);
   const papel = tipo === "receber" ? "cliente" : "fornecedor";
 
   const salvar = async (alcance?: EscopoRecorrencia) => {
