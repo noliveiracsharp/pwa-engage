@@ -3,7 +3,8 @@ import { periodoPreset, type Periodo } from "@/lib/periodo-vencimento";
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Paperclip, Plus, QrCode, Trash2, Undo2 } from "lucide-react";
+import { CheckCircle2, Paperclip, Plus, QrCode, Receipt, Trash2, Undo2 } from "lucide-react";
+import { ReciboDialog } from "@/components/financeiro/ReciboDialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ParceiroSheet } from "@/components/parceiros/ParceiroSheet";
 import { buildTree } from "@/lib/hierarchy";
@@ -163,10 +164,33 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
     if (error) return void toast.error(erroFinanceiro(error));
     toast.success("Baixa estornada."); invalidar();
   };
+  const [clonar, setClonar] = useState<Row | null>(null);
+  const [recibo, setRecibo] = useState<Row | null>(null);
+  const [excluirSerie, setExcluirSerie] = useState<Row | null>(null);
+  const ehSerie = (t: Row) => t["origem_tipo"] === "manual" && (!!t["origem_id"] || !!serieLegada(t));
   const excluir = async (t: Row) => {
+    if (ehSerie(t)) return void setExcluirSerie(t);
     const { error } = await supabase.from("financeiro_titulos").delete().eq("id", text(rowId(t)));
     if (error) return void toast.error(erroFinanceiro(error));
     toast.success("Título excluído."); invalidar();
+  };
+  const excluirAlcance = async (alcance: "atual" | "seguintes" | "todas") => {
+    const t = excluirSerie; if (!t) return;
+    setExcluirSerie(null);
+    let ids = [text(rowId(t))];
+    if (alcance !== "atual") {
+      let q = supabase.from("financeiro_titulos").select("*").eq("origem_tipo", "manual").eq("tipo", tipo).eq("empresa_id", text(t["empresa_id"]));
+      q = t["origem_id"] ? q.eq("origem_id", text(t["origem_id"])) : q.is("origem_id", null);
+      const { data, error } = await q;
+      if (error) return void toast.error(erroFinanceiro(error));
+      let irmas = (data ?? []) as Row[];
+      if (!t["origem_id"]) irmas = parcelasLegadas(t, irmas);
+      if (alcance === "seguintes") irmas = irmas.filter((x) => text(x["vencimento"]) >= text(t["vencimento"]) && x["status"] !== "pago");
+      ids = [...new Set([text(rowId(t)), ...irmas.map((x) => text(rowId(x)))])];
+    }
+    const { error } = await supabase.from("financeiro_titulos").delete().in("id", ids);
+    if (error) return void toast.error(erroFinanceiro(error));
+    toast.success(`${ids.length} parcela(s) excluída(s).`); invalidar();
   };
 
   const selecionados = rows.filter((t) => sel.has(text(rowId(t))));
@@ -230,6 +254,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
           {perms.canUpdate && s === "pago" && (
             <Button variant="ghost" size="icon" title="Estornar baixa" aria-label="Estornar baixa" onClick={() => estornar(t)}><Undo2 className="h-4 w-4" /></Button>
           )}
+          <Button variant="ghost" size="icon" title="Emitir recibo" aria-label="Emitir recibo" onClick={() => setRecibo(t)}><Receipt className="h-4 w-4" /></Button>
         </div>
       );
     } },
@@ -300,6 +325,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
         rowKey={(r, i) => text(rowId(r)) || String(i)}
         onAdd={perms.canCreate ? () => setEditar(null) : undefined}
         onEdit={(r) => setEditar(r)}
+        onDuplicate={perms.canCreate ? (r) => setClonar(r) : undefined}
         editReadOnly={!perms.canUpdate}
         onDelete={perms.canDelete ? excluir : undefined}
         filters={
@@ -331,6 +357,23 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
         <TituloSheet tipo={tipo} registro={editar} parceiros={parceiros} cartoes={cartoes} readOnly={!!editar && !perms.canUpdate}
           onClose={() => setEditar(undefined)} onSaved={invalidar} />
       )}
+      {clonar && (
+        <TituloSheet tipo={tipo} registro={null} modelo={clonar} parceiros={parceiros} cartoes={cartoes} readOnly={false}
+          onClose={() => setClonar(null)} onSaved={invalidar} />
+      )}
+      {recibo && <ReciboDialog tipo={tipo} titulo={recibo} parceiro={parceiroById.get(text(recibo["parceiro_id"]))} onClose={() => setRecibo(null)} />}
+      <Dialog open={!!excluirSerie} onOpenChange={(o) => !o && setExcluirSerie(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Excluir parcela</DialogTitle></DialogHeader>
+          <p className="text-sm">"{text(excluirSerie?.["descricao"])}" faz parte de uma série. O que deseja excluir?</p>
+          <div className="grid gap-2">
+            <Button variant="outline" onClick={() => void excluirAlcance("atual")}>Apenas esta parcela</Button>
+            <Button variant="outline" onClick={() => void excluirAlcance("seguintes")}>Esta e as seguintes em aberto</Button>
+            <Button variant="destructive" onClick={() => void excluirAlcance("todas")}>Todas as parcelas da série</Button>
+          </div>
+          <DialogFooter><Button variant="ghost" onClick={() => setExcluirSerie(null)}>Cancelar</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
       {cobrar && <CobrancaDialog titulo={cobrar} parceiro={parceiroById.get(text(cobrar["parceiro_id"]))} onClose={() => setCobrar(null)} onSaved={invalidar} />}
       {baixar && <BaixaDialog tipo={tipo} titulo={baixar} onClose={() => setBaixar(null)} onSaved={invalidar} />}
     </div>
@@ -339,29 +382,30 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
 
 type ModoForm = ModoLancamento | "cartao";
 
-function TituloSheet({ tipo, registro, parceiros, cartoes, readOnly, onClose, onSaved }: {
-  tipo: TipoTitulo; registro: Row | null; parceiros: Row[]; cartoes: Row[]; readOnly: boolean; onClose: () => void; onSaved: () => void;
+function TituloSheet({ tipo, registro, modelo, parceiros, cartoes, readOnly, onClose, onSaved }: {
+  tipo: TipoTitulo; registro: Row | null; modelo?: Row | null; parceiros: Row[]; cartoes: Row[]; readOnly: boolean; onClose: () => void; onSaved: () => void;
 }) {
   const { isMaster, empresa } = useAuth();
   const { empresaId } = useAudit();
   const categorias = useCategoriasFinanceiro(tipo);
+  const src = registro ?? modelo ?? null;
   const [v, setV] = useState({
-    descricao: text(registro?.["descricao"]),
-    categoria: text(registro?.["categoria"]),
-    parceiro_id: text(registro?.["parceiro_id"]),
-    vencimento: text(registro?.["vencimento"]).slice(0, 10) || hojeISO(),
-    valor: registro ? String(num(registro["valor"])).replace(".", ",") : "",
+    descricao: modelo && !registro ? `${text(modelo["descricao"]).replace(/\s*\(\d+\/\d+\)\s*$/, "")} (cópia)` : text(src?.["descricao"]),
+    categoria: text(src?.["categoria"]),
+    parceiro_id: text(src?.["parceiro_id"]),
+    vencimento: text(src?.["vencimento"]).slice(0, 10) || hojeISO(),
+    valor: src ? String(num(src["valor"])).replace(".", ",") : "",
     repetir: "1",
     modo: "unico" as ModoForm,
-    cartao_id: "",
-    status: text(registro?.["status"]) || "aberto",
-    observacao: text(registro?.["observacao"]),
-    data_competencia: text(registro?.["data_competencia"]).slice(0, 10) || hojeISO(),
-    centro_custo_id: text(registro?.["centro_custo_id"]),
-    codigo_referencia: text(registro?.["codigo_referencia"]),
-    conta_bancaria_id: text(registro?.["conta_bancaria_id"]),
-    forma_pagamento: text(registro?.["forma_pagamento"]),
-    nsu: text(registro?.["nsu"]),
+    cartao_id: modelo && !registro ? text(modelo["cartao_id"]) : "",
+    status: registro ? text(registro["status"]) || "aberto" : "aberto",
+    observacao: text(src?.["observacao"]),
+    data_competencia: text(src?.["data_competencia"]).slice(0, 10) || hojeISO(),
+    centro_custo_id: text(src?.["centro_custo_id"]),
+    codigo_referencia: text(src?.["codigo_referencia"]),
+    conta_bancaria_id: text(src?.["conta_bancaria_id"]),
+    forma_pagamento: text(src?.["forma_pagamento"]),
+    nsu: registro ? text(registro["nsu"]) : "",
     ja_pago: false,
   });
   const { data: centros = [] } = useTableRows("centro_custo");
@@ -527,7 +571,10 @@ function TituloSheet({ tipo, registro, parceiros, cartoes, readOnly, onClose, on
           <div className="space-y-1 sm:col-span-2"><Label>Centro de custo</Label>
             <SearchSelect value={v.centro_custo_id} disabled={readOnly} options={centroOpts} placeholder="Escolha o centro de custo" onChange={(x) => setV({ ...v, centro_custo_id: x })} /></div>
           <div className="space-y-1"><Label>Forma de pagamento</Label>
-            <SearchSelect value={v.forma_pagamento} disabled={readOnly || cartaoModo} options={FORMAS_PAGAMENTO.map((x) => ({ value: x, label: x }))} placeholder="Escolha" onChange={(x) => setV({ ...v, forma_pagamento: x })} /></div>
+            <SearchSelect value={v.forma_pagamento} disabled={readOnly || cartaoModo} options={FORMAS_PAGAMENTO.map((x) => ({ value: x, label: x }))} placeholder="Escolha" onChange={(x) => setV({
+              ...v, forma_pagamento: x,
+              ...(!registro && tipo === "pagar" && /cart[ãa]o de cr[ée]dito/i.test(x) ? { modo: "cartao" as ModoForm, repetir: v.repetir === "1" ? "1" : v.repetir } : {}),
+            })} /></div>
           <div className="space-y-1"><Label>{tipo === "receber" ? "Conta de recebimento" : "Conta de pagamento"}</Label>
             <SearchSelect value={v.conta_bancaria_id} disabled={readOnly} options={contaOpts} placeholder="Escolha a conta" onChange={(x) => setV({ ...v, conta_bancaria_id: x })} /></div>
           {tipo === "receber" && (
