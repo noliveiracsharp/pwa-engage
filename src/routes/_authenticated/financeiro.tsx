@@ -12,6 +12,7 @@ import { SearchSelect } from "@/components/data-table/SearchSelect";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -28,7 +29,10 @@ import { formatBRL, formatDate, num, round2 } from "@/lib/orcamentos";
 import { uploadFoto } from "@/lib/laudos";
 import { erroFinanceiro } from "@/lib/financeiro-db";
 import {
-  caixaPorMes,
+  fluxoPeriodo,
+  periodoVisao,
+  type ModoCaixa,
+  type VisaoCaixa,
   CATEGORIAS_FINANCEIRO,
   FORMAS_PAGAMENTO,
   hojeISO,
@@ -44,6 +48,8 @@ import {
 } from "@/lib/financeiro";
 import type { Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
+import { Bar, CartesianGrid, ComposedChart, Line, XAxis, YAxis } from "recharts";
+import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 
 export const Route = createFileRoute("/_authenticated/financeiro")({
   staticData: { sitemap: false },
@@ -287,7 +293,19 @@ function TituloSheet({ tipo, registro, parceiros, cartoes, readOnly, onClose, on
     cartao_id: "",
     status: text(registro?.["status"]) || "aberto",
     observacao: text(registro?.["observacao"]),
+    data_competencia: text(registro?.["data_competencia"]).slice(0, 10) || hojeISO(),
+    centro_custo_id: text(registro?.["centro_custo_id"]),
+    codigo_referencia: text(registro?.["codigo_referencia"]),
+    conta_bancaria_id: text(registro?.["conta_bancaria_id"]),
+    forma_pagamento: text(registro?.["forma_pagamento"]),
+    nsu: text(registro?.["nsu"]),
+    ja_pago: false,
   });
+  const { data: centros = [] } = useTableRows("centro_custo");
+  const { data: contas = [] } = useTableRows("financeiro_contas_bancarias");
+  const centroOpts = centros.filter((c) => c["status"] !== false || text(rowId(c)) === v.centro_custo_id)
+    .map((c) => ({ value: text(rowId(c)), label: [text(c["codigo"]), text(c["descricao"])].filter(Boolean).join(" — ") || "—" }));
+  const contaOpts = contas.map((c) => ({ value: text(rowId(c)), label: text(c["descricao"]) || text(c["banco"]) || "—" }));
   const [salvando, setSalvando] = useState(false);
   const opcoes = parceiros
     .filter((p) => (tipo === "receber" ? p["is_cliente"] !== false : p["is_fornecedor"] === true) || text(rowId(p)) === v.parceiro_id)
@@ -311,7 +329,10 @@ function TituloSheet({ tipo, registro, parceiros, cartoes, readOnly, onClose, on
     setSalvando(true);
     try {
       const base = { tipo, descricao: v.descricao.trim(), categoria: v.categoria, parceiro_id: v.parceiro_id || null,
-        vencimento: v.vencimento, valor, observacao: v.observacao || null, status: v.status };
+        vencimento: v.vencimento, valor, observacao: v.observacao || null, status: v.status,
+        data_competencia: v.data_competencia || null, centro_custo_id: v.centro_custo_id || null,
+        codigo_referencia: v.codigo_referencia.trim() || null, conta_bancaria_id: v.conta_bancaria_id || null,
+        nsu: v.nsu.trim() || null, ...(v.forma_pagamento ? { forma_pagamento: v.forma_pagamento } : {}) };
       if (registro) {
         const { error } = await supabase.from("financeiro_titulos").update(base as never).eq("id", text(rowId(registro)));
         if (error) throw error;
@@ -323,6 +344,7 @@ function TituloSheet({ tipo, registro, parceiros, cartoes, readOnly, onClose, on
           ...base, ...extra, empresa_id: emp, origem_tipo: "manual", parcela_n: i + 1,
           descricao: n > 1 ? `${base.descricao} (${i + 1}/${n})` : base.descricao,
           vencimento: p.vencimento, valor: p.valor,
+          ...(v.ja_pago && !cartaoModo && i === 0 ? { status: "pago", pago_em: p.vencimento, valor_pago: p.valor } : {}),
         }));
         const { error } = await supabase.from("financeiro_titulos").insert(lote as never);
         if (error) throw error;
@@ -350,8 +372,28 @@ function TituloSheet({ tipo, registro, parceiros, cartoes, readOnly, onClose, on
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>{[...new Set([...CATEGORIAS_FINANCEIRO[tipo], v.categoria].filter(Boolean))].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
             </Select></div>
+          <div className="space-y-1"><Label>Data de competência</Label>
+            <Input type="date" value={v.data_competencia} disabled={readOnly} onChange={(e) => setV({ ...v, data_competencia: e.target.value })} /></div>
+          <div className="space-y-1"><Label>Código de referência</Label>
+            <Input value={v.codigo_referencia} disabled={readOnly} placeholder="Nº da NF, pedido…" onChange={(e) => setV({ ...v, codigo_referencia: e.target.value })} /></div>
+          <div className="space-y-1 sm:col-span-2"><Label>Centro de custo</Label>
+            <SearchSelect value={v.centro_custo_id} disabled={readOnly} options={centroOpts} placeholder="Escolha o centro de custo" onChange={(x) => setV({ ...v, centro_custo_id: x })} /></div>
+          <div className="space-y-1"><Label>Forma de pagamento</Label>
+            <SearchSelect value={v.forma_pagamento} disabled={readOnly || cartaoModo} options={FORMAS_PAGAMENTO.map((x) => ({ value: x, label: x }))} placeholder="Escolha" onChange={(x) => setV({ ...v, forma_pagamento: x })} /></div>
+          <div className="space-y-1"><Label>{tipo === "receber" ? "Conta de recebimento" : "Conta de pagamento"}</Label>
+            <SearchSelect value={v.conta_bancaria_id} disabled={readOnly} options={contaOpts} placeholder="Escolha a conta" onChange={(x) => setV({ ...v, conta_bancaria_id: x })} /></div>
+          {tipo === "receber" && (
+            <div className="space-y-1"><Label>NSU / autorização do cartão</Label>
+              <Input value={v.nsu} disabled={readOnly} placeholder="Opcional" onChange={(e) => setV({ ...v, nsu: e.target.value })} /></div>
+          )}
+          {!registro && !cartaoModo && (
+            <div className="flex items-center gap-2 sm:col-span-2">
+              <Switch checked={v.ja_pago} onCheckedChange={(x) => setV({ ...v, ja_pago: x })} />
+              <Label>{tipo === "receber" ? "Já recebido" : "Já pago"}{v.modo !== "unico" ? " (baixa só a 1ª parcela)" : ""}</Label>
+            </div>
+          )}
           {!registro && (
-            <div className="space-y-1 sm:col-span-2"><Label>Tipo de lançamento</Label>
+            <div className="space-y-1 sm:col-span-2"><Label>Repetir lançamento</Label>
               <Select value={v.modo} onValueChange={(x) => setV({ ...v, modo: x as ModoForm, repetir: x === "unico" ? "1" : v.repetir === "1" ? (x === "cartao" ? "3" : "12") : v.repetir })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -474,47 +516,94 @@ const nomeMes = (k: string) => {
 
 function Caixa({ titulos }: { titulos: Row[] }) {
   const [saldoInicial, setSaldoInicial] = useState("");
-  const meses = caixaPorMes(titulos);
-  let acum = num(saldoInicial);
-  const linhas = meses.map((m) => {
-    const saldo = round2(m.entradas + m.entradasPrev - m.saidas - m.saidasPrev);
-    acum = round2(acum + saldo);
-    return { ...m, saldo, acum };
-  });
+  const [visao, setVisao] = useState<VisaoCaixa>("6m");
+  const [modo, setModo] = useState<ModoCaixa>("ambos");
+  const [custom, setCustom] = useState(() => periodoVisao("6m"));
+  const periodo = visao === "personalizado" ? custom : periodoVisao(visao);
+  const linhas = fluxoPeriodo(titulos, { ...periodo, modo, saldoInicial: num(saldoInicial) });
+  const tot = linhas.reduce((a, l) => ({ e: a.e + l.entradas, s: a.s + l.saidas }), { e: 0, s: 0 });
+  const dados = linhas.map((l) => ({ ...l, nome: nomeMes(l.mes) }));
+  const config = {
+    entradas: { label: "Entradas", color: "var(--success)" },
+    saidas: { label: "Saídas", color: "var(--destructive)" },
+    acumulado: { label: "Saldo acumulado", color: "var(--primary)" },
+  } satisfies ChartConfig;
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end gap-3">
+        <div className="space-y-1"><Label>Visão</Label>
+          <Select value={visao} onValueChange={(x) => setVisao(x as VisaoCaixa)}>
+            <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="mes">Mês atual</SelectItem>
+              <SelectItem value="6m">6 meses</SelectItem>
+              <SelectItem value="12m">12 meses</SelectItem>
+              <SelectItem value="personalizado">Personalizado</SelectItem>
+            </SelectContent>
+          </Select></div>
+        {visao === "personalizado" && (
+          <>
+            <div className="space-y-1"><Label>Data início</Label><Input type="date" value={custom.de} onChange={(e) => setCustom({ ...custom, de: e.target.value })} /></div>
+            <div className="space-y-1"><Label>Data fim</Label><Input type="date" value={custom.ate} onChange={(e) => setCustom({ ...custom, ate: e.target.value })} /></div>
+          </>
+        )}
+        <div className="space-y-1"><Label>Mostrar</Label>
+          <Select value={modo} onValueChange={(x) => setModo(x as ModoCaixa)}>
+            <SelectTrigger className="w-52"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="previsto">Previsto</SelectItem>
+              <SelectItem value="realizado">Realizado</SelectItem>
+              <SelectItem value="ambos">Previsto e realizado</SelectItem>
+            </SelectContent>
+          </Select></div>
         <div className="space-y-1"><Label>Saldo inicial (R$)</Label>
-          <Input className="w-48" inputMode="decimal" value={saldoInicial} onChange={(e) => setSaldoInicial(e.target.value)} placeholder="0,00" /></div>
-        <p className="text-muted-foreground text-xs">Realizado = baixas pela data do pagamento. Previsto = contas em aberto pelo vencimento.</p>
+          <Input className="w-40" inputMode="decimal" value={saldoInicial} onChange={(e) => setSaldoInicial(e.target.value)} placeholder="0,00" /></div>
+      </div>
+      <p className="text-muted-foreground text-xs">Realizado = baixas pela data do pagamento. Previsto = contas em aberto pelo vencimento.</p>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className="bg-card rounded-lg border p-3"><p className="text-muted-foreground text-xs">Entradas</p><p className="text-success text-lg font-semibold tabular-nums">{formatBRL(tot.e)}</p></div>
+        <div className="bg-card rounded-lg border p-3"><p className="text-muted-foreground text-xs">Saídas</p><p className="text-destructive text-lg font-semibold tabular-nums">{formatBRL(tot.s)}</p></div>
+        <div className="bg-card rounded-lg border p-3"><p className="text-muted-foreground text-xs">Saldo final</p><p className={cn("text-lg font-semibold tabular-nums", (linhas.at(-1)?.acumulado ?? 0) < 0 && "text-destructive")}>{formatBRL(linhas.at(-1)?.acumulado ?? 0)}</p></div>
       </div>
       {linhas.length === 0 ? (
-        <p className="text-muted-foreground text-sm">Nenhuma conta lançada ainda.</p>
+        <p className="text-muted-foreground text-sm">Informe um período válido.</p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50">
-              <tr className="text-left">
-                {["Mês", "Entradas realizadas", "Entradas previstas", "Saídas realizadas", "Saídas previstas", "Saldo do mês", "Acumulado"].map((h) => (
-                  <th key={h} className="px-3 py-2 font-medium">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {linhas.map((l) => (
-                <tr key={l.mes} className={cn("border-t", l.acum < 0 && "bg-destructive/10")}>
-                  <td className="px-3 py-2 font-medium capitalize">{nomeMes(l.mes)}</td>
-                  <td className="text-success px-3 py-2 tabular-nums">{formatBRL(l.entradas)}</td>
-                  <td className="text-muted-foreground px-3 py-2 tabular-nums">{formatBRL(l.entradasPrev)}</td>
-                  <td className="text-destructive px-3 py-2 tabular-nums">{formatBRL(l.saidas)}</td>
-                  <td className="text-muted-foreground px-3 py-2 tabular-nums">{formatBRL(l.saidasPrev)}</td>
-                  <td className={cn("px-3 py-2 font-semibold tabular-nums", l.saldo < 0 && "text-destructive")}>{formatBRL(l.saldo)}</td>
-                  <td className={cn("px-3 py-2 font-semibold tabular-nums", l.acum < 0 && "text-destructive")}>{formatBRL(l.acum)}</td>
+        <>
+          <div className="bg-card rounded-lg border p-3">
+            <ChartContainer config={config} className="h-72 w-full">
+              <ComposedChart data={dados}>
+                <CartesianGrid vertical={false} />
+                <XAxis dataKey="nome" tickLine={false} axisLine={false} />
+                <YAxis tickLine={false} axisLine={false} width={80} tickFormatter={(v: number) => formatBRL(v).replace(/,\d{2}$/, "")} />
+                <ChartTooltip content={<ChartTooltipContent formatter={(v, n) => <span className="flex w-full justify-between gap-3"><span>{config[n as keyof typeof config]?.label}</span><span className="font-mono tabular-nums">{formatBRL(Number(v))}</span></span>} />} />
+                <ChartLegend content={<ChartLegendContent />} />
+                <Bar dataKey="entradas" fill="var(--color-entradas)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="saidas" fill="var(--color-saidas)" radius={[4, 4, 0, 0]} />
+                <Line dataKey="acumulado" type="monotone" stroke="var(--color-acumulado)" strokeWidth={2} dot={{ r: 3 }} />
+              </ComposedChart>
+            </ChartContainer>
+          </div>
+          <div className="overflow-x-auto rounded-lg border">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50">
+                <tr className="text-left">
+                  {["Mês", "Entradas", "Saídas", "Saldo do mês", "Acumulado"].map((h) => <th key={h} className="px-3 py-2 font-medium">{h}</th>)}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {linhas.map((l) => (
+                  <tr key={l.mes} className={cn("border-t", l.acumulado < 0 && "bg-destructive/10")}>
+                    <td className="px-3 py-2 font-medium capitalize">{nomeMes(l.mes)}</td>
+                    <td className="text-success px-3 py-2 tabular-nums">{formatBRL(l.entradas)}</td>
+                    <td className="text-destructive px-3 py-2 tabular-nums">{formatBRL(l.saidas)}</td>
+                    <td className={cn("px-3 py-2 font-semibold tabular-nums", l.saldo < 0 && "text-destructive")}>{formatBRL(l.saldo)}</td>
+                    <td className={cn("px-3 py-2 font-semibold tabular-nums", l.acumulado < 0 && "text-destructive")}>{formatBRL(l.acumulado)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );
