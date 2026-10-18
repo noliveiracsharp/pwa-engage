@@ -391,6 +391,7 @@ function TituloSheet({ tipo, registro, parceiros, cartoes, readOnly, onClose, on
         const n = previa.length;
         const emp = isMaster && empresa ? rowId(empresa) : empresaId;
         const extra = cartaoModo ? { cartao_id: v.cartao_id, forma_pagamento: "Cartão de crédito", data_compra: v.vencimento } : {};
+        const serieId = n > 1 ? crypto.randomUUID() : null;
         const lote = previa.map((p, i) => ({
           ...base, ...extra, empresa_id: emp, origem_tipo: "manual", origem_id: serieId, parcela_n: i + 1,
           descricao: n > 1 ? `${base.descricao} (${i + 1}/${n})` : base.descricao,
@@ -510,10 +511,32 @@ function TituloSheet({ tipo, registro, parceiros, cartoes, readOnly, onClose, on
         </div>
         <div className="flex justify-end gap-2 border-t p-4">
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          {!readOnly && <Button disabled={salvando} onClick={salvar}>{salvando ? "Salvando…" : "Salvar"}</Button>}
+          {!readOnly && <Button disabled={salvando} onClick={() => void salvar()}>{salvando ? "Salvando…" : "Salvar"}</Button>}
         </div>
       </SheetContent>
     </Sheet>
+    <Dialog open={confirmarSerie} onOpenChange={(o) => !salvando && setConfirmarSerie(o)}>
+      <DialogContent className="sm:max-w-2xl" aria-describedby="recorrencia-descricao">
+        <DialogHeader><DialogTitle>Edição de lançamento recorrente</DialogTitle></DialogHeader>
+        <p id="recorrencia-descricao" className="text-sm">As alterações neste lançamento devem ser refletidas:</p>
+        <div role="radiogroup" aria-label="Alcance das alterações" className="space-y-4 py-2">
+          {([
+            ["atual", "Somente o lançamento atual"],
+            ["nao_vencidos", "Lançamento atual e todos os não vencidos que não possuam baixas"],
+            ["abertos", "Lançamento atual e todos os em aberto (vencidos + a vencer) que não possuam baixas"],
+            ["todos", "Todos os lançamentos"],
+          ] as const).map(([valor, label]) => <label key={valor} className="flex cursor-pointer items-start gap-3 text-sm">
+            <input type="radio" name="escopo-recorrencia" value={valor} checked={escopo === valor} disabled={salvando} onChange={() => setEscopo(valor)} className="mt-0.5 h-4 w-4 shrink-0 accent-primary" />
+            <span>{label}</span>
+          </label>)}
+        </div>
+        {escopo === "todos" && <p className="text-sm text-warning">Inclui pagos, recebidos e cancelados. Valores e datas das baixas já registradas serão preservados.</p>}
+        <DialogFooter>
+          <Button variant="outline" disabled={salvando} onClick={() => setConfirmarSerie(false)}>Cancelar</Button>
+          <Button disabled={salvando} onClick={() => void salvar(escopo)}>{salvando ? "Salvando…" : "Confirmar"}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
     </>
   );
 }
