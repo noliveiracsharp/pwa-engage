@@ -9,6 +9,7 @@ import { ParceiroSheet } from "@/components/parceiros/ParceiroSheet";
 import { buildTree } from "@/lib/hierarchy";
 import { formatCpfCnpj } from "@/lib/input-masks";
 import { ContasBancarias } from "@/components/financeiro/ContasBancarias";
+import { CartoesCredito } from "@/components/financeiro/CartoesCredito";
 import { ControllerPainel } from "@/components/financeiro/ControllerPainel";
 import { CategoriasDialog, useCategoriasFinanceiro } from "@/components/financeiro/CategoriasFinanceiro";
 import { CobrancaDialog } from "@/components/financeiro/CobrancaDialog";
@@ -94,7 +95,7 @@ function FinanceiroPage() {
       <TabsContent value="pagar"><Titulos tipo="pagar" todos={titulos} loading={isLoading} perms={perms} /></TabsContent>
       <TabsContent value="caixa"><Caixa titulos={titulos} /></TabsContent>
       <TabsContent value="controller"><ControllerPainel titulos={titulos} /></TabsContent>
-      <TabsContent value="bancos"><ContasBancarias perms={perms} /></TabsContent>
+      <TabsContent value="bancos" className="space-y-8"><ContasBancarias perms={perms} /><CartoesCredito perms={perms} /></TabsContent>
     </Tabs>
   );
 }
