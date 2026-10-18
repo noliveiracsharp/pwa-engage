@@ -16,6 +16,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UploadInfo } from "@/components/ui/upload-info";
 import { supabase } from "@/integrations/supabase/client";
+import { abrirArquivo, enviarPrivado, urlAssinada, useUrlAssinada } from "@/lib/arquivos-privados";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { useAudit } from "@/lib/audit";
 import { rowId, text, useTableRows } from "@/lib/crud";
@@ -148,7 +149,7 @@ function Despesas({ lanc, cartoes, usuarios, loading, perms }: { lanc: Row[]; ca
     } },
     { key: "acoes", header: "", fields: [], render: (l) => (
       <div className="flex justify-end gap-1">
-        {l["comprovante"] ? <Button variant="ghost" size="icon" asChild title="Comprovante"><a href={text(l["comprovante"])} target="_blank" rel="noreferrer"><Paperclip className="h-4 w-4" /></a></Button> : null}
+        {l["comprovante"] ? <Button variant="ghost" size="icon" asChild title="Comprovante"><button type="button" onClick={() => abrirArquivo(text(l["comprovante"])).catch((e) => toast.error(e.message))}><Paperclip className="h-4 w-4" /></button></Button> : null}
         {gestor && l["status"] === "pendente" && (
           <>
             <Button variant="ghost" size="icon" title="Aprovar" aria-label="Aprovar" onClick={() => aprovar(l)}><Check className="text-success h-4 w-4" /></Button>
@@ -232,17 +233,16 @@ function DespesaSheet({ registro, cartoes, lanc, readOnly, onClose, onSaved }: {
   const usado = cartaoSel ? usoCartaoMes(lanc.filter((l) => !registro || rowId(l) !== rowId(registro)), v.cartao_id, v.data.slice(0, 7)) : 0;
   const disponivel = cartaoSel ? disponivelCartao(cartaoSel["limite_mensal"], usado) : 0;
 
+  const previaComprovante = useUrlAssinada(v.comprovante);
+
   const enviar = async (original: File) => {
     setLendo(true);
     try {
       const pdf = original.type === "application/pdf";
       const file = pdf ? original : await comprimirImagem(original, "laudo");
-      const ext = file.name.split(".").pop()?.toLowerCase() || (pdf ? "pdf" : "jpg");
-      const path = `reembolsos/${crypto.randomUUID()}.${ext}`;
-      const { error } = await supabase.storage.from("chat_media").upload(path, file, { upsert: false, contentType: file.type || "application/octet-stream" });
-      if (error) throw error;
-      const url = supabase.storage.from("chat_media").getPublicUrl(path).data.publicUrl;
-      setV((s) => ({ ...s, comprovante: url }));
+      const ref = await enviarPrivado(file, "reembolsos");
+      const url = await urlAssinada(ref);
+      setV((s) => ({ ...s, comprovante: ref }));
       toast.info("Lendo o comprovante…");
       const r = await ler({ data: { url, pdf } });
       if (r.erro) return void toast.warning(r.erro);
@@ -299,8 +299,8 @@ function DespesaSheet({ registro, cartoes, lanc, readOnly, onClose, onSaved }: {
                 </Button>
               )}
               {v.comprovante && (/\.pdf$/i.test(v.comprovante)
-                ? <a href={v.comprovante} target="_blank" rel="noreferrer" className="text-primary text-sm underline">Abrir PDF</a>
-                : <img src={v.comprovante} alt="Comprovante" data-zoom className="h-24 rounded border object-cover" />)}
+                ? <button type="button" onClick={() => abrirArquivo(v.comprovante).catch((e) => toast.error(e.message))} className="text-primary text-sm underline">Abrir PDF</button>
+                : <img src={previaComprovante} alt="Comprovante" data-zoom className="h-24 rounded border object-cover" />)}
             </div>
           </div>
           <div className="space-y-1"><Label>Valor (R$) *</Label>
