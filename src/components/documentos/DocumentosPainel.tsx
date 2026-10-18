@@ -229,7 +229,7 @@ export function DocumentoEditor({ open, onOpenChange, doc, canEdit }: EditorProp
             <Label>Via assinada</Label>
             <div className="flex flex-wrap items-center gap-2">
               {v.anexo_url && (
-                <button type="button" onClick={() => abrirArquivo(v.anexo_url).catch((e) => toast.error(e.message))} className="text-primary flex items-center gap-1 text-sm underline">
+                <button type="button" onClick={() => abrirArquivo(v.anexo_url ?? "").catch((e) => toast.error(e.message))} className="text-primary flex items-center gap-1 text-sm underline">
                   <Paperclip className="size-4" /> Abrir anexo
                 </button>
               )}
