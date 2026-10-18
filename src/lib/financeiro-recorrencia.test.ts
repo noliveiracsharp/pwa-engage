@@ -12,10 +12,10 @@ const titulos = [atual,
   { ...atual, id: "8", origem_id: "s2" },
 ];
 describe("edição recorrente", () => {
-  it("somente o lançamento atual", () => expect(alvosRecorrencia(atual, titulos, "atual", "2026-10-18").map(t => t.id)).toEqual(["1"]));
-  it("atual e não vencidos sem baixas, incluindo hoje", () => expect(alvosRecorrencia(atual, titulos, "nao_vencidos", "2026-10-18").map(t => t.id)).toEqual(["1", "2", "3"]));
-  it("atual e todos abertos sem baixas, vencidos ou não", () => expect(alvosRecorrencia(atual, titulos, "abertos", "2026-11-18").map(t => t.id)).toEqual(["1", "2", "3"]));
-  it("todos apenas da mesma série e empresa", () => expect(alvosRecorrencia(atual, titulos, "todos", "2026-10-18").map(t => t.id)).toEqual(["1", "2", "3", "4", "5", "6"]));
+  it("somente o lançamento atual", () => expect(alvosRecorrencia(atual, titulos, "atual", "2026-10-18").map(t => t["id"])).toEqual(["1"]));
+  it("atual e não vencidos sem baixas, incluindo hoje", () => expect(alvosRecorrencia(atual, titulos, "nao_vencidos", "2026-10-18").map(t => t["id"])).toEqual(["1", "2", "3"]));
+  it("atual e todos abertos sem baixas, vencidos ou não", () => expect(alvosRecorrencia(atual, titulos, "abertos", "2026-11-18").map(t => t["id"])).toEqual(["1", "2", "3"]));
+  it("todos apenas da mesma série e empresa", () => expect(alvosRecorrencia(atual, titulos, "todos", "2026-10-18").map(t => t["id"])).toEqual(["1", "2", "3", "4", "5", "6"]));
   it("não agrupa antigos sem identificador", () => expect(alvosRecorrencia({ ...atual, origem_id: null }, [{ ...atual, origem_id: null }, { ...atual, id: "2", origem_id: null }], "todos", "2026-10-18")).toHaveLength(1));
   it("preserva datas distintas e valores de baixa", () => {
     expect(patchRecorrencia({ ...atual, valor: 100 }, { ...atual, id: "2", vencimento: "2026-11-10", status: "pago", valor_pago: 100 }, { vencimento: "2026-10-12", valor: 120, status: "cancelado" })).toEqual({ vencimento: "2026-11-12", valor: 120 });
