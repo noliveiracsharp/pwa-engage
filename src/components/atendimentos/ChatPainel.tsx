@@ -10,7 +10,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-  ArrowLeft, Bot, Check, CheckCheck, FileText, Hand, Lock, MoreVertical, MoveRight, Paperclip, PanelRightClose, PanelRightOpen, Send, Smile, CheckCircle2, Loader2, Trash2, Users, Video, Phone, Wrench,
+  ArrowLeft, Bot, Link2, Check, CheckCheck, FileText, Hand, Lock, MoreVertical, MoveRight, Paperclip, PanelRightClose, PanelRightOpen, Send, Smile, CheckCircle2, Loader2, Trash2, Users, Video, Phone, Wrench,
 } from "lucide-react";
 import { ChamadaFlutuante, duracao, linkConvite, novaSala, type Chamada } from "./ChamadaFlutuante";
 import {
@@ -276,6 +276,16 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
     qc.invalidateQueries({ queryKey: ["table", "atendimentos_mensagem"] });
   }
 
+  const linkPortal = () => `${window.location.origin}/portal?tel=${encodeURIComponent(telefonePessoa(pessoa).replace(/\D/g, ""))}`;
+  async function copiarPortal() {
+    await navigator.clipboard.writeText(linkPortal());
+    toast.success("Link do Portal do Cliente copiado");
+  }
+  async function enviarPortal() {
+    const primeiro = nome.split(" ")[0] || "";
+    await enviarConvite(`Olá${primeiro ? ` ${primeiro}` : ""}! Você pode acompanhar este atendimento e todo o seu histórico pelo link:\n${linkPortal()}`);
+  }
+
   function encerrarChamada() {
     if (!chamada) return;
     const c = chamada;
@@ -428,6 +438,8 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
             <Button variant="ghost" size="icon" aria-label="Mais ações" title="Mais ações"><MoreVertical className="h-5 w-5" /></Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem onSelect={() => void enviarPortal()} disabled={!telefonePessoa(pessoa)}><Send className="mr-2 h-4 w-4" /> Enviar link do Portal</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => void copiarPortal()} disabled={!telefonePessoa(pessoa)}><Link2 className="mr-2 h-4 w-4" /> Copiar link do Portal</DropdownMenuItem>
             <DropdownMenuItem onSelect={() => setMoverAberto(true)}><MoveRight className="mr-2 h-4 w-4" /> Mover etapa</DropdownMenuItem>
             <DropdownMenuItem onSelect={() => setOsAberta(true)}><Wrench className="mr-2 h-4 w-4" /> Abrir ordem de manutenção</DropdownMenuItem>
             {!encerrado && !ia && (

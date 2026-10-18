@@ -66,8 +66,17 @@ function Login({ onEntrar }: { onEntrar: (c: Cliente) => void }) {
   const [tel, setTel] = useState("");
   const [erro, setErro] = useState("");
   const [carregando, setCarregando] = useState(false);
+  // Link enviado pelo atendente: /portal?tel=11999999999 já entra direto.
+  useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get("tel");
+    if (t) { setTel(t); void entrarCom(t); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   async function enviar(e: React.FormEvent) {
     e.preventDefault();
+    await entrarCom(tel);
+  }
+  async function entrarCom(tel: string) {
     setErro("");
     if (tel.replace(/\D/g, "").length < 10) { setErro("Informe o telefone com DDD."); return; }
     setCarregando(true);
