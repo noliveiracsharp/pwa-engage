@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Download, Maximize2, Minimize2, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { FilterSelect } from "@/components/data-table/FilterField";
+import { FilterBar, FilterSelect } from "@/components/data-table/FilterField";
 import { SituacaoBadge } from "@/components/orcamentos/SituacaoBadge";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { useAudit } from "@/lib/audit";
@@ -213,7 +213,7 @@ function DreOfertasPage() {
         />
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5 print:hidden">
+      <FilterBar className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5 print:hidden">
         <FilterSelect label="Escopo" value={f.escopo} onChange={(v) => setF({ ...f, escopo: v })}
           options={ESCOPOS} />
         <FilterSelect label="Ano" value={f.ano} onChange={(v) => setF({ ...f, ano: v })}
@@ -224,7 +224,7 @@ function DreOfertasPage() {
           options={[{ value: "todos", label: "Todas" }, ...etapas.map((e) => ({ value: e.descricao, label: e.descricao }))]} />
         <FilterSelect label="Vendedor" value={f.vendedor} onChange={(v) => setF({ ...f, vendedor: v })}
           options={[{ value: "todos", label: "Todos" }, ...vendedores.map((id) => ({ value: id, label: nome(usuarios, id) }))]} />
-      </div>
+      </FilterBar>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <Kpi titulo="Receita líquida" valor={formatBRL(tot.liquido)} sub={`Ticket médio ${formatBRL(tot.ticketMedio)}`} />
