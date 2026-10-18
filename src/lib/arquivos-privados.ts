@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 /** Bucket privado: arquivos só abrem por link temporário assinado. */
@@ -55,4 +56,17 @@ export async function abrirArquivo(ref: string): Promise<void> {
     aba?.close();
     throw e;
   }
+}
+
+/** Link exibível (imagem/miniatura) para uma referência privada ou URL antiga. */
+export function useUrlAssinada(ref: string | null | undefined): string | undefined {
+  const [url, setUrl] = useState<string | undefined>(ref && !ehPrivado(ref) ? ref : undefined);
+  useEffect(() => {
+    let vivo = true;
+    if (!ref) { setUrl(undefined); return; }
+    if (!ehPrivado(ref)) { setUrl(ref); return; }
+    urlAssinada(ref).then((u) => vivo && setUrl(u)).catch(() => vivo && setUrl(undefined));
+    return () => { vivo = false; };
+  }, [ref]);
+  return url;
 }

@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FilePlus2, FileText, Link2, Paperclip, Printer, Send, ShieldCheck, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { abrirArquivo, enviarPrivado } from "@/lib/arquivos-privados";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -117,11 +118,7 @@ export function DocumentoEditor({ open, onOpenChange, doc, canEdit }: EditorProp
   async function anexar(file: File) {
     setEnviando(true);
     try {
-      const ext = file.name.split(".").pop()?.toLowerCase() || "pdf";
-      const path = `documentos/${crypto.randomUUID()}.${ext}`;
-      const { error } = await supabase.storage.from("chat_media").upload(path, file, { contentType: file.type || "application/octet-stream" });
-      if (error) throw error;
-      const url = supabase.storage.from("chat_media").getPublicUrl(path).data.publicUrl;
+      const url = await enviarPrivado(file, "documentos");
       setV((p) => ({ ...p, anexo_url: url, status: "assinado", dt_assinatura: p.dt_assinatura || new Date().toISOString().slice(0, 10) }));
     } catch (e: any) {
       toast.error("Falha ao enviar arquivo", { description: e?.message });
@@ -232,9 +229,9 @@ export function DocumentoEditor({ open, onOpenChange, doc, canEdit }: EditorProp
             <Label>Via assinada</Label>
             <div className="flex flex-wrap items-center gap-2">
               {v.anexo_url && (
-                <a href={v.anexo_url} target="_blank" rel="noreferrer" className="text-primary flex items-center gap-1 text-sm underline">
+                <button type="button" onClick={() => abrirArquivo(v.anexo_url).catch((e) => toast.error(e.message))} className="text-primary flex items-center gap-1 text-sm underline">
                   <Paperclip className="size-4" /> Abrir anexo
-                </a>
+                </button>
               )}
               {!ro && (
                 <Input type="file" accept="application/pdf,image/*" className="max-w-xs" disabled={enviando}
