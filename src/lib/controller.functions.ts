@@ -40,7 +40,7 @@ export const parecerController = createServerFn({ method: "POST" })
     if (!a.permitido) {
       if (a.motivo === "cota") return { texto: "", erro: `Limite de ${a.cota} pareceres no mês atingido. Contrate o módulo Controller com IA ou use sua própria chave.` };
       if (a.motivo === "sem_empresa") return { texto: "", erro: "Usuário sem empresa vinculada." };
-      return { texto: "", erro: "O Parecer do Controller está nos planos Pro e Enterprise, no módulo Controller com IA ou com sua própria chave em Configurações da IA." };
+      return { texto: "", erro: "O Parecer do Controller está nos planos Pro e Enterprise, no módulo Controller com IA ou com a chave própria da empresa em Empresas → Inteligência Artificial." };
     }
 
     const { streamText } = await import("ai");
@@ -83,7 +83,7 @@ export const parecerController = createServerFn({ method: "POST" })
     } catch (e) {
       const status = (e as { statusCode?: number }).statusCode;
       console.error("parecerController", e);
-      if (a.origem === "propria" && (status === 401 || status === 403)) return { texto: "", erro: "A chave de IA da empresa foi recusada pelo provedor. Confira em Configurações da IA." };
+      if (a.origem === "propria" && (status === 401 || status === 403)) return { texto: "", erro: "A chave de IA da empresa foi recusada pelo provedor. Confira em Empresas → Inteligência Artificial." };
       if (status === 402) return { texto: "", erro: "Créditos de IA esgotados. Tente novamente mais tarde." };
       if (status === 429) return { texto: "", erro: "Muitas solicitações. Tente novamente em instantes." };
       return { texto: "", erro: "Não foi possível gerar o parecer agora." };
