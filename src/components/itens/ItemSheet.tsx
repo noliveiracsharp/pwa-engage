@@ -334,7 +334,7 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, duplic
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-[85vw] lg:max-w-3xl">
+      <SheetContent className="w-full overflow-y-auto pb-0 sm:max-w-[85vw] lg:max-w-3xl">
         <SheetHeader className="px-6 pb-4">
           <SheetTitle>{duplicando ? "Duplicar item" : record ? "Editar item" : "Novo item"}</SheetTitle>
         </SheetHeader>
@@ -557,7 +557,7 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, duplic
           </div>
         </fieldset>
 
-        <div className="bg-background sticky bottom-0 mt-4 flex justify-end gap-2 px-6 py-4">
+        <div className="bg-background sticky bottom-0 z-10 mt-4 flex justify-end gap-2 border-t px-6 py-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
