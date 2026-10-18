@@ -20,6 +20,7 @@ const linkCls =
 const activeCls = "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary";
 
 function isActive(item: MenuItem, pathname: string): boolean {
+  if (!item.path) return false;
   return (
     pathname === item.path ||
     pathname.startsWith(item.path + "/") ||

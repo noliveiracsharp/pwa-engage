@@ -46,7 +46,7 @@ function normalize(row: Row, index: number): MenuItem {
   return {
     id: String(pick(row, ["funcao_id", "menu_id", "funcoes_id", "id"], `menu-${index}`)),
     label: String(pick(row, ["funcao_descricao", "descricao", "nome", "label"], "Menu")),
-    path: String(pick(row, ["path", "funcao_path", "rota", "url"], "/dashboard")),
+    path: String(pick(row, ["path", "funcao_path", "rota", "url"], "")),
     icon: String(pick(row, ["icone", "funcao_icone", "icon"], "circle")),
     order: Number(pick(row, ["ordem_hierarquia", "funcao_ordem", "ordem", "order"], index + 1)),
   };
