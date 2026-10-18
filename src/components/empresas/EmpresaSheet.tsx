@@ -8,6 +8,7 @@ import { WidgetChatDialog } from "@/components/empresas/WidgetChatDialog";
 import { configurarWebhookZapi, desconectarWhatsApp } from "@/lib/zapi.functions";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { DocumentosButton } from "@/components/documentos/DocumentosPainel";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -657,7 +658,14 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full overflow-y-auto pb-0 sm:max-w-2xl">
         <SheetHeader className="px-4 pb-4">
-          <SheetTitle>{title}</SheetTitle>
+          <div className="flex items-center gap-2 pr-8">
+            <SheetTitle>{title}</SheetTitle>
+            {empresa && rowId(empresa) !== undefined && (
+              <div className="ml-auto">
+                <DocumentosButton entidadeTipo="empresa" entidadeId={String(rowId(empresa))} entidadeNome={String(empresa["razao_social"] ?? empresa["nome"] ?? "")} registro={empresa} />
+              </div>
+            )}
+          </div>
         </SheetHeader>
 
         <Tabs key={tabs[0]!.key} defaultValue={tabs[0]!.key} className="px-4">
