@@ -9,6 +9,8 @@ import { configurarWebhookZapi, desconectarWhatsApp } from "@/lib/zapi.functions
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { DocumentosButton } from "@/components/documentos/DocumentosPainel";
+import { IaConfigPainel } from "@/components/financeiro/IaConfigDialog";
+import { useAudit } from "@/lib/audit";
 import { rowId } from "@/lib/crud";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -574,6 +576,7 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
   const baseTabs = (sections && sections.length > 0 ? sections : DEFAULT_SECTIONS).filter((t) => t.kind !== "instancias");
   const tabs = [...baseTabs.filter((t) => t.kind === "dados"), ...baseTabs.filter((t) => t.kind !== "dados")];
   const [cnpjLoading, setCnpjLoading] = useState(false);
+  const { empresaId: empresaAtivaId } = useAudit();
 
   async function lookupCnpj(value: string) {
     const cnpj = digitsOnly(value);
@@ -674,6 +677,7 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
             {tabs.map((t) => (
               <TabsTrigger key={t.key} value={t.key}>{t.label}</TabsTrigger>
             ))}
+            {empresa && <TabsTrigger value="__ia">Inteligência Artificial</TabsTrigger>}
           </TabsList>
 
           {tabs.map((t) =>
@@ -828,6 +832,15 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
               </TabsContent>
             ),
           )}
+          <TabsContent value="__ia" className="mt-4">
+            {empresa && text(rowId(empresa)) === text(empresaAtivaId) ? (
+              <IaConfigPainel readOnly={dadosLocked} />
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                A configuração de IA vale para a empresa em que você está conectado. Entre nesta empresa para configurá-la.
+              </p>
+            )}
+          </TabsContent>
         </Tabs>
 
         <div className="bg-background sticky bottom-0 z-10 mt-4 flex justify-end gap-2 border-t px-6 py-4">
