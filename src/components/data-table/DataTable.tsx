@@ -145,9 +145,9 @@ export function DataTable({
       </div>
 
       {filters && (
-        <div className="grid gap-3 rounded-lg border border-border bg-card p-3 sm:grid-cols-2 lg:grid-cols-4">
+        <FilterBar className="grid gap-3 rounded-lg border border-border bg-card p-3 sm:grid-cols-2 lg:grid-cols-4">
           {filters}
-        </div>
+        </FilterBar>
       )}
 
       <div className="overflow-x-auto rounded-lg border border-border bg-card">
