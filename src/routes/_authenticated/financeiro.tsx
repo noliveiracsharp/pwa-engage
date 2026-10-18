@@ -206,10 +206,11 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
 
   const pagoLabel = tipo === "receber" ? "Recebido" : "Pago";
   const cards: Array<{ label: string; valor: number; sit: string; cls: string }> = [
+    { label: "Total do período", valor: resumo.total, sit: "todos", cls: "border-l-muted-foreground" },
     { label: "A vencer", valor: resumo.aVencer, sit: "aberto", cls: "border-l-primary" },
     { label: "Vencidos", valor: resumo.vencidos, sit: "atrasado", cls: "border-l-destructive" },
     { label: `${pagoLabel} no mês`, valor: resumo.pagoMes, sit: "pago", cls: "border-l-success" },
-    { label: "Total em aberto", valor: resumo.emAberto, sit: "todos", cls: "border-l-warning" },
+    { label: "Total em aberto", valor: resumo.emAberto, sit: "em_aberto", cls: "border-l-warning" },
   ];
 
   const columns: Column[] = [
@@ -275,10 +276,10 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
         {cards.map((c) => (
-          <button key={c.label} type="button" onClick={() => setF((s) => ({ ...s, situacao: s.situacao === c.sit ? "todos" : c.sit }))}
-            className={cn("bg-card rounded-lg border border-l-4 p-3 text-left transition hover:shadow-sm", c.cls, f.situacao === c.sit && "ring-primary ring-2")}>
+          <button key={c.label} type="button" onClick={() => setF((s) => ({ ...s, situacao: c.sit === "em_aberto" || s.situacao === c.sit ? "todos" : c.sit }))}
+            className={cn("bg-card rounded-lg border border-l-4 p-3 text-left transition hover:shadow-sm", c.cls, f.situacao === c.sit && c.sit !== "todos" && "ring-primary ring-2")}>
             <p className="text-muted-foreground text-xs">{c.label}</p>
             <p className="text-lg font-bold tabular-nums">{formatBRL(c.valor)}</p>
           </button>

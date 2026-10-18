@@ -46,7 +46,7 @@ describe("financeiro", () => {
       { tipo: "pagar", status: "aberto", valor: 50, vencimento: "2026-06-01" },
       { tipo: "pagar", status: "cancelado", valor: 999, vencimento: "2026-06-01" },
     ];
-    expect(resumoTitulos(tit, "2026-05-10")).toEqual({ aVencer: 50, vencidos: 200, pagoMes: 110, emAberto: 250 });
+    expect(resumoTitulos(tit, "2026-05-10")).toEqual({ aVencer: 50, vencidos: 200, pagoMes: 110, emAberto: 250, total: 1349 });
     const c = caixaPorMes(tit);
     expect(c.find((x) => x.mes === "2026-05")?.entradas).toBe(110);
     expect(c.find((x) => x.mes === "2026-06")?.saidasPrev).toBe(50);

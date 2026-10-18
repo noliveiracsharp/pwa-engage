@@ -224,13 +224,13 @@ export function htmlFolhaDocumento(d: Row, empresa: Row | null | undefined, emis
   <div class="dt-emp">${logo ? `<img src="${escHtml(logo)}" alt="${escHtml(nomeEmp)}">` : ""}
     <div><h1>${escHtml(nomeEmp)}</h1>${cnpj ? `<p>CNPJ ${escHtml(cnpj)}</p>` : ""}${fone ? `<p>${escHtml(fone)}</p>` : ""}${end ? `<p>${escHtml(end)}</p>` : ""}</div>
   </div>
-  <div class="dt-num"><div class="dt-tipo">Documento</div>${num ? `<strong>${escHtml(num)}</strong>` : ""}
+  <div class="dt-num"><div class="dt-tipo">${escHtml(tx(d, ["tipo_doc"]) || "Documento")}</div>${num ? `<strong>${escHtml(num)}</strong>` : ""}
     <span class="dt-badge ${badge}">${escHtml(statusDoc(st).label)}</span>
     <div class="dt-datas"><div><span>Emissão</span><b>${dataBR(d["dt_emissao"]) || "—"}</b></div>${venc ? `<div><span>Válido até</span><b>${venc}</b></div>` : ""}</div>
   </div>
 </header>
 <section class="dt-cards">
-  <div class="dt-card"><h2>${escHtml(entidadeLabel(d["entidade_tipo"]) || "Destinatário")}</h2><b>${escHtml(d["entidade_nome"] || "—")}</b></div>
+  <div class="dt-card"><h2>${escHtml(tx(d, ["rotulo_destinatario"]) || entidadeLabel(d["entidade_tipo"]) || "Destinatário")}</h2><b>${escHtml(d["entidade_nome"] || "—")}</b></div>
   <div class="dt-card"><h2>Emissor</h2><b>${escHtml(emNome || nomeEmp)}</b>${tx(emissor, ["email"]) ? `<p>${escHtml(tx(emissor, ["email"]))}</p>` : ""}${tx(emissor, ["telefone", "celular"]) ? `<p>${escHtml(tx(emissor, ["telefone", "celular"]))}</p>` : ""}</div>
 </section>
 <div class="dt-titulo">${escHtml(d["titulo"])}</div>

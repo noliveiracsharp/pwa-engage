@@ -9,7 +9,7 @@ import { useAudit } from "@/lib/audit";
 import { text } from "@/lib/crud";
 import { formatCpfCnpj } from "@/lib/input-masks";
 import { formatBRL, formatDate, num } from "@/lib/orcamentos";
-import { linkAssinaturaDoc, novoTokenDoc } from "@/lib/documentos";
+import { CSS_FOLHA_DOC, htmlFolhaDocumento, linkAssinaturaDoc, novoTokenDoc } from "@/lib/documentos";
 import { valorPorExtenso } from "@/lib/recibo";
 import { imprimirDocumento } from "@/components/documentos/DocumentosPainel";
 import type { Row } from "@/lib/row";
@@ -29,7 +29,9 @@ export function ReciboDialog({ tipo, titulo, parceiro, onClose }: { tipo: "pagar
   const corpo = tipo === "receber"
     ? `Recebemos de ${nomeParc}${docParc} a importância de ${formatBRL(valor)} (${valorPorExtenso(valor)}), referente a ${text(titulo["descricao"])}.\n\nPara clareza, firmamos o presente recibo dando plena quitação do valor acima.\n\nData do pagamento: ${data}`
     : `Eu/Nós, ${nomeParc}${docParc}, declaro(amos) ter recebido de ${nomeEmp} a importância de ${formatBRL(valor)} (${valorPorExtenso(valor)}), referente a ${text(titulo["descricao"])}.\n\nPara clareza, firmo(amos) o presente recibo dando plena quitação do valor acima.\n\nData do pagamento: ${data}`;
+  const extras: Row = { tipo_doc: "Recibo", rotulo_destinatario: tipo === "receber" ? "Pagador" : "Recebedor" };
   const doc: Row = {
+    ...extras,
     titulo: `Recibo — ${text(titulo["descricao"])}`, entidade_tipo: "parceiro", entidade_id: text(titulo["parceiro_id"]),
     entidade_nome: nomeParc, conteudo: corpo, status: "emitido", dt_emissao: new Date().toISOString().slice(0, 10),
   };
@@ -38,7 +40,7 @@ export function ReciboDialog({ tipo, titulo, parceiro, onClose }: { tipo: "pagar
     if (!titulo["parceiro_id"]) return void toast.error("Este lançamento não tem cliente/fornecedor.");
     setSalvando(true);
     const token = novoTokenDoc();
-    const { error } = await db.from("documentos").insert(stamp({ ...doc, status: "enviado", exige_assinatura_digital: true, token_publico: token }, true));
+    const { error } = await db.from("documentos").insert(stamp({ ...Object.fromEntries(Object.entries(doc).filter(([k]) => !(k in extras))), status: "enviado", exige_assinatura_digital: true, token_publico: token }, true));
     setSalvando(false);
     if (error) return void toast.error("Não foi possível gerar o recibo", { description: error.message });
     setLink(linkAssinaturaDoc(window.location.origin, token));
@@ -47,9 +49,14 @@ export function ReciboDialog({ tipo, titulo, parceiro, onClose }: { tipo: "pagar
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="flex max-h-[92vh] max-w-3xl flex-col">
         <DialogHeader><DialogTitle>Recibo</DialogTitle></DialogHeader>
-        <pre className="bg-muted max-h-72 overflow-y-auto whitespace-pre-wrap rounded-lg p-3 font-sans text-sm">{corpo}</pre>
+        <div className="bg-muted/50 min-h-0 flex-1 overflow-y-auto rounded-lg p-3">
+          <article className="rounded-lg border bg-white p-4 text-black shadow-sm md:p-8">
+            <style>{CSS_FOLHA_DOC}</style>
+            <div dangerouslySetInnerHTML={{ __html: htmlFolhaDocumento({ ...doc, numero: `#${String(titulo["id"] ?? "").slice(0, 8).toUpperCase()}` }, empresa, usuario) }} />
+          </article>
+        </div>
         {link && (
           <div className="space-y-2 rounded-lg border p-3">
             <p className="text-sm font-medium">Link de assinatura eletrônica</p>
@@ -61,7 +68,7 @@ export function ReciboDialog({ tipo, titulo, parceiro, onClose }: { tipo: "pagar
           </div>
         )}
         <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={() => imprimirDocumento(doc, empresa, usuario)}><Printer className="mr-1 h-4 w-4" />Imprimir / PDF</Button>
+          <Button variant="outline" onClick={() => imprimirDocumento({ ...doc, numero: `#${String(titulo["id"] ?? "").slice(0, 8).toUpperCase()}` }, empresa, usuario)}><Printer className="mr-1 h-4 w-4" />Imprimir / PDF</Button>
           {!link && <Button disabled={salvando} onClick={() => void assinatura()}><Send className="mr-1 h-4 w-4" />{salvando ? "Gerando…" : "Enviar para assinatura"}</Button>}
         </DialogFooter>
       </DialogContent>

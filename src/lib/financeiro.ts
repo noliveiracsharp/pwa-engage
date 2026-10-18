@@ -157,20 +157,21 @@ export function titulosDoPedido(opts: {
   });
 }
 
-export type ResumoTitulos = { aVencer: number; vencidos: number; pagoMes: number; emAberto: number };
+export type ResumoTitulos = { aVencer: number; vencidos: number; pagoMes: number; emAberto: number; total: number };
 
 /** Cards do topo: em aberto a vencer, vencidos, baixados no mês corrente e total em aberto. */
 export function resumoTitulos(titulos: Row[], hoje = hojeISO()): ResumoTitulos {
   const mes = hoje.slice(0, 7);
-  const r = { aVencer: 0, vencidos: 0, pagoMes: 0, emAberto: 0 };
+  const r = { aVencer: 0, vencidos: 0, pagoMes: 0, emAberto: 0, total: 0 };
   for (const t of titulos) {
     const s = situacaoTitulo(t, hoje);
     const v = num(t["valor"]);
+    r.total += v;
     if (s === "aberto") { r.aVencer += v; r.emAberto += v; }
     else if (s === "atrasado") { r.vencidos += v; r.emAberto += v; }
     else if (s === "pago" && iso(t["pago_em"]).slice(0, 7) === mes) r.pagoMes += num(t["valor_pago"]) || v;
   }
-  return { aVencer: round2(r.aVencer), vencidos: round2(r.vencidos), pagoMes: round2(r.pagoMes), emAberto: round2(r.emAberto) };
+  return { aVencer: round2(r.aVencer), vencidos: round2(r.vencidos), pagoMes: round2(r.pagoMes), emAberto: round2(r.emAberto), total: round2(r.total) };
 }
 
 export type MesCaixa = { mes: string; entradas: number; saidas: number; entradasPrev: number; saidasPrev: number };
