@@ -86,6 +86,7 @@ export function PerfisTab() {
         filters={<FilterInput label="Buscar" value={busca} onChange={setBusca} placeholder="Descrição" />}
       />
       <RecordSheet
+        auditTable="perfil"
         open={open}
         onOpenChange={setOpen}
         title={record ? "Editar perfil" : "Novo perfil"}

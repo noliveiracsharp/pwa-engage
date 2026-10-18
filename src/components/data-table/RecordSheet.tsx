@@ -1,3 +1,5 @@
+import { HistoricoButton } from "@/components/auditoria/HistoricoButton";
+import { rowId } from "@/lib/crud";
 import { useEffect, useState, type ReactNode } from "react";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -46,6 +48,8 @@ type Props = {
   hideDataTab?: boolean | undefined;
   /** Disable saving (no can_update / can_create). */
   readOnly?: boolean;
+  /** Tabela do banco: mostra o botão "Histórico" (auditoria) ao editar. */
+  auditTable?: string | undefined;
 };
 
 export function columnFor(record: Row | null | undefined, fields: string[]) {
@@ -67,6 +71,7 @@ export function RecordSheet({
   dataTabLabel,
   hideDataTab,
   readOnly,
+  auditTable,
 }: Props) {
   const [values, setValues] = useState<Record<string, string>>({});
 
@@ -224,7 +229,12 @@ export function RecordSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-xl">
         <SheetHeader className="shrink-0 border-b px-6 py-4">
-          <SheetTitle>{title}</SheetTitle>
+          <div className="flex items-center gap-2 pr-8">
+            <SheetTitle>{title}</SheetTitle>
+            {auditTable && record && (
+              <div className="ml-auto"><HistoricoButton tabela={auditTable} registroId={rowId(record)} /></div>
+            )}
+          </div>
           {description && <SheetDescription>{description}</SheetDescription>}
         </SheetHeader>
 
