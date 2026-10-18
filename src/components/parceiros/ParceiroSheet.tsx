@@ -22,6 +22,16 @@ import type { Row } from "@/lib/row";
 
 export const PARENT_KEY = "parceiro_pai_id";
 
+export type TipoHierarquia = "independente" | "matriz" | "filial" | "cliente";
+export const TIPOS_HIERARQUIA: { value: TipoHierarquia; label: string; ajuda: string }[] = [
+  { value: "independente", label: "Independente", ajuda: "Cadastro avulso, sem vínculo." },
+  { value: "matriz", label: "Matriz / Administradora", ajuda: "Gestora que tem filiais ou clientes vinculados." },
+  { value: "filial", label: "Filial", ajuda: "Unidade com CNPJ próprio de uma matriz." },
+  { value: "cliente", label: "Cliente vinculado", ajuda: "Ex.: condomínio da administradora ou cliente da portaria." },
+];
+export const tipoHierarquiaLabel = (v: unknown) =>
+  TIPOS_HIERARQUIA.find((t) => t.value === v)?.label ?? "Independente";
+
 /** Rótulo do parceiro na árvore de matriz/filial. */
 export function parceiroLabel(r: Row): string {
   const nome = String(r["razao_social"] ?? r["nome_fantasia"] ?? "—");
@@ -76,6 +86,7 @@ type Form = Record<TextKey, string> & {
   cnaes_secundarios: Cnae[];
   qsa: Socio[];
   parceiro_pai_id: string;
+  tipo_hierarquia: TipoHierarquia;
 };
 
 function arr<T>(v: unknown): T[] {
@@ -97,6 +108,8 @@ function toForm(r: Row | null): Form {
   f.cnaes_secundarios = arr<Cnae>(r?.["cnaes_secundarios"]);
   f.qsa = arr<Socio>(r?.["qsa"]);
   f.parceiro_pai_id = r?.[PARENT_KEY] == null ? "" : String(r[PARENT_KEY]);
+  const th = r?.["tipo_hierarquia"];
+  f.tipo_hierarquia = TIPOS_HIERARQUIA.some((t) => t.value === th) ? (th as TipoHierarquia) : f.parceiro_pai_id ? "filial" : "independente";
   return f;
 }
 
@@ -218,6 +231,8 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly, saving, on
     const doc = digitsOnly(f.documento);
     if (doc && (doc.length !== (pf ? 11 : 14) || !isValidCpfCnpj(doc)))
       { toast.error(pf ? "CPF inválido." : "CNPJ inválido."); return; }
+    const precisaPai = f.tipo_hierarquia === "filial" || f.tipo_hierarquia === "cliente";
+    if (precisaPai && !f.parceiro_pai_id) { toast.error("Escolha a matriz/administradora responsável."); return; }
     const dup = duplicado;
     if (dup) { toast.error(`Este ${pf ? "CPF" : "CNPJ"} já está cadastrado para: ${String(dup["razao_social"] ?? "—")}.`); return; }
     if (!isCompletePhone(f.telefone)) { toast.error("Telefone principal incompleto."); return; }
@@ -232,7 +247,8 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly, saving, on
       opcao_pelo_mei: f.opcao_pelo_mei,
       cnaes_secundarios: f.cnaes_secundarios,
       qsa: f.qsa,
-      [PARENT_KEY]: f.parceiro_pai_id || null,
+      [PARENT_KEY]: precisaPai ? f.parceiro_pai_id : null,
+      tipo_hierarquia: f.tipo_hierarquia,
     };
     for (const k of TEXT_KEYS) values[k] = f[k].trim() || null;
     values["documento"] = doc || null;
@@ -336,21 +352,33 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly, saving, on
                   {field("razao_social", pf ? "Nome Completo" : "Razão Social", "sm:col-span-2")}
                   {!pf && field("nome_fantasia", "Nome Fantasia", "sm:col-span-2")}
                   <div className="sm:col-span-2">
-                    <Label className="mb-1.5 block text-sm font-medium">Parceiro Principal / Matriz</Label>
-                    <Select value={f.parceiro_pai_id || "none"} disabled={readOnly}
-                      onValueChange={(v) => set("parceiro_pai_id", v === "none" ? "" : v)}>
+                    <Label className="mb-1.5 block text-sm font-medium">Tipo na estrutura</Label>
+                    <Select value={f.tipo_hierarquia} disabled={readOnly}
+                      onValueChange={(v) => setF((p) => ({ ...p, tipo_hierarquia: v as TipoHierarquia, parceiro_pai_id: v === "filial" || v === "cliente" ? p.parceiro_pai_id : "" }))}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="none">Nenhum (Matriz / Registro Principal)</SelectItem>
-                        {paiOptions.map(({ row, depth }) => (
-                          <SelectItem key={String(rowId(row))} value={String(rowId(row))}>
-                            {`${"\u00A0\u00A0".repeat(depth)}${depth ? "↳ " : ""}${parceiroLabel(row)}`}
-                          </SelectItem>
-                        ))}
+                        {TIPOS_HIERARQUIA.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
                       </SelectContent>
                     </Select>
-                    <p className="text-muted-foreground mt-1.5 text-xs">Deixe em branco para matriz; escolha uma matriz para cadastrar como filial.</p>
+                    <p className="text-muted-foreground mt-1.5 text-xs">{TIPOS_HIERARQUIA.find((t) => t.value === f.tipo_hierarquia)?.ajuda}</p>
                   </div>
+                  {(f.tipo_hierarquia === "filial" || f.tipo_hierarquia === "cliente") && (
+                    <div className="sm:col-span-2">
+                      <Label className="mb-1.5 block text-sm font-medium">Matriz / Administradora responsável</Label>
+                      <Select value={f.parceiro_pai_id || "none"} disabled={readOnly}
+                        onValueChange={(v) => set("parceiro_pai_id", v === "none" ? "" : v)}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Selecione…</SelectItem>
+                          {paiOptions.map(({ row, depth }) => (
+                            <SelectItem key={String(rowId(row))} value={String(rowId(row))}>
+                              {`${"\u00A0\u00A0".repeat(depth)}${depth ? "↳ " : ""}${parceiroLabel(row)}`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                 </div>
               </div>
 
