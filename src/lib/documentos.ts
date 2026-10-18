@@ -138,3 +138,20 @@ export const MODELOS_PADRAO: ModeloPadrao[] = [
     conteudo: `ENTREGA / DEVOLUÇÃO DE VEÍCULO\n\nVeículo: {{marca}} {{modelo}}  Placa: {{placa}}  Ano: {{ano}}  Renavam: {{renavam}}\nResponsável: ______________________________  Data: {{data_hoje}}\n\nKm: __________  Combustível: [ ] 1/4 [ ] 1/2 [ ] 3/4 [ ] Cheio\nDocumento (CRLV): [ ] Sim [ ] Não   Estepe/macaco/triângulo: [ ] Sim [ ] Não\nAvarias encontradas: _______________________________________\n\n_______________________________\nEntregue por\n\n_______________________________\nRecebido por`,
   },
 ];
+
+/** Token aleatório para o link público de assinatura. */
+export const novoTokenDoc = () => crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "").slice(0, 8);
+
+export const linkAssinaturaDoc = (origin: string, token: string) => `${origin.replace(/\/$/, "")}/doc/${token}`;
+
+/** Selo de autenticidade da assinatura eletrônica (texto anexado ao documento impresso). */
+export function carimboAssinatura(d: Row | null | undefined): string {
+  if (!d || !d["assinado_em"]) return "";
+  const quando = new Date(String(d["assinado_em"])).toLocaleString("pt-BR");
+  return [
+    "ASSINADO ELETRONICAMENTE",
+    `Signatário: ${String(d["assinado_nome"] ?? "")} — CPF/CNPJ ${String(d["assinado_documento"] ?? "")}`,
+    `Data/hora: ${quando} — IP ${String(d["assinado_ip"] ?? "indisponível")}`,
+    `Código de autenticidade (SHA-256): ${String(d["assinado_hash"] ?? "")}`,
+  ].join("\n");
+}
