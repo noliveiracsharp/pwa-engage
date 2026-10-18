@@ -155,3 +155,86 @@ export function carimboAssinatura(d: Row | null | undefined): string {
     `Código de autenticidade (SHA-256): ${String(d["assinado_hash"] ?? "")}`,
   ].join("\n");
 }
+
+/* ---------- Folha timbrada (mesmo padrão visual da Oferta) ---------- */
+const escHtml = (s: unknown) =>
+  String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+const tx = (r: Row | null | undefined, keys: string[]) => {
+  const v = String(pick(r ?? {}, keys) ?? "").trim();
+  return v === "null" || v === "undefined" ? "" : v;
+};
+const dataBR = (v: unknown) => {
+  const s = String(v ?? "").slice(0, 10);
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : "";
+};
+
+/** Endereço da empresa em uma linha. */
+export function enderecoEmpresa(e: Row | null | undefined): string {
+  const rua = [tx(e, ["endereco", "logradouro"]), tx(e, ["numero_endereco", "numero"])].filter(Boolean).join(", ");
+  const local = [tx(e, ["bairro"]), [tx(e, ["cidade", "municipio"]), tx(e, ["uf", "estado"])].filter(Boolean).join("/")].filter(Boolean).join(" - ");
+  const cep = tx(e, ["cep"]);
+  return [rua, local, cep && `CEP ${cep}`].filter(Boolean).join(" - ");
+}
+
+/** CSS da folha timbrada (isolado por prefixo .dt-). */
+export const CSS_FOLHA_DOC = `
+.dt-doc{font:13px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;color:#1e293b;background:#fff}
+.dt-head{display:flex;justify-content:space-between;gap:24px;padding-bottom:18px;border-bottom:3px solid #2f6f8f}
+.dt-emp{display:flex;gap:18px;align-items:flex-start;min-width:0}
+.dt-emp img{max-height:70px;max-width:190px;object-fit:contain}
+.dt-emp h1{margin:0 0 4px;font-size:18px;font-weight:800;color:#1e3a5f;text-transform:uppercase}
+.dt-emp p{margin:0;color:#64748b}
+.dt-num{text-align:right;flex-shrink:0}
+.dt-tipo{letter-spacing:.2em;font-size:11px;color:#64748b;text-transform:uppercase}
+.dt-num strong{display:block;font-size:26px;color:#2f6f8f;font-weight:800}
+.dt-badge{display:inline-block;margin:4px 0 10px;padding:2px 12px;border-radius:999px;font-size:11px;font-weight:700;background:#fde68a;color:#78350f}
+.dt-badge.ok{background:#bbf7d0;color:#14532d}.dt-badge.x{background:#fecaca;color:#7f1d1d}
+.dt-datas{display:flex;gap:22px;justify-content:flex-end}
+.dt-datas span{display:block;font-size:10px;letter-spacing:.15em;color:#64748b;text-transform:uppercase}
+.dt-datas b{font-size:14px}
+.dt-cards{display:grid;grid-template-columns:1.6fr 1fr;gap:16px;margin:20px 0}
+.dt-card{border:1px solid #e2e8f0;background:#f8fafc;border-radius:10px;padding:14px 16px}
+.dt-card h2{margin:0 0 8px;font-size:11px;letter-spacing:.18em;color:#64748b;font-weight:600;text-transform:uppercase}
+.dt-card b{display:block;text-transform:uppercase}
+.dt-card p{margin:0}
+.dt-titulo{background:#1e3a5f;color:#fff;padding:10px 16px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-radius:4px}
+.dt-corpo{white-space:pre-wrap;font:14px/1.7 Georgia,serif;padding:16px 4px}
+.dt-selo{margin-top:20px;border:1px solid #86efac;background:#f0fdf4;border-radius:8px;padding:10px 14px;white-space:pre-wrap;font:11px/1.5 ui-monospace,monospace}
+.dt-assin{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:60px;text-align:center;font-size:12px}
+.dt-assin div{border-top:1px solid #1e293b;padding-top:6px}
+@media (max-width:640px){.dt-head{flex-direction:column}.dt-num{text-align:left}.dt-datas{justify-content:flex-start}.dt-cards{grid-template-columns:1fr}}
+`;
+
+/** HTML da folha timbrada do documento (conteúdo sempre escapado). */
+export function htmlFolhaDocumento(d: Row, empresa: Row | null | undefined, emissor?: Row | null): string {
+  const st = String(d["assinado_em"] ? "assinado" : d["status"] ?? "rascunho");
+  const badge = st === "assinado" ? "ok" : st === "cancelado" ? "x" : "";
+  const logo = tx(empresa, ["logo_claro", "logo", "logo_url", "logotipo", "imagem"]);
+  const nomeEmp = tx(empresa, ["razao_social", "nome", "nome_fantasia", "descricao"]) || "Empresa";
+  const cnpj = tx(empresa, ["cnpj", "documento"]);
+  const fone = tx(empresa, ["telefone", "fone", "celular", "whatsapp"]);
+  const end = enderecoEmpresa(empresa);
+  const num = tx(d, ["numero"]) || (d["id"] ? `#${String(d["id"]).slice(0, 8).toUpperCase()}` : "");
+  const venc = dataBR(d["dt_vencimento"]);
+  const selo = carimboAssinatura(d);
+  const emNome = tx(emissor, ["nome", "nome_completo"]);
+  return `<div class="dt-doc">
+<header class="dt-head">
+  <div class="dt-emp">${logo ? `<img src="${escHtml(logo)}" alt="${escHtml(nomeEmp)}">` : ""}
+    <div><h1>${escHtml(nomeEmp)}</h1>${cnpj ? `<p>CNPJ ${escHtml(cnpj)}</p>` : ""}${fone ? `<p>${escHtml(fone)}</p>` : ""}${end ? `<p>${escHtml(end)}</p>` : ""}</div>
+  </div>
+  <div class="dt-num"><div class="dt-tipo">Documento</div>${num ? `<strong>${escHtml(num)}</strong>` : ""}
+    <span class="dt-badge ${badge}">${escHtml(statusDoc(st).label)}</span>
+    <div class="dt-datas"><div><span>Emissão</span><b>${dataBR(d["dt_emissao"]) || "—"}</b></div>${venc ? `<div><span>Válido até</span><b>${venc}</b></div>` : ""}</div>
+  </div>
+</header>
+<section class="dt-cards">
+  <div class="dt-card"><h2>${escHtml(entidadeLabel(d["entidade_tipo"]) || "Destinatário")}</h2><b>${escHtml(d["entidade_nome"] || "—")}</b></div>
+  <div class="dt-card"><h2>Emissor</h2><b>${escHtml(emNome || nomeEmp)}</b>${tx(emissor, ["email"]) ? `<p>${escHtml(tx(emissor, ["email"]))}</p>` : ""}${tx(emissor, ["telefone", "celular"]) ? `<p>${escHtml(tx(emissor, ["telefone", "celular"]))}</p>` : ""}</div>
+</section>
+<div class="dt-titulo">${escHtml(d["titulo"])}</div>
+<div class="dt-corpo">${escHtml(d["conteudo"])}</div>
+${selo ? `<div class="dt-selo">${escHtml(selo)}</div>` : `<div class="dt-assin"><div>${escHtml(nomeEmp)}</div><div>${escHtml(d["entidade_nome"] || "Contratante")}</div></div>`}
+</div>`;
+}
