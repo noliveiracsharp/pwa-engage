@@ -2,7 +2,8 @@ import { periodoMesVigente } from "@/lib/utils";
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Paperclip, Plus, QrCode, Undo2 } from "lucide-react";
+import { CheckCircle2, Paperclip, Plus, QrCode, Trash2, Undo2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ParceiroSheet } from "@/components/parceiros/ParceiroSheet";
 import { buildTree } from "@/lib/hierarchy";
 import { formatCpfCnpj } from "@/lib/input-masks";
@@ -109,7 +110,10 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
   };
   const { data: cartoes = [] } = useTableRows("despesas_cartoes");
   const categorias = useCategoriasFinanceiro(tipo);
-  const [f, setF] = useState({ busca: "", situacao: "todos", categoria: "todos", cartao: "todos", ...periodoMesVigente() });
+  const [f, setF] = useState({ busca: "", situacao: "todos", categoria: "todos", cartao: "todos", visao: "mes" as VisaoCaixa, ...periodoMesVigente() });
+  const [sel, setSel] = useState<Set<string>>(new Set());
+  const [confirmarLote, setConfirmarLote] = useState(false);
+  const periodoF = f.visao === "personalizado" ? { de: f.de, ate: f.ate } : periodoVisao(f.visao);
   const [editar, setEditar] = useState<Row | null | undefined>(undefined);
   const [baixar, setBaixar] = useState<Row | null>(null);
   const [cobrar, setCobrar] = useState<Row | null>(null);
@@ -126,7 +130,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
             (f.situacao === "todos" || situacaoTitulo(t, hoje) === f.situacao) &&
             (f.categoria === "todos" || t["categoria"] === f.categoria) &&
             (f.cartao === "todos" || text(t["cartao_id"]) === f.cartao) &&
-            (!f.de || v >= f.de) && (!f.ate || v <= f.ate)
+            (!periodoF.de || v >= periodoF.de) && (!periodoF.ate || v <= periodoF.ate)
           );
         })
         .sort((a, b) => text(a["vencimento"]).localeCompare(text(b["vencimento"]))),
@@ -161,6 +165,17 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
     toast.success("Título excluído."); invalidar();
   };
 
+  const selecionados = rows.filter((t) => sel.has(text(rowId(t))));
+  const todosMarcados = rows.length > 0 && selecionados.length === rows.length;
+  const alternar = (id: string) => setSel((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const excluirLote = async () => {
+    const ids = selecionados.map((t) => text(rowId(t)));
+    const { error } = await supabase.from("financeiro_titulos").delete().in("id", ids);
+    setConfirmarLote(false);
+    if (error) return void toast.error(erroFinanceiro(error));
+    toast.success(`${ids.length} título(s) excluído(s).`); setSel(new Set()); invalidar();
+  };
+
   const pagoLabel = tipo === "receber" ? "Recebido" : "Pago";
   const cards: Array<{ label: string; valor: number; sit: string; cls: string }> = [
     { label: "A vencer", valor: resumo.aVencer, sit: "aberto", cls: "border-l-primary" },
@@ -170,6 +185,9 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
   ];
 
   const columns: Column[] = [
+    ...(perms.canDelete ? [{ key: "sel", header: "", fields: [], sortable: false, className: "w-8", render: (t: Row) => (
+      <Checkbox aria-label="Selecionar" checked={sel.has(text(rowId(t)))} onCheckedChange={() => alternar(text(rowId(t)))} />
+    ) } as Column] : []),
     { key: "venc", header: "Vencimento", fields: ["vencimento"], render: (t) => <span className="tabular-nums">{formatDate(t["vencimento"])}</span> },
     { key: "desc", header: "Descrição", fields: ["descricao"], render: (t) => (
       <div className="min-w-0">
@@ -238,6 +256,37 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
         ))}
       </div>
 
+      {perms.canDelete && rows.length > 0 && (
+        <div className={cn("bg-card flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3", selecionados.length > 0 && "border-destructive")}>
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox checked={todosMarcados} onCheckedChange={() => setSel(todosMarcados ? new Set() : new Set(rows.map((t) => text(rowId(t)))))} />
+            {selecionados.length > 0
+              ? <span><strong>{selecionados.length}</strong> selecionado(s) • <strong className="tabular-nums">{formatBRL(selecionados.reduce((s, t) => s + num(t["valor"]), 0))}</strong></span>
+              : <span className="text-muted-foreground">Selecionar todos ({rows.length})</span>}
+          </label>
+          {selecionados.length > 0 && (
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => setSel(new Set())}>Desmarcar</Button>
+              <Button variant="destructive" size="sm" onClick={() => setConfirmarLote(true)}><Trash2 className="mr-1 h-4 w-4" />Excluir selecionados</Button>
+            </div>
+          )}
+        </div>
+      )}
+
+      <Dialog open={confirmarLote} onOpenChange={setConfirmarLote}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Excluir {selecionados.length} título(s)?</DialogTitle></DialogHeader>
+          <p className="text-sm">Total: <strong>{formatBRL(selecionados.reduce((s, t) => s + num(t["valor"]), 0))}</strong>. Esta ação não pode ser desfeita.</p>
+          {selecionados.some((t) => situacaoTitulo(t, hoje) === "pago") && (
+            <p className="text-destructive text-sm font-medium">Atenção: {selecionados.filter((t) => situacaoTitulo(t, hoje) === "pago").length} título(s) já estão baixados.</p>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmarLote(false)}>Cancelar</Button>
+            <Button variant="destructive" onClick={() => void excluirLote()}>Excluir</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <DataTable
         title={tipo === "receber" ? "Contas a Receber" : "Contas a Pagar"}
         columns={columns}
@@ -260,8 +309,12 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
               <FilterSelect label="Cartão" value={f.cartao} onChange={(v) => setF((s) => ({ ...s, cartao: v }))}
                 options={[{ value: "todos", label: "Todos" }, ...cartoes.map((c) => ({ value: text(rowId(c)), label: nomeCartao(c) }))]} />
             )}
-            <div className="space-y-1"><Label className="text-xs">Vence de</Label><Input type="date" value={f.de} onChange={(e) => setF((s) => ({ ...s, de: e.target.value }))} /></div>
-            <div className="space-y-1"><Label className="text-xs">até</Label><Input type="date" value={f.ate} onChange={(e) => setF((s) => ({ ...s, ate: e.target.value }))} /></div>
+            <FilterSelect label="Visão" value={f.visao} onChange={(v) => setF((s) => ({ ...s, visao: v as VisaoCaixa, ...(v === "personalizado" ? periodoF : {}) }))}
+              options={[{ value: "mes", label: "Mês atual" }, { value: "6m", label: "6 meses" }, { value: "12m", label: "12 meses" }, { value: "personalizado", label: "Personalizado" }]} />
+            {f.visao === "personalizado" && (<>
+              <div className="space-y-1"><Label className="text-xs">Data início</Label><Input type="date" value={f.de} onChange={(e) => setF((s) => ({ ...s, de: e.target.value }))} /></div>
+              <div className="space-y-1"><Label className="text-xs">Data fim</Label><Input type="date" value={f.ate} onChange={(e) => setF((s) => ({ ...s, ate: e.target.value }))} /></div>
+            </>)}
             <div className="flex items-end gap-2"><Button variant="outline" onClick={exportarCsv}>CSV</Button>
               <CategoriasDialog tipo={tipo} podeEditar={perms.canCreate || perms.canUpdate} /></div>
           </>
