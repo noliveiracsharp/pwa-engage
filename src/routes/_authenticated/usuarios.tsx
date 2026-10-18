@@ -534,6 +534,7 @@ function UsuariosPage() {
       <DepartamentosDialog open={deptOpen} onOpenChange={setDeptOpen} empresaId={text(empresaAtual ? rowId(empresaAtual) : "") || userEmpresaId} />
       <RecordSheet
         auditTable="usuarios"
+        docs={{ tipo: "usuario", nome: (r) => String(r["nome"] ?? r["email"] ?? "") }}
         open={open}
         onOpenChange={setOpen}
         title={record ? "Editar usuário" : "Novo usuário"}

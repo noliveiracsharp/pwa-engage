@@ -10,6 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DocumentosButton } from "@/components/documentos/DocumentosPainel";
+import { rowId as docRowId } from "@/lib/crud";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { DocumentInput } from "@/components/data-table/DocumentInput";
 import { PhoneInput } from "@/components/data-table/PhoneInput";
@@ -261,7 +263,14 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly, saving, on
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-2xl">
         <SheetHeader className="px-6 pt-6 pb-4">
-          <SheetTitle>{record ? "Editar parceiro" : "Novo parceiro"}</SheetTitle>
+          <div className="flex items-center gap-2 pr-8">
+            <SheetTitle>{record ? "Editar parceiro" : "Novo parceiro"}</SheetTitle>
+            {record && (
+              <div className="ml-auto">
+                <DocumentosButton entidadeTipo="parceiro" entidadeId={String(docRowId(record) ?? "")} entidadeNome={String(record["razao_social"] ?? record["nome"] ?? record["nome_fantasia"] ?? "")} registro={record} />
+              </div>
+            )}
+          </div>
           <SheetDescription>Clientes e fornecedores usados no financeiro e faturamento.</SheetDescription>
         </SheetHeader>
         <Tabs value={pf ? "gerais" : tab} onValueChange={setTab} className="flex min-h-0 flex-1 flex-col">
