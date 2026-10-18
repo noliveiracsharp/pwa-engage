@@ -363,6 +363,7 @@ function TituloSheet({ tipo, registro, parceiros, cartoes, readOnly, onClose, on
   });
   const { data: centros = [] } = useTableRows("centro_custo");
   const { data: contas = [] } = useTableRows("financeiro_contas_bancarias");
+  const { data: titulosCartao = [] } = useTableRows("financeiro_titulos");
   const centroOpts = useMemo(() => buildTree(centros.filter((c) => c["status"] !== false || text(rowId(c)) === v.centro_custo_id), "centro_custo_pai_id").map((n) => {
     const parts = n.path.split(" > ");
     const pai = parts.length > 1 ? parts[parts.length - 2] : undefined;
@@ -622,7 +623,7 @@ function TituloSheet({ tipo, registro, parceiros, cartoes, readOnly, onClose, on
               <div className="max-h-40 overflow-y-auto px-3">
                 {previa.map((p, i) => (
                   <div key={i} className="grid grid-cols-3 py-0.5 tabular-nums">
-                    <span>{i + 1}/{previa.length}</span><span>{formatDate(p.vencimento)}</span><span className="text-right">{formatBRL(p.valor)}</span>
+                    <span className="truncate">{p.rotulo ?? `${i + 1}/${previa.length}`}</span><span>{formatDate(p.vencimento)}</span><span className="text-right">{formatBRL(p.valor)}</span>
                   </div>
                 ))}
               </div>
