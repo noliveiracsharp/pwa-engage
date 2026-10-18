@@ -25,6 +25,7 @@ import { duplicarAtividade } from "@/lib/projetos";
 import { ATIVIDADES, ATIV_DEPS, C, PRIORIDADES, atividadePct, doneValue, filterPayload, isDone, prioridadeClass, progressoCor, resolveCol, sincronizarTarefa, useCols } from "@/lib/projetos";
 import type { Row } from "@/lib/row";
 import type { Perms } from "@/hooks/usePagePermissions";
+import { confirmar } from "@/components/layout/DialogoGlobal";
 
 const BUCKET = "projetos";
 
@@ -360,7 +361,7 @@ function Anexos({ atividadeId, tarefaId, projetoId, readOnly }: { atividadeId: s
     qc.invalidateQueries({ queryKey: ["table", T] });
   }
   async function del(r: Row) {
-    if (!confirm(`Remover o anexo "${r[c.nome]}"?`)) return;
+    if (!await confirmar(`Remover o anexo "${r[c.nome]}"?`)) return;
     const path = String(r[c.path] ?? "") || String(r[c.url] ?? "").split(`/${BUCKET}/`)[1] || "";
     if (path) await supabase.storage.from(BUCKET).remove([path]);
     const { error } = await supabase.from(T).delete().eq(idColumn(r), rowId(r) as never);

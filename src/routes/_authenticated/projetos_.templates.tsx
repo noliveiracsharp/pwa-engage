@@ -12,6 +12,7 @@ import { useAudit } from "@/lib/audit";
 import { filterPayload, useCols } from "@/lib/projetos";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { cn } from "@/lib/utils";
+import { confirmar } from "@/components/layout/DialogoGlobal";
 
 export const Route = createFileRoute("/_authenticated/projetos_/templates")({
   staticData: { sitemap: false },
@@ -59,7 +60,7 @@ function TemplatesPage() {
     setEdit(null); refresh();
   }
   async function excluir(id: string, nome: string) {
-    if (!confirm(`Excluir o template "${nome}" e suas tarefas padrão?`)) return;
+    if (!await confirmar(`Excluir o template "${nome}" e suas tarefas padrão?`)) return;
     await supabase.from(TAREFAS_PADRAO).delete().eq("template_id", id as never);
     const { error } = await supabase.from(T).delete().eq("id", id as never);
     if (error) { toast.error(error.message); return; }

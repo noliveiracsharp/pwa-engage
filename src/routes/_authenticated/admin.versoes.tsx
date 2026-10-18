@@ -20,6 +20,7 @@ import {
   type Atualizacao, type Sugestao, type TipoIncremento, type Versao,
   STATUS_SUGESTAO, TIPO_CLASS, TIPO_LABEL, fmtData, fmtVersao, proximaVersao,
 } from "@/lib/versoes";
+import { confirmar } from "@/components/layout/DialogoGlobal";
 
 const db = supabase as any;
 
@@ -110,7 +111,7 @@ function VersoesTab() {
   };
 
   const excluir = async (v: Versao) => {
-    if (!confirm(`Excluir a versão ${v.versao}?`)) return;
+    if (!await confirmar(`Excluir a versão ${v.versao}?`)) return;
     const { error } = await db.from("sistema_versoes").delete().eq("id", v.id);
     if (error) { toast.error(error.message); return; }
     refresh();
@@ -197,7 +198,7 @@ function ItensTab() {
   };
 
   const excluir = async (a: Atualizacao) => {
-    if (!confirm(`Excluir "${a.titulo}"?`)) return;
+    if (!await confirmar(`Excluir "${a.titulo}"?`)) return;
     const { error } = await db.from("sistema_atualizacoes").delete().eq("id", a.id);
     if (error) { toast.error(error.message); return; }
     refresh();

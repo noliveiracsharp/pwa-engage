@@ -16,6 +16,7 @@ import { limiteDisponivelCartao, limiteUsadoCartao, melhorDiaCompra } from "@/li
 import { formatBRL, num, round2 } from "@/lib/orcamentos";
 import { cn } from "@/lib/utils";
 import type { Row } from "@/lib/row";
+import { confirmar } from "@/components/layout/DialogoGlobal";
 
 type Perms = { canCreate: boolean; canUpdate: boolean; canDelete: boolean };
 const TABELA = "despesas_cartoes";
@@ -31,7 +32,7 @@ export function CartoesCredito({ perms }: { perms: Perms }) {
   const contaNome = (id: unknown) => text(contas.find((c) => text(rowId(c)) === text(id))?.["descricao"]) || "Sem conta vinculada";
 
   const excluir = async (c: Row) => {
-    if (!window.confirm(`Excluir o cartão "${text(c["descricao"])}"?`)) return;
+    if (!await confirmar(`Excluir o cartão "${text(c["descricao"])}"?`)) return;
     const { error } = await supabase.from(TABELA as never).delete().eq("id", text(rowId(c)));
     if (error) return void toast.error(erroFinanceiro(error));
     toast.success("Cartão excluído."); invalidar();

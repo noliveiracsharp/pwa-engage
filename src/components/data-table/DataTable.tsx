@@ -20,6 +20,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import type { Row } from "@/lib/row";
+import { confirmar } from "@/components/layout/DialogoGlobal";
 
 export type Column = {
   key: string;
@@ -281,8 +282,8 @@ export function DataTable({
                           {onDelete && (
                             <DropdownMenuItem
                               className="text-destructive focus:text-destructive"
-                              onClick={() => {
-                                if (skipDeleteConfirm || window.confirm("Deseja realmente excluir este registro?")) onDelete(row);
+                              onClick={async () => {
+                                if (skipDeleteConfirm || await confirmar("Deseja realmente excluir este registro?")) onDelete(row);
                               }}
                             >
                               <Trash2 className="h-4 w-4" />
@@ -308,8 +309,8 @@ export function DataTable({
                           variant="ghost"
                           size="icon"
                           aria-label="Excluir"
-                          onClick={() => {
-                            if (skipDeleteConfirm || window.confirm("Deseja realmente excluir este registro?")) onDelete(row);
+                          onClick={async () => {
+                            if (skipDeleteConfirm || await confirmar("Deseja realmente excluir este registro?")) onDelete(row);
                           }}
                         >
                           <Trash2 className="h-4 w-4 text-destructive" />

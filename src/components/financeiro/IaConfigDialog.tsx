@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { confirmar } from "@/components/layout/DialogoGlobal";
 
 type Resumo = { modo: "plataforma" | "propria"; provedor: string; modelo: string | null; tem_chave: boolean; final_chave: string | null };
 
@@ -45,7 +46,7 @@ export function IaConfigPainel({ readOnly }: { readOnly?: boolean }) {
   };
 
   const remover = async () => {
-    if (!window.confirm("Remover a chave própria e voltar a usar a IA do plano?")) return;
+    if (!await confirmar("Remover a chave própria e voltar a usar a IA do plano?")) return;
     const { error } = await supabase.rpc("ia_config_remover_chave" as never);
     if (error) { toast.error("Não foi possível remover."); return; }
     toast.success("Chave removida. Voltando a usar a IA do plano.");

@@ -20,6 +20,7 @@ import { ENTIDADES, entidadeLabel, MODELOS_PADRAO, STATUS_DOC, VARIAVEIS, type E
 import { formatDate } from "@/lib/orcamentos";
 import { normalizeSearch } from "@/lib/documentos-busca";
 import type { Row } from "@/lib/row";
+import { confirmar } from "@/components/layout/DialogoGlobal";
 
 const db = supabase as any;
 
@@ -178,7 +179,7 @@ function Modelos({ canCreate, canEdit, canDelete }: { canCreate: boolean; canEdi
   }
 
   async function excluir(m: Row) {
-    if (!confirm(`Excluir o modelo "${m["titulo"]}"? Documentos já emitidos continuam.`)) return;
+    if (!await confirmar(`Excluir o modelo "${m["titulo"]}"? Documentos já emitidos continuam.`)) return;
     const { error } = await db.from("documento_modelos").delete().eq("id", m["id"]);
     if (error) return void toast.error("Não foi possível excluir", { description: error.message });
     qc.invalidateQueries({ queryKey: ["documento_modelos"] });

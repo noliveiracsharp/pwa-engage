@@ -17,6 +17,7 @@ import { erroFinanceiro } from "@/lib/financeiro-db";
 import { num } from "@/lib/orcamentos";
 import { BANCOS, nomeBanco } from "@/lib/pix";
 import type { Row } from "@/lib/row";
+import { confirmar } from "@/components/layout/DialogoGlobal";
 
 type Perms = { canCreate: boolean; canUpdate: boolean; canDelete: boolean };
 const TABELA = "financeiro_contas_bancarias";
@@ -28,7 +29,7 @@ export function ContasBancarias({ perms }: { perms: Perms }) {
   const invalidar = () => qc.invalidateQueries({ queryKey: ["table", TABELA] });
 
   const excluir = async (c: Row) => {
-    if (!window.confirm(`Excluir a conta "${text(c["descricao"])}"?`)) return;
+    if (!await confirmar(`Excluir a conta "${text(c["descricao"])}"?`)) return;
     const { error } = await supabase.from(TABELA as never).delete().eq("id", text(rowId(c)));
     if (error) return void toast.error(erroFinanceiro(error));
     toast.success("Conta excluída."); invalidar();

@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { rowId, useTableRows } from "@/lib/crud";
+import { confirmar } from "@/components/layout/DialogoGlobal";
 
 const isProduto = (t: unknown) => String(t ?? "") === "Produto";
 const calcVenda = (custo: number, margem: number, imposto: number) => {
@@ -113,7 +114,7 @@ export function PrecificacaoDialog({ open, onOpenChange }: { open: boolean; onOp
     }
     qc.invalidateQueries({ queryKey: ["precificacao"] });
     if (aplicar && alvos.length) {
-      if (!window.confirm(`Recalcular o preço de venda de ${alvos.length} item(ns)? Esta ação não pode ser desfeita.`)) {
+      if (!await confirmar(`Recalcular o preço de venda de ${alvos.length} item(ns)? Esta ação não pode ser desfeita.`)) {
         setSaving(false);
         toast.success("Parâmetros salvos. Itens não alterados.");
         onOpenChange(false);

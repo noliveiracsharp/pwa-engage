@@ -30,6 +30,7 @@ import {
   CATALOGO, dadosPadrao, nomeTipo, resumoNo, saidasDoNo, temEntrada,
   type CategoriaNo, type DadosNo, type TipoNo,
 } from "@/lib/fluxos";
+import { confirmar } from "@/components/layout/DialogoGlobal";
 
 export const Route = createFileRoute("/_authenticated/fluxos")({
   staticData: { sitemap: false },
@@ -257,7 +258,7 @@ function FluxosPage() {
   };
 
   const excluirFluxo = async () => {
-    if (!fluxo || !confirm(`Excluir o fluxo "${nome}"?`)) return;
+    if (!fluxo || !await confirmar(`Excluir o fluxo "${nome}"?`)) return;
     const { error } = await supabase.from("fluxos_atendimento").delete().eq("id", fluxo["id"] as string);
     if (error) { toast.error("Erro ao excluir", { description: error.message }); return; }
     setFluxoId("");

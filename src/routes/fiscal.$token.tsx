@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { baixarArquivo, CAMPOS_FISCAIS, gerarCsvFiscal, lerCsvFiscal, type ItemFiscal } from "@/lib/itens-fiscal";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/fiscal/$token")({
   staticData: { sitemap: false },
@@ -55,7 +56,7 @@ function FiscalPublico() {
     const mapa = lerCsvFiscal(await f.text());
     let n = 0;
     setItens((l) => l.map((i) => { const v = mapa.get(i.id); if (!v) return i; n++; return { ...i, ...v }; }));
-    setTimeout(() => alert(n ? `${n} item(ns) preenchido(s) pela planilha. Confira e clique em Enviar.` : "Nenhum item da planilha corresponde a este link."), 0);
+    if (n) toast.success(`${n} item(ns) preenchido(s) pela planilha. Confira e clique em Enviar.`); else toast.warning("Nenhum item da planilha corresponde a este link.");
     if (fileRef.current) fileRef.current.value = "";
   };
 
@@ -65,7 +66,7 @@ function FiscalPublico() {
     const { data, error } = await rpc("salvar_itens_fiscal_publico", { _token: token, _itens: payload });
     setEnviando(false);
     const r = data as { sucesso?: boolean; mensagem?: string } | null;
-    if (error || !r?.sucesso) return alert(r?.mensagem ?? "Não foi possível salvar. Verifique os valores (ex.: alíquota numérica).");
+    if (error || !r?.sucesso) return void toast.error(r?.mensagem ?? "Não foi possível salvar. Verifique os valores (ex.: alíquota numérica).");
     setOk(true);
   };
 

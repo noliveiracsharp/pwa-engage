@@ -30,6 +30,7 @@ import {
   variaveisDe,
   type EntidadeDoc,
 } from "@/lib/documentos";
+import { confirmar } from "@/components/layout/DialogoGlobal";
 
 const db = supabase as any;
 
@@ -310,7 +311,7 @@ export function DocumentosPainel({ entidadeTipo, entidadeId, entidadeNome, regis
   }
 
   async function excluir(d: DocumentoRow) {
-    if (!confirm(`Excluir "${d.titulo}"?`)) return;
+    if (!await confirmar(`Excluir "${d.titulo}"?`)) return;
     const { error } = await db.from("documentos").delete().eq("id", d.id);
     if (error) return void toast.error("Não foi possível excluir", { description: error.message });
     qc.invalidateQueries({ queryKey: ["documentos"] });

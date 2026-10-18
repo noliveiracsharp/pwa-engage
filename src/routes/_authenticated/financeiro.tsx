@@ -56,9 +56,11 @@ import {
   type TipoTitulo,
 } from "@/lib/financeiro";
 import type { Row } from "@/lib/row";
+import { ParceiroSituacaoAlerta, problemaParceiro } from "@/components/financeiro/ParceiroSituacaoAlerta";
 import { cn } from "@/lib/utils";
 import { Bar, CartesianGrid, ComposedChart, Line, XAxis, YAxis } from "recharts";
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
+import { confirmar } from "@/components/layout/DialogoGlobal";
 
 export const Route = createFileRoute("/_authenticated/financeiro")({
   staticData: { sitemap: false },
@@ -144,7 +146,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
 
   const baixarFatura = async () => {
     const total = round2(faturaAberta.reduce((s, t) => s + num(t["valor"]), 0));
-    if (!window.confirm(`Baixar ${faturaAberta.length} parcela(s) da fatura, total ${formatBRL(total)}?`)) return;
+    if (!await confirmar(`Baixar ${faturaAberta.length} parcela(s) da fatura, total ${formatBRL(total)}?`)) return;
     for (const t of faturaAberta) {
       const { error } = await supabase.from("financeiro_titulos").update({
         status: "pago", pago_em: hoje, valor_pago: num(t["valor"]), juros: 0, desconto: 0, forma_pagamento: "Cartão de crédito",
@@ -155,7 +157,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
   };
 
   const estornar = async (t: Row) => {
-    if (!window.confirm("Estornar a baixa deste título?")) return;
+    if (!await confirmar("Estornar a baixa deste título?")) return;
     const { error } = await supabase.from("financeiro_titulos")
       .update({ status: "aberto", pago_em: null, valor_pago: null, juros: 0, desconto: 0 } as never).eq("id", text(rowId(t)));
     if (error) return void toast.error(erroFinanceiro(error));
@@ -421,7 +423,9 @@ function TituloSheet({ tipo, registro, parceiros, cartoes, readOnly, onClose, on
     if (valor <= 0) return void toast.error(itensModo ? "Informe o valor de pelo menos um item." : "Informe o valor.");
     if (cartaoModo && !cartao) return void toast.error("Escolha o cartão utilizado.");
     if (cartaoModo && !previa.length) return void toast.error("Informe o dia de fechamento e de vencimento do cartão.");
-    if (cartaoModo && limiteCartao > 0 && valor > dispCartao && !window.confirm(`Esta compra (${formatBRL(valor)}) passa do limite disponível do cartão (${formatBRL(dispCartao)}). Lançar mesmo assim?`)) return;
+    if (cartaoModo && limiteCartao > 0 && valor > dispCartao && !await confirmar(`Esta compra (${formatBRL(valor)}) passa do limite disponível do cartão (${formatBRL(dispCartao)}). Lançar mesmo assim?`)) return;
+    { const prob = problemaParceiro(parceiros.find((p) => text(rowId(p)) === v.parceiro_id));
+      if (prob && !registro && !await confirmar({ title: `Lançar para ${papel} irregular?`, description: `Este ${papel} está com ${prob}. Deseja lançar mesmo assim?`, confirmText: "Lançar mesmo assim", destructive: true })) return; }
     if (temSerie && !alcance) { setEscopo("atual"); setConfirmarSerie(true); return; }
     setSalvando(true);
     try {
@@ -507,6 +511,7 @@ function TituloSheet({ tipo, registro, parceiros, cartoes, readOnly, onClose, on
                 emptyText={`Não encontrado. Use o + para cadastrar.`} onChange={(x) => setV({ ...v, parceiro_id: x })} />
               {!readOnly && <Button type="button" variant="outline" size="icon" title={`Cadastrar ${papel}`} aria-label={`Cadastrar ${papel}`} onClick={() => setNovoParc(true)}><Plus className="h-4 w-4" /></Button>}
             </div></div>
+          {!readOnly && <ParceiroSituacaoAlerta key={v.parceiro_id} papel={papel} parceiro={parceiros.find((p) => text(rowId(p)) === v.parceiro_id)} />}
           <div className="space-y-1"><Label>Categoria</Label>
             <div className="flex gap-2">
               <Select value={v.categoria} disabled={readOnly} onValueChange={(x) => setV({ ...v, categoria: x })}>
