@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Paperclip, QrCode, Undo2 } from "lucide-react";
 import { ContasBancarias } from "@/components/financeiro/ContasBancarias";
 import { ControllerPainel } from "@/components/financeiro/ControllerPainel";
+import { CategoriasDialog, useCategoriasFinanceiro } from "@/components/financeiro/CategoriasFinanceiro";
 import { CobrancaDialog } from "@/components/financeiro/CobrancaDialog";
 import { toast } from "sonner";
 import { DataTable, type Column } from "@/components/data-table/DataTable";
@@ -103,6 +104,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
     return p ? text(p["nome_fantasia"] || p["razao_social"]) : "";
   };
   const { data: cartoes = [] } = useTableRows("despesas_cartoes");
+  const categorias = useCategoriasFinanceiro(tipo);
   const [f, setF] = useState({ busca: "", situacao: "todos", categoria: "todos", cartao: "todos", ...periodoMesVigente() });
   const [editar, setEditar] = useState<Row | null | undefined>(undefined);
   const [baixar, setBaixar] = useState<Row | null>(null);
@@ -249,14 +251,15 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
             <FilterSelect label="Situação" value={f.situacao} onChange={(v) => setF((s) => ({ ...s, situacao: v }))}
               options={[{ value: "todos", label: "Todas" }, ...(["aberto", "atrasado", "pago", "cancelado"] as Situacao[]).map((s) => ({ value: s, label: SITUACAO_META[s].label(tipo) }))]} />
             <FilterSelect label="Categoria" value={f.categoria} onChange={(v) => setF((s) => ({ ...s, categoria: v }))}
-              options={[{ value: "todos", label: "Todas" }, ...CATEGORIAS_FINANCEIRO[tipo].map((c) => ({ value: c, label: c }))]} />
+              options={[{ value: "todos", label: "Todas" }, ...categorias.todas.map((c) => ({ value: c, label: c }))]} />
             {tipo === "pagar" && cartoes.length > 0 && (
               <FilterSelect label="Cartão" value={f.cartao} onChange={(v) => setF((s) => ({ ...s, cartao: v }))}
                 options={[{ value: "todos", label: "Todos" }, ...cartoes.map((c) => ({ value: text(rowId(c)), label: nomeCartao(c) }))]} />
             )}
             <div className="space-y-1"><Label className="text-xs">Vence de</Label><Input type="date" value={f.de} onChange={(e) => setF((s) => ({ ...s, de: e.target.value }))} /></div>
             <div className="space-y-1"><Label className="text-xs">até</Label><Input type="date" value={f.ate} onChange={(e) => setF((s) => ({ ...s, ate: e.target.value }))} /></div>
-            <div className="flex items-end"><Button variant="outline" onClick={exportarCsv}>CSV</Button></div>
+            <div className="flex items-end gap-2"><Button variant="outline" onClick={exportarCsv}>CSV</Button>
+              <CategoriasDialog tipo={tipo} podeEditar={perms.canCreate || perms.canUpdate} /></div>
           </>
         }
       />
@@ -285,9 +288,10 @@ function TituloSheet({ tipo, registro, parceiros, cartoes, readOnly, onClose, on
 }) {
   const { isMaster, empresa } = useAuth();
   const { empresaId } = useAudit();
+  const categorias = useCategoriasFinanceiro(tipo);
   const [v, setV] = useState({
     descricao: text(registro?.["descricao"]),
-    categoria: text(registro?.["categoria"]) || (CATEGORIAS_FINANCEIRO[tipo][0] ?? ""),
+    categoria: text(registro?.["categoria"]),
     parceiro_id: text(registro?.["parceiro_id"]),
     vencimento: text(registro?.["vencimento"]).slice(0, 10) || hojeISO(),
     valor: registro ? String(num(registro["valor"])).replace(".", ",") : "",
@@ -372,8 +376,8 @@ function TituloSheet({ tipo, registro, parceiros, cartoes, readOnly, onClose, on
             <SearchSelect value={v.parceiro_id} disabled={readOnly} options={opcoes} placeholder={`Escolha o ${papel}`} onChange={(x) => setV({ ...v, parceiro_id: x })} /></div>
           <div className="space-y-1"><Label>Categoria</Label>
             <Select value={v.categoria} disabled={readOnly} onValueChange={(x) => setV({ ...v, categoria: x })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>{[...new Set([...CATEGORIAS_FINANCEIRO[tipo], v.categoria].filter(Boolean))].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+              <SelectTrigger><SelectValue placeholder="Escolha a categoria" /></SelectTrigger>
+              <SelectContent>{[...new Set([...categorias.ativas, v.categoria].filter(Boolean))].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
             </Select></div>
           <div className="space-y-1"><Label>Data de competência</Label>
             <Input type="date" value={v.data_competencia} disabled={readOnly} onChange={(e) => setV({ ...v, data_competencia: e.target.value })} /></div>
