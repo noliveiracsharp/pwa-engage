@@ -34,7 +34,7 @@ function ParceirosPage() {
   const { empresaId, stamp } = useAudit();
   const [open, setOpen] = useState(false);
   const [record, setRecord] = useState<Row | null>(null);
-  const [f, setF] = useState({ busca: "", papel: "todos", status: "todos", estrutura: "todos", pai: "todos" });
+  const [f, setF] = useState({ busca: "", papel: "todos", status: "todos", situacao: "todos", estrutura: "todos", pai: "todos" });
 
   const escopo = useMemo(
     () => all.filter((r) => empresaId === undefined || !r["empresa_id"] || String(r["empresa_id"]) === String(empresaId)),
@@ -64,6 +64,7 @@ function ParceirosPage() {
             matchesAny([r["razao_social"], r["nome_fantasia"], r["documento"], r["telefone"], r["cidade"], pai?.["razao_social"]], f.busca) &&
             (f.papel === "todos" || (f.papel === "cliente" ? r["is_cliente"] === true : r["is_fornecedor"] === true)) &&
             (f.status === "todos" || (f.status === "ativo" ? r["status"] !== false : r["status"] === false)) &&
+            (f.situacao === "todos" || (f.situacao === "nao" ? !r["situacao_cadastral"] : String(r["situacao_cadastral"] ?? "").toUpperCase() === f.situacao)) &&
             (f.estrutura === "todos" || tipoDe(r) === f.estrutura) &&
             (f.pai === "todos" || String(r[PARENT_KEY] ?? "") === f.pai || String(rowId(r)) === f.pai)
           );
@@ -108,6 +109,18 @@ function ParceirosPage() {
     },
     { key: "documento", header: "Documento", fields: ["documento"], render: (r) => formatCpfCnpj(String(r["documento"] ?? "")) || "—" },
     { key: "telefone", header: "Telefone", fields: ["telefone"], render: (r) => formatPhoneDisplay(String(r["telefone"] ?? "")) || "—" },
+    {
+      key: "situacao_cadastral",
+      header: "Situação Receita",
+      fields: ["situacao_cadastral"],
+      render: (r) => {
+        const s = String(r["situacao_cadastral"] ?? "").trim().toUpperCase();
+        if (!s) return <span className="text-muted-foreground">—</span>;
+        const motivo = String(r["motivo_situacao_cadastral"] ?? "");
+        const cls = s === "ATIVA" ? "bg-success text-success-foreground" : s === "BAIXADA" || s === "NULA" ? "bg-destructive text-destructive-foreground" : "bg-warning text-warning-foreground";
+        return <Badge className={cls} title={motivo || undefined}>{s}</Badge>;
+      },
+    },
     { key: "status", header: "Status", fields: ["status"], render: (r) => <StatusBadge value={r["status"]} /> },
   ];
 
@@ -131,6 +144,8 @@ function ParceirosPage() {
               options={[{ value: "todos", label: "Todos" }, { value: "cliente", label: "Clientes" }, { value: "fornecedor", label: "Fornecedores" }]} />
             <FilterSelect label="Status" value={f.status} onChange={(v) => setF({ ...f, status: v })}
               options={[{ value: "todos", label: "Todos" }, { value: "ativo", label: "Ativo" }, { value: "inativo", label: "Inativo" }]} />
+            <FilterSelect label="Situação Receita" value={f.situacao} onChange={(v) => setF({ ...f, situacao: v })}
+              options={[{ value: "todos", label: "Todas" }, { value: "ATIVA", label: "Ativa" }, { value: "BAIXADA", label: "Baixada" }, { value: "INAPTA", label: "Inapta" }, { value: "SUSPENSA", label: "Suspensa" }, { value: "NULA", label: "Nula" }, { value: "nao", label: "Não consultado" }]} />
             <FilterSelect label="Estrutura" value={f.estrutura} onChange={(v) => setF({ ...f, estrutura: v })}
               options={[{ value: "todos", label: "Todas" }, ...TIPOS_HIERARQUIA.map((t) => ({ value: t.value, label: t.label }))]} />
             <FilterSelect label="Matriz / Administradora" value={f.pai} onChange={(v) => setF({ ...f, pai: v })}

@@ -323,6 +323,20 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly, saving, on
                 </div>
               </div>
 
+              {!pf && f.situacao_cadastral && (
+                <div className={`flex flex-wrap items-center gap-2 rounded-lg border px-4 py-3 text-sm ${ativa ? "border-success/40 bg-success/10" : "border-destructive/40 bg-destructive/10"}`}>
+                  <span className="font-medium">Situação na Receita Federal:</span>
+                  <Badge variant={ativa ? "default" : "destructive"}>{f.situacao_cadastral.toUpperCase()}</Badge>
+                  {!ativa && f.motivo_situacao_cadastral && !/sem motivo/i.test(f.motivo_situacao_cadastral) && (
+                    <span className="text-muted-foreground">Motivo: {f.motivo_situacao_cadastral}</span>
+                  )}
+                  {!ativa && f.status && !readOnly && (
+                    <Button type="button" size="sm" variant="outline" className="ml-auto" onClick={() => set("status", false)}>Marcar como Inativo</Button>
+                  )}
+                </div>
+              )}
+
+
               <div>
                 {section("Identificação")}
                 <div className="grid gap-x-4 gap-y-5 sm:grid-cols-2">
