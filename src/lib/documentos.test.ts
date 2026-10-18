@@ -39,3 +39,12 @@ describe("assinatura eletrônica de documentos", () => {
     expect(linkAssinaturaDoc("https://x.app/", "t1")).toBe("https://x.app/doc/t1");
   });
 });
+
+import { htmlFolhaDocumento } from "./documentos";
+describe("folha timbrada", () => {
+  it("escapa o conteúdo e mostra o CNPJ da empresa", () => {
+    const h = htmlFolhaDocumento({ titulo: "T", conteudo: "<script>x</script>", status: "emitido" }, { razao_social: "ACME", cnpj: "14.167.063/0001-41" });
+    expect(h).not.toContain("<script>");
+    expect(h).toContain("CNPJ 14.167.063/0001-41");
+  });
+});
