@@ -1,6 +1,7 @@
 import { PeriodoNavegavel } from "@/components/financeiro/PeriodoNavegavel";
 import { periodoPreset, type Periodo } from "@/lib/periodo-vencimento";
 import { useMemo, useState } from "react";
+import { cn } from "@/lib/utils";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Paperclip, Plus, QrCode, Trash2, Undo2 } from "lucide-react";
@@ -49,7 +50,7 @@ import {
   situacaoTitulo,
   valorBaixa,
   parcelasManuais,
-  parcelasCartao,
+  parcelasCartao, parcelasItensCartao, limiteUsadoCartao, limiteDisponivelCartao,
   type ModoLancamento,
   type Situacao,
   type TipoTitulo,
