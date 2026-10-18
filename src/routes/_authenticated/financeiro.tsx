@@ -480,6 +480,11 @@ function TituloSheet({ tipo, registro, parceiros, cartoes, readOnly, onClose, on
           <SheetDescription>{registro ? `Origem: ${ORIGEM_LABEL[text(registro["origem_tipo"])] ?? "Manual"}` : "Lançamento manual"}</SheetDescription>
         </SheetHeader>
         <div className="grid flex-1 content-start gap-4 overflow-y-auto p-4 sm:grid-cols-2">
+          {temSerie && (
+            <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm sm:col-span-2">
+              Esta conta faz parte de uma série de parcelas. Ao salvar alterações, você poderá escolher se aplica também às demais parcelas. Para quitar, use o botão de baixa na lista.
+            </div>
+          )}
           <div className="space-y-1 sm:col-span-2"><Label>Descrição</Label>
             <Input value={v.descricao} disabled={readOnly} onChange={(e) => setV({ ...v, descricao: e.target.value })} /></div>
           <div className="space-y-1"><Label>{tipo === "receber" ? "Cliente" : "Fornecedor"} *</Label>
@@ -551,13 +556,22 @@ function TituloSheet({ tipo, registro, parceiros, cartoes, readOnly, onClose, on
               <Input type="number" min={1} max={cartaoModo ? 48 : 120} value={v.repetir} onChange={(e) => setV({ ...v, repetir: e.target.value })} /></div>
           )}
           {!registro && (previa.length > 1 || (cartaoModo && previa.length > 0)) && (
-            <div className="bg-muted/40 max-h-48 overflow-y-auto rounded-md border p-2 text-sm sm:col-span-2">
-              {previa.map((p, i) => (
-                <div key={i} className="flex justify-between py-0.5 tabular-nums">
-                  <span>{i + 1}/{previa.length} — {formatDate(p.vencimento)}</span><span>{formatBRL(p.valor)}</span>
-                </div>
-              ))}
-              <div className="mt-1 flex justify-between border-t pt-1 font-semibold">
+            <div className="rounded-lg border border-primary/30 bg-primary/5 text-sm sm:col-span-2">
+              <div className="border-b border-primary/20 px-3 py-2">
+                <p className="font-semibold">Demonstrativo das {previa.length} parcelas que serão geradas</p>
+                <p className="text-muted-foreground text-xs">Conferência apenas. Ao salvar, o sistema cria {previa.length} lançamentos separados.</p>
+              </div>
+              <div className="text-muted-foreground grid grid-cols-3 px-3 pt-2 text-xs font-medium">
+                <span>Parcela</span><span>Vencimento</span><span className="text-right">Valor</span>
+              </div>
+              <div className="max-h-40 overflow-y-auto px-3">
+                {previa.map((p, i) => (
+                  <div key={i} className="grid grid-cols-3 py-0.5 tabular-nums">
+                    <span>{i + 1}/{previa.length}</span><span>{formatDate(p.vencimento)}</span><span className="text-right">{formatBRL(p.valor)}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-between border-t border-primary/20 px-3 py-2 font-semibold">
                 <span>Total</span><span>{formatBRL(previa.reduce((s, p) => s + p.valor, 0))}</span>
               </div>
             </div>
