@@ -9,6 +9,8 @@ import { useTableRows, rowId, text } from "@/lib/crud";
 import { formatBRL, num } from "@/lib/orcamentos";
 import { diagnosticar, type NivelAlerta } from "@/lib/controller";
 import { parecerController } from "@/lib/controller.functions";
+import { IaConfigDialog } from "./IaConfigDialog";
+import { supabase } from "@/integrations/supabase/client";
 import type { Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
 
@@ -47,7 +49,10 @@ export function ControllerPainel({ titulos }: { titulos: Row[] }) {
     setCarregando(true);
     try {
       const { alertas, ...ind } = d;
-      const r = await gerar({ data: { resumo: JSON.stringify({ ...ind, alertas: alertas.map((a) => `${a.titulo}: ${a.detalhe}`) }) } });
+      const { data: ses } = await supabase.auth.getSession();
+      const token = ses.session?.access_token;
+      if (!token) { toast.error("Sessão expirada. Entre novamente."); return; }
+      const r = await gerar({ data: { token, resumo: JSON.stringify({ ...ind, alertas: alertas.map((a) => `${a.titulo}: ${a.detalhe}`) }) } });
       if (r.erro) toast.error(r.erro); else setParecer(r.texto);
     } catch {
       toast.error("Não foi possível gerar o parecer agora.");
@@ -74,6 +79,7 @@ export function ControllerPainel({ titulos }: { titulos: Row[] }) {
             onChange={(e) => { setSaldo(e.target.value); localStorage.setItem(SALDO_KEY, e.target.value); }} />
         </div>
         <div className="flex gap-2 print:hidden">
+          <IaConfigDialog />
           <Button variant="outline" onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" />Relatório gerencial</Button>
           <Button onClick={pedirParecer} disabled={carregando}>
             {carregando ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <BrainCircuit className="mr-2 h-4 w-4" />}
