@@ -36,6 +36,6 @@ describe("controller", () => {
     expect(r[0]).toMatchObject({ categoria: "Software", atual: 200, media: 100 });
   });
   it("sem riscos retorna alerta ok", () => {
-    expect(diagnosticar([], 1000, () => "", H).alertas[0].nivel).toBe("ok");
+    expect(diagnosticar([], 1000, () => "", H).alertas[0]?.nivel).toBe("ok");
   });
 });
