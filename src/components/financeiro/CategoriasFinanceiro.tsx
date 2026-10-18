@@ -34,7 +34,7 @@ export function useCategoriasFinanceiro(tipo: TipoTitulo) {
 }
 
 /** Gestão de categorias: adicionar, renomear (atualiza os lançamentos) e ativar/inativar. */
-export function CategoriasDialog({ tipo, podeEditar }: { tipo: TipoTitulo; podeEditar: boolean }) {
+export function CategoriasDialog({ tipo, podeEditar, compacto }: { tipo: TipoTitulo; podeEditar: boolean; compacto?: boolean }) {
   const [aberto, setAberto] = useState(false);
   const [nova, setNova] = useState("");
   const [editando, setEditando] = useState<string | null>(null);
@@ -77,7 +77,9 @@ export function CategoriasDialog({ tipo, podeEditar }: { tipo: TipoTitulo; podeE
   return (
     <Dialog open={aberto} onOpenChange={setAberto}>
       <DialogTrigger asChild>
-        <Button type="button" variant="outline"><Tags className="mr-2 h-4 w-4" />Categorias</Button>
+        {compacto
+          ? <Button type="button" variant="outline" size="icon" title="Cadastrar ou editar categorias" aria-label="Cadastrar ou editar categorias"><Plus className="h-4 w-4" /></Button>
+          : <Button type="button" variant="outline"><Tags className="mr-2 h-4 w-4" />Categorias</Button>}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader><DialogTitle>Categorias de contas a {tipo}</DialogTitle></DialogHeader>
