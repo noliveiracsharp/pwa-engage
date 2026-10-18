@@ -12,6 +12,7 @@ import { SearchSelect } from "@/components/data-table/SearchSelect";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -292,7 +293,19 @@ function TituloSheet({ tipo, registro, parceiros, cartoes, readOnly, onClose, on
     cartao_id: "",
     status: text(registro?.["status"]) || "aberto",
     observacao: text(registro?.["observacao"]),
+    data_competencia: text(registro?.["data_competencia"]).slice(0, 10) || hojeISO(),
+    centro_custo_id: text(registro?.["centro_custo_id"]),
+    codigo_referencia: text(registro?.["codigo_referencia"]),
+    conta_bancaria_id: text(registro?.["conta_bancaria_id"]),
+    forma_pagamento: text(registro?.["forma_pagamento"]),
+    nsu: text(registro?.["nsu"]),
+    ja_pago: false,
   });
+  const { data: centros = [] } = useTableRows("centro_custo");
+  const { data: contas = [] } = useTableRows("financeiro_contas_bancarias");
+  const centroOpts = centros.filter((c) => c["status"] !== false || text(rowId(c)) === v.centro_custo_id)
+    .map((c) => ({ value: text(rowId(c)), label: [text(c["codigo"]), text(c["descricao"])].filter(Boolean).join(" — ") || "—" }));
+  const contaOpts = contas.map((c) => ({ value: text(rowId(c)), label: text(c["descricao"]) || text(c["banco"]) || "—" }));
   const [salvando, setSalvando] = useState(false);
   const opcoes = parceiros
     .filter((p) => (tipo === "receber" ? p["is_cliente"] !== false : p["is_fornecedor"] === true) || text(rowId(p)) === v.parceiro_id)
@@ -316,7 +329,10 @@ function TituloSheet({ tipo, registro, parceiros, cartoes, readOnly, onClose, on
     setSalvando(true);
     try {
       const base = { tipo, descricao: v.descricao.trim(), categoria: v.categoria, parceiro_id: v.parceiro_id || null,
-        vencimento: v.vencimento, valor, observacao: v.observacao || null, status: v.status };
+        vencimento: v.vencimento, valor, observacao: v.observacao || null, status: v.status,
+        data_competencia: v.data_competencia || null, centro_custo_id: v.centro_custo_id || null,
+        codigo_referencia: v.codigo_referencia.trim() || null, conta_bancaria_id: v.conta_bancaria_id || null,
+        nsu: v.nsu.trim() || null, ...(v.forma_pagamento ? { forma_pagamento: v.forma_pagamento } : {}) };
       if (registro) {
         const { error } = await supabase.from("financeiro_titulos").update(base as never).eq("id", text(rowId(registro)));
         if (error) throw error;
@@ -328,6 +344,7 @@ function TituloSheet({ tipo, registro, parceiros, cartoes, readOnly, onClose, on
           ...base, ...extra, empresa_id: emp, origem_tipo: "manual", parcela_n: i + 1,
           descricao: n > 1 ? `${base.descricao} (${i + 1}/${n})` : base.descricao,
           vencimento: p.vencimento, valor: p.valor,
+          ...(v.ja_pago && !cartaoModo && i === 0 ? { status: "pago", pago_em: p.vencimento, valor_pago: p.valor } : {}),
         }));
         const { error } = await supabase.from("financeiro_titulos").insert(lote as never);
         if (error) throw error;
@@ -355,8 +372,28 @@ function TituloSheet({ tipo, registro, parceiros, cartoes, readOnly, onClose, on
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>{[...new Set([...CATEGORIAS_FINANCEIRO[tipo], v.categoria].filter(Boolean))].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
             </Select></div>
+          <div className="space-y-1"><Label>Data de competência</Label>
+            <Input type="date" value={v.data_competencia} disabled={readOnly} onChange={(e) => setV({ ...v, data_competencia: e.target.value })} /></div>
+          <div className="space-y-1"><Label>Código de referência</Label>
+            <Input value={v.codigo_referencia} disabled={readOnly} placeholder="Nº da NF, pedido…" onChange={(e) => setV({ ...v, codigo_referencia: e.target.value })} /></div>
+          <div className="space-y-1 sm:col-span-2"><Label>Centro de custo</Label>
+            <SearchSelect value={v.centro_custo_id} disabled={readOnly} options={centroOpts} placeholder="Escolha o centro de custo" onChange={(x) => setV({ ...v, centro_custo_id: x })} /></div>
+          <div className="space-y-1"><Label>Forma de pagamento</Label>
+            <SearchSelect value={v.forma_pagamento} disabled={readOnly || cartaoModo} options={FORMAS_PAGAMENTO.map((x) => ({ value: x, label: x }))} placeholder="Escolha" onChange={(x) => setV({ ...v, forma_pagamento: x })} /></div>
+          <div className="space-y-1"><Label>{tipo === "receber" ? "Conta de recebimento" : "Conta de pagamento"}</Label>
+            <SearchSelect value={v.conta_bancaria_id} disabled={readOnly} options={contaOpts} placeholder="Escolha a conta" onChange={(x) => setV({ ...v, conta_bancaria_id: x })} /></div>
+          {tipo === "receber" && (
+            <div className="space-y-1"><Label>NSU / autorização do cartão</Label>
+              <Input value={v.nsu} disabled={readOnly} placeholder="Opcional" onChange={(e) => setV({ ...v, nsu: e.target.value })} /></div>
+          )}
+          {!registro && !cartaoModo && (
+            <div className="flex items-center gap-2 sm:col-span-2">
+              <Switch checked={v.ja_pago} onCheckedChange={(x) => setV({ ...v, ja_pago: x })} />
+              <Label>{tipo === "receber" ? "Já recebido" : "Já pago"}{v.modo !== "unico" ? " (baixa só a 1ª parcela)" : ""}</Label>
+            </div>
+          )}
           {!registro && (
-            <div className="space-y-1 sm:col-span-2"><Label>Tipo de lançamento</Label>
+            <div className="space-y-1 sm:col-span-2"><Label>Repetir lançamento</Label>
               <Select value={v.modo} onValueChange={(x) => setV({ ...v, modo: x as ModoForm, repetir: x === "unico" ? "1" : v.repetir === "1" ? (x === "cartao" ? "3" : "12") : v.repetir })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
