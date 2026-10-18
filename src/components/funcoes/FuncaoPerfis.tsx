@@ -47,7 +47,7 @@ export function FuncaoPerfis({ funcaoId }: Props) {
     can_read: true,
     can_update: true,
     can_delete: false,
-    status: true,
+    status: false,
   });
 
   const PERM_LABELS: { key: keyof typeof perms; label: string }[] = [
@@ -156,7 +156,7 @@ export function FuncaoPerfis({ funcaoId }: Props) {
         can_read: true,
         can_update: true,
         can_delete: true,
-        status: true,
+        status: false,
       })),
     );
     setSaving(false);
@@ -165,7 +165,7 @@ export function FuncaoPerfis({ funcaoId }: Props) {
       return;
     }
     await queryClient.invalidateQueries({ queryKey: ["table", "menu"] });
-    toast.success(`${novos.length} perfil(is) liberado(s) com acesso total.`);
+    toast.success(`${novos.length} perfil(is) adicionado(s) como inativo(s). Ative em "Ativo".`);
   };
 
   const vincular = async () => {
