@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DocumentosButton } from "@/components/documentos/DocumentosPainel";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { DataTable, type Column } from "@/components/data-table/DataTable";
 import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
@@ -287,7 +288,14 @@ function VeiculoSheet({ original, readOnly, onClose }: { original: Row | null; r
     <Sheet open onOpenChange={(o) => !o && onClose()}>
       <SheetContent className="flex w-full flex-col gap-0 p-0">
         <SheetHeader className="border-b p-4">
-          <SheetTitle className="flex items-center gap-2"><Car className="size-5" /> {original ? `Veículo ${String(original["placa"])}` : "Novo veículo"}</SheetTitle>
+          <div className="flex items-center gap-2 pr-8">
+            <SheetTitle className="flex items-center gap-2"><Car className="size-5" /> {original ? `Veículo ${String(original["placa"])}` : "Novo veículo"}</SheetTitle>
+            {original && (
+              <div className="ml-auto">
+                <DocumentosButton entidadeTipo="veiculo" entidadeId={String(rowId(original) ?? "")} entidadeNome={`${String(original["placa"] ?? "")} ${String(original["modelo"] ?? "")}`.trim()} registro={original} />
+              </div>
+            )}
+          </div>
         </SheetHeader>
         <div className="flex-1 space-y-6 overflow-y-auto p-4">
           <section className="grid gap-4 sm:grid-cols-3">

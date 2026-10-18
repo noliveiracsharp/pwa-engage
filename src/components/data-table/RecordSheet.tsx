@@ -1,4 +1,6 @@
 import { HistoricoButton } from "@/components/auditoria/HistoricoButton";
+import { DocumentosButton } from "@/components/documentos/DocumentosPainel";
+import type { EntidadeDoc } from "@/lib/documentos";
 import { useEffect, useState, type ReactNode } from "react";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -49,6 +51,8 @@ type Props = {
   readOnly?: boolean;
   /** Tabela do banco: mostra o botão "Histórico" (auditoria) ao editar. */
   auditTable?: string | undefined;
+  /** Mostra o botão "Documentos" (contratos/termos) ao editar. */
+  docs?: { tipo: EntidadeDoc; nome: (r: Row) => string } | undefined;
 };
 
 export function columnFor(record: Row | null | undefined, fields: string[]) {
@@ -71,6 +75,7 @@ export function RecordSheet({
   hideDataTab,
   readOnly,
   auditTable,
+  docs,
 }: Props) {
   const [values, setValues] = useState<Record<string, string>>({});
 
@@ -230,8 +235,11 @@ export function RecordSheet({
         <SheetHeader className="shrink-0 border-b px-6 py-4">
           <div className="flex items-center gap-2 pr-8">
             <SheetTitle>{title}</SheetTitle>
-            {auditTable && record && (
-              <div className="ml-auto"><HistoricoButton tabela={auditTable} registroId={rowId(record)} /></div>
+            {record && (docs || auditTable) && (
+              <div className="ml-auto flex items-center gap-1">
+                {docs && <DocumentosButton entidadeTipo={docs.tipo} entidadeId={String(rowId(record) ?? "")} entidadeNome={docs.nome(record)} registro={record} />}
+                {auditTable && <HistoricoButton tabela={auditTable} registroId={rowId(record)} />}
+              </div>
             )}
           </div>
           {description && <SheetDescription>{description}</SheetDescription>}

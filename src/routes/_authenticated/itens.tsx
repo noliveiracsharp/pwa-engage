@@ -8,6 +8,8 @@ import { DataTable, type Column } from "@/components/data-table/DataTable";
 import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
 import { StatusBadge } from "@/components/data-table/StatusBadge";
 import { ItemSheet } from "@/components/itens/ItemSheet";
+import { ReajusteOfertasDialog } from "@/components/itens/ReajusteOfertasDialog";
+import type { NovoPreco } from "@/lib/reajuste-itens";
 import { ImagensCarrosselDialog } from "@/components/itens/ImagensCarrosselDialog";
 import { rowId, useDeleteRecord, useSaveRecord, useTableRows } from "@/lib/crud";
 import { matchesAny } from "@/lib/input-masks";
@@ -64,6 +66,7 @@ function ItensPage() {
   const [duplicando, setDuplicando] = useState(false);
   const [f, setF] = useState({ busca: "", tipo: "todos", status: "todos" });
   const [precOpen, setPrecOpen] = useState(false);
+  const [reajuste, setReajuste] = useState<{ itemId: string; nome: string; novo: NovoPreco } | null>(null);
   const [fiscalOpen, setFiscalOpen] = useState(false);
   const [galeria, setGaleria] = useState<{ titulo: string; imagens: string[] } | null>(null);
 
@@ -246,10 +249,42 @@ function ItensPage() {
         readOnly={record && !duplicando ? !perms.canUpdate : !perms.canCreate}
         duplicando={duplicando}
         canCreateApoio={perms.canCreate}
-        onSave={(values) =>
-          save.mutate({ values: stamp(values, !record || duplicando), original: duplicando ? null : record }, { onSuccess: () => { setOpen(false); setRecord(null); setDuplicando(false); } })
-        }
+        onSave={(values) => {
+          const original = duplicando ? null : record;
+          const n = (x: unknown) => (x === null || x === undefined || x === "" ? null : Number(x));
+          const mudou =
+            original &&
+            (n(original["preco_custo"]) !== n(values["preco_custo"]) ||
+              n(original["preco_venda"]) !== n(values["preco_venda"]) ||
+              n(original["imposto"]) !== n(values["imposto"]));
+          save.mutate(
+            { values: stamp(values, !original), original },
+            {
+              onSuccess: () => {
+                setOpen(false);
+                setRecord(null);
+                setDuplicando(false);
+                if (mudou && original) {
+                  setReajuste({
+                    itemId: String(rowId(original)),
+                    nome: String(values["descricao"] ?? original["descricao"] ?? ""),
+                    novo: { preco_custo: n(values["preco_custo"]) ?? 0, preco_venda: n(values["preco_venda"]), imposto: n(values["imposto"]) ?? 0 },
+                  });
+                }
+              },
+            },
+          );
+        }}
       />
+      {reajuste && (
+        <ReajusteOfertasDialog
+          open
+          onOpenChange={(o) => !o && setReajuste(null)}
+          itemId={reajuste.itemId}
+          itemNome={reajuste.nome}
+          novo={reajuste.novo}
+        />
+      )}
       <PrecificacaoDialog open={precOpen} onOpenChange={setPrecOpen} />
       <FiscalContadorDialog open={fiscalOpen} onOpenChange={setFiscalOpen} itens={rows as Row[]} />
       <ImagensCarrosselDialog
