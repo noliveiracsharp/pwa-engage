@@ -222,36 +222,38 @@ export function RecordSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-xl">
-        <SheetHeader className="px-6 pb-4">
+      <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-xl">
+        <SheetHeader className="shrink-0 border-b px-6 py-4">
           <SheetTitle>{title}</SheetTitle>
           {description && <SheetDescription>{description}</SheetDescription>}
         </SheetHeader>
 
-        {allTabs && allTabs.length > 0 ? (
-          <Tabs key={allTabs[0]!.key} defaultValue={allTabs[0]!.key} className="px-6 pt-2">
-            <TabsList className="h-auto w-full flex-wrap">
+        <div className="min-h-0 flex-1 overflow-y-auto py-4">
+          {allTabs && allTabs.length > 0 ? (
+            <Tabs key={allTabs[0]!.key} defaultValue={allTabs[0]!.key} className="px-6">
+              <TabsList className="h-auto w-full flex-wrap">
+                {allTabs.map((t) => (
+                  <TabsTrigger key={t.key} value={t.key} className="flex-1">{t.label}</TabsTrigger>
+                ))}
+              </TabsList>
               {allTabs.map((t) => (
-                <TabsTrigger key={t.key} value={t.key} className="flex-1">{t.label}</TabsTrigger>
+                <TabsContent key={t.key} value={t.key} className={t.key === "dados" ? undefined : "pt-4"}>
+                  {t.content}
+                </TabsContent>
               ))}
-            </TabsList>
-            {allTabs.map((t) => (
-              <TabsContent key={t.key} value={t.key} className={t.key === "dados" ? undefined : "pt-4"}>
-                {t.content}
-              </TabsContent>
-            ))}
-          </Tabs>
-        ) : (
-          <div className="px-6">
-            <fieldset disabled={readOnly} className="min-w-0 disabled:opacity-70">
-              {photoBlock}
-              {fieldsGrid}
-            </fieldset>
-            {extra && <div className="pt-6">{extra}</div>}
-          </div>
-        )}
+            </Tabs>
+          ) : (
+            <div className="px-6">
+              <fieldset disabled={readOnly} className="min-w-0 disabled:opacity-70">
+                {photoBlock}
+                {fieldsGrid}
+              </fieldset>
+              {extra && <div className="pt-6">{extra}</div>}
+            </div>
+          )}
+        </div>
 
-        <div className="bg-background sticky bottom-0 mt-4 flex justify-end gap-2 px-6 py-4">
+        <div className="bg-background flex shrink-0 justify-end gap-2 border-t px-6 py-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
