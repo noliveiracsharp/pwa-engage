@@ -17,6 +17,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { Toaster } from "@/components/ui/sonner";
 import { VisualizadorGlobal } from "@/components/media/VisualizadorGlobal";
 import { NovaVersaoAviso } from "@/components/layout/NovaVersaoAviso";
+import { DialogoGlobal } from "@/components/layout/DialogoGlobal";
 
 function NotFoundComponent() {
   return (
@@ -135,6 +136,7 @@ function RootComponent() {
           <Toaster richColors closeButton duration={4000} position="top-right" offset={{ top: 72, right: 16 }} />
           <VisualizadorGlobal />
           <NovaVersaoAviso />
+          <DialogoGlobal />
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
