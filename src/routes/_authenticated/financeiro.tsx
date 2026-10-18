@@ -468,7 +468,8 @@ function TituloSheet({ tipo, registro, parceiros, cartoes, readOnly, onClose, on
         const serieId = n > 1 ? crypto.randomUUID() : null;
         const lote = previa.map((p, i) => ({
           ...base, ...extra, empresa_id: emp, origem_tipo: "manual", origem_id: serieId, parcela_n: i + 1,
-          descricao: n > 1 ? `${base.descricao} (${i + 1}/${n})` : base.descricao,
+          descricao: p.descricao ?? (n > 1 ? `${base.descricao} (${i + 1}/${n})` : base.descricao),
+          ...(p.categoria ? { categoria: p.categoria } : {}),
           vencimento: p.vencimento, valor: p.valor,
           ...(v.ja_pago && !cartaoModo && i === 0 ? { status: "pago", pago_em: p.vencimento, valor_pago: p.valor } : {}),
         }));
