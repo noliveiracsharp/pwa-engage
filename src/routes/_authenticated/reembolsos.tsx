@@ -113,7 +113,7 @@ function Despesas({ lanc, cartoes, usuarios, loading, perms }: { lanc: Row[]; ca
     invalidar();
   };
   const reprovar = async (l: Row) => {
-    const motivo = await perguntar("Motivo da reprovação:");
+    const motivo = await perguntar({ title: "Reprovar despesa", description: "Informe o motivo da reprovação.", multiline: true, confirmText: "Reprovar", destructive: true });
     if (motivo === null) return;
     const { error } = await supabase.from("despesas_lancamentos").update({ status: "reprovado", motivo: motivo || null, aprovado_por: usuarioId ?? null, aprovado_em: new Date().toISOString() } as never).eq("id", text(rowId(l)));
     if (error) return void toast.error(erroFinanceiro(error));
