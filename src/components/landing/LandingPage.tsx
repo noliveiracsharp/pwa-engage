@@ -457,8 +457,8 @@ export function LandingPage() {
           <div>
             <p className="mb-3 font-semibold">Institucional</p>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li>Termos de Uso</li>
-              <li>Política de Privacidade</li>
+              <li><Link to="/termos" className="hover:text-brand-on">Termos de Uso</Link></li>
+              <li><Link to="/privacidade" className="hover:text-brand-on">Política de Privacidade</Link></li>
             </ul>
           </div>
         </div>
