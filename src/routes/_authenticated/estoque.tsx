@@ -360,7 +360,7 @@ function MovimentacaoSheet({ open, onOpenChange, produtos, locais, saldos }: Mov
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-xl">
+      <SheetContent className="w-full overflow-y-auto pb-0 sm:max-w-xl">
         <SheetHeader className="px-6 pb-4">
           <SheetTitle>Nova movimentação</SheetTitle>
         </SheetHeader>
@@ -411,7 +411,7 @@ function MovimentacaoSheet({ open, onOpenChange, produtos, locais, saldos }: Mov
             <p className="text-warning text-sm sm:col-span-2">Cadastre ao menos um local na aba "Locais de Estoque".</p>
           )}
         </div>
-        <div className="bg-background sticky bottom-0 mt-4 flex justify-end gap-2 px-6 py-4">
+        <div className="bg-background sticky bottom-0 z-10 mt-4 flex justify-end gap-2 border-t px-6 py-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
           <Button onClick={submit} disabled={save.isPending}>{save.isPending ? "Salvando…" : "Salvar"}</Button>
         </div>

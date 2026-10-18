@@ -655,7 +655,7 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-2xl">
+      <SheetContent className="w-full overflow-y-auto pb-0 sm:max-w-2xl">
         <SheetHeader className="px-4 pb-4">
           <SheetTitle>{title}</SheetTitle>
         </SheetHeader>
@@ -821,7 +821,7 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
           )}
         </Tabs>
 
-        <div className="bg-background sticky bottom-0 mt-4 flex justify-end gap-2 border-t px-6 py-4">
+        <div className="bg-background sticky bottom-0 z-10 mt-4 flex justify-end gap-2 border-t px-6 py-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
