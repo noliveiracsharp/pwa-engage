@@ -1,4 +1,5 @@
-import { periodoMesVigente } from "@/lib/utils";
+import { PeriodoNavegavel } from "@/components/financeiro/PeriodoNavegavel";
+import { periodoPreset, type Periodo } from "@/lib/periodo-vencimento";
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
@@ -110,10 +111,10 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
   };
   const { data: cartoes = [] } = useTableRows("despesas_cartoes");
   const categorias = useCategoriasFinanceiro(tipo);
-  const [f, setF] = useState({ busca: "", situacao: "todos", categoria: "todos", cartao: "todos", visao: "mes" as VisaoCaixa, ...periodoMesVigente() });
+  const [f, setF] = useState({ busca: "", situacao: "todos", categoria: "todos", cartao: "todos", per: periodoPreset("mes") });
   const [sel, setSel] = useState<Set<string>>(new Set());
   const [confirmarLote, setConfirmarLote] = useState(false);
-  const periodoF = f.visao === "personalizado" ? { de: f.de, ate: f.ate } : periodoVisao(f.visao);
+  const periodoF = f.per;
   const [editar, setEditar] = useState<Row | null | undefined>(undefined);
   const [baixar, setBaixar] = useState<Row | null>(null);
   const [cobrar, setCobrar] = useState<Row | null>(null);
@@ -309,12 +310,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
               <FilterSelect label="Cartão" value={f.cartao} onChange={(v) => setF((s) => ({ ...s, cartao: v }))}
                 options={[{ value: "todos", label: "Todos" }, ...cartoes.map((c) => ({ value: text(rowId(c)), label: nomeCartao(c) }))]} />
             )}
-            <FilterSelect label="Visão" value={f.visao} onChange={(v) => setF((s) => ({ ...s, visao: v as VisaoCaixa, ...(v === "personalizado" ? periodoF : {}) }))}
-              options={[{ value: "mes", label: "Mês atual" }, { value: "6m", label: "6 meses" }, { value: "12m", label: "12 meses" }, { value: "personalizado", label: "Personalizado" }]} />
-            {f.visao === "personalizado" && (<>
-              <div className="space-y-1"><Label className="text-xs">Data início</Label><Input type="date" value={f.de} onChange={(e) => setF((s) => ({ ...s, de: e.target.value }))} /></div>
-              <div className="space-y-1"><Label className="text-xs">Data fim</Label><Input type="date" value={f.ate} onChange={(e) => setF((s) => ({ ...s, ate: e.target.value }))} /></div>
-            </>)}
+            <PeriodoNavegavel value={f.per} onChange={(p) => setF((s) => ({ ...s, per: p }))} />
             <div className="flex items-end gap-2"><Button variant="outline" onClick={exportarCsv}>CSV</Button>
               <CategoriasDialog tipo={tipo} podeEditar={perms.canCreate || perms.canUpdate} /></div>
           </>
@@ -667,10 +663,13 @@ const nomeMes = (k: string) => {
 
 function Caixa({ titulos }: { titulos: Row[] }) {
   const [saldoInicial, setSaldoInicial] = useState("");
-  const [visao, setVisao] = useState<VisaoCaixa>("6m");
+  const [per, setPer] = useState<Periodo>(() => periodoPreset("mes"));
   const [modo, setModo] = useState<ModoCaixa>("ambos");
-  const [custom, setCustom] = useState(() => periodoVisao("6m"));
-  const periodo = visao === "personalizado" ? custom : periodoVisao(visao);
+  const periodo = useMemo(() => {
+    if (per.preset !== "todo") return { de: per.de, ate: per.ate };
+    const datas = titulos.flatMap((t) => [text(t["vencimento"]).slice(0, 10), text(t["pago_em"]).slice(0, 10)]).filter(Boolean).sort();
+    return { de: datas[0] ?? "", ate: datas.at(-1) ?? "" };
+  }, [per, titulos]);
   const linhas = fluxoPeriodo(titulos, { ...periodo, modo, saldoInicial: num(saldoInicial) });
   const tot = linhas.reduce((a, l) => ({ e: a.e + l.entradas, s: a.s + l.saidas }), { e: 0, s: 0 });
   const dados = linhas.map((l) => ({ ...l, nome: nomeMes(l.mes) }));
@@ -682,22 +681,7 @@ function Caixa({ titulos }: { titulos: Row[] }) {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end gap-3">
-        <div className="space-y-1"><Label>Visão</Label>
-          <Select value={visao} onValueChange={(x) => setVisao(x as VisaoCaixa)}>
-            <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="mes">Mês atual</SelectItem>
-              <SelectItem value="6m">6 meses</SelectItem>
-              <SelectItem value="12m">12 meses</SelectItem>
-              <SelectItem value="personalizado">Personalizado</SelectItem>
-            </SelectContent>
-          </Select></div>
-        {visao === "personalizado" && (
-          <>
-            <div className="space-y-1"><Label>Data início</Label><Input type="date" value={custom.de} onChange={(e) => setCustom({ ...custom, de: e.target.value })} /></div>
-            <div className="space-y-1"><Label>Data fim</Label><Input type="date" value={custom.ate} onChange={(e) => setCustom({ ...custom, ate: e.target.value })} /></div>
-          </>
-        )}
+        <PeriodoNavegavel label="Período" value={per} onChange={setPer} />
         <div className="space-y-1"><Label>Mostrar</Label>
           <Select value={modo} onValueChange={(x) => setModo(x as ModoCaixa)}>
             <SelectTrigger className="w-52"><SelectValue /></SelectTrigger>
