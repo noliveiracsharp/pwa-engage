@@ -4,7 +4,8 @@ import { AlertTriangle, CheckCircle2, Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { rowId, text, type Row } from "@/lib/row";
+import { rowId, text } from "@/lib/crud";
+import type { Row } from "@/lib/row";
 
 const digitos = (s: string) => s.replace(/\D/g, "");
 
