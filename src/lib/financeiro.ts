@@ -232,3 +232,56 @@ export function parcelasCartao(opts: { valor: number; parcelas: number; dataComp
     valor: i === 0 ? round2(v - base * (n - 1)) : base,
   }));
 }
+
+export type VisaoCaixa = "mes" | "6m" | "12m" | "personalizado";
+export type ModoCaixa = "previsto" | "realizado" | "ambos";
+
+const ultimoDia = (y: number, m1: number) => new Date(y, m1, 0).getDate();
+
+/** Período da visão: mês atual; 6/12 meses = mês atual e os seguintes; personalizado usa as datas informadas. */
+export function periodoVisao(visao: VisaoCaixa, hoje = hojeISO(), de = "", ate = ""): { de: string; ate: string } {
+  if (visao === "personalizado") return { de, ate };
+  const [y, m] = hoje.split("-").map(Number);
+  const n = visao === "mes" ? 1 : visao === "6m" ? 6 : 12;
+  const ini = `${y}-${String(m).padStart(2, "0")}-01`;
+  const fimMes = addMonthsISO(ini, n - 1);
+  const [fy, fm] = fimMes.split("-").map(Number);
+  return { de: ini, ate: `${fimMes.slice(0, 7)}-${String(ultimoDia(fy!, fm!)).padStart(2, "0")}` };
+}
+
+export type MesFluxo = { mes: string; entradas: number; saidas: number; saldo: number; acumulado: number };
+
+/**
+ * Fluxo mês a mês no período. Realizado = baixas por data de pagamento; previsto = em aberto por vencimento.
+ * Meses contínuos entre `de` e `ate`; acumulado parte do saldo inicial.
+ */
+export function fluxoPeriodo(titulos: Row[], opts: { de: string; ate: string; modo: ModoCaixa; saldoInicial?: number }): MesFluxo[] {
+  if (!opts.de || !opts.ate || opts.de > opts.ate) return [];
+  const mapa = new Map<string, { e: number; s: number }>();
+  for (const t of titulos) {
+    const st = String(t["status"] ?? "aberto");
+    if (st === "cancelado") continue;
+    const pago = st === "pago";
+    if (pago && opts.modo === "previsto") continue;
+    if (!pago && opts.modo === "realizado") continue;
+    const data = pago ? iso(t["pago_em"]) : iso(t["vencimento"]);
+    if (!data || data < opts.de || data > opts.ate) continue;
+    const v = pago ? num(t["valor_pago"]) || num(t["valor"]) : num(t["valor"]);
+    const k = data.slice(0, 7);
+    const x = mapa.get(k) ?? { e: 0, s: 0 };
+    if (t["tipo"] === "receber") x.e += v; else x.s += v;
+    mapa.set(k, x);
+  }
+  const out: MesFluxo[] = [];
+  let acc = round2(num(opts.saldoInicial));
+  let cur = `${opts.de.slice(0, 7)}-01`;
+  while (cur.slice(0, 7) <= opts.ate.slice(0, 7) && out.length < 240) {
+    const k = cur.slice(0, 7);
+    const x = mapa.get(k) ?? { e: 0, s: 0 };
+    const saldo = round2(x.e - x.s);
+    acc = round2(acc + saldo);
+    out.push({ mes: k, entradas: round2(x.e), saidas: round2(x.s), saldo, acumulado: acc });
+    cur = addMonthsISO(cur, 1);
+  }
+  return out;
+}
