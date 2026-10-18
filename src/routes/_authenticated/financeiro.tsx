@@ -335,7 +335,7 @@ function TituloSheet({ tipo, registro, parceiros, cartoes, readOnly, onClose, on
     if (cartaoModo && !previa.length) return void toast.error("Informe o dia de fechamento e de vencimento do cartão.");
     setSalvando(true);
     try {
-      const base = { tipo, descricao: v.descricao.trim(), categoria: v.categoria, parceiro_id: v.parceiro_id || null,
+      const base = { tipo, descricao: v.descricao.trim(), categoria: v.categoria || (categorias.ativas[0] ?? ""), parceiro_id: v.parceiro_id || null,
         vencimento: v.vencimento, valor, observacao: v.observacao || null, status: v.status,
         data_competencia: v.data_competencia || null, centro_custo_id: v.centro_custo_id || null,
         codigo_referencia: v.codigo_referencia.trim() || null, conta_bancaria_id: v.conta_bancaria_id || null,
