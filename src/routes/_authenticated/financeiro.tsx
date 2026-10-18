@@ -548,24 +548,67 @@ function TituloSheet({ tipo, registro, parceiros, cartoes, readOnly, onClose, on
           {cartaoModo && (
             <div className="space-y-1 sm:col-span-2"><Label>Cartão utilizado *</Label>
               <Select value={v.cartao_id} onValueChange={(x) => setV({ ...v, cartao_id: x })}>
-                <SelectTrigger><SelectValue placeholder={cartoes.length ? "Escolha o cartão" : "Cadastre um cartão em Reembolsos → Cartões"} /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={cartoes.length ? "Escolha o cartão" : "Cadastre um cartão em Financeiro → Bancos"} /></SelectTrigger>
                 <SelectContent>{cartoes.map((c) => <SelectItem key={text(rowId(c))} value={text(rowId(c))}>{nomeCartao(c)}</SelectItem>)}</SelectContent>
               </Select>
-              {cartao && (!cartao["dia_fechamento"] || !cartao["dia_vencimento"]) && (
-                <p className="text-warning text-xs">Informe o dia de fechamento e de vencimento deste cartão em Reembolsos → Cartões.</p>
+              {cartao && !cartaoOk && (
+                <p className="text-warning text-xs">Informe o dia de fechamento e de vencimento deste cartão em Financeiro → Bancos.</p>
+              )}
+              {cartao && limiteCartao > 0 && (
+                <p className={cn("text-xs", round2(itensModo ? totalItens : num(v.valor)) > dispCartao ? "text-destructive" : "text-muted-foreground")}>
+                  Limite disponível: {formatBRL(dispCartao)} de {formatBRL(limiteCartao)}
+                </p>
               )}
             </div>
+          )}
+          {cartaoModo && (
+            <div className="space-y-1 sm:col-span-2"><Label>Como lançar a compra</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <Button type="button" variant={!porItem ? "default" : "outline"} onClick={() => setPorItem(false)}>Valor total</Button>
+                <Button type="button" variant={porItem ? "default" : "outline"} onClick={() => setPorItem(true)}>Item a item</Button>
+              </div></div>
           )}
           {registro && text(registro["cartao_id"]) && (
             <p className="text-muted-foreground text-sm sm:col-span-2">Cartão: {nomeCartao(cartoes.find((c) => text(rowId(c)) === text(registro["cartao_id"])))}</p>
           )}
           <div className="space-y-1"><Label>{cartaoModo ? "Data da compra" : registro || v.modo === "unico" ? "Vencimento" : "1º vencimento"}</Label>
             <Input type="date" value={v.vencimento} disabled={readOnly} onChange={(e) => setV({ ...v, vencimento: e.target.value })} /></div>
-          <div className="space-y-1"><Label>{(v.modo === "parcelado" || cartaoModo) && !registro ? "Valor total (R$)" : v.modo === "recorrente" && !registro ? "Valor mensal (R$)" : "Valor (R$)"}</Label>
-            <Input inputMode="decimal" value={v.valor} disabled={readOnly} onChange={(e) => setV({ ...v, valor: e.target.value })} placeholder="0,00" /></div>
-          {!registro && v.modo !== "unico" && (
+          {!itensModo && (
+            <div className="space-y-1"><Label>{(v.modo === "parcelado" || cartaoModo) && !registro ? "Valor total (R$)" : v.modo === "recorrente" && !registro ? "Valor mensal (R$)" : "Valor (R$)"}</Label>
+              <Input inputMode="decimal" value={v.valor} disabled={readOnly} onChange={(e) => setV({ ...v, valor: e.target.value })} placeholder="0,00" /></div>
+          )}
+          {!registro && v.modo !== "unico" && !itensModo && (
             <div className="space-y-1"><Label>{v.modo === "recorrente" ? "Nº de meses" : "Nº de parcelas"}</Label>
               <Input type="number" min={1} max={cartaoModo ? 48 : 120} value={v.repetir} onChange={(e) => setV({ ...v, repetir: e.target.value })} /></div>
+          )}
+          {itensModo && (
+            <div className="space-y-2 rounded-lg border p-3 sm:col-span-2">
+              <p className="text-sm font-semibold">Itens da compra</p>
+              <div className="text-muted-foreground hidden grid-cols-[1fr_10rem_7rem_5rem_2.5rem] gap-2 text-xs font-medium sm:grid">
+                <span>Descrição</span><span>Categoria</span><span>Valor (R$)</span><span>Parcelas</span><span />
+              </div>
+              {itens.map((it, idx) => {
+                const up = (patch: Partial<typeof it>) => setItens((l) => l.map((x, j) => (j === idx ? { ...x, ...patch } : x)));
+                return (
+                  <div key={idx} className="grid gap-2 sm:grid-cols-[1fr_10rem_7rem_5rem_2.5rem]">
+                    <Input value={it.descricao} placeholder="Ex.: Monitor 27''" onChange={(e) => up({ descricao: e.target.value })} />
+                    <Select value={it.categoria} onValueChange={(x) => up({ categoria: x })}>
+                      <SelectTrigger><SelectValue placeholder="Categoria" /></SelectTrigger>
+                      <SelectContent>{categorias.ativas.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                    </Select>
+                    <Input inputMode="decimal" value={it.valor} placeholder="0,00" onChange={(e) => up({ valor: e.target.value })} />
+                    <Input type="number" min={1} max={48} value={it.parcelas} onChange={(e) => up({ parcelas: e.target.value })} />
+                    <Button type="button" variant="ghost" size="icon" aria-label="Remover item" disabled={itens.length === 1}
+                      onClick={() => setItens((l) => l.filter((_, j) => j !== idx))}><Trash2 className="text-destructive h-4 w-4" /></Button>
+                  </div>
+                );
+              })}
+              <div className="flex items-center justify-between">
+                <Button type="button" variant="outline" size="sm" onClick={() => setItens((l) => [...l, { descricao: "", categoria: v.categoria, valor: "", parcelas: "1" }])}>
+                  <Plus className="mr-1 h-4 w-4" />Adicionar item</Button>
+                <p className="text-sm">Valor final no cartão: <span className="text-base font-bold tabular-nums">{formatBRL(totalItens)}</span></p>
+              </div>
+            </div>
           )}
           {!registro && (previa.length > 1 || (cartaoModo && previa.length > 0)) && (
             <div className="rounded-lg border border-primary/30 bg-primary/5 text-sm sm:col-span-2">
