@@ -20,6 +20,7 @@ const linkCls =
 const activeCls = "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary";
 
 function isActive(item: MenuItem, pathname: string): boolean {
+  if (!item.path) return false;
   return (
     pathname === item.path ||
     pathname.startsWith(item.path + "/") ||
@@ -109,6 +110,7 @@ function SidebarEntry({
         </PopoverTrigger>
         <PopoverContent side="right" align="start" className="w-56 p-1">
           <div className="px-3 py-1.5 text-xs font-semibold text-muted-foreground">{item.label}</div>
+{item.path && (
           <Link
             to={item.path as "/dashboard"}
             onClick={onNavigate}
@@ -117,6 +119,7 @@ function SidebarEntry({
             <Icon className="h-4 w-4 shrink-0" />
             <span className="truncate">{item.label}</span>
           </Link>
+          )}
           {flatten(children).map((c) => {
             const CIcon = getIcon(c.icon);
             return (
@@ -140,6 +143,7 @@ function SidebarEntry({
   return (
     <div className="flex flex-col gap-1">
       <div className={cn("flex items-center rounded-md", isActive(item, pathname) && activeCls)}>
+        {item.path ? (
         <Link
           to={item.path as "/dashboard"}
           onClick={onNavigate}
@@ -149,6 +153,17 @@ function SidebarEntry({
           <Icon className={cn("shrink-0", depth > 0 ? "h-4 w-4" : "h-5 w-5")} />
           <span className="truncate">{item.label}</span>
         </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            className={cn(linkCls, "min-w-0 flex-1 text-left")}
+            style={depth > 0 ? { paddingLeft: 12 + depth * 16 } : undefined}
+          >
+            <Icon className={cn("shrink-0", depth > 0 ? "h-4 w-4" : "h-5 w-5")} />
+            <span className="truncate">{item.label}</span>
+          </button>
+        )}
         <button
           type="button"
           aria-label={expanded ? `Recolher ${item.label}` : `Expandir ${item.label}`}

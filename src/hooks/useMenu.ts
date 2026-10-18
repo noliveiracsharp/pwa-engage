@@ -46,7 +46,7 @@ function normalize(row: Row, index: number): MenuItem {
   return {
     id: String(pick(row, ["funcao_id", "menu_id", "funcoes_id", "id"], `menu-${index}`)),
     label: String(pick(row, ["funcao_descricao", "descricao", "nome", "label"], "Menu")),
-    path: String(pick(row, ["path", "funcao_path", "rota", "url"], "/dashboard")),
+    path: String(pick(row, ["path", "funcao_path", "rota", "url"], "")),
     icon: String(pick(row, ["icone", "funcao_icone", "icon"], "circle")),
     order: Number(pick(row, ["ordem_hierarquia", "funcao_ordem", "ordem", "order"], index + 1)),
   };
@@ -70,11 +70,11 @@ export function useMenu() {
       // Master: todas as funções ativas que são menu, ignorando planos/módulos/menu.
       if (isMaster) {
         const all = (funcoes ?? [])
-          .filter((f) => asBool(f["status"]) && f["menu_ativo"] !== false && pick(f, ["path"]))
+          .filter((f) => asBool(f["status"]) && f["menu_ativo"] !== false)
           .map((f, i) => ({
             id: String(pick(f, ["id"], `menu-${i}`)),
             label: String(pick(f, ["descricao", "nome"], "Menu")),
-            path: String(pick(f, ["path"], "/dashboard")),
+            path: String(pick(f, ["path"], "")),
             icon: String(pick(f, ["icone", "icon"], "circle")),
             order: Number(pick(f, ["ordem_hierarquia", "ordem"], i + 1)),
           }))
@@ -134,7 +134,12 @@ function buildMenuTree(items: MenuItem[], funcoes: Row[]): MenuItem[] {
     list
       .sort((a, b) => a.order - b.order)
       .map((i) => ({ ...i, children: i.children?.length ? clean(i.children) : undefined }));
-  return clean(roots);
+  // Agrupador sem rota e sem subitens visíveis não tem ação: some do menu.
+  const semAcao = (list: MenuItem[]): MenuItem[] =>
+    list
+      .filter((i) => i.path || i.children?.length)
+      .map((i) => ({ ...i, children: i.children ? semAcao(i.children) : undefined }));
+  return semAcao(clean(roots));
 }
 
 /** Abas da página pai: funções filhas com menu_ativo = false que o perfil pode ler. */
