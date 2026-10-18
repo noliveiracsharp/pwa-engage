@@ -495,7 +495,7 @@ export function OrcamentoLinhas({
     setBlocosVazios((prev) => prev.map((b) => (b === antigo ? nome : b)));
   };
 
-  const excluirAmbiente = (bloco: string, rows: Linha[]) => {
+  const excluirAmbiente = async (bloco: string, rows: Linha[]) => {
     if (rows.length > 0 && !await confirmar(`Excluir o ambiente "${bloco}"? Os ${rows.length} item(ns) irão para "Itens gerais".`)) return;
     for (const l of rows) onChange(l.key, { bloco: "" });
     setBlocosVazios((prev) => prev.filter((b) => b !== bloco));

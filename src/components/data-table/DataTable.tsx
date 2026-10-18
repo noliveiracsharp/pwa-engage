@@ -282,7 +282,7 @@ export function DataTable({
                           {onDelete && (
                             <DropdownMenuItem
                               className="text-destructive focus:text-destructive"
-                              onClick={() => {
+                              onClick={async () => {
                                 if (skipDeleteConfirm || await confirmar("Deseja realmente excluir este registro?")) onDelete(row);
                               }}
                             >
@@ -309,7 +309,7 @@ export function DataTable({
                           variant="ghost"
                           size="icon"
                           aria-label="Excluir"
-                          onClick={() => {
+                          onClick={async () => {
                             if (skipDeleteConfirm || await confirmar("Deseja realmente excluir este registro?")) onDelete(row);
                           }}
                         >

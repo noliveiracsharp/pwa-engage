@@ -112,7 +112,7 @@ export function PropostaDialog(props: Props) {
   };
 
   const salvarModelo = async (b: Bloco) => {
-    const nome = await perguntar(`Nome do modelo de ${BLOCO_LABEL[b.tipo]}`, b.titulo);
+    const nome = await perguntar({ title: `Nome do modelo de ${BLOCO_LABEL[b.tipo]}`, defaultValue: b.titulo });
     if (!nome) return;
     const { error } = await supabase.from("orcamentos_templates" as never).insert({
       empresa_id: empresaId,
@@ -255,7 +255,7 @@ export function PropostaDialog(props: Props) {
                             variant="outline"
                             size="sm"
                             className="h-8 text-xs"
-                            onClick={() => {
+                            onClick={async () => {
                               if (b.conteudo.trim() && !await confirmar("Substituir o texto atual pelo contrato gerado a partir da oferta?")) return;
                               set(i, {
                                 titulo: "Contrato de prestação de serviços e tecnologia",

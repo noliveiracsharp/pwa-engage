@@ -14,7 +14,7 @@ async function compartilhar(projeto: Row) {
   }
   const url = `${window.location.origin}/compartilhado/${token}`;
   try { await navigator.clipboard.writeText(url); toast.success("Link do cliente copiado!", { description: url }); }
-  catch { await perguntar("Copie o link do cliente:", url); }
+  catch { await perguntar({ title: "Copie o link do cliente", defaultValue: url, confirmText: "Fechar", required: false }); }
 }
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";

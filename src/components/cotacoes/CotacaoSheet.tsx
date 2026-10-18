@@ -623,7 +623,7 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
           {editavel && (
             <Button
               disabled={aprovando || analise.escolhas.length === 0}
-              onClick={() => {
+              onClick={async () => {
                 if (analise.escolhas.length < itensCot.length && !await confirmar("Alguns itens estão sem preço e ficarão sem custo na oferta. Aprovar mesmo assim?")) return;
                 onAprovar(analise.escolhas);
               }}

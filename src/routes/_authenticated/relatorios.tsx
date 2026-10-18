@@ -192,7 +192,7 @@ function Lista({
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => await confirmar("Excluir este relatório?") && del.mutate(r)}
+                        onClick={async () => await confirmar("Excluir este relatório?") && del.mutate(r)}
                       >
                         <Trash2 className="mr-1 h-4 w-4 text-destructive" />
                         Excluir

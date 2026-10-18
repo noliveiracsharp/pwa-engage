@@ -667,7 +667,7 @@ export function KanbanConfigDialog({
                           title={
                             etapasComCards.has(id) ? "Há cards vinculados a esta etapa" : "Excluir"
                           }
-                          onClick={() => await confirmar("Excluir esta etapa?") && delEtapa.mutate(id)}
+                          onClick={async () => await confirmar("Excluir esta etapa?") && delEtapa.mutate(id)}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>}

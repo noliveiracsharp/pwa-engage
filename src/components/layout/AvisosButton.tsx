@@ -45,7 +45,7 @@ export function AvisosButton() {
           <span className="font-semibold text-foreground">Avisos</span>
           <div className="flex gap-1">
             <Button size="sm" variant="ghost" disabled={!naoLidos} onClick={marcarTodosLidos}><CheckCheck className="mr-1 h-4 w-4" />Ler todos</Button>
-            <Button size="sm" variant="ghost" disabled={!avisos.length} onClick={() => await confirmar("Apagar todos os avisos?") && limparAvisos()}><Trash2 className="mr-1 h-4 w-4" />Limpar</Button>
+            <Button size="sm" variant="ghost" disabled={!avisos.length} onClick={async () => await confirmar("Apagar todos os avisos?") && limparAvisos()}><Trash2 className="mr-1 h-4 w-4" />Limpar</Button>
           </div>
         </div>
         <ul className="max-h-[60vh] overflow-y-auto">

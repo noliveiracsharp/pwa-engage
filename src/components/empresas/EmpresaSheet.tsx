@@ -416,7 +416,7 @@ export function ChildTable({ config, empresa, perms = FULL }: { config: ChildCon
                     variant="ghost"
                     size="icon"
                     aria-label="Remover"
-                    onClick={() => {
+                    onClick={async () => {
                       if (await confirmar("Deseja realmente excluir este registro?")) remove(row);
                     }}
                   >

@@ -182,7 +182,7 @@ export function ManutencaoSheet({ open, onOpenChange, record, inicial, onSaved }
   const atual: Row = { ...(record ?? {}), ...f, checklist, anexos, ...datas };
 
   const iniciar = () => { const agora = new Date().toISOString(); setDatas((d) => ({ ...d, iniciado_em: agora })); setF((s) => ({ ...s, status: "em_execucao" })); };
-  const concluir = () => {
+  const concluir = async () => {
     if (resumo.respondidos < resumo.total && !await confirmar("Há itens do checklist sem resposta. Concluir assim mesmo?")) return;
     save.mutate({ status: "concluida", concluido_em: new Date().toISOString(), iniciado_em: datas.iniciado_em ?? new Date().toISOString() });
   };
