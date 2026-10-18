@@ -664,47 +664,49 @@ table img { cursor: zoom-in; }
 /* ------------------------------------------------------------------ */
 .dre-print-src { display: none; }
 .dre-print-host { display: none; }
-.dre-doc { background: #fff; color: #13263f; font-family: system-ui, sans-serif; font-size: 10.5px; line-height: 1.4; }
+.dre-doc { background: #fff; color: #13263f; font-family: system-ui, sans-serif; font-size: 12px; line-height: 1.45; }
 .dre-doc, .dre-doc * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 .dre-head { display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; border-bottom: 3px solid #0f3b5c; }
 .dre-emp { display: flex; align-items: center; gap: 12px; }
-.dre-emp img { height: 42px; width: auto; max-width: 150px; object-fit: contain; }
-.dre-emp-nome { font-size: 15px; font-weight: 700; color: #0f3b5c; }
-.dre-rot { font-size: 8.5px; letter-spacing: .12em; text-transform: uppercase; color: #5b7290; }
+.dre-emp img { height: 48px; width: auto; max-width: 150px; object-fit: contain; }
+.dre-emp-nome { font-size: 18px; font-weight: 700; color: #0f3b5c; }
+.dre-rot { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: #5b7290; }
 .dre-head-dir { text-align: right; }
 .dre-titulo { margin: 14px 0 10px; }
-.dre-titulo h1 { font-size: 17px; font-weight: 700; color: #0f3b5c; }
+.dre-titulo h1 { font-size: 21px; font-weight: 700; color: #0f3b5c; }
 .dre-titulo p { color: #5b7290; }
-.dre-doc h2 { margin: 16px 0 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #0f3b5c; border-bottom: 1.5px solid #0e7490; padding-bottom: 3px; }
+.dre-doc h2 { margin: 18px 0 8px; font-size: 13px; break-after: avoid; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #0f3b5c; border-bottom: 1.5px solid #0e7490; padding-bottom: 3px; }
 .dre-kpis { width: 100%; border-collapse: separate; border-spacing: 6px 0; margin: 0 -6px; }
 .dre-kpis td { width: 20%; vertical-align: top; border: 1px solid #dbe6f0; border-radius: 6px; padding: 8px 10px; background: #f4f8fb; }
-.dre-kpis span { display: block; font-size: 8.5px; text-transform: uppercase; letter-spacing: .06em; color: #5b7290; }
-.dre-kpis strong { display: block; font-size: 13px; color: #0f3b5c; font-variant-numeric: tabular-nums; margin-top: 2px; }
-.dre-kpis small { display: block; color: #5b7290; font-size: 9px; }
+.dre-kpis span { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: #5b7290; }
+.dre-kpis strong { display: block; font-size: 17px; color: #0f3b5c; font-variant-numeric: tabular-nums; margin-top: 2px; }
+.dre-kpis small { display: block; color: #5b7290; font-size: 10.5px; }
 .dre-kpis .dre-kpi-res { background: #0f3b5c; border-color: #0f3b5c; }
 .dre-kpis .dre-kpi-res span, .dre-kpis .dre-kpi-res strong, .dre-kpis .dre-kpi-res small { color: #fff; }
 .dre-tab { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
-.dre-tab th { background: #0f3b5c; color: #fff; font-size: 8.5px; text-transform: uppercase; letter-spacing: .05em; text-align: left; padding: 5px 7px; }
-.dre-tab td { padding: 4px 7px; border-bottom: 1px solid #e3ecf4; }
+.dre-tab th { background: #0f3b5c; color: #fff; font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; text-align: left; padding: 7px 9px; }
+.dre-tab td { padding: 6px 9px; border-bottom: 1px solid #e3ecf4; }
 .dre-tab tbody tr:nth-child(even) td { background: #f7fafc; }
 .dre-tab tr.tot td { font-weight: 700; background: #e6f4f8 !important; border-top: 1.5px solid #0f3b5c; }
 .dre-tab .r { text-align: right; white-space: nowrap; }
 .dre-tab .neg { color: #b91c1c; }
 .dre-tab tr { break-inside: avoid; }
 .dre-tab thead { display: table-header-group; }
-.dre-tab-mini { font-size: 8.5px; }
-.dre-tab-mini td, .dre-tab-mini th { padding: 3px 4px; }
+.dre-tab-mini { font-size: 11px; }
+.dre-tab-mini td, .dre-tab-mini th { padding: 5px 6px; }
+.dre-quebra { break-before: page; }
 .dre-duas { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-.dre-rodape { margin-top: 18px; padding-top: 8px; border-top: 1px solid #e3ecf4; font-size: 8.5px; color: #7a90a8; text-align: center; }
+.dre-rodape { margin-top: 18px; padding-top: 8px; border-top: 1px solid #e3ecf4; font-size: 10px; color: #7a90a8; text-align: center; }
+@page dre { size: A4 landscape; margin: 10mm; }
 @media print {
   html.dre-printing, html.dre-printing body { height: auto !important; overflow: visible !important; background: #fff !important; }
   html.dre-printing body > *:not(.dre-print-host) { display: none !important; }
-  html.dre-printing .dre-print-host { display: block !important; }
+  html.dre-printing .dre-print-host { display: block !important; page: dre; }
 }
 
 /* Fluxo de caixa no PDF do DRE */
-.dre-fluxo { font-size: 7.5px; }
-.dre-fluxo th, .dre-fluxo td { padding: 3px 4px; white-space: nowrap; }
+.dre-fluxo { font-size: 10px; }
+.dre-fluxo th, .dre-fluxo td { padding: 5px 5px; white-space: nowrap; }
 .dre-fluxo .dre-sub td { font-weight: 700; border-top: 1px solid #0f3b5c; }
 
 /* Marca Atende.ai (site institucional) */

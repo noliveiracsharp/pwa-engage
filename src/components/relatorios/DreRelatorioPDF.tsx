@@ -108,7 +108,7 @@ export function DreRelatorioDocumento(p: DreRelatorioProps) {
         </div>
       </div>
 
-      <h2>5. Detalhamento por oferta</h2>
+      <h2 className="dre-quebra">5. Detalhamento por oferta</h2>
       <table className="dre-tab dre-tab-mini">
         <thead>
           <tr><th>Oferta</th><th>Cliente</th><th>Vendedor</th><th>Situação</th><th className="r">Receita</th><th className="r">Custo</th><th className="r">Impostos</th><th className="r">Despesas</th><th className="r">Comissões</th><th className="r">Resultado</th><th className="r">Margem</th></tr>
@@ -127,7 +127,7 @@ export function DreRelatorioDocumento(p: DreRelatorioProps) {
 
       {p.fluxo && (
         <>
-          <h2>6. Fluxo de caixa projetado — mês a mês</h2>
+          <h2 className="dre-quebra">6. Fluxo de caixa projetado — mês a mês</h2>
           <TabelaFluxo meses={p.fluxo} print />
         </>
       )}
