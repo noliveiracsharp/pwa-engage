@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import loginHero from "@/assets/login-hero.jpg";
 import { useTheme } from "@/components/theme-provider";
 import { aplicarMarca, buscarMarca, lembrarSlug, slugDoHost, slugLembrado, type MarcaPublica } from "@/lib/marca-publica";
+import { lerEstado, MAX_TENTATIVAS, registrarFalha, restanteMs, salvarEstado } from "@/lib/login-limite";
 
 export const Route = createFileRoute("/login")({
   staticData: { sitemap: true },
@@ -61,13 +62,25 @@ function LoginPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const atual = lerEstado(email);
+    const resta = restanteMs(atual, Date.now());
+    if (resta > 0) {
+      toast.error("Acesso temporariamente bloqueado", { description: `Muitas tentativas. Tente novamente em ${Math.ceil(resta / 60000)} min.` });
+      return;
+    }
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password: senha });
     setLoading(false);
     if (error) {
-      toast.error("Não foi possível entrar", { description: error.message });
+      const novo = registrarFalha(atual, Date.now());
+      salvarEstado(email, novo);
+      const restantes = MAX_TENTATIVAS - novo.falhas;
+      toast.error("Não foi possível entrar", {
+        description: novo.bloqueadoAte ? "Muitas tentativas. Acesso bloqueado por 15 minutos." : `E-mail ou senha incorretos. ${restantes} tentativa(s) restante(s).`,
+      });
       return;
     }
+    salvarEstado(email, null);
     navigate({ to: "/dashboard", replace: true });
   }
 
