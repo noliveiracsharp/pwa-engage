@@ -25,6 +25,7 @@
 - Image compression only through `comprimirImagem` (src/lib/image-compress.ts) with `UploadInfo`.
 - DRE de Ofertas: pure src/lib/dre-ofertas.ts over stored values.
 - Finance: single `financeiro_titulos` table (origem_tipo/origem_id), pure src/lib/financeiro.ts, `inserirTitulos`; Pix BR Code generated locally (no mTLS on server).
+- Manual financial series share an `origem_id`; recurring edits use pure scope/patch helpers and an invoker SQL RPC for atomic updates under existing RLS, never infer series from names.
 - Maintenance: `manutencao_*` tables, pure src/lib/manutencoes.ts, single `ManutencaoSheet`; public links only via SECURITY DEFINER RPCs.
 - Reimbursements: pure src/lib/reembolsos.ts; approval creates a finance title.
 - LGPD audit: DB triggers write immutable `auditoria_logs`; UI only reads.

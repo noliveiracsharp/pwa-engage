@@ -29,3 +29,5 @@
 - [x] Manutenções Fase 2: relatório público /os/token, assinatura e aviso WhatsApp (aguarda atendeai-manutencoes-fase2.sql)
 - [ ] Manutenções Fase 3: cadastro de ativos, preventivas recorrentes e QR Code
 - Financeiro: cadastro rápido de fornecedor/cliente, categorias no formulário, centro de custo em árvore
+- [x] Financeiro: escolha do alcance ao editar novas séries manuais, com gravação atômica e testes.
+- [ ] Ativar e testar edição recorrente com dados reais — aguarda usuário executar atendeai-financeiro-edicao-recorrente.sql no banco próprio.

@@ -33,6 +33,7 @@ import { matchesAny } from "@/lib/input-masks";
 import { formatBRL, formatDate, num, round2 } from "@/lib/orcamentos";
 import { uploadFoto } from "@/lib/laudos";
 import { erroFinanceiro } from "@/lib/financeiro-db";
+import { alvosRecorrencia, patchRecorrencia, type EscopoRecorrencia } from "@/lib/financeiro-recorrencia";
 import {
   fluxoPeriodo,
   periodoVisao,
@@ -321,6 +322,9 @@ function TituloSheet({ tipo, registro, parceiros, cartoes, readOnly, onClose, on
   }), [centros, v.centro_custo_id]);
   const contaOpts = contas.map((c) => ({ value: text(rowId(c)), label: text(c["descricao"]) || text(c["banco"]) || "—" }));
   const [salvando, setSalvando] = useState(false);
+  const [confirmarSerie, setConfirmarSerie] = useState(false);
+  const [escopo, setEscopo] = useState<EscopoRecorrencia>("atual");
+  const temSerie = !!registro?.["origem_id"] && registro?.["origem_tipo"] === "manual";
   const qc = useQueryClient();
   const [novoParc, setNovoParc] = useState(false);
   const [salvandoParc, setSalvandoParc] = useState(false);
@@ -349,13 +353,14 @@ function TituloSheet({ tipo, registro, parceiros, cartoes, readOnly, onClose, on
     : parcelasManuais({ modo: v.modo as ModoLancamento, valor: num(v.valor), quantidade: num(v.repetir), primeira: v.vencimento });
   const papel = tipo === "receber" ? "cliente" : "fornecedor";
 
-  const salvar = async () => {
+  const salvar = async (alcance?: EscopoRecorrencia) => {
     const valor = round2(num(v.valor));
     if (!v.descricao.trim()) return void toast.error("Informe a descrição.");
     if (!v.parceiro_id) return void toast.error(`Escolha o ${papel}.`);
     if (valor <= 0) return void toast.error("Informe o valor.");
     if (cartaoModo && !cartao) return void toast.error("Escolha o cartão utilizado.");
     if (cartaoModo && !previa.length) return void toast.error("Informe o dia de fechamento e de vencimento do cartão.");
+    if (temSerie && !alcance) { setEscopo("atual"); setConfirmarSerie(true); return; }
     setSalvando(true);
     try {
       const base = { tipo, descricao: v.descricao.trim(), categoria: v.categoria || (categorias.ativas[0] ?? ""), parceiro_id: v.parceiro_id || null,
@@ -364,14 +369,31 @@ function TituloSheet({ tipo, registro, parceiros, cartoes, readOnly, onClose, on
         codigo_referencia: v.codigo_referencia.trim() || null, conta_bancaria_id: v.conta_bancaria_id || null,
         nsu: v.nsu.trim() || null, ...(v.forma_pagamento ? { forma_pagamento: v.forma_pagamento } : {}) };
       if (registro) {
-        const { error } = await supabase.from("financeiro_titulos").update(base as never).eq("id", text(rowId(registro)));
-        if (error) throw error;
+        if (temSerie && alcance) {
+          const { data, error: leituraError } = await supabase.from("financeiro_titulos").select("*")
+            .eq("origem_tipo", "manual").eq("origem_id", text(registro["origem_id"]))
+            .eq("empresa_id", text(registro["empresa_id"])).eq("tipo", tipo);
+          if (leituraError) throw leituraError;
+          const titulos = (data ?? []) as Row[];
+          const atual = titulos.find((t) => t["id"] === registro["id"]);
+          if (!atual) throw new Error("Este lançamento não está mais disponível. Atualize a lista.");
+          const patches = alvosRecorrencia(atual, titulos, alcance, hojeISO()).map((t) => ({ id: t["id"], valores: patchRecorrencia(registro, t, base) }));
+          const { error } = await supabase.rpc("editar_serie_financeira", { p_atual: registro["id"], p_escopo: alcance, p_alteracoes: patches } as never);
+          if (error) {
+            if (error.code === "PGRST202" || error.code === "42883") throw new Error("Execute o script de edição recorrente no SQL Editor para ativar esta opção.");
+            throw error;
+          }
+        } else {
+          const { error } = await supabase.from("financeiro_titulos").update(base as never).eq("id", text(rowId(registro)));
+          if (error) throw error;
+        }
       } else {
         const n = previa.length;
         const emp = isMaster && empresa ? rowId(empresa) : empresaId;
         const extra = cartaoModo ? { cartao_id: v.cartao_id, forma_pagamento: "Cartão de crédito", data_compra: v.vencimento } : {};
+        const serieId = n > 1 ? crypto.randomUUID() : null;
         const lote = previa.map((p, i) => ({
-          ...base, ...extra, empresa_id: emp, origem_tipo: "manual", parcela_n: i + 1,
+          ...base, ...extra, empresa_id: emp, origem_tipo: "manual", origem_id: serieId, parcela_n: i + 1,
           descricao: n > 1 ? `${base.descricao} (${i + 1}/${n})` : base.descricao,
           vencimento: p.vencimento, valor: p.valor,
           ...(v.ja_pago && !cartaoModo && i === 0 ? { status: "pago", pago_em: p.vencimento, valor_pago: p.valor } : {}),
@@ -489,10 +511,32 @@ function TituloSheet({ tipo, registro, parceiros, cartoes, readOnly, onClose, on
         </div>
         <div className="flex justify-end gap-2 border-t p-4">
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          {!readOnly && <Button disabled={salvando} onClick={salvar}>{salvando ? "Salvando…" : "Salvar"}</Button>}
+          {!readOnly && <Button disabled={salvando} onClick={() => void salvar()}>{salvando ? "Salvando…" : "Salvar"}</Button>}
         </div>
       </SheetContent>
     </Sheet>
+    <Dialog open={confirmarSerie} onOpenChange={(o) => !salvando && setConfirmarSerie(o)}>
+      <DialogContent className="sm:max-w-2xl" aria-describedby="recorrencia-descricao">
+        <DialogHeader><DialogTitle>Edição de lançamento recorrente</DialogTitle></DialogHeader>
+        <p id="recorrencia-descricao" className="text-sm">As alterações neste lançamento devem ser refletidas:</p>
+        <div role="radiogroup" aria-label="Alcance das alterações" className="space-y-4 py-2">
+          {([
+            ["atual", "Somente o lançamento atual"],
+            ["nao_vencidos", "Lançamento atual e todos os não vencidos que não possuam baixas"],
+            ["abertos", "Lançamento atual e todos os em aberto (vencidos + a vencer) que não possuam baixas"],
+            ["todos", "Todos os lançamentos"],
+          ] as const).map(([valor, label]) => <label key={valor} className="flex cursor-pointer items-start gap-3 text-sm">
+            <input type="radio" name="escopo-recorrencia" value={valor} checked={escopo === valor} disabled={salvando} onChange={() => setEscopo(valor)} className="mt-0.5 h-4 w-4 shrink-0 accent-primary" />
+            <span>{label}</span>
+          </label>)}
+        </div>
+        {escopo === "todos" && <p className="text-sm text-warning">Inclui pagos, recebidos e cancelados. Valores e datas das baixas já registradas serão preservados.</p>}
+        <DialogFooter>
+          <Button variant="outline" disabled={salvando} onClick={() => setConfirmarSerie(false)}>Cancelar</Button>
+          <Button disabled={salvando} onClick={() => void salvar(escopo)}>{salvando ? "Salvando…" : "Confirmar"}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
     </>
   );
 }
