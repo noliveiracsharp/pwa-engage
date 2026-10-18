@@ -33,7 +33,7 @@ import { matchesAny } from "@/lib/input-masks";
 import { formatBRL, formatDate, num, round2 } from "@/lib/orcamentos";
 import { uploadFoto } from "@/lib/laudos";
 import { erroFinanceiro } from "@/lib/financeiro-db";
-import { alvosRecorrencia, patchRecorrencia, type EscopoRecorrencia } from "@/lib/financeiro-recorrencia";
+import { alvosRecorrencia, parcelasLegadas, patchRecorrencia, serieLegada, type EscopoRecorrencia } from "@/lib/financeiro-recorrencia";
 import {
   fluxoPeriodo,
   periodoVisao,
@@ -324,7 +324,7 @@ function TituloSheet({ tipo, registro, parceiros, cartoes, readOnly, onClose, on
   const [salvando, setSalvando] = useState(false);
   const [confirmarSerie, setConfirmarSerie] = useState(false);
   const [escopo, setEscopo] = useState<EscopoRecorrencia>("atual");
-  const temSerie = !!registro?.["origem_id"] && registro?.["origem_tipo"] === "manual";
+  const temSerie = !!registro && registro["origem_tipo"] === "manual" && (!!registro["origem_id"] || !!serieLegada(registro));
   const qc = useQueryClient();
   const [novoParc, setNovoParc] = useState(false);
   const [salvandoParc, setSalvandoParc] = useState(false);
@@ -370,15 +370,29 @@ function TituloSheet({ tipo, registro, parceiros, cartoes, readOnly, onClose, on
         nsu: v.nsu.trim() || null, ...(v.forma_pagamento ? { forma_pagamento: v.forma_pagamento } : {}) };
       if (registro) {
         if (temSerie && alcance) {
+          let reg: Row = registro;
+          let serieId = text(reg["origem_id"]);
+          if (!serieId) {
+            // Série antiga: vincula as parcelas irmãs a um identificador novo antes de editar.
+            const { data: irmas, error: e1 } = await supabase.from("financeiro_titulos").select("*")
+              .eq("origem_tipo", "manual").is("origem_id", null)
+              .eq("empresa_id", text(reg["empresa_id"])).eq("tipo", tipo);
+            if (e1) throw e1;
+            const ids = parcelasLegadas(reg, (irmas ?? []) as Row[]).map((t) => text(t["id"]));
+            serieId = crypto.randomUUID();
+            const { error: e2 } = await supabase.from("financeiro_titulos").update({ origem_id: serieId } as never).in("id", ids.length ? ids : [text(reg["id"])]);
+            if (e2) throw e2;
+            reg = { ...reg, origem_id: serieId };
+          }
           const { data, error: leituraError } = await supabase.from("financeiro_titulos").select("*")
-            .eq("origem_tipo", "manual").eq("origem_id", text(registro["origem_id"]))
-            .eq("empresa_id", text(registro["empresa_id"])).eq("tipo", tipo);
+            .eq("origem_tipo", "manual").eq("origem_id", serieId)
+            .eq("empresa_id", text(reg["empresa_id"])).eq("tipo", tipo);
           if (leituraError) throw leituraError;
           const titulos = (data ?? []) as Row[];
-          const atual = titulos.find((t) => t["id"] === registro["id"]);
+          const atual = titulos.find((t) => t["id"] === reg["id"]);
           if (!atual) throw new Error("Este lançamento não está mais disponível. Atualize a lista.");
-          const patches = alvosRecorrencia(atual, titulos, alcance, hojeISO()).map((t) => ({ id: t["id"], valores: patchRecorrencia(registro, t, base) }));
-          const { error } = await supabase.rpc("editar_serie_financeira", { p_atual: registro["id"], p_escopo: alcance, p_alteracoes: patches } as never);
+          const patches = alvosRecorrencia(atual, titulos, alcance, hojeISO()).map((t) => ({ id: t["id"], valores: patchRecorrencia(reg, t, base) }));
+          const { error } = await supabase.rpc("editar_serie_financeira", { p_atual: reg["id"], p_escopo: alcance, p_alteracoes: patches } as never);
           if (error) {
             if (error.code === "PGRST202" || error.code === "42883") throw new Error("Execute o script de edição recorrente no SQL Editor para ativar esta opção.");
             throw error;

@@ -22,3 +22,14 @@ describe("edição recorrente", () => {
   });
   it("preserva o número da parcela na descrição", () => expect(patchRecorrencia({ ...atual, descricao: "Aluguel (1/3)" }, { ...atual, id: "2", descricao: "Aluguel (2/3)" }, { descricao: "Locação (1/3)" })).toEqual({ descricao: "Locação (2/3)" }));
 });
+import { parcelasLegadas } from "./financeiro-recorrencia";
+describe("séries antigas sem identificador", () => {
+  const b = { origem_tipo: "manual", origem_id: null, empresa_id: "e1", tipo: "pagar", parceiro_id: "p1" };
+  const lista = [
+    { ...b, id: "1", descricao: "Aluguel (1/3)" }, { ...b, id: "2", descricao: "Aluguel (2/3)" },
+    { ...b, id: "3", descricao: "Aluguel (1/12)" }, { ...b, id: "4", descricao: "Aluguel (3/3)", parceiro_id: "p2" },
+    { ...b, id: "5", descricao: "Luz (2/3)" }, { ...b, id: "6", descricao: "Aluguel (3/3)", empresa_id: "e2" },
+  ];
+  it("agrupa só mesma descrição, total, parceiro e empresa", () => expect(parcelasLegadas(lista[0]!, lista).map((t) => t["id"])).toEqual(["1", "2"]));
+  it("lançamento sem sufixo não é série", () => expect(parcelasLegadas({ ...b, id: "9", descricao: "Aluguel" }, lista)).toEqual([]));
+});

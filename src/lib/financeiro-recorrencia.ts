@@ -38,3 +38,23 @@ export function patchRecorrencia(atual: Row, destino: Row, alteracoes: Row): Row
   }
   return patch;
 }
+const SUFIXO = /\s\((\d+)\/(\d+)\)$/;
+
+/** Lançamento manual antigo (sem origem_id) com sufixo "(n/m)" na descrição. */
+export function serieLegada(t: Row): { base: string; total: number } | null {
+  if (t["origem_tipo"] !== "manual" || t["origem_id"]) return null;
+  const m = String(t["descricao"] ?? "").match(SUFIXO);
+  if (!m || Number(m[2]) < 2) return null;
+  return { base: String(t["descricao"]).replace(SUFIXO, "").trim(), total: Number(m[2]) };
+}
+
+/** Parcelas antigas da mesma série: mesma empresa, tipo, parceiro, descrição base e total de parcelas. */
+export function parcelasLegadas(atual: Row, titulos: Row[]): Row[] {
+  const s = serieLegada(atual);
+  if (!s) return [];
+  return titulos.filter((t) => {
+    const o = serieLegada(t);
+    return !!o && o.base === s.base && o.total === s.total && t["empresa_id"] === atual["empresa_id"]
+      && t["tipo"] === atual["tipo"] && (t["parceiro_id"] ?? null) === (atual["parceiro_id"] ?? null);
+  });
+}

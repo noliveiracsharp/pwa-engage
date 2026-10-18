@@ -5,7 +5,7 @@ import { pick, type Row } from "@/lib/row";
 
 const CTX_KEY = "atendeai.empresaContexto";
 /** Mude este valor a cada atualização publicada: força novo login de todos. */
-const APP_RELEASE = "2026-10-18-financeiro-recorrencia";
+const APP_RELEASE = "2026-10-18-sessao-estavel";
 const RELEASE_KEY = "atendeai.release";
 
 type AuthContextValue = {
@@ -38,18 +38,18 @@ const AuthContext = createContext<AuthContextValue>({
   refreshUsuario: () => {},
 });
 
+/** Busca o cadastro do usuário logado. Lança erro em falha de rede (para não "perder" o usuário). */
 export async function loadUsuario(user: User) {
-  const byAuth = await supabase.from("usuarios").select("*").eq("auth_user_id", user.id).maybeSingle();
-  if (byAuth.data) return byAuth.data as Row;
   const byId = await supabase.from("usuarios").select("*").eq("id", user.id).maybeSingle();
   if (byId.data) return byId.data as Row;
-  const byEmail = await supabase
-    .from("usuarios")
-    .select("*")
-    .eq("email", user.email ?? "")
-    .maybeSingle();
-  return (byEmail.data as Row) ?? null;
+  if (user.email) {
+    const byEmail = await supabase.from("usuarios").select("*").eq("email", user.email).maybeSingle();
+    if (byEmail.data) return byEmail.data as Row;
+    if (byEmail.error && byId.error) throw byEmail.error;
+  } else if (byId.error) throw byId.error;
+  return null;
 }
+const USUARIO_CACHE = "atendeai.usuarioCache";
 
 /** Master = perfil com ordem 0 (ou descrição contendo "Master"). */
 export async function isPerfilMaster(perfilId: unknown): Promise<boolean> {
@@ -87,6 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         void import("@/lib/access").then((m) => m.clearAccessCache());
       }
       if (!nextSession) {
+        sessionStorage.removeItem(USUARIO_CACHE);
         setUsuario(null);
         setEmpresaOriginal(null);
         setIsMaster(false);
@@ -99,17 +100,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => sub.subscription.unsubscribe();
   }, []);
 
+  const userId = session?.user?.id;
   useEffect(() => {
     const user = session?.user;
     if (!user) return;
     let cancelled = false;
+    // Restaura o último cadastro conhecido deste usuário enquanto recarrega.
+    try {
+      const c = JSON.parse(sessionStorage.getItem(USUARIO_CACHE) ?? "null") as { uid: string; u: Row; m: boolean } | null;
+      if (c && c.uid === user.id) { setUsuario((prev) => prev ?? c.u); setIsMaster((prev) => prev || c.m); }
+    } catch { /* ignore */ }
     (async () => {
+      let u: Row | null = null;
+      for (let tentativa = 0; tentativa < 4 && !cancelled; tentativa++) {
+        try { u = await loadUsuario(user); break; }
+        catch { await new Promise((r) => setTimeout(r, 1500 * (tentativa + 1))); }
+      }
+      if (cancelled || !u) return; // falha temporária: mantém o usuário atual em vez de zerar
       try {
-        const u = await loadUsuario(user);
-        if (cancelled) return;
         setUsuario(u);
         const master = await isPerfilMaster(pick(u, ["perfil_id", "id_perfil"]));
-        if (!cancelled) setIsMaster(master);
+        if (!cancelled) {
+          setIsMaster(master);
+          sessionStorage.setItem(USUARIO_CACHE, JSON.stringify({ uid: user.id, u, m: master }));
+        }
         const empresaId = pick<string | number>(u, ["empresa_id", "id_empresa", "empresaid"]);
         if (empresaId !== undefined) {
           const { data } = await supabase.from("empresas").select("*").eq("id", empresaId).maybeSingle();
@@ -125,7 +139,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [session, version]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, version]);
 
   useEffect(() => {
     if (!isMaster || !ctxId) {
