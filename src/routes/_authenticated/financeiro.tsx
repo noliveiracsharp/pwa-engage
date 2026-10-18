@@ -28,7 +28,10 @@ import { formatBRL, formatDate, num, round2 } from "@/lib/orcamentos";
 import { uploadFoto } from "@/lib/laudos";
 import { erroFinanceiro } from "@/lib/financeiro-db";
 import {
-  caixaPorMes,
+  fluxoPeriodo,
+  periodoVisao,
+  type ModoCaixa,
+  type VisaoCaixa,
   CATEGORIAS_FINANCEIRO,
   FORMAS_PAGAMENTO,
   hojeISO,
@@ -44,6 +47,8 @@ import {
 } from "@/lib/financeiro";
 import type { Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
+import { Bar, CartesianGrid, ComposedChart, Line, XAxis, YAxis } from "recharts";
+import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 
 export const Route = createFileRoute("/_authenticated/financeiro")({
   staticData: { sitemap: false },
@@ -474,47 +479,94 @@ const nomeMes = (k: string) => {
 
 function Caixa({ titulos }: { titulos: Row[] }) {
   const [saldoInicial, setSaldoInicial] = useState("");
-  const meses = caixaPorMes(titulos);
-  let acum = num(saldoInicial);
-  const linhas = meses.map((m) => {
-    const saldo = round2(m.entradas + m.entradasPrev - m.saidas - m.saidasPrev);
-    acum = round2(acum + saldo);
-    return { ...m, saldo, acum };
-  });
+  const [visao, setVisao] = useState<VisaoCaixa>("6m");
+  const [modo, setModo] = useState<ModoCaixa>("ambos");
+  const [custom, setCustom] = useState(() => periodoVisao("6m"));
+  const periodo = visao === "personalizado" ? custom : periodoVisao(visao);
+  const linhas = fluxoPeriodo(titulos, { ...periodo, modo, saldoInicial: num(saldoInicial) });
+  const tot = linhas.reduce((a, l) => ({ e: a.e + l.entradas, s: a.s + l.saidas }), { e: 0, s: 0 });
+  const dados = linhas.map((l) => ({ ...l, nome: nomeMes(l.mes) }));
+  const config = {
+    entradas: { label: "Entradas", color: "var(--success)" },
+    saidas: { label: "Saídas", color: "var(--destructive)" },
+    acumulado: { label: "Saldo acumulado", color: "var(--primary)" },
+  } satisfies ChartConfig;
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end gap-3">
+        <div className="space-y-1"><Label>Visão</Label>
+          <Select value={visao} onValueChange={(x) => setVisao(x as VisaoCaixa)}>
+            <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="mes">Mês atual</SelectItem>
+              <SelectItem value="6m">6 meses</SelectItem>
+              <SelectItem value="12m">12 meses</SelectItem>
+              <SelectItem value="personalizado">Personalizado</SelectItem>
+            </SelectContent>
+          </Select></div>
+        {visao === "personalizado" && (
+          <>
+            <div className="space-y-1"><Label>Data início</Label><Input type="date" value={custom.de} onChange={(e) => setCustom({ ...custom, de: e.target.value })} /></div>
+            <div className="space-y-1"><Label>Data fim</Label><Input type="date" value={custom.ate} onChange={(e) => setCustom({ ...custom, ate: e.target.value })} /></div>
+          </>
+        )}
+        <div className="space-y-1"><Label>Mostrar</Label>
+          <Select value={modo} onValueChange={(x) => setModo(x as ModoCaixa)}>
+            <SelectTrigger className="w-52"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="previsto">Previsto</SelectItem>
+              <SelectItem value="realizado">Realizado</SelectItem>
+              <SelectItem value="ambos">Previsto e realizado</SelectItem>
+            </SelectContent>
+          </Select></div>
         <div className="space-y-1"><Label>Saldo inicial (R$)</Label>
-          <Input className="w-48" inputMode="decimal" value={saldoInicial} onChange={(e) => setSaldoInicial(e.target.value)} placeholder="0,00" /></div>
-        <p className="text-muted-foreground text-xs">Realizado = baixas pela data do pagamento. Previsto = contas em aberto pelo vencimento.</p>
+          <Input className="w-40" inputMode="decimal" value={saldoInicial} onChange={(e) => setSaldoInicial(e.target.value)} placeholder="0,00" /></div>
+      </div>
+      <p className="text-muted-foreground text-xs">Realizado = baixas pela data do pagamento. Previsto = contas em aberto pelo vencimento.</p>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className="bg-card rounded-lg border p-3"><p className="text-muted-foreground text-xs">Entradas</p><p className="text-success text-lg font-semibold tabular-nums">{formatBRL(tot.e)}</p></div>
+        <div className="bg-card rounded-lg border p-3"><p className="text-muted-foreground text-xs">Saídas</p><p className="text-destructive text-lg font-semibold tabular-nums">{formatBRL(tot.s)}</p></div>
+        <div className="bg-card rounded-lg border p-3"><p className="text-muted-foreground text-xs">Saldo final</p><p className={cn("text-lg font-semibold tabular-nums", (linhas.at(-1)?.acumulado ?? 0) < 0 && "text-destructive")}>{formatBRL(linhas.at(-1)?.acumulado ?? 0)}</p></div>
       </div>
       {linhas.length === 0 ? (
-        <p className="text-muted-foreground text-sm">Nenhuma conta lançada ainda.</p>
+        <p className="text-muted-foreground text-sm">Informe um período válido.</p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50">
-              <tr className="text-left">
-                {["Mês", "Entradas realizadas", "Entradas previstas", "Saídas realizadas", "Saídas previstas", "Saldo do mês", "Acumulado"].map((h) => (
-                  <th key={h} className="px-3 py-2 font-medium">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {linhas.map((l) => (
-                <tr key={l.mes} className={cn("border-t", l.acum < 0 && "bg-destructive/10")}>
-                  <td className="px-3 py-2 font-medium capitalize">{nomeMes(l.mes)}</td>
-                  <td className="text-success px-3 py-2 tabular-nums">{formatBRL(l.entradas)}</td>
-                  <td className="text-muted-foreground px-3 py-2 tabular-nums">{formatBRL(l.entradasPrev)}</td>
-                  <td className="text-destructive px-3 py-2 tabular-nums">{formatBRL(l.saidas)}</td>
-                  <td className="text-muted-foreground px-3 py-2 tabular-nums">{formatBRL(l.saidasPrev)}</td>
-                  <td className={cn("px-3 py-2 font-semibold tabular-nums", l.saldo < 0 && "text-destructive")}>{formatBRL(l.saldo)}</td>
-                  <td className={cn("px-3 py-2 font-semibold tabular-nums", l.acum < 0 && "text-destructive")}>{formatBRL(l.acum)}</td>
+        <>
+          <div className="bg-card rounded-lg border p-3">
+            <ChartContainer config={config} className="h-72 w-full">
+              <ComposedChart data={dados}>
+                <CartesianGrid vertical={false} />
+                <XAxis dataKey="nome" tickLine={false} axisLine={false} />
+                <YAxis tickLine={false} axisLine={false} width={80} tickFormatter={(v: number) => formatBRL(v).replace(/,\d{2}$/, "")} />
+                <ChartTooltip content={<ChartTooltipContent formatter={(v, n) => <span className="flex w-full justify-between gap-3"><span>{config[n as keyof typeof config]?.label}</span><span className="font-mono tabular-nums">{formatBRL(Number(v))}</span></span>} />} />
+                <ChartLegend content={<ChartLegendContent />} />
+                <Bar dataKey="entradas" fill="var(--color-entradas)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="saidas" fill="var(--color-saidas)" radius={[4, 4, 0, 0]} />
+                <Line dataKey="acumulado" type="monotone" stroke="var(--color-acumulado)" strokeWidth={2} dot={{ r: 3 }} />
+              </ComposedChart>
+            </ChartContainer>
+          </div>
+          <div className="overflow-x-auto rounded-lg border">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50">
+                <tr className="text-left">
+                  {["Mês", "Entradas", "Saídas", "Saldo do mês", "Acumulado"].map((h) => <th key={h} className="px-3 py-2 font-medium">{h}</th>)}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {linhas.map((l) => (
+                  <tr key={l.mes} className={cn("border-t", l.acumulado < 0 && "bg-destructive/10")}>
+                    <td className="px-3 py-2 font-medium capitalize">{nomeMes(l.mes)}</td>
+                    <td className="text-success px-3 py-2 tabular-nums">{formatBRL(l.entradas)}</td>
+                    <td className="text-destructive px-3 py-2 tabular-nums">{formatBRL(l.saidas)}</td>
+                    <td className={cn("px-3 py-2 font-semibold tabular-nums", l.saldo < 0 && "text-destructive")}>{formatBRL(l.saldo)}</td>
+                    <td className={cn("px-3 py-2 font-semibold tabular-nums", l.acumulado < 0 && "text-destructive")}>{formatBRL(l.acumulado)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );
