@@ -70,11 +70,11 @@ export function useMenu() {
       // Master: todas as funções ativas que são menu, ignorando planos/módulos/menu.
       if (isMaster) {
         const all = (funcoes ?? [])
-          .filter((f) => asBool(f["status"]) && f["menu_ativo"] !== false && pick(f, ["path"]))
+          .filter((f) => asBool(f["status"]) && f["menu_ativo"] !== false)
           .map((f, i) => ({
             id: String(pick(f, ["id"], `menu-${i}`)),
             label: String(pick(f, ["descricao", "nome"], "Menu")),
-            path: String(pick(f, ["path"], "/dashboard")),
+            path: String(pick(f, ["path"], "")),
             icon: String(pick(f, ["icone", "icon"], "circle")),
             order: Number(pick(f, ["ordem_hierarquia", "ordem"], i + 1)),
           }))
