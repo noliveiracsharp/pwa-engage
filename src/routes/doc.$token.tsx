@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { sha256 } from "@/lib/propostas";
 import { formatCpfCnpj } from "@/lib/input-masks";
-import { carimboAssinatura } from "@/lib/documentos";
+import { CSS_FOLHA_DOC, htmlFolhaDocumento } from "@/lib/documentos";
 import type { Row } from "@/lib/row";
 
 export const Route = createFileRoute("/doc/$token")({
@@ -100,17 +100,9 @@ function DocumentoPublico() {
       </div>
 
       <main className="mx-auto max-w-[860px] space-y-6 px-3 py-6 md:py-10">
-        <article className="bg-card rounded-xl border p-6 shadow-sm md:p-10">
-          {dados.empresa?.["nome"] ? (
-            <p className="text-muted-foreground mb-6 text-xs">
-              Emitido por {String(dados.empresa["nome"])}{dados.empresa["cnpj"] ? ` — CNPJ ${String(dados.empresa["cnpj"])}` : ""}
-            </p>
-          ) : null}
-          <h1 className="mb-6 text-xl font-semibold">{String(d["titulo"] ?? "")}</h1>
-          <div className="font-serif text-[15px] leading-relaxed whitespace-pre-wrap">{String(d["conteudo"] ?? "")}</div>
-          {assinado && (
-            <pre className="bg-success/10 mt-8 rounded-md border p-3 text-xs whitespace-pre-wrap">{carimboAssinatura(d)}</pre>
-          )}
+        <article className="rounded-xl border bg-white p-4 shadow-sm md:p-10 print:border-0 print:p-0 print:shadow-none">
+          <style>{CSS_FOLHA_DOC}</style>
+          <div dangerouslySetInnerHTML={{ __html: htmlFolhaDocumento(d, dados.empresa) }} />
         </article>
 
         {assinado ? (

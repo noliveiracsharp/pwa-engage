@@ -18,6 +18,8 @@ import { cn } from "@/lib/utils";
 import type { Row } from "@/lib/row";
 import {
   carimboAssinatura,
+  CSS_FOLHA_DOC,
+  htmlFolhaDocumento,
   diasParaVencer,
   linkAssinaturaDoc,
   novoTokenDoc,
@@ -80,16 +82,16 @@ export function VencimentoInfo({ data }: { data: unknown }) {
   );
 }
 
-export function imprimirDocumento(titulo: string, conteudo: string) {
+export function imprimirDocumento(doc: Row, empresa: Row | null | undefined, emissor?: Row | null) {
   const w = window.open("", "_blank");
   if (!w) return void toast.error("Libere pop-ups para imprimir.");
-  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+  const titulo = String(doc["titulo"] ?? "Documento").replace(/</g, "&lt;");
   w.document.write(
-    `<html><head><title>${esc(titulo)}</title><style>@page{size:A4;margin:22mm}body{font:12pt/1.6 Georgia,serif;white-space:pre-wrap;color:#000}</style></head><body>${esc(conteudo)}</body></html>`,
+    `<html><head><title>${titulo}</title><style>@page{size:A4;margin:14mm}body{margin:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}${CSS_FOLHA_DOC}</style></head><body>${htmlFolhaDocumento(doc, empresa, emissor)}</body></html>`,
   );
   w.document.close();
   w.focus();
-  setTimeout(() => w.print(), 300);
+  setTimeout(() => w.print(), 400);
 }
 
 type EditorProps = {
@@ -103,6 +105,7 @@ type EditorProps = {
 export function DocumentoEditor({ open, onOpenChange, doc, canEdit }: EditorProps) {
   const qc = useQueryClient();
   const { stamp } = useAudit();
+  const { empresa, usuario } = useAuth();
   const [v, setV] = useState<Partial<DocumentoRow>>({});
   const [salvando, setSalvando] = useState(false);
   const [enviando, setEnviando] = useState(false);
@@ -247,7 +250,7 @@ export function DocumentoEditor({ open, onOpenChange, doc, canEdit }: EditorProp
           </div>
         </div>
         <DialogFooter className="shrink-0 border-t px-6 py-4">
-          <Button variant="ghost" className="mr-auto gap-1" onClick={() => imprimirDocumento(v.titulo ?? "", [v.conteudo ?? "", carimboAssinatura(v as Row)].filter(Boolean).join("\n\n"))}>
+          <Button variant="ghost" className="mr-auto gap-1" onClick={() => imprimirDocumento(v as Row, empresa, usuario)}>
             <Printer className="size-4" /> Imprimir / PDF
           </Button>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
