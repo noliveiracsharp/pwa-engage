@@ -4,6 +4,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Paperclip, QrCode, Undo2 } from "lucide-react";
 import { ContasBancarias } from "@/components/financeiro/ContasBancarias";
+import { ControllerPainel } from "@/components/financeiro/ControllerPainel";
 import { CobrancaDialog } from "@/components/financeiro/CobrancaDialog";
 import { toast } from "sonner";
 import { DataTable, type Column } from "@/components/data-table/DataTable";
@@ -79,11 +80,13 @@ function FinanceiroPage() {
         <TabsTrigger value="receber">Contas a Receber</TabsTrigger>
         <TabsTrigger value="pagar">Contas a Pagar</TabsTrigger>
         <TabsTrigger value="caixa">Fluxo de Caixa</TabsTrigger>
+        <TabsTrigger value="controller">Controller</TabsTrigger>
         <TabsTrigger value="bancos">Contas Bancárias</TabsTrigger>
       </TabsList>
       <TabsContent value="receber"><Titulos tipo="receber" todos={titulos} loading={isLoading} perms={perms} /></TabsContent>
       <TabsContent value="pagar"><Titulos tipo="pagar" todos={titulos} loading={isLoading} perms={perms} /></TabsContent>
       <TabsContent value="caixa"><Caixa titulos={titulos} /></TabsContent>
+      <TabsContent value="controller"><ControllerPainel titulos={titulos} /></TabsContent>
       <TabsContent value="bancos"><ContasBancarias perms={perms} /></TabsContent>
     </Tabs>
   );
