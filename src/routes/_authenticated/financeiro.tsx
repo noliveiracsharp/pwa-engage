@@ -130,6 +130,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
   const [confirmarLote, setConfirmarLote] = useState(false);
   const periodoF = f.per;
   const [editar, setEditar] = useState<Row | null | undefined>(undefined);
+  const [novoNoCartao, setNovoNoCartao] = useState<string>("");
   const [baixar, setBaixar] = useState<Row | null>(null);
   const [cobrar, setCobrar] = useState<Row | null>(null);
   const hoje = hojeISO();
@@ -369,7 +370,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
         <p className="text-muted-foreground text-xs">{t["__fatura"] ? `Cartão de crédito • ${(t["__itens"] as Row[]).length} item(ns) — clique para ver` : <>{ORIGEM_LABEL[text(t["origem_tipo"])] ?? "Manual"}{t["categoria"] ? ` • ${text(t["categoria"])}` : ""}</>}</p>
       </div>
     ) },
-    { key: "parc", header: tipo === "receber" ? "Cliente" : "Fornecedor", fields: [], render: (t) => nomeParc(t["parceiro_id"]) || "—" },
+    { key: "parc", header: tipo === "receber" ? "Cliente" : "Fornecedor", fields: [], render: (t) => t["__fatura"] ? ([...new Set((t["__itens"] as Row[]).map((x) => nomeParc(x["parceiro_id"])).filter(Boolean))].join(", ") || "—") : nomeParc(t["parceiro_id"]) || "—" },
     { key: "valor", header: "Valor", fields: ["valor"], render: (t) => <span className="font-semibold tabular-nums">{formatBRL(t["valor"])}</span> },
     { key: "sit", header: "Situação", fields: [], render: (t) => {
       const s = situacaoTitulo(t, hoje);
@@ -603,6 +604,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
                 <p className="text-sm">{itens.length} item(ns) • Total <strong className="tabular-nums">{formatBRL(fatura["valor"])}</strong></p>
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => setFatura(null)}>Fechar</Button>
+                  {perms.canCreate && <Button variant="outline" onClick={() => { const c = text(fatura["cartao_id"]); setFatura(null); setNovoNoCartao(c); setEditar(null); }}><Plus className="mr-1 h-4 w-4" />Adicionar itens</Button>}
                   {perms.canUpdate && fatura["status"] !== "pago" && <Button onClick={() => void baixarItensFatura(itens)}><CheckCircle2 className="mr-1 h-4 w-4" />Baixar fatura</Button>}
                 </div>
               </div>
@@ -618,7 +620,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
         loading={loading}
         getValue={(r, fs) => r[fs[0] ?? ""]}
         rowKey={(r, i) => text(rowId(r)) || String(i)}
-        onAdd={perms.canCreate ? () => setEditar(null) : undefined}
+        onAdd={perms.canCreate ? () => { setNovoNoCartao(""); setEditar(null); } : undefined}
         onEdit={(r) => (r["__fatura"] ? setFatura(r) : setEditar(r))}
         rowMenu={rowMenu}
         editReadOnly={!perms.canUpdate}
@@ -649,8 +651,8 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
       )}
 
       {editar !== undefined && (
-        <TituloSheet tipo={tipo} registro={editar} parceiros={parceiros} cartoes={cartoes} readOnly={!!editar && !perms.canUpdate}
-          onClose={() => setEditar(undefined)} onSaved={invalidar} />
+        <TituloSheet key={novoNoCartao || "x"} tipo={tipo} registro={editar} presetCartao={novoNoCartao} parceiros={parceiros} cartoes={cartoes} readOnly={!!editar && !perms.canUpdate}
+          onClose={() => { setEditar(undefined); setNovoNoCartao(""); }} onSaved={invalidar} />
       )}
       {clonar && (
         <TituloSheet tipo={tipo} registro={null} modelo={clonar} parceiros={parceiros} cartoes={cartoes} readOnly={false}
@@ -677,8 +679,8 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
 
 type ModoForm = ModoLancamento | "cartao";
 
-function TituloSheet({ tipo, registro, modelo, parceiros, cartoes, readOnly, onClose, onSaved }: {
-  tipo: TipoTitulo; registro: Row | null; modelo?: Row | null; parceiros: Row[]; cartoes: Row[]; readOnly: boolean; onClose: () => void; onSaved: () => void;
+function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes, readOnly, onClose, onSaved }: {
+  tipo: TipoTitulo; registro: Row | null; modelo?: Row | null; presetCartao?: string; parceiros: Row[]; cartoes: Row[]; readOnly: boolean; onClose: () => void; onSaved: () => void;
 }) {
   const { isMaster, empresa } = useAuth();
   const { empresaId } = useAudit();
@@ -691,8 +693,9 @@ function TituloSheet({ tipo, registro, modelo, parceiros, cartoes, readOnly, onC
     vencimento: text(src?.["vencimento"]).slice(0, 10) || hojeISO(),
     valor: src ? moedaDeNumero(num(src["valor"])) : "",
     repetir: "1",
-    modo: "unico" as ModoForm,
-    cartao_id: modelo && !registro ? text(modelo["cartao_id"]) : "",
+    modo: (presetCartao && !registro ? "cartao" : "unico") as ModoForm,
+    cartao_id: presetCartao && !registro ? presetCartao : modelo && !registro ? text(modelo["cartao_id"]) : "",
+    data_compra: text(registro?.["data_compra"]).slice(0, 10),
     status: registro ? text(registro["status"]) || "aberto" : "aberto",
     observacao: text(src?.["observacao"]),
     data_competencia: text(src?.["data_competencia"]).slice(0, 10) || hojeISO(),
@@ -745,8 +748,8 @@ function TituloSheet({ tipo, registro, modelo, parceiros, cartoes, readOnly, onC
   const podeConverter = !registro || (!temSerie && text(registro["origem_tipo"] || "manual") === "manual"
     && !text(registro["cartao_id"]));
   const cartao = cartoes.find((c) => text(rowId(c)) === v.cartao_id);
-  const [porItem, setPorItem] = useState(false);
-  const [itens, setItens] = useState<{ descricao: string; categoria: string; valor: string; parcelas: string; data: string }[]>([{ descricao: "", categoria: "", valor: "", parcelas: "1", data: "" }]);
+  const [porItem, setPorItem] = useState(!!presetCartao && !registro);
+  const [itens, setItens] = useState<{ descricao: string; categoria: string; valor: string; parcelas: string; data: string }[]>([{ descricao: "", categoria: "", valor: "", parcelas: "1", data: hojeISO() }]);
   const itensModo = cartaoModo && porItem;
   const cartaoOk = !!(cartao && cartao["dia_fechamento"] && cartao["dia_vencimento"]);
   const optsCartao = { dataCompra: v.vencimento, diaFechamento: num(cartao?.["dia_fechamento"]), diaVencimento: num(cartao?.["dia_vencimento"]) };
@@ -861,7 +864,8 @@ function TituloSheet({ tipo, registro, modelo, parceiros, cartoes, readOnly, onC
         vencimento: v.vencimento, valor, observacao: v.observacao || null, status: statusBase,
         data_competencia: v.data_competencia || null, centro_custo_id: v.centro_custo_id || null,
         codigo_referencia: v.codigo_referencia.trim() || null, conta_bancaria_id: v.conta_bancaria_id || null,
-        nsu: v.nsu.trim() || null, ...(v.forma_pagamento ? { forma_pagamento: v.forma_pagamento } : {}) };
+        nsu: v.nsu.trim() || null, ...(v.forma_pagamento ? { forma_pagamento: v.forma_pagamento } : {}),
+        ...(registro && text(registro["cartao_id"]) && v.data_compra ? { data_compra: v.data_compra } : {}) };
       if (registro) {
         if (temSerie && alcance && !v.desvincular) {
           let reg: Row = registro;
@@ -1086,7 +1090,11 @@ function TituloSheet({ tipo, registro, modelo, parceiros, cartoes, readOnly, onC
             <p className="text-muted-foreground text-sm sm:col-span-2">Cartão: {nomeCartao(cartoes.find((c) => text(rowId(c)) === text(registro["cartao_id"])))}</p>
           )}
           <div className="space-y-1"><Label>{itensModo ? "Data da compra (padrão dos itens)" : cartaoModo ? "Data da compra" : registro || v.modo === "unico" ? "Vencimento" : "1º vencimento"}</Label>
-            <Input type="date" value={v.vencimento} disabled={readOnly} onChange={(e) => setV({ ...v, vencimento: e.target.value })} /></div>
+            <Input type="date" value={v.vencimento} disabled={readOnly} onChange={(e) => { const old = v.vencimento; const nv = e.target.value; setV({ ...v, vencimento: nv }); if (itensModo) setItens((l) => l.map((x) => (!x.data || x.data === old ? { ...x, data: nv } : x))); }} /></div>
+          {registro && text(registro["cartao_id"]) && (
+            <div className="space-y-1"><Label>Data da compra</Label>
+              <Input type="date" value={v.data_compra} disabled={readOnly} onChange={(e) => setV({ ...v, data_compra: e.target.value })} /></div>
+          )}
           {!itensModo && (
             <div className="space-y-1"><Label>{(v.modo === "parcelado" || cartaoModo) && podeConverter ? "Valor total (R$)" : v.modo === "recorrente" && podeConverter ? "Valor mensal (R$)" : "Valor (R$)"}</Label>
               <Input inputMode="decimal" value={v.valor} disabled={readOnly} onChange={(e) => setV({ ...v, valor: mascaraMoeda(e.target.value) })} placeholder="0,00" /></div>
@@ -1119,7 +1127,7 @@ function TituloSheet({ tipo, registro, modelo, parceiros, cartoes, readOnly, onC
                 );
               })}
               <div className="flex items-center justify-between">
-                <Button type="button" variant="outline" size="sm" onClick={() => setItens((l) => [...l, { descricao: "", categoria: v.categoria, valor: "", parcelas: "1", data: "" }])}>
+                <Button type="button" variant="outline" size="sm" onClick={() => setItens((l) => [...l, { descricao: "", categoria: v.categoria, valor: "", parcelas: "1", data: l[l.length - 1]?.data || v.vencimento }])}>
                   <Plus className="mr-1 h-4 w-4" />Adicionar item</Button>
                 <p className="text-sm">Valor final no cartão: <span className="text-base font-bold tabular-nums">{formatBRL(totalItens)}</span></p>
               </div>
