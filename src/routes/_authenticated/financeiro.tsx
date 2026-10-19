@@ -3,7 +3,7 @@ import { periodoPreset, type Periodo } from "@/lib/periodo-vencimento";
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Copy, Paperclip, Plus, QrCode, Receipt, Trash2, Undo2 } from "lucide-react";
+import { CalendarClock, CheckCircle2, Copy, TrendingUp, Paperclip, Plus, QrCode, Receipt, Trash2, Undo2 } from "lucide-react";
 import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { ReciboDialog } from "@/components/financeiro/ReciboDialog";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -50,6 +50,9 @@ import {
   FORMAS_PAGAMENTO,
   hojeISO,
   resumoTitulos,
+  reajusteEmCarencia,
+  valorReajustado,
+  CARENCIA_REAJUSTE_MESES,
   SITUACAO_META,
   situacaoTitulo,
   valorBaixa,
@@ -225,6 +228,59 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
     toast.success(`${ids.length} título(s) excluído(s).`); setSel(new Set()); invalidar();
   };
 
+  const [loteAcao, setLoteAcao] = useState<null | { acao: "pagar" | "agendar" | "reajustar"; itens: Row[] }>(null);
+  const [loteForm, setLoteForm] = useState({ data: hojeISO(), forma: "", percentual: "" });
+  const abrirLote = (acao: "pagar" | "agendar" | "reajustar", itens: Row[]) => {
+    if (!itens.length) return void toast.error("Nenhum título elegível na seleção.");
+    setLoteForm({ data: hojeISO(), forma: "", percentual: "" }); setLoteAcao({ acao, itens });
+  };
+  const sit = (t: Row) => situacaoTitulo(t, hoje);
+  const abertosSel = selecionados.filter((t) => ["aberto", "atrasado", "agendado"].includes(sit(t)));
+  const pagosSel = selecionados.filter((t) => sit(t) === "pago");
+  const reajustaveisSel = selecionados.filter((t) => sit(t) !== "pago" && sit(t) !== "cancelado");
+  const estornarLote = async () => {
+    if (!pagosSel.length) return void toast.error("Nenhum título baixado na seleção.");
+    if (!await confirmar(`Estornar a baixa de ${pagosSel.length} título(s)?`)) return;
+    const { error } = await supabase.from("financeiro_titulos")
+      .update({ status: "aberto", pago_em: null, valor_pago: null, juros: 0, desconto: 0 } as never).in("id", pagosSel.map((t) => text(rowId(t))));
+    if (error) return void toast.error(erroFinanceiro(error));
+    toast.success(`${pagosSel.length} baixa(s) estornada(s).`); setSel(new Set()); invalidar();
+  };
+  const desagendar = async (t: Row) => {
+    const { error } = await supabase.from("financeiro_titulos").update({ agendado_para: null } as never).eq("id", text(rowId(t)));
+    if (error) return void toast.error(erroFinanceiro(error));
+    toast.success("Agendamento removido."); invalidar();
+  };
+  const executarLote = async () => {
+    if (!loteAcao) return;
+    const { acao, itens } = loteAcao;
+    if (acao === "reajustar") {
+      const pct = num(String(loteForm.percentual).replace(",", "."));
+      if (!pct) return void toast.error("Informe o percentual do reajuste.");
+      const emCarencia = itens.filter((t) => reajusteEmCarencia(t, hoje));
+      if (emCarencia.length && !await confirmar(`${emCarencia.length} título(s) já foram reajustados há menos de ${CARENCIA_REAJUSTE_MESES} meses. Deseja reajustar mesmo assim?`)) return;
+      for (const t of itens) {
+        const { error } = await supabase.from("financeiro_titulos").update({ valor: valorReajustado(num(t["valor"]), pct), reajustado_em: hoje, reajuste_percentual: pct } as never).eq("id", text(rowId(t)));
+        if (error) return void toast.error(erroFinanceiro(error));
+      }
+      toast.success(`${itens.length} título(s) reajustado(s) em ${pct}%.`);
+    } else if (acao === "pagar") {
+      for (const t of itens) {
+        const { error } = await supabase.from("financeiro_titulos").update({
+          status: "pago", pago_em: loteForm.data, valor_pago: num(t["valor"]), juros: 0, desconto: 0, agendado_para: null,
+          ...(loteForm.forma ? { forma_pagamento: loteForm.forma } : {}),
+        } as never).eq("id", text(rowId(t)));
+        if (error) return void toast.error(erroFinanceiro(error));
+      }
+      toast.success(`${itens.length} baixa(s) registrada(s).`);
+    } else {
+      const { error } = await supabase.from("financeiro_titulos").update({ agendado_para: loteForm.data } as never).in("id", itens.map((t) => text(rowId(t))));
+      if (error) return void toast.error(erroFinanceiro(error));
+      toast.success(`${itens.length} título(s) agendado(s) para ${formatDate(loteForm.data)}.`);
+    }
+    setLoteAcao(null); setSel(new Set()); invalidar();
+  };
+
   const pagoLabel = tipo === "receber" ? "Recebido" : "Pago";
   const cards: Array<{ label: string; valor: number; sit: string; cls: string }> = [
     { label: "Total do período", valor: resumo.total, sit: "todos", cls: "border-l-muted-foreground" },
@@ -235,7 +291,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
   ];
 
   const columns: Column[] = [
-    ...(perms.canDelete ? [{ key: "sel", header: "", fields: [], sortable: false, className: "w-8", render: (t: Row) => (
+    ...(perms.canDelete || perms.canUpdate ? [{ key: "sel", header: "", fields: [], sortable: false, className: "w-8", render: (t: Row) => (
       <Checkbox aria-label="Selecionar" checked={sel.has(text(rowId(t)))} onCheckedChange={() => alternar(text(rowId(t)))} />
     ) } as Column] : []),
     { key: "venc", header: "Vencimento", fields: ["vencimento"], render: (t) => <span className="tabular-nums">{formatDate(t["vencimento"])}</span> },
@@ -263,6 +319,8 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
         <div>
           <span className={cn("rounded px-2 py-0.5 text-xs font-medium", SITUACAO_META[s].badge)}>{SITUACAO_META[s].label(tipo)}</span>
           {s === "pago" && <p className="text-muted-foreground mt-1 text-xs">{formatDate(t["pago_em"])} • {formatBRL(t["valor_pago"])}</p>}
+          {s === "agendado" && <p className="text-muted-foreground mt-1 text-xs">para {formatDate(t["agendado_para"])}</p>}
+          {t["reajustado_em"] ? <p className="text-muted-foreground mt-1 text-xs">Reajustado em {formatDate(t["reajustado_em"])}</p> : null}
         </div>
       );
     } },
@@ -270,11 +328,20 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
 
   const rowMenu = (t: Row) => {
     const s = situacaoTitulo(t, hoje);
-    const aberto = s === "aberto" || s === "atrasado";
+    const aberto = s === "aberto" || s === "atrasado" || s === "agendado";
     return (
       <>
         {perms.canUpdate && aberto && (
           <DropdownMenuItem onClick={() => setBaixar(t)}><CheckCircle2 className="text-success h-4 w-4" /> {tipo === "receber" ? "Registrar recebimento" : "Registrar pagamento"}</DropdownMenuItem>
+        )}
+        {perms.canUpdate && aberto && s !== "agendado" && (
+          <DropdownMenuItem onClick={() => abrirLote("agendar", [t])}><CalendarClock className="h-4 w-4" /> Agendar pagamento</DropdownMenuItem>
+        )}
+        {perms.canUpdate && s === "agendado" && (
+          <DropdownMenuItem onClick={() => void desagendar(t)}><CalendarClock className="h-4 w-4" /> Remover agendamento</DropdownMenuItem>
+        )}
+        {perms.canUpdate && aberto && (
+          <DropdownMenuItem onClick={() => abrirLote("reajustar", [t])}><TrendingUp className="h-4 w-4" /> Reajustar valor</DropdownMenuItem>
         )}
         {perms.canUpdate && s === "pago" && (
           <DropdownMenuItem onClick={() => estornar(t)}><Undo2 className="h-4 w-4" /> Estornar baixa</DropdownMenuItem>
@@ -321,8 +388,8 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
         ))}
       </div>
 
-      {perms.canDelete && rows.length > 0 && (
-        <div className={cn("bg-card flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3", selecionados.length > 0 && "border-destructive")}>
+      {(perms.canDelete || perms.canUpdate) && rows.length > 0 && (
+        <div className={cn("bg-card flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3", selecionados.length > 0 && "border-primary")}>
           <label className="flex items-center gap-2 text-sm">
             <Checkbox checked={todosMarcados} onCheckedChange={() => setSel(todosMarcados ? new Set() : new Set(rows.map((t) => text(rowId(t)))))} />
             {selecionados.length > 0
@@ -330,13 +397,54 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
               : <span className="text-muted-foreground">Selecionar todos ({rows.length})</span>}
           </label>
           {selecionados.length > 0 && (
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button variant="outline" size="sm" onClick={() => setSel(new Set())}>Desmarcar</Button>
-              <Button variant="destructive" size="sm" onClick={() => setConfirmarLote(true)}><Trash2 className="mr-1 h-4 w-4" />Excluir selecionados</Button>
+              {perms.canUpdate && <>
+                <Button variant="outline" size="sm" disabled={!abertosSel.length} onClick={() => abrirLote("pagar", abertosSel)}><CheckCircle2 className="mr-1 h-4 w-4" />{tipo === "receber" ? "Registrar recebimento" : "Registrar pagamento"} ({abertosSel.length})</Button>
+                <Button variant="outline" size="sm" disabled={!abertosSel.length} onClick={() => abrirLote("agendar", abertosSel)}><CalendarClock className="mr-1 h-4 w-4" />Agendar ({abertosSel.length})</Button>
+                <Button variant="outline" size="sm" disabled={!pagosSel.length} onClick={() => void estornarLote()}><Undo2 className="mr-1 h-4 w-4" />Estornar baixa ({pagosSel.length})</Button>
+                <Button variant="outline" size="sm" disabled={!reajustaveisSel.length} onClick={() => abrirLote("reajustar", reajustaveisSel)}><TrendingUp className="mr-1 h-4 w-4" />Reajustar ({reajustaveisSel.length})</Button>
+              </>}
+              {perms.canDelete && <Button variant="destructive" size="sm" onClick={() => setConfirmarLote(true)}><Trash2 className="mr-1 h-4 w-4" />Excluir selecionados</Button>}
             </div>
           )}
         </div>
       )}
+
+      <Dialog open={!!loteAcao} onOpenChange={(o) => !o && setLoteAcao(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>
+            {loteAcao?.acao === "pagar" ? (tipo === "receber" ? "Registrar recebimento" : "Registrar pagamento") : loteAcao?.acao === "agendar" ? "Agendar pagamento" : "Reajustar valores"} — {loteAcao?.itens.length} título(s)
+          </DialogTitle></DialogHeader>
+          {loteAcao && (
+            <div className="space-y-3">
+              <p className="text-sm">Total atual: <strong className="tabular-nums">{formatBRL(loteAcao.itens.reduce((s, t) => s + num(t["valor"]), 0))}</strong></p>
+              {loteAcao.acao !== "reajustar" && (
+                <div className="space-y-1"><Label>{loteAcao.acao === "pagar" ? "Data do pagamento" : "Agendar para"}</Label>
+                  <Input type="date" value={loteForm.data} onChange={(e) => setLoteForm((s) => ({ ...s, data: e.target.value }))} /></div>
+              )}
+              {loteAcao.acao === "pagar" && (
+                <div className="space-y-1"><Label>Forma de pagamento (opcional)</Label>
+                  <SearchSelect value={loteForm.forma} onChange={(v) => setLoteForm((s) => ({ ...s, forma: v }))} options={FORMAS_PAGAMENTO.map((x) => ({ value: x, label: x }))} placeholder="Manter a de cada título" /></div>
+              )}
+              {loteAcao.acao === "reajustar" && (() => {
+                const pct = num(String(loteForm.percentual).replace(",", "."));
+                const carencia = loteAcao.itens.filter((t) => reajusteEmCarencia(t, hoje)).length;
+                return (<>
+                  <div className="space-y-1"><Label>Percentual de reajuste (ex.: IPCA acumulado 4,5)</Label>
+                    <Input inputMode="decimal" value={loteForm.percentual} onChange={(e) => setLoteForm((s) => ({ ...s, percentual: e.target.value }))} placeholder="0,00 %" /></div>
+                  {pct !== 0 && <p className="text-sm">Novo total: <strong className="tabular-nums">{formatBRL(loteAcao.itens.reduce((s, t) => s + valorReajustado(num(t["valor"]), pct), 0))}</strong></p>}
+                  {carencia > 0 && <p className="text-destructive text-sm font-medium">Atenção: {carencia} título(s) já reajustado(s) há menos de {CARENCIA_REAJUSTE_MESES} meses.</p>}
+                </>);
+              })()}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setLoteAcao(null)}>Cancelar</Button>
+            <Button onClick={() => void executarLote()}>Confirmar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={confirmarLote} onOpenChange={setConfirmarLote}>
         <DialogContent>
