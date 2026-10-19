@@ -1,6 +1,6 @@
 import { PeriodoNavegavel } from "@/components/financeiro/PeriodoNavegavel";
 import { periodoPreset, type Periodo } from "@/lib/periodo-vencimento";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Copy, Paperclip, Plus, QrCode, Receipt, Trash2, Undo2 } from "lucide-react";
@@ -225,7 +225,15 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
     { key: "venc", header: "Vencimento", fields: ["vencimento"], render: (t) => <span className="tabular-nums">{formatDate(t["vencimento"])}</span> },
     { key: "desc", header: "Descrição", fields: ["descricao"], render: (t) => (
       <div className="min-w-0">
-        <p className="truncate font-medium">{text(t["descricao"])}</p>
+        {(() => {
+          const m = text(t["descricao"]).match(/^(.*?)\s*\((\d+\/\d+)\)\s*$/);
+          return (
+            <div className="flex min-w-0 items-center gap-1.5">
+              <p className="truncate font-medium">{m ? m[1] : text(t["descricao"])}</p>
+              {m && <span className="bg-primary/10 text-primary shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold tabular-nums">{m[2]}</span>}
+            </div>
+          );
+        })()}
         <p className="text-muted-foreground text-xs">{ORIGEM_LABEL[text(t["origem_tipo"])] ?? "Manual"}{t["categoria"] ? ` • ${text(t["categoria"])}` : ""}</p>
       </div>
     ) },
@@ -480,6 +488,33 @@ function TituloSheet({ tipo, registro, modelo, parceiros, cartoes, readOnly, onC
     const m = text(registro?.["descricao"]).match(/\((\d+)\/(\d+)\)\s*$/);
     return m ? m[2]! : "";
   });
+  const [serie, setSerie] = useState<Row[]>([]);
+  useEffect(() => {
+    if (!temSerie || !registro) return;
+    let vivo = true;
+    (async () => {
+      let q = supabase.from("financeiro_titulos").select("*").eq("origem_tipo", "manual").eq("tipo", tipo).eq("empresa_id", text(registro["empresa_id"]));
+      q = registro["origem_id"] ? q.eq("origem_id", text(registro["origem_id"])) : q.is("origem_id", null);
+      const { data } = await q;
+      let l = (data ?? []) as Row[];
+      if (!registro["origem_id"]) l = parcelasLegadas(registro, l);
+      l.sort((a, b) => text(a["vencimento"]).localeCompare(text(b["vencimento"])));
+      if (vivo) setSerie(l);
+    })();
+    return () => { vivo = false; };
+  }, [temSerie, registro, tipo]);
+  const previaSerie = useMemo(() => {
+    const total = Math.floor(num(novoTotal));
+    if (!serie.length || total <= serie.length || total > 120) return [];
+    const ult = serie[serie.length - 1]!;
+    const [y, m, d] = text(ult["vencimento"]).slice(0, 10).split("-").map(Number);
+    return Array.from({ length: total - serie.length }, (_, i) => {
+      const dt = new Date(Date.UTC(y!, m! - 1 + i + 1, 1));
+      const fim = new Date(Date.UTC(dt.getUTCFullYear(), dt.getUTCMonth() + 1, 0)).getUTCDate();
+      dt.setUTCDate(Math.min(d!, fim));
+      return { vencimento: dt.toISOString().slice(0, 10), valor: num(ult["valor"]) };
+    });
+  }, [serie, novoTotal]);
   const carregarSerie = async (): Promise<Row[]> => {
     const reg = registro!;
     const serieId = text(reg["origem_id"]);
@@ -653,6 +688,39 @@ function TituloSheet({ tipo, registro, modelo, parceiros, cartoes, readOnly, onC
                   <p className="w-full text-xs text-muted-foreground">Aumentar cria novas parcelas mensais após a última; reduzir remove só parcelas em aberto do final. Parcelas pagas são preservadas.</p>
                 </div>
               )}
+              {serie.length > 0 && (() => {
+                const total = Math.max(serie.length, Math.floor(num(novoTotal)) || serie.length);
+                const quitado = serie.filter((t) => t["status"] === "pago").reduce((s, t) => s + num(t["valor_pago"] ?? t["valor"]), 0);
+                const soma = serie.reduce((s, t) => s + num(t["valor"]), 0) + previaSerie.reduce((s, p) => s + p.valor, 0);
+                return (
+                  <div className="rounded-md border border-primary/20 bg-background">
+                    <div className="text-muted-foreground grid grid-cols-4 px-3 pt-2 text-xs font-medium">
+                      <span>Parcela</span><span>Vencimento</span><span className="text-right">Valor</span><span className="text-right">Situação</span>
+                    </div>
+                    <div className="max-h-56 overflow-y-auto px-3">
+                      {serie.map((t, i) => {
+                        const s = situacaoTitulo(t, hojeISO());
+                        const atual = text(rowId(t)) === text(rowId(registro!));
+                        return (
+                          <div key={text(rowId(t))} className={cn("grid grid-cols-4 items-center py-0.5 tabular-nums", atual && "font-semibold text-primary")}>
+                            <span>{i + 1}/{total}{atual ? " • esta" : ""}</span><span>{formatDate(t["vencimento"])}</span>
+                            <span className="text-right">{formatBRL(t["valor"])}</span>
+                            <span className="text-right"><span className={cn("rounded px-1.5 py-0.5 text-[10px] font-medium", SITUACAO_META[s].badge)}>{SITUACAO_META[s].label(tipo)}</span></span>
+                          </div>
+                        );
+                      })}
+                      {previaSerie.map((p, i) => (
+                        <div key={`n${i}`} className="text-muted-foreground grid grid-cols-4 py-0.5 italic tabular-nums">
+                          <span>{serie.length + i + 1}/{total}</span><span>{formatDate(p.vencimento)}</span><span className="text-right">{formatBRL(p.valor)}</span><span className="text-right text-xs">nova</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex justify-between border-t border-primary/20 px-3 py-2 text-xs font-semibold">
+                      <span>Total {formatBRL(soma)}</span><span>Quitado {formatBRL(quitado)}</span>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           )}
           <div className="space-y-1 sm:col-span-2"><Label>Descrição</Label>
