@@ -9,6 +9,8 @@ import { toast } from "sonner";
 import { DataTable, type Column } from "@/components/data-table/DataTable";
 import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
 import { CotacaoSheet } from "@/components/cotacoes/CotacaoSheet";
+import { ConfigAprovacaoDialog } from "@/components/cotacoes/AprovacaoCompras";
+import { ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSaveOrcamento, type LinhaPayload } from "@/hooks/useSaveOrcamento";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
@@ -52,6 +54,7 @@ function CotacoesPage() {
   const saveOrc = useSaveOrcamento();
   const { empresaId } = useAudit();
 
+  const [wfOpen, setWfOpen] = useState(false);
   const [novoTitulo, setNovoTitulo] = useState<string | null>(null);
   const [criando, setCriando] = useState(false);
   const novaCotacao = () => setNovoTitulo("Cotação avulsa");
@@ -210,6 +213,12 @@ function CotacoesPage() {
 
   return (
     <>
+      {perms.canUpdate && (
+        <div className="mb-3 flex justify-end">
+          <Button variant="outline" size="sm" onClick={() => setWfOpen(true)}><ShieldCheck className="mr-1 h-4 w-4" />Workflow de aprovação</Button>
+        </div>
+      )}
+      <ConfigAprovacaoDialog open={wfOpen} onOpenChange={setWfOpen} />
       <DataTable
         title="Cotações de Compras"
         columns={columns}
