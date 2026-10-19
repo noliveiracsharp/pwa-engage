@@ -1,6 +1,6 @@
 import { PeriodoNavegavel } from "@/components/financeiro/PeriodoNavegavel";
 import { periodoPreset, type Periodo } from "@/lib/periodo-vencimento";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Copy, Paperclip, Plus, QrCode, Receipt, Trash2, Undo2 } from "lucide-react";
@@ -480,6 +480,33 @@ function TituloSheet({ tipo, registro, modelo, parceiros, cartoes, readOnly, onC
     const m = text(registro?.["descricao"]).match(/\((\d+)\/(\d+)\)\s*$/);
     return m ? m[2]! : "";
   });
+  const [serie, setSerie] = useState<Row[]>([]);
+  useEffect(() => {
+    if (!temSerie || !registro) return;
+    let vivo = true;
+    (async () => {
+      let q = supabase.from("financeiro_titulos").select("*").eq("origem_tipo", "manual").eq("tipo", tipo).eq("empresa_id", text(registro["empresa_id"]));
+      q = registro["origem_id"] ? q.eq("origem_id", text(registro["origem_id"])) : q.is("origem_id", null);
+      const { data } = await q;
+      let l = (data ?? []) as Row[];
+      if (!registro["origem_id"]) l = parcelasLegadas(registro, l);
+      l.sort((a, b) => text(a["vencimento"]).localeCompare(text(b["vencimento"])));
+      if (vivo) setSerie(l);
+    })();
+    return () => { vivo = false; };
+  }, [temSerie, registro, tipo]);
+  const previaSerie = useMemo(() => {
+    const total = Math.floor(num(novoTotal));
+    if (!serie.length || total <= serie.length || total > 120) return [];
+    const ult = serie[serie.length - 1]!;
+    const [y, m, d] = text(ult["vencimento"]).slice(0, 10).split("-").map(Number);
+    return Array.from({ length: total - serie.length }, (_, i) => {
+      const dt = new Date(Date.UTC(y!, m! - 1 + i + 1, 1));
+      const fim = new Date(Date.UTC(dt.getUTCFullYear(), dt.getUTCMonth() + 1, 0)).getUTCDate();
+      dt.setUTCDate(Math.min(d!, fim));
+      return { vencimento: dt.toISOString().slice(0, 10), valor: num(ult["valor"]) };
+    });
+  }, [serie, novoTotal]);
   const carregarSerie = async (): Promise<Row[]> => {
     const reg = registro!;
     const serieId = text(reg["origem_id"]);
