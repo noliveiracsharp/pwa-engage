@@ -141,7 +141,8 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
     const grupos = new Map<string, Row[]>();
     for (const t of doTipo) {
       if (t["origem_tipo"] !== "manual" || !t["origem_id"]) continue;
-      const k = text(t["origem_id"]);
+      // Mesma série = mesmo vínculo E mesma descrição base (evita "parcelas" entre compras diferentes do cartão).
+      const k = `${text(t["origem_id"])}|${text(t["descricao"]).replace(/\s*\(\d+\/\d+\)\s*$/, "").trim().toLowerCase()}`;
       grupos.set(k, [...(grupos.get(k) ?? []), t]);
     }
     const mapa = new Map<string, string>();
@@ -186,14 +187,15 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
       if (!r["__k"]) return r;
       const itens = grupos.get(text(r["__k"]))!;
       const c = cartoes.find((x) => text(rowId(x)) === text(itens[0]!["cartao_id"]));
-      const todosPagos = itens.every((t) => t["status"] === "pago");
+      const todosPagos = itens.every((t) => t["status"] === "pago" || t["status"] === "cancelado") && itens.some((t) => t["status"] === "pago");
+      const pagoParcial = round2(itens.reduce((s, t) => s + (t["status"] === "pago" ? num(t["valor_pago"]) || num(t["valor"]) : num(t["valor_pago"])), 0));
       return { id: r["id"], __fatura: true, __itens: itens, cartao_id: itens[0]!["cartao_id"], vencimento: itens[0]!["vencimento"],
         descricao: `Fatura ${nomeCartao(c)}`, categoria: "Cartão de crédito", origem_tipo: "cartao",
         valor: round2(itens.reduce((s, t) => s + num(t["valor"]), 0)),
         status: todosPagos ? "pago" : itens.some((t) => t["status"] === "cancelado") && itens.every((t) => t["status"] === "cancelado") ? "cancelado" : "aberto",
-        pago_em: todosPagos ? itens[0]!["pago_em"] : null,
-        valor_pago: todosPagos ? round2(itens.reduce((s, t) => s + num(t["valor_pago"]), 0)) : null } as Row;
-    }).flatMap((r) => (r["__fatura"] && abertas.has(text(r["id"])) ? [r, ...(r["__itens"] as Row[]).map((t) => ({ ...t, __filho: true }))] : [r]));
+        valor_pago: todosPagos || pagoParcial > 0 ? pagoParcial : null,
+        pago_em: todosPagos ? itens[0]!["pago_em"] : itens.find((t) => t["pago_em"])?.["pago_em"] ?? null } as Row;
+    }).flatMap((r) => (r["__fatura"] && abertas.has(text(r["id"])) ? [r, ...(r["__itens"] as Row[]).map((t) => ({ ...t, __filho: true, __pai: r }))] : [r]));
   }, [rows, tipo, f.cartao, cartoes, abertas]);
   const baixarItensFatura = async (itens: Row[]) => {
     const abertos = itens.filter((t) => t["status"] !== "pago" && t["status"] !== "cancelado");
@@ -206,6 +208,36 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
     toast.success("Fatura baixada."); setFatura(null); invalidar();
   };
   const invalidar = () => qc.invalidateQueries({ queryKey: ["table", "financeiro_titulos"] });
+  const estornarFatura = async (itens: Row[]) => {
+    if (!await confirmar("Estornar todos os pagamentos desta fatura?")) return;
+    const { error } = await supabase.from("financeiro_titulos").update({ status: "aberto", pago_em: null, valor_pago: null, juros: 0, desconto: 0 } as never).in("id", itens.map((t) => text(rowId(t))));
+    if (error) return void toast.error(erroFinanceiro(error));
+    toast.success("Pagamentos da fatura estornados."); setFatura(null); invalidar();
+  };
+  const pagarParcialFatura = async (itens: Row[], valor: number, data: string) => {
+    const ordem = [...itens].sort((a, b) => text(a["data_compra"]).localeCompare(text(b["data_compra"])));
+    const plano = distribuirPagamento(ordem, valor);
+    if (!plano.length) return void toast.error("Informe um valor maior que zero.");
+    for (const p of plano) {
+      const { error } = await supabase.from("financeiro_titulos").update((p.quitado
+        ? { status: "pago", pago_em: data, valor_pago: p.valor_pago, agendado_para: null, forma_pagamento: "Cartão de crédito" }
+        : { pago_em: data, valor_pago: p.valor_pago }) as never).eq("id", p.id);
+      if (error) return void toast.error(erroFinanceiro(error));
+    }
+    toast.success(`Pagamento de ${formatBRL(valor)} registrado na fatura.`); setFatura(null); invalidar();
+  };
+  const mudarVencimentoFatura = async (itens: Row[], venc: string) => {
+    if (!venc) return;
+    const { error } = await supabase.from("financeiro_titulos").update({ vencimento: venc } as never).in("id", itens.map((t) => text(rowId(t))));
+    if (error) return void toast.error(erroFinanceiro(error));
+    toast.success("Vencimento da fatura atualizado."); setFatura(null); invalidar();
+  };
+  const excluirItemFatura = async (t: Row) => {
+    if (!await confirmar({ title: "Excluir este item da fatura?", description: `${text(t["descricao"])} — ${formatBRL(t["valor"])}`, confirmText: "Excluir", destructive: true })) return;
+    const { error } = await supabase.from("financeiro_titulos").delete().eq("id", text(rowId(t)));
+    if (error) return void toast.error(erroFinanceiro(error));
+    toast.success("Item excluído."); setFatura(null); invalidar();
+  };
   const faturaAberta = rows.filter((t) => t["status"] === "aberto");
 
   const baixarFatura = async () => {
@@ -276,8 +308,8 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
     setLoteForm({ data: hojeISO(), forma: "", percentual: "", whats: tipo === "receber", email: tipo === "receber" }); setLoteAcao({ acao, itens });
   };
   const sit = (t: Row) => situacaoTitulo(t, hoje);
-  const abertosSel = selecionados.filter((t) => ["aberto", "atrasado", "agendado"].includes(sit(t)));
-  const pagosSel = selecionados.filter((t) => sit(t) === "pago");
+  const abertosSel = selecionados.filter((t) => ["aberto", "atrasado", "agendado", "parcial"].includes(sit(t)));
+  const pagosSel = selecionados.filter((t) => sit(t) === "pago" || sit(t) === "parcial");
   const reajustaveisSel = selecionados.filter((t) => sit(t) !== "pago" && sit(t) !== "cancelado");
   const estornarLote = async () => {
     if (!pagosSel.length) return void toast.error("Nenhum título baixado na seleção.");
@@ -373,11 +405,13 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
     { key: "parc", header: tipo === "receber" ? "Cliente" : "Fornecedor", fields: [], render: (t) => t["__fatura"] ? ([...new Set((t["__itens"] as Row[]).map((x) => nomeParc(x["parceiro_id"])).filter(Boolean))].join(", ") || "—") : nomeParc(t["parceiro_id"]) || "—" },
     { key: "valor", header: "Valor", fields: ["valor"], render: (t) => <span className="font-semibold tabular-nums">{formatBRL(t["valor"])}</span> },
     { key: "sit", header: "Situação", fields: [], render: (t) => {
+      if (t["__filho"]) return <span className="text-muted-foreground text-xs">na fatura</span>;
       const s = situacaoTitulo(t, hoje);
       return (
         <div>
           <span className={cn("rounded px-2 py-0.5 text-xs font-medium", SITUACAO_META[s].badge)}>{SITUACAO_META[s].label(tipo)}</span>
           {s === "pago" && <p className="text-muted-foreground mt-1 text-xs">{formatDate(t["pago_em"])} • {formatBRL(t["valor_pago"])}</p>}
+          {s === "parcial" && <p className="text-muted-foreground mt-1 text-xs">Pago {formatBRL(t["valor_pago"])} • saldo {formatBRL(round2(num(t["valor"]) - num(t["valor_pago"])))}</p>}
           {s === "agendado" && <p className="text-muted-foreground mt-1 text-xs">para {formatDate(t["agendado_para"])}</p>}
           {t["reajustado_em"] ? <p className="text-muted-foreground mt-1 text-xs">Reajustado em {formatDate(t["reajustado_em"])}</p> : null}
         </div>
@@ -388,12 +422,17 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
   const rowMenu = (t: Row) => {
     if (t["__fatura"]) return (
       <>
-        <DropdownMenuItem onClick={() => setFatura(t)}><CreditCard className="h-4 w-4" /> Ver itens da fatura</DropdownMenuItem>
-        {perms.canUpdate && t["status"] !== "pago" && <DropdownMenuItem onClick={() => void baixarItensFatura(t["__itens"] as Row[])}><CheckCircle2 className="text-success h-4 w-4" /> Baixar fatura</DropdownMenuItem>}
+        <DropdownMenuItem onClick={() => setFatura(t)}><CreditCard className="h-4 w-4" /> Editar fatura e itens</DropdownMenuItem>
+        {perms.canUpdate && t["status"] !== "pago" && <DropdownMenuItem onClick={() => void baixarItensFatura(t["__itens"] as Row[])}><CheckCircle2 className="text-success h-4 w-4" /> Baixar fatura (total)</DropdownMenuItem>}
+        {perms.canUpdate && t["status"] !== "pago" && <DropdownMenuItem onClick={() => setFatura(t)}><CheckCircle2 className="h-4 w-4" /> Pagamento parcial / mínimo</DropdownMenuItem>}
+        {perms.canUpdate && num(t["valor_pago"]) > 0 && <DropdownMenuItem onClick={() => void estornarFatura(t["__itens"] as Row[])}><Undo2 className="h-4 w-4" /> Estornar pagamentos da fatura</DropdownMenuItem>}
       </>
     );
+    if (t["__filho"]) return (
+      <DropdownMenuItem onClick={() => setFatura(t["__pai"] as Row)}><CreditCard className="h-4 w-4" /> Abrir fatura</DropdownMenuItem>
+    );
     const s = situacaoTitulo(t, hoje);
-    const aberto = s === "aberto" || s === "atrasado" || s === "agendado";
+    const aberto = s === "aberto" || s === "atrasado" || s === "agendado" || s === "parcial";
     return (
       <>
         {perms.canUpdate && aberto && (
@@ -408,7 +447,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
         {perms.canUpdate && aberto && (
           <DropdownMenuItem onClick={() => abrirLote("reajustar", [t])}><TrendingUp className="h-4 w-4" /> Reajustar valor</DropdownMenuItem>
         )}
-        {perms.canUpdate && s === "pago" && (
+        {perms.canUpdate && (s === "pago" || s === "parcial") && (
           <DropdownMenuItem onClick={() => estornar(t)}><Undo2 className="h-4 w-4" /> Estornar baixa</DropdownMenuItem>
         )}
         {tipo === "receber" && perms.canUpdate && aberto && (
@@ -594,18 +633,25 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
                         <td className="p-2">{text(t["categoria"]) || "—"}</td>
                         <td className="p-2 text-right font-medium tabular-nums">{formatBRL(t["valor"])}</td>
                         <td className="p-2"><span className={cn("rounded px-2 py-0.5 text-xs font-medium", SITUACAO_META[st].badge)}>{SITUACAO_META[st].label(tipo)}</span></td>
-                        <td className="p-2"><Button size="sm" variant="ghost" onClick={() => { setFatura(null); setEditar(t); }}>Editar</Button></td>
+                        <td className="p-2 whitespace-nowrap">
+                          {num(t["valor_pago"]) > 0 && t["status"] !== "pago" && <p className="text-muted-foreground text-[10px]">pago {formatBRL(t["valor_pago"])}</p>}
+                          {perms.canUpdate && <Button size="sm" variant="ghost" onClick={() => { setFatura(null); setEditar(t); }}>Editar</Button>}
+                          {perms.canDelete && <Button size="icon" variant="ghost" className="h-8 w-8" aria-label="Excluir item" onClick={() => void excluirItemFatura(t)}><Trash2 className="text-destructive h-4 w-4" /></Button>}</td>
                       </tr>);
                     })}
                   </tbody>
                 </table>
               </div>
-              <div className="flex items-center justify-between">
-                <p className="text-sm">{itens.length} item(ns) • Total <strong className="tabular-nums">{formatBRL(fatura["valor"])}</strong></p>
+              {perms.canUpdate && <FaturaAcoes key={text(fatura["id"])} fatura={fatura} itens={itens}
+                onVencimento={(d) => void mudarVencimentoFatura(itens, d)} onParcial={(val, d) => void pagarParcialFatura(itens, val, d)}
+                onEstornar={() => void estornarFatura(itens)} />}
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm">{itens.length} item(ns) • Total <strong className="tabular-nums">{formatBRL(fatura["valor"])}</strong>
+                  {num(fatura["valor_pago"]) > 0 && fatura["status"] !== "pago" && <> • Pago {formatBRL(fatura["valor_pago"])} • Saldo <strong>{formatBRL(round2(num(fatura["valor"]) - num(fatura["valor_pago"])))}</strong></>}</p>
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => setFatura(null)}>Fechar</Button>
                   {perms.canCreate && <Button variant="outline" onClick={() => { const c = text(fatura["cartao_id"]); setFatura(null); setNovoNoCartao(c); setEditar(null); }}><Plus className="mr-1 h-4 w-4" />Adicionar itens</Button>}
-                  {perms.canUpdate && fatura["status"] !== "pago" && <Button onClick={() => void baixarItensFatura(itens)}><CheckCircle2 className="mr-1 h-4 w-4" />Baixar fatura</Button>}
+                  {perms.canUpdate && fatura["status"] !== "pago" && <Button onClick={() => void baixarItensFatura(itens)}><CheckCircle2 className="mr-1 h-4 w-4" />Baixar fatura (total)</Button>}
                 </div>
               </div>
             </>);
@@ -629,7 +675,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
           <>
             <FilterInput label="Busca" value={f.busca} onChange={(v) => setF((s) => ({ ...s, busca: v }))} placeholder="Descrição, parceiro, categoria" />
             <FilterSelect label="Situação" value={f.situacao} onChange={(v) => setF((s) => ({ ...s, situacao: v }))}
-              options={[{ value: "todos", label: "Todas" }, ...(["aberto", "atrasado", "pago", "cancelado"] as Situacao[]).map((s) => ({ value: s, label: SITUACAO_META[s].label(tipo) }))]} />
+              options={[{ value: "todos", label: "Todas" }, ...(["aberto", "parcial", "atrasado", "pago", "cancelado"] as Situacao[]).map((s) => ({ value: s, label: SITUACAO_META[s].label(tipo) }))]} />
             <FilterSelect label="Categoria" value={f.categoria} onChange={(v) => setF((s) => ({ ...s, categoria: v }))}
               options={[{ value: "todos", label: "Todas" }, ...categorias.todas.map((c) => ({ value: c, label: c }))]} />
             {tipo === "pagar" && cartoes.length > 0 && (
@@ -673,6 +719,38 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
       </Dialog>
       {cobrar && <CobrancaDialog titulo={cobrar} parceiro={parceiroById.get(text(cobrar["parceiro_id"]))} onClose={() => setCobrar(null)} onSaved={invalidar} />}
       {baixar && <BaixaDialog tipo={tipo} titulo={baixar} onClose={() => setBaixar(null)} onSaved={invalidar} />}
+    </div>
+  );
+}
+
+function FaturaAcoes({ fatura, itens, onVencimento, onParcial, onEstornar }: {
+  fatura: Row; itens: Row[]; onVencimento: (d: string) => void; onParcial: (valor: number, data: string) => void; onEstornar: () => void;
+}) {
+  const saldo = round2(itens.reduce((s, t) => s + saldoTitulo(t), 0));
+  const [venc, setVenc] = useState(text(fatura["vencimento"]).slice(0, 10));
+  const [valor, setValor] = useState("");
+  const [data, setData] = useState(hojeISO());
+  return (
+    <div className="grid gap-3 rounded-lg border p-3 sm:grid-cols-2">
+      <div className="space-y-1"><Label>Vencimento da fatura</Label>
+        <div className="flex gap-2"><Input type="date" value={venc} onChange={(e) => setVenc(e.target.value)} />
+          <Button variant="outline" disabled={!venc || venc === text(fatura["vencimento"]).slice(0, 10)} onClick={() => onVencimento(venc)}>Aplicar</Button></div>
+        <p className="text-muted-foreground text-xs">Muda o vencimento de todos os itens desta fatura.</p></div>
+      {saldo > 0 ? (
+        <div className="space-y-1"><Label>Pagamento parcial / mínimo</Label>
+          <div className="flex gap-2">
+            <Input inputMode="decimal" placeholder={`até ${formatBRL(saldo)}`} value={valor} onChange={(e) => setValor(mascaraMoeda(e.target.value))} />
+            <Input type="date" className="w-40" value={data} onChange={(e) => setData(e.target.value)} />
+          </div>
+          <Button size="sm" className="w-full" disabled={num(valor) <= 0} onClick={() => {
+            const v = round2(num(valor));
+            if (v > saldo) return void toast.error(`O valor passa do saldo da fatura (${formatBRL(saldo)}).`);
+            onParcial(v, data);
+          }}>Registrar pagamento</Button>
+          <p className="text-muted-foreground text-xs">Abate os itens mais antigos primeiro; o restante fica como saldo em aberto.</p></div>
+      ) : (
+        <div className="flex items-end"><Button variant="outline" onClick={onEstornar}><Undo2 className="mr-1 h-4 w-4" />Estornar pagamentos</Button></div>
+      )}
     </div>
   );
 }
