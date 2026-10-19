@@ -1290,9 +1290,12 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
 }
 
 function BaixaDialog({ tipo, titulo, onClose, onSaved }: { tipo: TipoTitulo; titulo: Row; onClose: () => void; onSaved: () => void }) {
-  const [v, setV] = useState({ data: hojeISO(), juros: "", desconto: "", forma: FORMAS_PAGAMENTO[0] ?? "Pix", comprovante: "" });
+  const [v, setV] = useState({ data: hojeISO(), juros: "", desconto: "", forma: FORMAS_PAGAMENTO[0] ?? "Pix", comprovante: "", pagoAgora: "" });
   const [enviando, setEnviando] = useState(false);
-  const total = valorBaixa(num(titulo["valor"]), num(v.juros), num(v.desconto));
+  const jaPago = num(titulo["valor_pago"]);
+  const total = valorBaixa(saldoTitulo(titulo), num(v.juros), num(v.desconto));
+  const pagoAgora = v.pagoAgora ? round2(num(v.pagoAgora)) : total;
+  const parcial = pagoAgora > 0 && pagoAgora < total - 0.004;
 
   const anexar = async (file?: File) => {
     if (!file) return;
@@ -1317,9 +1320,19 @@ function BaixaDialog({ tipo, titulo, onClose, onSaved }: { tipo: TipoTitulo; tit
     return calcularTarifa(conta as never, v.forma, usadas);
   }, [conta, v.forma, v.data, todosTitulos, titulo]);
   const confirmar = async () => {
+    if (pagoAgora <= 0) return void toast.error("Informe o valor pago.");
+    if (pagoAgora > total + 0.004) return void toast.error(`O valor passa do saldo (${formatBRL(total)}).`);
+    if (parcial) {
+      const { error } = await supabase.from("financeiro_titulos").update({
+        pago_em: v.data, valor_pago: round2(jaPago + pagoAgora), forma_pagamento: v.forma, comprovante: v.comprovante || titulo["comprovante"] || null, agendado_para: null,
+      } as never).eq("id", text(rowId(titulo)));
+      if (error) return void toast.error(erroFinanceiro(error));
+      toast.success(`Pagamento parcial de ${formatBRL(pagoAgora)} registrado. Saldo: ${formatBRL(round2(total - pagoAgora))}.`);
+      onSaved(); onClose(); return;
+    }
     const tarifa = tarifaInfo.tarifa;
     const { error } = await supabase.from("financeiro_titulos").update({
-      status: "pago", pago_em: v.data, valor_pago: total, juros: round2(num(v.juros)), desconto: round2(num(v.desconto)),
+      status: "pago", pago_em: v.data, valor_pago: round2(jaPago + total), juros: round2(num(v.juros)), desconto: round2(num(v.desconto)),
       forma_pagamento: v.forma, comprovante: v.comprovante || titulo["comprovante"] || null,
       ...(tipo === "receber" ? { tarifa_bancaria: tarifa, valor_liquido: round2(total - tarifa), conta_bancaria_id: conta ? text(rowId(conta)) : titulo["conta_bancaria_id"] ?? null } : {}),
     } as never).eq("id", text(rowId(titulo)));
@@ -1357,7 +1370,11 @@ function BaixaDialog({ tipo, titulo, onClose, onSaved }: { tipo: TipoTitulo; tit
             {v.comprovante && <img src={v.comprovante} alt="Comprovante" className="mt-2 h-20 rounded border object-cover" />}
           </div>
         </div>
-        <p className="text-sm">Valor da baixa: <strong>{formatBRL(total)}</strong></p>
+        <div className="space-y-1"><Label>Valor pago agora (R$)</Label>
+          <Input inputMode="decimal" value={v.pagoAgora} placeholder={moedaDeNumero(total)} onChange={(e) => setV({ ...v, pagoAgora: mascaraMoeda(e.target.value) })} />
+          <p className="text-muted-foreground text-xs">Deixe em branco para quitar. Valor menor registra pagamento parcial e mantém o saldo em aberto.</p></div>
+        {jaPago > 0 && <p className="text-muted-foreground text-sm">Já pago antes: {formatBRL(jaPago)}</p>}
+        <p className="text-sm">{parcial ? <>Pagamento parcial: <strong>{formatBRL(pagoAgora)}</strong> • saldo restante <strong>{formatBRL(round2(total - pagoAgora))}</strong></> : <>Valor da baixa: <strong>{formatBRL(total)}</strong></>}</p>
         {tipo === "receber" && conta && modalidadeTarifa(v.forma) && (
           <p className="text-muted-foreground text-sm">
             Tarifa {text(conta["descricao"])} ({tarifaInfo.sequencia}ª {v.forma.toLowerCase()} do mês):{" "}
