@@ -18,7 +18,7 @@ import type { Row } from "@/lib/row";
 
 export type TipoTitulo = "receber" | "pagar";
 export type StatusTitulo = "aberto" | "pago" | "cancelado";
-export type Situacao = "aberto" | "atrasado" | "pago" | "cancelado";
+export type Situacao = "aberto" | "agendado" | "atrasado" | "pago" | "cancelado";
 export type OrigemTitulo = "manual" | "oferta" | "pedido" | "despesa" | "comissao" | "reembolso";
 
 export type NovoTitulo = {
@@ -47,12 +47,35 @@ const iso = (v: unknown) => String(v ?? "").slice(0, 10);
 export function situacaoTitulo(t: Row, hoje = hojeISO()): Situacao {
   const s = String(t["status"] ?? "aberto");
   if (s === "pago" || s === "cancelado") return s;
+  if (iso(t["agendado_para"])) return "agendado";
   const v = iso(t["vencimento"]);
   return v && v < hoje ? "atrasado" : "aberto";
 }
 
+/** Carência mínima entre reajustes do mesmo título (meses). */
+export const CARENCIA_REAJUSTE_MESES = 12;
+
+/** Meses completos entre duas datas ISO (a <= b). */
+export function mesesEntre(a: string, b: string): number {
+  const [ya, ma, da] = a.slice(0, 10).split("-").map(Number);
+  const [yb, mb, db] = b.slice(0, 10).split("-").map(Number);
+  let m = (yb! - ya!) * 12 + (mb! - ma!);
+  if (db! < da!) m -= 1;
+  return m;
+}
+
+/** True quando o título foi reajustado há menos de 12 meses. */
+export function reajusteEmCarencia(t: Row, hoje = hojeISO()): boolean {
+  const ult = iso(t["reajustado_em"]);
+  return !!ult && mesesEntre(ult, hoje) < CARENCIA_REAJUSTE_MESES;
+}
+
+/** Novo valor aplicando percentual (ex.: IPCA 4,5 → +4,5%). */
+export const valorReajustado = (valor: number, percentual: number) => round2(num(valor) * (1 + num(percentual) / 100));
+
 export const SITUACAO_META: Record<Situacao, { label: (tipo: TipoTitulo) => string; badge: string }> = {
   aberto: { label: () => "Em aberto", badge: "bg-muted text-foreground" },
+  agendado: { label: () => "Agendado", badge: "bg-primary/15 text-primary" },
   atrasado: { label: () => "Atrasado", badge: "bg-destructive text-destructive-foreground" },
   pago: { label: (t) => (t === "receber" ? "Recebido" : "Pago"), badge: "bg-success text-success-foreground" },
   cancelado: { label: () => "Cancelado", badge: "bg-muted text-muted-foreground line-through" },
@@ -167,7 +190,7 @@ export function resumoTitulos(titulos: Row[], hoje = hojeISO()): ResumoTitulos {
     const s = situacaoTitulo(t, hoje);
     const v = num(t["valor"]);
     r.total += v;
-    if (s === "aberto") { r.aVencer += v; r.emAberto += v; }
+    if (s === "aberto" || s === "agendado") { r.aVencer += v; r.emAberto += v; }
     else if (s === "atrasado") { r.vencidos += v; r.emAberto += v; }
     else if (s === "pago" && iso(t["pago_em"]).slice(0, 7) === mes) r.pagoMes += num(t["valor_pago"]) || v;
   }
