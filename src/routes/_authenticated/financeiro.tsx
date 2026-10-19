@@ -349,7 +349,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
     ) } as Column] : []),
     { key: "venc", header: "Vencimento", fields: ["vencimento"], render: (t) => t["__filho"] ? <span className="text-muted-foreground text-xs tabular-nums">Compra {formatDate(t["data_compra"]) || "—"}</span> : <span className="tabular-nums">{formatDate(t["vencimento"])}</span> },
     { key: "desc", header: "Descrição", fields: ["descricao"], render: (t) => (
-      <div className={cn("min-w-0", t["__filho"] && "border-primary/40 ml-4 border-l-2 pl-3")}>
+      <div className={cn("min-w-0", !!t["__filho"] && "border-primary/40 ml-4 border-l-2 pl-3")}>
         {(() => {
           const txt = text(t["descricao"]).match(/^(.*?)\s*\((\d+\/\d+)\)\s*$/);
           const pos = posSerie.get(text(rowId(t)));
@@ -361,7 +361,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
             </div>
           );
         })()}
-        {t["__fatura"] && (
+        {!!t["__fatura"] && (
           <button type="button" className="text-primary mb-1 flex items-center gap-1 text-xs font-medium" onClick={(e) => { e.stopPropagation(); setAbertas((s) => { const n = new Set(s); const k = text(t["id"]); if (n.has(k)) n.delete(k); else n.add(k); return n; }); }}>
             {abertas.has(text(t["id"])) ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}<CreditCard className="h-3.5 w-3.5" /> {abertas.has(text(t["id"])) ? "Ocultar itens" : "Mostrar itens"}
           </button>
