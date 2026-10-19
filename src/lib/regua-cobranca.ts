@@ -61,5 +61,5 @@ export function deveEmitirBoleto(vencimento: string, hoje: string, cfg: ModoEmis
 }
 
 export function preencherModelo(modelo: string, vars: Record<string, string>): string {
-  return modelo.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? vars[k] : m));
+  return modelo.replace(/\{(\w+)\}/g, (m, k: string) => (vars[k] ?? m));
 }

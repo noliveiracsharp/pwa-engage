@@ -17,9 +17,9 @@ describe("régua de cobrança", () => {
     expect(etapasDoDia("2026-10-20", "2026-10-23", etapas)).toEqual([]);
   });
   it("respeita a preferência do cliente e os canais ligados na empresa", () => {
-    expect(canaisEfetivos(etapas[0], ["whatsapp", "email"], "email")).toEqual(["email"]);
-    expect(canaisEfetivos(etapas[0], ["whatsapp"], null)).toEqual(["whatsapp"]);
-    expect(canaisEfetivos(etapas[0], ["whatsapp", "email"], "nenhum")).toEqual([]);
+    expect(canaisEfetivos(etapas[0]!, ["whatsapp", "email"], "email")).toEqual(["email"]);
+    expect(canaisEfetivos(etapas[0]!, ["whatsapp"], null)).toEqual(["whatsapp"]);
+    expect(canaisEfetivos(etapas[0]!, ["whatsapp", "email"], "nenhum")).toEqual([]);
   });
   it("emite boleto X dias antes do vencimento e nunca duas vezes", () => {
     const cfg = { modo: "dias_antes" as const, dias_antes: 5 };
