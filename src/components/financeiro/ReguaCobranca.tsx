@@ -16,15 +16,15 @@ import { ETAPAS_PADRAO, MODELO_EMAIL_ASSUNTO_PADRAO, MODELO_WHATSAPP_PADRAO, rot
 import { formatBRL } from "@/lib/orcamentos";
 import { text } from "@/lib/crud";
 
-type Cfg = Record<string, any>;
 const SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
-const PADRAO: Cfg = {
-  ativo: false, canais: ["whatsapp", "email"], hora_disparo: 9, dias_semana: [1, 2, 3, 4, 5], etapas: ETAPAS_PADRAO,
+const PADRAO = {
+  ativo: false, canais: ["whatsapp", "email"] as Canal[], hora_disparo: 9, dias_semana: [1, 2, 3, 4, 5] as number[], etapas: ETAPAS_PADRAO as Etapa[],
   boleto_modo: "nao", boleto_dias_antes: 5, boleto_dia_mes: 1, nota_modo: "nao",
   modelo_whatsapp: MODELO_WHATSAPP_PADRAO, modelo_email_assunto: MODELO_EMAIL_ASSUNTO_PADRAO, link_base: "https://pwa-engage.lovable.app",
   email_modo: "sistema", smtp_host: "", smtp_porta: 465, smtp_usuario: "", remetente_nome: "", remetente_email: "", responder_para: "",
-  fiscal_ambiente: "homologacao", fiscal_tipo: "nfse", fiscal_config: {},
+  fiscal_ambiente: "homologacao", fiscal_tipo: "nfse", fiscal_config: {} as any,
 };
+type Cfg = typeof PADRAO & { atualizado_em?: string; ultima_execucao?: string };
 
 async function chamar(acao: string, extra: Record<string, unknown> = {}) {
   const { data, error } = await supabase.functions.invoke("cobranca-regua", { body: { acao, ...extra } });
@@ -54,7 +54,7 @@ export function ReguaCobranca({ canEdit }: { canEdit: boolean }) {
       if (error) { setSemScript(true); return; }
       setEmpresaId(emp as unknown as string);
       const { data } = await supabase.from("cobranca_regua" as never).select("*").maybeSingle();
-      setCfg({ ...PADRAO, ...((data as Cfg) ?? {}) });
+      setCfg({ ...PADRAO, ...((data as unknown as Partial<Cfg>) ?? {}) });
       const { data: s } = await supabase.rpc("cobranca_segredos_resumo" as never);
       if (s) setSegredos(s as never);
     })();
@@ -63,7 +63,7 @@ export function ReguaCobranca({ canEdit }: { canEdit: boolean }) {
   if (semScript) return <p className="text-muted-foreground text-sm">Rode o script da régua de cobrança no banco para liberar esta tela.</p>;
   if (!cfg) return <Loader2 className="mx-auto h-5 w-5 animate-spin" />;
 
-  const set = (k: string, v: unknown) => setCfg((c) => ({ ...c!, [k]: v }));
+  const set = (k: keyof Cfg, v: unknown) => setCfg((c) => ({ ...c!, [k]: v }));
   const setFc = (k: string, v: unknown) => setCfg((c) => ({ ...c!, fiscal_config: { ...(c!.fiscal_config ?? {}), [k]: v } }));
   const etapas: Etapa[] = cfg.etapas ?? [];
   const setEtapa = (i: number, p: Partial<Etapa>) => set("etapas", etapas.map((e, j) => (j === i ? { ...e, ...p } : e)));
