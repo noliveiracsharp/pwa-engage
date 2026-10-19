@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useEmpresaAtiva } from "@/hooks/useEmpresaAtiva";
 import { EXEMPLO_EMAIL, montarEmailCobrancaHtml, ETAPAS_PADRAO, MODELO_EMAIL_ASSUNTO_PADRAO, MODELO_WHATSAPP_PADRAO, rotuloEtapa, type Canal, type Etapa } from "@/lib/regua-cobranca";
+import { useAuth } from "@/hooks/useAuth";
 import { formatBRL } from "@/lib/orcamentos";
 import { text } from "@/lib/crud";
 
