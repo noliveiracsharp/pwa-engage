@@ -417,6 +417,9 @@ function TituloSheet({ tipo, registro, modelo, parceiros, cartoes, readOnly, onC
     forma_pagamento: text(src?.["forma_pagamento"]),
     nsu: registro ? text(registro["nsu"]) : "",
     ja_pago: false,
+    pago_em: registro ? text(registro["pago_em"]).slice(0, 10) : "",
+    valor_pago: registro && registro["valor_pago"] != null ? moedaDeNumero(num(registro["valor_pago"])) : "",
+    desvincular: false,
   });
   const { data: centros = [] } = useTableRows("centro_custo");
   const { data: contas = [] } = useTableRows("financeiro_contas_bancarias");
@@ -483,16 +486,18 @@ function TituloSheet({ tipo, registro, modelo, parceiros, cartoes, readOnly, onC
     if (cartaoModo && limiteCartao > 0 && valor > dispCartao && !await confirmar(`Esta compra (${formatBRL(valor)}) passa do limite disponível do cartão (${formatBRL(dispCartao)}). Lançar mesmo assim?`)) return;
     { const prob = problemaParceiro(parceiros.find((p) => text(rowId(p)) === v.parceiro_id));
       if (prob && !registro && !await confirmar({ title: `Lançar para ${papel} irregular?`, description: `Este ${papel} está com ${prob}. Deseja lançar mesmo assim?`, confirmText: "Lançar mesmo assim", destructive: true })) return; }
-    if (temSerie && !alcance) { setEscopo("atual"); setConfirmarSerie(true); return; }
+    if (temSerie && !alcance && !v.desvincular) { setEscopo("atual"); setConfirmarSerie(true); return; }
+    if (registro && v.status === "pago" && !v.pago_em) return void toast.error("Informe a data do pagamento.");
     setSalvando(true);
     try {
+      const statusBase = v.status === "pago" ? (text(registro?.["status"]) === "pago" ? "pago" : "aberto") : v.status;
       const base = { tipo, descricao: v.descricao.trim(), categoria: v.categoria || (categorias.ativas[0] ?? ""), parceiro_id: v.parceiro_id || null,
-        vencimento: v.vencimento, valor, observacao: v.observacao || null, status: v.status,
+        vencimento: v.vencimento, valor, observacao: v.observacao || null, status: statusBase,
         data_competencia: v.data_competencia || null, centro_custo_id: v.centro_custo_id || null,
         codigo_referencia: v.codigo_referencia.trim() || null, conta_bancaria_id: v.conta_bancaria_id || null,
         nsu: v.nsu.trim() || null, ...(v.forma_pagamento ? { forma_pagamento: v.forma_pagamento } : {}) };
       if (registro) {
-        if (temSerie && alcance) {
+        if (temSerie && alcance && !v.desvincular) {
           let reg: Row = registro;
           let serieId = text(reg["origem_id"]);
           if (!serieId) {
@@ -534,8 +539,18 @@ function TituloSheet({ tipo, registro, modelo, parceiros, cartoes, readOnly, onC
           if (e2) throw e2;
         } else {
           const pago = podeConverter && v.ja_pago ? { status: "pago", pago_em: v.vencimento, valor_pago: valor } : {};
-          const { error } = await supabase.from("financeiro_titulos").update({ ...base, ...pago } as never).eq("id", text(rowId(registro)));
+          const solto = temSerie && v.desvincular
+            ? { origem_id: null, parcela_n: null, descricao: base.descricao.replace(/\s*\(\d+\/\d+\)\s*$/, "") } : {};
+          const { error } = await supabase.from("financeiro_titulos").update({ ...base, ...solto, ...pago } as never).eq("id", text(rowId(registro)));
           if (error) throw error;
+        }
+        // Situação/baixa sempre aplicada só a este lançamento.
+        if (!(podeConverter && v.ja_pago)) {
+          const baixa = v.status === "pago"
+            ? { status: "pago", pago_em: v.pago_em || hojeISO(), valor_pago: round2(num(v.valor_pago)) || valor }
+            : { status: v.status, pago_em: null, valor_pago: null };
+          const { error: eb } = await supabase.from("financeiro_titulos").update(baixa as never).eq("id", text(rowId(registro)));
+          if (eb) throw eb;
         }
       } else {
         const n = previa.length;
@@ -569,8 +584,14 @@ function TituloSheet({ tipo, registro, modelo, parceiros, cartoes, readOnly, onC
         </SheetHeader>
         <div className="grid flex-1 content-start gap-4 overflow-y-auto p-4 sm:grid-cols-2">
           {temSerie && (
-            <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm sm:col-span-2">
-              Esta conta faz parte de uma série de parcelas. Ao salvar alterações, você poderá escolher se aplica também às demais parcelas. Para quitar, use o botão de baixa na lista.
+            <div className="space-y-2 rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm sm:col-span-2">
+              <p>Esta conta faz parte de uma série de parcelas. Ao salvar, você escolhe se as alterações valem também para as demais parcelas.</p>
+              {!readOnly && (
+                <div className="flex items-center gap-2">
+                  <Switch checked={v.desvincular} onCheckedChange={(x) => setV({ ...v, desvincular: x })} />
+                  <Label>Desvincular desta série (vira uma conta avulsa, sem alterar as demais)</Label>
+                </div>
+              )}
             </div>
           )}
           <div className="space-y-1 sm:col-span-2"><Label>Descrição</Label>
@@ -711,12 +732,25 @@ function TituloSheet({ tipo, registro, modelo, parceiros, cartoes, readOnly, onC
               </div>
             </div>
           )}
-          {registro && registro["status"] !== "pago" && (
+          {registro && (
             <div className="space-y-1"><Label>Situação</Label>
-              <Select value={v.status} disabled={readOnly} onValueChange={(x) => setV({ ...v, status: x })}>
+              <Select value={v.status} disabled={readOnly} onValueChange={(x) => setV({ ...v, status: x,
+                ...(x === "pago" && !v.valor_pago ? { valor_pago: v.valor, pago_em: v.pago_em || hojeISO() } : {}) })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent><SelectItem value="aberto">Em aberto</SelectItem><SelectItem value="cancelado">Cancelado</SelectItem></SelectContent>
+                <SelectContent>
+                  <SelectItem value="aberto">Em aberto</SelectItem>
+                  <SelectItem value="pago">{tipo === "receber" ? "Recebido" : "Pago"}</SelectItem>
+                  <SelectItem value="cancelado">Cancelado</SelectItem>
+                </SelectContent>
               </Select></div>
+          )}
+          {registro && v.status === "pago" && (
+            <>
+              <div className="space-y-1"><Label>{tipo === "receber" ? "Data do recebimento" : "Data do pagamento"}</Label>
+                <Input type="date" value={v.pago_em} disabled={readOnly} onChange={(e) => setV({ ...v, pago_em: e.target.value })} /></div>
+              <div className="space-y-1"><Label>{tipo === "receber" ? "Valor recebido (R$)" : "Valor pago (R$)"}</Label>
+                <Input inputMode="decimal" value={v.valor_pago} disabled={readOnly} placeholder="0,00" onChange={(e) => setV({ ...v, valor_pago: mascaraMoeda(e.target.value) })} /></div>
+            </>
           )}
           <div className="space-y-1 sm:col-span-2"><Label>Observação</Label>
             <Textarea value={v.observacao} disabled={readOnly} onChange={(e) => setV({ ...v, observacao: e.target.value })} /></div>
