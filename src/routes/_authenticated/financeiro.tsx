@@ -524,9 +524,9 @@ function TituloSheet({ tipo, registro, modelo, parceiros, cartoes, readOnly, onC
           // Converte um lançamento único em série: o atual vira a 1ª parcela e as demais são criadas.
           const n = previa.length;
           const serieId = crypto.randomUUID();
-          const pago = v.ja_pago ? { status: "pago", pago_em: previa[0].vencimento, valor_pago: previa[0].valor } : {};
+          const pago = v.ja_pago ? { status: "pago", pago_em: previa[0]!.vencimento, valor_pago: previa[0]!.valor } : {};
           const { error } = await supabase.from("financeiro_titulos").update({ ...base, origem_tipo: "manual", origem_id: serieId, parcela_n: 1,
-            descricao: `${base.descricao} (1/${n})`, vencimento: previa[0].vencimento, valor: previa[0].valor, ...pago } as never).eq("id", text(rowId(registro)));
+            descricao: `${base.descricao} (1/${n})`, vencimento: previa[0]!.vencimento, valor: previa[0]!.valor, ...pago } as never).eq("id", text(rowId(registro)));
           if (error) throw error;
           const resto = previa.slice(1).map((p, i) => ({ ...base, empresa_id: registro["empresa_id"], origem_tipo: "manual", origem_id: serieId,
             parcela_n: i + 2, descricao: `${base.descricao} (${i + 2}/${n})`, vencimento: p.vencimento, valor: p.valor, status: "aberto" }));
