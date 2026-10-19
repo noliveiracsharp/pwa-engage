@@ -347,7 +347,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
     ...(perms.canDelete || perms.canUpdate ? [{ key: "sel", header: "", fields: [], sortable: false, className: "w-8", render: (t: Row) => t["__fatura"] || t["__filho"] ? null : (
       <Checkbox aria-label="Selecionar" checked={sel.has(text(rowId(t)))} onCheckedChange={() => alternar(text(rowId(t)))} />
     ) } as Column] : []),
-    { key: "venc", header: "Vencimento", fields: ["vencimento"], render: (t) => <span className="tabular-nums">{formatDate(t["vencimento"])}</span> },
+    { key: "venc", header: "Vencimento", fields: ["vencimento"], render: (t) => t["__filho"] ? <span className="text-muted-foreground text-xs tabular-nums">Compra {formatDate(t["data_compra"]) || "—"}</span> : <span className="tabular-nums">{formatDate(t["vencimento"])}</span> },
     { key: "desc", header: "Descrição", fields: ["descricao"], render: (t) => (
       <div className={cn("min-w-0", t["__filho"] && "border-primary/40 ml-4 border-l-2 pl-3")}>
         {(() => {
