@@ -1,4 +1,5 @@
 import { PeriodoNavegavel } from "@/components/financeiro/PeriodoNavegavel";
+import { buscarIpca12m } from "@/lib/indices.functions";
 import { periodoPreset, type Periodo } from "@/lib/periodo-vencimento";
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
@@ -231,6 +232,8 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
 
   const [loteAcao, setLoteAcao] = useState<null | { acao: "pagar" | "agendar" | "reajustar"; itens: Row[] }>(null);
   const [loteForm, setLoteForm] = useState({ data: hojeISO(), forma: "", percentual: "" });
+  const [ipcaCarregando, setIpcaCarregando] = useState(false);
+  const [ipcaRef, setIpcaRef] = useState("");
   const abrirLote = (acao: "pagar" | "agendar" | "reajustar", itens: Row[]) => {
     if (!itens.length) return void toast.error("Nenhum título elegível na seleção.");
     setLoteForm({ data: hojeISO(), forma: "", percentual: "" }); setLoteAcao({ acao, itens });
@@ -434,7 +437,20 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
                 const fmt = (d: string) => (d ? d.slice(0, 10).split("-").reverse().join("/") : "—");
                 return (<>
                   <div className="space-y-1"><Label>Percentual de reajuste (ex.: IPCA acumulado 4,5)</Label>
-                    <Input inputMode="decimal" value={loteForm.percentual} onChange={(e) => setLoteForm((s) => ({ ...s, percentual: e.target.value }))} placeholder="0,00 %" /></div>
+                    <div className="flex gap-2">
+                      <Input inputMode="decimal" value={loteForm.percentual} onChange={(e) => setLoteForm((s) => ({ ...s, percentual: e.target.value }))} placeholder="0,00 %" />
+                      <Button type="button" variant="outline" disabled={ipcaCarregando} onClick={async () => {
+                        setIpcaCarregando(true);
+                        try {
+                          const r = await buscarIpca12m();
+                          if (!r.ok) return void toast.error("Não foi possível consultar o IPCA no Banco Central agora. Informe o percentual manualmente.");
+                          setLoteForm((s) => ({ ...s, percentual: r.valor.toFixed(2).replace(".", ",") }));
+                          const [, m, a] = r.data.split("/");
+                          setIpcaRef(`IPCA acumulado 12 meses: ${r.valor.toFixed(2).replace(".", ",")}% (ref. ${m}/${a} — fonte: Banco Central)`);
+                        } finally { setIpcaCarregando(false); }
+                      }}><TrendingUp className="h-4 w-4" />{ipcaCarregando ? "Buscando..." : "Buscar IPCA 12m"}</Button>
+                    </div>
+                    {ipcaRef && <p className="text-xs text-muted-foreground">{ipcaRef}</p>}</div>
                   {pct !== 0 && <p className="text-sm">Novo total: <strong className="tabular-nums">{formatBRL(loteAcao.itens.reduce((s, t) => s + valorReajustado(num(t["valor"]), pct), 0))}</strong></p>}
                   {carencia > 0 && <p className="text-destructive text-sm font-medium">Atenção: {carencia} título(s) ainda não completaram {CARENCIA_REAJUSTE_MESES} meses desde o início do contrato ou do último reajuste.</p>}
                   <div className="max-h-72 overflow-auto rounded border">
