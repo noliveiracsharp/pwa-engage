@@ -4,7 +4,7 @@ import { periodoPreset, type Periodo } from "@/lib/periodo-vencimento";
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { CalendarClock, CheckCircle2, Copy, TrendingUp, Paperclip, Plus, QrCode, Receipt, Trash2, Undo2 } from "lucide-react";
+import { CalendarClock, CheckCircle2, ChevronDown, ChevronRight, Copy, CreditCard, TrendingUp, Paperclip, Plus, QrCode, Receipt, Trash2, Undo2 } from "lucide-react";
 import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { ReciboDialog } from "@/components/financeiro/ReciboDialog";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -170,6 +170,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
   const resumo = resumoTitulos(rows, hoje);
   // Visão geral de Contas a Pagar: compras no cartão aparecem agrupadas como uma fatura por cartão/vencimento.
   const [fatura, setFatura] = useState<Row | null>(null);
+  const [abertas, setAbertas] = useState<Set<string>>(new Set());
   const exibidos = useMemo(() => {
     if (tipo !== "pagar" || f.cartao !== "todos") return rows;
     const grupos = new Map<string, Row[]>();
@@ -191,8 +192,8 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
         status: todosPagos ? "pago" : itens.some((t) => t["status"] === "cancelado") && itens.every((t) => t["status"] === "cancelado") ? "cancelado" : "aberto",
         pago_em: todosPagos ? itens[0]!["pago_em"] : null,
         valor_pago: todosPagos ? round2(itens.reduce((s, t) => s + num(t["valor_pago"]), 0)) : null } as Row;
-    });
-  }, [rows, tipo, f.cartao, cartoes]);
+    }).flatMap((r) => (r["__fatura"] && abertas.has(text(r["id"])) ? [r, ...(r["__itens"] as Row[]).map((t) => ({ ...t, __filho: true }))] : [r]));
+  }, [rows, tipo, f.cartao, cartoes, abertas]);
   const baixarItensFatura = async (itens: Row[]) => {
     const abertos = itens.filter((t) => t["status"] !== "pago" && t["status"] !== "cancelado");
     if (!abertos.length) return void toast.error("Essa fatura já está paga.");
@@ -343,12 +344,12 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
   ];
 
   const columns: Column[] = [
-    ...(perms.canDelete || perms.canUpdate ? [{ key: "sel", header: "", fields: [], sortable: false, className: "w-8", render: (t: Row) => t["__fatura"] ? null : (
+    ...(perms.canDelete || perms.canUpdate ? [{ key: "sel", header: "", fields: [], sortable: false, className: "w-8", render: (t: Row) => t["__fatura"] || t["__filho"] ? null : (
       <Checkbox aria-label="Selecionar" checked={sel.has(text(rowId(t)))} onCheckedChange={() => alternar(text(rowId(t)))} />
     ) } as Column] : []),
     { key: "venc", header: "Vencimento", fields: ["vencimento"], render: (t) => <span className="tabular-nums">{formatDate(t["vencimento"])}</span> },
     { key: "desc", header: "Descrição", fields: ["descricao"], render: (t) => (
-      <div className="min-w-0">
+      <div className={cn("min-w-0", t["__filho"] && "border-primary/40 ml-4 border-l-2 pl-3")}>
         {(() => {
           const txt = text(t["descricao"]).match(/^(.*?)\s*\((\d+\/\d+)\)\s*$/);
           const pos = posSerie.get(text(rowId(t)));
@@ -360,6 +361,11 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
             </div>
           );
         })()}
+        {t["__fatura"] && (
+          <button type="button" className="text-primary mb-1 flex items-center gap-1 text-xs font-medium" onClick={(e) => { e.stopPropagation(); setAbertas((s) => { const n = new Set(s); const k = text(t["id"]); if (n.has(k)) n.delete(k); else n.add(k); return n; }); }}>
+            {abertas.has(text(t["id"])) ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}<CreditCard className="h-3.5 w-3.5" /> {abertas.has(text(t["id"])) ? "Ocultar itens" : "Mostrar itens"}
+          </button>
+        )}
         <p className="text-muted-foreground text-xs">{t["__fatura"] ? `Cartão de crédito • ${(t["__itens"] as Row[]).length} item(ns) — clique para ver` : <>{ORIGEM_LABEL[text(t["origem_tipo"])] ?? "Manual"}{t["categoria"] ? ` • ${text(t["categoria"])}` : ""}</>}</p>
       </div>
     ) },
