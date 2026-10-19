@@ -168,6 +168,41 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
     [doTipo, f, hoje], // eslint-disable-line react-hooks/exhaustive-deps
   );
   const resumo = resumoTitulos(rows, hoje);
+  // Visão geral de Contas a Pagar: compras no cartão aparecem agrupadas como uma fatura por cartão/vencimento.
+  const [fatura, setFatura] = useState<Row | null>(null);
+  const exibidos = useMemo(() => {
+    if (tipo !== "pagar" || f.cartao !== "todos") return rows;
+    const grupos = new Map<string, Row[]>();
+    const out: Row[] = [];
+    for (const t of rows) {
+      if (!text(t["cartao_id"])) { out.push(t); continue; }
+      const k = `${text(t["cartao_id"])}|${text(t["vencimento"]).slice(0, 10)}`;
+      if (!grupos.has(k)) { grupos.set(k, []); out.push({ id: `fatura:${k}`, __k: k }); }
+      grupos.get(k)!.push(t);
+    }
+    return out.map((r) => {
+      if (!r["__k"]) return r;
+      const itens = grupos.get(text(r["__k"]))!;
+      const c = cartoes.find((x) => text(rowId(x)) === text(itens[0]!["cartao_id"]));
+      const todosPagos = itens.every((t) => t["status"] === "pago");
+      return { id: r["id"], __fatura: true, __itens: itens, cartao_id: itens[0]!["cartao_id"], vencimento: itens[0]!["vencimento"],
+        descricao: `Fatura ${nomeCartao(c)}`, categoria: "Cartão de crédito", origem_tipo: "cartao",
+        valor: round2(itens.reduce((s, t) => s + num(t["valor"]), 0)),
+        status: todosPagos ? "pago" : itens.some((t) => t["status"] === "cancelado") && itens.every((t) => t["status"] === "cancelado") ? "cancelado" : "aberto",
+        pago_em: todosPagos ? itens[0]!["pago_em"] : null,
+        valor_pago: todosPagos ? round2(itens.reduce((s, t) => s + num(t["valor_pago"]), 0)) : null } as Row;
+    });
+  }, [rows, tipo, f.cartao, cartoes]);
+  const baixarItensFatura = async (itens: Row[]) => {
+    const abertos = itens.filter((t) => t["status"] !== "pago" && t["status"] !== "cancelado");
+    if (!abertos.length) return void toast.error("Essa fatura já está paga.");
+    const total = round2(abertos.reduce((s, t) => s + num(t["valor"]), 0));
+    if (!await confirmar(`Baixar a fatura com ${abertos.length} item(ns), total ${formatBRL(total)}?`)) return;
+    const { error } = await supabase.from("financeiro_titulos").update({ status: "pago", pago_em: hoje, juros: 0, desconto: 0, agendado_para: null, forma_pagamento: "Cartão de crédito" } as never).in("id", abertos.map((t) => text(rowId(t))));
+    if (error) return void toast.error(erroFinanceiro(error));
+    for (const t of abertos) await supabase.from("financeiro_titulos").update({ valor_pago: num(t["valor"]) } as never).eq("id", text(rowId(t)));
+    toast.success("Fatura baixada."); setFatura(null); invalidar();
+  };
   const invalidar = () => qc.invalidateQueries({ queryKey: ["table", "financeiro_titulos"] });
   const faturaAberta = rows.filter((t) => t["status"] === "aberto");
 
@@ -308,7 +343,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
   ];
 
   const columns: Column[] = [
-    ...(perms.canDelete || perms.canUpdate ? [{ key: "sel", header: "", fields: [], sortable: false, className: "w-8", render: (t: Row) => (
+    ...(perms.canDelete || perms.canUpdate ? [{ key: "sel", header: "", fields: [], sortable: false, className: "w-8", render: (t: Row) => t["__fatura"] ? null : (
       <Checkbox aria-label="Selecionar" checked={sel.has(text(rowId(t)))} onCheckedChange={() => alternar(text(rowId(t)))} />
     ) } as Column] : []),
     { key: "venc", header: "Vencimento", fields: ["vencimento"], render: (t) => <span className="tabular-nums">{formatDate(t["vencimento"])}</span> },
@@ -325,7 +360,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
             </div>
           );
         })()}
-        <p className="text-muted-foreground text-xs">{ORIGEM_LABEL[text(t["origem_tipo"])] ?? "Manual"}{t["categoria"] ? ` • ${text(t["categoria"])}` : ""}</p>
+        <p className="text-muted-foreground text-xs">{t["__fatura"] ? `Cartão de crédito • ${(t["__itens"] as Row[]).length} item(ns) — clique para ver` : <>{ORIGEM_LABEL[text(t["origem_tipo"])] ?? "Manual"}{t["categoria"] ? ` • ${text(t["categoria"])}` : ""}</>}</p>
       </div>
     ) },
     { key: "parc", header: tipo === "receber" ? "Cliente" : "Fornecedor", fields: [], render: (t) => nomeParc(t["parceiro_id"]) || "—" },
@@ -344,6 +379,12 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
   ];
 
   const rowMenu = (t: Row) => {
+    if (t["__fatura"]) return (
+      <>
+        <DropdownMenuItem onClick={() => setFatura(t)}><CreditCard className="h-4 w-4" /> Ver itens da fatura</DropdownMenuItem>
+        {perms.canUpdate && t["status"] !== "pago" && <DropdownMenuItem onClick={() => void baixarItensFatura(t["__itens"] as Row[])}><CheckCircle2 className="text-success h-4 w-4" /> Baixar fatura</DropdownMenuItem>}
+      </>
+    );
     const s = situacaoTitulo(t, hoje);
     const aberto = s === "aberto" || s === "atrasado" || s === "agendado";
     return (
@@ -526,18 +567,56 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
         </DialogContent>
       </Dialog>
 
+      <Dialog open={!!fatura} onOpenChange={(o) => !o && setFatura(null)}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader><DialogTitle>{text(fatura?.["descricao"])} — vence {formatDate(fatura?.["vencimento"])}</DialogTitle></DialogHeader>
+          {fatura && (() => {
+            const itens = [...(fatura["__itens"] as Row[])].sort((a, b) => text(a["data_compra"]).localeCompare(text(b["data_compra"])));
+            return (<>
+              <div className="max-h-[60vh] overflow-auto rounded border">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted sticky top-0"><tr className="text-left">
+                    <th className="p-2">Compra</th><th className="p-2">Descrição</th><th className="p-2">Categoria</th><th className="p-2 text-right">Valor</th><th className="p-2">Situação</th><th className="p-2"></th></tr></thead>
+                  <tbody>
+                    {itens.map((t) => {
+                      const st = situacaoTitulo(t, hoje); const pos = posSerie.get(text(rowId(t)));
+                      return (<tr key={text(rowId(t))} className="border-t">
+                        <td className="p-2 whitespace-nowrap tabular-nums">{formatDate(t["data_compra"]) || "—"}</td>
+                        <td className="p-2">{text(t["descricao"]).replace(/\s*\(\d+\/\d+\)\s*$/, "")}{pos && <span className="bg-primary/10 text-primary ml-1.5 rounded px-1.5 py-0.5 text-[10px] font-semibold">{pos}</span>}
+                          {nomeParc(t["parceiro_id"]) && <p className="text-muted-foreground text-xs">{nomeParc(t["parceiro_id"])}</p>}</td>
+                        <td className="p-2">{text(t["categoria"]) || "—"}</td>
+                        <td className="p-2 text-right font-medium tabular-nums">{formatBRL(t["valor"])}</td>
+                        <td className="p-2"><span className={cn("rounded px-2 py-0.5 text-xs font-medium", SITUACAO_META[st].badge)}>{SITUACAO_META[st].label(tipo)}</span></td>
+                        <td className="p-2"><Button size="sm" variant="ghost" onClick={() => { setFatura(null); setEditar(t); }}>Editar</Button></td>
+                      </tr>);
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex items-center justify-between">
+                <p className="text-sm">{itens.length} item(ns) • Total <strong className="tabular-nums">{formatBRL(fatura["valor"])}</strong></p>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setFatura(null)}>Fechar</Button>
+                  {perms.canUpdate && fatura["status"] !== "pago" && <Button onClick={() => void baixarItensFatura(itens)}><CheckCircle2 className="mr-1 h-4 w-4" />Baixar fatura</Button>}
+                </div>
+              </div>
+            </>);
+          })()}
+        </DialogContent>
+      </Dialog>
+
       <DataTable
         title={tipo === "receber" ? "Contas a Receber" : "Contas a Pagar"}
         columns={columns}
-        rows={rows}
+        rows={exibidos}
         loading={loading}
         getValue={(r, fs) => r[fs[0] ?? ""]}
         rowKey={(r, i) => text(rowId(r)) || String(i)}
         onAdd={perms.canCreate ? () => setEditar(null) : undefined}
-        onEdit={(r) => setEditar(r)}
+        onEdit={(r) => (r["__fatura"] ? setFatura(r) : setEditar(r))}
         rowMenu={rowMenu}
         editReadOnly={!perms.canUpdate}
-        onDelete={perms.canDelete ? excluir : undefined}
+        onDelete={perms.canDelete ? (r) => (r["__fatura"] ? void toast.error("Para excluir, abra a fatura e exclua os itens.") : excluir(r)) : undefined}
         filters={
           <>
             <FilterInput label="Busca" value={f.busca} onChange={(v) => setF((s) => ({ ...s, busca: v }))} placeholder="Descrição, parceiro, categoria" />
