@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Landmark, Pencil, Plus, Star, Trash2 } from "lucide-react";
+import { Landmark, Pencil, PlugZap, Plus, Star, Trash2 } from "lucide-react";
+import { BancoApiSheet } from "./BancoApiSheet";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +27,7 @@ export function ContasBancarias({ perms }: { perms: Perms }) {
   const qc = useQueryClient();
   const { data: contas = [], isLoading } = useTableRows(TABELA);
   const [editar, setEditar] = useState<Row | null | undefined>(undefined);
+  const [api, setApi] = useState<Row | null>(null);
   const invalidar = () => qc.invalidateQueries({ queryKey: ["table", TABELA] });
 
   const excluir = async (c: Row) => {
@@ -64,6 +66,8 @@ export function ContasBancarias({ perms }: { perms: Perms }) {
               <p className="truncate text-sm">Pix: <span className="font-medium">{text(c["chave_pix"]) || "não informado"}</span></p>
               <p className="text-muted-foreground text-xs">Multa {num(c["multa_percentual"])}% • Juros {num(c["juros_mensal_percentual"])}% a.m.{c["ativo"] === false ? " • Inativa" : ""}</p>
               <div className="flex justify-end gap-1">
+                {c["provedor_api"] ? <span className={`mr-auto self-center rounded px-2 py-0.5 text-xs ${c["api_ativo"] ? "bg-success/15 text-success" : "bg-muted text-muted-foreground"}`}>API {text(c["provedor_api"])} {c["api_ativo"] ? "ativa" : "inativa"}</span> : null}
+                {perms.canUpdate && <Button variant="ghost" size="icon" aria-label="Integração bancária" title="Integração bancária (API)" onClick={() => setApi(c)}><PlugZap className="h-4 w-4" /></Button>}
                 <Button variant="ghost" size="icon" aria-label="Editar" onClick={() => setEditar(c)}><Pencil className="h-4 w-4" /></Button>
                 {perms.canDelete && <Button variant="ghost" size="icon" aria-label="Excluir" onClick={() => excluir(c)}><Trash2 className="text-destructive h-4 w-4" /></Button>}
               </div>
@@ -71,6 +75,7 @@ export function ContasBancarias({ perms }: { perms: Perms }) {
           ))}
         </div>
       )}
+      {api && <BancoApiSheet conta={api} onClose={() => setApi(null)} onSaved={invalidar} />}
       {editar !== undefined && <ContaSheet registro={editar} readOnly={!!editar && !perms.canUpdate} onClose={() => setEditar(undefined)} onSaved={invalidar} />}
     </div>
   );
