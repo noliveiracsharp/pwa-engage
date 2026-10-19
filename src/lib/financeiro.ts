@@ -18,7 +18,7 @@ import type { Row } from "@/lib/row";
 
 export type TipoTitulo = "receber" | "pagar";
 export type StatusTitulo = "aberto" | "pago" | "cancelado";
-export type Situacao = "aberto" | "agendado" | "atrasado" | "pago" | "cancelado";
+export type Situacao = "aberto" | "parcial" | "agendado" | "atrasado" | "pago" | "cancelado";
 export type OrigemTitulo = "manual" | "oferta" | "pedido" | "despesa" | "comissao" | "reembolso";
 
 export type NovoTitulo = {
@@ -47,6 +47,7 @@ const iso = (v: unknown) => String(v ?? "").slice(0, 10);
 export function situacaoTitulo(t: Row, hoje = hojeISO()): Situacao {
   const s = String(t["status"] ?? "aberto");
   if (s === "pago" || s === "cancelado") return s;
+  if (num(t["valor_pago"]) > 0) return "parcial";
   if (iso(t["agendado_para"])) return "agendado";
   const v = iso(t["vencimento"]);
   return v && v < hoje ? "atrasado" : "aberto";
@@ -85,6 +86,7 @@ export const valorReajustado = (valor: number, percentual: number) => round2(num
 
 export const SITUACAO_META: Record<Situacao, { label: (tipo: TipoTitulo) => string; badge: string }> = {
   aberto: { label: () => "Em aberto", badge: "bg-muted text-foreground" },
+  parcial: { label: (t) => (t === "receber" ? "Recebido parcial" : "Pago parcial"), badge: "bg-warning/20 text-warning-foreground" },
   agendado: { label: () => "Agendado", badge: "bg-primary/15 text-primary" },
   atrasado: { label: () => "Atrasado", badge: "bg-destructive text-destructive-foreground" },
   pago: { label: (t) => (t === "receber" ? "Recebido" : "Pago"), badge: "bg-success text-success-foreground" },
@@ -200,7 +202,8 @@ export function resumoTitulos(titulos: Row[], hoje = hojeISO()): ResumoTitulos {
     const s = situacaoTitulo(t, hoje);
     const v = num(t["valor"]);
     r.total += v;
-    if (s === "aberto" || s === "agendado") { r.aVencer += v; r.emAberto += v; }
+    if (s === "parcial") { const sd = saldoTitulo(t); r.emAberto += sd; if (iso(t["vencimento"]) < hoje) r.vencidos += sd; else r.aVencer += sd; }
+    else if (s === "aberto" || s === "agendado") { r.aVencer += v; r.emAberto += v; }
     else if (s === "atrasado") { r.vencidos += v; r.emAberto += v; }
     else if (s === "pago" && iso(t["pago_em"]).slice(0, 7) === mes) r.pagoMes += num(t["valor_pago"]) || v;
   }
@@ -346,4 +349,28 @@ export type ItemCartao = { descricao: string; categoria: string; valor: number; 
 export function parcelasItensCartao(itens: ItemCartao[], opts: { dataCompra: string; diaFechamento: number; diaVencimento: number }) {
   return itens.flatMap((it, grupo) => parcelasCartao({ valor: it.valor, parcelas: it.parcelas, ...opts, dataCompra: it.dataCompra || opts.dataCompra })
     .map((p, i, arr) => ({ ...p, item: it, grupo, n: i + 1, total: arr.length, dataCompra: it.dataCompra || opts.dataCompra })));
+}
+
+/** Saldo ainda devido: valor − já pago (0 quando quitado/cancelado). */
+export function saldoTitulo(t: Row): number {
+  const st = String(t["status"] ?? "aberto");
+  if (st === "pago" || st === "cancelado") return 0;
+  return round2(Math.max(0, num(t["valor"]) - num(t["valor_pago"])));
+}
+
+/**
+ * Distribui um pagamento entre títulos (ordem informada): quita o saldo de cada um até acabar o valor.
+ * Quem recebe só parte fica com valor_pago acumulado e situação "parcial".
+ */
+export function distribuirPagamento(titulos: Row[], valorPago: number): { id: string; valor_pago: number; quitado: boolean }[] {
+  let resta = round2(Math.max(0, num(valorPago)));
+  const out: { id: string; valor_pago: number; quitado: boolean }[] = [];
+  for (const t of titulos) {
+    const saldo = saldoTitulo(t);
+    if (resta <= 0 || saldo <= 0) continue;
+    const aplica = round2(Math.min(saldo, resta));
+    resta = round2(resta - aplica);
+    out.push({ id: String(t["id"]), valor_pago: round2(num(t["valor_pago"]) + aplica), quitado: aplica >= saldo });
+  }
+  return out;
 }
