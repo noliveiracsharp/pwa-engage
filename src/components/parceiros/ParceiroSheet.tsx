@@ -11,6 +11,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DocumentosButton } from "@/components/documentos/DocumentosPainel";
+import { ContatosButton } from "@/components/contatos/ContatosButton";
 import { rowId as docRowId } from "@/lib/crud";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { DocumentInput } from "@/components/data-table/DocumentInput";
@@ -286,6 +287,7 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly, saving, on
             <SheetTitle>{record ? "Editar parceiro" : "Novo parceiro"}</SheetTitle>
             {record && (
               <div className="ml-auto">
+                <ContatosButton entidade="parceiro" entidadeId={String(docRowId(record) ?? "")} />
                 <DocumentosButton entidadeTipo="parceiro" entidadeId={String(docRowId(record) ?? "")} entidadeNome={String(record["razao_social"] ?? record["nome"] ?? record["nome_fantasia"] ?? "")} registro={record} />
               </div>
             )}

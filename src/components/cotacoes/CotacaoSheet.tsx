@@ -16,6 +16,8 @@ import { formatBRL, formatQtd, num, round2 } from "@/lib/orcamentos";
 import { pick, type Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
 import { confirmar } from "@/components/layout/DialogoGlobal";
+import { QuickCreateDialog } from "@/components/itens/QuickCreateDialog";
+const ITEM_RAPIDO = [{ key: "descricao", label: "Descrição" }, { key: "codigo", label: "Código / referência" }];
 import { PainelAprovacaoCotacao } from "@/components/cotacoes/AprovacaoCompras";
 import { podeGerarPedido } from "@/lib/aprovacao-compras";
 
@@ -43,6 +45,7 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
   const [novoForn, setNovoForn] = useState("");
   const [novoParc, setNovoParc] = useState<{ nome: string; doc: string; tel: string } | null>(null);
   const [novoItem, setNovoItem] = useState("");
+  const [criarItem, setCriarItem] = useState(false);
   const [busy, setBusy] = useState(false);
   const [criterio, setCriterio] = useState<"preco" | "prazo">("preco");
   const [gerando, setGerando] = useState(false);
@@ -291,7 +294,7 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
     const p = parceiroById.get(String(f["fornecedor_id"]));
     const fone = String(pick(p ?? {}, ["whatsapp", "celular", "telefone"]) ?? "").replace(/\D/g, "");
     const numero = fone && !fone.startsWith("55") ? `55${fone}` : fone;
-    const texto = `Olá, ${nomeParc(p)}!\n\nSegue a solicitação da cotação ${String(cotacao["numero"] ?? "")}.\n\nPara informar seus preços, prazos e condições, acesse o link abaixo:\n\n${url}\n\nQualquer dúvida, ficamos à disposição.`;
+    const texto = `Olá, ${nomeParc(p)}!\n\nSegue a solicitação da cotação ${String(cotacao["numero"] ?? "")}${cotacao["titulo"] ? ` — ${String(cotacao["titulo"])}` : ""}.\n\nPara informar seus preços, prazos e condições, acesse o link abaixo:\n\n${url}\n\nQualquer dúvida, ficamos à disposição.`;
     window.open(`https://wa.me/${numero}?text=${encodeURIComponent(texto)}`, "_blank", "noopener");
   };
 
@@ -467,7 +470,15 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
               </div>
             </div>
             <p className="text-muted-foreground text-xs">Clique no círculo ao lado do preço para escolher de qual fornecedor comprar cada item.</p>
-            {editavel && <SearchSelect value={novoItem} onChange={addItem} options={itemOpts} placeholder="Adicionar item à cotação" />}
+            {editavel && (
+              <div className="flex gap-2">
+                <div className="flex-1"><SearchSelect value={novoItem} onChange={addItem} options={itemOpts} placeholder="Adicionar item à cotação" /></div>
+                <Button variant="outline" onClick={() => setCriarItem(true)}><Plus className="mr-1 h-4 w-4" /> Novo item</Button>
+              </div>
+            )}
+            <QuickCreateDialog open={criarItem} onOpenChange={setCriarItem} title="Novo item" table="itens"
+              fields={ITEM_RAPIDO}
+              onCreated={(id) => { void qc.invalidateQueries({ queryKey: ["table", "itens"] }); void addItem(id); }} />
             <div className="overflow-x-auto rounded-lg border">
               <table className="w-full text-sm">
                 <thead className="bg-muted/50">
