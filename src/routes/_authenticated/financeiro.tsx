@@ -35,7 +35,8 @@ import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { useAuth } from "@/hooks/useAuth";
 import { useAudit } from "@/lib/audit";
 import { rowId, text, useTableRows } from "@/lib/crud";
-import { matchesAny } from "@/lib/input-masks";
+import { mascaraMoeda, matchesAny, moedaDeNumero } from "@/lib/input-masks";
+import { calcularTarifa, modalidadeTarifa } from "@/lib/financeiro-tarifas";
 import { formatBRL, formatDate, num, round2 } from "@/lib/orcamentos";
 import { uploadFoto } from "@/lib/laudos";
 import { erroFinanceiro } from "@/lib/financeiro-db";
@@ -135,7 +136,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
         .filter((t) => {
           const v = text(t["vencimento"]).slice(0, 10);
           return (
-            matchesAny([t["descricao"], nomeParc(t["parceiro_id"]), t["categoria"]], f.busca) &&
+            matchesAny([t["descricao"], nomeParc(t["parceiro_id"]), t["categoria"], moedaDeNumero(num(t["valor"])), num(t["valor"]).toFixed(2)], f.busca) &&
             (f.situacao === "todos" || situacaoTitulo(t, hoje) === f.situacao) &&
             (f.categoria === "todos" || t["categoria"] === f.categoria) &&
             (f.cartao === "todos" || text(t["cartao_id"]) === f.cartao) &&
@@ -403,7 +404,7 @@ function TituloSheet({ tipo, registro, modelo, parceiros, cartoes, readOnly, onC
     categoria: text(src?.["categoria"]),
     parceiro_id: text(src?.["parceiro_id"]),
     vencimento: text(src?.["vencimento"]).slice(0, 10) || hojeISO(),
-    valor: src ? String(num(src["valor"])).replace(".", ",") : "",
+    valor: src ? moedaDeNumero(num(src["valor"])) : "",
     repetir: "1",
     modo: "unico" as ModoForm,
     cartao_id: modelo && !registro ? text(modelo["cartao_id"]) : "",
@@ -638,7 +639,7 @@ function TituloSheet({ tipo, registro, modelo, parceiros, cartoes, readOnly, onC
             <Input type="date" value={v.vencimento} disabled={readOnly} onChange={(e) => setV({ ...v, vencimento: e.target.value })} /></div>
           {!itensModo && (
             <div className="space-y-1"><Label>{(v.modo === "parcelado" || cartaoModo) && !registro ? "Valor total (R$)" : v.modo === "recorrente" && !registro ? "Valor mensal (R$)" : "Valor (R$)"}</Label>
-              <Input inputMode="decimal" value={v.valor} disabled={readOnly} onChange={(e) => setV({ ...v, valor: e.target.value })} placeholder="0,00" /></div>
+              <Input inputMode="decimal" value={v.valor} disabled={readOnly} onChange={(e) => setV({ ...v, valor: mascaraMoeda(e.target.value) })} placeholder="0,00" /></div>
           )}
           {!registro && v.modo !== "unico" && !itensModo && (
             <div className="space-y-1"><Label>{v.modo === "recorrente" ? "Nº de meses" : "Nº de parcelas"}</Label>
@@ -659,7 +660,7 @@ function TituloSheet({ tipo, registro, modelo, parceiros, cartoes, readOnly, onC
                       <SelectTrigger><SelectValue placeholder="Categoria" /></SelectTrigger>
                       <SelectContent>{categorias.ativas.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
                     </Select>
-                    <Input inputMode="decimal" value={it.valor} placeholder="0,00" onChange={(e) => up({ valor: e.target.value })} />
+                    <Input inputMode="decimal" value={it.valor} placeholder="0,00" onChange={(e) => up({ valor: mascaraMoeda(e.target.value) })} />
                     <Input type="number" min={1} max={48} value={it.parcelas} onChange={(e) => up({ parcelas: e.target.value })} />
                     <Button type="button" variant="ghost" size="icon" aria-label="Remover item" disabled={itens.length === 1}
                       onClick={() => setItens((l) => l.filter((_, j) => j !== idx))}><Trash2 className="text-destructive h-4 w-4" /></Button>
@@ -770,8 +771,8 @@ function BaixaDialog({ tipo, titulo, onClose, onSaved }: { tipo: TipoTitulo; tit
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>{FORMAS_PAGAMENTO.map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
             </Select></div>
-          <div className="space-y-1"><Label>Juros / multa (R$)</Label><Input inputMode="decimal" value={v.juros} onChange={(e) => setV({ ...v, juros: e.target.value })} placeholder="0,00" /></div>
-          <div className="space-y-1"><Label>Desconto (R$)</Label><Input inputMode="decimal" value={v.desconto} onChange={(e) => setV({ ...v, desconto: e.target.value })} placeholder="0,00" /></div>
+          <div className="space-y-1"><Label>Juros / multa (R$)</Label><Input inputMode="decimal" value={v.juros} onChange={(e) => setV({ ...v, juros: mascaraMoeda(e.target.value) })} placeholder="0,00" /></div>
+          <div className="space-y-1"><Label>Desconto (R$)</Label><Input inputMode="decimal" value={v.desconto} onChange={(e) => setV({ ...v, desconto: mascaraMoeda(e.target.value) })} placeholder="0,00" /></div>
           <div className="space-y-1 sm:col-span-2">
             <Label className="flex items-center gap-1">Comprovante (foto) <UploadInfo perfil="laudo" /></Label>
             <Input type="file" accept="image/*" disabled={enviando} onChange={(e) => anexar(e.target.files?.[0])} />
