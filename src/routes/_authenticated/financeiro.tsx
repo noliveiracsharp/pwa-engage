@@ -13,6 +13,7 @@ import { formatCpfCnpj } from "@/lib/input-masks";
 import { ContasBancarias } from "@/components/financeiro/ContasBancarias";
 import { CartoesCredito } from "@/components/financeiro/CartoesCredito";
 import { ControllerPainel } from "@/components/financeiro/ControllerPainel";
+import { ReguaCobranca } from "@/components/financeiro/ReguaCobranca";
 import { CategoriasDialog, useCategoriasFinanceiro } from "@/components/financeiro/CategoriasFinanceiro";
 import { CobrancaDialog } from "@/components/financeiro/CobrancaDialog";
 import { toast } from "sonner";
@@ -93,12 +94,14 @@ function FinanceiroPage() {
         <TabsTrigger value="pagar">Contas a Pagar</TabsTrigger>
         <TabsTrigger value="caixa">Fluxo de Caixa</TabsTrigger>
         <TabsTrigger value="controller">Controller</TabsTrigger>
+        <TabsTrigger value="regua">Cobrança automática</TabsTrigger>
         <TabsTrigger value="bancos">Contas Bancárias</TabsTrigger>
       </TabsList>
       <TabsContent value="receber"><Titulos tipo="receber" todos={titulos} loading={isLoading} perms={perms} /></TabsContent>
       <TabsContent value="pagar"><Titulos tipo="pagar" todos={titulos} loading={isLoading} perms={perms} /></TabsContent>
       <TabsContent value="caixa"><Caixa titulos={titulos} /></TabsContent>
       <TabsContent value="controller"><ControllerPainel titulos={titulos} /></TabsContent>
+      <TabsContent value="regua"><ReguaCobranca canEdit={perms.canUpdate || perms.canCreate} /></TabsContent>
       <TabsContent value="bancos" className="space-y-8"><ContasBancarias perms={perms} /><CartoesCredito perms={perms} /></TabsContent>
     </Tabs>
   );
