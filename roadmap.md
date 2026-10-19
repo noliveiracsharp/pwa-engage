@@ -37,3 +37,4 @@
 - Financeiro: cadastro rápido de fornecedor/cliente, categorias no formulário, centro de custo em árvore
 - [x] Financeiro: escolha do alcance ao editar novas séries manuais, com gravação atômica e testes.
 - [ ] Ativar e testar edição recorrente com dados reais — aguarda usuário executar atendeai-financeiro-edicao-recorrente.sql no banco próprio.
+- [x] Contas a Pagar: fatura de cartão agrupada (pai) com itens expansíveis (filhos) + modal
