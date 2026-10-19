@@ -9,6 +9,7 @@ import { configurarWebhookZapi, desconectarWhatsApp } from "@/lib/zapi.functions
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { DocumentosButton } from "@/components/documentos/DocumentosPainel";
+import { ContatosButton } from "@/components/contatos/ContatosButton";
 import { IaConfigPainel } from "@/components/financeiro/IaConfigDialog";
 import { useAudit } from "@/lib/audit";
 import { rowId } from "@/lib/crud";
@@ -666,7 +667,8 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
           <div className="flex items-center gap-2 pr-8">
             <SheetTitle>{title}</SheetTitle>
             {empresa && rowId(empresa) !== undefined && (
-              <div className="ml-auto">
+              <div className="ml-auto flex gap-2">
+                <ContatosButton entidade="empresa" entidadeId={String(rowId(empresa))} />
                 <DocumentosButton entidadeTipo="empresa" entidadeId={String(rowId(empresa))} entidadeNome={String(empresa["razao_social"] ?? empresa["nome"] ?? "")} registro={empresa} />
               </div>
             )}
