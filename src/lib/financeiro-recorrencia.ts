@@ -58,3 +58,38 @@ export function parcelasLegadas(atual: Row, titulos: Row[]): Row[] {
       && t["tipo"] === atual["tipo"] && (t["parceiro_id"] ?? null) === (atual["parceiro_id"] ?? null);
   });
 }
+
+/** Soma meses a AAAA-MM-DD ajustando fim de mês. */
+function maisMeses(iso: string, meses: number): string {
+  const [a, m, d] = iso.slice(0, 10).split("-").map(Number) as [number, number, number];
+  const alvo = new Date(Date.UTC(a, m - 1 + meses, 1));
+  const ultimo = new Date(Date.UTC(alvo.getUTCFullYear(), alvo.getUTCMonth() + 1, 0)).getUTCDate();
+  alvo.setUTCDate(Math.min(d, ultimo));
+  return alvo.toISOString().slice(0, 10);
+}
+
+export type PlanoTamanho = {
+  renomear: { id: unknown; descricao: string; parcela_n: number }[];
+  criar: { parcela_n: number; descricao: string; vencimento: string; valor: number }[];
+  remover: unknown[];
+  bloqueio?: string;
+};
+
+/** Muda a quantidade de parcelas de uma série: estende com novas mensais ou remove excedentes em aberto. */
+export function planoTamanhoSerie(titulos: Row[], novoTotal: number): PlanoTamanho {
+  const ord = [...titulos].sort((a, b) => String(a["vencimento"]).localeCompare(String(b["vencimento"])));
+  const vazio: PlanoTamanho = { renomear: [], criar: [], remover: [] };
+  if (!ord.length || novoTotal < 1) return { ...vazio, bloqueio: "Quantidade inválida." };
+  const base = String(ord[0]!["descricao"] ?? "").replace(SUFIXO, "").trim();
+  const nome = (n: number) => (novoTotal > 1 ? `${base} (${n}/${novoTotal})` : base);
+  const excedentes = ord.slice(novoTotal);
+  if (excedentes.some((t) => t["status"] === "pago" || !!t["pago_em"] || num(t["valor_pago"]) > 0))
+    return { ...vazio, bloqueio: "Há parcelas já pagas além da nova quantidade. Estorne-as antes de reduzir." };
+  const mantidas = ord.slice(0, novoTotal);
+  const ultima = ord[ord.length - 1]!;
+  const criar = Array.from({ length: Math.max(0, novoTotal - ord.length) }, (_, i) => {
+    const n = ord.length + i + 1;
+    return { parcela_n: n, descricao: nome(n), vencimento: maisMeses(String(ultima["vencimento"]), i + 1), valor: num(ultima["valor"]) };
+  });
+  return { renomear: mantidas.map((t, i) => ({ id: t["id"], descricao: nome(i + 1), parcela_n: i + 1 })), criar, remover: excedentes.map((t) => t["id"]) };
+}
