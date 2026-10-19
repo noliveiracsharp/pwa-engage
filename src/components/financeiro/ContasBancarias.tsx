@@ -15,7 +15,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAudit } from "@/lib/audit";
 import { rowId, text, useTableRows } from "@/lib/crud";
 import { erroFinanceiro } from "@/lib/financeiro-db";
-import { num } from "@/lib/orcamentos";
+import { formatBRL, num } from "@/lib/orcamentos";
+import { mascaraMoeda, moedaDeNumero } from "@/lib/input-masks";
 import { BANCOS, nomeBanco } from "@/lib/pix";
 import type { Row } from "@/lib/row";
 import { confirmar } from "@/components/layout/DialogoGlobal";
@@ -64,7 +65,7 @@ export function ContasBancarias({ perms }: { perms: Perms }) {
               </div>
               <p className="text-sm">Ag. {text(c["agencia"]) || "—"} • Conta {text(c["conta"]) || "—"}{c["digito"] ? `-${text(c["digito"])}` : ""}</p>
               <p className="truncate text-sm">Pix: <span className="font-medium">{text(c["chave_pix"]) || "não informado"}</span></p>
-              <p className="text-muted-foreground text-xs">Multa {num(c["multa_percentual"])}% • Juros {num(c["juros_mensal_percentual"])}% a.m.{c["ativo"] === false ? " • Inativa" : ""}</p>
+              <p className="text-muted-foreground text-xs">Multa {num(c["multa_percentual"])}% • Juros {num(c["juros_mensal_percentual"])}% a.m.{num(c["tarifa_boleto_baixa"]) || num(c["tarifa_pix"]) ? ` • Boleto ${formatBRL(c["tarifa_boleto_baixa"])} (${num(c["franquia_boleto"])} grátis) • Pix ${formatBRL(c["tarifa_pix"])}` : ""}{c["ativo"] === false ? " • Inativa" : ""}</p>
               <div className="flex justify-end gap-1">
                 {c["provedor_api"] ? <span className={`mr-auto self-center rounded px-2 py-0.5 text-xs ${c["api_ativo"] ? "bg-success/15 text-success" : "bg-muted text-muted-foreground"}`}>API {text(c["provedor_api"])} {c["api_ativo"] ? "ativa" : "inativa"}</span> : null}
                 {perms.canUpdate && <Button variant="ghost" size="icon" aria-label="Integração bancária" title="Integração bancária (API)" onClick={() => setApi(c)}><PlugZap className="h-4 w-4" /></Button>}
@@ -81,6 +82,8 @@ export function ContasBancarias({ perms }: { perms: Perms }) {
   );
 }
 
+const TARIFAS = ["tarifa_boleto_emissao", "tarifa_boleto_baixa", "tarifa_pix"] as const;
+const FRANQUIAS = ["franquia_boleto", "franquia_pix"] as const;
 const CAMPOS = ["descricao", "banco", "agencia", "conta", "digito", "convenio", "carteira", "titular_nome", "titular_documento", "cidade", "chave_pix", "instrucoes"] as const;
 
 function ContaSheet({ registro, readOnly, onClose, onSaved }: { registro: Row | null; readOnly: boolean; onClose: () => void; onSaved: () => void }) {
@@ -92,9 +95,12 @@ function ContaSheet({ registro, readOnly, onClose, onSaved }: { registro: Row | 
     if (!o["banco"]) o["banco"] = "077";
     o["multa"] = registro ? String(num(registro["multa_percentual"])) : "2";
     o["juros"] = registro ? String(num(registro["juros_mensal_percentual"])) : "1";
+    for (const k of TARIFAS) o[k] = registro ? moedaDeNumero(num(registro[k])) : "";
+    for (const k of FRANQUIAS) o[k] = registro ? String(num(registro[k]) || "") : "";
     return o;
   });
   const [padrao, setPadrao] = useState(!!registro?.["padrao"]);
+  const [gerarDespesa, setGerarDespesa] = useState(registro ? registro["gerar_despesa_tarifa"] !== false : true);
   const [ativo, setAtivo] = useState(registro ? registro["ativo"] !== false : true);
   const [salvando, setSalvando] = useState(false);
   const set = (k: string) => (e: { target: { value: string } }) => setV((s) => ({ ...s, [k]: e.target.value }));
@@ -106,6 +112,9 @@ function ContaSheet({ registro, readOnly, onClose, onSaved }: { registro: Row | 
     const emp = registro ? text(registro["empresa_id"]) : isMaster && empresa ? text(rowId(empresa)) : text(empresaId);
     const dados: Record<string, unknown> = { padrao, ativo, multa_percentual: dec(v["multa"] ?? ""), juros_mensal_percentual: dec(v["juros"] ?? "") };
     for (const k of CAMPOS) dados[k] = v[k]?.trim() || null;
+    for (const k of TARIFAS) dados[k] = num(v[k] ?? "");
+    for (const k of FRANQUIAS) dados[k] = Math.max(0, Math.floor(num(v[k] ?? "")));
+    dados["gerar_despesa_tarifa"] = gerarDespesa;
     if (padrao) await supabase.from(TABELA as never).update({ padrao: false } as never).eq("empresa_id", emp);
     const q = registro
       ? supabase.from(TABELA as never).update(dados as never).eq("id", text(rowId(registro)))
@@ -116,6 +125,9 @@ function ContaSheet({ registro, readOnly, onClose, onSaved }: { registro: Row | 
     toast.success("Conta salva."); onSaved(); onClose();
   };
 
+  const moeda = (k: string, label: string) => (
+    <div className="space-y-1"><Label>{label}</Label><Input inputMode="numeric" value={v[k] ?? ""} onChange={(e) => setV((s) => ({ ...s, [k]: mascaraMoeda(e.target.value) }))} placeholder="0,00" disabled={readOnly} /></div>
+  );
   const campo = (k: string, label: string, ph = "") => (
     <div className="space-y-1"><Label>{label}</Label><Input value={v[k] ?? ""} onChange={set(k)} placeholder={ph} disabled={readOnly} /></div>
   );
@@ -147,6 +159,20 @@ function ContaSheet({ registro, readOnly, onClose, onSaved }: { registro: Row | 
             {campo("chave_pix", "Chave Pix", "CNPJ, e-mail, +55 telefone ou aleatória")}
             {campo("multa", "Multa por atraso (%)")}
             {campo("juros", "Juros ao mês (%)")}
+          </div>
+          <div className="space-y-3 rounded-lg border p-3">
+            <div>
+              <p className="font-medium">Tarifas e pacote da conta</p>
+              <p className="text-muted-foreground text-xs">As primeiras liquidações do mês dentro da franquia são isentas; a partir da seguinte, cobra a tarifa.</p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {moeda("tarifa_boleto_emissao", "Boleto — emissão (R$)")}
+              {moeda("tarifa_boleto_baixa", "Boleto — baixa (R$)")}
+              <div className="space-y-1"><Label>Boletos grátis/mês</Label><Input inputMode="numeric" value={v["franquia_boleto"] ?? ""} onChange={(e) => setV((s) => ({ ...s, franquia_boleto: e.target.value.replace(/\D/g, "") }))} placeholder="Ex.: 100" disabled={readOnly} /></div>
+              {moeda("tarifa_pix", "Pix recebido (R$)")}
+              <div className="space-y-1"><Label>Pix grátis/mês</Label><Input inputMode="numeric" value={v["franquia_pix"] ?? ""} onChange={(e) => setV((s) => ({ ...s, franquia_pix: e.target.value.replace(/\D/g, "") }))} placeholder="0" disabled={readOnly} /></div>
+            </div>
+            <label className="flex items-center gap-2 text-sm"><Switch checked={gerarDespesa} onCheckedChange={setGerarDespesa} disabled={readOnly} />Lançar a tarifa automaticamente em Contas a Pagar (categoria Tarifas Bancárias)</label>
           </div>
           <div className="space-y-1"><Label>Instruções do boleto</Label><Textarea value={v["instrucoes"] ?? ""} onChange={set("instrucoes")} disabled={readOnly} placeholder="Ex.: Não receber após 30 dias do vencimento." /></div>
           <div className="flex flex-wrap gap-6">
