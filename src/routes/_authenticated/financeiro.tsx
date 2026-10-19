@@ -452,6 +452,9 @@ function TituloSheet({ tipo, registro, modelo, parceiros, cartoes, readOnly, onC
       hint: p["documento"] ? formatCpfCnpj(text(p["documento"])) : undefined,
       keywords: [text(p["razao_social"]), text(p["nome_fantasia"]), text(p["documento"]), text(p["documento"]).replace(/\D/g, "")] }));
   const cartaoModo = !registro && v.modo === "cartao";
+  // Na edição, um lançamento avulso manual em aberto pode virar parcelado/recorrente e ser baixado.
+  const podeConverter = !registro || (!temSerie && text(registro["origem_tipo"] || "manual") === "manual"
+    && registro["status"] !== "pago" && !text(registro["cartao_id"]));
   const cartao = cartoes.find((c) => text(rowId(c)) === v.cartao_id);
   const [porItem, setPorItem] = useState(false);
   const [itens, setItens] = useState<{ descricao: string; categoria: string; valor: string; parcelas: string }[]>([{ descricao: "", categoria: "", valor: "", parcelas: "1" }]);
@@ -517,8 +520,21 @@ function TituloSheet({ tipo, registro, modelo, parceiros, cartoes, readOnly, onC
             if (error.code === "PGRST202" || error.code === "42883") throw new Error("Execute o script de edição recorrente no SQL Editor para ativar esta opção.");
             throw error;
           }
+        } else if (podeConverter && previa.length > 1) {
+          // Converte um lançamento único em série: o atual vira a 1ª parcela e as demais são criadas.
+          const n = previa.length;
+          const serieId = crypto.randomUUID();
+          const pago = v.ja_pago ? { status: "pago", pago_em: previa[0].vencimento, valor_pago: previa[0].valor } : {};
+          const { error } = await supabase.from("financeiro_titulos").update({ ...base, origem_tipo: "manual", origem_id: serieId, parcela_n: 1,
+            descricao: `${base.descricao} (1/${n})`, vencimento: previa[0].vencimento, valor: previa[0].valor, ...pago } as never).eq("id", text(rowId(registro)));
+          if (error) throw error;
+          const resto = previa.slice(1).map((p, i) => ({ ...base, empresa_id: registro["empresa_id"], origem_tipo: "manual", origem_id: serieId,
+            parcela_n: i + 2, descricao: `${base.descricao} (${i + 2}/${n})`, vencimento: p.vencimento, valor: p.valor, status: "aberto" }));
+          const { error: e2 } = await supabase.from("financeiro_titulos").insert(resto as never);
+          if (e2) throw e2;
         } else {
-          const { error } = await supabase.from("financeiro_titulos").update(base as never).eq("id", text(rowId(registro)));
+          const pago = podeConverter && v.ja_pago ? { status: "pago", pago_em: v.vencimento, valor_pago: valor } : {};
+          const { error } = await supabase.from("financeiro_titulos").update({ ...base, ...pago } as never).eq("id", text(rowId(registro)));
           if (error) throw error;
         }
       } else {
@@ -591,13 +607,13 @@ function TituloSheet({ tipo, registro, modelo, parceiros, cartoes, readOnly, onC
             <div className="space-y-1"><Label>NSU / autorização do cartão</Label>
               <Input value={v.nsu} disabled={readOnly} placeholder="Opcional" onChange={(e) => setV({ ...v, nsu: e.target.value })} /></div>
           )}
-          {!registro && !cartaoModo && (
+          {podeConverter && !cartaoModo && (
             <div className="flex items-center gap-2 sm:col-span-2">
               <Switch checked={v.ja_pago} onCheckedChange={(x) => setV({ ...v, ja_pago: x })} />
               <Label>{tipo === "receber" ? "Já recebido" : "Já pago"}{v.modo !== "unico" ? " (baixa só a 1ª parcela)" : ""}</Label>
             </div>
           )}
-          {!registro && (
+          {podeConverter && (
             <div className="space-y-1 sm:col-span-2"><Label>Repetir lançamento</Label>
               <Select value={v.modo} onValueChange={(x) => setV({ ...v, modo: x as ModoForm, repetir: x === "unico" ? "1" : v.repetir === "1" ? (x === "cartao" ? "3" : "12") : v.repetir })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -605,7 +621,7 @@ function TituloSheet({ tipo, registro, modelo, parceiros, cartoes, readOnly, onC
                   <SelectItem value="unico">Único</SelectItem>
                   <SelectItem value="parcelado">Parcelado (divide o valor total)</SelectItem>
                   <SelectItem value="recorrente">Mensal recorrente (mesmo valor todo mês)</SelectItem>
-                  {tipo === "pagar" && <SelectItem value="cartao">Cartão de crédito parcelado (vence na fatura)</SelectItem>}
+                  {tipo === "pagar" && !registro && <SelectItem value="cartao">Cartão de crédito parcelado (vence na fatura)</SelectItem>}
                 </SelectContent>
               </Select></div>
           )}
@@ -638,10 +654,10 @@ function TituloSheet({ tipo, registro, modelo, parceiros, cartoes, readOnly, onC
           <div className="space-y-1"><Label>{cartaoModo ? "Data da compra" : registro || v.modo === "unico" ? "Vencimento" : "1º vencimento"}</Label>
             <Input type="date" value={v.vencimento} disabled={readOnly} onChange={(e) => setV({ ...v, vencimento: e.target.value })} /></div>
           {!itensModo && (
-            <div className="space-y-1"><Label>{(v.modo === "parcelado" || cartaoModo) && !registro ? "Valor total (R$)" : v.modo === "recorrente" && !registro ? "Valor mensal (R$)" : "Valor (R$)"}</Label>
+            <div className="space-y-1"><Label>{(v.modo === "parcelado" || cartaoModo) && podeConverter ? "Valor total (R$)" : v.modo === "recorrente" && podeConverter ? "Valor mensal (R$)" : "Valor (R$)"}</Label>
               <Input inputMode="decimal" value={v.valor} disabled={readOnly} onChange={(e) => setV({ ...v, valor: mascaraMoeda(e.target.value) })} placeholder="0,00" /></div>
           )}
-          {!registro && v.modo !== "unico" && !itensModo && (
+          {podeConverter && v.modo !== "unico" && !itensModo && (
             <div className="space-y-1"><Label>{v.modo === "recorrente" ? "Nº de meses" : "Nº de parcelas"}</Label>
               <Input type="number" min={1} max={cartaoModo ? 48 : 120} value={v.repetir} onChange={(e) => setV({ ...v, repetir: e.target.value })} /></div>
           )}
@@ -674,7 +690,7 @@ function TituloSheet({ tipo, registro, modelo, parceiros, cartoes, readOnly, onC
               </div>
             </div>
           )}
-          {!registro && (previa.length > 1 || (cartaoModo && previa.length > 0)) && (
+          {podeConverter && (previa.length > 1 || (cartaoModo && previa.length > 0)) && (
             <div className="rounded-lg border border-primary/30 bg-primary/5 text-sm sm:col-span-2">
               <div className="border-b border-primary/20 px-3 py-2">
                 <p className="font-semibold">Demonstrativo das {previa.length} parcelas que serão geradas</p>
