@@ -61,7 +61,7 @@ import {
   situacaoTitulo,
   valorBaixa,
   parcelasManuais,
-  parcelasCartao, parcelasItensCartao, limiteUsadoCartao, limiteDisponivelCartao,
+  parcelasCartao, parcelasItensCartao, vencimentoFatura, limiteUsadoCartao, limiteDisponivelCartao,
   type ModoLancamento,
   type Situacao,
   type TipoTitulo,
@@ -828,6 +828,8 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
   const podeConverter = !registro || (!temSerie && text(registro["origem_tipo"] || "manual") === "manual"
     && !text(registro["cartao_id"]));
   const cartao = cartoes.find((c) => text(rowId(c)) === v.cartao_id);
+  const cartaoReg = registro && text(registro["cartao_id"]) ? cartoes.find((c) => text(rowId(c)) === text(registro["cartao_id"])) : undefined;
+  const [parcItem, setParcItem] = useState("1");
   const [porItem, setPorItem] = useState(!!presetCartao && !registro);
   const [itens, setItens] = useState<{ descricao: string; categoria: string; valor: string; parcelas: string; data: string }[]>([{ descricao: "", categoria: "", valor: "", parcelas: "1", data: hojeISO() }]);
   const itensModo = cartaoModo && porItem;
@@ -946,6 +948,26 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
         codigo_referencia: v.codigo_referencia.trim() || null, conta_bancaria_id: v.conta_bancaria_id || null,
         nsu: v.nsu.trim() || null, ...(v.forma_pagamento ? { forma_pagamento: v.forma_pagamento } : {}),
         ...(registro && text(registro["cartao_id"]) && v.data_compra ? { data_compra: v.data_compra } : {}) };
+      // Compra no cartão: mudar a data da compra recalcula em qual fatura ela cai.
+      const diasCartao = cartaoReg && cartaoReg["dia_fechamento"] && cartaoReg["dia_vencimento"] ? { f: num(cartaoReg["dia_fechamento"]), v: num(cartaoReg["dia_vencimento"]) } : null;
+      if (registro && diasCartao && !temSerie && v.data_compra && v.data_compra !== text(registro["data_compra"]).slice(0, 10)) {
+        base.vencimento = vencimentoFatura(v.data_compra, diasCartao.f, diasCartao.v);
+      }
+      const nItem = Math.floor(num(parcItem)) || 1;
+      if (registro && cartaoReg && !temSerie && nItem > 1) {
+        if (!diasCartao) throw new Error("Informe o dia de fechamento e vencimento do cartão em Financeiro → Bancos.");
+        const ps = parcelasCartao({ valor, parcelas: nItem, dataCompra: v.data_compra || text(registro["data_compra"]).slice(0, 10) || v.vencimento, diaFechamento: diasCartao.f, diaVencimento: diasCartao.v });
+        const serieId = crypto.randomUUID();
+        const { error } = await supabase.from("financeiro_titulos").update({ ...base, origem_tipo: "manual", origem_id: serieId, parcela_n: 1,
+          descricao: `${base.descricao} (1/${ps.length})`, vencimento: ps[0]!.vencimento, valor: ps[0]!.valor } as never).eq("id", text(rowId(registro)));
+        if (error) throw error;
+        const resto = ps.slice(1).map((p, i) => ({ ...base, empresa_id: registro["empresa_id"], cartao_id: registro["cartao_id"], forma_pagamento: "Cartão de crédito",
+          data_compra: v.data_compra || registro["data_compra"], origem_tipo: "manual", origem_id: serieId, parcela_n: i + 2,
+          descricao: `${base.descricao} (${i + 2}/${ps.length})`, vencimento: p.vencimento, valor: p.valor, status: "aberto" }));
+        const { error: e2 } = await supabase.from("financeiro_titulos").insert(resto as never);
+        if (e2) throw e2;
+        toast.success(`Compra dividida em ${ps.length} parcelas no cartão.`); onSaved(); onClose(); return;
+      }
       if (registro) {
         if (temSerie && alcance && !v.desvincular) {
           let reg: Row = registro;
@@ -1173,7 +1195,13 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
             <Input type="date" value={v.vencimento} disabled={readOnly} onChange={(e) => { const old = v.vencimento; const nv = e.target.value; setV({ ...v, vencimento: nv }); if (itensModo) setItens((l) => l.map((x) => (!x.data || x.data === old ? { ...x, data: nv } : x))); }} /></div>
           {registro && text(registro["cartao_id"]) && (
             <div className="space-y-1"><Label>Data da compra</Label>
-              <Input type="date" value={v.data_compra} disabled={readOnly} onChange={(e) => setV({ ...v, data_compra: e.target.value })} /></div>
+              <Input type="date" value={v.data_compra} disabled={readOnly} onChange={(e) => setV({ ...v, data_compra: e.target.value })} />
+              {!temSerie && <p className="text-muted-foreground text-xs">Ao mudar a data, o vencimento passa para a fatura correta do cartão.</p>}</div>
+          )}
+          {registro && text(registro["cartao_id"]) && !temSerie && !readOnly && (
+            <div className="space-y-1"><Label>Parcelas no cartão</Label>
+              <Input type="number" min={1} max={48} value={parcItem} onChange={(e) => setParcItem(e.target.value)} />
+              <p className="text-muted-foreground text-xs">Mais de 1 divide o valor nas próximas faturas.</p></div>
           )}
           {!itensModo && (
             <div className="space-y-1"><Label>{(v.modo === "parcelado" || cartaoModo) && podeConverter ? "Valor total (R$)" : v.modo === "recorrente" && podeConverter ? "Valor mensal (R$)" : "Valor (R$)"}</Label>
