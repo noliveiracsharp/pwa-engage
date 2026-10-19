@@ -21,3 +21,16 @@ describe("agendado", () => {
     expect(situacaoTitulo({ status: "pago", agendado_para: "2026-11-01" }, "2026-10-19")).toBe("pago");
   });
 });
+
+import { infoReajuste as _info } from "./financeiro";
+describe("infoReajuste pela competência", () => {
+  it("competência há 4 meses: faltam 8", () => {
+    expect(_info({ data_competencia: "2026-06-19" }, "2026-10-19").faltam).toBe(8);
+  });
+  it("competência há 12 meses: apto", () => {
+    expect(_info({ data_competencia: "2025-10-19" }, "2026-10-19").emCarencia).toBe(false);
+  });
+  it("último reajuste tem prioridade", () => {
+    expect(_info({ data_competencia: "2024-01-01", reajustado_em: "2026-05-19" }, "2026-10-19").faltam).toBe(7);
+  });
+});

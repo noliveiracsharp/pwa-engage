@@ -51,6 +51,7 @@ import {
   hojeISO,
   resumoTitulos,
   reajusteEmCarencia,
+  infoReajuste,
   valorReajustado,
   CARENCIA_REAJUSTE_MESES,
   SITUACAO_META,
@@ -257,7 +258,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
     if (acao === "reajustar") {
       const pct = num(String(loteForm.percentual).replace(",", "."));
       if (!pct) return void toast.error("Informe o percentual do reajuste.");
-      const emCarencia = itens.filter((t) => reajusteEmCarencia(t, hoje));
+      const emCarencia = itens.filter((t) => infoReajuste(t, hoje).emCarencia);
       if (emCarencia.length && !await confirmar(`${emCarencia.length} título(s) já foram reajustados há menos de ${CARENCIA_REAJUSTE_MESES} meses. Deseja reajustar mesmo assim?`)) return;
       for (const t of itens) {
         const { error } = await supabase.from("financeiro_titulos").update({ valor: valorReajustado(num(t["valor"]), pct), reajustado_em: hoje, reajuste_percentual: pct } as never).eq("id", text(rowId(t)));
@@ -429,12 +430,39 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
               )}
               {loteAcao.acao === "reajustar" && (() => {
                 const pct = num(String(loteForm.percentual).replace(",", "."));
-                const carencia = loteAcao.itens.filter((t) => reajusteEmCarencia(t, hoje)).length;
+                const carencia = loteAcao.itens.filter((t) => infoReajuste(t, hoje).emCarencia).length;
+                const fmt = (d: string) => (d ? d.slice(0, 10).split("-").reverse().join("/") : "—");
                 return (<>
                   <div className="space-y-1"><Label>Percentual de reajuste (ex.: IPCA acumulado 4,5)</Label>
                     <Input inputMode="decimal" value={loteForm.percentual} onChange={(e) => setLoteForm((s) => ({ ...s, percentual: e.target.value }))} placeholder="0,00 %" /></div>
                   {pct !== 0 && <p className="text-sm">Novo total: <strong className="tabular-nums">{formatBRL(loteAcao.itens.reduce((s, t) => s + valorReajustado(num(t["valor"]), pct), 0))}</strong></p>}
-                  {carencia > 0 && <p className="text-destructive text-sm font-medium">Atenção: {carencia} título(s) já reajustado(s) há menos de {CARENCIA_REAJUSTE_MESES} meses.</p>}
+                  {carencia > 0 && <p className="text-destructive text-sm font-medium">Atenção: {carencia} título(s) ainda não completaram {CARENCIA_REAJUSTE_MESES} meses desde o início do contrato ou do último reajuste.</p>}
+                  <div className="max-h-72 overflow-auto rounded border">
+                    <table className="w-full text-xs">
+                      <thead className="bg-muted sticky top-0"><tr className="text-left">
+                        <th className="p-2">Vencimento</th><th className="p-2">Descrição</th><th className="p-2">Data-base</th>
+                        <th className="p-2 text-right">Atual</th><th className="p-2 text-right">Novo</th><th className="p-2"></th></tr></thead>
+                      <tbody>
+                        {loteAcao.itens.map((t) => {
+                          const inf = infoReajuste(t, hoje);
+                          return (<tr key={String(t["id"])} className="border-t align-top">
+                            <td className="p-2 whitespace-nowrap">{fmt(String(t["vencimento"] ?? ""))}</td>
+                            <td className="p-2">{String(t["descricao"] ?? "")}</td>
+                            <td className="p-2">
+                              <div>{inf.origem === "reajuste" ? "Reajustado em " : inf.origem === "competencia" ? "Início " : ""}{fmt(inf.base)}</div>
+                              {inf.origem === null ? <span className="text-muted-foreground">Sem competência</span>
+                                : inf.emCarencia ? <span className="text-destructive font-medium">Faltam {inf.faltam} mes(es)</span>
+                                : <span className="text-primary font-medium">{inf.meses} meses — apto</span>}
+                            </td>
+                            <td className="p-2 text-right tabular-nums">{formatBRL(num(t["valor"]))}</td>
+                            <td className="p-2 text-right tabular-nums">{formatBRL(valorReajustado(num(t["valor"]), pct))}</td>
+                            <td className="p-2"><Button type="button" variant="ghost" size="sm" className="h-6 px-2" aria-label="Remover"
+                              onClick={() => setLoteAcao((s) => s && ({ ...s, itens: s.itens.filter((x) => x["id"] !== t["id"]) }))}>×</Button></td>
+                          </tr>);
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 </>);
               })()}
             </div>

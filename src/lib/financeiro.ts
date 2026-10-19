@@ -70,6 +70,16 @@ export function reajusteEmCarencia(t: Row, hoje = hojeISO()): boolean {
   return !!ult && mesesEntre(ult, hoje) < CARENCIA_REAJUSTE_MESES;
 }
 
+/** Data-base do reajuste: último reajuste, senão a competência (início do contrato). */
+export function infoReajuste(t: Row, hoje = hojeISO()) {
+  const ult = iso(t["reajustado_em"]);
+  const comp = iso(t["data_competencia"]);
+  const base = ult || comp || "";
+  const meses = base ? mesesEntre(base, hoje) : null;
+  const faltam = meses === null ? 0 : Math.max(0, CARENCIA_REAJUSTE_MESES - meses);
+  return { base, origem: ult ? ("reajuste" as const) : comp ? ("competencia" as const) : null, meses, faltam, emCarencia: faltam > 0 };
+}
+
 /** Novo valor aplicando percentual (ex.: IPCA 4,5 → +4,5%). */
 export const valorReajustado = (valor: number, percentual: number) => round2(num(valor) * (1 + num(percentual) / 100));
 
