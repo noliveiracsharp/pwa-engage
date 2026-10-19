@@ -340,10 +340,10 @@ export function melhorDiaCompra(diaFechamento: number): number {
   return d >= 31 ? 1 : d + 1;
 }
 
-export type ItemCartao = { descricao: string; categoria: string; valor: number; parcelas: number };
+export type ItemCartao = { descricao: string; categoria: string; valor: number; parcelas: number; dataCompra?: string };
 
 /** Gera as parcelas de cada item de uma compra no cartão, cada item com sua quantidade de parcelas. */
 export function parcelasItensCartao(itens: ItemCartao[], opts: { dataCompra: string; diaFechamento: number; diaVencimento: number }) {
-  return itens.flatMap((it) => parcelasCartao({ valor: it.valor, parcelas: it.parcelas, ...opts })
-    .map((p, i, arr) => ({ ...p, item: it, n: i + 1, total: arr.length })));
+  return itens.flatMap((it, grupo) => parcelasCartao({ valor: it.valor, parcelas: it.parcelas, ...opts, dataCompra: it.dataCompra || opts.dataCompra })
+    .map((p, i, arr) => ({ ...p, item: it, grupo, n: i + 1, total: arr.length, dataCompra: it.dataCompra || opts.dataCompra })));
 }

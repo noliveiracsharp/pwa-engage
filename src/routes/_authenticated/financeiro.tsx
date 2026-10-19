@@ -661,14 +661,14 @@ function TituloSheet({ tipo, registro, modelo, parceiros, cartoes, readOnly, onC
     && !text(registro["cartao_id"]));
   const cartao = cartoes.find((c) => text(rowId(c)) === v.cartao_id);
   const [porItem, setPorItem] = useState(false);
-  const [itens, setItens] = useState<{ descricao: string; categoria: string; valor: string; parcelas: string }[]>([{ descricao: "", categoria: "", valor: "", parcelas: "1" }]);
+  const [itens, setItens] = useState<{ descricao: string; categoria: string; valor: string; parcelas: string; data: string }[]>([{ descricao: "", categoria: "", valor: "", parcelas: "1", data: "" }]);
   const itensModo = cartaoModo && porItem;
   const cartaoOk = !!(cartao && cartao["dia_fechamento"] && cartao["dia_vencimento"]);
   const optsCartao = { dataCompra: v.vencimento, diaFechamento: num(cartao?.["dia_fechamento"]), diaVencimento: num(cartao?.["dia_vencimento"]) };
-  const previa: { vencimento: string; valor: number; descricao?: string; categoria?: string; rotulo?: string }[] = !podeConverter ? [] : cartaoModo
+  const previa: { vencimento: string; valor: number; descricao?: string; categoria?: string; rotulo?: string; grupo?: number; n?: number; total?: number; dataCompra?: string }[] = !podeConverter ? [] : cartaoModo
     ? (!cartaoOk ? [] : itensModo
-      ? parcelasItensCartao(itens.filter((i) => num(i.valor) > 0).map((i) => ({ descricao: i.descricao.trim() || v.descricao.trim(), categoria: i.categoria, valor: num(i.valor), parcelas: num(i.parcelas) || 1 })), optsCartao)
-        .map((p) => ({ vencimento: p.vencimento, valor: p.valor, descricao: p.total > 1 ? `${p.item.descricao} (${p.n}/${p.total})` : p.item.descricao, categoria: p.item.categoria, rotulo: `${p.item.descricao} ${p.n}/${p.total}` }))
+      ? parcelasItensCartao(itens.filter((i) => num(i.valor) > 0).map((i) => ({ descricao: i.descricao.trim() || v.descricao.trim(), categoria: i.categoria, valor: num(i.valor), parcelas: num(i.parcelas) || 1, dataCompra: i.data || v.vencimento })), optsCartao)
+        .map((p) => ({ grupo: p.grupo, n: p.n, total: p.total, dataCompra: p.dataCompra, vencimento: p.vencimento, valor: p.valor, descricao: p.total > 1 ? `${p.item.descricao} (${p.n}/${p.total})` : p.item.descricao, categoria: p.item.categoria, rotulo: `${p.item.descricao} ${p.n}/${p.total}` }))
       : parcelasCartao({ valor: num(v.valor), parcelas: num(v.repetir), ...optsCartao }))
     : parcelasManuais({ modo: v.modo as ModoLancamento, valor: num(v.valor), quantidade: num(v.repetir), primeira: v.vencimento });
   const totalItens = round2(itens.reduce((s, i) => s + num(i.valor), 0));
@@ -838,8 +838,14 @@ function TituloSheet({ tipo, registro, modelo, parceiros, cartoes, readOnly, onC
         const emp = isMaster && empresa ? rowId(empresa) : empresaId;
         const extra = cartaoModo ? { cartao_id: v.cartao_id, forma_pagamento: "Cartão de crédito", data_compra: v.vencimento } : {};
         const serieId = n > 1 ? crypto.randomUUID() : null;
+        // Item a item: cada item é uma compra própria (série só se tiver mais de 1 parcela).
+        const seriesItem = new Map<number, string | null>();
         const lote = previa.map((p, i) => ({
-          ...base, ...extra, empresa_id: emp, origem_tipo: "manual", origem_id: serieId, parcela_n: i + 1,
+          ...base, ...extra, empresa_id: emp, origem_tipo: "manual",
+          ...(p.grupo !== undefined
+            ? { origem_id: (seriesItem.has(p.grupo) ? seriesItem.get(p.grupo) : (seriesItem.set(p.grupo, (p.total ?? 1) > 1 ? crypto.randomUUID() : null), seriesItem.get(p.grupo))) ?? null,
+                parcela_n: p.n ?? 1, data_compra: p.dataCompra ?? v.vencimento }
+            : { origem_id: serieId, parcela_n: i + 1 }),
           descricao: p.descricao ?? (n > 1 ? `${base.descricao} (${i + 1}/${n})` : base.descricao),
           ...(p.categoria ? { categoria: p.categoria } : {}),
           vencimento: p.vencimento, valor: p.valor,
@@ -994,7 +1000,7 @@ function TituloSheet({ tipo, registro, modelo, parceiros, cartoes, readOnly, onC
           {registro && text(registro["cartao_id"]) && (
             <p className="text-muted-foreground text-sm sm:col-span-2">Cartão: {nomeCartao(cartoes.find((c) => text(rowId(c)) === text(registro["cartao_id"])))}</p>
           )}
-          <div className="space-y-1"><Label>{cartaoModo ? "Data da compra" : registro || v.modo === "unico" ? "Vencimento" : "1º vencimento"}</Label>
+          <div className="space-y-1"><Label>{itensModo ? "Data da compra (padrão dos itens)" : cartaoModo ? "Data da compra" : registro || v.modo === "unico" ? "Vencimento" : "1º vencimento"}</Label>
             <Input type="date" value={v.vencimento} disabled={readOnly} onChange={(e) => setV({ ...v, vencimento: e.target.value })} /></div>
           {!itensModo && (
             <div className="space-y-1"><Label>{(v.modo === "parcelado" || cartaoModo) && podeConverter ? "Valor total (R$)" : v.modo === "recorrente" && podeConverter ? "Valor mensal (R$)" : "Valor (R$)"}</Label>
@@ -1007,14 +1013,15 @@ function TituloSheet({ tipo, registro, modelo, parceiros, cartoes, readOnly, onC
           {itensModo && (
             <div className="space-y-2 rounded-lg border p-3 sm:col-span-2">
               <p className="text-sm font-semibold">Itens da compra</p>
-              <div className="text-muted-foreground hidden grid-cols-[1fr_10rem_7rem_5rem_2.5rem] gap-2 text-xs font-medium sm:grid">
-                <span>Descrição</span><span>Categoria</span><span>Valor (R$)</span><span>Parcelas</span><span />
+              <div className="text-muted-foreground hidden grid-cols-[1fr_9rem_9rem_7rem_4.5rem_2.5rem] gap-2 text-xs font-medium sm:grid">
+                <span>Descrição</span><span>Data da compra</span><span>Categoria</span><span>Valor (R$)</span><span>Parcelas</span><span />
               </div>
               {itens.map((it, idx) => {
                 const up = (patch: Partial<typeof it>) => setItens((l) => l.map((x, j) => (j === idx ? { ...x, ...patch } : x)));
                 return (
-                  <div key={idx} className="grid gap-2 sm:grid-cols-[1fr_10rem_7rem_5rem_2.5rem]">
+                  <div key={idx} className="grid gap-2 sm:grid-cols-[1fr_9rem_9rem_7rem_4.5rem_2.5rem]">
                     <Input value={it.descricao} placeholder="Ex.: Monitor 27''" onChange={(e) => up({ descricao: e.target.value })} />
+                    <Input type="date" aria-label="Data da compra" value={it.data || v.vencimento} onChange={(e) => up({ data: e.target.value })} />
                     <Select value={it.categoria} onValueChange={(x) => up({ categoria: x })}>
                       <SelectTrigger><SelectValue placeholder="Categoria" /></SelectTrigger>
                       <SelectContent>{categorias.ativas.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
@@ -1027,7 +1034,7 @@ function TituloSheet({ tipo, registro, modelo, parceiros, cartoes, readOnly, onC
                 );
               })}
               <div className="flex items-center justify-between">
-                <Button type="button" variant="outline" size="sm" onClick={() => setItens((l) => [...l, { descricao: "", categoria: v.categoria, valor: "", parcelas: "1" }])}>
+                <Button type="button" variant="outline" size="sm" onClick={() => setItens((l) => [...l, { descricao: "", categoria: v.categoria, valor: "", parcelas: "1", data: "" }])}>
                   <Plus className="mr-1 h-4 w-4" />Adicionar item</Button>
                 <p className="text-sm">Valor final no cartão: <span className="text-base font-bold tabular-nums">{formatBRL(totalItens)}</span></p>
               </div>
