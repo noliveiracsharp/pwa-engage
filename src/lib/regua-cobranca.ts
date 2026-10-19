@@ -69,7 +69,7 @@ const brl = (v: unknown) => Number(v ?? 0).toLocaleString("pt-BR", { style: "cur
 const dataBR = (iso: unknown) => { const s = String(iso ?? "").slice(0, 10); return s ? `${s.slice(8, 10)}/${s.slice(5, 7)}/${s.slice(0, 4)}` : ""; };
 
 export type DadosEmailCobranca = {
-  empresaNome: string; logo?: string; cor: string; cliente: string; dias: number;
+  empresaNome: string; logo?: string | null; cor: string; cliente: string; dias: number;
   descricao: string; valor: number; vencimento: string; linhaDigitavel?: string; link: string; pixel?: string;
 };
 
