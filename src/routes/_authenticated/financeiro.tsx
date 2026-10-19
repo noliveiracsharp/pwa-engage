@@ -40,7 +40,7 @@ import { calcularTarifa, modalidadeTarifa } from "@/lib/financeiro-tarifas";
 import { formatBRL, formatDate, num, round2 } from "@/lib/orcamentos";
 import { uploadFoto } from "@/lib/laudos";
 import { erroFinanceiro } from "@/lib/financeiro-db";
-import { alvosRecorrencia, parcelasLegadas, patchRecorrencia, serieLegada, type EscopoRecorrencia } from "@/lib/financeiro-recorrencia";
+import { alvosRecorrencia, parcelasLegadas, patchRecorrencia, planoTamanhoSerie, serieLegada, type EscopoRecorrencia } from "@/lib/financeiro-recorrencia";
 import {
   fluxoPeriodo,
   periodoVisao,
@@ -476,6 +476,59 @@ function TituloSheet({ tipo, registro, modelo, parceiros, cartoes, readOnly, onC
   const dispCartao = limiteDisponivelCartao(limiteCartao, usadoCartao);
   const papel = tipo === "receber" ? "cliente" : "fornecedor";
 
+  const [novoTotal, setNovoTotal] = useState(() => {
+    const m = text(registro?.["descricao"]).match(/\((\d+)\/(\d+)\)\s*$/);
+    return m ? m[2]! : "";
+  });
+  const carregarSerie = async (): Promise<Row[]> => {
+    const reg = registro!;
+    const serieId = text(reg["origem_id"]);
+    if (serieId) {
+      const { data, error } = await supabase.from("financeiro_titulos").select("*").eq("origem_tipo", "manual").eq("origem_id", serieId)
+        .eq("empresa_id", text(reg["empresa_id"])).eq("tipo", tipo);
+      if (error) throw error;
+      return (data ?? []) as Row[];
+    }
+    const { data, error } = await supabase.from("financeiro_titulos").select("*").eq("origem_tipo", "manual").is("origem_id", null)
+      .eq("empresa_id", text(reg["empresa_id"])).eq("tipo", tipo);
+    if (error) throw error;
+    const irmas = parcelasLegadas(reg, (data ?? []) as Row[]);
+    const novoId = crypto.randomUUID();
+    const { error: e2 } = await supabase.from("financeiro_titulos").update({ origem_id: novoId } as never).in("id", irmas.map((t) => text(t["id"])));
+    if (e2) throw e2;
+    return irmas.map((t) => ({ ...t, origem_id: novoId }));
+  };
+  const aplicarTamanho = async () => {
+    if (!registro) return;
+    const total = Math.floor(num(novoTotal));
+    if (total < 1 || total > 120) return void toast.error("Informe entre 1 e 120 parcelas.");
+    setSalvando(true);
+    try {
+      const titulos = await carregarSerie();
+      const plano = planoTamanhoSerie(titulos, total);
+      if (plano.bloqueio) return void toast.error(plano.bloqueio);
+      if (!plano.criar.length && !plano.remover.length) return void toast.info(`A série já tem ${total} parcelas.`);
+      const msg = plano.criar.length ? `Serão criadas ${plano.criar.length} novas parcelas futuras.` : `Serão removidas ${plano.remover.length} parcelas em aberto do final.`;
+      if (!await confirmar({ title: `Alterar série para ${total} parcelas?`, description: `${msg} As demais terão a numeração atualizada.`, confirmText: "Alterar", destructive: plano.remover.length > 0 })) return;
+      const modelo = titulos.find((t) => t["id"] === plano.renomear[plano.renomear.length - 1]?.id) ?? titulos[0]!;
+      if (plano.remover.length) {
+        const { error } = await supabase.from("financeiro_titulos").delete().in("id", plano.remover as never);
+        if (error) throw error;
+      }
+      for (const r of plano.renomear) {
+        const { error } = await supabase.from("financeiro_titulos").update({ descricao: r.descricao, parcela_n: r.parcela_n } as never).eq("id", r.id as never);
+        if (error) throw error;
+      }
+      if (plano.criar.length) {
+        const copia = ["tipo", "categoria", "parceiro_id", "observacao", "centro_custo_id", "codigo_referencia", "conta_bancaria_id", "forma_pagamento", "empresa_id", "origem_tipo", "origem_id"];
+        const lote = plano.criar.map((c) => ({ ...Object.fromEntries(copia.map((k) => [k, modelo[k] ?? null])), ...c, data_competencia: c.vencimento, status: "aberto" }));
+        const { error } = await supabase.from("financeiro_titulos").insert(lote as never);
+        if (error) throw error;
+      }
+      toast.success(`Série ajustada para ${total} parcelas.`); onSaved(); onClose();
+    } catch (e) { toast.error(erroFinanceiro(e)); } finally { setSalvando(false); }
+  };
+
   const salvar = async (alcance?: EscopoRecorrencia) => {
     const valor = itensModo ? totalItens : round2(num(v.valor));
     if (!v.descricao.trim()) return void toast.error("Informe a descrição.");
@@ -590,6 +643,14 @@ function TituloSheet({ tipo, registro, modelo, parceiros, cartoes, readOnly, onC
                 <div className="flex items-center gap-2">
                   <Switch checked={v.desvincular} onCheckedChange={(x) => setV({ ...v, desvincular: x })} />
                   <Label>Desvincular desta série (vira uma conta avulsa, sem alterar as demais)</Label>
+                </div>
+              )}
+              {!readOnly && !v.desvincular && (
+                <div className="flex flex-wrap items-end gap-2 border-t border-primary/20 pt-2">
+                  <div className="space-y-1"><Label>Quantidade de parcelas/meses da série</Label>
+                    <Input type="number" min={1} max={120} className="w-32" value={novoTotal} onChange={(e) => setNovoTotal(e.target.value)} /></div>
+                  <Button type="button" variant="outline" disabled={salvando || !num(novoTotal)} onClick={() => void aplicarTamanho()}>Alterar quantidade</Button>
+                  <p className="w-full text-xs text-muted-foreground">Aumentar cria novas parcelas mensais após a última; reduzir remove só parcelas em aberto do final. Parcelas pagas são preservadas.</p>
                 </div>
               )}
             </div>
