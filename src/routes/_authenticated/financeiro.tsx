@@ -40,7 +40,7 @@ import { calcularTarifa, modalidadeTarifa } from "@/lib/financeiro-tarifas";
 import { formatBRL, formatDate, num, round2 } from "@/lib/orcamentos";
 import { uploadFoto } from "@/lib/laudos";
 import { erroFinanceiro } from "@/lib/financeiro-db";
-import { alvosRecorrencia, parcelasLegadas, patchRecorrencia, serieLegada, type EscopoRecorrencia } from "@/lib/financeiro-recorrencia";
+import { alvosRecorrencia, parcelasLegadas, patchRecorrencia, planoTamanhoSerie, serieLegada, type EscopoRecorrencia } from "@/lib/financeiro-recorrencia";
 import {
   fluxoPeriodo,
   periodoVisao,
@@ -590,6 +590,14 @@ function TituloSheet({ tipo, registro, modelo, parceiros, cartoes, readOnly, onC
                 <div className="flex items-center gap-2">
                   <Switch checked={v.desvincular} onCheckedChange={(x) => setV({ ...v, desvincular: x })} />
                   <Label>Desvincular desta série (vira uma conta avulsa, sem alterar as demais)</Label>
+                </div>
+              )}
+              {!readOnly && !v.desvincular && (
+                <div className="flex flex-wrap items-end gap-2 border-t border-primary/20 pt-2">
+                  <div className="space-y-1"><Label>Quantidade de parcelas/meses da série</Label>
+                    <Input type="number" min={1} max={120} className="w-32" value={novoTotal} onChange={(e) => setNovoTotal(e.target.value)} /></div>
+                  <Button type="button" variant="outline" disabled={salvando || !num(novoTotal)} onClick={() => void aplicarTamanho()}>Alterar quantidade</Button>
+                  <p className="w-full text-xs text-muted-foreground">Aumentar cria novas parcelas mensais após a última; reduzir remove só parcelas em aberto do final. Parcelas pagas são preservadas.</p>
                 </div>
               )}
             </div>
