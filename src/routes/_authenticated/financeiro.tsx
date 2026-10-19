@@ -517,7 +517,7 @@ function TituloSheet({ tipo, registro, modelo, parceiros, cartoes, readOnly, onC
       let l = (data ?? []) as Row[];
       if (!registro["origem_id"]) l = parcelasLegadas(registro, l);
       l.sort((a, b) => text(a["vencimento"]).localeCompare(text(b["vencimento"])));
-      if (vivo) setSerie(l);
+      if (vivo) { setSerie(l); if (l.length > 1) setNovoTotal(String(l.length)); }
     })();
     return () => { vivo = false; };
   }, [temSerie, registro, tipo]);
