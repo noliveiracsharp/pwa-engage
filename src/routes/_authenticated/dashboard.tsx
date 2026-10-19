@@ -3,7 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import {
-  AlertTriangle, Bell, Bot, CheckCircle2, ClipboardList, FolderKanban, Headphones, HandCoins,
+  AlertTriangle, Bell, CheckCircle2, ClipboardList, FolderKanban, Headphones, HandCoins,
   ShoppingCart, TrendingUp, Users,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,9 +13,45 @@ import { useAudit } from "@/lib/audit";
 import { useAuth } from "@/hooks/useAuth";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { EVENTOS } from "@/lib/projetos-eventos";
-import { formatBRL, situacaoOf } from "@/lib/orcamentos";
+import { formatBRL } from "@/lib/orcamentos";
 import { COTACAO_STATUS } from "@/lib/laudos";
 import { pick, type Row } from "@/lib/row";
+import { etapasDoKanban, kanbanDoModulo, type EtapaKanban } from "@/lib/orcamento-kanban";
+
+const normTxt = (v: unknown) => String(v ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+type GrupoEtapa = EtapaKanban & { n: number; v: number };
+
+/** Agrupa registros nas etapas reais do Kanban (por etapa_id; senão pela situação/status com o mesmo nome). */
+function agruparPorEtapas(etapas: EtapaKanban[], rows: Row[], campoTexto: string[], valor?: (r: Row) => number) {
+  const grupos: GrupoEtapa[] = etapas.map((e) => ({ ...e, n: 0, v: 0 }));
+  const porId = new Map(grupos.map((g) => [g.id, g]));
+  const porNome = new Map(grupos.map((g) => [normTxt(g.descricao), g]));
+  let semEtapa = 0;
+  for (const r of rows) {
+    const id = String(pick(r, ["kanban_etapa_id", "etapa_id", "id_etapa"]) ?? "");
+    const g = porId.get(id) ?? porNome.get(normTxt(pick(r, campoTexto)));
+    if (!g) { semEtapa++; continue; }
+    g.n++; g.v += valor ? valor(r) : 0;
+  }
+  return { grupos, semEtapa };
+}
+
+const TONS: Record<string, string> = {
+  verde: "border-l-success", vermelho: "border-l-destructive", amarelo: "border-l-warning", laranja: "border-l-warning",
+  azul: "border-l-primary", padrao: "border-l-border",
+};
+function KpiEtapa({ g, valor }: { g: GrupoEtapa; valor?: boolean }) {
+  const borda = TONS[normTxt(g.cor)] ?? "border-l-primary";
+  return (
+    <Card className={`border-l-4 ${g.ganha ? "border-l-success" : borda}`}>
+      <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+        <CardTitle className="text-sm font-medium text-muted-foreground">{g.descricao} ({g.n})</CardTitle>
+        {g.ganha ? <CheckCircle2 className="h-4 w-4 text-success" /> : <FolderKanban className="h-4 w-4 text-primary" />}
+      </CardHeader>
+      <CardContent><p className="text-2xl font-bold text-foreground">{valor ? formatBRL(g.v) : g.n}</p></CardContent>
+    </Card>
+  );
+}
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   staticData: { sitemap: false },
@@ -236,29 +272,30 @@ function PainelComercial({ periodo }: { periodo: Periodo }) {
         rowsOf("orcamento_comissoes", empresaId, (q) => q.eq("beneficiario_id", usuarioId)),
       ]);
       const val = (r: Row) => Number(pick(r, ["total_liquido", "valor_total", "total"]) ?? 0) || 0;
-      const g = { andamento: { n: 0, v: 0 }, aprovado: { n: 0, v: 0 }, reprovado: { n: 0, v: 0 } };
-      for (const r of rows) {
-        const s = situacaoOf(r["situacao"]);
-        const k = s === "Aprovado" ? "aprovado" : s === "Reprovado" ? "reprovado" : "andamento";
-        g[k].n++; g[k].v += val(r);
-      }
-      const decididas = g.aprovado.n + g.reprovado.n;
-      const conv = decididas ? Math.round((g.aprovado.n / decididas) * 100) : 0;
-      const ticket = g.aprovado.n ? g.aprovado.v / g.aprovado.n : 0;
+      const kanbanId = await kanbanDoModulo("orcamentos", "orcamento");
+      const etapas = await etapasDoKanban(kanbanId);
+      const { grupos, semEtapa } = agruparPorEtapas(etapas, rows, ["situacao"], val);
+      const ganhas = grupos.filter((g) => g.ganha);
+      const nG = ganhas.reduce((t, g) => t + g.n, 0);
+      const vG = ganhas.reduce((t, g) => t + g.v, 0);
+      const conv = rows.length ? Math.round((nG / rows.length) * 100) : 0;
+      const ticket = nG ? vG / nG : 0;
       const minhas = comissoes.filter((c) => c["status"] !== "paga").reduce((t, c) => t + (Number(c["valor"]) || 0), 0);
-      return { g, conv, ticket, minhas };
+      return { grupos, semEtapa, conv, ticket, minhas, temKanban: !!kanbanId, temGanha: ganhas.length > 0 };
     },
   });
   return (
     <Secao title="Comercial — Ofertas" icon={TrendingUp}>
+      {data && !data.temKanban && <p className="text-sm text-muted-foreground">Vincule um Kanban à função Ofertas para ver as etapas aqui.</p>}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {(data?.grupos ?? []).map((g) => <KpiEtapa key={g.id} g={g} valor />)}
+      </div>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <Kpi title={`Em negociação (${data?.g.andamento.n ?? 0})`} value={formatBRL(data?.g.andamento.v ?? 0)} icon={TrendingUp} tone="warning" />
-        <Kpi title={`Aprovadas (${data?.g.aprovado.n ?? 0})`} value={formatBRL(data?.g.aprovado.v ?? 0)} icon={CheckCircle2} tone="success" />
-        <Kpi title="Taxa de conversão" value={`${data?.conv ?? 0}%`} icon={TrendingUp} />
-        <Kpi title="Ticket médio aprovado" value={formatBRL(data?.ticket ?? 0)} icon={TrendingUp} />
-        <Kpi title={`Reprovadas (${data?.g.reprovado.n ?? 0})`} value={formatBRL(data?.g.reprovado.v ?? 0)} icon={AlertTriangle} tone="destructive" />
+        <Kpi title={data?.temGanha === false ? "Taxa de conversão (marque a etapa ganha)" : "Taxa de conversão"} value={`${data?.conv ?? 0}%`} icon={TrendingUp} />
+        <Kpi title="Ticket médio ganho" value={formatBRL(data?.ticket ?? 0)} icon={TrendingUp} />
         <Kpi title="Minhas comissões a receber" value={formatBRL(data?.minhas ?? 0)} icon={HandCoins} tone="success" />
       </div>
+      {!!data?.semEtapa && <p className="text-xs text-muted-foreground">{data.semEtapa} oferta(s) sem etapa correspondente no Kanban.</p>}
     </Secao>
   );
 }
@@ -269,28 +306,27 @@ function PainelAtendimento() {
   const { data } = useQuery({
     queryKey: ["dashboard", "atendimentos", empresaId],
     queryFn: async () => {
-      const [comIA, emAtendimento, encerrados, pessoas] = await Promise.all([
-        countOf("atendimentos", empresaId, (q) => q.eq("status", "IA")),
-        countOf("atendimentos", empresaId, (q) => q.eq("status", "Em atendimento")),
-        countOf("atendimentos", empresaId, (q) => q.eq("status", "Encerrado")),
+      const [kanbanId, pessoas, todos] = await Promise.all([
+        kanbanDoModulo("atendimentos", "atendimento"),
         countOf("pessoas", empresaId),
+        rowsOf("atendimentos", empresaId),
       ]);
+      const etapas = await etapasDoKanban(kanbanId);
+      const { grupos } = agruparPorEtapas(etapas, todos, ["status", "situacao"]);
       const rows = await rowsOf("atendimentos", empresaId, (q) => q.gte("created_at", periodStart("ano").toISOString()));
       const meses = new Map<string, number>();
       for (const r of rows) {
         const m = new Date(String(r["created_at"])).toLocaleDateString("pt-BR", { month: "short", year: "2-digit" });
         meses.set(m, (meses.get(m) ?? 0) + 1);
       }
-      const total = comIA + emAtendimento + encerrados;
-      return { comIA, emAtendimento, encerrados, pessoas, total, porMes: [...meses].map(([label, total]) => ({ label, total })) };
+      return { grupos, temKanban: !!kanbanId, pessoas, porMes: [...meses].map(([label, total]) => ({ label, total })) };
     },
   });
   return (
     <Secao title="Atendimento" icon={Headphones}>
+      {data && !data.temKanban && <p className="text-sm text-muted-foreground">Vincule um Kanban à função Atendimentos para ver as etapas aqui.</p>}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Kpi title="Com a IA" value={data?.comIA ?? 0} icon={Bot} />
-        <Kpi title="Em atendimento humano" value={data?.emAtendimento ?? 0} icon={Headphones} tone="warning" />
-        <Kpi title="Encerrados" value={data?.encerrados ?? 0} icon={CheckCircle2} tone="success" />
+        {(data?.grupos ?? []).map((g) => <KpiEtapa key={g.id} g={g} />)}
         <Kpi title="Contatos" value={data?.pessoas ?? 0} icon={Users} />
       </div>
       <Card>
