@@ -174,7 +174,7 @@ export function PainelAprovacaoCotacao({ cotacaoId, valorTotal, children }: { co
   const votar = async (status: "aprovado" | "rejeitado") => {
     let justificativa: string | null = null;
     if (status === "rejeitado") {
-      justificativa = await perguntar({ title: "Rejeitar cotação", message: "Informe a justificativa (obrigatória).", required: true } as never);
+      justificativa = await perguntar({ title: "Rejeitar cotação", description: "Informe a justificativa (obrigatória).", required: true, multiline: true });
       if (!justificativa?.trim()) return;
     }
     const { error } = await supabase.from("cotacao_aprovacoes" as never).insert({ empresa_id: empresaId, cotacao_id: cotacaoId, usuario_id: uid, status, justificativa } as never);

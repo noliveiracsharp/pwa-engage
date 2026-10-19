@@ -16,6 +16,8 @@ import { formatBRL, formatQtd, num, round2 } from "@/lib/orcamentos";
 import { pick, type Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
 import { confirmar } from "@/components/layout/DialogoGlobal";
+import { PainelAprovacaoCotacao } from "@/components/cotacoes/AprovacaoCompras";
+import { podeGerarPedido } from "@/lib/aprovacao-compras";
 
 type Props = {
   open: boolean;
@@ -571,11 +573,12 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
             </div>
           </section>
 
+          <PainelAprovacaoCotacao cotacaoId={cid} valorTotal={analise.split}>{(sitAprov) => (
           <section className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 className="font-semibold">Pedidos de compra</h3>
               {canUpdate && (
-                <Button size="sm" disabled={gerando || analise.escolhas.length === 0} onClick={gerarPedidos}>
+                <Button size="sm" disabled={gerando || analise.escolhas.length === 0 || !podeGerarPedido(sitAprov)} title={!podeGerarPedido(sitAprov) ? "Aguardando aprovação da cotação" : undefined} onClick={gerarPedidos}>
                   {gerando ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <ShoppingCart className="mr-1 h-4 w-4" />}
                   {pedidosCot.length ? "Gerar novamente" : "Gerar pedidos de compra"}
                 </Button>
@@ -616,6 +619,7 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
               {analise.porForn.size === 0 && <p className="text-muted-foreground rounded-md border border-dashed p-4 text-center text-sm md:col-span-2">Os pedidos aparecem aqui quando houver preços cotados.</p>}
             </div>
           </section>
+          )}</PainelAprovacaoCotacao>
         </div>
 
         <div className="flex justify-end gap-2 border-t px-6 py-4">
