@@ -234,7 +234,29 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
     if (error) return void toast.error(erroFinanceiro(error));
     toast.success("Vencimento da fatura atualizado."); setFatura(null); invalidar();
   };
+  const [excluirFat, setExcluirFat] = useState<Row | null>(null);
+  const excluirFaturaAlcance = async (alcance: "atual" | "seguintes" | "todas") => {
+    const fat = excluirFat; if (!fat) return;
+    setExcluirFat(null);
+    const itens = fat["__itens"] as Row[];
+    const ids = new Set(itens.map((t) => text(rowId(t))));
+    if (alcance !== "atual") {
+      const series = [...new Set(itens.map((t) => text(t["origem_id"])).filter(Boolean))];
+      if (series.length) {
+        const { data, error } = await supabase.from("financeiro_titulos").select("*").eq("tipo", tipo).in("origem_id", series);
+        if (error) return void toast.error(erroFinanceiro(error));
+        for (const x of (data ?? []) as Row[]) {
+          if (alcance === "seguintes" && (text(x["vencimento"]) < text(fat["vencimento"]) || x["status"] === "pago")) continue;
+          ids.add(text(rowId(x)));
+        }
+      }
+    }
+    const { error } = await supabase.from("financeiro_titulos").delete().in("id", [...ids]);
+    if (error) return void toast.error(erroFinanceiro(error));
+    toast.success(`${ids.size} lançamento(s) excluído(s).`); setFatura(null); invalidar();
+  };
   const excluirItemFatura = async (t: Row) => {
+    if (ehSerie(t)) { setFatura(null); return void setExcluirSerie(t); }
     if (!await confirmar({ title: "Excluir este item da fatura?", description: `${text(t["descricao"])} — ${formatBRL(t["valor"])}`, confirmText: "Excluir", destructive: true })) return;
     const { error } = await supabase.from("financeiro_titulos").delete().eq("id", text(rowId(t)));
     if (error) return void toast.error(erroFinanceiro(error));
@@ -427,6 +449,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
         <DropdownMenuItem onClick={() => setFatura(t)}><CreditCard className="h-4 w-4" /> Editar fatura e itens</DropdownMenuItem>
         {perms.canUpdate && t["status"] !== "pago" && <DropdownMenuItem onClick={() => void baixarItensFatura(t["__itens"] as Row[])}><CheckCircle2 className="text-success h-4 w-4" /> Baixar fatura (total)</DropdownMenuItem>}
         {perms.canUpdate && t["status"] !== "pago" && <DropdownMenuItem onClick={() => setFatura(t)}><CheckCircle2 className="h-4 w-4" /> Pagamento parcial / mínimo</DropdownMenuItem>}
+        {perms.canDelete && <DropdownMenuItem onClick={() => setExcluirFat(t)}><Trash2 className="text-destructive h-4 w-4" /> Excluir fatura</DropdownMenuItem>}
         {perms.canUpdate && num(t["valor_pago"]) > 0 && <DropdownMenuItem onClick={() => void estornarFatura(t["__itens"] as Row[])}><Undo2 className="h-4 w-4" /> Estornar pagamentos da fatura</DropdownMenuItem>}
       </>
     );
@@ -650,7 +673,8 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-sm">{itens.length} item(ns) • Total <strong className="tabular-nums">{formatBRL(fatura["valor"])}</strong>
                   {num(fatura["valor_pago"]) > 0 && fatura["status"] !== "pago" && <> • Pago {formatBRL(fatura["valor_pago"])} • Saldo <strong>{formatBRL(round2(num(fatura["valor"]) - num(fatura["valor_pago"])))}</strong></>}</p>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
+                  {perms.canDelete && <Button variant="outline" className="text-destructive" onClick={() => { const f = fatura; setFatura(null); setExcluirFat(f); }}><Trash2 className="mr-1 h-4 w-4" />Excluir fatura</Button>}
                   <Button variant="outline" onClick={() => setFatura(null)}>Fechar</Button>
                   {perms.canCreate && <Button variant="outline" onClick={() => { const c = text(fatura["cartao_id"]); setFatura(null); setNovoNoCartao(c); setEditar(null); }}><Plus className="mr-1 h-4 w-4" />Adicionar itens</Button>}
                   {perms.canUpdate && fatura["status"] !== "pago" && <Button onClick={() => void baixarItensFatura(itens)}><CheckCircle2 className="mr-1 h-4 w-4" />Baixar fatura (total)</Button>}
@@ -672,7 +696,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
         onEdit={(r) => (r["__fatura"] ? setFatura(r) : setEditar(r))}
         rowMenu={rowMenu}
         editReadOnly={!perms.canUpdate}
-        onDelete={perms.canDelete ? (r) => (r["__fatura"] ? void toast.error("Para excluir, abra a fatura e exclua os itens.") : excluir(r)) : undefined}
+        onDelete={perms.canDelete ? (r) => (r["__fatura"] ? setExcluirFat(r) : r["__filho"] ? void excluirItemFatura(r) : excluir(r)) : undefined}
         filters={
           <>
             <FilterInput label="Busca" value={f.busca} onChange={(v) => setF((s) => ({ ...s, busca: v }))} placeholder="Descrição, parceiro, categoria" />
@@ -707,6 +731,18 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
           onClose={() => setClonar(null)} onSaved={invalidar} />
       )}
       {recibo && <ReciboDialog tipo={tipo} titulo={recibo} parceiro={parceiroById.get(text(recibo["parceiro_id"]))} onClose={() => setRecibo(null)} />}
+      <Dialog open={!!excluirFat} onOpenChange={(o) => !o && setExcluirFat(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Excluir fatura</DialogTitle></DialogHeader>
+          <p className="text-sm">"{text(excluirFat?.["descricao"])}" — vence {formatDate(excluirFat?.["vencimento"])}, {(excluirFat?.["__itens"] as Row[] | undefined)?.length ?? 0} item(ns), {formatBRL(excluirFat?.["valor"])}. O que deseja excluir?</p>
+          <div className="grid gap-2">
+            <Button variant="outline" onClick={() => void excluirFaturaAlcance("atual")}>Apenas esta fatura</Button>
+            <Button variant="outline" onClick={() => void excluirFaturaAlcance("seguintes")}>Esta e as parcelas seguintes em aberto</Button>
+            <Button variant="destructive" onClick={() => void excluirFaturaAlcance("todas")}>Todas as parcelas das compras desta fatura</Button>
+          </div>
+          <DialogFooter><Button variant="ghost" onClick={() => setExcluirFat(null)}>Cancelar</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
       <Dialog open={!!excluirSerie} onOpenChange={(o) => !o && setExcluirSerie(null)}>
         <DialogContent>
           <DialogHeader><DialogTitle>Excluir parcela</DialogTitle></DialogHeader>
