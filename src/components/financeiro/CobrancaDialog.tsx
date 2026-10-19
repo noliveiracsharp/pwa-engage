@@ -60,7 +60,7 @@ export function CobrancaDialog({ titulo, parceiro, onClose, onSaved }: { titulo:
       else {
         if (r["linha_digitavel"]) setLinha(text(r["linha_digitavel"]));
         setStCob(acao === "cancelar" ? "cancelado" : text(r["cobranca_status"]));
-        toast.success(acao === "emitir" ? "Boleto registrado no banco." : acao === "cancelar" ? "Boleto cancelado." : "Situação atualizada.");
+        toast.success(acao === "emitir" ? "Boleto registrado no banco." : acao === "cancelar" ? "Boleto cancelado." : r["status"] === "pago" ? "Boleto pago! Título baixado no financeiro." : "Situação atualizada.");
         onSaved();
       }
     } catch (e) { toast.error((e as Error).message); }
