@@ -234,7 +234,9 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
     if (error) return void toast.error(erroFinanceiro(error));
     toast.success("Vencimento da fatura atualizado."); setFatura(null); invalidar();
   };
-  const [excluirFat, setExcluirFat] = useState<Row | null>(null);
+  const [excluirFat, setExcluirFatRaw] = useState<Row | null>(null);
+  const [alcFat, setAlcFat] = useState<"atual" | "seguintes" | "todas">("atual");
+  const setExcluirFat = (r: Row | null) => { setAlcFat("atual"); setExcluirFatRaw(r); };
   const excluirFaturaAlcance = async (alcance: "atual" | "seguintes" | "todas") => {
     const fat = excluirFat; if (!fat) return;
     setExcluirFat(null);
@@ -732,15 +734,47 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
       )}
       {recibo && <ReciboDialog tipo={tipo} titulo={recibo} parceiro={parceiroById.get(text(recibo["parceiro_id"]))} onClose={() => setRecibo(null)} />}
       <Dialog open={!!excluirFat} onOpenChange={(o) => !o && setExcluirFat(null)}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-3xl">
           <DialogHeader><DialogTitle>Excluir fatura</DialogTitle></DialogHeader>
-          <p className="text-sm">"{text(excluirFat?.["descricao"])}" — vence {formatDate(excluirFat?.["vencimento"])}, {(excluirFat?.["__itens"] as Row[] | undefined)?.length ?? 0} item(ns), {formatBRL(excluirFat?.["valor"])}. O que deseja excluir?</p>
-          <div className="grid gap-2">
-            <Button variant="outline" onClick={() => void excluirFaturaAlcance("atual")}>Apenas esta fatura</Button>
-            <Button variant="outline" onClick={() => void excluirFaturaAlcance("seguintes")}>Esta e as parcelas seguintes em aberto</Button>
-            <Button variant="destructive" onClick={() => void excluirFaturaAlcance("todas")}>Todas as parcelas das compras desta fatura</Button>
-          </div>
-          <DialogFooter><Button variant="ghost" onClick={() => setExcluirFat(null)}>Cancelar</Button></DialogFooter>
+          {excluirFat && (() => {
+            const itens = [...(excluirFat["__itens"] as Row[])].sort((a, b) => text(a["data_compra"]).localeCompare(text(b["data_compra"])));
+            const parcelados = itens.filter((t) => posSerie.get(text(rowId(t)))).length;
+            return (<>
+              <p className="text-sm">{text(excluirFat["descricao"])} — vence {formatDate(excluirFat["vencimento"])}. Estes lançamentos serão excluídos:</p>
+              <div className="max-h-[40vh] overflow-auto rounded border">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted sticky top-0"><tr className="text-left">
+                    <th className="p-2">Compra</th><th className="p-2">Descrição</th><th className="p-2">Categoria</th><th className="p-2">Parcela</th><th className="p-2 text-right">Valor</th></tr></thead>
+                  <tbody>
+                    {itens.map((t) => (<tr key={text(rowId(t))} className="border-t">
+                      <td className="p-2 whitespace-nowrap tabular-nums">{formatDate(t["data_compra"]) || "—"}</td>
+                      <td className="p-2">{text(t["descricao"]).replace(/\s*\(\d+\/\d+\)\s*$/, "")}
+                        {nomeParc(t["parceiro_id"]) && <p className="text-muted-foreground text-xs">{nomeParc(t["parceiro_id"])}</p>}</td>
+                      <td className="p-2">{text(t["categoria"]) || "—"}</td>
+                      <td className="p-2">{posSerie.get(text(rowId(t))) || "—"}</td>
+                      <td className="p-2 text-right font-medium tabular-nums">{formatBRL(t["valor"])}</td>
+                    </tr>))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="text-sm">{itens.length} item(ns) • Total <strong className="tabular-nums">{formatBRL(excluirFat["valor"])}</strong></p>
+              <div role="radiogroup" aria-label="Alcance da exclusão" className="space-y-3 py-1">
+                {([
+                  ["atual", "Somente os lançamentos desta fatura"],
+                  ["seguintes", "Esta fatura e as parcelas seguintes em aberto (sem baixas)"],
+                  ["todas", "Todas as parcelas das compras desta fatura"],
+                ] as const).map(([valor, label]) => <label key={valor} className="flex cursor-pointer items-start gap-3 text-sm">
+                  <input type="radio" name="alcance-fatura" checked={alcFat === valor} onChange={() => setAlcFat(valor)} className="mt-0.5 h-4 w-4 shrink-0 accent-primary" />
+                  <span>{label}</span>
+                </label>)}
+              </div>
+              {alcFat !== "atual" && <p className="text-sm text-warning">{parcelados > 0 ? `${parcelados} compra(s) parcelada(s) também terão parcelas excluídas em outros meses.` : "Nenhuma compra desta fatura é parcelada; só estes itens serão excluídos."}{alcFat === "todas" && parcelados > 0 && " Inclui parcelas já pagas."}</p>}
+            </>);
+          })()}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setExcluirFat(null)}>Cancelar</Button>
+            <Button variant="destructive" onClick={() => void excluirFaturaAlcance(alcFat)}>Confirmar exclusão</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
       <Dialog open={!!excluirSerie} onOpenChange={(o) => !o && setExcluirSerie(null)}>
