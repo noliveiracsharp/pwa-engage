@@ -35,7 +35,8 @@ import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { useAuth } from "@/hooks/useAuth";
 import { useAudit } from "@/lib/audit";
 import { rowId, text, useTableRows } from "@/lib/crud";
-import { matchesAny } from "@/lib/input-masks";
+import { mascaraMoeda, matchesAny, moedaDeNumero } from "@/lib/input-masks";
+import { calcularTarifa, modalidadeTarifa } from "@/lib/financeiro-tarifas";
 import { formatBRL, formatDate, num, round2 } from "@/lib/orcamentos";
 import { uploadFoto } from "@/lib/laudos";
 import { erroFinanceiro } from "@/lib/financeiro-db";
@@ -135,7 +136,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
         .filter((t) => {
           const v = text(t["vencimento"]).slice(0, 10);
           return (
-            matchesAny([t["descricao"], nomeParc(t["parceiro_id"]), t["categoria"]], f.busca) &&
+            matchesAny([t["descricao"], nomeParc(t["parceiro_id"]), t["categoria"], moedaDeNumero(num(t["valor"])), num(t["valor"]).toFixed(2)], f.busca) &&
             (f.situacao === "todos" || situacaoTitulo(t, hoje) === f.situacao) &&
             (f.categoria === "todos" || t["categoria"] === f.categoria) &&
             (f.cartao === "todos" || text(t["cartao_id"]) === f.cartao) &&
@@ -403,7 +404,7 @@ function TituloSheet({ tipo, registro, modelo, parceiros, cartoes, readOnly, onC
     categoria: text(src?.["categoria"]),
     parceiro_id: text(src?.["parceiro_id"]),
     vencimento: text(src?.["vencimento"]).slice(0, 10) || hojeISO(),
-    valor: src ? String(num(src["valor"])).replace(".", ",") : "",
+    valor: src ? moedaDeNumero(num(src["valor"])) : "",
     repetir: "1",
     modo: "unico" as ModoForm,
     cartao_id: modelo && !registro ? text(modelo["cartao_id"]) : "",
@@ -638,7 +639,7 @@ function TituloSheet({ tipo, registro, modelo, parceiros, cartoes, readOnly, onC
             <Input type="date" value={v.vencimento} disabled={readOnly} onChange={(e) => setV({ ...v, vencimento: e.target.value })} /></div>
           {!itensModo && (
             <div className="space-y-1"><Label>{(v.modo === "parcelado" || cartaoModo) && !registro ? "Valor total (R$)" : v.modo === "recorrente" && !registro ? "Valor mensal (R$)" : "Valor (R$)"}</Label>
-              <Input inputMode="decimal" value={v.valor} disabled={readOnly} onChange={(e) => setV({ ...v, valor: e.target.value })} placeholder="0,00" /></div>
+              <Input inputMode="decimal" value={v.valor} disabled={readOnly} onChange={(e) => setV({ ...v, valor: mascaraMoeda(e.target.value) })} placeholder="0,00" /></div>
           )}
           {!registro && v.modo !== "unico" && !itensModo && (
             <div className="space-y-1"><Label>{v.modo === "recorrente" ? "Nº de meses" : "Nº de parcelas"}</Label>
@@ -659,7 +660,7 @@ function TituloSheet({ tipo, registro, modelo, parceiros, cartoes, readOnly, onC
                       <SelectTrigger><SelectValue placeholder="Categoria" /></SelectTrigger>
                       <SelectContent>{categorias.ativas.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
                     </Select>
-                    <Input inputMode="decimal" value={it.valor} placeholder="0,00" onChange={(e) => up({ valor: e.target.value })} />
+                    <Input inputMode="decimal" value={it.valor} placeholder="0,00" onChange={(e) => up({ valor: mascaraMoeda(e.target.value) })} />
                     <Input type="number" min={1} max={48} value={it.parcelas} onChange={(e) => up({ parcelas: e.target.value })} />
                     <Button type="button" variant="ghost" size="icon" aria-label="Remover item" disabled={itens.length === 1}
                       onClick={() => setItens((l) => l.filter((_, j) => j !== idx))}><Trash2 className="text-destructive h-4 w-4" /></Button>
@@ -748,12 +749,38 @@ function BaixaDialog({ tipo, titulo, onClose, onSaved }: { tipo: TipoTitulo; tit
     catch (e) { toast.error(e instanceof Error ? e.message : "Falha no envio."); }
     finally { setEnviando(false); }
   };
+  const { data: contasBanc = [] } = useTableRows("financeiro_contas_bancarias");
+  const { data: todosTitulos = [] } = useTableRows("financeiro_titulos");
+  const conta = useMemo(() => {
+    if (tipo !== "receber") return null;
+    const id = text(titulo["conta_bancaria_id"]);
+    return contasBanc.find((c) => text(rowId(c)) === id) ?? contasBanc.find((c) => c["padrao"]) ?? null;
+  }, [tipo, titulo, contasBanc]);
+  const tarifaInfo = useMemo(() => {
+    const mod = modalidadeTarifa(v.forma);
+    if (!conta || !mod) return calcularTarifa(null, v.forma, 0);
+    const mes = v.data.slice(0, 7); const cid = text(rowId(conta));
+    const usadas = todosTitulos.filter((t) => t["tipo"] === "receber" && t["status"] === "pago" && text(t["pago_em"]).slice(0, 7) === mes
+      && modalidadeTarifa(text(t["forma_pagamento"])) === mod && text(t["conta_bancaria_id"] || "") === cid && text(rowId(t)) !== text(rowId(titulo))).length;
+    return calcularTarifa(conta as never, v.forma, usadas);
+  }, [conta, v.forma, v.data, todosTitulos, titulo]);
   const confirmar = async () => {
+    const tarifa = tarifaInfo.tarifa;
     const { error } = await supabase.from("financeiro_titulos").update({
       status: "pago", pago_em: v.data, valor_pago: total, juros: round2(num(v.juros)), desconto: round2(num(v.desconto)),
       forma_pagamento: v.forma, comprovante: v.comprovante || titulo["comprovante"] || null,
+      ...(tipo === "receber" ? { tarifa_bancaria: tarifa, valor_liquido: round2(total - tarifa), conta_bancaria_id: conta ? text(rowId(conta)) : titulo["conta_bancaria_id"] ?? null } : {}),
     } as never).eq("id", text(rowId(titulo)));
     if (error) return void toast.error(erroFinanceiro(error));
+    if (tipo === "receber" && conta && tarifa > 0 && conta["gerar_despesa_tarifa"] !== false) {
+      const { error: e2 } = await supabase.from("financeiro_titulos").insert({
+        empresa_id: titulo["empresa_id"], tipo: "pagar", categoria: "Tarifas Bancárias",
+        descricao: `Tarifa ${v.forma} — ${text(titulo["descricao"])} (${text(conta["descricao"])})`,
+        vencimento: v.data, valor: tarifa, status: "pago", pago_em: v.data, valor_pago: tarifa,
+        forma_pagamento: "Débito em conta", conta_bancaria_id: text(rowId(conta)),
+      } as never);
+      if (e2) toast.error(`Recebimento salvo, mas a tarifa não foi lançada: ${erroFinanceiro(e2)}`);
+    }
     toast.success(tipo === "receber" ? "Recebimento registrado." : "Pagamento registrado.");
     onSaved(); onClose();
   };
@@ -770,8 +797,8 @@ function BaixaDialog({ tipo, titulo, onClose, onSaved }: { tipo: TipoTitulo; tit
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>{FORMAS_PAGAMENTO.map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
             </Select></div>
-          <div className="space-y-1"><Label>Juros / multa (R$)</Label><Input inputMode="decimal" value={v.juros} onChange={(e) => setV({ ...v, juros: e.target.value })} placeholder="0,00" /></div>
-          <div className="space-y-1"><Label>Desconto (R$)</Label><Input inputMode="decimal" value={v.desconto} onChange={(e) => setV({ ...v, desconto: e.target.value })} placeholder="0,00" /></div>
+          <div className="space-y-1"><Label>Juros / multa (R$)</Label><Input inputMode="decimal" value={v.juros} onChange={(e) => setV({ ...v, juros: mascaraMoeda(e.target.value) })} placeholder="0,00" /></div>
+          <div className="space-y-1"><Label>Desconto (R$)</Label><Input inputMode="decimal" value={v.desconto} onChange={(e) => setV({ ...v, desconto: mascaraMoeda(e.target.value) })} placeholder="0,00" /></div>
           <div className="space-y-1 sm:col-span-2">
             <Label className="flex items-center gap-1">Comprovante (foto) <UploadInfo perfil="laudo" /></Label>
             <Input type="file" accept="image/*" disabled={enviando} onChange={(e) => anexar(e.target.files?.[0])} />
@@ -779,6 +806,12 @@ function BaixaDialog({ tipo, titulo, onClose, onSaved }: { tipo: TipoTitulo; tit
           </div>
         </div>
         <p className="text-sm">Valor da baixa: <strong>{formatBRL(total)}</strong></p>
+        {tipo === "receber" && conta && modalidadeTarifa(v.forma) && (
+          <p className="text-muted-foreground text-sm">
+            Tarifa {text(conta["descricao"])} ({tarifaInfo.sequencia}ª {v.forma.toLowerCase()} do mês):{" "}
+            <strong>{tarifaInfo.isento ? "Isento pelo pacote" : formatBRL(tarifaInfo.tarifa)}</strong> • Líquido: <strong>{formatBRL(total - tarifaInfo.tarifa)}</strong>
+          </p>
+        )}
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
           <Button disabled={enviando} onClick={confirmar}>Confirmar</Button>

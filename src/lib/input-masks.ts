@@ -8,6 +8,17 @@ import {
 
 export const digitsOnly = (value: string) => value.replace(/\D/g, "");
 
+/** Máscara monetária pt-BR: centavos preenchidos da direita para a esquerda ("249" → "2,49"). */
+export function mascaraMoeda(value: string): string {
+  const d = digitsOnly(value).replace(/^0+/, "").slice(0, 13);
+  if (!d) return "";
+  return (Number(d) / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+/** Número → texto mascarado (ex.: 1500 → "1.500,00"). */
+export const moedaDeNumero = (n: number) =>
+  n ? n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "";
+
 export function matchesMaskedValue(value: unknown, term: string): boolean {
   const query = term.trim();
   if (!query) return true;
