@@ -25,13 +25,18 @@ function colunaCom(r: Row, partes: string[], excluir: string[] = []): unknown {
 }
 
 /** Descobre o kanban vinculado ao módulo de Orçamentos via `funcoes_kanban`. */
-export async function kanbanDoModuloOrcamentos(): Promise<string | null> {
+export function kanbanDoModuloOrcamentos(): Promise<string | null> {
+  return kanbanDoModulo("orcamentos", "orcamento");
+}
+
+/** Kanban vinculado à função cujo path é `/<modulo>` (ou cuja descrição começa por `prefixoDesc`). */
+export async function kanbanDoModulo(modulo: string, prefixoDesc?: string): Promise<string | null> {
   const { data: funcoes } = await supabase.from("funcoes").select("*");
   const ids = ((funcoes ?? []) as Row[])
     .filter((f) => {
       const path = norm(f["path"]).replace(/^\/+|\/+$/g, "");
       const desc = norm(pick(f, ["descricao", "nome"]));
-      return path === "orcamentos" || path.endsWith("/orcamentos") || desc.startsWith("orcamento");
+      return path === modulo || path.endsWith(`/${modulo}`) || (!!prefixoDesc && desc.startsWith(prefixoDesc));
     })
     // A chave de `funcoes` pode ser `funcao_id` (não `id`).
     .flatMap((f) =>
