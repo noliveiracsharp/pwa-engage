@@ -231,12 +231,12 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
   };
 
   const [loteAcao, setLoteAcao] = useState<null | { acao: "pagar" | "agendar" | "reajustar"; itens: Row[] }>(null);
-  const [loteForm, setLoteForm] = useState({ data: hojeISO(), forma: "", percentual: "" });
+  const [loteForm, setLoteForm] = useState({ data: hojeISO(), forma: "", percentual: "", whats: true, email: true });
   const [ipcaCarregando, setIpcaCarregando] = useState(false);
   const [ipcaRef, setIpcaRef] = useState("");
   const abrirLote = (acao: "pagar" | "agendar" | "reajustar", itens: Row[]) => {
     if (!itens.length) return void toast.error("Nenhum título elegível na seleção.");
-    setLoteForm({ data: hojeISO(), forma: "", percentual: "" }); setLoteAcao({ acao, itens });
+    setLoteForm({ data: hojeISO(), forma: "", percentual: "", whats: tipo === "receber", email: tipo === "receber" }); setLoteAcao({ acao, itens });
   };
   const sit = (t: Row) => situacaoTitulo(t, hoje);
   const abertosSel = selecionados.filter((t) => ["aberto", "atrasado", "agendado"].includes(sit(t)));
@@ -268,6 +268,19 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
         if (error) return void toast.error(erroFinanceiro(error));
       }
       toast.success(`${itens.length} título(s) reajustado(s) em ${pct}%.`);
+      const canais = [loteForm.whats && "whatsapp", loteForm.email && "email"].filter(Boolean);
+      if (tipo === "receber" && canais.length) {
+        const { data, error } = await supabase.functions.invoke("cobranca-regua", { body: {
+          acao: "reajuste_aviso", percentual: pct, referencia: ipcaRef.replace(/^IPCA acumulado 12 meses: [^(]*\(/, "IPCA 12m, ").replace(/\)$/, ""), canais,
+          itens: itens.map((t) => ({ id: text(rowId(t)), valor_anterior: num(t["valor"]) })) } });
+        const log = ((data as { log?: Array<{ ok: boolean; cliente: string; canal: string; erro?: string }> } | null)?.log) ?? [];
+        if (error || (data as { erro?: string } | null)?.erro) toast.error(`Reajuste salvo, mas a comunicação falhou: ${(data as { erro?: string } | null)?.erro ?? "atualize a função cobranca-regua (v3)."}`);
+        else {
+          const ok = log.filter((l) => l.ok).length, falhas = log.filter((l) => !l.ok);
+          toast.success(`Comunicação enviada: ${ok} envio(s).`);
+          if (falhas.length) toast.error(`${falhas.length} envio(s) não realizados: ${falhas.slice(0, 3).map((f) => `${f.cliente} (${f.erro})`).join("; ")}`, { duration: 10000 });
+        }
+      }
     } else if (acao === "pagar") {
       for (const t of itens) {
         const { error } = await supabase.from("financeiro_titulos").update({
@@ -451,6 +464,15 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
                       }}><TrendingUp className="h-4 w-4" />{ipcaCarregando ? "Buscando..." : "Buscar IPCA 12m"}</Button>
                     </div>
                     {ipcaRef && <p className="text-xs text-muted-foreground">{ipcaRef}</p>}</div>
+                  {tipo === "receber" && (
+                    <div className="space-y-1 rounded-md border p-2"><p className="text-sm font-medium">Comunicar clientes do reajuste</p>
+                      <div className="flex flex-wrap gap-4 text-sm">
+                        <label className="flex items-center gap-2"><Switch checked={loteForm.whats} onCheckedChange={(x) => setLoteForm((s) => ({ ...s, whats: x }))} /> WhatsApp</label>
+                        <label className="flex items-center gap-2"><Switch checked={loteForm.email} onCheckedChange={(x) => setLoteForm((s) => ({ ...s, email: x }))} /> E-mail (modelo do aviso de boleto)</label>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Uma mensagem por cliente, com valor anterior, novo valor, índice aplicado e as parcelas reajustadas.</p>
+                    </div>
+                  )}
                   {pct !== 0 && <p className="text-sm">Novo total: <strong className="tabular-nums">{formatBRL(loteAcao.itens.reduce((s, t) => s + valorReajustado(num(t["valor"]), pct), 0))}</strong></p>}
                   {carencia > 0 && <p className="text-destructive text-sm font-medium">Atenção: {carencia} título(s) ainda não completaram {CARENCIA_REAJUSTE_MESES} meses desde o início do contrato ou do último reajuste.</p>}
                   <div className="max-h-72 overflow-auto rounded border">

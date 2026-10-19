@@ -17,6 +17,7 @@ import { pick, type Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
 import { confirmar } from "@/components/layout/DialogoGlobal";
 import { QuickCreateDialog } from "@/components/itens/QuickCreateDialog";
+const ITEM_RAPIDO = [{ key: "descricao", label: "Descrição" }, { key: "codigo", label: "Código / referência" }];
 import { PainelAprovacaoCotacao } from "@/components/cotacoes/AprovacaoCompras";
 import { podeGerarPedido } from "@/lib/aprovacao-compras";
 
@@ -476,7 +477,7 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
               </div>
             )}
             <QuickCreateDialog open={criarItem} onOpenChange={setCriarItem} title="Novo item" table="itens"
-              fields={[{ key: "descricao", label: "Descrição" }, { key: "codigo", label: "Código / referência" }]}
+              fields={ITEM_RAPIDO}
               onCreated={(id) => { void qc.invalidateQueries({ queryKey: ["table", "itens"] }); void addItem(id); }} />
             <div className="overflow-x-auto rounded-lg border">
               <table className="w-full text-sm">
