@@ -130,6 +130,22 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
   const hoje = hojeISO();
 
   const doTipo = useMemo(() => todos.filter((t) => t["tipo"] === tipo), [todos, tipo]);
+  // Posição real na série (n/total) pelo vínculo origem_id, independente do texto da descrição.
+  const posSerie = useMemo(() => {
+    const grupos = new Map<string, Row[]>();
+    for (const t of doTipo) {
+      if (t["origem_tipo"] !== "manual" || !t["origem_id"]) continue;
+      const k = text(t["origem_id"]);
+      grupos.set(k, [...(grupos.get(k) ?? []), t]);
+    }
+    const mapa = new Map<string, string>();
+    for (const l of grupos.values()) {
+      if (l.length < 2) continue;
+      l.sort((a, b) => text(a["vencimento"]).localeCompare(text(b["vencimento"])));
+      l.forEach((t, i) => mapa.set(text(rowId(t)), `${i + 1}/${l.length}`));
+    }
+    return mapa;
+  }, [doTipo]);
   const rows = useMemo(
     () =>
       doTipo
@@ -226,7 +242,9 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
     { key: "desc", header: "Descrição", fields: ["descricao"], render: (t) => (
       <div className="min-w-0">
         {(() => {
-          const m = text(t["descricao"]).match(/^(.*?)\s*\((\d+\/\d+)\)\s*$/);
+          const txt = text(t["descricao"]).match(/^(.*?)\s*\((\d+\/\d+)\)\s*$/);
+          const pos = posSerie.get(text(rowId(t)));
+          const m = pos ? [null, txt ? txt[1] : text(t["descricao"]), pos] as const : txt;
           return (
             <div className="flex min-w-0 items-center gap-1.5">
               <p className="truncate font-medium">{m ? m[1] : text(t["descricao"])}</p>
