@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
-import { Copy, MessageCircle } from "lucide-react";
+import { Ban, Copy, FileDown, Landmark, Loader2, MessageCircle, RefreshCw } from "lucide-react";
+import { abrirPdfBase64, chamarBanco, STATUS_COBRANCA } from "@/lib/banco-api";
+import { confirmar } from "@/components/layout/DialogoGlobal";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,6 +47,25 @@ export function CobrancaDialog({ titulo, parceiro, onClose, onSaved }: { titulo:
   useEffect(() => { if (pix) void QRCode.toDataURL(pix, { margin: 1, width: 220 }).then(setQr); else setQr(""); }, [pix]);
 
   const copiar = (v: string) => { void navigator.clipboard.writeText(v); toast.success("Copiado."); };
+  const [stCob, setStCob] = useState(text(titulo["cobranca_status"]));
+  const [banco, setBanco] = useState<string | null>(null);
+  const acaoBanco = async (acao: "emitir" | "consultar" | "pdf" | "cancelar") => {
+    let motivo = "";
+    if (acao === "cancelar") { if (!(await confirmar("Cancelar este boleto no banco?"))) return; motivo = "Cancelado pelo emissor"; }
+    if (acao === "emitir" && contaId !== text(titulo["conta_bancaria_id"])) { if (!(await salvar(false))) return; }
+    setBanco(acao);
+    try {
+      const r = await chamarBanco<Record<string, unknown>>(acao, { titulo_id: text(rowId(titulo)), motivo });
+      if (acao === "pdf") abrirPdfBase64(text(r["pdf"]));
+      else {
+        if (r["linha_digitavel"]) setLinha(text(r["linha_digitavel"]));
+        setStCob(acao === "cancelar" ? "cancelado" : text(r["cobranca_status"]));
+        toast.success(acao === "emitir" ? "Boleto registrado no banco." : acao === "cancelar" ? "Boleto cancelado." : "Situação atualizada.");
+        onSaved();
+      }
+    } catch (e) { toast.error((e as Error).message); }
+    setBanco(null);
+  };
   const salvar = async (enviado: boolean) => {
     setSalvando(true);
     const upd: Record<string, unknown> = { conta_bancaria_id: contaId || null, linha_digitavel: linha.trim() || null, boleto_url: boletoUrl.trim() || null, pix_copia_cola: pix || null };
@@ -95,6 +116,27 @@ export function CobrancaDialog({ titulo, parceiro, onClose, onSaved }: { titulo:
                 <Label>Pix copia e cola (com valor)</Label>
                 <Textarea readOnly value={pix} className="h-28 font-mono text-xs" />
                 <Button variant="outline" size="sm" onClick={() => copiar(pix)}><Copy className="mr-1 h-4 w-4" />Copiar Pix</Button>
+              </div>
+            </div>
+          )}
+          {conta?.["api_ativo"] === true && (
+            <div className="space-y-2 rounded-lg border p-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <Landmark className="text-primary h-4 w-4" />
+                <span className="text-sm font-medium">Boleto + Pix pelo banco ({text(conta["provedor_api"])})</span>
+                {stCob && <span className={`rounded px-2 py-0.5 text-xs ${STATUS_COBRANCA[stCob]?.cls ?? "bg-muted"}`}>{STATUS_COBRANCA[stCob]?.label ?? stCob}</span>}
+              </div>
+              {text(titulo["cobranca_erro"]) && !stCob && <p className="text-destructive text-xs">Última tentativa: {text(titulo["cobranca_erro"])}</p>}
+              <div className="flex flex-wrap gap-2">
+                {(!stCob || stCob === "cancelado" || stCob === "baixado") ? (
+                  <Button size="sm" disabled={!!banco} onClick={() => acaoBanco("emitir")}>{banco === "emitir" ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Landmark className="mr-1 h-4 w-4" />}Emitir boleto pelo banco</Button>
+                ) : (
+                  <>
+                    <Button size="sm" variant="outline" disabled={!!banco} onClick={() => acaoBanco("pdf")}><FileDown className="mr-1 h-4 w-4" />PDF oficial</Button>
+                    <Button size="sm" variant="outline" disabled={!!banco} onClick={() => acaoBanco("consultar")}><RefreshCw className="mr-1 h-4 w-4" />Atualizar situação</Button>
+                    {stCob !== "pago" && <Button size="sm" variant="outline" disabled={!!banco} onClick={() => acaoBanco("cancelar")}><Ban className="text-destructive mr-1 h-4 w-4" />Cancelar boleto</Button>}
+                  </>
+                )}
               </div>
             </div>
           )}
