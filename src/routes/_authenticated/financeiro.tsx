@@ -749,12 +749,38 @@ function BaixaDialog({ tipo, titulo, onClose, onSaved }: { tipo: TipoTitulo; tit
     catch (e) { toast.error(e instanceof Error ? e.message : "Falha no envio."); }
     finally { setEnviando(false); }
   };
+  const { data: contasBanc = [] } = useTableRows("financeiro_contas_bancarias");
+  const { data: todosTitulos = [] } = useTableRows("financeiro_titulos");
+  const conta = useMemo(() => {
+    if (tipo !== "receber") return null;
+    const id = text(titulo["conta_bancaria_id"]);
+    return contasBanc.find((c) => text(rowId(c)) === id) ?? contasBanc.find((c) => c["padrao"]) ?? null;
+  }, [tipo, titulo, contasBanc]);
+  const tarifaInfo = useMemo(() => {
+    const mod = modalidadeTarifa(v.forma);
+    if (!conta || !mod) return calcularTarifa(null, v.forma, 0);
+    const mes = v.data.slice(0, 7); const cid = text(rowId(conta));
+    const usadas = todosTitulos.filter((t) => t["tipo"] === "receber" && t["status"] === "pago" && text(t["pago_em"]).slice(0, 7) === mes
+      && modalidadeTarifa(text(t["forma_pagamento"])) === mod && text(t["conta_bancaria_id"] || "") === cid && text(rowId(t)) !== text(rowId(titulo))).length;
+    return calcularTarifa(conta as never, v.forma, usadas);
+  }, [conta, v.forma, v.data, todosTitulos, titulo]);
   const confirmar = async () => {
+    const tarifa = tarifaInfo.tarifa;
     const { error } = await supabase.from("financeiro_titulos").update({
       status: "pago", pago_em: v.data, valor_pago: total, juros: round2(num(v.juros)), desconto: round2(num(v.desconto)),
       forma_pagamento: v.forma, comprovante: v.comprovante || titulo["comprovante"] || null,
+      ...(tipo === "receber" ? { tarifa_bancaria: tarifa, valor_liquido: round2(total - tarifa), conta_bancaria_id: conta ? text(rowId(conta)) : titulo["conta_bancaria_id"] ?? null } : {}),
     } as never).eq("id", text(rowId(titulo)));
     if (error) return void toast.error(erroFinanceiro(error));
+    if (tipo === "receber" && conta && tarifa > 0 && conta["gerar_despesa_tarifa"] !== false) {
+      const { error: e2 } = await supabase.from("financeiro_titulos").insert({
+        empresa_id: titulo["empresa_id"], tipo: "pagar", categoria: "Tarifas Bancárias",
+        descricao: `Tarifa ${v.forma} — ${text(titulo["descricao"])} (${text(conta["descricao"])})`,
+        vencimento: v.data, valor: tarifa, status: "pago", pago_em: v.data, valor_pago: tarifa,
+        forma_pagamento: "Débito em conta", conta_bancaria_id: text(rowId(conta)),
+      } as never);
+      if (e2) toast.error(`Recebimento salvo, mas a tarifa não foi lançada: ${erroFinanceiro(e2)}`);
+    }
     toast.success(tipo === "receber" ? "Recebimento registrado." : "Pagamento registrado.");
     onSaved(); onClose();
   };
@@ -780,6 +806,12 @@ function BaixaDialog({ tipo, titulo, onClose, onSaved }: { tipo: TipoTitulo; tit
           </div>
         </div>
         <p className="text-sm">Valor da baixa: <strong>{formatBRL(total)}</strong></p>
+        {tipo === "receber" && conta && modalidadeTarifa(v.forma) && (
+          <p className="text-muted-foreground text-sm">
+            Tarifa {text(conta["descricao"])} ({tarifaInfo.sequencia}ª {v.forma.toLowerCase()} do mês):{" "}
+            <strong>{tarifaInfo.isento ? "Isento pelo pacote" : formatBRL(tarifaInfo.tarifa)}</strong> • Líquido: <strong>{formatBRL(total - tarifaInfo.tarifa)}</strong>
+          </p>
+        )}
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
           <Button disabled={enviando} onClick={confirmar}>Confirmar</Button>
