@@ -481,9 +481,10 @@ function TituloSheet({ tipo, registro, modelo, parceiros, cartoes, readOnly, onC
       hint: p["documento"] ? formatCpfCnpj(text(p["documento"])) : undefined,
       keywords: [text(p["razao_social"]), text(p["nome_fantasia"]), text(p["documento"]), text(p["documento"]).replace(/\D/g, "")] }));
   const cartaoModo = !registro && v.modo === "cartao";
-  // Na edição, um lançamento avulso manual em aberto pode virar parcelado/recorrente e ser baixado.
+  // Na edição, um lançamento avulso manual (aberto ou já pago) pode virar parcelado/recorrente;
+  // se já estiver pago, a baixa permanece só na 1ª parcela.
   const podeConverter = !registro || (!temSerie && text(registro["origem_tipo"] || "manual") === "manual"
-    && registro["status"] !== "pago" && !text(registro["cartao_id"]));
+    && !text(registro["cartao_id"]));
   const cartao = cartoes.find((c) => text(rowId(c)) === v.cartao_id);
   const [porItem, setPorItem] = useState(false);
   const [itens, setItens] = useState<{ descricao: string; categoria: string; valor: string; parcelas: string }[]>([{ descricao: "", categoria: "", valor: "", parcelas: "1" }]);
