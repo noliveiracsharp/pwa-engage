@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useEmpresaAtiva } from "@/hooks/useEmpresaAtiva";
 import { EXEMPLO_EMAIL, montarEmailCobrancaHtml, ETAPAS_PADRAO, MODELO_EMAIL_ASSUNTO_PADRAO, MODELO_WHATSAPP_PADRAO, rotuloEtapa, type Canal, type Etapa } from "@/lib/regua-cobranca";
+import { useAuth } from "@/hooks/useAuth";
 import { formatBRL } from "@/lib/orcamentos";
 import { text } from "@/lib/crud";
 
@@ -51,10 +52,17 @@ export function ReguaCobranca({ canEdit }: { canEdit: boolean }) {
   const [semScript, setSemScript] = useState(false);
   const empresaAtiva = useEmpresaAtiva();
   const [previa, setPrevia] = useState(false);
-  const htmlPrevia = useMemo(() => montarEmailCobrancaHtml({
-    ...EXEMPLO_EMAIL, empresaNome: empresaAtiva.nome ?? "", logo: empresaAtiva.logo, cor: empresaAtiva.claro ?? "",
-    vencimento: new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10), link: "#",
-  }), [empresaAtiva.nome, empresaAtiva.logo, empresaAtiva.claro]);
+  const { empresa: empresaRow } = useAuth();
+  const htmlPrevia = useMemo(() => {
+    const e = (empresaRow ?? {}) as Record<string, unknown>;
+    const s = (k: string) => (e[k] ? String(e[k]) : null);
+    return montarEmailCobrancaHtml({
+      ...EXEMPLO_EMAIL, empresaNome: empresaAtiva.nome ?? "", logo: empresaAtiva.logo, cor: empresaAtiva.claro ?? "",
+      vencimento: new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10), link: "#",
+      documento: s("cnpj_cpf"), endereco: s("endereco"), telefone: s("telefone1"),
+      emailContato: cfg?.responder_para || cfg?.remetente_email || null, site: empresaAtiva.site || null,
+    });
+  }, [empresaAtiva.nome, empresaAtiva.logo, empresaAtiva.claro, empresaAtiva.site, empresaRow, cfg?.responder_para, cfg?.remetente_email]);
 
   useEffect(() => {
     void (async () => {

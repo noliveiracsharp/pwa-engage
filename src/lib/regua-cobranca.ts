@@ -71,22 +71,43 @@ const dataBR = (iso: unknown) => { const s = String(iso ?? "").slice(0, 10); ret
 export type DadosEmailCobranca = {
   empresaNome: string; logo?: string | null | undefined; cor: string; cliente: string; dias: number;
   descricao: string; valor: number; vencimento: string; linhaDigitavel?: string; link: string; pixel?: string;
+  documento?: string | null; endereco?: string | null; telefone?: string | null; emailContato?: string | null; site?: string | null;
 };
+
+/** Formata CPF/CNPJ só com dígitos; outros textos voltam como vieram. */
+export function formatarDocumento(v: unknown): string {
+  const n = String(v ?? "").replace(/\D/g, "");
+  if (n.length === 14) return n.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+  if (n.length === 11) return n.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, "$1.$2.$3-$4");
+  return String(v ?? "");
+}
 
 /** Layout oficial do e-mail de cobrança (espelhado na Edge Function cobranca-regua). */
 export function montarEmailCobrancaHtml(d: DadosEmailCobranca): string {
   const cor = d.cor || "#2563eb";
+  const doc = formatarDocumento(d.documento);
+  const benef = `${escHtml(d.empresaNome)}${doc ? ` — CNPJ/CPF ${escHtml(doc)}` : ""}`;
+  const contatos = [d.telefone && `WhatsApp/Telefone: ${escHtml(d.telefone)}`, d.emailContato && `E-mail: ${escHtml(d.emailContato)}`, d.site && `<a href="${escHtml(d.site)}" style="color:${cor}">${escHtml(d.site.replace(/^https?:\/\//, ""))}</a>`].filter(Boolean).join(" · ");
   return `<!doctype html><html><body style="margin:0;background:#f4f4f5;font-family:Arial,sans-serif">
 <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:24px">
-<table width="560" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;max-width:100%">
-<tr><td style="background:${cor};padding:20px;color:#fff;font-size:18px;font-weight:bold">${d.logo ? `<img src="${escHtml(d.logo)}" height="36" alt="">` : escHtml(d.empresaNome)}</td></tr>
+<table width="560" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;max-width:100%;border-top:6px solid ${cor}">
+<tr><td style="padding:22px 24px 16px;border-bottom:1px solid #e4e4e7"><table width="100%" cellpadding="0" cellspacing="0"><tr>
+<td>${d.logo ? `<img src="${escHtml(d.logo)}" height="44" alt="${escHtml(d.empresaNome)}" style="display:block">` : `<span style="font-size:20px;font-weight:bold;color:${cor}">${escHtml(d.empresaNome)}</span>`}</td>
+<td align="right" style="font-size:11px;color:#71717a;line-height:1.4">${doc ? `CNPJ/CPF ${escHtml(doc)}<br>` : ""}${d.endereco ? escHtml(d.endereco) : ""}</td></tr></table></td></tr>
 <tr><td style="padding:24px;color:#18181b;font-size:15px;line-height:1.5">
 <p>Olá, ${escHtml(d.cliente)}!</p><p>${escHtml(avisoEtapa(d.dias))}</p>
-<table width="100%" style="background:#f4f4f5;border-radius:8px;padding:12px;margin:16px 0">
+<table width="100%" style="background:#f4f4f5;border-left:4px solid ${cor};border-radius:8px;padding:12px;margin:16px 0">
 <tr><td>${escHtml(d.descricao)}</td></tr><tr><td style="font-size:22px;font-weight:bold">${brl(d.valor)}</td></tr><tr><td>Vencimento: ${dataBR(d.vencimento)}</td></tr></table>
 <p style="text-align:center"><a href="${escHtml(d.link)}" style="background:${cor};color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold">Ver boleto, Pix e nota fiscal</a></p>
 ${d.linhaDigitavel ? `<p style="font-size:12px;color:#52525b">Linha digitável:<br><b>${escHtml(d.linhaDigitavel)}</b></p>` : ""}
+<table width="100%" style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px;margin:16px 0;font-size:12px;color:#78350f"><tr><td>
+<b>Dica de segurança:</b> antes de confirmar o Pix ou o boleto, confira no seu banco se o beneficiário é <b>${benef}</b>. Se for diferente, não pague e fale com a gente.</td></tr></table>
 <p style="font-size:12px;color:#71717a">Se já realizou o pagamento, desconsidere esta mensagem.</p>
+</td></tr>
+<tr><td style="background:#fafafa;border-top:1px solid #e4e4e7;padding:16px 24px;font-size:11px;color:#71717a;line-height:1.5">
+<b style="color:#3f3f46">${benef}</b>${d.endereco ? `<br>${escHtml(d.endereco)}` : ""}
+${contatos ? `<br>Dúvidas sobre esta fatura? ${contatos}` : ""}
+<br>Você recebe este e-mail porque possui serviços ativos com ${escHtml(d.empresaNome)}. Seus dados são tratados conforme a LGPD.
 </td></tr></table></td></tr></table>${d.pixel ? `<img src="${escHtml(d.pixel)}" width="1" height="1" alt="">` : ""}</body></html>`;
 }
 
