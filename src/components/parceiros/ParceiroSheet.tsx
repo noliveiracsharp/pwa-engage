@@ -384,7 +384,7 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly, saving, on
                       <Select value={f.parceiro_pai_id || "none"} disabled={readOnly}
                         onValueChange={(v) => set("parceiro_pai_id", v === "none" ? "" : v)}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
+                        <SelectContent sort={false}>
                           <SelectItem value="none">Selecione…</SelectItem>
                           {paiOptions.map(({ row, depth }) => (
                             <SelectItem key={String(rowId(row))} value={String(rowId(row))}>
