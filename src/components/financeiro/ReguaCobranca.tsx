@@ -49,6 +49,12 @@ export function ReguaCobranca({ canEdit }: { canEdit: boolean }) {
   const [salvando, setSalvando] = useState(false);
   const [rodando, setRodando] = useState(false);
   const [semScript, setSemScript] = useState(false);
+  const empresaAtiva = useEmpresaAtiva();
+  const [previa, setPrevia] = useState(false);
+  const htmlPrevia = useMemo(() => montarEmailCobrancaHtml({
+    ...EXEMPLO_EMAIL, empresaNome: empresaAtiva.nome ?? "", logo: empresaAtiva.logo, cor: empresaAtiva.claro ?? "",
+    vencimento: new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10), link: "#",
+  }), [empresaAtiva.nome, empresaAtiva.logo, empresaAtiva.claro]);
 
   useEffect(() => {
     void (async () => {
@@ -94,12 +100,6 @@ export function ReguaCobranca({ canEdit }: { canEdit: boolean }) {
     catch (e) { toast.error((e as Error).message); }
     setRodando(false);
   };
-  const empresaAtiva = useEmpresaAtiva();
-  const [previa, setPrevia] = useState(false);
-  const htmlPrevia = useMemo(() => montarEmailCobrancaHtml({
-    ...EXEMPLO_EMAIL, empresaNome: empresaAtiva.nome ?? "", logo: empresaAtiva.logo, cor: empresaAtiva.claro ?? "",
-    vencimento: new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10), link: "#",
-  }), [empresaAtiva.nome, empresaAtiva.logo, empresaAtiva.claro]);
   const testarEmail = async () => {
     const para = cfg.responder_para || cfg.remetente_email;
     if (!para) return void toast.error("Preencha o e-mail do remetente ou de resposta para receber o teste.");
