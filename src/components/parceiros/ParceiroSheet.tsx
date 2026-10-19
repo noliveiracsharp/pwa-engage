@@ -69,7 +69,7 @@ const TEXT_KEYS = [
   "razao_social", "nome_fantasia", "documento", "inscricao_estadual", "telefone", "telefone2", "email",
   "cep", "endereco", "numero", "complemento", "bairro", "cidade", "uf", "observacoes",
   "data_inicio_atividade", "situacao_cadastral", "motivo_situacao_cadastral", "porte", "natureza_juridica",
-  "cnae_principal_codigo", "cnae_principal_descricao", "capital_social", "cobranca_canais",
+  "cnae_principal_codigo", "cnae_principal_descricao", "capital_social", "cobranca_canais", "oferta_canais",
 ] as const;
 type TextKey = (typeof TEXT_KEYS)[number];
 
@@ -253,6 +253,7 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly, saving, on
     for (const k of TEXT_KEYS) values[k] = f[k].trim() || null;
     // só grava a preferência de cobrança quando escolhida (coluna criada pelo script da régua)
     if (!values["cobranca_canais"]) delete values["cobranca_canais"];
+    if (!values["oferta_canais"] && !record?.["oferta_canais"]) delete values["oferta_canais"];
     values["documento"] = doc || null;
     values["cep"] = digitsOnly(f.cep) || null;
     values["uf"] = f.uf.trim().toUpperCase() || null;
@@ -418,6 +419,19 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly, saving, on
                         <SelectItem value="padrao">Padrão da empresa</SelectItem>
                         <SelectItem value="whatsapp">Somente WhatsApp</SelectItem>
                         <SelectItem value="email">Somente e-mail</SelectItem>
+                        <SelectItem value="ambos">WhatsApp e e-mail</SelectItem>
+                        <SelectItem value="nenhum">Não enviar</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <Label className="mb-1.5 block text-sm font-medium">Receber acompanhamento de Ofertas por</Label>
+                    <Select value={f.oferta_canais || "padrao"} onValueChange={v => set("oferta_canais", v === "padrao" ? "" : v)}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="padrao">Padrão da empresa</SelectItem>
+                        <SelectItem value="email">Somente e-mail</SelectItem>
+                        <SelectItem value="whatsapp">Somente WhatsApp</SelectItem>
                         <SelectItem value="ambos">WhatsApp e e-mail</SelectItem>
                         <SelectItem value="nenhum">Não enviar</SelectItem>
                       </SelectContent>

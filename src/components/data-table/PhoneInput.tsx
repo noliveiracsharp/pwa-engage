@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { getCountries, getCountryCallingCode, type CountryCode } from "libphonenumber-js";
 import { Input } from "@/components/ui/input";
+import { WhatsAppStatus } from "./WhatsAppStatus";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   countryFlag,
@@ -78,6 +79,7 @@ export function PhoneInput({ id, value, onChange }: Props) {
         maxLength={24}
         onChange={(event) => changeNumber(event.target.value)}
       />
+      <WhatsAppStatus telefone={value} />
     </div>
   );
 }

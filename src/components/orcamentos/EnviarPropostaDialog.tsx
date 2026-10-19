@@ -83,6 +83,8 @@ export function EnviarPropostaDialog({ open, onOpenChange, orcamento, empresa, c
     try {
       const inst = instancias.find((i) => text(rowId(i)) === instId);
       await dispararMensagem({ instancia: inst, mensagemId: null, atendimentoId: null, telefone, texto: mensagem });
+      const { error: acompanhamentoErro } = await supabase.rpc("oferta_marcar_envio", { p_id: String(rowId(orcamento) ?? "") });
+      if (acompanhamentoErro) toast.warning("Mensagem enviada, mas o acompanhamento não foi iniciado. Confira a instalação da régua.");
       toast.success("Mensagem enviada pelo WhatsApp da empresa.");
       onOpenChange(false);
     } catch (e) {

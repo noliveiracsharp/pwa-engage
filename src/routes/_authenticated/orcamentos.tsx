@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { etapasDoKanban, kanbanDoModuloOrcamentos } from "@/lib/orcamento-kanban";
 import { corEtapa } from "@/lib/kanban-cores";
 import { createFileRoute } from "@tanstack/react-router";
-import { ChevronDown, Copy, FileSignature, FileText, Info, ScrollText, ShoppingCart, Wallet } from "lucide-react";
+import { ChevronDown, Copy, FileSignature, FileText, Info, MessageCircle, ScrollText, ShoppingCart, Wallet } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
 import { DataTable, type Column } from "@/components/data-table/DataTable";
@@ -38,6 +38,7 @@ import { AtivacaoOfertaDialog } from "@/components/orcamentos/AtivacaoOfertaDial
 import { ofertaTravada, situacaoAtivada } from "@/lib/oferta-ativacao";
 import { executarHandoff } from "@/lib/kanban-handoff";
 import { confirmar } from "@/components/layout/DialogoGlobal";
+import { ReguaOfertas } from "@/components/orcamentos/ReguaOfertas";
 
 export const Route = createFileRoute("/_authenticated/orcamentos")({
   staticData: { sitemap: false },
@@ -131,6 +132,7 @@ function OrcamentosPage() {
   const [f, setF] = useState({ busca: "", situacao: "todos", vendedor: "todos", ano: "todos" });
   const [duplicarDe, setDuplicarDe] = useState<{ record: Row; linhas: Row[] } | null>(null);
   const [ativar, setAtivar] = useState<Row | null>(null);
+  const [reguaOpen, setReguaOpen] = useState(false);
 
   const gerarContas = async (r: Row) => {
     const id = String(rowId(r) ?? "");
@@ -448,6 +450,8 @@ function OrcamentosPage() {
 
   return (
     <>
+      <div className="mb-3 flex justify-end"><Button variant="outline" onClick={() => setReguaOpen(true)}><MessageCircle className="mr-2 h-4 w-4" />Régua de acompanhamento</Button></div>
+      <ReguaOfertas open={reguaOpen} onOpenChange={setReguaOpen} canEdit={perms.canUpdate} situacoes={situacoes.map(s => s.value)} />
       <div className="mb-4 flex gap-3 overflow-x-auto pb-1">
         {cards.map((c) => {
           const ativo = f.situacao === c.value;
