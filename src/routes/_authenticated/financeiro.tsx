@@ -56,6 +56,8 @@ import {
   valorReajustado,
   CARENCIA_REAJUSTE_MESES,
   SITUACAO_META,
+  distribuirPagamento,
+  saldoTitulo,
   situacaoTitulo,
   valorBaixa,
   parcelasManuais,
