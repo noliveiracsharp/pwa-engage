@@ -12,7 +12,9 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ETAPAS_PADRAO, MODELO_EMAIL_ASSUNTO_PADRAO, MODELO_WHATSAPP_PADRAO, rotuloEtapa, type Canal, type Etapa } from "@/lib/regua-cobranca";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useEmpresaAtiva } from "@/hooks/useEmpresaAtiva";
+import { EXEMPLO_EMAIL, montarEmailCobrancaHtml, ETAPAS_PADRAO, MODELO_EMAIL_ASSUNTO_PADRAO, MODELO_WHATSAPP_PADRAO, rotuloEtapa, type Canal, type Etapa } from "@/lib/regua-cobranca";
 import { formatBRL } from "@/lib/orcamentos";
 import { text } from "@/lib/crud";
 
@@ -92,6 +94,12 @@ export function ReguaCobranca({ canEdit }: { canEdit: boolean }) {
     catch (e) { toast.error((e as Error).message); }
     setRodando(false);
   };
+  const empresaAtiva = useEmpresaAtiva();
+  const [previa, setPrevia] = useState(false);
+  const htmlPrevia = useMemo(() => montarEmailCobrancaHtml({
+    ...EXEMPLO_EMAIL, empresaNome: empresaAtiva.nome, logo: empresaAtiva.logo, cor: empresaAtiva.claro,
+    vencimento: new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10), link: "#",
+  }), [empresaAtiva.nome, empresaAtiva.logo, empresaAtiva.claro]);
   const testarEmail = async () => {
     const para = cfg.responder_para || cfg.remetente_email;
     if (!para) return void toast.error("Preencha o e-mail do remetente ou de resposta para receber o teste.");
@@ -244,7 +252,14 @@ export function ReguaCobranca({ canEdit }: { canEdit: boolean }) {
             <div className="space-y-1"><Label>Nome do remetente</Label><Input value={cfg.remetente_nome ?? ""} onChange={(e) => set("remetente_nome", e.target.value)} /></div>
             <div className="space-y-1"><Label>E-mail do remetente</Label><Input type="email" value={cfg.remetente_email ?? ""} onChange={(e) => set("remetente_email", e.target.value)} /></div>
             <div className="space-y-1 sm:col-span-2"><Label>Responder para</Label><Input type="email" value={cfg.responder_para ?? ""} onChange={(e) => set("responder_para", e.target.value)} /></div>
-            <div className="sm:col-span-2"><Button variant="outline" onClick={testarEmail}><Send className="mr-1 h-4 w-4" />Enviar e-mail de teste</Button><span className="text-muted-foreground ml-2 text-xs">Salve antes de testar.</span></div>
+            <div className="sm:col-span-2"><Button variant="outline" onClick={testarEmail}><Send className="mr-1 h-4 w-4" />Enviar e-mail de teste</Button><Button variant="outline" className="ml-2" onClick={() => setPrevia(true)}><Eye className="mr-1 h-4 w-4" />Visualizar modelo</Button><span className="text-muted-foreground ml-2 text-xs">Salve antes de testar. O teste usa dados de exemplo.</span>
+              <Dialog open={previa} onOpenChange={setPrevia}>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader><DialogTitle>Prévia do e-mail de cobrança</DialogTitle></DialogHeader>
+                  <p className="text-muted-foreground text-xs">Exemplo com dados fictícios (lembrete 5 dias antes). Os dados reais do cliente e do título entram no envio.</p>
+                  <iframe title="Prévia do e-mail" srcDoc={htmlPrevia} sandbox="" className="h-[70vh] w-full rounded-md border" />
+                </DialogContent>
+              </Dialog></div>
           </CardContent>
         </Card>
       </TabsContent>
