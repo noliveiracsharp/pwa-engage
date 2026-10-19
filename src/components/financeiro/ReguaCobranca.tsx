@@ -97,7 +97,7 @@ export function ReguaCobranca({ canEdit }: { canEdit: boolean }) {
   const empresaAtiva = useEmpresaAtiva();
   const [previa, setPrevia] = useState(false);
   const htmlPrevia = useMemo(() => montarEmailCobrancaHtml({
-    ...EXEMPLO_EMAIL, empresaNome: empresaAtiva.nome, logo: empresaAtiva.logo, cor: empresaAtiva.claro,
+    ...EXEMPLO_EMAIL, empresaNome: empresaAtiva.nome ?? "", logo: empresaAtiva.logo, cor: empresaAtiva.claro ?? "",
     vencimento: new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10), link: "#",
   }), [empresaAtiva.nome, empresaAtiva.logo, empresaAtiva.claro]);
   const testarEmail = async () => {
