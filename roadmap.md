@@ -1,5 +1,11 @@
 # Roadmap
 
+## Régua de Ofertas e WhatsApp
+- [ ] Configurar etapas e templates próprios com e-mail no padrão de cobrança.
+- [ ] Implementar envio agendado, interrupção por situação e histórico sem duplicidade.
+- [ ] Verificar WhatsApp nos campos de telefone e consultar cadastros existentes em lote.
+- [ ] Ativar e verificar dados reais — depende da execução do SQL no banco próprio e da publicação.
+
 ## Ajuste atual
 - [x] Avisos de projetos: preservar exclusões individuais e Limpar entre atualizações e recargas, com testes de regressão.
 - [x] Situação das Ofertas usa as cores das etapas vinculadas na listagem e no formulário.
