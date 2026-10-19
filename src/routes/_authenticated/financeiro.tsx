@@ -461,7 +461,7 @@ function TituloSheet({ tipo, registro, modelo, parceiros, cartoes, readOnly, onC
   const itensModo = cartaoModo && porItem;
   const cartaoOk = !!(cartao && cartao["dia_fechamento"] && cartao["dia_vencimento"]);
   const optsCartao = { dataCompra: v.vencimento, diaFechamento: num(cartao?.["dia_fechamento"]), diaVencimento: num(cartao?.["dia_vencimento"]) };
-  const previa: { vencimento: string; valor: number; descricao?: string; categoria?: string; rotulo?: string }[] = registro ? [] : cartaoModo
+  const previa: { vencimento: string; valor: number; descricao?: string; categoria?: string; rotulo?: string }[] = !podeConverter ? [] : cartaoModo
     ? (!cartaoOk ? [] : itensModo
       ? parcelasItensCartao(itens.filter((i) => num(i.valor) > 0).map((i) => ({ descricao: i.descricao.trim() || v.descricao.trim(), categoria: i.categoria, valor: num(i.valor), parcelas: num(i.parcelas) || 1 })), optsCartao)
         .map((p) => ({ vencimento: p.vencimento, valor: p.valor, descricao: p.total > 1 ? `${p.item.descricao} (${p.n}/${p.total})` : p.item.descricao, categoria: p.item.categoria, rotulo: `${p.item.descricao} ${p.n}/${p.total}` }))

@@ -276,7 +276,8 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
     invalidar();
   };
 
-  const linkDe = (f: Row) => (f["token_publico"] ? `${window.location.origin}/cotacao/${String(f["token_publico"])}` : null);
+  const origemPublica = () => (/localhost|127\.0\.0\.1|id-preview--/.test(window.location.host) ? "https://pwa-engage.lovable.app" : window.location.origin);
+  const linkDe = (f: Row) => (f["token_publico"] ? `${origemPublica()}/cotacao/${String(f["token_publico"])}` : null);
   const semToken = () => toast.error("Link indisponível: rode o script atendeai-cotacao-online.sql no banco.");
   const copiarLink = async (f: Row) => {
     const url = linkDe(f);
@@ -290,7 +291,7 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
     const p = parceiroById.get(String(f["fornecedor_id"]));
     const fone = String(pick(p ?? {}, ["whatsapp", "celular", "telefone"]) ?? "").replace(/\D/g, "");
     const numero = fone && !fone.startsWith("55") ? `55${fone}` : fone;
-    const texto = `Olá, ${nomeParc(p)}! Segue a cotação ${String(cotacao["numero"] ?? "")}. Informe preços, prazos e condições por este link: ${url}`;
+    const texto = `Olá, ${nomeParc(p)}!\n\nSegue a solicitação da cotação ${String(cotacao["numero"] ?? "")}.\n\nPara informar seus preços, prazos e condições, acesse o link abaixo:\n\n${url}\n\nQualquer dúvida, ficamos à disposição.`;
     window.open(`https://wa.me/${numero}?text=${encodeURIComponent(texto)}`, "_blank", "noopener");
   };
 
