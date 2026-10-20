@@ -6,7 +6,7 @@ import {
 
 /** Menu "3 pontinhos" com as ações de uma tarefa. */
 export function AcoesTarefa({ onNovaAtividade, onEditar, onDuplicar, onExcluir, small }: {
-  onNovaAtividade?: () => void; onEditar?: () => void; onDuplicar?: () => void; onExcluir?: () => void; small?: boolean;
+  onNovaAtividade?: (() => void) | undefined; onEditar?: (() => void) | undefined; onDuplicar?: (() => void) | undefined; onExcluir?: (() => void) | undefined; small?: boolean;
 }) {
   return (
     <DropdownMenu>
