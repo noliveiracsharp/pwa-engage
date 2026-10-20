@@ -61,7 +61,7 @@ import {
   situacaoTitulo,
   valorBaixa,
   parcelasManuais,
-  parcelasCartao, parcelasItensCartao, vencimentoFatura, limiteUsadoCartao, limiteDisponivelCartao, type ItemCartao,
+  parcelasCartao, parcelasItensCartao, vencimentoFatura, serieParcelas, vencParcela1Cartao, vencParcela1De, limiteUsadoCartao, limiteDisponivelCartao, type ItemCartao,
   type ModoLancamento,
   type Situacao,
   type TipoTitulo,
@@ -1143,6 +1143,7 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
           ...(p.categoria ? { categoria: p.categoria } : {}),
           vencimento: p.vencimento, valor: p.valor,
           ...(v.ja_pago && !cartaoModo && i === 0 ? { status: "pago", pago_em: p.vencimento, valor_pago: p.valor } : {}),
+          ...(p.anterior ? (statusAnt === "pago" ? { status: "pago", pago_em: p.vencimento, valor_pago: p.valor } : { status: "aberto" }) : {}),
         }));
         const { error } = await supabase.from("financeiro_titulos").insert(lote as never);
         if (error) throw error;
@@ -1314,8 +1315,19 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
               <Input type="number" min={1} max={cartaoModo ? 48 : 120} value={v.repetir} onChange={(e) => setV({ ...v, repetir: e.target.value })} /></div>
             <div className="space-y-1"><Label>Começar na parcela</Label>
               <Input type="number" min={1} max={totParc} value={inicio} onChange={(e) => setInicio(e.target.value)} />
-              <p className="text-muted-foreground text-xs">Ex.: 2 para lançar de 2/{totParc} em diante (a 1ª já foi paga antes).</p></div>
+              <p className="text-muted-foreground text-xs">Ex.: 2 para lançar de 2/{totParc} em diante .</p></div>
           </>)}
+          {!registro && podeConverter && algumMeio && (
+            <div className="flex flex-wrap items-center gap-3 rounded-lg border p-3 sm:col-span-2">
+              <Switch checked={incluirAnt} onCheckedChange={setIncluirAnt} id="incl-ant" />
+              <Label htmlFor="incl-ant" className="flex-1">Incluir histórico das parcelas anteriores</Label>
+              {incluirAnt && (
+                <Select value={statusAnt} onValueChange={(x) => setStatusAnt(x as "pago" | "aberto")}>
+                  <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+                  <SelectContent><SelectItem value="aberto">Em aberto</SelectItem><SelectItem value="pago">Pago</SelectItem></SelectContent>
+                </Select>)}
+            </div>
+          )}
           {itensModo && (
             <div className="space-y-2 rounded-lg border p-3 sm:col-span-2">
               <p className="text-sm font-semibold">Itens da compra</p>
