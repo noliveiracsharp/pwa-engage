@@ -101,8 +101,7 @@ export function useChecklistGate() {
 
   function fechar(ok: boolean) {
     setPedido(null);
-    resolver.current?.(ok);
-    resolver.current = null;
+    res?.(ok);
   }
 
   const preenchido = (it: Row) => {
@@ -133,12 +132,13 @@ export function useChecklistGate() {
     if (error) { setOcupado(false); toast.error(`Não foi possível salvar o checklist. ${error.message}`); return; }
     qc.invalidateQueries({ queryKey: ["table", "atendimentos_checklists"] });
     const atual = pedido;
+    const res = resolver.current;
+    resolver.current = null;
     setPedido(null);
     const ok = await atual.executar();
     setOcupado(false);
     if (ok && atual.modo !== "saida") toast.success("Checklist registrado e card transferido.");
-    resolver.current?.(ok);
-    resolver.current = null;
+    res?.(ok);
   }
 
   async function anexar(id: string, file: File) {
