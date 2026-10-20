@@ -15,8 +15,11 @@ import { baixarArquivo, cotacaoStatusMeta, parseCsv, proximoNumero, toCsv } from
 import { formatBRL, formatQtd, num, round2 } from "@/lib/orcamentos";
 import { pick, type Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
+import { formatPhoneDisplay } from "@/lib/input-masks";
 import { confirmar } from "@/components/layout/DialogoGlobal";
 import { QuickCreateDialog } from "@/components/itens/QuickCreateDialog";
+import { useAuth } from "@/hooks/useAuth";
+import { useTableRows } from "@/lib/crud";
 const ITEM_RAPIDO = [{ key: "descricao", label: "Descrição" }, { key: "codigo", label: "Código / referência" }];
 import { PainelAprovacaoCotacao } from "@/components/cotacoes/AprovacaoCompras";
 import { podeGerarPedido } from "@/lib/aprovacao-compras";
@@ -41,6 +44,16 @@ const nomeParc = (p: Row | undefined) => String(pick(p ?? {}, ["nome_fantasia", 
 
 export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, precos, parceiros, itens, pedidos, empresaId, canUpdate, aprovando, onAprovar }: Props) {
   const qc = useQueryClient();
+  const { usuario } = useAuth();
+  const { data: unidadesRows = [] } = useTableRows("unidade_medida");
+  const unidadeOpts = useMemo(() => unidadesRows
+    .map((u) => { const sig = String(pick(u, ["sigla", "abreviacao", "codigo", "descricao"]) ?? ""); const d = String(pick(u, ["descricao"]) ?? sig); return { value: sig, label: sig === d ? d : `${sig} — ${d}`, keywords: [d] }; })
+    .filter((o) => o.value).sort((a, b) => a.label.localeCompare(b.label, "pt-BR")), [unidadesRows]);
+  const unidadeDoItem = (itemId: string) => {
+    const it = itens.find((i) => String(rowId(i)) === itemId);
+    const u = unidadesRows.find((r) => String(rowId(r)) === String(it?.["unidade_medida_id"] ?? ""));
+    return u ? String(pick(u, ["sigla", "abreviacao", "codigo", "descricao"]) ?? "") || null : null;
+  };
   const fileRef = useRef<HTMLInputElement>(null);
   const [novoForn, setNovoForn] = useState("");
   const [novoParc, setNovoParc] = useState<{ nome: string; doc: string; tel: string } | null>(null);
@@ -187,7 +200,7 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
     const g = analise.porForn.get(String(p["fornecedor_id"]));
     const linhas = (g?.itens ?? []).map((e) => {
       const item = itemById.get(String(e.cotacaoItem["item_id"]));
-      return `• ${formatQtd(e.cotacaoItem["quantidade"])} x ${String(item?.["descricao"] ?? "Item")} — ${formatBRL(e.preco)}`;
+      return `• ${formatQtd(e.cotacaoItem["quantidade"])}${e.cotacaoItem["unidade"] ? ` ${String(e.cotacaoItem["unidade"])}` : ""} x ${String(item?.["descricao"] ?? "Item")} — ${formatBRL(e.preco)}`;
     });
     const texto = [
       `Olá, ${nomeParc(parc)}! Segue o pedido de compra ${String(p["numero"] ?? "")} (cotação ${String(cotacao["numero"] ?? "")}):`,
@@ -257,6 +270,8 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
     setNovoItem("");
     const { error } = await supabase.from("cotacoes_itens").insert({ cotacao_id: cid, item_id: itemId, quantidade: 1 });
     if (error) return void toast.error(error.message);
+    const un = unidadeDoItem(itemId);
+    if (un) await supabase.from("cotacoes_itens").update({ unidade: un } as never).eq("cotacao_id", cid).eq("item_id", itemId).is("unidade" as never, null);
     invalidar();
   };
   const salvarQtd = async (it: Row, valor: string) => {
@@ -264,6 +279,11 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
     if (q <= 0 || q === num(it["quantidade"])) return;
     const { error } = await supabase.from("cotacoes_itens").update({ quantidade: q }).eq("id", String(it["id"]));
     if (error) return void toast.error(error.message);
+    invalidar();
+  };
+  const salvarUnidade = async (it: Row, un: string) => {
+    const { error } = await supabase.from("cotacoes_itens").update({ unidade: un || null } as never).eq("id", String(it["id"]));
+    if (error) return void toast.error(error.message.includes("unidade") ? "Rode o script atendeai-cotacao-vendedor-unidade.sql no banco." : error.message);
     invalidar();
   };
   const removerItem = async (it: Row) => {
@@ -282,9 +302,17 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
   const origemPublica = () => (/localhost|127\.0\.0\.1|id-preview--/.test(window.location.host) ? "https://pwa-engage.lovable.app" : window.location.origin);
   const linkDe = (f: Row) => (f["token_publico"] ? `${origemPublica()}/cotacao/${String(f["token_publico"])}` : null);
   const semToken = () => toast.error("Link indisponível: rode o script atendeai-cotacao-online.sql no banco.");
+  const respNome = String(pick(usuario ?? {}, ["nome", "name"]) ?? "").trim();
+  const respFone = String(pick(usuario ?? {}, ["whatsapp", "celular", "telefone"]) ?? "").trim();
+  const gravarResponsavel = async () => {
+    if (!respNome && !respFone) return;
+    if (cotacao["responsavel_nome"] === respNome && cotacao["responsavel_telefone"] === respFone) return;
+    await supabase.from("cotacoes").update({ responsavel_nome: respNome || null, responsavel_telefone: respFone || null } as never).eq("id", cid);
+  };
   const copiarLink = async (f: Row) => {
     const url = linkDe(f);
     if (!url) { semToken(); return; }
+    await gravarResponsavel();
     await navigator.clipboard.writeText(url);
     toast.success("Link copiado.");
   };
@@ -294,7 +322,9 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
     const p = parceiroById.get(String(f["fornecedor_id"]));
     const fone = String(pick(p ?? {}, ["whatsapp", "celular", "telefone"]) ?? "").replace(/\D/g, "");
     const numero = fone && !fone.startsWith("55") ? `55${fone}` : fone;
-    const texto = `Olá, ${nomeParc(p)}!\n\nSegue a solicitação da cotação ${String(cotacao["numero"] ?? "")}${cotacao["titulo"] ? ` — ${String(cotacao["titulo"])}` : ""}.\n\nPara informar seus preços, prazos e condições, acesse o link abaixo:\n\n${url}\n\nQualquer dúvida, ficamos à disposição.`;
+    void gravarResponsavel();
+    const assinatura = respNome ? `\n\n${respNome}${respFone ? ` — WhatsApp ${formatPhoneDisplay(respFone)}` : ""}` : "";
+    const texto = `Olá, ${nomeParc(p)}!\n\nSegue a solicitação da cotação ${String(cotacao["numero"] ?? "")}${cotacao["titulo"] ? ` — ${String(cotacao["titulo"])}` : ""}.\n\nPara informar seus preços, prazos e condições, acesse o link abaixo:\n\n${url}\n\nQualquer dúvida, ficamos à disposição.${assinatura}`;
     window.open(`https://wa.me/${numero}?text=${encodeURIComponent(texto)}`, "_blank", "noopener");
   };
 
@@ -485,6 +515,7 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
                   <tr>
                     <th className="px-3 py-2 text-left">Item</th>
                     <th className="px-3 py-2 text-right">Qtd.</th>
+                    <th className="px-3 py-2 text-left">Un.</th>
                     {fornCot.map((f) => (
                       <th key={String(f["id"])} className="min-w-32 px-3 py-2 text-right">
                         {nomeParc(parceiroById.get(String(f["fornecedor_id"])))}
@@ -509,6 +540,11 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
                               <Button size="icon" variant="ghost" className="h-8 w-8" aria-label="Remover item" onClick={() => removerItem(it)}><Trash2 className="h-4 w-4" /></Button>
                             </div>
                           ) : formatQtd(it["quantidade"])}
+                        </td>
+                        <td className="px-2 py-1.5">
+                          {editavel ? (
+                            <div className="w-28"><SearchSelect value={String(it["unidade"] ?? "")} onChange={(v) => salvarUnidade(it, v)} options={unidadeOpts} placeholder="Un." /></div>
+                          ) : String(it["unidade"] ?? "—")}
                         </td>
                         {fornCot.map((f) => {
                           const fid = String(f["fornecedor_id"]);
