@@ -905,18 +905,39 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
   const cartao = cartoes.find((c) => text(rowId(c)) === v.cartao_id);
   const cartaoReg = registro && text(registro["cartao_id"]) ? cartoes.find((c) => text(rowId(c)) === text(registro["cartao_id"])) : undefined;
   const [parcItem, setParcItem] = useState("1");
+  const [inicio, setInicio] = useState("1");
   const [porItem, setPorItem] = useState(!!presetCartao && !registro);
-  const [itens, setItens] = useState<{ descricao: string; categoria: string; valor: string; parcelas: string; data: string }[]>([{ descricao: "", categoria: "", valor: "", parcelas: "1", data: hojeISO() }]);
+  const [itens, setItens] = useState<{ descricao: string; categoria: string; valor: string; parcelas: string; inicio: string; data: string }[]>([{ descricao: "", categoria: "", valor: "", parcelas: "1", inicio: "1", data: hojeISO() }]);
   const itensModo = cartaoModo && porItem;
   const cartaoOk = !!(cartao && cartao["dia_fechamento"] && cartao["dia_vencimento"]);
   const optsCartao = { dataCompra: v.vencimento, diaFechamento: num(cartao?.["dia_fechamento"]), diaVencimento: num(cartao?.["dia_vencimento"]) };
+  // Parcela inicial: permite lançar só o que falta (ex.: começar na 2/10).
+  const totParc = Math.max(1, Math.floor(num(v.repetir)) || 1);
+  const ini = Math.min(totParc, Math.max(1, Math.floor(num(inicio)) || 1));
+  const restam = totParc - ini + 1;
+  const offset = <T extends { vencimento: string; valor: number }>(l: T[]) => l.map((p, i) => ({ ...p, n: ini + i, total: totParc }));
   const previa: { vencimento: string; valor: number; descricao?: string; categoria?: string; rotulo?: string; grupo?: number; n?: number; total?: number; dataCompra?: string }[] = !podeConverter ? [] : cartaoModo
     ? (!cartaoOk ? [] : itensModo
-      ? parcelasItensCartao(itens.filter((i) => num(i.valor) > 0).map((i) => ({ descricao: i.descricao.trim() || v.descricao.trim(), categoria: i.categoria, valor: num(i.valor), parcelas: num(i.parcelas) || 1, dataCompra: i.data || v.vencimento })), optsCartao)
-        .map((p) => ({ grupo: p.grupo, n: p.n, total: p.total, dataCompra: p.dataCompra, vencimento: p.vencimento, valor: p.valor, descricao: p.total > 1 ? `${p.item.descricao} (${p.n}/${p.total})` : p.item.descricao, categoria: p.item.categoria, rotulo: `${p.item.descricao} ${p.n}/${p.total}` }))
-      : parcelasCartao({ valor: num(v.valor), parcelas: num(v.repetir), ...optsCartao }))
-    : parcelasManuais({ modo: v.modo as ModoLancamento, valor: num(v.valor), quantidade: num(v.repetir), primeira: v.vencimento });
-  const totalItens = round2(itens.reduce((s, i) => s + num(i.valor), 0));
+      ? parcelasItensCartao(itens.filter((i) => num(i.valor) > 0).map((i) => {
+          const tot = Math.max(1, Math.floor(num(i.parcelas)) || 1);
+          const ii = Math.min(tot, Math.max(1, Math.floor(num(i.inicio)) || 1));
+          const rest = tot - ii + 1;
+          // Valor informado é o valor da parcela (como vem na fatura).
+          return { descricao: i.descricao.trim() || v.descricao.trim(), categoria: i.categoria, valor: round2(num(i.valor) * rest), parcelas: rest, dataCompra: i.data || v.vencimento, _ini: ii, _tot: tot };
+        }), optsCartao)
+        .map((p) => {
+          const it = p.item as ItemCartao & { _ini: number; _tot: number };
+          const n = it._ini + p.n - 1; const total = it._tot;
+          return { grupo: p.grupo, n, total, dataCompra: p.dataCompra, vencimento: p.vencimento, valor: p.valor, descricao: total > 1 ? `${it.descricao} (${n}/${total})` : it.descricao, categoria: it.categoria, rotulo: `${it.descricao} ${n}/${total}` };
+        })
+      : offset(parcelasCartao({ valor: round2(num(v.valor) * restam), parcelas: restam, ...optsCartao })))
+    : v.modo === "unico" ? parcelasManuais({ modo: v.modo as ModoLancamento, valor: num(v.valor), quantidade: 1, primeira: v.vencimento })
+    : offset(parcelasManuais({ modo: v.modo as ModoLancamento, valor: v.modo === "parcelado" ? round2(num(v.valor) * restam / totParc) : num(v.valor), quantidade: restam, primeira: v.vencimento }));
+  const totalItens = round2(itens.reduce((s, i) => {
+    const tot = Math.max(1, Math.floor(num(i.parcelas)) || 1);
+    const ii = Math.min(tot, Math.max(1, Math.floor(num(i.inicio)) || 1));
+    return s + num(i.valor) * (tot - ii + 1);
+  }, 0));
   const usadoCartao = cartao ? limiteUsadoCartao(titulosCartao, text(rowId(cartao))) : 0;
   const limiteCartao = num(cartao?.["limite_total"]) || num(cartao?.["limite_mensal"]);
   const dispCartao = limiteDisponivelCartao(limiteCartao, usadoCartao);
