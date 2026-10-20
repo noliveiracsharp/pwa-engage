@@ -917,24 +917,27 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
   const totParc = Math.max(1, Math.floor(num(v.repetir)) || 1);
   const ini = Math.min(totParc, Math.max(1, Math.floor(num(inicio)) || 1));
   const restam = totParc - ini + 1;
-  const offset = <T extends { vencimento: string; valor: number }>(l: T[]) => l.map((p, i) => ({ ...p, n: ini + i, total: totParc }));
-  const previa: { vencimento: string; valor: number; descricao?: string; categoria?: string; rotulo?: string; grupo?: number; n?: number; total?: number; dataCompra?: string }[] = !podeConverter ? [] : cartaoModo
+  void restam;
+  // Parcelas anteriores à atual (ex.: 1/10 quando começa na 2/10): só em lançamento novo.
+  const [incluirAnt, setIncluirAnt] = useState(true);
+  const [statusAnt, setStatusAnt] = useState<"pago" | "aberto">("pago");
+  const comAnt = !registro && incluirAnt;
+  const algumMeio = ini > 1 || (cartaoModo && porItem && itens.some((i) => Math.floor(num(i.inicio)) > 1));
+  const fC = num(cartao?.["dia_fechamento"]); const vC = num(cartao?.["dia_vencimento"]);
+  type Prev = { vencimento: string; valor: number; descricao?: string; categoria?: string; rotulo?: string; grupo?: number; n?: number; total?: number; dataCompra?: string; anterior?: boolean };
+  const previa: Prev[] = !podeConverter ? [] : cartaoModo
     ? (!cartaoOk ? [] : itensModo
-      ? parcelasItensCartao(itens.filter((i) => num(i.valor) > 0).map((i) => {
-          const tot = Math.max(1, Math.floor(num(i.parcelas)) || 1);
-          const ii = Math.min(tot, Math.max(1, Math.floor(num(i.inicio)) || 1));
-          const rest = tot - ii + 1;
-          // Valor informado é o valor da parcela (como vem na fatura).
-          return { descricao: i.descricao.trim() || v.descricao.trim(), categoria: i.categoria, valor: round2(num(i.valor) * rest), parcelas: rest, dataCompra: i.data || v.vencimento, _ini: ii, _tot: tot };
-        }), optsCartao)
-        .map((p) => {
-          const it = p.item as ItemCartao & { _ini: number; _tot: number };
-          const n = it._ini + p.n - 1; const total = it._tot;
-          return { grupo: p.grupo, n, total, dataCompra: p.dataCompra, vencimento: p.vencimento, valor: p.valor, descricao: total > 1 ? `${it.descricao} (${n}/${total})` : it.descricao, categoria: it.categoria, rotulo: `${it.descricao} ${n}/${total}` };
+      ? itens.filter((i) => num(i.valor) > 0).flatMap((i, grupo) => {
+          const desc = i.descricao.trim() || v.descricao.trim();
+          const dc = i.data || v.vencimento;
+          return serieParcelas({ total: num(i.parcelas), inicio: num(i.inicio), valorParcela: num(i.valor), incluirAnteriores: comAnt, vencParcela1: vencParcela1Cartao(dc, fC, vC) })
+            .map((p) => ({ grupo, n: p.n, total: p.total, dataCompra: dc, vencimento: p.vencimento, valor: p.valor, anterior: p.anterior, categoria: i.categoria,
+              descricao: p.total > 1 ? `${desc} (${p.n}/${p.total})` : desc, rotulo: `${desc} ${p.n}/${p.total}` }));
         })
-      : offset(parcelasCartao({ valor: round2(num(v.valor) * restam), parcelas: restam, ...optsCartao })))
+      : serieParcelas({ total: totParc, inicio: ini, valorParcela: num(v.valor), incluirAnteriores: comAnt, vencParcela1: vencParcela1Cartao(v.vencimento, fC, vC) }))
     : v.modo === "unico" ? parcelasManuais({ modo: v.modo as ModoLancamento, valor: num(v.valor), quantidade: 1, primeira: v.vencimento })
-    : offset(parcelasManuais({ modo: v.modo as ModoLancamento, valor: v.modo === "parcelado" ? round2(num(v.valor) * restam / totParc) : num(v.valor), quantidade: restam, primeira: v.vencimento }));
+    : serieParcelas({ total: totParc, inicio: ini, incluirAnteriores: comAnt, vencParcela1: vencParcela1De(v.vencimento, ini),
+        ...(v.modo === "parcelado" ? { valorTotal: num(v.valor) } : { valorParcela: num(v.valor) }) });
   const totalItens = round2(itens.reduce((s, i) => {
     const tot = Math.max(1, Math.floor(num(i.parcelas)) || 1);
     const ii = Math.min(tot, Math.max(1, Math.floor(num(i.inicio)) || 1));
