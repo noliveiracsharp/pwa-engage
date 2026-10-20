@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useTableRows, rowId, text } from "@/lib/crud";
 import { formatBRL, num } from "@/lib/orcamentos";
-import { diagnosticar, type NivelAlerta } from "@/lib/controller";
+import { diagnosticar, projecaoMensal, type NivelAlerta } from "@/lib/controller";
+import { FaleController } from "./FaleController";
 import { parecerController } from "@/lib/controller.functions";
 import { supabase } from "@/integrations/supabase/client";
 import type { Row } from "@/lib/row";
@@ -62,6 +63,13 @@ export function ControllerPainel({ titulos }: { titulos: Row[] }) {
     } finally {
       setCarregando(false);
     }
+  };
+
+  const contextoChat = () => {
+    const { alertas, ...ind } = d;
+    const porCategoria: Record<string, number> = {};
+    for (const t of titulos) if (t["tipo"] === "pagar" && t["status"] === "pago") { const c = String(t["categoria"] || "Sem categoria"); porCategoria[c] = (porCategoria[c] ?? 0) + (num(t["valor_pago"]) || num(t["valor"])); }
+    return JSON.stringify({ ...ind, alertas: alertas.map((a) => `${a.titulo}: ${a.detalhe}`), projecaoMensal: projecaoMensal(titulos, num(saldo)), despesasPagasPorCategoria: porCategoria, observacao: "projecaoMensal considera apenas títulos em aberto já lançados; burn = despesa média mensal paga nos últimos 3 meses." });
   };
 
   const kpis = [
@@ -131,6 +139,8 @@ export function ControllerPainel({ titulos }: { titulos: Row[] }) {
           <Markdown texto={parecer} />
         </div>
       )}
+
+      <FaleController contexto={contextoChat} />
 
       <div className="dre-print-src" aria-hidden>
         <ControllerRelatorioDocumento empresa={{ nome: emp.nome ?? "", logo: emp.logo ?? "" }} d={d} saldo={num(saldo)} parecer={parecer} />

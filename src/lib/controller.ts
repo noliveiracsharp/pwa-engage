@@ -149,3 +149,26 @@ export function diagnosticar(titulos: Row[], saldo: number, nomeDe: (t: Row) => 
 
   return { saldo, burn, runway, ruptura, inadimplencia: inad, pmr, pmp, categorias, aReceber30: round2(aReceber30), aPagar30: round2(aPagar30), alertas };
 }
+
+export type MesProjetado = { mes: string; entradas: number; saidas: number; saldoFinal: number };
+/** Projeção mês a mês do saldo usando títulos em aberto (vencidos entram no mês atual). */
+export function projecaoMensal(titulos: Row[], saldo: number, hoje = hojeISO(), meses = 15): MesProjetado[] {
+  const lista = Array.from({ length: meses }, (_, i) => mesMenos(hoje, -i));
+  const mov = new Map(lista.map((m) => [m, { e: 0, s: 0 }]));
+  for (const t of titulos) {
+    if (!ativo(t) || t["status"] === "pago") continue;
+    let m = iso(t["vencimento"]).slice(0, 7);
+    if (!m) continue;
+    if (m < lista[0]!) m = lista[0]!;
+    const x = mov.get(m);
+    if (!x) continue;
+    const v = t["status"] === "parcial" ? Math.max(0, num(t["valor"]) - num(t["valor_pago"])) : num(t["valor"]);
+    if (t["tipo"] === "receber") x.e += v; else x.s += v;
+  }
+  let s = saldo;
+  return lista.map((mes) => {
+    const x = mov.get(mes)!;
+    s += x.e - x.s;
+    return { mes, entradas: round2(x.e), saidas: round2(x.s), saldoFinal: round2(s) };
+  });
+}
