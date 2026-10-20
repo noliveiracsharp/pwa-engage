@@ -176,6 +176,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
   // Visão geral de Contas a Pagar: compras no cartão aparecem agrupadas como uma fatura por cartão/vencimento.
   const [faturaSel, setFatura] = useState<Row | null>(null);
   const [novaCompra, setNovaCompra] = useState<Row | null>(null);
+  const [importar, setImportar] = useState(false);
   const [abertas, setAbertas] = useState<Set<string>>(new Set());
   const exibidos: Row[] = useMemo(() => {
     if (tipo !== "pagar" || f.cartao !== "todos") return rows;
