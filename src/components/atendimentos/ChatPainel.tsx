@@ -87,6 +87,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
 
   const { data: mensagens = [], isLoading } = useQuery({
     queryKey: ["table", "atendimentos_mensagem", "at", id],
+    refetchInterval: 3000,
     queryFn: async (): Promise<Row[]> => {
       const { data, error } = await supabase
         .from("atendimentos_mensagem")
