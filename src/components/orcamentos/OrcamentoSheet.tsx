@@ -1,3 +1,4 @@
+import { TEMPERATURAS } from "@/lib/temperatura";
 import { OrcamentoDespesas } from "@/components/orcamentos/OrcamentoDespesas";
 import { OrcamentoCompra } from "@/components/orcamentos/OrcamentoCompra";
 import { condicaoCompraFromValue, condicaoCompraPadrao, condicaoCompraToValue, cronogramaCompra, type CondicaoCompra } from "@/lib/orcamentos";
@@ -84,6 +85,7 @@ const VALIDADE_PADRAO_DIAS = 15;
 
 type Header = {
   situacao: string;
+  temperatura: string;
   kanban_etapa_id: string;
   dt_orcamento: string;
   validade_orcamento: string;
@@ -103,6 +105,7 @@ const emptyHeader = (vendedorId: string): Header => {
   const hoje = todayISO();
   return {
     situacao: "Em andamento",
+    temperatura: "",
     kanban_etapa_id: "",
     dt_orcamento: hoje,
     validade_orcamento: addDaysISO(hoje, VALIDADE_PADRAO_DIAS),
@@ -164,6 +167,7 @@ const headerFromRecord = (r: Row): Header => {
   const dt = toISODate(r["dt_orcamento"]) || todayISO();
   return {
     situacao: String(r["situacao"] ?? "") || "Em andamento",
+    temperatura: String(r["temperatura"] ?? ""),
     kanban_etapa_id: String(r["kanban_etapa_id"] ?? ""),
     dt_orcamento: dt,
     validade_orcamento: toISODate(r["validade_orcamento"]),
@@ -518,6 +522,7 @@ export function OrcamentoSheet({
 
     const header: Row = {
       situacao: h.situacao,
+      ...(h.temperatura || record?.["temperatura"] ? { temperatura: h.temperatura || null } : {}),
       ...(h.kanban_etapa_id ? { kanban_etapa_id: h.kanban_etapa_id } : {}),
       dt_orcamento: h.dt_orcamento,
       validade_orcamento: dateOrNull(h.validade_orcamento),
@@ -634,6 +639,30 @@ export function OrcamentoSheet({
                       <span className="flex items-center gap-2">
                         <span className={cn("h-2.5 w-2.5 rounded-full", corEtapa(e.cor).className)} />
                         {e.descricao}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="min-w-0 space-y-1.5">
+              <Label htmlFor="temperatura" className="block text-sm font-medium">
+                Temperatura
+              </Label>
+              <Select
+                value={h.temperatura || "nenhuma"}
+                onValueChange={(v) => patchHeader({ temperatura: v === "nenhuma" ? "" : v })}
+                disabled={Boolean(readOnly)}
+              >
+                <SelectTrigger id="temperatura"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="nenhuma">Sem temperatura</SelectItem>
+                  {TEMPERATURAS.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>
+                      <span className="flex items-center gap-2">
+                        <span className={cn("h-2.5 w-2.5 rounded-full", t.dot)} />
+                        {t.label}
                       </span>
                     </SelectItem>
                   ))}
