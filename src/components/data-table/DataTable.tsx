@@ -59,6 +59,8 @@ type Props = {
   onToggleRow?: (row: Row) => void;
   /** When set, row actions collapse into a ⋮ menu with these items plus Editar/Excluir. */
   rowMenu?: (row: Row) => ReactNode;
+  /** Per-row toggle of the built-in Editar/Excluir actions in the ⋮ menu. */
+  rowActions?: (row: Row) => { edit: boolean; delete: boolean };
 };
 
 export function DataTable({
@@ -75,6 +77,7 @@ export function DataTable({
   onDuplicate,
   skipDeleteConfirm,
   rowMenu,
+  rowActions,
   rowKey,
   onReorder,
   rowDepth,
@@ -272,14 +275,14 @@ export function DataTable({
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-60">
                           {rowMenu(row)}
-                          {(onEdit || onDelete) && <DropdownMenuSeparator />}
-                          {onEdit && (
+                          {((onEdit && rowActions?.(row).edit !== false) || (onDelete && rowActions?.(row).delete !== false)) && <DropdownMenuSeparator />}
+                          {onEdit && rowActions?.(row).edit !== false && (
                             <DropdownMenuItem onClick={() => onEdit(row)}>
                               {editReadOnly ? <Eye className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
                               {editReadOnly ? "Visualizar" : "Editar"}
                             </DropdownMenuItem>
                           )}
-                          {onDelete && (
+                          {onDelete && rowActions?.(row).delete !== false && (
                             <DropdownMenuItem
                               className="text-destructive focus:text-destructive"
                               onClick={async () => {
