@@ -32,6 +32,8 @@ import { pick, type Row } from "@/lib/row";
 import { isCompletePhone, isValidCpfCnpj } from "@/lib/input-masks";
 import { formatPhoneDisplay } from "@/lib/input-masks";
 import { confirmar } from "@/components/layout/DialogoGlobal";
+import { coordNum, geocodificar, gpsNavegador } from "@/lib/geocodificacao";
+import { LocateFixed, MapPin } from "lucide-react";
 
 type EmpresaField = {
   key: string;
@@ -43,14 +45,19 @@ type EmpresaField = {
   fiscal?: boolean;
   /** Campo de white label: vazio grava null (volta ao padrão). */
   wl?: boolean;
+  /** Coordenada geográfica (decimal). */
+  coord?: boolean;
 };
 
 export const EMPRESA_FIELDS: EmpresaField[] = [
+  { key: "tipo_pessoa", label: "Tipo de pessoa", type: "select", options: [{ value: "Jurídica", label: "Jurídica" }, { value: "Física", label: "Física" }] },
   { key: "cnpj_cpf", label: "CNPJ / CPF", type: "document" },
   { key: "status", label: "Status", type: "boolean" },
   { key: "compartilhar_catalogo_filiais", label: "Compartilhar catálogo com filiais", type: "boolean", full: true },
   { key: "nome", label: "Nome", full: true },
   { key: "endereco", label: "Endereço", full: true },
+  { key: "latitude", label: "Latitude", coord: true },
+  { key: "longitude", label: "Longitude", coord: true },
   { key: "telefone1", label: "Telefone 1", type: "tel" },
   { key: "telefone2", label: "Telefone 2", type: "tel" },
   { key: "logo", label: "Logo", type: "photo", full: true },
@@ -615,6 +622,18 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
       setCnpjLoading(false);
     }
   }
+  const [geoLoading, setGeoLoading] = useState(false);
+  async function buscarCoordenadas(gps = false) {
+    setGeoLoading(true);
+    try {
+      const end = values["endereco"] ?? "";
+      const cep = (end.match(/\d{5}-?\d{3}/) ?? [""])[0];
+      const c = gps ? await gpsNavegador() : await geocodificar({ livre: end.replace(/CEP\s*/i, ""), cep });
+      if (!c) { toast.error(gps ? "Não foi possível obter a localização do aparelho." : "Não encontramos coordenadas para este endereço."); return; }
+      setValues((p) => ({ ...p, latitude: String(c.latitude), longitude: String(c.longitude) }));
+      toast.success("Coordenadas preenchidas.");
+    } finally { setGeoLoading(false); }
+  }
   const configFor: Record<string, ChildConfig> = { instancias: INSTANCIAS, campos: CAMPOS, etiquetas: ETIQUETAS, notas: NOTAS };
   const [values, setValues] = useState<Record<string, string>>({});
   const dadosPerms = tabs.find((t) => t.kind === "dados")?.perms;
@@ -625,6 +644,7 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
     if (!open) return;
     const next: Record<string, string> = {};
     for (const field of EMPRESA_FIELDS) next[field.key] = text(pick(empresa, [field.key], ""));
+    if (!next["tipo_pessoa"]) next["tipo_pessoa"] = "Jurídica";
     setValues(next);
   }, [open, empresa]);
 
@@ -632,6 +652,9 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
 
   const submit = () => {
     const document = values["cnpj_cpf"] ?? "";
+    const dig = digitsOnly(document);
+    if (dig && values["tipo_pessoa"] === "Física" && dig.length !== 11) { toast.error("Pessoa física: informe um CPF."); return; }
+    if (dig && values["tipo_pessoa"] !== "Física" && dig.length !== 14) { toast.error("Pessoa jurídica: informe um CNPJ."); return; }
     if (document && !isValidCpfCnpj(document)) {
       toast.error("CNPJ / CPF: informe um documento válido.");
       return;
@@ -651,6 +674,8 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
         payload[field.key] = raw === "true";
       } else if (field.numeric) {
         payload[field.key] = raw === "" ? null : Number(digitsOnly(raw)) || 0;
+      } else if (field.coord) {
+        payload[field.key] = coordNum(raw);
       } else if (field.fiscal || field.wl) {
         payload[field.key] = raw.trim() || null;
       } else {
@@ -717,6 +742,17 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
                   <p className="text-muted-foreground text-xs">
                     Cores, ícone e site aplicados ao sistema para os usuários desta empresa. Deixe vazio para usar o padrão.
                   </p>
+                </div>
+              )}
+              {field.key === "latitude" && (
+                <div className="flex flex-wrap items-center gap-2 sm:col-span-2">
+                  <span className="text-sm font-medium">Localização</span>
+                  <Button type="button" variant="outline" size="sm" disabled={geoLoading} onClick={() => void buscarCoordenadas()}>
+                    {geoLoading ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <MapPin className="mr-1 h-4 w-4" />}Obter pelo endereço/CEP
+                  </Button>
+                  <Button type="button" variant="outline" size="sm" disabled={geoLoading} onClick={() => void buscarCoordenadas(true)}>
+                    <LocateFixed className="mr-1 h-4 w-4" />Localização do aparelho
+                  </Button>
                 </div>
               )}
               {field.key === "inscricao_estadual" && (
