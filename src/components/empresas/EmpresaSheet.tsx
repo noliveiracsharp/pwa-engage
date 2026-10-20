@@ -414,7 +414,7 @@ export function ChildTable({ config, empresa, perms = FULL }: { config: ChildCon
                   (text(pick(row, ["status_conexao"])).toLowerCase() === "conectado" ? (
                     <>
                       <Badge className="bg-success text-success-foreground hover:bg-success">WhatsApp Conectado</Badge>
-                      {row.webhook_ativo === true ? (
+                      {row["webhook_ativo"] === true ? (
                         <Button size="sm" className="bg-success text-success-foreground hover:bg-success/90" onClick={() => void ativarRecebimento(row)} title="Recebimento ativo. Clique para reaplicar na Z-API">
                           <CheckCircle2 className="mr-1 h-4 w-4" /> Recebimento ativo
                         </Button>
