@@ -60,7 +60,7 @@ export const Route = createFileRoute("/_authenticated/orcamentos")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  validateSearch: (s: Record<string, unknown>): { abrir?: string } => (typeof s.abrir === "string" && s.abrir ? { abrir: s.abrir } : {}),
+  validateSearch: (s: Record<string, unknown>): { abrir?: string } => (typeof s["abrir"] === "string" && s["abrir"] ? { abrir: s["abrir"] } : {}),
   component: OrcamentosPage,
 });
 
