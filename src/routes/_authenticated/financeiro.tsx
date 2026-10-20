@@ -1052,7 +1052,7 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
       const nItem = Math.floor(num(parcItem)) || 1;
       if (registro && cartaoReg && !temSerie && nItem > 1) {
         if (!diasCartao) throw new Error("Informe o dia de fechamento e vencimento do cartão em Financeiro → Bancos.");
-        const ps = parcelasCartao({ valor, parcelas: nItem, dataCompra: v.data_compra || text(registro["data_compra"]).slice(0, 10) || v.vencimento, diaFechamento: diasCartao.f, diaVencimento: diasCartao.v });
+        const ps = parcelasCartao({ valor: round2(valor * nItem), parcelas: nItem, dataCompra: v.data_compra || text(registro["data_compra"]).slice(0, 10) || v.vencimento, diaFechamento: diasCartao.f, diaVencimento: diasCartao.v });
         const serieId = crypto.randomUUID();
         const { error } = await supabase.from("financeiro_titulos").update({ ...base, origem_tipo: "manual", origem_id: serieId, parcela_n: 1,
           descricao: `${base.descricao} (1/${ps.length})`, vencimento: ps[0]!.vencimento, valor: ps[0]!.valor } as never).eq("id", text(rowId(registro)));
@@ -1298,7 +1298,7 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
           {registro && text(registro["cartao_id"]) && !temSerie && !readOnly && (
             <div className="space-y-1"><Label>Parcelas no cartão</Label>
               <Input type="number" min={1} max={48} value={parcItem} onChange={(e) => setParcItem(e.target.value)} />
-              <p className="text-muted-foreground text-xs">Mais de 1 divide o valor nas próximas faturas.</p></div>
+              <p className="text-muted-foreground text-xs">O valor informado é o de cada parcela; mais de 1 repete nas próximas faturas.</p></div>
           )}
           {!itensModo && (
             <div className="space-y-1"><Label>{(v.modo === "parcelado" || cartaoModo) && podeConverter ? "Valor total (R$)" : v.modo === "recorrente" && podeConverter ? "Valor mensal (R$)" : "Valor (R$)"}</Label>
