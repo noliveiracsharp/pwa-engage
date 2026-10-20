@@ -61,7 +61,7 @@ import {
   situacaoTitulo,
   valorBaixa,
   parcelasManuais,
-  parcelasCartao, parcelasItensCartao, vencimentoFatura, limiteUsadoCartao, limiteDisponivelCartao,
+  parcelasCartao, parcelasItensCartao, vencimentoFatura, limiteUsadoCartao, limiteDisponivelCartao, type ItemCartao,
   type ModoLancamento,
   type Situacao,
   type TipoTitulo,
@@ -198,7 +198,9 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
         status: todosPagos ? "pago" : itens.some((t) => t["status"] === "cancelado") && itens.every((t) => t["status"] === "cancelado") ? "cancelado" : "aberto",
         valor_pago: todosPagos || pagoParcial > 0 ? pagoParcial : null,
         pago_em: todosPagos ? itens[0]!["pago_em"] : itens.find((t) => t["pago_em"])?.["pago_em"] ?? null } as Row;
-    }).flatMap((r) => (r["__fatura"] && abertas.has(text(r["id"])) ? [r, ...(r["__itens"] as Row[]).map((t) => ({ ...t, __filho: true, __pai: r }))] : [r]));
+    }).flatMap((r) => (r["__fatura"] && abertas.has(text(r["id"]))
+      ? [r, ...[...(r["__itens"] as Row[])].sort((a, b) => text(a["data_compra"]).localeCompare(text(b["data_compra"]))).map((t) => ({ ...t, __filho: true, __pai: r }))]
+      : [r]));
   }, [rows, tipo, f.cartao, cartoes, abertas]);
   const baixarItensFatura = async (itens: Row[]) => {
     const abertos = itens.filter((t) => t["status"] !== "pago" && t["status"] !== "cancelado");
@@ -905,18 +907,39 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
   const cartao = cartoes.find((c) => text(rowId(c)) === v.cartao_id);
   const cartaoReg = registro && text(registro["cartao_id"]) ? cartoes.find((c) => text(rowId(c)) === text(registro["cartao_id"])) : undefined;
   const [parcItem, setParcItem] = useState("1");
+  const [inicio, setInicio] = useState("1");
   const [porItem, setPorItem] = useState(!!presetCartao && !registro);
-  const [itens, setItens] = useState<{ descricao: string; categoria: string; valor: string; parcelas: string; data: string }[]>([{ descricao: "", categoria: "", valor: "", parcelas: "1", data: hojeISO() }]);
+  const [itens, setItens] = useState<{ descricao: string; categoria: string; valor: string; parcelas: string; inicio: string; data: string }[]>([{ descricao: "", categoria: "", valor: "", parcelas: "1", inicio: "1", data: hojeISO() }]);
   const itensModo = cartaoModo && porItem;
   const cartaoOk = !!(cartao && cartao["dia_fechamento"] && cartao["dia_vencimento"]);
   const optsCartao = { dataCompra: v.vencimento, diaFechamento: num(cartao?.["dia_fechamento"]), diaVencimento: num(cartao?.["dia_vencimento"]) };
+  // Parcela inicial: permite lançar só o que falta (ex.: começar na 2/10).
+  const totParc = Math.max(1, Math.floor(num(v.repetir)) || 1);
+  const ini = Math.min(totParc, Math.max(1, Math.floor(num(inicio)) || 1));
+  const restam = totParc - ini + 1;
+  const offset = <T extends { vencimento: string; valor: number }>(l: T[]) => l.map((p, i) => ({ ...p, n: ini + i, total: totParc }));
   const previa: { vencimento: string; valor: number; descricao?: string; categoria?: string; rotulo?: string; grupo?: number; n?: number; total?: number; dataCompra?: string }[] = !podeConverter ? [] : cartaoModo
     ? (!cartaoOk ? [] : itensModo
-      ? parcelasItensCartao(itens.filter((i) => num(i.valor) > 0).map((i) => ({ descricao: i.descricao.trim() || v.descricao.trim(), categoria: i.categoria, valor: num(i.valor), parcelas: num(i.parcelas) || 1, dataCompra: i.data || v.vencimento })), optsCartao)
-        .map((p) => ({ grupo: p.grupo, n: p.n, total: p.total, dataCompra: p.dataCompra, vencimento: p.vencimento, valor: p.valor, descricao: p.total > 1 ? `${p.item.descricao} (${p.n}/${p.total})` : p.item.descricao, categoria: p.item.categoria, rotulo: `${p.item.descricao} ${p.n}/${p.total}` }))
-      : parcelasCartao({ valor: num(v.valor), parcelas: num(v.repetir), ...optsCartao }))
-    : parcelasManuais({ modo: v.modo as ModoLancamento, valor: num(v.valor), quantidade: num(v.repetir), primeira: v.vencimento });
-  const totalItens = round2(itens.reduce((s, i) => s + num(i.valor), 0));
+      ? parcelasItensCartao(itens.filter((i) => num(i.valor) > 0).map((i) => {
+          const tot = Math.max(1, Math.floor(num(i.parcelas)) || 1);
+          const ii = Math.min(tot, Math.max(1, Math.floor(num(i.inicio)) || 1));
+          const rest = tot - ii + 1;
+          // Valor informado é o valor da parcela (como vem na fatura).
+          return { descricao: i.descricao.trim() || v.descricao.trim(), categoria: i.categoria, valor: round2(num(i.valor) * rest), parcelas: rest, dataCompra: i.data || v.vencimento, _ini: ii, _tot: tot };
+        }), optsCartao)
+        .map((p) => {
+          const it = p.item as ItemCartao & { _ini: number; _tot: number };
+          const n = it._ini + p.n - 1; const total = it._tot;
+          return { grupo: p.grupo, n, total, dataCompra: p.dataCompra, vencimento: p.vencimento, valor: p.valor, descricao: total > 1 ? `${it.descricao} (${n}/${total})` : it.descricao, categoria: it.categoria, rotulo: `${it.descricao} ${n}/${total}` };
+        })
+      : offset(parcelasCartao({ valor: round2(num(v.valor) * restam), parcelas: restam, ...optsCartao })))
+    : v.modo === "unico" ? parcelasManuais({ modo: v.modo as ModoLancamento, valor: num(v.valor), quantidade: 1, primeira: v.vencimento })
+    : offset(parcelasManuais({ modo: v.modo as ModoLancamento, valor: v.modo === "parcelado" ? round2(num(v.valor) * restam / totParc) : num(v.valor), quantidade: restam, primeira: v.vencimento }));
+  const totalItens = round2(itens.reduce((s, i) => {
+    const tot = Math.max(1, Math.floor(num(i.parcelas)) || 1);
+    const ii = Math.min(tot, Math.max(1, Math.floor(num(i.inicio)) || 1));
+    return s + num(i.valor) * (tot - ii + 1);
+  }, 0));
   const usadoCartao = cartao ? limiteUsadoCartao(titulosCartao, text(rowId(cartao))) : 0;
   const limiteCartao = num(cartao?.["limite_total"]) || num(cartao?.["limite_mensal"]);
   const dispCartao = limiteDisponivelCartao(limiteCartao, usadoCartao);
@@ -1031,7 +1054,7 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
       const nItem = Math.floor(num(parcItem)) || 1;
       if (registro && cartaoReg && !temSerie && nItem > 1) {
         if (!diasCartao) throw new Error("Informe o dia de fechamento e vencimento do cartão em Financeiro → Bancos.");
-        const ps = parcelasCartao({ valor, parcelas: nItem, dataCompra: v.data_compra || text(registro["data_compra"]).slice(0, 10) || v.vencimento, diaFechamento: diasCartao.f, diaVencimento: diasCartao.v });
+        const ps = parcelasCartao({ valor: round2(valor * nItem), parcelas: nItem, dataCompra: v.data_compra || text(registro["data_compra"]).slice(0, 10) || v.vencimento, diaFechamento: diasCartao.f, diaVencimento: diasCartao.v });
         const serieId = crypto.randomUUID();
         const { error } = await supabase.from("financeiro_titulos").update({ ...base, origem_tipo: "manual", origem_id: serieId, parcela_n: 1,
           descricao: `${base.descricao} (1/${ps.length})`, vencimento: ps[0]!.vencimento, valor: ps[0]!.valor } as never).eq("id", text(rowId(registro)));
@@ -1074,14 +1097,15 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
           }
         } else if (podeConverter && previa.length > 1) {
           // Converte um lançamento único em série: o atual vira a 1ª parcela e as demais são criadas.
-          const n = previa.length;
+          const n = previa[0]?.total ?? previa.length;
+          const n0 = previa[0]?.n ?? 1;
           const serieId = crypto.randomUUID();
           const pago = v.ja_pago ? { status: "pago", pago_em: previa[0]!.vencimento, valor_pago: previa[0]!.valor } : {};
-          const { error } = await supabase.from("financeiro_titulos").update({ ...base, origem_tipo: "manual", origem_id: serieId, parcela_n: 1,
-            descricao: `${base.descricao} (1/${n})`, vencimento: previa[0]!.vencimento, valor: previa[0]!.valor, ...pago } as never).eq("id", text(rowId(registro)));
+          const { error } = await supabase.from("financeiro_titulos").update({ ...base, origem_tipo: "manual", origem_id: serieId, parcela_n: n0,
+            descricao: `${base.descricao} (${n0}/${n})`, vencimento: previa[0]!.vencimento, valor: previa[0]!.valor, ...pago } as never).eq("id", text(rowId(registro)));
           if (error) throw error;
           const resto = previa.slice(1).map((p, i) => ({ ...base, empresa_id: registro["empresa_id"], origem_tipo: "manual", origem_id: serieId,
-            parcela_n: i + 2, descricao: `${base.descricao} (${i + 2}/${n})`, vencimento: p.vencimento, valor: p.valor, status: "aberto" }));
+            parcela_n: p.n ?? i + 2, descricao: `${base.descricao} (${p.n ?? i + 2}/${n})`, vencimento: p.vencimento, valor: p.valor, status: "aberto" }));
           const { error: e2 } = await supabase.from("financeiro_titulos").insert(resto as never);
           if (e2) throw e2;
         } else {
@@ -1100,7 +1124,7 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
           if (eb) throw eb;
         }
       } else {
-        const n = previa.length;
+        const n = previa[0]?.total ?? previa.length;
         const emp = isMaster && empresa ? rowId(empresa) : empresaId;
         const extra = cartaoModo ? { cartao_id: v.cartao_id, forma_pagamento: "Cartão de crédito", data_compra: v.vencimento } : {};
         const serieId = n > 1 ? crypto.randomUUID() : null;
@@ -1111,8 +1135,8 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
           ...(p.grupo !== undefined
             ? { origem_id: (seriesItem.has(p.grupo) ? seriesItem.get(p.grupo) : (seriesItem.set(p.grupo, (p.total ?? 1) > 1 ? crypto.randomUUID() : null), seriesItem.get(p.grupo))) ?? null,
                 parcela_n: p.n ?? 1, data_compra: p.dataCompra ?? v.vencimento }
-            : { origem_id: serieId, parcela_n: i + 1 }),
-          descricao: p.descricao ?? (n > 1 ? `${base.descricao} (${i + 1}/${n})` : base.descricao),
+            : { origem_id: serieId, parcela_n: p.n ?? i + 1 }),
+          descricao: p.descricao ?? (n > 1 ? `${base.descricao} (${p.n ?? i + 1}/${n})` : base.descricao),
           ...(p.categoria ? { categoria: p.categoria } : {}),
           vencimento: p.vencimento, valor: p.valor,
           ...(v.ja_pago && !cartaoModo && i === 0 ? { status: "pago", pago_em: p.vencimento, valor_pago: p.valor } : {}),
@@ -1276,41 +1300,46 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
           {registro && text(registro["cartao_id"]) && !temSerie && !readOnly && (
             <div className="space-y-1"><Label>Parcelas no cartão</Label>
               <Input type="number" min={1} max={48} value={parcItem} onChange={(e) => setParcItem(e.target.value)} />
-              <p className="text-muted-foreground text-xs">Mais de 1 divide o valor nas próximas faturas.</p></div>
+              <p className="text-muted-foreground text-xs">O valor informado é o de cada parcela; mais de 1 repete nas próximas faturas.</p></div>
           )}
           {!itensModo && (
-            <div className="space-y-1"><Label>{(v.modo === "parcelado" || cartaoModo) && podeConverter ? "Valor total (R$)" : v.modo === "recorrente" && podeConverter ? "Valor mensal (R$)" : "Valor (R$)"}</Label>
+            <div className="space-y-1"><Label>{cartaoModo && podeConverter ? "Valor da parcela (R$)" : v.modo === "parcelado" && podeConverter ? "Valor total (R$)" : v.modo === "recorrente" && podeConverter ? "Valor mensal (R$)" : "Valor (R$)"}</Label>
               <Input inputMode="decimal" value={v.valor} disabled={readOnly} onChange={(e) => setV({ ...v, valor: mascaraMoeda(e.target.value) })} placeholder="0,00" /></div>
           )}
-          {podeConverter && v.modo !== "unico" && !itensModo && (
-            <div className="space-y-1"><Label>{v.modo === "recorrente" ? "Nº de meses" : "Nº de parcelas"}</Label>
+          {podeConverter && v.modo !== "unico" && !itensModo && (<>
+            <div className="space-y-1"><Label>{v.modo === "recorrente" ? "Nº total de meses" : "Nº total de parcelas"}</Label>
               <Input type="number" min={1} max={cartaoModo ? 48 : 120} value={v.repetir} onChange={(e) => setV({ ...v, repetir: e.target.value })} /></div>
-          )}
+            <div className="space-y-1"><Label>Começar na parcela</Label>
+              <Input type="number" min={1} max={totParc} value={inicio} onChange={(e) => setInicio(e.target.value)} />
+              <p className="text-muted-foreground text-xs">Ex.: 2 para lançar de 2/{totParc} em diante (a 1ª já foi paga antes).</p></div>
+          </>)}
           {itensModo && (
             <div className="space-y-2 rounded-lg border p-3 sm:col-span-2">
               <p className="text-sm font-semibold">Itens da compra</p>
-              <div className="text-muted-foreground hidden grid-cols-[1fr_9rem_9rem_7rem_4.5rem_2.5rem] gap-2 text-xs font-medium sm:grid">
-                <span>Descrição</span><span>Data da compra</span><span>Categoria</span><span>Valor (R$)</span><span>Parcelas</span><span />
+              <div className="text-muted-foreground hidden grid-cols-[1fr_9rem_9rem_7rem_4rem_4rem_2.5rem] gap-2 text-xs font-medium sm:grid">
+                <span>Descrição</span><span>Data da compra</span><span>Categoria</span><span>Valor parcela</span><span>Parcela atual</span><span>De (total)</span><span />
               </div>
               {itens.map((it, idx) => {
                 const up = (patch: Partial<typeof it>) => setItens((l) => l.map((x, j) => (j === idx ? { ...x, ...patch } : x)));
                 return (
-                  <div key={idx} className="grid gap-2 sm:grid-cols-[1fr_9rem_9rem_7rem_4.5rem_2.5rem]">
+                  <div key={idx} className="grid gap-2 sm:grid-cols-[1fr_9rem_9rem_7rem_4rem_4rem_2.5rem]">
                     <Input value={it.descricao} placeholder="Ex.: Monitor 27''" onChange={(e) => up({ descricao: e.target.value })} />
                     <Input type="date" aria-label="Data da compra" value={it.data || v.vencimento} onChange={(e) => up({ data: e.target.value })} />
                     <Select value={it.categoria} onValueChange={(x) => up({ categoria: x })}>
                       <SelectTrigger><SelectValue placeholder="Categoria" /></SelectTrigger>
                       <SelectContent>{categorias.ativas.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
                     </Select>
-                    <Input inputMode="decimal" value={it.valor} placeholder="0,00" onChange={(e) => up({ valor: mascaraMoeda(e.target.value) })} />
-                    <Input type="number" min={1} max={48} value={it.parcelas} onChange={(e) => up({ parcelas: e.target.value })} />
+                    <Input inputMode="decimal" aria-label="Valor da parcela" value={it.valor} placeholder="0,00" onChange={(e) => up({ valor: mascaraMoeda(e.target.value) })} />
+                    <Input type="number" aria-label="Parcela atual" min={1} max={num(it.parcelas) || 1} value={it.inicio} onChange={(e) => up({ inicio: e.target.value })} />
+                    <Input type="number" aria-label="Total de parcelas" min={1} max={48} value={it.parcelas} onChange={(e) => up({ parcelas: e.target.value })} />
                     <Button type="button" variant="ghost" size="icon" aria-label="Remover item" disabled={itens.length === 1}
                       onClick={() => setItens((l) => l.filter((_, j) => j !== idx))}><Trash2 className="text-destructive h-4 w-4" /></Button>
                   </div>
                 );
               })}
+              <p className="text-muted-foreground text-xs">Informe o valor de cada parcela, como aparece na fatura. Para uma compra que já está na 2/10, coloque 2 em "Parcela atual" e 10 em "De".</p>
               <div className="flex items-center justify-between">
-                <Button type="button" variant="outline" size="sm" onClick={() => setItens((l) => [...l, { descricao: "", categoria: v.categoria, valor: "", parcelas: "1", data: l[l.length - 1]?.data || v.vencimento }])}>
+                <Button type="button" variant="outline" size="sm" onClick={() => setItens((l) => [...l, { descricao: "", categoria: v.categoria, valor: "", parcelas: "1", inicio: "1", data: l[l.length - 1]?.data || v.vencimento }])}>
                   <Plus className="mr-1 h-4 w-4" />Adicionar item</Button>
                 <p className="text-sm">Valor final no cartão: <span className="text-base font-bold tabular-nums">{formatBRL(totalItens)}</span></p>
               </div>
@@ -1592,22 +1621,25 @@ function NovaCompraCartao({ tipo, fatura, cartoes, parceiros, categorias, onClos
   const itens = (fatura["__itens"] as Row[]) ?? [];
   const ref = itens[0] ?? {};
   const cartao = cartoes.find((c) => text(rowId(c)) === text(fatura["cartao_id"]));
-  const [v, setV] = useState({ data: hojeISO(), descricao: "", parceiro_id: text(ref["parceiro_id"]), categoria: "", valor: "", parcelas: "1" });
+  const [v, setV] = useState({ data: hojeISO(), descricao: "", parceiro_id: text(ref["parceiro_id"]), categoria: "", valor: "", parcelas: "1", inicio: "1" });
   const [salvando, setSalvando] = useState(false);
   const opts = parceiros.filter((p) => p["is_fornecedor"] === true || text(rowId(p)) === v.parceiro_id)
     .map((p) => ({ value: text(rowId(p)), label: text(p["nome_fantasia"] || p["razao_social"]) || "—", keywords: [text(p["documento"])] }))
     .sort((a, b) => a.label.localeCompare(b.label));
   const fech = num(cartao?.["dia_fechamento"]); const venc = num(cartao?.["dia_vencimento"]);
-  const parcelas = fech && venc ? parcelasCartao({ valor: num(v.valor), parcelas: num(v.parcelas), dataCompra: v.data, diaFechamento: fech, diaVencimento: venc }) : [];
+  const totP = Math.max(1, Math.floor(num(v.parcelas)) || 1);
+  const iniP = Math.min(totP, Math.max(1, Math.floor(num(v.inicio)) || 1));
+  const restP = totP - iniP + 1;
+  const parcelas = fech && venc ? parcelasCartao({ valor: round2(num(v.valor) * restP), parcelas: restP, dataCompra: v.data, diaFechamento: fech, diaVencimento: venc }) : [];
   const salvar = async () => {
     if (!v.descricao.trim()) return void toast.error("Informe a descrição.");
     if (!v.parceiro_id) return void toast.error("Escolha o fornecedor.");
     if (!parcelas.length) return void toast.error(fech ? "Informe o valor." : "Cadastre fechamento e vencimento do cartão.");
     setSalvando(true);
-    const n = parcelas.length; const serie = n > 1 ? crypto.randomUUID() : null;
+    const n = totP; const serie = n > 1 ? crypto.randomUUID() : null;
     const lote = parcelas.map((p, i) => ({
-      tipo, empresa_id: ref["empresa_id"], origem_tipo: "manual", origem_id: serie, parcela_n: i + 1,
-      descricao: n > 1 ? `${v.descricao.trim()} (${i + 1}/${n})` : v.descricao.trim(),
+      tipo, empresa_id: ref["empresa_id"], origem_tipo: "manual", origem_id: serie, parcela_n: iniP + i,
+      descricao: n > 1 ? `${v.descricao.trim()} (${iniP + i}/${n})` : v.descricao.trim(),
       parceiro_id: v.parceiro_id, categoria: v.categoria || null, centro_custo_id: ref["centro_custo_id"] ?? null,
       conta_bancaria_id: ref["conta_bancaria_id"] ?? null, cartao_id: fatura["cartao_id"], forma_pagamento: "Cartão de crédito",
       data_compra: v.data, data_competencia: v.data, vencimento: p.vencimento, valor: p.valor, status: "aberto",
@@ -1625,7 +1657,7 @@ function NovaCompraCartao({ tipo, fatura, cartoes, parceiros, categorias, onClos
         <DialogHeader><DialogTitle>Adicionar compra — {text(fatura["descricao"])}</DialogTitle></DialogHeader>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1"><Label>Data da compra</Label><Input type="date" value={v.data} onChange={(e) => setV({ ...v, data: e.target.value })} /></div>
-          <div className="space-y-1"><Label>Valor (R$)</Label><Input inputMode="decimal" placeholder="0,00" value={v.valor} onChange={(e) => setV({ ...v, valor: mascaraMoeda(e.target.value) })} /></div>
+          <div className="space-y-1"><Label>Valor da parcela (R$)</Label><Input inputMode="decimal" placeholder="0,00" value={v.valor} onChange={(e) => setV({ ...v, valor: mascaraMoeda(e.target.value) })} /></div>
           <div className="space-y-1 sm:col-span-2"><Label>Descrição</Label><Input value={v.descricao} onChange={(e) => setV({ ...v, descricao: e.target.value })} /></div>
           <div className="space-y-1"><Label>Fornecedor *</Label>
             <SearchSelect value={v.parceiro_id} options={opts} placeholder="Escolha o fornecedor" searchPlaceholder="Nome ou CNPJ…" emptyText="Não encontrado." onChange={(x) => setV({ ...v, parceiro_id: x })} /></div>
@@ -1634,8 +1666,8 @@ function NovaCompraCartao({ tipo, fatura, cartoes, parceiros, categorias, onClos
               <SelectTrigger><SelectValue placeholder="Escolha a categoria" /></SelectTrigger>
               <SelectContent>{[...categorias].sort((a, b) => a.localeCompare(b)).map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
             </Select></div>
-          <div className="space-y-1"><Label>Parcelas no cartão</Label><Input type="number" min={1} max={48} value={v.parcelas} onChange={(e) => setV({ ...v, parcelas: e.target.value })} /></div>
-          {parcelas.length > 0 && <p className="text-muted-foreground self-end text-xs sm:col-span-1">1ª parcela na fatura de {formatDate(parcelas[0]!.vencimento)}{parcelas.length > 1 ? ` • ${parcelas.length}x de ${formatBRL(parcelas[1]!.valor)}` : ""}</p>}
+          <div className="space-y-1"><div className="grid grid-cols-2 gap-2"><div className="space-y-1"><Label>Parcela atual</Label><Input type="number" min={1} max={totP} value={v.inicio} onChange={(e) => setV({ ...v, inicio: e.target.value })} /></div><div className="space-y-1"><Label>De (total)</Label><Input type="number" min={1} max={48} value={v.parcelas} onChange={(e) => setV({ ...v, parcelas: e.target.value })} /></div></div></div>
+          {parcelas.length > 0 && <p className="text-muted-foreground self-end text-xs sm:col-span-1">1ª parcela na fatura de {formatDate(parcelas[0]!.vencimento)}{totP > 1 ? ` • parcelas ${iniP} a ${totP} de ${formatBRL(parcelas[0]!.valor)}` : ""}</p>}
         </div>
         <DialogFooter><Button variant="outline" onClick={onClose}>Cancelar</Button><Button disabled={salvando} onClick={() => void salvar()}>Salvar compra</Button></DialogFooter>
       </DialogContent>
