@@ -11,6 +11,9 @@ import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { useAudit } from "@/lib/audit";
 import { caminhoClassificacao, useClassificacoes } from "@/components/parceiros/ClassificacaoField";
 import { formatCpfCnpj, formatPhoneDisplay, matchesAny } from "@/lib/input-masks";
+import { Upload } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ImportarParceirosDialog } from "@/components/parceiros/ImportarParceirosDialog";
 
 export const Route = createFileRoute("/_authenticated/parceiros")({
   staticData: { sitemap: false },
@@ -35,6 +38,7 @@ function ParceirosPage() {
   const { empresaId, stamp } = useAudit();
   const { data: classificacoes = [] } = useClassificacoes();
   const [open, setOpen] = useState(false);
+  const [impOpen, setImpOpen] = useState(false);
   const [record, setRecord] = useState<Row | null>(null);
   const [f, setF] = useState({ busca: "", papel: "todos", status: "todos", situacao: "todos", estrutura: "todos", pai: "todos", classificacao: "todos" });
 
@@ -130,6 +134,12 @@ function ParceirosPage() {
 
   return (
     <>
+      {perms.canCreate && (
+        <div className="mb-2 flex justify-end">
+          <Button variant="outline" size="sm" onClick={() => setImpOpen(true)}><Upload className="mr-1 h-4 w-4" />Importar CSV</Button>
+        </div>
+      )}
+      <ImportarParceirosDialog open={impOpen} onOpenChange={setImpOpen} existentes={escopo} empresaId={empresaId} stamp={stamp} />
       <DataTable
         title="Parceiros de Negócios"
         columns={columns}
