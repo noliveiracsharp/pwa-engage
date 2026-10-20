@@ -55,7 +55,9 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
         }
         // Só mensagens recebidas de contatos (ignora status, grupos e as enviadas por nós).
         if (body.fromMe || body.isGroup || !body.phone) return ok({ ignorada: true });
-        if (body.type && body.type !== "ReceivedCallback") return ok({ ignorada: true });
+        // Ignora só avisos de status/entrega; qualquer outro "type" (chat, text, audio...) é mensagem.
+        const tipoEvt = String(body.type ?? "").toLowerCase();
+        if (/status|delivery|presence|connected|disconnected/.test(tipoEvt)) return ok({ ignorada: true });
 
         let texto = body.text?.message ?? "";
         let tipo = "texto";

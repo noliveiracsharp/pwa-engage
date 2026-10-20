@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Code, Inbox, Loader2, Pencil, Plus, QrCode, Search, Trash2, Unplug } from "lucide-react";
+import { CheckCircle2, Code, Inbox, Loader2, Pencil, Plus, QrCode, Search, Trash2, Unplug } from "lucide-react";
 import { digitsOnly } from "@/lib/input-masks";
 import { useServerFn } from "@tanstack/react-start";
 import { QrCodeDialog } from "@/components/empresas/QrCodeDialog";
@@ -322,8 +322,13 @@ export function ChildTable({ config, empresa, perms = FULL }: { config: ChildCon
     const clientToken = text(pick(row, ["client_token"]));
     const token = text(pick(row, ["token"])) || clientToken;
     const r = await webhookFn({ data: { instanceId: text(pick(row, ["instance_id"])), token, clientToken: clientToken || undefined, url } });
-    if (r.ok) toast.success("Recebimento ativado na Z-API. Endereço copiado.");
-    else toast.error(`A Z-API recusou (${r.message ?? ""}). O endereço foi copiado: cole em "Ao receber" no painel da Z-API.`);
+    if (r.ok) {
+      const key = idColumn(row);
+      const { error } = await supabase.from(config.table).update({ webhook_ativo: true } as never).eq(key, row[key] as never);
+      if (error) toast.warning("Recebimento ativado, mas rode o script atendeai-webhook-ativo.sql para o botão ficar verde.");
+      else toast.success("Recebimento ativado na Z-API. Endereço copiado.");
+      refresh();
+    } else toast.error(`A Z-API recusou (${r.message ?? ""}). O endereço foi copiado: cole em "Ao receber" no painel da Z-API.`);
   };
 
   const desconectar = async (row: Row) => {
@@ -409,9 +414,15 @@ export function ChildTable({ config, empresa, perms = FULL }: { config: ChildCon
                   (text(pick(row, ["status_conexao"])).toLowerCase() === "conectado" ? (
                     <>
                       <Badge className="bg-success text-success-foreground hover:bg-success">WhatsApp Conectado</Badge>
-                      <Button variant="outline" size="sm" onClick={() => void ativarRecebimento(row)} title="Faz as mensagens recebidas entrarem no Atende.ai e acionarem os fluxos">
-                        <Inbox className="mr-1 h-4 w-4" /> Ativar recebimento
-                      </Button>
+                      {row["webhook_ativo"] === true ? (
+                        <Button size="sm" className="bg-success text-success-foreground hover:bg-success/90" onClick={() => void ativarRecebimento(row)} title="Recebimento ativo. Clique para reaplicar na Z-API">
+                          <CheckCircle2 className="mr-1 h-4 w-4" /> Recebimento ativo
+                        </Button>
+                      ) : (
+                        <Button variant="outline" size="sm" onClick={() => void ativarRecebimento(row)} title="Faz as mensagens recebidas entrarem no Atende.ai e acionarem os fluxos">
+                          <Inbox className="mr-1 h-4 w-4" /> Ativar recebimento
+                        </Button>
+                      )}
                       <Button variant="outline" size="sm" onClick={() => void desconectar(row)}>
                         <Unplug className="mr-1 h-4 w-4" /> Desconectar
                       </Button>
