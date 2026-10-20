@@ -99,7 +99,7 @@ export function KanbanConfigDialog({
   const qc = useQueryClient();
   const kanbanId = kanban ? String(kanban["id"]) : "";
   const [tab, setTab] = useState("dados");
-  const [form, setForm] = useState({ nome: "", descricao: "", status: true });
+  const [form, setForm] = useState({ nome: "", descricao: "", status: true, totais: false, temperatura: false });
   const [novaEtapa, setNovaEtapa] = useState("");
   const [editId, setEditId] = useState<string | null>(null);
   const [editDesc, setEditDesc] = useState("");
@@ -110,6 +110,8 @@ export function KanbanConfigDialog({
   const [editCk, setEditCk] = useState(false);
   const [editGanha, setEditGanha] = useState(false);
   const [editTpl, setEditTpl] = useState("");
+  const [editCkS, setEditCkS] = useState(false);
+  const [editTplS, setEditTplS] = useState("");
   const [editDestK, setEditDestK] = useState("");
   const [editDestE, setEditDestE] = useState("");
   const { data: templates = [] } = useChecklistTemplates(empresaId);
@@ -123,6 +125,8 @@ export function KanbanConfigDialog({
       nome: String(kanban?.["nome"] ?? ""),
       descricao: String(kanban?.["descricao"] ?? ""),
       status: kanban ? String(kanban["status"] ?? "true") !== "false" : true,
+      totais: [true, "true", "t", 1].includes(kanban?.["exibir_totais"] as never),
+      temperatura: [true, "true", "t", 1].includes(kanban?.["habilitar_temperatura"] as never),
     });
     setEditId(null);
     setNovaEtapa("");
@@ -196,6 +200,9 @@ export function KanbanConfigDialog({
         descricao: form.descricao.trim(),
         status: form.status,
       };
+      // Só envia os parâmetros quando ligados ou já existentes, para não quebrar bancos sem o script.
+      if (form.totais || (kanban && "exibir_totais" in kanban)) payload["exibir_totais"] = form.totais;
+      if (form.temperatura || (kanban && "habilitar_temperatura" in kanban)) payload["habilitar_temperatura"] = form.temperatura;
       if (kanbanId) {
         const { error } = await supabase.from("kanban_nome").update(payload).eq("id", kanbanId);
         if (error) throw error;
@@ -458,6 +465,14 @@ export function KanbanConfigDialog({
                 />
               </div>
             </div>
+            <label className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 text-sm">
+              <span>Exibir totalizador financeiro no cabeçalho<span className="block text-xs text-muted-foreground">Soma o valor dos cards em cada etapa e no funil. Ideal para Ofertas.</span></span>
+              <Switch checked={form.totais} onCheckedChange={(v) => setForm({ ...form, totais: v })} />
+            </label>
+            <label className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 text-sm">
+              <span>Habilitar temperatura dos cards<span className="block text-xs text-muted-foreground">Pinta o card conforme Frio, Morno ou Quente definido na Oferta.</span></span>
+              <Switch checked={form.temperatura} onCheckedChange={(v) => setForm({ ...form, temperatura: v })} />
+            </label>
             {transfer && (
               <div className="space-y-3 rounded-md border border-destructive/50 p-3">
                 <p className="text-sm">
@@ -571,6 +586,25 @@ export function KanbanConfigDialog({
                         <label className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 text-sm">
                           <span>Exigir checklist para entrar</span><Switch checked={editCk} onCheckedChange={setEditCk} />
                         </label>
+                        {editCk && (
+                          <Select value={editTpl} onValueChange={setEditTpl}>
+                            <SelectTrigger className="w-full"><SelectValue placeholder={templates.length ? "Escolha o checklist" : "Crie na aba Checklists"} /></SelectTrigger>
+                            <SelectContent>
+                              {[...templates].sort((a, b) => String(a["nome"] ?? "").localeCompare(String(b["nome"] ?? ""), "pt-BR")).map((t) => <SelectItem key={String(t["id"])} value={String(t["id"])}>{String(t["nome"] ?? "")}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        )}
+                        <label className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 text-sm">
+                          <span>Exigir checklist para sair</span><Switch checked={editCkS} onCheckedChange={setEditCkS} />
+                        </label>
+                        {editCkS && (
+                          <Select value={editTplS} onValueChange={setEditTplS}>
+                            <SelectTrigger className="w-full"><SelectValue placeholder={templates.length ? "Escolha o checklist" : "Crie na aba Checklists"} /></SelectTrigger>
+                            <SelectContent>
+                              {[...templates].sort((a, b) => String(a["nome"] ?? "").localeCompare(String(b["nome"] ?? ""), "pt-BR")).map((t) => <SelectItem key={String(t["id"])} value={String(t["id"])}>{String(t["nome"] ?? "")}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        )}
                         <label className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 text-sm">
                           <span>Venda ganha / fechamento<span className="block text-xs text-muted-foreground">Entra na DRE do Board e no faturamento</span></span>
                           <Switch checked={editGanha} onCheckedChange={setEditGanha} />
@@ -593,23 +627,16 @@ export function KanbanConfigDialog({
                             </Select>
                           )}
                         </div>
-                        {editCk && (
-                          <Select value={editTpl} onValueChange={setEditTpl}>
-                            <SelectTrigger className="w-full"><SelectValue placeholder={templates.length ? "Escolha o checklist" : "Crie na aba Checklists"} /></SelectTrigger>
-                            <SelectContent>
-                              {templates.map((t) => <SelectItem key={String(t["id"])} value={String(t["id"])}>{String(t["nome"] ?? "")}</SelectItem>)}
-                            </SelectContent>
-                          </Select>
-                        )}
                         <Button
                           size="icon"
                           variant="ghost"
                           aria-label="Salvar etapa"
-                          disabled={updEtapa.isPending || !editDesc.trim() || (editCk && !editTpl) || (!!editDestK && !editDestE)}
+                          disabled={updEtapa.isPending || !editDesc.trim() || (editCk && !editTpl) || (editCkS && !editTplS) || (!!editDestK && !editDestE)}
                           onClick={() =>
                             updEtapa.mutate({ id, patch: {
                               descricao: editDesc.trim(), cor: editCor, is_default_ia: editIA, is_default_humano: editHum,
-                              exige_checklist: editCk, checklist_template_id: editCk ? editTpl : null, etapa_ganha: editGanha,
+                              exige_checklist: editCk, checklist_template_id: editCk ? editTpl : null,
+                              ...(editCkS || "exige_checklist_saida" in e ? { exige_checklist_saida: editCkS, checklist_saida_template_id: editCkS ? editTplS : null } : {}), etapa_ganha: editGanha,
                               acao_kanban_destino_id: editDestK || null, acao_etapa_destino_id: editDestK ? editDestE : null,
                             } })
                           }
@@ -652,6 +679,8 @@ export function KanbanConfigDialog({
                             setEditHum(e["is_default_humano"] === true);
                             setEditCk([true, 1, "true", "t"].includes(e["exige_checklist"] as never));
                             setEditTpl(String(e["checklist_template_id"] ?? ""));
+                            setEditCkS([true, 1, "true", "t"].includes(e["exige_checklist_saida"] as never));
+                            setEditTplS(String(e["checklist_saida_template_id"] ?? ""));
                             setEditGanha([true, 1, "true", "t"].includes(e["etapa_ganha"] as never));
                             setEditDestK(String(e["acao_kanban_destino_id"] ?? ""));
                             setEditDestE(String(e["acao_etapa_destino_id"] ?? ""));
@@ -677,7 +706,8 @@ export function KanbanConfigDialog({
                         {e["is_default_ia"] === true && <Badge variant="secondary" className="gap-1 text-[10px]"><Bot className="h-3 w-3" /> Padrão IA</Badge>}
                         {e["is_default_humano"] === true && <Badge variant="secondary" className="gap-1 text-[10px]"><Users className="h-3 w-3" /> Padrão Equipe</Badge>}
                         {e["is_default_encerrado"] === true && <Badge variant="secondary" className="gap-1 text-[10px]"><Check className="h-3 w-3" /> Encerramento</Badge>}
-                        {[true, 1, "true", "t"].includes(e["exige_checklist"] as never) && <Badge variant="secondary" className="gap-1 text-[10px]"><ClipboardCheck className="h-3 w-3" /> Checklist</Badge>}
+                        {[true, 1, "true", "t"].includes(e["exige_checklist"] as never) && <Badge variant="secondary" className="gap-1 text-[10px]"><ClipboardCheck className="h-3 w-3" /> Checklist entrada</Badge>}
+                        {[true, 1, "true", "t"].includes(e["exige_checklist_saida"] as never) && <Badge variant="secondary" className="gap-1 text-[10px]"><ClipboardCheck className="h-3 w-3" /> Checklist saída</Badge>}
                         {!!e["acao_kanban_destino_id"] && <Badge variant="secondary" className="text-[10px]">→ {String(kanbans.find((k) => String(k["id"]) === String(e["acao_kanban_destino_id"]))?.["nome"] ?? "Outro quadro")}</Badge>}
                         </div>
                       </div>
