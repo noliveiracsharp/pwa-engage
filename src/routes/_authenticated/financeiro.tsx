@@ -75,6 +75,7 @@ import { Bar, CartesianGrid, ComposedChart, Line, XAxis, YAxis } from "recharts"
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { confirmar } from "@/components/layout/DialogoGlobal";
 import { OfertaConsultaSheet, VincularOfertaDialog, ofertaDoTitulo } from "@/components/financeiro/OfertaVinculo";
+import { camposFiscais, rotulosFiscais } from "@/lib/titulo-fiscal";
 
 export const Route = createFileRoute("/_authenticated/financeiro")({
   staticData: { sitemap: false },
