@@ -173,9 +173,10 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
   );
   const resumo = resumoTitulos(rows, hoje);
   // Visão geral de Contas a Pagar: compras no cartão aparecem agrupadas como uma fatura por cartão/vencimento.
-  const [fatura, setFatura] = useState<Row | null>(null);
+  const [faturaSel, setFatura] = useState<Row | null>(null);
+  const [novaCompra, setNovaCompra] = useState<Row | null>(null);
   const [abertas, setAbertas] = useState<Set<string>>(new Set());
-  const exibidos = useMemo(() => {
+  const exibidos: Row[] = useMemo(() => {
     if (tipo !== "pagar" || f.cartao !== "todos") return rows;
     const grupos = new Map<string, Row[]>();
     const out: Row[] = [];
@@ -445,6 +446,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
     } },
   ];
 
+  const fatura = faturaSel ? (exibidos.find((x) => x["id"] === faturaSel["id"] && x["__fatura"]) ?? faturaSel) : null;
   const rowMenu = (t: Row) => {
     if (t["__fatura"]) return (
       <>
@@ -678,7 +680,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
                 <div className="flex flex-wrap gap-2">
                   {perms.canDelete && <Button variant="outline" className="text-destructive" onClick={() => { const f = fatura; setFatura(null); setExcluirFat(f); }}><Trash2 className="mr-1 h-4 w-4" />Excluir fatura</Button>}
                   <Button variant="outline" onClick={() => setFatura(null)}>Fechar</Button>
-                  {perms.canCreate && <Button variant="outline" onClick={() => { const c = text(fatura["cartao_id"]); setFatura(null); setNovoNoCartao(c); setEditar(null); }}><Plus className="mr-1 h-4 w-4" />Adicionar itens</Button>}
+                  {perms.canCreate && <Button variant="outline" onClick={() => setNovaCompra(fatura)}><Plus className="mr-1 h-4 w-4" />Adicionar itens</Button>}
                   {perms.canUpdate && fatura["status"] !== "pago" && <Button onClick={() => void baixarItensFatura(itens)}><CheckCircle2 className="mr-1 h-4 w-4" />Baixar fatura (total)</Button>}
                 </div>
               </div>
@@ -687,7 +689,10 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
         </DialogContent>
       </Dialog>
 
+      {novaCompra && <NovaCompraCartao tipo={tipo} fatura={novaCompra} cartoes={cartoes} parceiros={parceiros} categorias={categorias.ativas}
+        onClose={() => setNovaCompra(null)} onSaved={invalidar} />}
       <DataTable
+        rowActions={(r) => (r["__fatura"] ? { edit: false, delete: false } : { edit: true, delete: true })}
         title={tipo === "receber" ? "Contas a Receber" : "Contas a Pagar"}
         columns={columns}
         rows={exibidos}
@@ -1579,4 +1584,61 @@ function Caixa({ titulos }: { titulos: Row[] }) {
 function nomeCartao(c: Row | undefined): string {
   if (!c) return "—";
   return [text(c["descricao"]), c["final4"] ? `final ${text(c["final4"])}` : ""].filter(Boolean).join(" • ");
+}
+
+function NovaCompraCartao({ tipo, fatura, cartoes, parceiros, categorias, onClose, onSaved }: {
+  tipo: TipoTitulo; fatura: Row; cartoes: Row[]; parceiros: Row[]; categorias: string[]; onClose: () => void; onSaved: () => void;
+}) {
+  const itens = (fatura["__itens"] as Row[]) ?? [];
+  const ref = itens[0] ?? {};
+  const cartao = cartoes.find((c) => text(rowId(c)) === text(fatura["cartao_id"]));
+  const [v, setV] = useState({ data: hojeISO(), descricao: "", parceiro_id: text(ref["parceiro_id"]), categoria: "", valor: "", parcelas: "1" });
+  const [salvando, setSalvando] = useState(false);
+  const opts = parceiros.filter((p) => p["is_fornecedor"] === true || text(rowId(p)) === v.parceiro_id)
+    .map((p) => ({ value: text(rowId(p)), label: text(p["nome_fantasia"] || p["razao_social"]) || "—", keywords: [text(p["documento"])] }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+  const fech = num(cartao?.["dia_fechamento"]); const venc = num(cartao?.["dia_vencimento"]);
+  const parcelas = fech && venc ? parcelasCartao({ valor: num(v.valor), parcelas: num(v.parcelas), dataCompra: v.data, diaFechamento: fech, diaVencimento: venc }) : [];
+  const salvar = async () => {
+    if (!v.descricao.trim()) return void toast.error("Informe a descrição.");
+    if (!v.parceiro_id) return void toast.error("Escolha o fornecedor.");
+    if (!parcelas.length) return void toast.error(fech ? "Informe o valor." : "Cadastre fechamento e vencimento do cartão.");
+    setSalvando(true);
+    const n = parcelas.length; const serie = n > 1 ? crypto.randomUUID() : null;
+    const lote = parcelas.map((p, i) => ({
+      tipo, empresa_id: ref["empresa_id"], origem_tipo: "manual", origem_id: serie, parcela_n: i + 1,
+      descricao: n > 1 ? `${v.descricao.trim()} (${i + 1}/${n})` : v.descricao.trim(),
+      parceiro_id: v.parceiro_id, categoria: v.categoria || null, centro_custo_id: ref["centro_custo_id"] ?? null,
+      conta_bancaria_id: ref["conta_bancaria_id"] ?? null, cartao_id: fatura["cartao_id"], forma_pagamento: "Cartão de crédito",
+      data_compra: v.data, data_competencia: v.data, vencimento: p.vencimento, valor: p.valor, status: "aberto",
+    }));
+    const { error } = await supabase.from("financeiro_titulos").insert(lote as never);
+    setSalvando(false);
+    if (error) return void toast.error(erroFinanceiro(error));
+    const fora = parcelas[0]!.vencimento !== text(fatura["vencimento"]).slice(0, 10);
+    toast.success(fora ? `Compra salva na fatura de ${formatDate(parcelas[0]!.vencimento)} (pela data da compra).` : "Compra adicionada à fatura.");
+    onSaved(); onClose();
+  };
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-xl">
+        <DialogHeader><DialogTitle>Adicionar compra — {text(fatura["descricao"])}</DialogTitle></DialogHeader>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1"><Label>Data da compra</Label><Input type="date" value={v.data} onChange={(e) => setV({ ...v, data: e.target.value })} /></div>
+          <div className="space-y-1"><Label>Valor (R$)</Label><Input inputMode="decimal" placeholder="0,00" value={v.valor} onChange={(e) => setV({ ...v, valor: mascaraMoeda(e.target.value) })} /></div>
+          <div className="space-y-1 sm:col-span-2"><Label>Descrição</Label><Input value={v.descricao} onChange={(e) => setV({ ...v, descricao: e.target.value })} /></div>
+          <div className="space-y-1"><Label>Fornecedor *</Label>
+            <SearchSelect value={v.parceiro_id} options={opts} placeholder="Escolha o fornecedor" searchPlaceholder="Nome ou CNPJ…" emptyText="Não encontrado." onChange={(x) => setV({ ...v, parceiro_id: x })} /></div>
+          <div className="space-y-1"><Label>Categoria</Label>
+            <Select value={v.categoria} onValueChange={(x) => setV({ ...v, categoria: x })}>
+              <SelectTrigger><SelectValue placeholder="Escolha a categoria" /></SelectTrigger>
+              <SelectContent>{[...categorias].sort((a, b) => a.localeCompare(b)).map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+            </Select></div>
+          <div className="space-y-1"><Label>Parcelas no cartão</Label><Input type="number" min={1} max={48} value={v.parcelas} onChange={(e) => setV({ ...v, parcelas: e.target.value })} /></div>
+          {parcelas.length > 0 && <p className="text-muted-foreground self-end text-xs sm:col-span-1">1ª parcela na fatura de {formatDate(parcelas[0]!.vencimento)}{parcelas.length > 1 ? ` • ${parcelas.length}x de ${formatBRL(parcelas[1]!.valor)}` : ""}</p>}
+        </div>
+        <DialogFooter><Button variant="outline" onClick={onClose}>Cancelar</Button><Button disabled={salvando} onClick={() => void salvar()}>Salvar compra</Button></DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 }
