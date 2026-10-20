@@ -721,9 +721,10 @@ function Detalhe({ projeto, d, perms, onBack }: { projeto: Row; d: D; perms: Per
                           <Button size="icon" variant="ghost" disabled={idx === 0} onClick={() => moverAtividade(filhas, idx, -1)} aria-label="Subir atividade" title="Subir"><ArrowUp className="h-4 w-4" /></Button>
                           <Button size="icon" variant="ghost" disabled={idx === filhas.length - 1} onClick={() => moverAtividade(filhas, idx, 1)} aria-label="Descer atividade" title="Descer"><ArrowDown className="h-4 w-4" /></Button>
                         </>}
-                        {perms.canCreate && <Button size="icon" variant="ghost" onClick={() => duplicarAtiv(a)} aria-label="Duplicar atividade" title="Duplicar"><Copy className="h-4 w-4" /></Button>}
-                        <Button size="icon" variant="ghost" onClick={() => setAtivAberta({ id: aid, tarefa: id })} aria-label="Abrir atividade"><Pencil className="h-4 w-4" /></Button>
-                        {perms.canDelete && <Button size="icon" variant="ghost" onClick={() => excluirAtividade(a)} aria-label="Excluir atividade"><Trash2 className="h-4 w-4 text-destructive" /></Button>}
+                        <AcoesTarefa rotulo="atividade"
+                          onEditar={() => setAtivAberta({ id: aid, tarefa: id })}
+                          onDuplicar={perms.canCreate ? () => void duplicarAtiv(a) : undefined}
+                          onExcluir={perms.canDelete ? () => void excluirAtividade(a) : undefined} />
                       </TableCell>
                     </TableRow>
                   );
