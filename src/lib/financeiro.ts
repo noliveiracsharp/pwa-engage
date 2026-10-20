@@ -108,8 +108,8 @@ export function titulosDaOferta(orc: Row): NovoTitulo[] {
   const total = parcelas.length;
   const out: NovoTitulo[] = parcelas.map((p) => ({
     tipo: "receber",
-    descricao: `Oferta ${numero} — parcela ${p.numero}/${total}`,
-    categoria: "Venda / Oferta",
+    descricao: `Oferta ${numero} — Implantação ${p.numero}/${total}`,
+    categoria: "Implantação / Venda",
     vencimento: p.vencimento || hojeISO(),
     valor: round2(p.valor),
     parceiro_id: cliente,
@@ -117,6 +117,26 @@ export function titulosDaOferta(orc: Row): NovoTitulo[] {
     origem_id: id,
     parcela_n: p.numero,
   }));
+  // Mensalidades do contrato: série separada da implantação (1 boleto/mês).
+  const mensal = round2(num(orc["total_recorrente"]));
+  if (mensal > 0) {
+    const meses = Math.max(1, Math.min(120, Math.floor(num(orc["vigencia_meses"])) || 12));
+    const base = iso(orc["dt_orcamento"] ?? orc["data"] ?? orc["created_at"]) || hojeISO();
+    const primeira = parcelas[0]?.vencimento ? addMonthsISO(parcelas[0].vencimento, 1) : addMonthsISO(base, 1);
+    for (let i = 0; i < meses; i++) {
+      out.push({
+        tipo: "receber",
+        descricao: `Oferta ${numero} — Mensalidade ${i + 1}/${meses}`,
+        categoria: "Mensalidade de contrato",
+        vencimento: addMonthsISO(primeira, i),
+        valor: mensal,
+        parceiro_id: cliente,
+        origem_tipo: "oferta",
+        origem_id: id,
+        parcela_n: total + i + 1,
+      });
+    }
+  }
   const forn = cronogramaCompra({
     custo: num(orc["total_custo"]),
     condicao: condicaoCompraFromValue(orc["compra_condicao"]),

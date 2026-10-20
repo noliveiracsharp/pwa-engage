@@ -15,6 +15,7 @@ import { ESPACOS } from "@/components/projetos/EspacosSidebar";
 import { titulosDaOferta } from "@/lib/financeiro";
 import { contarTitulosDaOrigem, erroFinanceiro, inserirTitulos } from "@/lib/financeiro-db";
 import { nomeProjetoDaOferta } from "@/lib/oferta-ativacao";
+import { formatBRL } from "@/lib/orcamentos";
 
 type Props = {
   open: boolean;
@@ -113,6 +114,13 @@ export function AtivacaoOfertaDialog({ open, onOpenChange, oferta, cliente, empr
             <Label htmlFor="at-fin">Gerar contas a receber e a pagar</Label>
             <Switch id="at-fin" checked={gerarFin} onCheckedChange={setGerarFin} />
           </div>
+          {gerarFin && oferta && (
+            <ul className="text-muted-foreground list-disc space-y-1 rounded-md border p-3 pl-7 text-xs">
+              {Number(oferta["total_liquido"]) > 0 && <li>Implantação (produtos + serviços avulsos): {formatBRL(oferta["total_liquido"])}, conforme o parcelamento da Oferta — 1 boleto por parcela.</li>}
+              {Number(oferta["total_recorrente"]) > 0 && <li>Mensalidades: {Math.max(1, Math.floor(Number(oferta["vigencia_meses"])) || 12)} × {formatBRL(oferta["total_recorrente"])}, começando no mês seguinte à implantação.</li>}
+              <li>Contas a pagar separadas: fornecedor dos produtos e despesas operacionais.</li>
+            </ul>
+          )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Agora não</Button>
