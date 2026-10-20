@@ -17,13 +17,32 @@ import { rowId, text } from "@/lib/crud";
 import { formatBRL, formatDate, round2 } from "@/lib/orcamentos";
 import { erroFinanceiro } from "@/lib/financeiro-db";
 import { lerFaturaCartao } from "@/lib/fatura-importacao.functions";
-import { chaveItem, ehDespesa, limparDescricao, parcelasDaLinha, type ItemFaturaLido } from "@/lib/fatura-importacao";
+import { lerTextoFatura, chaveItem, ehDespesa, limparDescricao, parcelasDaLinha, type ItemFaturaLido } from "@/lib/fatura-importacao";
 import type { Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
 
 type Linha = ItemFaturaLido & { id: number; marcado: boolean; cartao_id: string; categoria: string; parceiro_id: string; jaLancado: boolean };
 
 const nomeP = (p: Row) => text(p["nome_fantasia"] || p["razao_social"]) || "—";
+async function textoDoPdf(f: File): Promise<string> {
+  const pdfjs = await import("pdfjs-dist");
+  const worker = await import("pdfjs-dist/build/pdf.worker.min.mjs?url");
+  pdfjs.GlobalWorkerOptions.workerSrc = worker.default;
+  const doc = await pdfjs.getDocument({ data: await f.arrayBuffer() }).promise;
+  const out: string[] = [];
+  for (let i = 1; i <= doc.numPages; i++) {
+    const c = await (await doc.getPage(i)).getTextContent();
+    const rows = new Map<number, [number, string][]>();
+    for (const it of c.items) {
+      if (!("str" in it) || !it.str.trim()) continue;
+      const y = Math.round(it.transform[5] / 3);
+      const r = rows.get(y) ?? []; r.push([it.transform[4], it.str]); rows.set(y, r);
+    }
+    [...rows.entries()].sort((a, b) => b[0] - a[0]).forEach(([, r]) => out.push(r.sort((a, b) => a[0] - b[0]).map((x) => x[1]).join(" ")));
+  }
+  return out.join("\n");
+}
+
 const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
 
 export function ImportarFaturaDialog({ cartoes, parceiros, categorias, onClose, onSaved }: {
@@ -60,12 +79,16 @@ export function ImportarFaturaDialog({ cartoes, parceiros, categorias, onClose, 
     if (file.size > 15 * 1024 * 1024) return void toast.error("PDF muito grande (máx. 15 MB).");
     setEtapa("lendo");
     try {
-      const path = `faturas/${crypto.randomUUID()}.pdf`;
-      const { error } = await supabase.storage.from("chat_media").upload(path, file, { contentType: "application/pdf" });
-      if (error) throw error;
-      const url = supabase.storage.from("chat_media").getPublicUrl(path).data.publicUrl;
-      const r = await ler({ data: { url } });
-      if (r.erro || !r.itens.length) { setEtapa("arquivo"); return void toast.error(r.erro ?? "Nenhuma compra encontrada no PDF."); }
+      let r: { vencimento: string | null; total: number | null; itens: ItemFaturaLido[]; erro?: string } = lerTextoFatura(await textoDoPdf(file));
+      if (!r.itens.length) {
+        // Layout desconhecido: tenta a leitura por IA.
+        const path = `faturas/${crypto.randomUUID()}.pdf`;
+        const { error } = await supabase.storage.from("chat_media").upload(path, file, { contentType: "application/pdf" });
+        if (error) throw error;
+        const url = supabase.storage.from("chat_media").getPublicUrl(path).data.publicUrl;
+        r = await ler({ data: { url } });
+      }
+      if (r.erro || !r.itens.length) { setEtapa("arquivo"); return void toast.error(r.erro ? "Não reconhecemos o formato desta fatura." : "Nenhuma compra encontrada no PDF."); }
       const vencimento = r.vencimento ?? "";
       // Compras já lançadas nesta fatura (mesmo vencimento) não entram de novo.
       const ids = cartoes.map((c) => text(rowId(c)));
