@@ -46,7 +46,7 @@ export function lerTextoFatura(texto: string): { vencimento: string | null; tota
   let total: number | null = null;
   const v = texto.match(/vencimento[^\d]{0,40}(\d{2})\/(\d{2})\/(\d{4})/i) ?? texto.match(/\d{4}\*{2,}\d{4} (\d{2})\/(\d{2})\/(\d{4})/);
   if (v) vencimento = `${v[3]}-${v[2]}-${v[1]}`;
-  const t = texto.match(/(?:fatura atual|total da (?:sua )?fatura)[^\d]{0,30}R\$ ?([\d.]+,\d{2})/i);
+  const t = texto.match(/fatura atual[^\d]{0,30}R\$ ?([\d.]+,\d{2})/i) ?? texto.match(/despesas do m[êe]s[^\d]{0,30}R\$ ?([\d.]+,\d{2})/i);
   if (t) total = brl(t[1]);
   let final4: string | null = null;
   const itens: ItemFaturaLido[] = [];
