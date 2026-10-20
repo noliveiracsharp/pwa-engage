@@ -17,7 +17,7 @@ import { IniciaisResponsaveis, responsaveisDe } from "@/components/projetos/Resp
 import { espacoEDescendentes } from "@/components/projetos/EspacosSidebar";
 import { rowId, idColumn, matches } from "@/lib/crud";
 import { useAudit } from "@/lib/audit";
-import { ATIVIDADES, atividadePct, duplicarTarefa, excluirTarefaComFilhos, filterPayload, fmtDate, prioridadeClass, progressoCor, sincronizarTarefa, tarefaPct } from "@/lib/projetos";
+import { ATIVIDADES, atividadePct, duplicarAtividade, duplicarTarefa, excluirTarefaComFilhos, filterPayload, fmtDate, prioridadeClass, progressoCor, sincronizarTarefa, tarefaPct } from "@/lib/projetos";
 import { AcoesTarefa } from "@/components/projetos/AcoesTarefa";
 import type { Row } from "@/lib/row";
 import type { Perms } from "@/hooks/usePagePermissions";
@@ -88,6 +88,19 @@ export function TarefasEspaco({ espacoId, espacos, projetos, tarefas, atividades
   }
   async function duplicar(t: Row) {
     try { await duplicarTarefa(t, tc.nome, proxOrdem()); toast.success("Tarefa duplicada com as atividades."); qc.invalidateQueries(); }
+    catch (e) { toast.error((e as Error).message); }
+  }
+  async function excluirAtiv(a: Row) {
+    if (!await confirmar(`Excluir a atividade "${String(a["nome"] ?? "")}"?`)) return;
+    const { error } = await supabase.from(ATIVIDADES as never).delete().eq("id", rowId(a) as never);
+    if (error) { toast.error(error.message); return; }
+    await sincronizarTarefa(String(a["tarefa_id"]), tCols);
+    toast.success("Atividade excluída.");
+    qc.invalidateQueries({ queryKey: ["table", ATIVIDADES] });
+    refresh();
+  }
+  async function duplicarAtiv(a: Row) {
+    try { await duplicarAtividade(a, String(a["tarefa_id"])); await sincronizarTarefa(String(a["tarefa_id"]), tCols); toast.success("Atividade duplicada."); qc.invalidateQueries(); }
     catch (e) { toast.error((e as Error).message); }
   }
   async function concluirAtividade(a: Row, v: boolean) {
@@ -246,7 +259,12 @@ export function TarefasEspaco({ espacoId, espacos, projetos, tarefas, atividades
                                     <TableCell><IniciaisResponsaveis ids={Array.isArray(a["responsaveis"]) ? (a["responsaveis"] as unknown[]).map(String) : []} usuarios={usuarios} /></TableCell>
                                     <TableCell className="text-sm">{fmtDate(a["dt_fim"])}</TableCell>
                                     <TableCell><Badge className={prioridadeClass(a["prioridade"])}>{String(a["prioridade"] ?? "Normal")}</Badge></TableCell>
-                                    <TableCell />
+                                    <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                                      <AcoesTarefa rotulo="atividade"
+                                        onEditar={() => setAtivAberta({ id: String(rowId(a)), tarefa: id })}
+                                        onDuplicar={perms.canCreate ? () => void duplicarAtiv(a) : undefined}
+                                        onExcluir={perms.canDelete ? () => void excluirAtiv(a) : undefined} />
+                                    </TableCell>
                                   </TableRow>
                                 );
                               })}
