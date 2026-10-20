@@ -192,6 +192,25 @@ export async function duplicarAtividade(a: Row, tarefaId: string, sufixo = " (C�
   return novoId;
 }
 
+/** Exclui a tarefa e tudo que pertence a ela (atividades, dependências, checklists e anexos). */
+export async function excluirTarefaComFilhos(tarefaId: string): Promise<void> {
+  const { data: ats } = await supabase.from(ATIVIDADES as never).select("id").eq("tarefa_id", tarefaId as never);
+  const ids = ((ats ?? []) as Row[]).map((a) => String(a["id"]));
+  if (ids.length) {
+    await supabase.from("projetos_atividades_dependencias" as never).delete().in("atividade_id", ids as never);
+    await supabase.from("projetos_atividades_dependencias" as never).delete().in("depende_de_id", ids as never);
+    await supabase.from("projetos_tarefas_checklists" as never).delete().in("atividade_id", ids as never);
+    await supabase.from("projetos_tarefas_anexos" as never).delete().in("atividade_id", ids as never);
+  }
+  // Itens antigos ligados direto à tarefa (ignora se a coluna não existir).
+  await supabase.from("projetos_tarefas_checklists" as never).delete().eq("tarefa_id", tarefaId as never);
+  await supabase.from("projetos_tarefas_anexos" as never).delete().eq("tarefa_id", tarefaId as never);
+  const { error: e1 } = await supabase.from(ATIVIDADES as never).delete().eq("tarefa_id", tarefaId as never);
+  if (e1) throw e1;
+  const { error } = await supabase.from("projetos_tarefas").delete().eq("id", tarefaId as never);
+  if (error) throw error;
+}
+
 /** Copia uma tarefa com todas as atividades e checklists, no fim do projeto. */
 export async function duplicarTarefa(t: Row, nomeCol: string, ordem: number): Promise<void> {
   const { data, error } = await supabase.from("projetos_tarefas")

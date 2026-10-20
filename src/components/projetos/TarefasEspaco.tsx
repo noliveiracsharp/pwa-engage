@@ -17,7 +17,8 @@ import { IniciaisResponsaveis, responsaveisDe } from "@/components/projetos/Resp
 import { espacoEDescendentes } from "@/components/projetos/EspacosSidebar";
 import { rowId, idColumn, matches } from "@/lib/crud";
 import { useAudit } from "@/lib/audit";
-import { ATIVIDADES, atividadePct, filterPayload, fmtDate, prioridadeClass, progressoCor, sincronizarTarefa, tarefaPct } from "@/lib/projetos";
+import { ATIVIDADES, atividadePct, duplicarTarefa, excluirTarefaComFilhos, filterPayload, fmtDate, prioridadeClass, progressoCor, sincronizarTarefa, tarefaPct } from "@/lib/projetos";
+import { AcoesTarefa } from "@/components/projetos/AcoesTarefa";
 import type { Row } from "@/lib/row";
 import type { Perms } from "@/hooks/usePagePermissions";
 import { confirmar } from "@/components/layout/DialogoGlobal";
@@ -78,10 +79,16 @@ export function TarefasEspaco({ espacoId, espacos, projetos, tarefas, atividades
     refresh();
   }
   async function excluir(t: Row) {
-    if (!await confirmar(`Excluir a tarefa "${t[tc.nome]}"?`)) return;
-    const { error } = await supabase.from("projetos_tarefas").delete().eq(idColumn(t), rowId(t) as never);
-    if (error) { toast.error(error.message); return; }
+    const n = ativsDe(String(rowId(t))).length;
+    if (!await confirmar(`Excluir a tarefa "${t[tc.nome]}"${n ? ` e suas ${n} atividade(s)` : ""}?`)) return;
+    try { await excluirTarefaComFilhos(String(rowId(t))); } catch (e) { toast.error((e as Error).message); return; }
+    toast.success("Tarefa excluída.");
+    qc.invalidateQueries({ queryKey: ["table", ATIVIDADES] });
     refresh();
+  }
+  async function duplicar(t: Row) {
+    try { await duplicarTarefa(t, tc.nome, proxOrdem()); toast.success("Tarefa duplicada com as atividades."); qc.invalidateQueries(); }
+    catch (e) { toast.error((e as Error).message); }
   }
   async function concluirAtividade(a: Row, v: boolean) {
     const { error } = await supabase.from(ATIVIDADES as never).update({ progresso: v ? 100 : 0, situacao: v ? "Concluída" : "Em andamento" } as never).eq("id", rowId(a) as never);
@@ -104,9 +111,12 @@ export function TarefasEspaco({ espacoId, espacos, projetos, tarefas, atividades
         className="group cursor-pointer space-y-2 rounded-md border border-border bg-background p-3 transition-shadow hover:shadow-md">
         <div className="flex items-start justify-between gap-2">
           <p className="min-w-0 break-words font-medium text-foreground">{String(t[tc.nome] ?? "")}</p>
-          <div className="flex opacity-0 transition-opacity group-hover:opacity-100" onClick={(e) => e.stopPropagation()}>
-            {perms.canCreate && <Button size="icon" variant="ghost" className="h-6 w-6" title="Nova atividade" aria-label="Nova atividade" onClick={() => setAtivAberta({ id: null, tarefa: id })}><Plus className="h-3.5 w-3.5" /></Button>}
-            {perms.canDelete && <Button size="icon" variant="ghost" className="h-6 w-6" aria-label="Excluir" onClick={() => excluir(t)}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>}
+          <div onClick={(e) => e.stopPropagation()}>
+            <AcoesTarefa small
+              onNovaAtividade={perms.canCreate ? () => setAtivAberta({ id: null, tarefa: id }) : undefined}
+              onEditar={() => setAberta(id)}
+              onDuplicar={perms.canCreate ? () => void duplicar(t) : undefined}
+              onExcluir={perms.canDelete ? () => void excluir(t) : undefined} />
           </div>
         </div>
         {origem(t) && <p className="truncate text-xs text-muted-foreground">Projeto: {origem(t)}</p>}
@@ -216,9 +226,11 @@ export function TarefasEspaco({ espacoId, espacos, projetos, tarefas, atividades
                                 <TableCell>{fmtDate(t[tc.fim])}</TableCell>
                                 <TableCell><Badge className={prioridadeClass(t[tc.prio])}>{String(t[tc.prio] ?? "Normal")}</Badge></TableCell>
                                 <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                                  {perms.canCreate && <Button size="icon" variant="ghost" title="Nova atividade" aria-label="Nova atividade" onClick={() => { setExpandidas((s) => new Set(s).add(id)); setAtivAberta({ id: null, tarefa: id }); }}><Plus className="h-4 w-4" /></Button>}
-                                  <Button size="icon" variant="ghost" aria-label="Abrir" onClick={() => setAberta(id)}><Pencil className="h-4 w-4" /></Button>
-                                  {perms.canDelete && <Button size="icon" variant="ghost" aria-label="Excluir" onClick={() => excluir(t)}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
+                                  <AcoesTarefa
+                                    onNovaAtividade={perms.canCreate ? () => { setExpandidas((s) => new Set(s).add(id)); setAtivAberta({ id: null, tarefa: id }); } : undefined}
+                                    onEditar={() => setAberta(id)}
+                                    onDuplicar={perms.canCreate ? () => void duplicar(t) : undefined}
+                                    onExcluir={perms.canDelete ? () => void excluir(t) : undefined} />
                                 </TableCell>
                               </TableRow>
                               {!fechada && filhas.map((a) => {

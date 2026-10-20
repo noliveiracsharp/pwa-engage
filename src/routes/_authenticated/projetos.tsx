@@ -41,7 +41,8 @@ import { useTableRows, rowId, idColumn, matches } from "@/lib/crud";
 import { SortableList, salvarOrdem, useSortableRow } from "@/lib/reorder";
 import { useAudit } from "@/lib/audit";
 import { usePagePermissions, type Perms } from "@/hooks/usePagePermissions";
-import { ATIVIDADES, atividadePct, periodo, C, doneValue, duplicarAtividade, duplicarTarefa, filterPayload, fmtDate, isDone, nomePessoa, prioridadeClass, progressoCor, resolveCol, sincronizarTarefa, tarefaPct, useCols } from "@/lib/projetos";
+import { ATIVIDADES, atividadePct, periodo, C, doneValue, duplicarAtividade, duplicarTarefa, excluirTarefaComFilhos, filterPayload, fmtDate, isDone, nomePessoa, prioridadeClass, progressoCor, resolveCol, sincronizarTarefa, tarefaPct, useCols } from "@/lib/projetos";
+import { AcoesTarefa } from "@/components/projetos/AcoesTarefa";
 import { ArrowDown, ArrowUp, Copy } from "lucide-react";
 import type { Row } from "@/lib/row";
 import { confirmar, perguntar } from "@/components/layout/DialogoGlobal";
@@ -588,9 +589,11 @@ function Detalhe({ projeto, d, perms, onBack }: { projeto: Row; d: D; perms: Per
     try { await salvarOrdem(ATIVIDADES, novo); } catch (e) { toast.error((e as Error).message); qc.invalidateQueries({ queryKey: ["table", ATIVIDADES] }); }
   }
   async function excluir(t: Row) {
-    if (!await confirmar(`Excluir a tarefa "${t[d.tc.nome]}"?`)) return;
-    const { error } = await supabase.from("projetos_tarefas").delete().eq(idColumn(t), rowId(t) as never);
-    if (error) { toast.error(error.message); return; }
+    const n = ativsDe(String(rowId(t))).length;
+    if (!await confirmar(`Excluir a tarefa "${t[d.tc.nome]}"${n ? ` e suas ${n} atividade(s)` : ""}?`)) return;
+    try { await excluirTarefaComFilhos(String(rowId(t))); } catch (e) { toast.error((e as Error).message); return; }
+    toast.success("Tarefa excluída.");
+    qc.invalidateQueries({ queryKey: ["table", ATIVIDADES] });
     refresh();
   }
 
@@ -686,10 +689,11 @@ function Detalhe({ projeto, d, perms, onBack }: { projeto: Row; d: D; perms: Per
                   <TableCell>{fmtDate(t[d.tc.fim])}</TableCell>
                   <TableCell><Badge className={prioridadeClass(t[d.tc.prio])}>{String(t[d.tc.prio] ?? "Normal")}</Badge></TableCell>
                   <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                    {perms.canCreate && <Button size="icon" variant="ghost" onClick={() => { setExpandidas((s) => new Set(s).add(id)); setAtivAberta({ id: null, tarefa: id }); }} aria-label="Nova atividade" title="Nova atividade"><Plus className="h-4 w-4" /></Button>}
-                    {perms.canCreate && <Button size="icon" variant="ghost" onClick={() => duplicarTar(t)} aria-label="Duplicar tarefa" title="Duplicar tarefa"><Copy className="h-4 w-4" /></Button>}
-                    <Button size="icon" variant="ghost" onClick={() => setAberta(id)} aria-label="Abrir"><Pencil className="h-4 w-4" /></Button>
-                    {perms.canDelete && <Button size="icon" variant="ghost" onClick={() => excluir(t)} aria-label="Excluir"><Trash2 className="h-4 w-4 text-destructive" /></Button>}
+                    <AcoesTarefa
+                      onNovaAtividade={perms.canCreate ? () => { setExpandidas((s) => new Set(s).add(id)); setAtivAberta({ id: null, tarefa: id }); } : undefined}
+                      onEditar={() => setAberta(id)}
+                      onDuplicar={perms.canCreate ? () => void duplicarTar(t) : undefined}
+                      onExcluir={perms.canDelete ? () => void excluir(t) : undefined} />
                   </TableCell>
                 </SortRow>
                 {!fechada && filhas.map((a, idx) => {
