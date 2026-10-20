@@ -94,6 +94,7 @@ function ParceirosPage() {
           <div>
             <div>{String(pick(r, ["razao_social"], "—"))}</div>
             {pick(r, ["nome_fantasia"]) && <div className="text-muted-foreground text-xs">{String(r["nome_fantasia"])}</div>}
+            {r["classificacao_id"] ? <Badge variant="outline" className="mt-0.5 text-[10px]">{caminhoClassificacao(classificacoes, r["classificacao_id"]) || "—"}</Badge> : null}
           </div>
         </div>
       ),
@@ -153,6 +154,8 @@ function ParceirosPage() {
               options={[{ value: "todos", label: "Todas" }, ...TIPOS_HIERARQUIA.map((t) => ({ value: t.value, label: t.label }))]} />
             <FilterSelect label="Matriz / Administradora" value={f.pai} onChange={(v) => setF({ ...f, pai: v })}
               options={[{ value: "todos", label: "Todas" }, ...matrizes.map((m) => ({ value: String(rowId(m)), label: String(m["razao_social"] ?? "—") }))]} />
+            <FilterSelect label="Classificação" value={f.classificacao} onChange={(v) => setF({ ...f, classificacao: v })}
+              options={[{ value: "todos", label: "Todas" }, ...classificacoes.map((c) => ({ value: String(rowId(c)), label: caminhoClassificacao(classificacoes, rowId(c)) })).sort((a, b) => a.label.localeCompare(b.label, "pt-BR"))]} />
           </>
         }
       />
