@@ -930,11 +930,11 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
       ? itens.filter((i) => num(i.valor) > 0).flatMap((i, grupo) => {
           const desc = i.descricao.trim() || v.descricao.trim();
           const dc = i.data || v.vencimento;
-          return serieParcelas({ total: num(i.parcelas), inicio: num(i.inicio), valorParcela: num(i.valor), incluirAnteriores: comAnt, vencParcela1: vencParcela1Cartao(dc, fC, vC) })
+          return serieParcelas({ total: num(i.parcelas), inicio: num(i.inicio), valorParcela: num(i.valor), incluirAnteriores: comAnt, vencParcela1: vencParcela1De(vencParcela1Cartao(dc, fC, vC), num(i.inicio)) })
             .map((p) => ({ grupo, n: p.n, total: p.total, dataCompra: dc, vencimento: p.vencimento, valor: p.valor, anterior: p.anterior, categoria: i.categoria,
               descricao: p.total > 1 ? `${desc} (${p.n}/${p.total})` : desc, rotulo: `${desc} ${p.n}/${p.total}` }));
         })
-      : serieParcelas({ total: totParc, inicio: ini, valorParcela: num(v.valor), incluirAnteriores: comAnt, vencParcela1: vencParcela1Cartao(v.vencimento, fC, vC) }))
+      : serieParcelas({ total: totParc, inicio: ini, valorParcela: num(v.valor), incluirAnteriores: comAnt, vencParcela1: vencParcela1De(vencParcela1Cartao(v.vencimento, fC, vC), ini) }))
     : v.modo === "unico" ? parcelasManuais({ modo: v.modo as ModoLancamento, valor: num(v.valor), quantidade: 1, primeira: v.vencimento })
     : serieParcelas({ total: totParc, inicio: ini, incluirAnteriores: comAnt, vencParcela1: vencParcela1De(v.vencimento, ini),
         ...(v.modo === "parcelado" ? { valorTotal: num(v.valor) } : { valorParcela: num(v.valor) }) });
@@ -1648,7 +1648,7 @@ function NovaCompraCartao({ tipo, fatura, cartoes, parceiros, categorias, onClos
   void restP;
   const [incluirAnt, setIncluirAnt] = useState(true);
   const [statusAnt, setStatusAnt] = useState<"pago" | "aberto">("pago");
-  const parcelas = fech && venc && num(v.valor) > 0 ? serieParcelas({ total: totP, inicio: iniP, valorParcela: num(v.valor), incluirAnteriores: incluirAnt, vencParcela1: vencParcela1Cartao(v.data, fech, venc) }) : [];
+  const parcelas = fech && venc && num(v.valor) > 0 ? serieParcelas({ total: totP, inicio: iniP, valorParcela: num(v.valor), incluirAnteriores: incluirAnt, vencParcela1: vencParcela1De(vencParcela1Cartao(v.data, fech, venc), iniP) }) : [];
   const atual = parcelas.find((p) => !p.anterior);
   const salvar = async () => {
     if (!v.descricao.trim()) return void toast.error("Informe a descrição.");
