@@ -11,7 +11,7 @@ describe("projecaoMensal", () => {
     ];
     const p = projecaoMensal(t, 500, "2026-10-20", 3);
     expect(p.map((m) => m.mes)).toEqual(["2026-10", "2026-11", "2026-12"]);
-    expect(p[0].saldoFinal).toBe(400);
-    expect(p[2].saldoFinal).toBe(1100);
+    expect(p[0]?.saldoFinal).toBe(400);
+    expect(p[2]?.saldoFinal).toBe(1100);
   });
 });

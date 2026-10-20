@@ -159,7 +159,7 @@ export function projecaoMensal(titulos: Row[], saldo: number, hoje = hojeISO(), 
     if (!ativo(t) || t["status"] === "pago") continue;
     let m = iso(t["vencimento"]).slice(0, 7);
     if (!m) continue;
-    if (m < lista[0]) m = lista[0];
+    if (m < lista[0]!) m = lista[0]!;
     const x = mov.get(m);
     if (!x) continue;
     const v = t["status"] === "parcial" ? Math.max(0, num(t["valor"]) - num(t["valor_pago"])) : num(t["valor"]);
