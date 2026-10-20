@@ -79,7 +79,7 @@ export function ImportarFaturaDialog({ cartoes, parceiros, categorias, onClose, 
     if (file.size > 15 * 1024 * 1024) return void toast.error("PDF muito grande (máx. 15 MB).");
     setEtapa("lendo");
     try {
-      let r: { vencimento: string | null; total: number | null; itens: ItemFaturaLido[]; erro?: string | null } = lerTextoFatura(await textoDoPdf(file));
+      let r: { vencimento: string | null; total: number | null; itens: ItemFaturaLido[]; erro?: string } = lerTextoFatura(await textoDoPdf(file));
       if (!r.itens.length) {
         // Layout desconhecido: tenta a leitura por IA.
         const path = `faturas/${crypto.randomUUID()}.pdf`;
