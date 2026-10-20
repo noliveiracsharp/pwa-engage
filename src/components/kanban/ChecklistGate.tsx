@@ -101,7 +101,8 @@ export function useChecklistGate() {
 
   function fechar(ok: boolean) {
     setPedido(null);
-    res?.(ok);
+    resolver.current?.(ok);
+    resolver.current = null;
   }
 
   const preenchido = (it: Row) => {
