@@ -14,7 +14,8 @@ export function TranscricaoAudio({ mensagemId, url, salva }: { mensagemId: strin
   const rodar = async () => {
     setBusy(true);
     try {
-      const r = await transcrever({ data: { url } });
+      const { data: s } = await supabase.auth.getSession();
+      const r = await transcrever({ data: { url, token: s.session?.access_token } });
       if (r.erro || !r.texto) { toast.error(r.erro ?? "Não foi possível transcrever."); return; }
       setTexto(r.texto);
       if (mensagemId) {
