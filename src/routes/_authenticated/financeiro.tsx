@@ -1121,7 +1121,7 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
           if (eb) throw eb;
         }
       } else {
-        const n = previa.length;
+        const n = previa[0]?.total ?? previa.length;
         const emp = isMaster && empresa ? rowId(empresa) : empresaId;
         const extra = cartaoModo ? { cartao_id: v.cartao_id, forma_pagamento: "Cartão de crédito", data_compra: v.vencimento } : {};
         const serieId = n > 1 ? crypto.randomUUID() : null;
@@ -1132,8 +1132,8 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
           ...(p.grupo !== undefined
             ? { origem_id: (seriesItem.has(p.grupo) ? seriesItem.get(p.grupo) : (seriesItem.set(p.grupo, (p.total ?? 1) > 1 ? crypto.randomUUID() : null), seriesItem.get(p.grupo))) ?? null,
                 parcela_n: p.n ?? 1, data_compra: p.dataCompra ?? v.vencimento }
-            : { origem_id: serieId, parcela_n: i + 1 }),
-          descricao: p.descricao ?? (n > 1 ? `${base.descricao} (${i + 1}/${n})` : base.descricao),
+            : { origem_id: serieId, parcela_n: p.n ?? i + 1 }),
+          descricao: p.descricao ?? (n > 1 ? `${base.descricao} (${p.n ?? i + 1}/${n})` : base.descricao),
           ...(p.categoria ? { categoria: p.categoria } : {}),
           vencimento: p.vencimento, valor: p.valor,
           ...(v.ja_pago && !cartaoModo && i === 0 ? { status: "pago", pago_em: p.vencimento, valor_pago: p.valor } : {}),
