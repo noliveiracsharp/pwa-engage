@@ -13,9 +13,7 @@ const LIMITE_ARQUIVO = 80_000;
 
 async function lerArquivo(f: File): Promise<string> {
   if (f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf")) {
-    const pdfjs = await import("pdfjs-dist");
-    const worker = await import("pdfjs-dist/build/pdf.worker.min.mjs?url");
-    pdfjs.GlobalWorkerOptions.workerSrc = worker.default;
+    const pdfjs = await (await import("@/lib/pdf-worker")).prepararPdfjs();
     const doc = await pdfjs.getDocument({ data: await f.arrayBuffer() }).promise;
     const paginas: string[] = [];
     for (let i = 1; i <= doc.numPages; i++) {

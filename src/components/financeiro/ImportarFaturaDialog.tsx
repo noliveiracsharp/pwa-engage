@@ -25,9 +25,7 @@ type Linha = ItemFaturaLido & { id: number; marcado: boolean; cartao_id: string;
 
 const nomeP = (p: Row) => text(p["nome_fantasia"] || p["razao_social"]) || "—";
 async function textoDoPdf(f: File): Promise<string> {
-  const pdfjs = await import("pdfjs-dist");
-  const worker = await import("pdfjs-dist/build/pdf.worker.min.mjs?url");
-  pdfjs.GlobalWorkerOptions.workerSrc = worker.default;
+  const pdfjs = await (await import("@/lib/pdf-worker")).prepararPdfjs();
   const doc = await pdfjs.getDocument({ data: await f.arrayBuffer() }).promise;
   const out: string[] = [];
   for (let i = 1; i <= doc.numPages; i++) {
