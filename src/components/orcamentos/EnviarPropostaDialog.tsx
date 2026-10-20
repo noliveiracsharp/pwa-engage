@@ -46,7 +46,7 @@ export function EnviarPropostaDialog({ open, onOpenChange, orcamento, empresa, c
       [
         `Olá${nome ? `, ${nome}` : ""}!`,
         "",
-        `Segue a sua Oferta *${text(orcamento["numero"])}*${emp ? ` da *${emp}*` : ""} no valor de *${brl(orcamento["total_liquido"])}*.`,
+        `Segue a sua Oferta *${text(orcamento["numero"])}*${emp ? ` da *${emp}*` : ""} no valor de *${valorProposta(orcamento)}*.`,
         "",
         "Você pode conferir todos os detalhes, o contrato e assinar eletronicamente pelo link:",
         `🔗 ${link}`,
@@ -145,4 +145,13 @@ export function EnviarPropostaDialog({ open, onOpenChange, orcamento, empresa, c
       </DialogContent>
     </Dialog>
   );
+}
+
+function valorProposta(o: Record<string, unknown>): string {
+  const imp = Number(o["total_liquido"]) || 0;
+  const rec = Number(o["total_recorrente"]) || 0;
+  const f = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  if (rec > 0 && imp === 0) return `${f(rec)}/mês`;
+  if (rec > 0) return `${f(imp)} + ${f(rec)}/mês`;
+  return f(imp);
 }

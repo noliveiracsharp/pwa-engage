@@ -345,11 +345,20 @@ function OrcamentosPage() {
     {
       key: "total_liquido",
       header: "Total líquido",
-      fields: ["total_liquido"],
+      fields: ["total_liquido", "total_recorrente"],
       className: "text-right",
-      render: (r) => (
-        <span className="font-semibold tabular-nums">{formatBRL(r["total_liquido"])}</span>
-      ),
+      render: (r) => {
+        const imp = Number(r["total_liquido"]) || 0;
+        const rec = Number(r["total_recorrente"]) || 0;
+        if (rec > 0 && imp === 0)
+          return <span className="font-semibold tabular-nums">{formatBRL(rec)}<span className="text-muted-foreground text-xs font-normal">/mês</span></span>;
+        return (
+          <div className="flex flex-col items-end">
+            <span className="font-semibold tabular-nums">{formatBRL(imp)}</span>
+            {rec > 0 && <span className="text-muted-foreground text-xs tabular-nums">+ {formatBRL(rec)}/mês</span>}
+          </div>
+        );
+      },
     },
     {
       key: "situacao",
@@ -438,6 +447,7 @@ function OrcamentosPage() {
       (f.ano === "todos" || String(yearOf(r["dt_orcamento"]) ?? "") === f.ano),
   );
   const somar = (lista: Row[]) => lista.reduce((s, r) => s + (Number(r["total_liquido"]) || 0), 0);
+  const somarRec = (lista: Row[]) => lista.reduce((s, r) => s + (Number(r["total_recorrente"]) || 0), 0);
   const cards = [
     { value: "todos", label: "Total geral", dot: "bg-foreground", lista: baseCards },
     ...situacoes.map((s) => ({
@@ -471,6 +481,9 @@ function OrcamentosPage() {
                 <span className="truncate">{c.label}</span>
               </div>
               <div className="mt-1 text-lg font-semibold tabular-nums">{formatBRL(somar(c.lista))}</div>
+              {somarRec(c.lista) > 0 && (
+                <div className="text-xs font-medium tabular-nums">+ {formatBRL(somarRec(c.lista))}/mês</div>
+              )}
               <div className="text-muted-foreground text-xs">
                 {c.lista.length} {c.lista.length === 1 ? "oferta" : "ofertas"}
               </div>
