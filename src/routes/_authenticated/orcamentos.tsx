@@ -60,6 +60,7 @@ export const Route = createFileRoute("/_authenticated/orcamentos")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
+  validateSearch: (s: Record<string, unknown>): { abrir?: string } => (typeof s.abrir === "string" && s.abrir ? { abrir: s.abrir } : {}),
   component: OrcamentosPage,
 });
 
@@ -124,6 +125,13 @@ function OrcamentosPage() {
       if (achado) { setRecord(achado); return; }
     }
   };
+  const { abrir } = Route.useSearch();
+  const navOrc = Route.useNavigate();
+  useEffect(() => {
+    if (!abrir || !todos.length) return;
+    const achado = todos.find((t) => String(rowId(t)) === abrir);
+    if (achado) { setRecord(achado); setOpen(true); void navOrc({ search: {}, replace: true }); }
+  }, [abrir, todos]);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [preview, setPreview] = useState<Row | null>(null);
   const [propostaOpen, setPropostaOpen] = useState(false);
