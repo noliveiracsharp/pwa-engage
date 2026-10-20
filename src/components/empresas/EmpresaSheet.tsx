@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Code, Inbox, Loader2, Pencil, Plus, QrCode, Search, Trash2, Unplug } from "lucide-react";
+import { CheckCircle2, Code, Inbox, Loader2, Pencil, Plus, QrCode, Search, Trash2, Unplug } from "lucide-react";
 import { digitsOnly } from "@/lib/input-masks";
 import { useServerFn } from "@tanstack/react-start";
 import { QrCodeDialog } from "@/components/empresas/QrCodeDialog";
