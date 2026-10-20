@@ -37,7 +37,7 @@ export const chaveItem = (descricao: string, valor: number, parcela: number) =>
   `${limparDescricao(descricao).toLowerCase()}|${valor.toFixed(2)}|${parcela}`;
 
 const MESES: Record<string, string> = { jan: "01", fev: "02", mar: "03", abr: "04", mai: "05", jun: "06", jul: "07", ago: "08", set: "09", out: "10", nov: "11", dez: "12" };
-const brl = (s: string) => Number(s.replace(/\./g, "").replace(",", "."));
+const brl = (s: string | undefined) => !s ? 0 : Number(s.replace(/\./g, "").replace(",", "."));
 
 /** Lê o texto (linha a linha) de uma fatura de cartão — sem IA. */
 export function lerTextoFatura(texto: string): { vencimento: string | null; total: number | null; itens: ItemFaturaLido[] } {
@@ -53,16 +53,16 @@ export function lerTextoFatura(texto: string): { vencimento: string | null; tota
   const re = /^(\d{1,2}) de ([a-zç]{3})\.? (\d{4}) (.+?)(?: -)? (\+ ?)?(-)?R\$ ?([\d.]+,\d{2})$/i;
   for (const l of linhas) {
     const c = l.match(/^cart[ãa]o \S*?(\d{4})$/i);
-    if (c) { final4 = c[1]; continue; }
-    const m = l.match(re);
+    if (c) { final4 = c[1] ?? null; continue; }
+    const m = l.match(re) as unknown as string[] | null;
     if (!m) continue;
-    const mes = MESES[m[2].toLowerCase()];
+    const mes = MESES[(m[2] ?? "").toLowerCase()];
     if (!mes) continue;
-    const desc = m[4].replace(/\s+-$/, "").trim();
+    const desc = (m[4] ?? "").replace(/\s+-$/, "").trim();
     const p = desc.match(/parcela\s+(\d+)\s+de\s+(\d+)/i);
     const credito = !!m[5] || /^p ?agamento\b|estorno/i.test(desc);
     itens.push({
-      final4, data: `${m[3]}-${mes}-${m[1].padStart(2, "0")}`,
+      final4, data: `${m[3]}-${mes}-${(m[1] ?? "").padStart(2, "0")}`,
       descricao: desc.replace(/^P AGAMENTO/i, "PAGAMENTO"), valor: brl(m[7]),
       parcela: p ? Number(p[1]) : null, de: p ? Number(p[2]) : null, credito,
     });

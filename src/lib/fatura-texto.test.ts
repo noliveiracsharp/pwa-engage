@@ -11,6 +11,6 @@ describe("lerTextoFatura", () => {
   const r = lerTextoFatura(txt);
   it("vencimento e total", () => { expect(r.vencimento).toBe("2026-10-25"); expect(r.total).toBe(9545.47); });
   it("parcela 2 de 10 no cartão 8346", () => expect(r.itens[0]).toMatchObject({ final4: "8346", valor: 504.92, parcela: 2, de: 10, data: "2026-09-09", credito: false }));
-  it("pagamento é crédito", () => expect(r.itens[1].credito).toBe(true));
+  it("pagamento é crédito", () => expect(r.itens[1]?.credito).toBe(true));
   it("12/12 no cartão 8385", () => expect(r.itens[2]).toMatchObject({ final4: "8385", parcela: 12, de: 12 }));
 });
