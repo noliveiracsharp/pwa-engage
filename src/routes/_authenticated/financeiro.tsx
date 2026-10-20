@@ -4,7 +4,8 @@ import { periodoPreset, type Periodo } from "@/lib/periodo-vencimento";
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { CalendarClock, CheckCircle2, ChevronDown, ChevronRight, Copy, CreditCard, TrendingUp, Paperclip, Plus, QrCode, Receipt, Trash2, Undo2 } from "lucide-react";
+import { CalendarClock, CheckCircle2, ChevronDown, ChevronRight, Copy, CreditCard, FileUp, TrendingUp, Paperclip, Plus, QrCode, Receipt, Trash2, Undo2 } from "lucide-react";
+import { ImportarFaturaDialog } from "@/components/financeiro/ImportarFaturaDialog";
 import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { ReciboDialog } from "@/components/financeiro/ReciboDialog";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -175,6 +176,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
   // Visão geral de Contas a Pagar: compras no cartão aparecem agrupadas como uma fatura por cartão/vencimento.
   const [faturaSel, setFatura] = useState<Row | null>(null);
   const [novaCompra, setNovaCompra] = useState<Row | null>(null);
+  const [importar, setImportar] = useState(false);
   const [abertas, setAbertas] = useState<Set<string>>(new Set());
   const exibidos: Row[] = useMemo(() => {
     if (tipo !== "pagar" || f.cartao !== "todos") return rows;
@@ -693,6 +695,8 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
 
       {novaCompra && <NovaCompraCartao tipo={tipo} fatura={novaCompra} cartoes={cartoes} parceiros={parceiros} categorias={categorias.ativas}
         onClose={() => setNovaCompra(null)} onSaved={invalidar} />}
+      {importar && <ImportarFaturaDialog cartoes={cartoes} parceiros={parceiros} categorias={categorias.ativas}
+        onClose={() => setImportar(false)} onSaved={invalidar} />}
       <DataTable
         rowActions={(r) => (r["__fatura"] ? { edit: false, delete: false } : { edit: true, delete: true })}
         title={tipo === "receber" ? "Contas a Receber" : "Contas a Pagar"}
@@ -719,6 +723,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
             )}
             <PeriodoNavegavel value={f.per} onChange={(p) => setF((s) => ({ ...s, per: p }))} />
             <div className="flex items-end gap-2"><Button variant="outline" onClick={exportarCsv}>CSV</Button>
+              {tipo === "pagar" && perms.canCreate && <Button variant="outline" onClick={() => setImportar(true)}><FileUp className="mr-1 h-4 w-4" />Importar fatura (PDF)</Button>}
               <CategoriasDialog tipo={tipo} podeEditar={perms.canCreate || perms.canUpdate} /></div>
           </>
         }
