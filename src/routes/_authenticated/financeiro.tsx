@@ -61,7 +61,7 @@ import {
   situacaoTitulo,
   valorBaixa,
   parcelasManuais,
-  parcelasCartao, parcelasItensCartao, vencimentoFatura, limiteUsadoCartao, limiteDisponivelCartao, type ItemCartao,
+  parcelasCartao, parcelasItensCartao, vencimentoFatura, serieParcelas, vencParcela1Cartao, vencParcela1De, limiteUsadoCartao, limiteDisponivelCartao, type ItemCartao,
   type ModoLancamento,
   type Situacao,
   type TipoTitulo,
@@ -917,24 +917,27 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
   const totParc = Math.max(1, Math.floor(num(v.repetir)) || 1);
   const ini = Math.min(totParc, Math.max(1, Math.floor(num(inicio)) || 1));
   const restam = totParc - ini + 1;
-  const offset = <T extends { vencimento: string; valor: number }>(l: T[]) => l.map((p, i) => ({ ...p, n: ini + i, total: totParc }));
-  const previa: { vencimento: string; valor: number; descricao?: string; categoria?: string; rotulo?: string; grupo?: number; n?: number; total?: number; dataCompra?: string }[] = !podeConverter ? [] : cartaoModo
+  void restam;
+  // Parcelas anteriores à atual (ex.: 1/10 quando começa na 2/10): só em lançamento novo.
+  const [incluirAnt, setIncluirAnt] = useState(true);
+  const [statusAnt, setStatusAnt] = useState<"pago" | "aberto">("pago");
+  const comAnt = !registro && incluirAnt;
+  const algumMeio = ini > 1 || (cartaoModo && porItem && itens.some((i) => Math.floor(num(i.inicio)) > 1));
+  const fC = num(cartao?.["dia_fechamento"]); const vC = num(cartao?.["dia_vencimento"]);
+  type Prev = { vencimento: string; valor: number; descricao?: string; categoria?: string; rotulo?: string; grupo?: number; n?: number; total?: number; dataCompra?: string; anterior?: boolean };
+  const previa: Prev[] = !podeConverter ? [] : cartaoModo
     ? (!cartaoOk ? [] : itensModo
-      ? parcelasItensCartao(itens.filter((i) => num(i.valor) > 0).map((i) => {
-          const tot = Math.max(1, Math.floor(num(i.parcelas)) || 1);
-          const ii = Math.min(tot, Math.max(1, Math.floor(num(i.inicio)) || 1));
-          const rest = tot - ii + 1;
-          // Valor informado é o valor da parcela (como vem na fatura).
-          return { descricao: i.descricao.trim() || v.descricao.trim(), categoria: i.categoria, valor: round2(num(i.valor) * rest), parcelas: rest, dataCompra: i.data || v.vencimento, _ini: ii, _tot: tot };
-        }), optsCartao)
-        .map((p) => {
-          const it = p.item as ItemCartao & { _ini: number; _tot: number };
-          const n = it._ini + p.n - 1; const total = it._tot;
-          return { grupo: p.grupo, n, total, dataCompra: p.dataCompra, vencimento: p.vencimento, valor: p.valor, descricao: total > 1 ? `${it.descricao} (${n}/${total})` : it.descricao, categoria: it.categoria, rotulo: `${it.descricao} ${n}/${total}` };
+      ? itens.filter((i) => num(i.valor) > 0).flatMap((i, grupo) => {
+          const desc = i.descricao.trim() || v.descricao.trim();
+          const dc = i.data || v.vencimento;
+          return serieParcelas({ total: num(i.parcelas), inicio: num(i.inicio), valorParcela: num(i.valor), incluirAnteriores: comAnt, vencParcela1: vencParcela1Cartao(dc, fC, vC) })
+            .map((p) => ({ grupo, n: p.n, total: p.total, dataCompra: dc, vencimento: p.vencimento, valor: p.valor, anterior: p.anterior, categoria: i.categoria,
+              descricao: p.total > 1 ? `${desc} (${p.n}/${p.total})` : desc, rotulo: `${desc} ${p.n}/${p.total}` }));
         })
-      : offset(parcelasCartao({ valor: round2(num(v.valor) * restam), parcelas: restam, ...optsCartao })))
+      : serieParcelas({ total: totParc, inicio: ini, valorParcela: num(v.valor), incluirAnteriores: comAnt, vencParcela1: vencParcela1Cartao(v.vencimento, fC, vC) }))
     : v.modo === "unico" ? parcelasManuais({ modo: v.modo as ModoLancamento, valor: num(v.valor), quantidade: 1, primeira: v.vencimento })
-    : offset(parcelasManuais({ modo: v.modo as ModoLancamento, valor: v.modo === "parcelado" ? round2(num(v.valor) * restam / totParc) : num(v.valor), quantidade: restam, primeira: v.vencimento }));
+    : serieParcelas({ total: totParc, inicio: ini, incluirAnteriores: comAnt, vencParcela1: vencParcela1De(v.vencimento, ini),
+        ...(v.modo === "parcelado" ? { valorTotal: num(v.valor) } : { valorParcela: num(v.valor) }) });
   const totalItens = round2(itens.reduce((s, i) => {
     const tot = Math.max(1, Math.floor(num(i.parcelas)) || 1);
     const ii = Math.min(tot, Math.max(1, Math.floor(num(i.inicio)) || 1));
@@ -1140,6 +1143,7 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
           ...(p.categoria ? { categoria: p.categoria } : {}),
           vencimento: p.vencimento, valor: p.valor,
           ...(v.ja_pago && !cartaoModo && i === 0 ? { status: "pago", pago_em: p.vencimento, valor_pago: p.valor } : {}),
+          ...(p.anterior ? (statusAnt === "pago" ? { status: "pago", pago_em: p.vencimento, valor_pago: p.valor } : { status: "aberto" }) : {}),
         }));
         const { error } = await supabase.from("financeiro_titulos").insert(lote as never);
         if (error) throw error;
@@ -1311,8 +1315,19 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
               <Input type="number" min={1} max={cartaoModo ? 48 : 120} value={v.repetir} onChange={(e) => setV({ ...v, repetir: e.target.value })} /></div>
             <div className="space-y-1"><Label>Começar na parcela</Label>
               <Input type="number" min={1} max={totParc} value={inicio} onChange={(e) => setInicio(e.target.value)} />
-              <p className="text-muted-foreground text-xs">Ex.: 2 para lançar de 2/{totParc} em diante (a 1ª já foi paga antes).</p></div>
+              <p className="text-muted-foreground text-xs">Ex.: 2 para lançar de 2/{totParc} em diante .</p></div>
           </>)}
+          {!registro && podeConverter && algumMeio && (
+            <div className="flex flex-wrap items-center gap-3 rounded-lg border p-3 sm:col-span-2">
+              <Switch checked={incluirAnt} onCheckedChange={setIncluirAnt} id="incl-ant" />
+              <Label htmlFor="incl-ant" className="flex-1">Incluir histórico das parcelas anteriores</Label>
+              {incluirAnt && (
+                <Select value={statusAnt} onValueChange={(x) => setStatusAnt(x as "pago" | "aberto")}>
+                  <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+                  <SelectContent><SelectItem value="aberto">Em aberto</SelectItem><SelectItem value="pago">Pago</SelectItem></SelectContent>
+                </Select>)}
+            </div>
+          )}
           {itensModo && (
             <div className="space-y-2 rounded-lg border p-3 sm:col-span-2">
               <p className="text-sm font-semibold">Itens da compra</p>
@@ -1357,7 +1372,7 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
               <div className="max-h-40 overflow-y-auto px-3">
                 {previa.map((p, i) => (
                   <div key={i} className="grid grid-cols-3 py-0.5 tabular-nums">
-                    <span className="truncate">{p.rotulo ?? `${i + 1}/${previa.length}`}</span><span>{formatDate(p.vencimento)}</span><span className="text-right">{formatBRL(p.valor)}</span>
+                    <span className="truncate">{p.rotulo ?? (p.n ? `${p.n}/${p.total}` : `${i + 1}/${previa.length}`)}{p.anterior ? ` • ${statusAnt === "pago" ? "pago" : "em aberto"}` : ""}</span><span>{formatDate(p.vencimento)}</span><span className="text-right">{formatBRL(p.valor)}</span>
                   </div>
                 ))}
               </div>
@@ -1630,25 +1645,32 @@ function NovaCompraCartao({ tipo, fatura, cartoes, parceiros, categorias, onClos
   const totP = Math.max(1, Math.floor(num(v.parcelas)) || 1);
   const iniP = Math.min(totP, Math.max(1, Math.floor(num(v.inicio)) || 1));
   const restP = totP - iniP + 1;
-  const parcelas = fech && venc ? parcelasCartao({ valor: round2(num(v.valor) * restP), parcelas: restP, dataCompra: v.data, diaFechamento: fech, diaVencimento: venc }) : [];
+  void restP;
+  const [incluirAnt, setIncluirAnt] = useState(true);
+  const [statusAnt, setStatusAnt] = useState<"pago" | "aberto">("pago");
+  const parcelas = fech && venc && num(v.valor) > 0 ? serieParcelas({ total: totP, inicio: iniP, valorParcela: num(v.valor), incluirAnteriores: incluirAnt, vencParcela1: vencParcela1Cartao(v.data, fech, venc) }) : [];
+  const atual = parcelas.find((p) => !p.anterior);
   const salvar = async () => {
     if (!v.descricao.trim()) return void toast.error("Informe a descrição.");
     if (!v.parceiro_id) return void toast.error("Escolha o fornecedor.");
     if (!parcelas.length) return void toast.error(fech ? "Informe o valor." : "Cadastre fechamento e vencimento do cartão.");
     setSalvando(true);
     const n = totP; const serie = n > 1 ? crypto.randomUUID() : null;
-    const lote = parcelas.map((p, i) => ({
-      tipo, empresa_id: ref["empresa_id"], origem_tipo: "manual", origem_id: serie, parcela_n: iniP + i,
-      descricao: n > 1 ? `${v.descricao.trim()} (${iniP + i}/${n})` : v.descricao.trim(),
+    const i_ = 0;
+    const lote = parcelas.map((p) => ({
+      tipo, empresa_id: ref["empresa_id"], origem_tipo: "manual", origem_id: serie, parcela_n: p.n,
+      descricao: n > 1 ? `${v.descricao.trim()} (${p.n}/${n})` : v.descricao.trim(),
       parceiro_id: v.parceiro_id, categoria: v.categoria || null, centro_custo_id: ref["centro_custo_id"] ?? null,
       conta_bancaria_id: ref["conta_bancaria_id"] ?? null, cartao_id: fatura["cartao_id"], forma_pagamento: "Cartão de crédito",
-      data_compra: v.data, data_competencia: v.data, vencimento: p.vencimento, valor: p.valor, status: "aberto",
+      data_compra: v.data, data_competencia: v.data, vencimento: p.vencimento, valor: p.valor,
+      ...(p.anterior && statusAnt === "pago" ? { status: "pago", pago_em: p.vencimento, valor_pago: p.valor } : { status: "aberto" }),
     }));
+    void i_;
     const { error } = await supabase.from("financeiro_titulos").insert(lote as never);
     setSalvando(false);
     if (error) return void toast.error(erroFinanceiro(error));
-    const fora = parcelas[0]!.vencimento !== text(fatura["vencimento"]).slice(0, 10);
-    toast.success(fora ? `Compra salva na fatura de ${formatDate(parcelas[0]!.vencimento)} (pela data da compra).` : "Compra adicionada à fatura.");
+    const fora = (atual ?? parcelas[0]!).vencimento !== text(fatura["vencimento"]).slice(0, 10);
+    toast.success(fora ? `Compra salva na fatura de ${formatDate((atual ?? parcelas[0]!).vencimento)} (pela data da compra).` : "Compra adicionada à fatura.");
     onSaved(); onClose();
   };
   return (
@@ -1667,7 +1689,18 @@ function NovaCompraCartao({ tipo, fatura, cartoes, parceiros, categorias, onClos
               <SelectContent>{[...categorias].sort((a, b) => a.localeCompare(b)).map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
             </Select></div>
           <div className="space-y-1"><div className="grid grid-cols-2 gap-2"><div className="space-y-1"><Label>Parcela atual</Label><Input type="number" min={1} max={totP} value={v.inicio} onChange={(e) => setV({ ...v, inicio: e.target.value })} /></div><div className="space-y-1"><Label>De (total)</Label><Input type="number" min={1} max={48} value={v.parcelas} onChange={(e) => setV({ ...v, parcelas: e.target.value })} /></div></div></div>
-          {parcelas.length > 0 && <p className="text-muted-foreground self-end text-xs sm:col-span-1">1ª parcela na fatura de {formatDate(parcelas[0]!.vencimento)}{totP > 1 ? ` • parcelas ${iniP} a ${totP} de ${formatBRL(parcelas[0]!.valor)}` : ""}</p>}
+          {atual && <p className="text-muted-foreground self-end text-xs sm:col-span-1">Parcela {iniP}/{totP} na fatura de {formatDate(atual.vencimento)} • {formatBRL(atual.valor)} cada</p>}
+          {iniP > 1 && (
+            <div className="flex flex-wrap items-center gap-3 rounded-lg border p-3 sm:col-span-2">
+              <Switch checked={incluirAnt} onCheckedChange={setIncluirAnt} id="nc-ant" />
+              <Label htmlFor="nc-ant" className="flex-1">Incluir histórico das parcelas anteriores (1 a {iniP - 1})</Label>
+              {incluirAnt && (
+                <Select value={statusAnt} onValueChange={(x) => setStatusAnt(x as "pago" | "aberto")}>
+                  <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+                  <SelectContent><SelectItem value="aberto">Em aberto</SelectItem><SelectItem value="pago">Pago</SelectItem></SelectContent>
+                </Select>)}
+            </div>
+          )}
         </div>
         <DialogFooter><Button variant="outline" onClick={onClose}>Cancelar</Button><Button disabled={salvando} onClick={() => void salvar()}>Salvar compra</Button></DialogFooter>
       </DialogContent>

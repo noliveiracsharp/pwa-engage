@@ -270,6 +270,41 @@ export function parcelasCartao(opts: { valor: number; parcelas: number; dataComp
   }));
 }
 
+export type ParcelaSerie = { n: number; total: number; vencimento: string; valor: number; anterior: boolean };
+
+/**
+ * Série que começa no meio (ex.: 2/10). A parcela 1 vence em `vencParcela1`; a parcela n, n−1 meses depois.
+ * `valorParcela` vai exato em cada parcela (sem redistribuir centavos). Com `valorTotal`, divide e a sobra fica na 1ª.
+ * Parcelas anteriores ao início só entram com `incluirAnteriores` (marcadas `anterior`).
+ */
+export function serieParcelas(opts: { total: number; inicio: number; vencParcela1: string; valorParcela?: number; valorTotal?: number; incluirAnteriores?: boolean }): ParcelaSerie[] {
+  const total = Math.max(1, Math.min(120, Math.floor(num(opts.total)) || 1));
+  const ini = Math.min(total, Math.max(1, Math.floor(num(opts.inicio)) || 1));
+  let base: number; let primeira: number;
+  if (opts.valorTotal !== undefined) {
+    const vt = round2(num(opts.valorTotal));
+    base = Math.floor(Math.round((vt / total) * 1e6) / 1e4) / 100;
+    primeira = round2(vt - base * (total - 1));
+  } else { base = round2(num(opts.valorParcela)); primeira = base; }
+  if (base <= 0 && primeira <= 0) return [];
+  const [y, m, d] = opts.vencParcela1.slice(0, 10).split("-").map(Number);
+  const de = opts.incluirAnteriores ? 1 : ini;
+  return Array.from({ length: total - de + 1 }, (_, i) => {
+    const n = de + i;
+    return { n, total, vencimento: isoDe(y!, m! - 1 + n - 1, d!), valor: n === 1 ? primeira : base, anterior: n < ini };
+  });
+}
+
+/** Vencimento da parcela 1 de uma compra no cartão (fatura que recebe a compra). */
+export const vencParcela1Cartao = (dataCompra: string, diaFechamento: number, diaVencimento: number) =>
+  vencimentoFatura(dataCompra, diaFechamento, diaVencimento);
+
+/** Vencimento da parcela 1 a partir do vencimento informado para a parcela atual (`inicio`). */
+export function vencParcela1De(vencAtual: string, inicio: number): string {
+  const [y, m, d] = vencAtual.slice(0, 10).split("-").map(Number);
+  return isoDe(y!, m! - 1 - (Math.max(1, Math.floor(num(inicio)) || 1) - 1), d!);
+}
+
 export type VisaoCaixa = "mes" | "6m" | "12m" | "personalizado";
 export type ModoCaixa = "previsto" | "realizado" | "ambos";
 
