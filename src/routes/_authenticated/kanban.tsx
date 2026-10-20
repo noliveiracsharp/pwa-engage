@@ -10,6 +10,8 @@ import { formatBRL } from "@/lib/orcamentos";
 import { AtivacaoOfertaDialog } from "@/components/orcamentos/AtivacaoOfertaDialog";
 import { situacaoAtivada } from "@/lib/oferta-ativacao";
 import { executarHandoff } from "@/lib/kanban-handoff";
+import { OfertaKanbanSheet } from "@/components/kanban/OfertaKanbanSheet";
+import { classeTemperatura, opcoesQuadro, valorOferta } from "@/lib/temperatura";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   CAMPOS_CARD_ORCAMENTO,
@@ -163,6 +165,9 @@ function KanbanPage() {
     queryFn: () => tabelaDoKanban(kanbanId),
   });
   const quadroOfertas = tabelaQuadro === "orcamentos";
+  const [ofertaAberta, setOfertaAberta] = useState<Row | null>(null);
+  const kanbanAtual = kanbans.find((k) => String(k["id"]) === kanbanId) ?? null;
+  const opc = opcoesQuadro(kanbanAtual, quadroOfertas);
   const cardsByEtapa = useMemo(() => {
     const map = new Map<string, Row[]>();
     // Cada quadro mostra só a entidade da função vinculada (padrão: atendimentos).
@@ -446,14 +451,21 @@ function KanbanPage() {
       }
       return moveCard.mutateAsync({ id, etapaId, column }).then(() => true, () => false);
     };
-    if (alvo && checklist.precisa(alvo)) void checklist.exigir({ atendimento: card, etapa: alvo, executar: mover });
+    if (alvo && checklist.precisa(alvo)) void checklist.exigir({ atendimento: card, etapa: alvo, ...(atual ? { origem: atual } : {}), executar: mover });
     else void mover();
   };
 
   return (
     <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-foreground">Kanban</h1>
+        <div className="flex items-baseline gap-3">
+          <h1 className="text-2xl font-bold text-foreground">Kanban</h1>
+          {opc.totais && quadroOfertas && (
+            <span className="text-sm text-muted-foreground">
+              Total do funil: <strong className="text-foreground">{formatBRL(boardEtapas.flatMap((e) => cardsByEtapa.get(String(e["id"])) ?? []).reduce((a, o) => a + valorOferta(o), 0))}</strong>
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           <Select value={kanbanId} onValueChange={setKanbanId}>
             <SelectTrigger className="w-56">
@@ -550,7 +562,9 @@ function KanbanPage() {
                     {text(pick(etapa, ETAPA_FIELDS, "Etapa"))}
                   </span>
                   <span className="rounded-full bg-background px-2 py-0.5 text-xs text-muted-foreground">
-                    {cards.length}
+                    {opc.totais && quadroOfertas
+                      ? `${formatBRL(cards.reduce((a, c) => a + valorOferta(c), 0))} · ${cards.length}`
+                      : cards.length}
                   </span>
                   <Button
                     size="icon"
@@ -601,9 +615,10 @@ function KanbanPage() {
                           draggable
                           onDragStart={() => setDragId(dk)}
                           onDragEnd={() => setDragId(null)}
-                          onClick={() => navigate({ to: "/orcamentos" })}
+                          onClick={() => setOfertaAberta(card)}
                           className={cn(
                             "flex w-full items-start gap-2 rounded-md border border-border bg-card p-3 text-left shadow-sm transition hover:border-primary",
+                            opc.temperatura && classeTemperatura(card["temperatura"]),
                             dragId === dk && "opacity-50",
                           )}
                         >
@@ -732,6 +747,7 @@ function KanbanPage() {
 
       {pesquisa.dialog}
       {checklist.dialog}
+      <OfertaKanbanSheet oferta={ofertaAberta} onClose={() => setOfertaAberta(null)} />
       <Sheet open={newEtapa} onOpenChange={setNewEtapa}>
         <SheetContent className="flex flex-col overflow-hidden">
           <SheetHeader>
