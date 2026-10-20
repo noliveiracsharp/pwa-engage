@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { etapasDoKanban, kanbanDoModuloOrcamentos } from "@/lib/orcamento-kanban";
 import { corEtapa } from "@/lib/kanban-cores";
@@ -60,6 +60,7 @@ export const Route = createFileRoute("/_authenticated/orcamentos")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
+  validateSearch: (s: Record<string, unknown>): { abrir?: string } => (typeof s["abrir"] === "string" && s["abrir"] ? { abrir: s["abrir"] } : {}),
   component: OrcamentosPage,
 });
 
@@ -124,6 +125,13 @@ function OrcamentosPage() {
       if (achado) { setRecord(achado); return; }
     }
   };
+  const { abrir } = Route.useSearch();
+  const navOrc = Route.useNavigate();
+  useEffect(() => {
+    if (!abrir || !todos.length) return;
+    const achado = todos.find((t) => String(rowId(t)) === abrir);
+    if (achado) { setRecord(achado); setOpen(true); void navOrc({ search: {}, replace: true }); }
+  }, [abrir, todos]);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [preview, setPreview] = useState<Row | null>(null);
   const [propostaOpen, setPropostaOpen] = useState(false);

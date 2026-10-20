@@ -4,7 +4,7 @@ import { periodoPreset, type Periodo } from "@/lib/periodo-vencimento";
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { CalendarClock, CheckCircle2, ChevronDown, ChevronRight, Copy, CreditCard, FileUp, TrendingUp, Paperclip, Plus, QrCode, Receipt, Trash2, Undo2 } from "lucide-react";
+import { CalendarClock, CheckCircle2, ChevronDown, ChevronRight, Copy, CreditCard, FileText, FileUp, TrendingUp, Paperclip, Plus, QrCode, Receipt, Trash2, Undo2 } from "lucide-react";
 import { ImportarFaturaDialog } from "@/components/financeiro/ImportarFaturaDialog";
 import { ImportarContaDialog } from "@/components/financeiro/ImportarContaDialog";
 import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
@@ -74,6 +74,7 @@ import { cn } from "@/lib/utils";
 import { Bar, CartesianGrid, ComposedChart, Line, XAxis, YAxis } from "recharts";
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { confirmar } from "@/components/layout/DialogoGlobal";
+import { OfertaConsultaSheet, VincularOfertaDialog, ofertaDoTitulo } from "@/components/financeiro/OfertaVinculo";
 
 export const Route = createFileRoute("/_authenticated/financeiro")({
   staticData: { sitemap: false },
@@ -294,6 +295,10 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
   };
   const [clonar, setClonar] = useState<Row | null>(null);
   const [recibo, setRecibo] = useState<Row | null>(null);
+  const [vincOferta, setVincOferta] = useState<Row | null>(null);
+  const [consultaOferta, setConsultaOferta] = useState("");
+  const { data: ofertasFin = [] } = useTableRows("orcamentos");
+  const numOferta = (id: string) => text(ofertasFin.find((o) => text(rowId(o)) === id)?.["numero"]);
   const [excluirSerie, setExcluirSerie] = useState<Row | null>(null);
   const ehSerie = (t: Row) => t["origem_tipo"] === "manual" && (!!t["origem_id"] || !!serieLegada(t));
   const excluir = async (t: Row) => {
@@ -432,6 +437,11 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
             {abertas.has(text(t["id"])) ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}<CreditCard className="h-3.5 w-3.5" /> {abertas.has(text(t["id"])) ? "Ocultar itens" : "Mostrar itens"}
           </button>
         )}
+        {!t["__fatura"] && ofertaDoTitulo(t) ? (
+          <button type="button" className="text-primary flex items-center gap-1 text-xs font-semibold hover:underline" onClick={(e) => { e.stopPropagation(); setConsultaOferta(ofertaDoTitulo(t)); }}>
+            <FileText className="h-3.5 w-3.5" /> Oferta #{numOferta(ofertaDoTitulo(t)) || "…"}
+          </button>
+        ) : null}
         <p className="text-muted-foreground text-xs">{t["__fatura"] ? `Cartão de crédito • ${(t["__itens"] as Row[]).length} item(ns) — clique para ver` : <>{ORIGEM_LABEL[text(t["origem_tipo"])] ?? "Manual"}{t["categoria"] ? ` • ${text(t["categoria"])}` : ""}</>}</p>
       </div>
     ) },
@@ -487,6 +497,9 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
         )}
         {tipo === "receber" && perms.canUpdate && aberto && (
           <DropdownMenuItem onClick={() => setCobrar(t)}><QrCode className="h-4 w-4" /> Cobrança Boleto + Pix</DropdownMenuItem>
+        )}
+        {tipo === "receber" && perms.canUpdate && (
+          <DropdownMenuItem onClick={() => setVincOferta(t)}><FileText className="h-4 w-4" /> {ofertaDoTitulo(t) ? "Trocar Oferta de referência" : "Gerar / vincular Oferta"}</DropdownMenuItem>
         )}
         <DropdownMenuItem onClick={() => setRecibo(t)}><Receipt className="h-4 w-4" /> Emitir recibo</DropdownMenuItem>
         {t["comprovante"] ? (
@@ -749,6 +762,8 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
         <TituloSheet tipo={tipo} registro={null} modelo={clonar} parceiros={parceiros} cartoes={cartoes} readOnly={false}
           onClose={() => setClonar(null)} onSaved={invalidar} />
       )}
+      {vincOferta && <VincularOfertaDialog titulo={vincOferta} onClose={() => setVincOferta(null)} />}
+      {consultaOferta && <OfertaConsultaSheet ofertaId={consultaOferta} onClose={() => setConsultaOferta("")} />}
       {recibo && <ReciboDialog tipo={tipo} titulo={recibo} parceiro={parceiroById.get(text(recibo["parceiro_id"]))} onClose={() => setRecibo(null)} />}
       <Dialog open={!!excluirFat} onOpenChange={(o) => !o && setExcluirFat(null)}>
         <DialogContent className="sm:max-w-3xl">
