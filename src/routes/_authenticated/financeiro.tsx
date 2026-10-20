@@ -1303,38 +1303,43 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
               <p className="text-muted-foreground text-xs">O valor informado é o de cada parcela; mais de 1 repete nas próximas faturas.</p></div>
           )}
           {!itensModo && (
-            <div className="space-y-1"><Label>{(v.modo === "parcelado" || cartaoModo) && podeConverter ? "Valor total (R$)" : v.modo === "recorrente" && podeConverter ? "Valor mensal (R$)" : "Valor (R$)"}</Label>
+            <div className="space-y-1"><Label>{cartaoModo && podeConverter ? "Valor da parcela (R$)" : v.modo === "parcelado" && podeConverter ? "Valor total (R$)" : v.modo === "recorrente" && podeConverter ? "Valor mensal (R$)" : "Valor (R$)"}</Label>
               <Input inputMode="decimal" value={v.valor} disabled={readOnly} onChange={(e) => setV({ ...v, valor: mascaraMoeda(e.target.value) })} placeholder="0,00" /></div>
           )}
-          {podeConverter && v.modo !== "unico" && !itensModo && (
-            <div className="space-y-1"><Label>{v.modo === "recorrente" ? "Nº de meses" : "Nº de parcelas"}</Label>
+          {podeConverter && v.modo !== "unico" && !itensModo && (<>
+            <div className="space-y-1"><Label>{v.modo === "recorrente" ? "Nº total de meses" : "Nº total de parcelas"}</Label>
               <Input type="number" min={1} max={cartaoModo ? 48 : 120} value={v.repetir} onChange={(e) => setV({ ...v, repetir: e.target.value })} /></div>
-          )}
+            <div className="space-y-1"><Label>Começar na parcela</Label>
+              <Input type="number" min={1} max={totParc} value={inicio} onChange={(e) => setInicio(e.target.value)} />
+              <p className="text-muted-foreground text-xs">Ex.: 2 para lançar de 2/{totParc} em diante (a 1ª já foi paga antes).</p></div>
+          </>)}
           {itensModo && (
             <div className="space-y-2 rounded-lg border p-3 sm:col-span-2">
               <p className="text-sm font-semibold">Itens da compra</p>
-              <div className="text-muted-foreground hidden grid-cols-[1fr_9rem_9rem_7rem_4.5rem_2.5rem] gap-2 text-xs font-medium sm:grid">
-                <span>Descrição</span><span>Data da compra</span><span>Categoria</span><span>Valor (R$)</span><span>Parcelas</span><span />
+              <div className="text-muted-foreground hidden grid-cols-[1fr_9rem_9rem_7rem_4rem_4rem_2.5rem] gap-2 text-xs font-medium sm:grid">
+                <span>Descrição</span><span>Data da compra</span><span>Categoria</span><span>Valor parcela</span><span>Parcela atual</span><span>De (total)</span><span />
               </div>
               {itens.map((it, idx) => {
                 const up = (patch: Partial<typeof it>) => setItens((l) => l.map((x, j) => (j === idx ? { ...x, ...patch } : x)));
                 return (
-                  <div key={idx} className="grid gap-2 sm:grid-cols-[1fr_9rem_9rem_7rem_4.5rem_2.5rem]">
+                  <div key={idx} className="grid gap-2 sm:grid-cols-[1fr_9rem_9rem_7rem_4rem_4rem_2.5rem]">
                     <Input value={it.descricao} placeholder="Ex.: Monitor 27''" onChange={(e) => up({ descricao: e.target.value })} />
                     <Input type="date" aria-label="Data da compra" value={it.data || v.vencimento} onChange={(e) => up({ data: e.target.value })} />
                     <Select value={it.categoria} onValueChange={(x) => up({ categoria: x })}>
                       <SelectTrigger><SelectValue placeholder="Categoria" /></SelectTrigger>
                       <SelectContent>{categorias.ativas.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
                     </Select>
-                    <Input inputMode="decimal" value={it.valor} placeholder="0,00" onChange={(e) => up({ valor: mascaraMoeda(e.target.value) })} />
-                    <Input type="number" min={1} max={48} value={it.parcelas} onChange={(e) => up({ parcelas: e.target.value })} />
+                    <Input inputMode="decimal" aria-label="Valor da parcela" value={it.valor} placeholder="0,00" onChange={(e) => up({ valor: mascaraMoeda(e.target.value) })} />
+                    <Input type="number" aria-label="Parcela atual" min={1} max={num(it.parcelas) || 1} value={it.inicio} onChange={(e) => up({ inicio: e.target.value })} />
+                    <Input type="number" aria-label="Total de parcelas" min={1} max={48} value={it.parcelas} onChange={(e) => up({ parcelas: e.target.value })} />
                     <Button type="button" variant="ghost" size="icon" aria-label="Remover item" disabled={itens.length === 1}
                       onClick={() => setItens((l) => l.filter((_, j) => j !== idx))}><Trash2 className="text-destructive h-4 w-4" /></Button>
                   </div>
                 );
               })}
+              <p className="text-muted-foreground text-xs">Informe o valor de cada parcela, como aparece na fatura. Para uma compra que já está na 2/10, coloque 2 em "Parcela atual" e 10 em "De".</p>
               <div className="flex items-center justify-between">
-                <Button type="button" variant="outline" size="sm" onClick={() => setItens((l) => [...l, { descricao: "", categoria: v.categoria, valor: "", parcelas: "1", data: l[l.length - 1]?.data || v.vencimento }])}>
+                <Button type="button" variant="outline" size="sm" onClick={() => setItens((l) => [...l, { descricao: "", categoria: v.categoria, valor: "", parcelas: "1", inicio: "1", data: l[l.length - 1]?.data || v.vencimento }])}>
                   <Plus className="mr-1 h-4 w-4" />Adicionar item</Button>
                 <p className="text-sm">Valor final no cartão: <span className="text-base font-bold tabular-nums">{formatBRL(totalItens)}</span></p>
               </div>
