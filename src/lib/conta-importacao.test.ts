@@ -15,7 +15,7 @@ describe("importação de contas", () => {
   it("conta de consumo 48 dígitos: valor", () => {
     const r = lerLinhaDigitavel("836200000005 123400481003 000000000000 000000000000");
     expect(r?.tipo).toBe("consumo");
-    expect(r?.valor).toBe(512.34);
+    expect(r?.valor).toBe(12.34);
   });
   it("PDF sem linha: usa vencimento e valor do texto", () => {
     const r = lerTextoConta("Vencimento 10/11/2026\nValor do documento R$ 1.234,56\nCNPJ 12.345.678/0001-90");
