@@ -18,6 +18,9 @@ import { DocumentInput } from "@/components/data-table/DocumentInput";
 import { PhoneInput } from "@/components/data-table/PhoneInput";
 import { digitsOnly, formatCpfCnpj, isCompletePhone, isValidCpfCnpj } from "@/lib/input-masks";
 import { descendantIds } from "@/lib/hierarchy";
+import { ClassificacaoField } from "@/components/parceiros/ClassificacaoField";
+import { coordNum, geocodificar, gpsNavegador } from "@/lib/geocodificacao";
+import { MapPin, LocateFixed } from "lucide-react";
 import { rowId } from "@/lib/crud";
 import type { Row } from "@/lib/row";
 
@@ -71,6 +74,7 @@ const TEXT_KEYS = [
   "cep", "endereco", "numero", "complemento", "bairro", "cidade", "uf", "observacoes",
   "data_inicio_atividade", "situacao_cadastral", "motivo_situacao_cadastral", "porte", "natureza_juridica",
   "cnae_principal_codigo", "cnae_principal_descricao", "capital_social", "cobranca_canais", "oferta_canais",
+  "classificacao_id", "latitude", "longitude",
 ] as const;
 type TextKey = (typeof TEXT_KEYS)[number];
 
@@ -102,7 +106,7 @@ function toForm(r: Row | null): Form {
   f.data_inicio_atividade = f.data_inicio_atividade.slice(0, 10);
   f.is_cliente = r ? r["is_cliente"] === true : true;
   f.is_fornecedor = r?.["is_fornecedor"] === true;
-  f.tipo_pessoa = r?.["tipo_pessoa"] === "Jurídica" ? "Jurídica" : "Física";
+  f.tipo_pessoa = r?.["tipo_pessoa"] === "Física" ? "Física" : "Jurídica";
   f.status = r ? r["status"] !== false : true;
   f.opcao_pelo_simples = r?.["opcao_pelo_simples"] === true;
   f.opcao_pelo_mei = r?.["opcao_pelo_mei"] === true;
@@ -171,6 +175,17 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly, saving, on
     } finally {
       setCepLoading(false);
     }
+  }
+
+  const [geoLoading, setGeoLoading] = useState(false);
+  async function buscarCoordenadas(gps = false) {
+    setGeoLoading(true);
+    try {
+      const c = gps ? await gpsNavegador() : await geocodificar({ endereco: f.endereco, numero: f.numero, bairro: f.bairro, cidade: f.cidade, uf: f.uf, cep: f.cep });
+      if (!c) { toast.error(gps ? "Não foi possível obter a localização do aparelho." : "Não encontramos coordenadas para este endereço."); return; }
+      setF((p) => ({ ...p, latitude: String(c.latitude), longitude: String(c.longitude) }));
+      toast.success("Coordenadas preenchidas.");
+    } finally { setGeoLoading(false); }
   }
 
   async function lookupCnpj(value: string) {
@@ -258,6 +273,10 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly, saving, on
     values["documento"] = doc || null;
     values["cep"] = digitsOnly(f.cep) || null;
     values["uf"] = f.uf.trim().toUpperCase() || null;
+    values["classificacao_id"] = f.classificacao_id || null;
+    values["latitude"] = coordNum(f.latitude);
+    values["longitude"] = coordNum(f.longitude);
+    if (!record) { for (const k of ["classificacao_id", "latitude", "longitude"]) if (values[k] == null) delete values[k]; }
     values["capital_social"] = f.capital_social.trim() === "" ? null : Number(f.capital_social);
     if (pf) {
       for (const k of ["nome_fantasia", "inscricao_estadual", "data_inicio_atividade", "situacao_cadastral", "motivo_situacao_cadastral",
@@ -315,7 +334,7 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly, saving, on
                 <div>
                   <Label className="mb-2 block text-sm font-medium">Tipo de Pessoa</Label>
                   <RadioGroup value={f.tipo_pessoa} onValueChange={(v) => { set("tipo_pessoa", v as Form["tipo_pessoa"]); set("documento", ""); }} className="flex gap-6">
-                    {(["Física", "Jurídica"] as const).map((t) => (
+                    {(["Jurídica", "Física"] as const).map((t) => (
                       <label key={t} className="flex cursor-pointer items-center gap-2">
                         <RadioGroupItem value={t} disabled={readOnly} /> {t}
                       </label>
@@ -370,6 +389,9 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly, saving, on
                   {!pf && field("inscricao_estadual", "Inscrição Estadual")}
                   {field("razao_social", pf ? "Nome Completo" : "Razão Social", "sm:col-span-2")}
                   {!pf && field("nome_fantasia", "Nome Fantasia", "sm:col-span-2")}
+                  <div className="sm:col-span-2">
+                    <ClassificacaoField value={f.classificacao_id} disabled={readOnly} onChange={(v) => set("classificacao_id", v)} />
+                  </div>
                   <div className="sm:col-span-2">
                     <Label className="mb-1.5 block text-sm font-medium">Tipo na estrutura</Label>
                     <Select value={f.tipo_hierarquia} disabled={readOnly}
@@ -459,6 +481,16 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly, saving, on
                   {field("bairro", "Bairro", "sm:col-span-2")}
                   {field("cidade", "Cidade", "sm:col-span-3")}
                   {field("uf", "UF", "sm:col-span-1", { maxLength: 2, className: "uppercase" })}
+                  {field("latitude", "Latitude", "sm:col-span-2", { inputMode: "decimal", placeholder: "-23.5505200" })}
+                  {field("longitude", "Longitude", "sm:col-span-2", { inputMode: "decimal", placeholder: "-46.6333080" })}
+                  <div className="flex items-end gap-2 sm:col-span-2">
+                    <Button type="button" variant="outline" className="flex-1" disabled={readOnly || geoLoading} onClick={() => void buscarCoordenadas()} title="Obter coordenadas pelo endereço/CEP">
+                      {geoLoading ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <MapPin className="mr-1 h-4 w-4" />}Pelo endereço
+                    </Button>
+                    <Button type="button" variant="outline" size="icon" disabled={readOnly || geoLoading} onClick={() => void buscarCoordenadas(true)} title="Usar a localização do aparelho">
+                      <LocateFixed className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
 

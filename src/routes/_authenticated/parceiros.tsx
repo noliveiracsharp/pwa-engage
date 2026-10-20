@@ -9,6 +9,7 @@ import { rowId, useDeleteRecord, useSaveRecord, useTableRows } from "@/lib/crud"
 import { pick, type Row } from "@/lib/row";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { useAudit } from "@/lib/audit";
+import { caminhoClassificacao, useClassificacoes } from "@/components/parceiros/ClassificacaoField";
 import { formatCpfCnpj, formatPhoneDisplay, matchesAny } from "@/lib/input-masks";
 
 export const Route = createFileRoute("/_authenticated/parceiros")({
@@ -32,9 +33,10 @@ function ParceirosPage() {
   const remove = useDeleteRecord("parceiros");
   const perms = usePagePermissions("/parceiros");
   const { empresaId, stamp } = useAudit();
+  const { data: classificacoes = [] } = useClassificacoes();
   const [open, setOpen] = useState(false);
   const [record, setRecord] = useState<Row | null>(null);
-  const [f, setF] = useState({ busca: "", papel: "todos", status: "todos", situacao: "todos", estrutura: "todos", pai: "todos" });
+  const [f, setF] = useState({ busca: "", papel: "todos", status: "todos", situacao: "todos", estrutura: "todos", pai: "todos", classificacao: "todos" });
 
   const escopo = useMemo(
     () => all.filter((r) => empresaId === undefined || !r["empresa_id"] || String(r["empresa_id"]) === String(empresaId)),
@@ -65,6 +67,7 @@ function ParceirosPage() {
             (f.papel === "todos" || (f.papel === "cliente" ? r["is_cliente"] === true : r["is_fornecedor"] === true)) &&
             (f.status === "todos" || (f.status === "ativo" ? r["status"] !== false : r["status"] === false)) &&
             (f.situacao === "todos" || (f.situacao === "nao" ? !r["situacao_cadastral"] : String(r["situacao_cadastral"] ?? "").toUpperCase() === f.situacao)) &&
+            (f.classificacao === "todos" || String(r["classificacao_id"] ?? "") === f.classificacao) &&
             (f.estrutura === "todos" || tipoDe(r) === f.estrutura) &&
             (f.pai === "todos" || String(r[PARENT_KEY] ?? "") === f.pai || String(rowId(r)) === f.pai)
           );
@@ -91,6 +94,7 @@ function ParceirosPage() {
           <div>
             <div>{String(pick(r, ["razao_social"], "—"))}</div>
             {pick(r, ["nome_fantasia"]) && <div className="text-muted-foreground text-xs">{String(r["nome_fantasia"])}</div>}
+            {r["classificacao_id"] ? <Badge variant="outline" className="mt-0.5 text-[10px]">{caminhoClassificacao(classificacoes, r["classificacao_id"]) || "—"}</Badge> : null}
           </div>
         </div>
       ),
@@ -150,6 +154,8 @@ function ParceirosPage() {
               options={[{ value: "todos", label: "Todas" }, ...TIPOS_HIERARQUIA.map((t) => ({ value: t.value, label: t.label }))]} />
             <FilterSelect label="Matriz / Administradora" value={f.pai} onChange={(v) => setF({ ...f, pai: v })}
               options={[{ value: "todos", label: "Todas" }, ...matrizes.map((m) => ({ value: String(rowId(m)), label: String(m["razao_social"] ?? "—") }))]} />
+            <FilterSelect label="Classificação" value={f.classificacao} onChange={(v) => setF({ ...f, classificacao: v })}
+              options={[{ value: "todos", label: "Todas" }, ...classificacoes.map((c) => ({ value: String(rowId(c)), label: caminhoClassificacao(classificacoes, rowId(c)) })).sort((a, b) => a.label.localeCompare(b.label, "pt-BR"))]} />
           </>
         }
       />
