@@ -37,6 +37,7 @@ import {
 } from "@/lib/atendimentos";
 import { dispararMensagem, marcarEnvio } from "@/lib/atendimentos-envio";
 import { GravadorAudio } from "./GravadorAudio";
+import { TranscricaoAudio } from "./TranscricaoAudio";
 import { ProtocoloBadge } from "./ProtocoloBadge";
 import { ManutencaoSheet } from "@/components/manutencoes/ManutencaoSheet";
 import { AvaliacaoSelo, usePesquisaSatisfacao } from "./Pesquisa";
@@ -746,6 +747,7 @@ function Balao({ m, autores }: { m: Row; autores: Map<string, string> }) {
         )}
         {url && tipo === "figurinha" && <img src={url} alt="Figurinha" className="h-32 w-32 object-contain" />}
         {url && tipo === "audio" && <audio controls src={url} className="mb-1 max-w-full" />}
+        {url && tipo === "audio" && <TranscricaoAudio mensagemId={text(mid)} url={url} salva={text(m["transcricao"])} />}
         {url && tipo === "video" && <video controls src={url} className="mb-1 max-h-72 rounded-md" />}
         {url && tipo === "documento" && (
           <a href={url} target="_blank" rel="noreferrer" className="mb-1 flex items-center gap-2 underline">

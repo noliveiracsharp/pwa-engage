@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { CheckCircle2, Loader2, Send } from "lucide-react";
+import { CheckCircle2, Loader2, MessageCircle, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,7 +28,7 @@ export const Route = createFileRoute("/cotacao/$token")({
 });
 
 type Item = {
-  id: string; quantidade: number; descricao: string | null; codigo: string | null;
+  id: string; quantidade: number; unidade?: string | null; descricao: string | null; codigo: string | null;
   preco_unitario: number | null; prazo_dias: number | null; disponivel: boolean | null; marca: string | null; observacao: string | null;
 };
 type Dados = {
@@ -36,6 +36,7 @@ type Dados = {
   cotacao: { numero: string | null; titulo: string | null; status: string | null };
   participacao: { respondido: boolean | null; data_resposta: string | null; condicao_pagamento: string | null; frete: string | null; observacao_geral: string | null };
   fornecedor: { nome: string | null } | null;
+  responsavel?: { nome: string | null; telefone: string | null } | null;
   empresa: { nome: string | null; logo: string | null; telefone: string | null } | null;
   itens: Item[];
 };
@@ -115,6 +116,26 @@ function CotacaoPublica() {
       </header>
 
       <main className="mx-auto max-w-5xl space-y-6 px-4 py-6 pb-28">
+        {(dados.responsavel?.nome || dados.responsavel?.telefone) && (() => {
+          const d = String(dados.responsavel?.telefone ?? "").replace(/\D/g, "");
+          const wa = d ? (d.startsWith("55") ? d : `55${d}`) : "";
+          return (
+            <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-card p-4">
+              <div>
+                <div className="text-xs text-muted-foreground">Responsável por esta cotação</div>
+                <div className="font-semibold">{dados.responsavel?.nome ?? "—"}</div>
+                {d && <div className="text-sm text-muted-foreground">{dados.responsavel?.telefone}</div>}
+              </div>
+              {wa && (
+                <Button asChild variant="outline">
+                  <a href={`https://wa.me/${wa}?text=${encodeURIComponent(`Olá! Tenho uma dúvida sobre a cotação ${dados.cotacao.numero ?? ""}.`)}`} target="_blank" rel="noopener noreferrer">
+                    <MessageCircle className="mr-2 h-4 w-4" />Falar no WhatsApp
+                  </a>
+                </Button>
+              )}
+            </section>
+          );
+        })()}
         <section className="rounded-lg border bg-card p-4">
           <h1 className="text-lg font-bold">{dados.cotacao.titulo ?? "Cotação"}</h1>
           <p className="text-sm text-muted-foreground">
@@ -146,7 +167,7 @@ function CotacaoPublica() {
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="min-w-0">
                     <div className="font-medium">{i.descricao ?? "Item"}</div>
-                    <div className="text-xs text-muted-foreground">{i.codigo ? `Cód. ${i.codigo} · ` : ""}Quantidade: {formatQtd(i.quantidade)}</div>
+                    <div className="text-xs text-muted-foreground">{i.codigo ? `Cód. ${i.codigo} · ` : ""}Quantidade: {formatQtd(i.quantidade)}{i.unidade ? ` ${i.unidade}` : ""}</div>
                   </div>
                   <label className="flex items-center gap-2 text-sm">
                     <Switch checked={l.disponivel} disabled={encerrada} onCheckedChange={(v) => set(i.id, { disponivel: v })} /> Tenho este item
