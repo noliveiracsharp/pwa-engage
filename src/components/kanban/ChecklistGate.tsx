@@ -33,7 +33,7 @@ function usePodePular() {
   return isMaster || /admin|gerente/i.test(data ?? "");
 }
 
-type Pedido = { atendimento: Row; etapa: Row; executar: () => Promise<boolean> };
+type Pedido = { atendimento: Row; etapa: Row; origem?: Row; executar: () => Promise<boolean>; modo?: "entrada" | "saida"; template?: string };
 type Valor = boolean | string;
 
 /**
@@ -62,6 +62,22 @@ export function useChecklistGate() {
   }
 
   async function exigir(p: Pedido): Promise<boolean> {
+    // Checklist de SAÍDA da etapa atual vem primeiro; ao concluir, segue para o de entrada.
+    if (p.origem?.["id"]) {
+      const { data: of } = await supabase.from("kanban_etapas").select("*").eq("id", String(p.origem["id"])).maybeSingle();
+      const origem = { ...p.origem, ...((of as Row | null) ?? {}) };
+      if (ativo(origem["exige_checklist_saida"])) {
+        if (!origem["checklist_saida_template_id"]) {
+          toast.error("Esta etapa exige checklist de saída, mas nenhum template está vinculado. Ajuste em Configurar quadro > Etapas.");
+          return false;
+        }
+        return abrirGate({ ...p, etapa: origem, modo: "saida", template: String(origem["checklist_saida_template_id"]), executar: () => exigirEntrada(p) });
+      }
+    }
+    return exigirEntrada(p);
+  }
+
+  async function exigirEntrada(p: Pedido): Promise<boolean> {
     // Relê a etapa de destino para não depender de cache desatualizado.
     const { data: fresca } = await supabase.from("kanban_etapas").select("*").eq("id", String(p.etapa["id"])).maybeSingle();
     const etapa = { ...p.etapa, ...((fresca as Row | null) ?? {}) };
@@ -70,10 +86,13 @@ export function useChecklistGate() {
       toast.error("Esta etapa exige checklist, mas nenhum template está vinculado. Ajuste em Configurar quadro > Etapas.");
       return false;
     }
-    p = { ...p, etapa };
+    return abrirGate({ ...p, etapa, modo: "entrada", template: String(etapa["checklist_template_id"]) });
+  }
+
+  async function abrirGate(p: Pedido): Promise<boolean> {
     setPedido(p); setValores({}); setPular(false); setJustificativa(""); setCarregando(true);
     const { data, error } = await supabase.from("checklists_itens").select("*")
-      .eq("template_id", String(p.etapa["checklist_template_id"])).order("ordem");
+      .eq("template_id", String(p.template)).order("ordem");
     setCarregando(false);
     if (error) { toast.error(error.message); setPedido(null); return false; }
     setItens((data ?? []) as Row[]);
@@ -105,7 +124,7 @@ export function useChecklistGate() {
       empresa_id: pick(pedido.atendimento, ["empresa_id"]) ?? empresaId,
       atendimento_id: pedido.atendimento["id"],
       etapa_destino_id: pedido.etapa["id"],
-      template_id: pedido.etapa["checklist_template_id"],
+      template_id: pedido.template ?? pedido.etapa["checklist_template_id"],
       preenchido_por: usuarioId,
       respostas,
       ignorado: pular,
@@ -113,10 +132,13 @@ export function useChecklistGate() {
     } as never);
     if (error) { setOcupado(false); toast.error(`Não foi possível salvar o checklist. ${error.message}`); return; }
     qc.invalidateQueries({ queryKey: ["table", "atendimentos_checklists"] });
-    const ok = await pedido.executar();
+    const atual = pedido;
+    setPedido(null);
+    const ok = await atual.executar();
     setOcupado(false);
-    if (ok) toast.success("Checklist registrado e atendimento transferido.");
-    fechar(ok);
+    if (ok && atual.modo !== "saida") toast.success("Checklist registrado e card transferido.");
+    resolver.current?.(ok);
+    resolver.current = null;
   }
 
   async function anexar(id: string, file: File) {
@@ -135,7 +157,7 @@ export function useChecklistGate() {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2"><ClipboardCheck className="h-5 w-5 text-primary" /> Requisitos para Transferência</DialogTitle>
           <DialogDescription>
-            Para entrar em <strong>{String(pedido?.etapa["descricao"] ?? "")}</strong>, preencha os itens abaixo.
+            {pedido?.modo === "saida" ? "Para sair de " : "Para entrar em "}<strong>{String(pedido?.etapa["descricao"] ?? "")}</strong>, preencha os itens abaixo.
           </DialogDescription>
         </DialogHeader>
         {carregando ? (
