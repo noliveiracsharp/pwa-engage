@@ -61,7 +61,7 @@ import {
   situacaoTitulo,
   valorBaixa,
   parcelasManuais,
-  parcelasCartao, parcelasItensCartao, vencimentoFatura, limiteUsadoCartao, limiteDisponivelCartao,
+  parcelasCartao, parcelasItensCartao, vencimentoFatura, limiteUsadoCartao, limiteDisponivelCartao, type ItemCartao,
   type ModoLancamento,
   type Situacao,
   type TipoTitulo,
@@ -198,7 +198,9 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
         status: todosPagos ? "pago" : itens.some((t) => t["status"] === "cancelado") && itens.every((t) => t["status"] === "cancelado") ? "cancelado" : "aberto",
         valor_pago: todosPagos || pagoParcial > 0 ? pagoParcial : null,
         pago_em: todosPagos ? itens[0]!["pago_em"] : itens.find((t) => t["pago_em"])?.["pago_em"] ?? null } as Row;
-    }).flatMap((r) => (r["__fatura"] && abertas.has(text(r["id"])) ? [r, ...(r["__itens"] as Row[]).map((t) => ({ ...t, __filho: true, __pai: r }))] : [r]));
+    }).flatMap((r) => (r["__fatura"] && abertas.has(text(r["id"]))
+      ? [r, ...[...(r["__itens"] as Row[])].sort((a, b) => text(a["data_compra"]).localeCompare(text(b["data_compra"]))).map((t) => ({ ...t, __filho: true, __pai: r }))]
+      : [r]));
   }, [rows, tipo, f.cartao, cartoes, abertas]);
   const baixarItensFatura = async (itens: Row[]) => {
     const abertos = itens.filter((t) => t["status"] !== "pago" && t["status"] !== "cancelado");
