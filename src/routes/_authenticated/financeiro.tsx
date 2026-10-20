@@ -443,6 +443,11 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
             <FileText className="h-3.5 w-3.5" /> Oferta #{numOferta(ofertaDoTitulo(t)) || "…"}
           </button>
         ) : null}
+        {!t["__fatura"] && (t["nfe_numero"] || t["nfse_numero"] || t["nfse_rps"]) ? (
+          <div className="flex flex-wrap gap-1">
+            {rotulosFiscais(t).map((r) => <span key={r} className="bg-muted text-muted-foreground rounded px-1.5 py-0.5 text-[10px] font-semibold">{r}</span>)}
+          </div>
+        ) : null}
         <p className="text-muted-foreground text-xs">{t["__fatura"] ? `Cartão de crédito • ${(t["__itens"] as Row[]).length} item(ns) — clique para ver` : <>{ORIGEM_LABEL[text(t["origem_tipo"])] ?? "Manual"}{t["categoria"] ? ` • ${text(t["categoria"])}` : ""}</>}</p>
       </div>
     ) },
@@ -887,6 +892,10 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
     conta_bancaria_id: text(src?.["conta_bancaria_id"]),
     forma_pagamento: text(src?.["forma_pagamento"]),
     nsu: registro ? text(registro["nsu"]) : "",
+    nfe_numero: text(registro?.["nfe_numero"]), nfe_serie: text(registro?.["nfe_serie"]),
+    nfe_valor: registro?.["nfe_valor"] != null ? moedaDeNumero(num(registro["nfe_valor"])) : "",
+    nfse_numero: text(registro?.["nfse_numero"]), nfse_rps: text(registro?.["nfse_rps"]),
+    nfse_valor: registro?.["nfse_valor"] != null ? moedaDeNumero(num(registro["nfse_valor"])) : "",
     ja_pago: false,
     pago_em: registro ? text(registro["pago_em"]).slice(0, 10) : "",
     valor_pago: registro && registro["valor_pago"] != null ? moedaDeNumero(num(registro["valor_pago"])) : "",
@@ -1074,7 +1083,8 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
         data_competencia: v.data_competencia || null, centro_custo_id: v.centro_custo_id || null,
         codigo_referencia: v.codigo_referencia.trim() || null, conta_bancaria_id: v.conta_bancaria_id || null,
         nsu: v.nsu.trim() || null, ...(v.forma_pagamento ? { forma_pagamento: v.forma_pagamento } : {}),
-        ...(registro && text(registro["cartao_id"]) && v.data_compra ? { data_compra: v.data_compra } : {}) };
+        ...(registro && text(registro["cartao_id"]) && v.data_compra ? { data_compra: v.data_compra } : {}),
+        ...camposFiscais(v, registro) };
       // Compra no cartão: mudar a data da compra recalcula em qual fatura ela cai.
       const diasCartao = cartaoReg && cartaoReg["dia_fechamento"] && cartaoReg["dia_vencimento"] ? { f: num(cartaoReg["dia_fechamento"]), v: num(cartaoReg["dia_vencimento"]) } : null;
       if (registro && diasCartao && !temSerie && v.data_compra && v.data_compra !== text(registro["data_compra"]).slice(0, 10)) {
@@ -1275,6 +1285,31 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
           {tipo === "receber" && (
             <div className="space-y-1"><Label>NSU / autorização do cartão</Label>
               <Input value={v.nsu} disabled={readOnly} placeholder="Opcional" onChange={(e) => setV({ ...v, nsu: e.target.value })} /></div>
+          )}
+          {tipo === "receber" && (
+            <div className="border-border space-y-3 rounded-lg border p-3 sm:col-span-2">
+              <div>
+                <p className="text-sm font-semibold">Documentos fiscais</p>
+                <p className="text-muted-foreground text-xs">Um único boleto pode ter NF-e (produtos) e NFS-e (serviços) separadas.</p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="space-y-1"><Label>NF-e (produtos) nº</Label>
+                  <Input value={v.nfe_numero} disabled={readOnly} placeholder="Opcional" onChange={(e) => setV({ ...v, nfe_numero: e.target.value })} /></div>
+                <div className="space-y-1"><Label>Série</Label>
+                  <Input value={v.nfe_serie} disabled={readOnly} placeholder="Opcional" onChange={(e) => setV({ ...v, nfe_serie: e.target.value })} /></div>
+                <div className="space-y-1"><Label>Valor dos produtos (R$)</Label>
+                  <Input inputMode="decimal" value={v.nfe_valor} disabled={readOnly} placeholder="0,00" onChange={(e) => setV({ ...v, nfe_valor: mascaraMoeda(e.target.value) })} /></div>
+                <div className="space-y-1"><Label>NFS-e (serviços) nº</Label>
+                  <Input value={v.nfse_numero} disabled={readOnly} placeholder="Opcional" onChange={(e) => setV({ ...v, nfse_numero: e.target.value })} /></div>
+                <div className="space-y-1"><Label>RPS</Label>
+                  <Input value={v.nfse_rps} disabled={readOnly} placeholder="Opcional" onChange={(e) => setV({ ...v, nfse_rps: e.target.value })} /></div>
+                <div className="space-y-1"><Label>Valor dos serviços (R$)</Label>
+                  <Input inputMode="decimal" value={v.nfse_valor} disabled={readOnly} placeholder="0,00" onChange={(e) => setV({ ...v, nfse_valor: mascaraMoeda(e.target.value) })} /></div>
+              </div>
+              {(v.nfe_valor || v.nfse_valor) && Math.abs(round2(num(v.nfe_valor) + num(v.nfse_valor)) - round2(num(v.valor))) > 0.009 && (
+                <p className="text-destructive text-xs">A soma das notas ({moedaDeNumero(round2(num(v.nfe_valor) + num(v.nfse_valor)))}) difere do valor do lançamento ({moedaDeNumero(round2(num(v.valor)))}).</p>
+              )}
+            </div>
           )}
           {podeConverter && !cartaoModo && (
             <div className="flex items-center gap-2 sm:col-span-2">
