@@ -1,3 +1,4 @@
+import { PessoaCampos } from "@/components/pessoas/PessoaCampos";
 import { TEMPERATURAS } from "@/lib/temperatura";
 import { OrcamentoDespesas } from "@/components/orcamentos/OrcamentoDespesas";
 import { OrcamentoCompra } from "@/components/orcamentos/OrcamentoCompra";
@@ -801,6 +802,12 @@ export function OrcamentoSheet({
             usuarios={vendedores}
             onTotalChange={setTotalComissoes}
           />
+
+          {record && (
+            <div className="rounded-lg border p-4">
+              <PessoaCampos pessoaId={recordId} templates={["ofertas"]} tabela="orcamentos_camposperson" fk="orcamento_id" titulo="Campos personalizados da Oferta" />
+            </div>
+          )}
 
           {/* ------------- modalidade e serviços recorrentes ------------- */}
           <OrcamentoModalidade

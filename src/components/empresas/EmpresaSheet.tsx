@@ -157,6 +157,13 @@ const CAMPOS: ChildConfig = {
   empty: "Nenhum campo personalizado.",
   sortable: true,
   columns: [
+    {
+      key: "template",
+      label: "Template (onde o campo aparece)",
+      type: "select",
+      options: ["geral", "ofertas", "pessoas", "atendimento"],
+      optionLabels: { geral: "Geral (todos os módulos)", ofertas: "Ofertas", pessoas: "Pessoas / Contatos", atendimento: "Suporte / Atendimento" },
+    },
     { key: "label", label: "Label (exibido na tela)", required: true },
     { key: "chave", label: "Chave técnica (ex: matricula_convenio)", required: true },
     {

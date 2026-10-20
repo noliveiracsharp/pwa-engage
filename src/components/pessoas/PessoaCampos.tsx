@@ -13,7 +13,15 @@ import { useAuth } from "@/hooks/useAuth";
 import { text } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
 
-type Props = { pessoaId?: string | number | undefined };
+type Props = {
+  pessoaId?: string | number | undefined;
+  /** Templates exibidos (o "geral" sempre aparece). */
+  templates?: string[];
+  /** Tabela onde os valores ficam gravados e a coluna de vínculo. */
+  tabela?: string;
+  fk?: string;
+  titulo?: string;
+};
 
 const opcoesDe = (v: string) => v.split(",").map((o) => o.trim()).filter(Boolean);
 
