@@ -30,7 +30,20 @@ function inputTypeFor(tipo: string) {
   return "text";
 }
 
-export function PessoaCampos({ pessoaId }: Props) {
+export const TEMPLATES_CAMPOS: Record<string, string> = {
+  atendimento: "Suporte / Atendimento",
+  geral: "Geral (todos)",
+  ofertas: "Ofertas",
+  pessoas: "Pessoas / Contatos",
+};
+
+/** Template "geral" (ou vazio) aparece em todos os módulos. */
+export const campoNoTemplate = (campoTemplate: unknown, alvos: string[]) => {
+  const t = String(campoTemplate ?? "").trim() || "geral";
+  return t === "geral" || alvos.includes(t);
+};
+
+export function PessoaCampos({ pessoaId, templates = ["pessoas", "atendimento"], tabela = "pessoas_camposperson", fk = "pessoa_id", titulo = "Campos personalizados" }: Props) {
   const queryClient = useQueryClient();
   const { empresa } = useAuth();
   const empresaId = empresa ? pick(empresa, ["id"]) : undefined;
@@ -47,12 +60,12 @@ export function PessoaCampos({ pessoaId }: Props) {
   });
 
   const { data: valores = [] } = useQuery({
-    queryKey: ["table", "pessoas_camposperson", text(pessoaId)],
+    queryKey: ["table", tabela, text(pessoaId)],
     enabled: Boolean(pessoaId),
     queryFn: async (): Promise<Row[]> => {
-      const { data, error } = await supabase.from("pessoas_camposperson").select("*");
+      const { data, error } = await (supabase.from as unknown as (t: string) => ReturnType<typeof supabase.from>)(tabela).select("*").eq(fk as never, pessoaId as never);
       if (error) throw error;
-      return ((data ?? []) as Row[]).filter((row) => text(pick(row, ["pessoa_id"])) === text(pessoaId));
+      return (data ?? []) as Row[];
     },
   });
 
@@ -64,8 +77,9 @@ export function PessoaCampos({ pessoaId }: Props) {
           return empresaId === undefined || dono === undefined || text(dono) === text(empresaId);
         })
         .filter((row) => text(pick(row, ["chave"])) !== "")
+        .filter((row) => campoNoTemplate(row["template"], templates))
         .sort((a, b) => (Number(pick(a, ["ordem"])) || 0) - (Number(pick(b, ["ordem"])) || 0) || text(pick(a, ["chave"])).localeCompare(text(pick(b, ["chave"])))),
-    [definicoes, empresaId],
+    [definicoes, empresaId, templates.join(",")],
   );
 
   useEffect(() => {
@@ -96,18 +110,18 @@ export function PessoaCampos({ pessoaId }: Props) {
         const existente = valores.find((row) => text(pick(row, ["chave"])) === chave);
         if (existente) {
           const { error } = await supabase
-            .from("pessoas_camposperson")
+            .from(tabela as "pessoas_camposperson")
             .update({ valor, ordem } as never)
             .eq("id", pick(existente, ["id"]) as never);
           if (error) throw error;
         } else if (valor !== "") {
           const { error } = await supabase
-            .from("pessoas_camposperson")
-            .insert({ pessoa_id: pessoaId, chave, valor, ordem } as never);
+            .from(tabela as "pessoas_camposperson")
+            .insert({ [fk]: pessoaId, chave, valor, ordem } as never);
           if (error) throw error;
         }
       }
-      queryClient.invalidateQueries({ queryKey: ["table", "pessoas_camposperson"] });
+      queryClient.invalidateQueries({ queryKey: ["table", tabela] });
       toast.success("Campos personalizados salvos.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Não foi possível salvar os campos.");
@@ -119,14 +133,14 @@ export function PessoaCampos({ pessoaId }: Props) {
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="text-sm font-semibold">Campos personalizados</h3>
+        <h3 className="text-sm font-semibold">{titulo}</h3>
         <p className="text-muted-foreground text-xs">
           Campos definidos no cadastro da empresa.
         </p>
       </div>
 
       {!pessoaId ? (
-        <p className="text-muted-foreground text-sm">Salve a pessoa para preencher os campos personalizados.</p>
+        <p className="text-muted-foreground text-sm">Salve o registro para preencher os campos personalizados.</p>
       ) : (
         <>
           <div className="grid gap-x-4 gap-y-5">
