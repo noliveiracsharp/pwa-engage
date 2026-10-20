@@ -297,6 +297,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
   const [recibo, setRecibo] = useState<Row | null>(null);
   const [vincOferta, setVincOferta] = useState<Row | null>(null);
   const [consultaOferta, setConsultaOferta] = useState("");
+  const [consultaTitulo, setConsultaTitulo] = useState<Row | null>(null);
   const { data: ofertasFin = [] } = useTableRows("orcamentos");
   const numOferta = (id: string) => text(ofertasFin.find((o) => text(rowId(o)) === id)?.["numero"]);
   const [excluirSerie, setExcluirSerie] = useState<Row | null>(null);
@@ -438,7 +439,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
           </button>
         )}
         {!t["__fatura"] && ofertaDoTitulo(t) ? (
-          <button type="button" className="text-primary flex items-center gap-1 text-xs font-semibold hover:underline" onClick={(e) => { e.stopPropagation(); setConsultaOferta(ofertaDoTitulo(t)); }}>
+          <button type="button" className="text-primary flex items-center gap-1 text-xs font-semibold hover:underline" onClick={(e) => { e.stopPropagation(); setConsultaTitulo(t); setConsultaOferta(ofertaDoTitulo(t)); }}>
             <FileText className="h-3.5 w-3.5" /> Oferta #{numOferta(ofertaDoTitulo(t)) || "…"}
           </button>
         ) : null}
@@ -763,7 +764,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
           onClose={() => setClonar(null)} onSaved={invalidar} />
       )}
       {vincOferta && <VincularOfertaDialog titulo={vincOferta} onClose={() => setVincOferta(null)} />}
-      {consultaOferta && <OfertaConsultaSheet ofertaId={consultaOferta} onClose={() => setConsultaOferta("")} />}
+      {consultaOferta && <OfertaConsultaSheet ofertaId={consultaOferta} titulo={consultaTitulo} onClose={() => { setConsultaOferta(""); setConsultaTitulo(null); }} />}
       {recibo && <ReciboDialog tipo={tipo} titulo={recibo} parceiro={parceiroById.get(text(recibo["parceiro_id"]))} onClose={() => setRecibo(null)} />}
       <Dialog open={!!excluirFat} onOpenChange={(o) => !o && setExcluirFat(null)}>
         <DialogContent className="sm:max-w-3xl">
