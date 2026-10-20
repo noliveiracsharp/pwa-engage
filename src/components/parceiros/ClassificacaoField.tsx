@@ -47,14 +47,14 @@ export function ClassificacaoField({ value, onChange, disabled }: { value: strin
     <div>
       <Label className="mb-1.5 block text-sm font-medium">Classificação</Label>
       <div className="flex gap-2">
-        <Select value={value || NENHUM} disabled={disabled} onValueChange={(v) => onChange(v === NENHUM ? "" : v)}>
+        <Select value={value || NENHUM} disabled={!!disabled} onValueChange={(v) => onChange(v === NENHUM ? "" : v)}>
           <SelectTrigger><SelectValue placeholder="Sem classificação" /></SelectTrigger>
           <SelectContent>
             <SelectItem value={NENHUM}>Sem classificação</SelectItem>
             {lista.map((o) => <SelectItem key={o.id} value={o.id}>{o.label}</SelectItem>)}
           </SelectContent>
         </Select>
-        <Button type="button" variant="outline" size="icon" title="Gerenciar classificações" disabled={disabled} onClick={() => setGerir(true)}>
+        <Button type="button" variant="outline" size="icon" title="Gerenciar classificações" disabled={!!disabled} onClick={() => setGerir(true)}>
           <Settings2 className="h-4 w-4" />
         </Button>
       </div>
