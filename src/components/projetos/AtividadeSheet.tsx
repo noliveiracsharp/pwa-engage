@@ -83,6 +83,17 @@ export function AtividadeSheet({ atividade, isNew, tarefaId, projetoId, atividad
     }
     onClose();
   }
+  async function excluir() {
+    if (!atividade) return;
+    if (!await confirmar(`Excluir a atividade "${String(atividade["nome"] ?? "")}"?`)) return;
+    const { error } = await supabase.from(ATIVIDADES as never).delete().eq("id", aid as never);
+    if (error) { toast.error(error.message); return; }
+    await sincronizarTarefa(tid, tCols);
+    toast.success("Atividade excluída.");
+    qc.invalidateQueries({ queryKey: ["table", ATIVIDADES] });
+    qc.invalidateQueries({ queryKey: ["table", "projetos_tarefas"] });
+    onClose();
+  }
   async function duplicar() {
     if (!atividade) return;
     try {
@@ -149,6 +160,7 @@ export function AtividadeSheet({ atividade, isNew, tarefaId, projetoId, atividad
         </div>
         <div className="flex flex-wrap justify-end gap-2 border-t border-border p-4">
           {atividade && perms.canCreate && <Button variant="outline" className="mr-auto" onClick={duplicar}><Copy className="mr-1 h-4 w-4" />Duplicar</Button>}
+          {atividade && perms.canDelete && <Button variant="outline" className="text-destructive" onClick={excluir}><Trash2 className="mr-1 h-4 w-4" />Excluir</Button>}
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
           {!readOnly && isNew && <Button variant="secondary" onClick={() => salvar(true)}>Salvar e adicionar outra</Button>}
           {!readOnly && <Button onClick={() => salvar()}>Salvar</Button>}
