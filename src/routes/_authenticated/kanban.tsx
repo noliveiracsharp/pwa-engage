@@ -462,7 +462,7 @@ function KanbanPage() {
           <h1 className="text-2xl font-bold text-foreground">Kanban</h1>
           {opc.totais && quadroOfertas && (
             <span className="text-sm text-muted-foreground">
-              Total do funil: <strong className="text-foreground">{formatBRL(orcamentos.filter((o) => boardEtapas.some((e) => String(e["id"]) === String(o["kanban_etapa_id"] ?? ""))).reduce((a, o) => a + valorOferta(o), 0))}</strong>
+              Total do funil: <strong className="text-foreground">{formatBRL(boardEtapas.flatMap((e) => cardsByEtapa.get(String(e["id"])) ?? []).reduce((a, o) => a + valorOferta(o), 0))}</strong>
             </span>
           )}
         </div>
