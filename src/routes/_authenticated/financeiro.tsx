@@ -1,3 +1,5 @@
+import { imprimirDre } from "@/components/relatorios/DreRelatorioPDF";
+import { useEmpresaAtiva } from "@/hooks/useEmpresaAtiva";
 import { PeriodoNavegavel } from "@/components/financeiro/PeriodoNavegavel";
 import { buscarIpca12m } from "@/lib/indices.functions";
 import { periodoPreset, type Periodo } from "@/lib/periodo-vencimento";
