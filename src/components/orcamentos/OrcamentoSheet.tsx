@@ -668,6 +668,17 @@ export function OrcamentoSheet({
           disabled={Boolean(readOnly)}
           className="min-w-0 space-y-6 px-6 disabled:opacity-70"
         >
+          <div role="tablist" className="sticky top-0 z-10 -mx-6 flex gap-1 border-b border-border bg-background px-6 pt-2">
+            {([["oferta", "Oferta & Itens"], ["crm", "CRM & Atendimento"], ["financeiro", "Financeiro & Comissões"]] as const).map(([k, l]) => (
+              <button key={k} type="button" role="tab" aria-selected={aba === k} onClick={() => setAba(k)}
+                className={cn("-mb-px border-b-2 px-3 py-2 text-sm font-medium transition-colors",
+                  aba === k ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground")}>
+                {l}
+              </button>
+            ))}
+          </div>
+
+          <div hidden={aba !== "oferta"} className="space-y-6">
           {/* ------------------------ cabeçalho ------------------------ */}
           <div className="grid gap-x-4 gap-y-5 pt-2 sm:grid-cols-2 lg:grid-cols-4">
             <div className="min-w-0 space-y-1.5">
@@ -728,54 +739,6 @@ export function OrcamentoSheet({
                 </SelectContent>
               </Select>
             </div>
-
-            <div className="min-w-0 space-y-1.5">
-              <Label className="block text-sm font-medium">Origem do lead</Label>
-              <SearchSelect
-                value={h.origem_lead}
-                onChange={(v) => patchHeader({ origem_lead: v })}
-                options={ORIGENS_LEAD.map((o) => ({ value: o, label: o }))}
-                placeholder="Selecione"
-                searchPlaceholder="Pesquisar…"
-                disabled={Boolean(readOnly)}
-              />
-            </div>
-
-            <div className="min-w-0 space-y-1.5 sm:col-span-2 rounded-md border border-border p-3">
-              <p className="text-sm font-medium">Próxima ação</p>
-              <div className="grid gap-2 sm:grid-cols-3">
-                <SearchSelect
-                  value={h.proxima_acao_tipo}
-                  onChange={(v) => patchHeader({ proxima_acao_tipo: v })}
-                  options={TIPOS_ACAO.map((t) => ({ value: t.value, label: t.label }))}
-                  placeholder="Tipo"
-                  searchPlaceholder="Pesquisar…"
-                  disabled={Boolean(readOnly)}
-                />
-                <Input type="datetime-local" value={h.proxima_acao_em} disabled={Boolean(readOnly)}
-                  onChange={(e) => patchHeader({ proxima_acao_em: e.target.value })} aria-label="Data e hora da próxima ação" />
-                <Input value={h.proxima_acao_obs} disabled={Boolean(readOnly)} placeholder="O que fazer"
-                  onChange={(e) => patchHeader({ proxima_acao_obs: e.target.value })} />
-              </div>
-            </div>
-
-            {negocioPerdido(h.situacao) && (
-              <div className="min-w-0 space-y-1.5 sm:col-span-2 rounded-md border border-destructive/40 p-3">
-                <p className="text-sm font-medium">Motivo da perda *</p>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <SearchSelect
-                    value={h.motivo_perda}
-                    onChange={(v) => patchHeader({ motivo_perda: v })}
-                    options={MOTIVOS_PERDA.map((m) => ({ value: m, label: m }))}
-                    placeholder="Selecione o motivo"
-                    searchPlaceholder="Pesquisar…"
-                    disabled={Boolean(readOnly)}
-                  />
-                  <Input value={h.motivo_perda_obs} disabled={Boolean(readOnly)} placeholder="Detalhes (ex.: concorrente)"
-                    onChange={(e) => patchHeader({ motivo_perda_obs: e.target.value })} />
-                </div>
-              </div>
-            )}
 
             <div className="min-w-0 space-y-1.5">
               <Label htmlFor="dt_orcamento" className="block text-sm font-medium">
@@ -886,7 +849,9 @@ export function OrcamentoSheet({
             despesas={totalDespesas(h.despesas)}
             onChange={(patch) => patchHeader(patch)}
           />
+          </div>
 
+          <div hidden={aba !== "financeiro"} className="space-y-6">
           <OrcamentoDespesas
             despesas={h.despesas}
             readOnly={readOnly}
@@ -909,6 +874,84 @@ export function OrcamentoSheet({
             usuarios={vendedores}
             onTotalChange={setTotalComissoes}
           />
+          </div>
+
+          <div hidden={aba !== "crm"} className="space-y-6">
+          <div className="grid gap-x-4 gap-y-5 sm:grid-cols-2">
+            <div className="min-w-0 space-y-1.5">
+              <Label className="block text-sm font-medium">Origem do lead</Label>
+              <SearchSelect
+                value={h.origem_lead}
+                onChange={(v) => patchHeader({ origem_lead: v })}
+                options={ORIGENS_LEAD.map((o) => ({ value: o, label: o }))}
+                placeholder="Selecione"
+                searchPlaceholder="Pesquisar…"
+                disabled={Boolean(readOnly)}
+              />
+            </div>
+            <div className="min-w-0 space-y-1.5">
+              <Label htmlFor="origem_lead_desc" className="block text-sm font-medium">Detalhes da origem</Label>
+              <Input id="origem_lead_desc" value={h.origem_lead_desc} disabled={Boolean(readOnly)}
+                placeholder="Ex.: Feira Predial Expo 2026, indicação do Dr. Marcelo"
+                onChange={(e) => patchHeader({ origem_lead_desc: e.target.value })} />
+            </div>
+
+            <div className="min-w-0 space-y-1.5 sm:col-span-2 rounded-md border border-border p-3">
+              <p className="text-sm font-medium">Próxima ação</p>
+              <div className="grid gap-2 sm:grid-cols-3">
+                <SearchSelect
+                  value={h.proxima_acao_tipo}
+                  onChange={(v) => patchHeader({ proxima_acao_tipo: v })}
+                  options={TIPOS_ACAO.map((t) => ({ value: t.value, label: t.label }))}
+                  placeholder="Tipo"
+                  searchPlaceholder="Pesquisar…"
+                  disabled={Boolean(readOnly)}
+                />
+                <Input type="datetime-local" value={h.proxima_acao_em} disabled={Boolean(readOnly)}
+                  onChange={(e) => patchHeader({ proxima_acao_em: e.target.value })} aria-label="Data e hora da próxima ação" />
+                <Input value={h.proxima_acao_obs} disabled={Boolean(readOnly)} placeholder="O que fazer"
+                  onChange={(e) => patchHeader({ proxima_acao_obs: e.target.value })} />
+              </div>
+            </div>
+
+            {negocioPerdido(h.situacao) && (
+              <div className="min-w-0 space-y-1.5 sm:col-span-2 rounded-md border border-destructive/40 p-3">
+                <p className="text-sm font-medium">Motivo da perda *</p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <SearchSelect
+                    value={h.motivo_perda}
+                    onChange={(v) => patchHeader({ motivo_perda: v })}
+                    options={MOTIVOS_PERDA.map((m) => ({ value: m, label: m }))}
+                    placeholder="Selecione o motivo"
+                    searchPlaceholder="Pesquisar…"
+                    disabled={Boolean(readOnly)}
+                  />
+                  <Input value={h.motivo_perda_obs} disabled={Boolean(readOnly)} placeholder="Detalhes (ex.: concorrente)"
+                    onChange={(e) => patchHeader({ motivo_perda_obs: e.target.value })} />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {record && recordId && (
+            <ConsultorComercial
+              orcamentoId={String(recordId)}
+              contexto={{
+                numero: record["numero"], situacao: h.situacao, temperatura: h.temperatura,
+                origem: h.origem_lead, origem_detalhe: h.origem_lead_desc,
+                data_oferta: h.dt_orcamento, validade: h.validade_orcamento,
+                cliente: clienteOptions.find((c) => c.value === h.parceiro_id)?.label ?? null,
+                vendedor: vendedorOptions.find((v) => v.value === h.usuario_id)?.label ?? null,
+                descricao: h.descricao,
+                proxima_acao: { tipo: h.proxima_acao_tipo, em: h.proxima_acao_em, obs: h.proxima_acao_obs },
+                motivo_perda: h.motivo_perda || null,
+                totais: { liquido: totais.total_liquido, custo: totais.total_custo, mensal: totalRecorrente },
+                itens: linhas.map((l) => ({ ...(l as unknown as Record<string, unknown>) })).slice(0, 40),
+              }}
+              empresaId={record["empresa_id"]}
+              readOnly={Boolean(readOnly)}
+            />
+          )}
 
           {record && (
             <div className="rounded-lg border p-4">
@@ -921,7 +964,10 @@ export function OrcamentoSheet({
               <OfertaTimeline orcamentoId={String(recordId)} empresaId={record["empresa_id"]} readOnly={Boolean(readOnly)} />
             </div>
           )}
+          {!record && <p className="text-sm text-muted-foreground">Salve a oferta para registrar a linha do tempo e usar o Consultor Comercial.</p>}
+          </div>
 
+          <div hidden={aba !== "oferta"} className="space-y-6">
           {/* ------------- modalidade e serviços recorrentes ------------- */}
           <OrcamentoModalidade
             value={h}
@@ -942,6 +988,7 @@ export function OrcamentoSheet({
             readOnly={readOnly}
             onChange={(patch) => patchHeader(patch)}
           />
+          </div>
         </fieldset>
 
         <div className="mt-6 flex flex-wrap justify-end gap-2 border-t px-6 py-4">
