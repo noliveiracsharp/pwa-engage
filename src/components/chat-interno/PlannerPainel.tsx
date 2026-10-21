@@ -113,8 +113,9 @@ export function ItemLinha({ i, onCheck, compacto, editavel = true }: { i: Planne
 
 /** Planner completo em tela cheia: backlog + semana + performance + relatório. */
 export function PlannerPainel({ me, usuarios, onFechar }: { me: string; usuarios: Row[]; onFechar: () => void }) {
-  const { isMaster } = useAuth();
-  const gestor = isMaster || usePagePermissions("/usuarios").canUpdate;
+  const { isMaster, usuario } = useAuth();
+  const permUsuarios = usePagePermissions("/usuarios");
+  const gestor = isMaster || permUsuarios.canUpdate;
   const emp = useEmpresaAtiva();
   const [alvo, setAlvo] = useState(me);
   const [semana, setSemana] = useState(inicioSemana(hoje()));
@@ -129,7 +130,7 @@ export function PlannerPainel({ me, usuarios, onFechar }: { me: string; usuarios
   const atrasadas = ativos.filter((i) => i.status !== "concluida" && (diaDoItem(i) ?? "9") < hoje());
   const perf = useMemo(() => calcularPerformance(itens, desde, ate), [itens, desde, ate]);
   const pessoas = useMemo(() => [...usuarios].sort((a, b) => String(pick(a, ["nome"], "")).localeCompare(String(pick(b, ["nome"], "")), "pt-BR")), [usuarios]);
-  const nomeAlvo = proprio ? String(pick(useAuth().usuario, ["nome"], "Você")) : String(pick(usuarios.find((u) => String(u["id"]) === alvo) ?? {}, ["nome"], "Usuário"));
+  const nomeAlvo = proprio ? String(pick(usuario, ["nome"], "Você")) : String(pick(usuarios.find((u) => String(u["id"]) === alvo) ?? {}, ["nome"], "Usuário"));
   const detalhes = ordenar(itens.filter((i) => { const d = diaDoItem(i); return i.status !== "recusada" && i.status !== "aguardando" && d && d >= desde && d <= ate; }));
   const farol = perf.classificacao === "Excelente" ? "text-success" : perf.classificacao === "Bom" ? "text-warning" : "text-destructive";
 
