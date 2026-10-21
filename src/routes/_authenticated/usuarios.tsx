@@ -108,7 +108,7 @@ function UsuariosPage() {
   const [toDelete, setToDelete] = useState<Row | null>(null);
   const [sel, setSel] = useState<Set<string>>(new Set());
   const lote = useAcoesComuns("usuarios");
-  const meuId = text(usuarioAtualId());
+  const meuId = usuario ? text(rowId(usuario)) : "";
   const [removing, setRemoving] = useState(false);
 
   const inativar = async () => {
