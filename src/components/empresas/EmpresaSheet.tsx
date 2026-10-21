@@ -764,6 +764,13 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
                   </p>
                 </div>
               )}
+              {field.key === "latitude" && empresa && rowId(empresa) !== undefined && (
+                <div className="rounded-lg border bg-muted/30 p-3 sm:col-span-2">
+                  <h3 className="text-sm font-semibold">Contatos (telefones e e-mails)</h3>
+                  <p className="mb-2 text-xs text-muted-foreground">Usados nos envios. O Principal ⭐ é espelhado no cadastro.</p>
+                  <ContatosPainel entidade="empresa" entidadeId={String(rowId(empresa))} />
+                </div>
+              )}
               {field.key === "latitude" && (
                 <div className="flex flex-wrap items-center gap-2 sm:col-span-2">
                   <span className="text-sm font-medium">Localização</span>
