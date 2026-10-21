@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { ImageIcon, Landmark, Package, Settings2 } from "lucide-react";
+import { Ban, CheckCircle2, ImageIcon, Landmark, Package, Settings2, Trash2 } from "lucide-react";
+import { BarraAcoesLote, useAcoesComuns } from "@/components/data-table/AcoesLote";
 import { Button } from "@/components/ui/button";
 import { PrecificacaoDialog } from "@/components/itens/PrecificacaoDialog";
 import { FiscalContadorDialog } from "@/components/itens/FiscalContadorDialog";
@@ -63,6 +64,8 @@ function ItensPage() {
   const { stamp } = useAudit();
   const [open, setOpen] = useState(false);
   const [record, setRecord] = useState<Row | null>(null);
+  const [sel, setSel] = useState<Set<string>>(new Set());
+  const lote = useAcoesComuns("itens");
   const [duplicando, setDuplicando] = useState(false);
   const [f, setF] = useState({ busca: "", tipo: "todos", status: "todos" });
   const [precOpen, setPrecOpen] = useState(false);
@@ -215,6 +218,24 @@ function ItensPage() {
           }}
           editReadOnly={!perms.canUpdate}
           onDelete={perms.canDelete ? (row) => remove.mutate(row) : undefined}
+          selection={{ selected: sel, onChange: setSel }}
+          bulkBar={
+            <BarraAcoesLote
+              tabela="itens"
+              selecionados={filtered.filter((r, i) => sel.has(String(rowId(r) ?? i)))}
+              totalFiltrado={filtered.length}
+              rotulo={(r) => String(pick(r, ["nome", "descricao"], "—"))}
+              onSelecionarTodos={() => setSel(new Set(filtered.map((r, i) => String(rowId(r) ?? i))))}
+              onLimpar={() => setSel(new Set())}
+              acoes={[
+                ...(perms.canUpdate ? [
+                  { label: "Ativar", icon: <CheckCircle2 className="h-4 w-4" />, executar: lote.definirStatus(true) },
+                  { label: "Inativar", icon: <Ban className="h-4 w-4" />, confirmacao: "Inativar {n} item(ns)?", executar: lote.definirStatus(false) },
+                ] : []),
+                ...(perms.canDelete ? [{ label: "Excluir", icon: <Trash2 className="h-4 w-4" />, destrutiva: true, confirmacao: "Excluir permanentemente {n} item(ns)? Os usados em ofertas serão mantidos.", executar: lote.excluir }] : []),
+              ]}
+            />
+          }
           filters={
             <>
               <FilterInput

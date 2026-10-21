@@ -3,7 +3,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { etapasDoKanban, kanbanDoModuloOrcamentos } from "@/lib/orcamento-kanban";
 import { corEtapa } from "@/lib/kanban-cores";
 import { createFileRoute } from "@tanstack/react-router";
-import { ChevronDown, Copy, FileSignature, FileText, Info, MessageCircle, ScrollText, ShoppingCart, Wallet } from "lucide-react";
+import { ChevronDown, Copy, FileSignature, FileText, Info, MessageCircle, ScrollText, ShoppingCart, Thermometer, Trash2, Wallet } from "lucide-react";
+import { BarraAcoesLote, useAcoesComuns } from "@/components/data-table/AcoesLote";
+import { TEMPERATURAS } from "@/lib/temperatura";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
 import { DataTable, type Column } from "@/components/data-table/DataTable";
@@ -116,6 +118,8 @@ function OrcamentosPage() {
 
   const [open, setOpen] = useState(false);
   const [record, setRecord] = useState<Row | null>(null);
+  const [sel, setSel] = useState<Set<string>>(new Set());
+  const lote = useAcoesComuns("orcamentos");
   const qcOrc = useQueryClient();
   // Oferta gravada ao confirmar um item: recarrega e mantém o painel aberto com o registro atualizado.
   const manterAbertoCom = async (id: string) => {
@@ -534,6 +538,29 @@ function OrcamentosPage() {
                 remove.mutate(row);
               }
             : undefined
+        }
+        selection={{ selected: sel, onChange: setSel }}
+        bulkBar={
+          <BarraAcoesLote
+            tabela="orcamentos"
+            selecionados={rows.filter((r, i) => sel.has(String(rowId(r) ?? i)))}
+            totalFiltrado={rows.length}
+            rotulo={(r) => `#${String(r["numero"] ?? rowId(r))} ${String(r["titulo"] ?? "")}`.trim()}
+            onSelecionarTodos={() => setSel(new Set(rows.map((r, i) => String(rowId(r) ?? i))))}
+            onLimpar={() => setSel(new Set())}
+            acoes={[
+              ...(perms.canUpdate ? TEMPERATURAS.map((t) => ({
+                label: `Temperatura: ${t.label}`,
+                icon: <Thermometer className="h-4 w-4" />,
+                executar: (r: Row) => lote.atualizar(r, { temperatura: t.value }),
+              })) : []),
+              ...(perms.canDelete ? [{
+                label: "Excluir", icon: <Trash2 className="h-4 w-4" />, destrutiva: true,
+                confirmacao: "Excluir permanentemente {n} oferta(s)? Ofertas em Ativação ou ganhas serão mantidas.",
+                executar: async (r: Row) => ofertaTravada(r, etapasKanban) ? { ok: false, mensagem: "Ativada/ganha — mantida" } : lote.excluir(r),
+              }] : []),
+            ]}
+          />
         }
         filters={
           <>
