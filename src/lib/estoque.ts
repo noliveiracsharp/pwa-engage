@@ -48,3 +48,20 @@ export function calcularSaldos(movs: Row[]) {
 }
 
 export const qtd = (v: number) => v.toLocaleString("pt-BR", { maximumFractionDigits: 3 });
+
+export type EntradaPedido = { item_id: string; quantidade: number; custo_unitario: number | null };
+
+/** Entradas de estoque ao receber um pedido de compra: só itens que controlam estoque, somando linhas repetidas. */
+export function entradasDoPedido(itens: Row[], controlaEstoque: Set<string>): EntradaPedido[] {
+  const mapa = new Map<string, EntradaPedido & { valor: number }>();
+  for (const it of itens) {
+    const item = String(it["item_id"] ?? "");
+    const q = n(it["quantidade"]);
+    if (!item || !controlaEstoque.has(item) || !(q > 0)) continue;
+    const valor = n(it["preco_unitario"]) * q;
+    const atual = mapa.get(item);
+    if (atual) { atual.quantidade += q; atual.valor += valor; }
+    else mapa.set(item, { item_id: item, quantidade: q, custo_unitario: null, valor });
+  }
+  return [...mapa.values()].map(({ valor, ...e }) => ({ ...e, custo_unitario: valor > 0 ? Math.round((valor / e.quantidade) * 100) / 100 : null }));
+}
