@@ -6,6 +6,7 @@ import { type Aviso, EVT_ABRIR_CHAT, limparAvisos, listarAvisos, marcarLido, mar
 import { useAuth } from "@/hooks/useAuth";
 import { useAvisosFrota } from "@/hooks/useAvisosFrota";
 import { useAvisosProjetos } from "@/hooks/useAvisosProjetos";
+import { useAvisosLeads } from "@/hooks/useAvisosLeads";
 import { confirmar } from "@/components/layout/DialogoGlobal";
 
 function Icone({ a }: { a: Aviso }) {
@@ -19,6 +20,7 @@ export function AvisosButton() {
   const { usuario } = useAuth();
   useAvisosFrota(!!usuario);
   useAvisosProjetos(usuario?.["id"]);
+  useAvisosLeads(usuario?.["id"]);
   const [avisos, setAvisos] = useState<Aviso[]>([]);
   const [open, setOpen] = useState(false);
   useEffect(() => { setAvisos(listarAvisos()); return onAvisos(() => setAvisos(listarAvisos())); }, []);
