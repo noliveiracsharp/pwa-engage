@@ -12,7 +12,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAudit } from "@/lib/audit";
 import { rowId, text, useTableRows } from "@/lib/crud";
 import { erroFinanceiro } from "@/lib/financeiro-db";
-import { limiteDisponivelCartao, limiteUsadoCartao, melhorDiaCompra } from "@/lib/financeiro";
+import { limiteGrupoCartao, melhorDiaCompra } from "@/lib/financeiro";
+import { Badge } from "@/components/ui/badge";
 import { formatBRL, num, round2 } from "@/lib/orcamentos";
 import { cn } from "@/lib/utils";
 import type { Row } from "@/lib/row";
@@ -52,9 +53,10 @@ export function CartoesCredito({ perms }: { perms: Perms }) {
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {cartoes.map((c) => {
-            const limite = limiteDe(c);
-            const usado = limiteUsadoCartao(titulos, text(rowId(c)));
-            const disp = limiteDisponivelCartao(limite, usado);
+            const g = limiteGrupoCartao(cartoes, titulos, text(rowId(c)));
+            const limite = g.limite;
+            const usado = g.usadoGrupo;
+            const disp = g.disponivel;
             const pct = limite > 0 ? Math.min(100, (usado / limite) * 100) : 0;
             const melhor = num(c["melhor_dia_compra"]) || melhorDiaCompra(num(c["dia_fechamento"]));
             return (
@@ -64,12 +66,15 @@ export function CartoesCredito({ perms }: { perms: Perms }) {
                   <div className="min-w-0">
                     <p className="truncate font-semibold">{text(c["descricao"])}</p>
                     <p className="text-muted-foreground text-xs">{text(c["bandeira"]) || "—"}{c["final4"] ? ` • final ${text(c["final4"])}` : ""} • {contaNome(c["conta_bancaria_id"])}{c["ativo"] === false ? " • Inativo" : ""}</p>
+                    {!g.ehTitular && <Badge variant="secondary" className="mt-1">Limite compartilhado com {text(g.titular?.["descricao"])}</Badge>}
+                    {g.ehTitular && g.compartilhado && <Badge variant="outline" className="mt-1">Titular • limite compartilhado</Badge>}
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <div className="flex justify-between text-xs tabular-nums"><span>Usado {formatBRL(usado)}</span><span className="text-muted-foreground">Limite {formatBRL(limite)}</span></div>
+                  <div className="flex justify-between text-xs tabular-nums"><span>Usado {formatBRL(usado)}{g.compartilhado ? " (grupo)" : ""}</span><span className="text-muted-foreground">Limite {formatBRL(limite)}</span></div>
                   <div className="bg-muted h-2 rounded"><div className={cn("h-2 rounded", pct >= 85 ? "bg-destructive" : pct >= 60 ? "bg-warning" : "bg-success")} style={{ width: `${pct}%` }} /></div>
-                  <p className="text-sm">Disponível: <span className="font-semibold tabular-nums">{formatBRL(disp)}</span></p>
+                  {g.compartilhado && <p className="text-muted-foreground text-xs tabular-nums">Usado neste cartão: {formatBRL(g.usadoProprio)}</p>}
+                  <p className="text-sm">Disponível{g.compartilhado ? " compartilhado" : ""}: <span className="font-semibold tabular-nums">{formatBRL(disp)}</span></p>
                 </div>
                 <p className="text-muted-foreground text-xs">Fecha dia {text(c["dia_fechamento"]) || "—"} • Vence dia {text(c["dia_vencimento"]) || "—"} • Melhor dia de compra {melhor || "—"}</p>
                 <div className="flex justify-end gap-1">
