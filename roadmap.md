@@ -43,4 +43,4 @@
 - [x] Fase 1: origem do lead, motivo de perda, próxima ação no card
 - [x] Fase 2a: linha do tempo da Oferta (notas + mudanças automáticas)
 - [x] Fase 2b: captação de leads + roleta de vendedores
-- [ ] Fase 3: metas por vendedor, forecast ponderado, relatório de perdas
+- [x] Fase 3: metas por vendedor, forecast ponderado, relatório de perdas

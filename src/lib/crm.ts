@@ -49,3 +49,35 @@ export const ROTULO_STATUS_ACAO: Record<StatusAcao, string> = {
   agendada: "Ação agendada",
   encerrado: "",
 };
+
+const n = (v: unknown) => Number(v ?? 0) || 0;
+
+/** Probabilidade da etapa (0–100): usa a gravada; senão distribui pela posição (10% → 90%). */
+export function probabilidadeEtapa(etapa: Record<string, unknown> | undefined, indice: number, total: number): number {
+  const p = etapa?.["probabilidade"];
+  if (p !== null && p !== undefined && p !== "") return Math.max(0, Math.min(100, n(p)));
+  if (total <= 1) return 50;
+  return Math.round(10 + (80 * indice) / (total - 1));
+}
+
+/** Previsão ponderada: soma valor × probabilidade das ofertas em aberto. */
+export function forecastPonderado(itens: Array<{ valor: number; probabilidade: number }>): number {
+  return Math.round(itens.reduce((s, i) => s + i.valor * (i.probabilidade / 100), 0) * 100) / 100;
+}
+
+/** Agrupa motivos de perda com quantidade e valor, do maior para o menor. */
+export function resumoPerdas(ofertas: Array<{ motivo: string | null; valor: number }>) {
+  const m = new Map<string, { motivo: string; qtd: number; valor: number }>();
+  for (const o of ofertas) {
+    const k = o.motivo?.trim() || "Não informado";
+    const r = m.get(k) ?? { motivo: k, qtd: 0, valor: 0 };
+    r.qtd += 1; r.valor += o.valor;
+    m.set(k, r);
+  }
+  return [...m.values()].sort((a, b) => b.qtd - a.qtd || b.valor - a.valor);
+}
+
+/** % da meta atingida (0 quando sem meta). */
+export function percentualMeta(realizado: number, meta: number): number {
+  return meta > 0 ? Math.round((realizado / meta) * 1000) / 10 : 0;
+}
