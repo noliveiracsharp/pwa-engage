@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowRightLeft, Clock, MessageSquare, Phone, Send, StickyNote, Users, MapPin, Trash2 } from "lucide-react";
+import { ArrowRightLeft, Clock, MessageSquare, Phone, Send, StickyNote, Users, MapPin, Trash2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,9 @@ export function OfertaTimeline({ orcamentoId, empresaId, readOnly }: { orcamento
   const { usuarioId } = useAudit();
   const [tipo, setTipo] = useState("nota");
   const [texto, setTexto] = useState("");
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editTipo, setEditTipo] = useState("nota");
+  const [editTexto, setEditTexto] = useState("");
   const key = ["orcamento_interacoes", orcamentoId];
 
   const { data = [], error } = useQuery({
@@ -48,6 +51,16 @@ export function OfertaTimeline({ orcamentoId, empresaId, readOnly }: { orcamento
     },
     onSuccess: () => { setTexto(""); void qc.invalidateQueries({ queryKey: key }); },
     onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Não foi possível registrar."),
+  });
+
+  const edit = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("orcamento_interacoes" as never)
+        .update({ tipo: editTipo, descricao: editTexto.trim() } as never).eq("id", editId as string);
+      if (error) throw error;
+    },
+    onSuccess: () => { setEditId(null); void qc.invalidateQueries({ queryKey: key }); toast.success("Registro atualizado."); },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Não foi possível atualizar."),
   });
 
   const del = useMutation({
@@ -90,17 +103,35 @@ export function OfertaTimeline({ orcamentoId, empresaId, readOnly }: { orcamento
                   <Icon className="h-3 w-3 text-muted-foreground" />
                 </span>
                 <div className="flex items-start justify-between gap-2">
+                  {editId === String(r["id"]) ? (
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <SearchSelect value={editTipo} onChange={(v) => setEditTipo(v || "nota")} allowClear={false}
+                        options={TIPOS.map((x) => ({ value: x.value, label: x.label }))} searchPlaceholder="Pesquisar…" />
+                      <Textarea value={editTexto} onChange={(e) => setEditTexto(e.target.value)} rows={3} />
+                      <div className="flex justify-end gap-2">
+                        <Button type="button" size="sm" variant="outline" onClick={() => setEditId(null)}>Cancelar</Button>
+                        <Button type="button" size="sm" disabled={!editTexto.trim() || edit.isPending} onClick={() => edit.mutate()}>Salvar</Button>
+                      </div>
+                    </div>
+                  ) : (
                   <div className="min-w-0">
                     <p className={AUTO.has(t) ? "text-xs text-muted-foreground" : "text-sm text-foreground whitespace-pre-wrap"}>{String(r["descricao"] ?? "")}</p>
                     <p className="text-[11px] text-muted-foreground">
                       {AUTO.has(t) ? "Automático" : TIPOS.find((x) => x.value === t)?.label} · {new Date(String(r["created_at"])).toLocaleString("pt-BR")}
                     </p>
                   </div>
-                  {!readOnly && !AUTO.has(t) && (
+                  )}
+                  {!readOnly && !AUTO.has(t) && editId !== String(r["id"]) && (
+                    <div className="flex shrink-0">
+                    <Button type="button" variant="ghost" size="icon" className="h-6 w-6" aria-label="Editar"
+                      onClick={() => { setEditId(String(r["id"])); setEditTipo(t); setEditTexto(String(r["descricao"] ?? "")); }}>
+                      <Pencil className="h-3 w-3" />
+                    </Button>
                     <Button type="button" variant="ghost" size="icon" className="h-6 w-6" aria-label="Apagar"
                       onClick={async () => { if (await confirmar({ title: "Apagar registro?", description: "Essa anotação será removida." })) del.mutate(String(r["id"])); }}>
                       <Trash2 className="h-3 w-3" />
                     </Button>
+                    </div>
                   )}
                 </div>
               </li>

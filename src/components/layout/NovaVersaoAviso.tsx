@@ -120,8 +120,8 @@ export function NovaVersaoAviso() {
 
   if (restante === null) return null;
   return (
-    <div className="fixed inset-x-0 top-0 z-[100] flex justify-center p-3">
-      <div className="flex w-full max-w-2xl flex-col gap-3 rounded-lg border border-primary/40 bg-card p-4 shadow-lg sm:flex-row sm:items-center">
+    <div data-nova-versao className="pointer-events-none fixed inset-x-0 top-0 z-[2147483000] flex justify-center p-3" style={{ pointerEvents: "none" }}>
+      <div className="pointer-events-auto flex w-full max-w-2xl flex-col gap-3 rounded-lg border border-primary/40 bg-card p-4 shadow-lg sm:flex-row sm:items-center" style={{ pointerEvents: "auto" }}>
         <Sparkles className="h-6 w-6 shrink-0 text-primary" />
         <div className="flex-1 text-sm">
           <p className="font-semibold text-foreground">
