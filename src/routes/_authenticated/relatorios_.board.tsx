@@ -103,14 +103,72 @@ function BoardPage() {
         <div className="flex flex-wrap items-end gap-2">
           <div><Label className="text-xs">De</Label><Input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} /></div>
           <div><Label className="text-xs">Até</Label><Input type="date" value={ate} onChange={(e) => setAte(e.target.value)} /></div>
-          <Button onClick={() => window.print()}><Printer className="mr-1 h-4 w-4" /> Imprimir / PDF</Button>
+          <Button onClick={() => imprimirBoard()}><Printer className="mr-1 h-4 w-4" /> Imprimir / PDF</Button>
         </div>
       </div>
 
-      <header className="hidden border-b border-border pb-3 print:block">
-        <h1 className="text-xl font-bold">{emp.nome || "Relatório"} — Relatório ao Board</h1>
-        <p className="text-sm text-muted-foreground">Período de {new Date(desde + "T12:00").toLocaleDateString("pt-BR")} a {new Date(ate + "T12:00").toLocaleDateString("pt-BR")}</p>
-      </header>
+      <div className="dre-print-src" aria-hidden>
+        <div id="board-print" className="dre-doc">
+          <header className="dre-head">
+            <div className="dre-emp">
+              {emp.logo && <img src={String(emp.logo)} alt="" data-no-zoom />}
+              <div>
+                <div className="dre-emp-nome">{emp.nome}</div>
+                <div className="dre-rot">Relatório executivo • Confidencial</div>
+              </div>
+            </div>
+            <div className="dre-head-dir"><div className="dre-rot">Emitido em</div><div>{new Date().toLocaleString("pt-BR")}</div></div>
+          </header>
+          <div className="dre-titulo">
+            <h1>Relatório ao Board</h1>
+            <p>Período de {new Date(desde + "T12:00").toLocaleDateString("pt-BR")} a {new Date(ate + "T12:00").toLocaleDateString("pt-BR")}</p>
+          </div>
+          <table className="dre-kpis"><tbody><tr>
+            <td><span>Caixa em bancos</span><strong>{formatBRL(d.caixa)}</strong><small>{d.limite ? `+ ${formatBRL(d.limite)} de limite` : "Saldo da última consulta"}</small></td>
+            <td><span>Receita recorrente (MRR)</span><strong>{formatBRL(d.mrr)}</strong><small>Ofertas ganhas</small></td>
+            <td><span>Inadimplência +30d</span><strong>{pct(d.inad)}</strong><small>Do saldo a receber</small></td>
+            <td><span>Prazo receber × pagar</span><strong>{d.pmr} × {d.pmp} dias</strong></td>
+            <td><span>Economia em compras</span><strong>{formatBRL(d.saving.valor)}</strong><small>{pct(d.saving.pct)} nas cotações</small></td>
+            <td className="dre-kpi-res"><span>Resultado do período</span><strong>{formatBRL(resultado)}</strong><small>Margem {pct(margem)}</small></td>
+          </tr></tbody></table>
+
+          <h2>1. Evolução de contas a receber e a pagar</h2>
+          <TabPdf cab={["Mês", "Previsto receber", "Recebido", "Previsto pagar", "Pago", "Resultado"]}
+            linhas={d.evol.map((m) => [mesLabel(m.mes), formatBRL(m.receberPrevisto), formatBRL(m.receberRealizado), formatBRL(m.pagarPrevisto), formatBRL(m.pagarRealizado), formatBRL(m.resultado)])}
+            tot={["Total", "", formatBRL(d.receita), "", formatBRL(d.despesa), formatBRL(resultado)]} />
+
+          <div className="dre-duas">
+            <div>
+              <h2>2. Idade dos valores a receber</h2>
+              <TabPdf cab={["Faixa", "Qtd.", "Valor", "%"]} linhas={d.aging.map((a) => [a.faixa, String(a.qtd), formatBRL(a.valor), pct((a.valor / totalAging) * 100)])} />
+            </div>
+            <div>
+              <h2>3. Despesas pagas por categoria</h2>
+              <TabPdf cab={["Categoria", "Valor", "%"]} linhas={d.categorias.slice(0, 10).map((c) => [c.categoria, formatBRL(c.valor), pct((c.valor / totalCat) * 100)])} />
+            </div>
+          </div>
+
+          <div className="dre-duas">
+            <div>
+              <h2>4. Maiores pagadores</h2>
+              <TabPdf cab={["Pagador", "Valor", "%", "Acumulado"]} linhas={d.topRec.map((x) => [nomeParc(x.id), formatBRL(x.valor), pct(x.pct), pct(x.acumulado)])} />
+            </div>
+            <div>
+              <h2>5. Maiores fornecedores</h2>
+              <TabPdf cab={["Fornecedor", "Valor", "%", "Acumulado"]} linhas={d.topPag.map((x) => [nomeParc(x.id), formatBRL(x.valor), pct(x.pct), pct(x.acumulado)])} />
+            </div>
+          </div>
+
+          <h2>6. Ofertas e vendas</h2>
+          <p>{d.totalOfertas} ofertas no período • Conversão {pct(d.conv)} ({d.ganho?.qtd ?? 0} ganhas, {d.perdidas} perdidas) • Ticket médio {formatBRL(d.ticket.impl)} + {formatBRL(d.ticket.mensal)}/mês • {d.misto} com faturamento misto</p>
+          <TabPdf cab={["Temperatura", "Qtd.", "Implantação", "Mensalidade"]} linhas={d.pipe.map((p) => [p.label, String(p.qtd), formatBRL(p.implantacao), formatBRL(p.mensal)])} />
+
+          <h2>7. Compras</h2>
+          <p>Nas cotações com dois ou mais fornecedores, o valor fechado foi {formatBRL(d.saving.base - d.saving.valor)} contra {formatBRL(d.saving.base)} da proposta mais cara — economia de {formatBRL(d.saving.valor)} ({pct(d.saving.pct)}).</p>
+
+          <footer className="dre-rodape">Valores realizados e previstos conforme lançamentos do financeiro e ofertas do sistema. Documento de uso interno.</footer>
+        </div>
+      </div>
 
       <Secao titulo="Resumo executivo">
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
@@ -196,6 +254,40 @@ function BoardPage() {
         </p>
       </Secao>
     </div>
+  );
+}
+
+function TabPdf({ cab, linhas, tot }: { cab: string[]; linhas: string[][]; tot?: string[] }) {
+  return (
+    <table className="dre-tab">
+      <thead><tr>{cab.map((c, i) => <th key={c} className={i > 0 ? "r" : ""}>{c}</th>)}</tr></thead>
+      <tbody>
+        {linhas.length === 0 && <tr><td colSpan={cab.length}>Sem dados no período.</td></tr>}
+        {linhas.map((l, i) => <tr key={i}>{l.map((c, j) => <td key={j} className={j > 0 ? "r" : ""}>{c}</td>)}</tr>)}
+        {tot && <tr className="tot">{tot.map((c, j) => <td key={j} className={j > 0 ? "r" : ""}>{c}</td>)}</tr>}
+      </tbody>
+    </table>
+  );
+}
+
+/** Clona o relatório para fora do layout e imprime só ele (mesmo modelo do DRE). */
+function imprimirBoard() {
+  const src = document.getElementById("board-print");
+  if (!src) return;
+  const host = document.createElement("div");
+  host.className = "dre-print-host";
+  host.appendChild(src.cloneNode(true));
+  document.body.appendChild(host);
+  document.documentElement.classList.add("dre-printing");
+  const limpar = () => {
+    document.documentElement.classList.remove("dre-printing");
+    host.remove();
+    window.removeEventListener("afterprint", limpar);
+  };
+  window.addEventListener("afterprint", limpar);
+  const imgs = Array.from(host.querySelectorAll("img"));
+  Promise.all(imgs.map((img) => (img.complete ? null : new Promise((r) => { img.onload = img.onerror = r; })))).then(() =>
+    setTimeout(() => window.print(), 50),
   );
 }
 
