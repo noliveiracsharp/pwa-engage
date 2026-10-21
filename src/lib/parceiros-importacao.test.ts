@@ -18,3 +18,12 @@ describe("importação de parceiros", () => {
     expect(lerCsvParceiros("Razão social;Cidade\n;Taubaté", new Set())[0]!.erros).toContain("Razão social obrigatória");
   });
 });
+
+import { vinculoMatriz as vm, contatosDaLinha as cdl } from "./parceiros-importacao";
+describe("vínculo com administradora", () => {
+  const ids = new Map([["11222333000181", "gk"]]);
+  it("lote escolhido vincula como cliente", () => expect(vm({}, ids, "gk")).toMatchObject({ parceiro_pai_id: "gk", tipo_hierarquia: "cliente" }));
+  it("coluna do CSV tem prioridade", () => expect(vm({ matriz_documento: "11222333000181" }, ids, "outra").parceiro_pai_id).toBe("gk"));
+  it("CNPJ inexistente gera erro", () => expect(vm({ matriz_documento: "999" }, ids, null).erro).toBeTruthy());
+  it("telefone e e-mail viram contatos", () => expect(cdl({ telefone: "12999990000", email: "a@b.com" }).length).toBe(2));
+});
