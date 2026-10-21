@@ -1,5 +1,8 @@
-import { useMemo, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { lazy, Suspense, useMemo, useState } from "react";
+import { ClientOnly, createFileRoute } from "@tanstack/react-router";
+import { coordenadas, LEGENDA_PINS } from "@/lib/parceiros-mapa";
+
+const ParceirosMapa = lazy(() => import("@/components/parceiros/ParceirosMapa"));
 import { Badge } from "@/components/ui/badge";
 import { DataTable, type Column } from "@/components/data-table/DataTable";
 import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
@@ -11,7 +14,7 @@ import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { useAudit } from "@/lib/audit";
 import { caminhoClassificacao, useClassificacoes } from "@/components/parceiros/ClassificacaoField";
 import { formatCpfCnpj, formatPhoneDisplay, matchesAny } from "@/lib/input-masks";
-import { Ban, Building2, CheckCircle2, MapPin, MessageCircle, Trash2, Upload } from "lucide-react";
+import { Ban, Building2, CheckCircle2, List, Map as MapIcon, MapPin, MessageCircle, Trash2, Upload } from "lucide-react";
 import { BarraAcoesLote, consultarCnpjReceita, geolocalizarRegistro, useAcoesComuns } from "@/components/data-table/AcoesLote";
 import { Button } from "@/components/ui/button";
 import { ImportarParceirosDialog } from "@/components/parceiros/ImportarParceirosDialog";
@@ -42,6 +45,7 @@ function ParceirosPage() {
   const lote = useAcoesComuns("parceiros");
   const [open, setOpen] = useState(false);
   const [impOpen, setImpOpen] = useState(false);
+  const [visao, setVisao] = useState<"tabela" | "mapa">("tabela");
   const [record, setRecord] = useState<Row | null>(null);
   const [f, setF] = useState({ busca: "", papel: "todos", status: "todos", situacao: "todos", estrutura: "todos", pai: "todos", classificacao: "todos" });
 
@@ -213,6 +217,7 @@ function ParceirosPage() {
           </>
         }
       />
+      </div>
       <ParceiroSheet
         open={open}
         onOpenChange={setOpen}
