@@ -22,7 +22,7 @@ const db = (t: string) => supabase.from(t as never) as unknown as ReturnType<typ
 
 /** Cadastro simplificado em campo: cria o item pendente e avisa Compras com uma tarefa. */
 export function ItemRapidoDialog({ open, termo, laudoNumero, onOpenChange, onCriado }: {
-  open: boolean; termo: string; laudoNumero?: string;
+  open: boolean; termo: string; laudoNumero?: string | undefined;
   onOpenChange: (o: boolean) => void;
   onCriado: (id: string, descricao: string) => void;
 }) {
