@@ -1,5 +1,8 @@
-import { useMemo, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { lazy, Suspense, useMemo, useState } from "react";
+import { ClientOnly, createFileRoute } from "@tanstack/react-router";
+import { coordenadas, LEGENDA_PINS } from "@/lib/parceiros-mapa";
+
+const ParceirosMapa = lazy(() => import("@/components/parceiros/ParceirosMapa"));
 import { Badge } from "@/components/ui/badge";
 import { DataTable, type Column } from "@/components/data-table/DataTable";
 import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
@@ -11,7 +14,7 @@ import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { useAudit } from "@/lib/audit";
 import { caminhoClassificacao, useClassificacoes } from "@/components/parceiros/ClassificacaoField";
 import { formatCpfCnpj, formatPhoneDisplay, matchesAny } from "@/lib/input-masks";
-import { Ban, Building2, CheckCircle2, MapPin, MessageCircle, Trash2, Upload } from "lucide-react";
+import { Ban, Building2, CheckCircle2, List, Map as MapIcon, MapPin, MessageCircle, Trash2, Upload } from "lucide-react";
 import { BarraAcoesLote, consultarCnpjReceita, geolocalizarRegistro, useAcoesComuns } from "@/components/data-table/AcoesLote";
 import { Button } from "@/components/ui/button";
 import { ImportarParceirosDialog } from "@/components/parceiros/ImportarParceirosDialog";
@@ -42,6 +45,7 @@ function ParceirosPage() {
   const lote = useAcoesComuns("parceiros");
   const [open, setOpen] = useState(false);
   const [impOpen, setImpOpen] = useState(false);
+  const [visao, setVisao] = useState<"tabela" | "mapa">("tabela");
   const [record, setRecord] = useState<Row | null>(null);
   const [f, setF] = useState({ busca: "", papel: "todos", status: "todos", situacao: "todos", estrutura: "todos", pai: "todos", classificacao: "todos" });
 
@@ -135,14 +139,34 @@ function ParceirosPage() {
     { key: "status", header: "Status", fields: ["status"], render: (r) => <StatusBadge value={r["status"]} /> },
   ];
 
+  const comPin = rows.filter((r) => coordenadas(r)).length;
+
   return (
     <>
-      {perms.canCreate && (
-        <div className="mb-2 flex justify-end">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <div className="inline-flex rounded-md border p-0.5">
+          <Button variant={visao === "tabela" ? "secondary" : "ghost"} size="sm" onClick={() => setVisao("tabela")}><List className="mr-1 h-4 w-4" />Tabela</Button>
+          <Button variant={visao === "mapa" ? "secondary" : "ghost"} size="sm" onClick={() => setVisao("mapa")}><MapIcon className="mr-1 h-4 w-4" />Mapa</Button>
+        </div>
+        {perms.canCreate && (
           <Button variant="outline" size="sm" onClick={() => setImpOpen(true)}><Upload className="mr-1 h-4 w-4" />Importar CSV</Button>
+        )}
+      </div>
+      <ImportarParceirosDialog open={impOpen} onOpenChange={setImpOpen} existentes={escopo} empresaId={empresaId} stamp={stamp} />
+      {visao === "mapa" && (
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+            {LEGENDA_PINS.map((l) => <span key={l.cat} className="inline-flex items-center gap-1.5"><span className={`h-3 w-3 rounded-full dot-${l.cat}`} />{l.label}</span>)}
+            <span className="ml-auto">{comPin} de {rows.length} com localização{comPin < rows.length ? " — use \"Geolocalizar pelo endereço\" na tabela para os demais" : ""}</span>
+          </div>
+          <ClientOnly fallback={<div className="h-[420px] rounded-lg border" />}>
+            <Suspense fallback={<div className="h-[420px] rounded-lg border" />}>
+              <ParceirosMapa rows={rows} onAbrir={(r) => { setRecord(r); setOpen(true); }} />
+            </Suspense>
+          </ClientOnly>
         </div>
       )}
-      <ImportarParceirosDialog open={impOpen} onOpenChange={setImpOpen} existentes={escopo} empresaId={empresaId} stamp={stamp} />
+      <div className={visao === "mapa" ? "hidden" : undefined}>
       <DataTable
         title="Parceiros de Negócios"
         columns={columns}
@@ -193,6 +217,7 @@ function ParceirosPage() {
           </>
         }
       />
+      </div>
       <ParceiroSheet
         open={open}
         onOpenChange={setOpen}
