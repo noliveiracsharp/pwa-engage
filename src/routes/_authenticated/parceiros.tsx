@@ -11,7 +11,8 @@ import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { useAudit } from "@/lib/audit";
 import { caminhoClassificacao, useClassificacoes } from "@/components/parceiros/ClassificacaoField";
 import { formatCpfCnpj, formatPhoneDisplay, matchesAny } from "@/lib/input-masks";
-import { Upload } from "lucide-react";
+import { Ban, Building2, CheckCircle2, MapPin, MessageCircle, Trash2, Upload } from "lucide-react";
+import { BarraAcoesLote, consultarCnpjReceita, geolocalizarRegistro, useAcoesComuns } from "@/components/data-table/AcoesLote";
 import { Button } from "@/components/ui/button";
 import { ImportarParceirosDialog } from "@/components/parceiros/ImportarParceirosDialog";
 
@@ -37,6 +38,8 @@ function ParceirosPage() {
   const perms = usePagePermissions("/parceiros");
   const { empresaId, stamp } = useAudit();
   const { data: classificacoes = [] } = useClassificacoes();
+  const [sel, setSel] = useState<Set<string>>(new Set());
+  const lote = useAcoesComuns("parceiros");
   const [open, setOpen] = useState(false);
   const [impOpen, setImpOpen] = useState(false);
   const [record, setRecord] = useState<Row | null>(null);
@@ -151,6 +154,27 @@ function ParceirosPage() {
         onEdit={(row) => { setRecord(row); setOpen(true); }}
         editReadOnly={!perms.canUpdate}
         onDelete={perms.canDelete ? (row) => remove.mutate(row) : undefined}
+        selection={{ selected: sel, onChange: setSel }}
+        bulkBar={
+          <BarraAcoesLote
+            tabela="parceiros"
+            selecionados={rows.filter((r, i) => sel.has(String(rowId(r) ?? i)))}
+            totalFiltrado={rows.length}
+            rotulo={(r) => String(r["razao_social"] || r["nome_fantasia"] || "—")}
+            onSelecionarTodos={() => setSel(new Set(rows.map((r, i) => String(rowId(r) ?? i))))}
+            onLimpar={() => setSel(new Set())}
+            acoes={[
+              ...(perms.canUpdate ? [
+                { label: "Consultar CNPJ na Receita", icon: <Building2 className="h-4 w-4" />, intervalo: 1200, executar: (r: Row) => consultarCnpjReceita(r, lote.atualizar) },
+                { label: "Geolocalizar pelo endereço", icon: <MapPin className="h-4 w-4" />, intervalo: 1100, executar: (r: Row) => geolocalizarRegistro(r, lote.atualizar) },
+                { label: "Ativar", icon: <CheckCircle2 className="h-4 w-4" />, executar: lote.definirStatus(true) },
+                { label: "Inativar", icon: <Ban className="h-4 w-4" />, confirmacao: "Inativar {n} parceiro(s)?", executar: lote.definirStatus(false) },
+              ] : []),
+              { label: "Verificar WhatsApp", icon: <MessageCircle className="h-4 w-4" />, intervalo: 300, executar: lote.verificarWhatsApp() },
+              ...(perms.canDelete ? [{ label: "Excluir", icon: <Trash2 className="h-4 w-4" />, destrutiva: true, confirmacao: "Excluir permanentemente {n} parceiro(s)?", executar: lote.excluir }] : []),
+            ]}
+          />
+        }
         filters={
           <>
             <FilterInput label="Buscar" value={f.busca} onChange={(v) => setF({ ...f, busca: v })} placeholder="Nome, documento, telefone ou cidade" />
