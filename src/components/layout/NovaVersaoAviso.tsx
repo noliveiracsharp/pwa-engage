@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -119,7 +120,7 @@ export function NovaVersaoAviso() {
   }, [restante]);
 
   if (restante === null) return null;
-  return (
+  const aviso = (
     <div data-nova-versao className="pointer-events-none fixed inset-x-0 top-0 z-[2147483000] flex justify-center p-3" style={{ pointerEvents: "none" }}>
       <div className="pointer-events-auto flex w-full max-w-2xl flex-col gap-3 rounded-lg border border-primary/40 bg-card p-4 shadow-lg sm:flex-row sm:items-center" style={{ pointerEvents: "auto" }}>
         <Sparkles className="h-6 w-6 shrink-0 text-primary" />
@@ -136,4 +137,5 @@ export function NovaVersaoAviso() {
       </div>
     </div>
   );
+  return typeof document === "undefined" ? aviso : createPortal(aviso, document.body);
 }
