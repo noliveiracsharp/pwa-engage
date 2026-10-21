@@ -23,7 +23,7 @@
 - [x] Orçamentos: itens em tabela compacta com "Adicionar item" ao final, botão Salvar item e Cancelar edição (descarta a linha nova ou restaura os valores anteriores).
 
 ## Próximos
-- [ ] Duplicar orçamento (gera novo número com os mesmos itens).
+- [x] Duplicar orçamento (gera novo número com os mesmos itens).
 - [ ] Filtro de Kanban por usuário (usuario_kanban) na tela /kanban.
 - [ ] Tela de Atendimentos (chat estilo WhatsApp Web).
 
