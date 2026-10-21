@@ -136,6 +136,9 @@ function Lista({
         <h1 className="text-2xl font-bold text-foreground">Relatórios</h1>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" asChild>
+            <Link to="/relatorios/comercial">Painel Comercial</Link>
+          </Button>
+          <Button variant="outline" asChild>
             <Link to="/relatorios/board">Painel do Board</Link>
           </Button>
           {perms.canCreate && (
