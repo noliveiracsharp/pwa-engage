@@ -16,3 +16,10 @@ describe("temperatura e totais do kanban", () => {
     expect(valorOferta({ total_liquido: 8000, total_recorrente: 5000 })).toBe(13000);
   });
 });
+
+import { temperaturaEfetiva as te } from "./temperatura";
+describe("temperatura automática", () => {
+  it("Ativação vira Ganho", () => expect(te("Ativação", "frio")?.label).toBe("Ganho"));
+  it("Perdido vira Perdido", () => expect(te("Perdido", "quente")?.label).toBe("Perdido"));
+  it("Em andamento mantém escolhida", () => expect(te("Em andamento", "morno")?.label).toBe("Morno"));
+});
