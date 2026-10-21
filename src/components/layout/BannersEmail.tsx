@@ -13,7 +13,7 @@ import { SearchSelect } from "@/components/data-table/SearchSelect";
 import { confirmar } from "@/components/layout/DialogoGlobal";
 import { bannerEmailHtml, type BannerEmail } from "@/lib/regua-cobranca";
 
-const SCRIPT = "Rode o script atendeai-email-banners.sql no SQL Editor.";
+const SCRIPT = "Rode o script atendeai-cotacao-versoes-e-banners.sql no SQL Editor.";
 const TIPOS = [
   { value: "cobranca", label: "Somente cobrança" },
   { value: "oferta", label: "Somente Ofertas" },

@@ -13,7 +13,7 @@ import { pick, type Row } from "@/lib/row";
 
 type Props = { cotacao: Row; itensCot: Row[]; precos: Row[]; itens: Row[]; canUpdate: boolean; usuarioNome: string };
 
-const SCRIPT = "Rode o script atendeai-cotacao-versoes.sql no SQL Editor.";
+const SCRIPT = "Rode o script atendeai-cotacao-versoes-e-banners.sql no SQL Editor.";
 
 export function CotacaoVersoes({ cotacao, itensCot, precos, itens, canUpdate, usuarioNome }: Props) {
   const qc = useQueryClient();
