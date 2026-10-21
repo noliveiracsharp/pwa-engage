@@ -1,5 +1,6 @@
 import { PessoaCampos } from "@/components/pessoas/PessoaCampos";
 import { OfertaTimeline } from "@/components/orcamentos/OfertaTimeline";
+import { ConsultorComercial } from "@/components/orcamentos/ConsultorComercial";
 import { TEMPERATURAS } from "@/lib/temperatura";
 import { MOTIVOS_PERDA, ORIGENS_LEAD, TIPOS_ACAO, negocioPerdido } from "@/lib/crm";
 import { OrcamentoDespesas } from "@/components/orcamentos/OrcamentoDespesas";
@@ -98,6 +99,7 @@ type Header = {
   situacao: string;
   temperatura: string;
   origem_lead: string;
+  origem_lead_desc: string;
   motivo_perda: string;
   motivo_perda_obs: string;
   proxima_acao_tipo: string;
@@ -124,6 +126,7 @@ const emptyHeader = (vendedorId: string): Header => {
     situacao: "Em andamento",
     temperatura: "",
     origem_lead: "",
+    origem_lead_desc: "",
     motivo_perda: "",
     motivo_perda_obs: "",
     proxima_acao_tipo: "",
@@ -193,6 +196,7 @@ const headerFromRecord = (r: Row): Header => {
     situacao: String(r["situacao"] ?? "") || "Em andamento",
     temperatura: String(r["temperatura"] ?? ""),
     origem_lead: String(r["origem_lead"] ?? ""),
+    origem_lead_desc: String(r["origem_lead_desc"] ?? ""),
     motivo_perda: String(r["motivo_perda"] ?? ""),
     motivo_perda_obs: String(r["motivo_perda_obs"] ?? ""),
     proxima_acao_tipo: String(r["proxima_acao_tipo"] ?? ""),
@@ -569,6 +573,7 @@ export function OrcamentoSheet({
       if (v || (record && record[k] != null)) crm[k] = v || null;
     };
     campoCrm("origem_lead", h.origem_lead);
+    campoCrm("origem_lead_desc", h.origem_lead_desc);
     campoCrm("motivo_perda", negocioPerdido(h.situacao) ? h.motivo_perda : "");
     campoCrm("motivo_perda_obs", negocioPerdido(h.situacao) ? h.motivo_perda_obs : "");
     campoCrm("proxima_acao_tipo", h.proxima_acao_tipo);
