@@ -38,3 +38,9 @@
 - [x] Financeiro: escolha do alcance ao editar novas séries manuais, com gravação atômica e testes.
 - [ ] Ativar e testar edição recorrente com dados reais — aguarda usuário executar atendeai-financeiro-edicao-recorrente.sql no banco próprio.
 - [x] Contas a Pagar: fatura de cartão agrupada (pai) com itens expansíveis (filhos) + modal
+
+## CRM
+- [x] Fase 1: origem do lead, motivo de perda, próxima ação no card
+- [x] Fase 2a: linha do tempo da Oferta (notas + mudanças automáticas)
+- [ ] Fase 2b: webhook de captação de leads (site/anúncios)
+- [ ] Fase 3: roleta de leads, metas por vendedor, forecast ponderado, relatório de perdas

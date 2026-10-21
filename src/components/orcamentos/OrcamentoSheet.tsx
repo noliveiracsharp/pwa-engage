@@ -1,4 +1,5 @@
 import { PessoaCampos } from "@/components/pessoas/PessoaCampos";
+import { OfertaTimeline } from "@/components/orcamentos/OfertaTimeline";
 import { TEMPERATURAS } from "@/lib/temperatura";
 import { MOTIVOS_PERDA, ORIGENS_LEAD, TIPOS_ACAO, negocioPerdido } from "@/lib/crm";
 import { OrcamentoDespesas } from "@/components/orcamentos/OrcamentoDespesas";
@@ -908,6 +909,12 @@ export function OrcamentoSheet({
           {record && (
             <div className="rounded-lg border p-4">
               <PessoaCampos pessoaId={recordId} templates={["ofertas"]} tabela="orcamentos_camposperson" fk="orcamento_id" titulo="Campos personalizados da Oferta" />
+            </div>
+          )}
+
+          {record && recordId && (
+            <div className="rounded-lg border p-4">
+              <OfertaTimeline orcamentoId={String(recordId)} empresaId={record["empresa_id"]} readOnly={Boolean(readOnly)} />
             </div>
           )}
 
