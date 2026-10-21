@@ -37,6 +37,7 @@ import {
 } from "@/lib/atendimentos";
 import { dispararMensagem, marcarEnvio } from "@/lib/atendimentos-envio";
 import { GravadorAudio } from "./GravadorAudio";
+import { SinoBotao, SinoTarja, desarmarSino } from "./SinoAtendimento";
 import { TranscricaoAudio } from "./TranscricaoAudio";
 import { ProtocoloBadge } from "./ProtocoloBadge";
 import { ManutencaoSheet } from "@/components/manutencoes/ManutencaoSheet";
@@ -205,6 +206,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
       return;
     }
     setTexto("");
+    if (!interna) void desarmarSino(id, atendimento, colsAt).then(() => qc.invalidateQueries({ queryKey: ["table", "atendimentos"] }));
     // Handoff silencioso: humano respondeu numa conversa da IA.
     if (!interna && isIA(atendimento)) {
       const et = etapaHumano(etapas, text(pick(atendimento, A.kanban)));
@@ -277,6 +279,12 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
     }
     qc.invalidateQueries({ queryKey: ["table", "atendimentos_mensagem"] });
   }
+
+  const sinoProps = {
+    atendimentoId: id, atendimento, colsAt, nomeCliente: nome, encerrado,
+    enviar: (c: string) => enviarConvite(c, "Aviso de espera enviado ao cliente"),
+    onChange: () => void qc.invalidateQueries({ queryKey: ["table", "atendimentos"] }),
+  };
 
   const linkPortal = () => `${window.location.origin}/portal?tel=${encodeURIComponent(telefonePessoa(pessoa).replace(/\D/g, ""))}`;
   async function copiarPortal() {
@@ -410,6 +418,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1">
+        <SinoBotao {...sinoProps} />
         {!encerrado && !chamada && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -495,6 +504,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
         </Button>
         </div>
       </header>
+      <SinoTarja {...sinoProps} />
 
       <div className="flex-1 space-y-2 overflow-y-auto px-3 py-4 sm:px-6">
         {isLoading && <p className="text-center text-sm text-muted-foreground">Carregando mensagens…</p>}
