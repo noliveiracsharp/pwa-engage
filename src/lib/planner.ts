@@ -14,6 +14,8 @@ export type PlannerItem = {
   status: "aberta" | "aguardando" | "recusada" | "concluida";
   concluidoEm: string | null;
   remarcacoes: number;
+  /** Quantidade de comentários na linha do tempo. */
+  comentarios?: number;
 };
 
 export const PRIORIDADES: { v: Prioridade; label: string; peso: number }[] = [
@@ -62,6 +64,8 @@ export type Performance = {
   noPrazo: number;
   comPrazo: number;
   remarcacoes: number;
+  /** Quantidade de comentários na linha do tempo. */
+  comentarios?: number;
   minutosConcluidos: number;
   aderencia: number;
   pontualidade: number;
