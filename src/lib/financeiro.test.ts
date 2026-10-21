@@ -51,6 +51,9 @@ describe("financeiro", () => {
     // Recebido segue o período filtrado, não o mês do relógio
     expect(resumoTitulos(tit, "2026-07-10", { de: "2026-05-01", ate: "2026-05-31" }).pagoMes).toBe(110);
     expect(resumoTitulos(tit, "2026-07-10").pagoMes).toBe(0);
+    const c = caixaPorMes(tit);
+    expect(c.find((x) => x.mes === "2026-05")?.entradas).toBe(110);
+    expect(c.find((x) => x.mes === "2026-06")?.saidasPrev).toBe(50);
   });
 
   it("situação aceita múltipla escolha", () => {
