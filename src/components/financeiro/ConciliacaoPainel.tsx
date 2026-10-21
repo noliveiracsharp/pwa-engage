@@ -49,7 +49,7 @@ export function ConciliacaoPainel({ conta, movs, onFeito }: { conta: Row; movs: 
   const baixar = async () => {
     const sel = pares.filter((p) => marcados.has(p.tituloId));
     if (!sel.length) return;
-    if (!(await confirmar({ title: "Dar baixa", description: `Dar baixa em ${sel.length} título(s) com a data do extrato?`, confirmText: "Dar baixa" } as never))) return;
+    if (!(await confirmar(`Dar baixa em ${sel.length} título(s) com a data do extrato?`))) return;
     setSalvando(true);
     try {
       for (const p of sel) {

@@ -10,6 +10,7 @@ import { formatBRL, num } from "@/lib/orcamentos";
 import { rowId, text } from "@/lib/crud";
 import type { Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
+import { ConciliacaoPainel } from "./ConciliacaoPainel";
 
 type Transacao = { data: string; tipo: string; operacao: "C" | "D"; valor: number; descricao: string; titulo: string };
 const iso = (d: Date) => d.toISOString().slice(0, 10);
@@ -27,6 +28,7 @@ export function haQuanto(s: unknown) {
 /** Card de saldo em tempo real de uma conta com API ativa. */
 export function SaldoCard({ conta, onAtualizado, onExtrato }: { conta: Row; onAtualizado: () => void; onExtrato: () => void }) {
   const [carregando, setCarregando] = useState(false);
+  const [conciliar, setConciliar] = useState(false);
   const atualizar = async () => {
     setCarregando(true);
     try { await chamarBanco("saldo", { conta_id: text(rowId(conta)) }); toast.success("Saldo atualizado com o banco."); onAtualizado(); }
@@ -100,6 +102,10 @@ export function ExtratoSheet({ conta, onClose }: { conta: Row; onClose: () => vo
               <div className="rounded-md border p-2"><p className="text-muted-foreground text-xs">Saídas</p><p className="text-destructive font-semibold">{formatBRL(saidas)}</p></div>
               <div className="rounded-md border p-2"><p className="text-muted-foreground text-xs">Resultado</p><p className="font-semibold">{formatBRL(entradas - saidas)}</p></div>
             </div>
+            <Button variant={conciliar ? "secondary" : "outline"} size="sm" className="self-start" onClick={() => setConciliar((v) => !v)}>
+              {conciliar ? "Fechar conciliação" : "Conciliar com o financeiro"}
+            </Button>
+            {conciliar && <ConciliacaoPainel conta={conta} movs={lista} onFeito={() => setConciliar(false)} />}
             <div className="relative">
               <Search className="text-muted-foreground absolute left-2 top-2.5 h-4 w-4" />
               <Input className="pl-8" placeholder="Buscar por descrição, tipo ou valor..." value={busca} onChange={(e) => setBusca(e.target.value)} />
