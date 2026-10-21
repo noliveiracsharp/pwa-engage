@@ -771,3 +771,12 @@ table img { cursor: zoom-in; }
 }
 [data-sonner-toast][data-expanded="true"]::after { animation-play-state: paused; }
 @keyframes toast-tempo { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+
+.pin-cliente { fill: var(--mapa-cliente); stroke: var(--background); }
+.pin-fornecedor { fill: var(--mapa-fornecedor); stroke: var(--background); }
+.pin-ambos { fill: var(--mapa-ambos); stroke: var(--background); }
+.pin-inativo { fill: var(--mapa-inativo); stroke: var(--background); }
+.dot-cliente { background: var(--mapa-cliente); }
+.dot-fornecedor { background: var(--mapa-fornecedor); }
+.dot-ambos { background: var(--mapa-ambos); }
+.dot-inativo { background: var(--mapa-inativo); }
