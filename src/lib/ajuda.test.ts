@@ -11,4 +11,7 @@ describe("buscarArtigos", () => {
   it("retorna vazio para pergunta sem termos", () => {
     expect(buscarArtigos(ARTIGOS_PADRAO, "como de")).toEqual([]);
   });
+  it("encontra o guia de captação de leads", () => {
+    expect(buscarArtigos(ARTIGOS_PADRAO, "roleta de leads do site")[0]?.id).toBe("crm-captacao");
+  });
 });
