@@ -130,7 +130,19 @@ function ItensPage() {
       },
     },
     { key: "codigo", header: "Código", fields: ["codigo"] },
-    { key: "descricao", header: "Descrição", fields: ["descricao"] },
+    {
+      key: "descricao",
+      header: "Descrição",
+      fields: ["descricao"],
+      render: (row) => (
+        <span className="inline-flex flex-wrap items-center gap-2">
+          {String(pick(row, ["descricao"]) ?? "—")}
+          {row["pendente_compras"] === true && (
+            <span className="bg-warning/15 text-warning rounded-full px-2 py-0.5 text-[10px] font-semibold" title="Cadastrado em campo pelo técnico">Pendente de Compras</span>
+          )}
+        </span>
+      ),
+    },
     { key: "tipo", header: "Natureza", fields: ["tipo"] },
     {
       key: "marca",
@@ -278,8 +290,10 @@ function ItensPage() {
             (n(original["preco_custo"]) !== n(values["preco_custo"]) ||
               n(original["preco_venda"]) !== n(values["preco_venda"]) ||
               n(original["imposto"]) !== n(values["imposto"]));
+          // Ao Compras salvar o item completo, sai da pendência criada em campo.
+          const vals = original?.["pendente_compras"] === true ? { ...values, pendente_compras: false } : values;
           save.mutate(
-            { values: stamp(values, !original), original },
+            { values: stamp(vals, !original), original },
             {
               onSuccess: () => {
                 setOpen(false);

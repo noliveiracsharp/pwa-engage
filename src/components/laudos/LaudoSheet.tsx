@@ -13,6 +13,7 @@ import { rowId } from "@/lib/crud";
 import { CLASSIFICACOES, isInspecao, OBJETIVO_INSPECAO, OBJETIVOS, OBJETIVO_LEVANTAMENTO, uploadFoto } from "@/lib/laudos";
 import { pick, type Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
+import { ItemRapidoDialog } from "@/components/laudos/ItemRapidoDialog";
 
 export type LaudoLinha = {
   key: string;
@@ -102,6 +103,7 @@ export function LaudoSheet({ open, onOpenChange, record, linhas, fotos, clientes
   const [ls, setLs] = useState<LaudoLinha[]>([]);
   const [gerais, setGerais] = useState<string[]>([]);
   const [edit, setEdit] = useState<LaudoLinha | null>(null);
+  const [rapido, setRapido] = useState(false);
   const vazio = (): LaudoLinha => ({ key: "", item_id: "", descricao_item: "", quantidade: "1", conforme: true, observacao: "", fotos: [] });
 
   useEffect(() => {
@@ -306,22 +308,37 @@ export function LaudoSheet({ open, onOpenChange, record, linhas, fotos, clientes
           </Button>
         </div>
       </SheetContent>
+      <ItemRapidoDialog
+        open={rapido}
+        termo={edit?.item_id ? "" : edit?.descricao_item ?? ""}
+        laudoNumero={record ? String(record["numero"] ?? "") : undefined}
+        onOpenChange={setRapido}
+        onCriado={(id, descricao) => setEdit((e) => (e ? { ...e, item_id: id, descricao_item: descricao } : e))}
+      />
       <Dialog open={!!edit} onOpenChange={(o) => !o && setEdit(null)}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="flex max-h-[90vh] w-[calc(100vw-2rem)] flex-col overflow-hidden sm:max-w-lg">
           <DialogHeader><DialogTitle>{edit?.key ? "Editar item" : "Adicionar item"}</DialogTitle></DialogHeader>
           {edit && (
-            <div className="space-y-4">
-              <div className="space-y-1.5">
-                <Label>Item do cadastro</Label>
-                <SearchSelect
-                  value={edit.item_id}
-                  options={itemOpts}
-                  placeholder="Selecione o item"
-                  onChange={(v) => {
-                    const it = itens.find((x) => String(rowId(x)) === v);
-                    setEdit({ ...edit, item_id: v, descricao_item: v ? String(it?.["descricao"] ?? "Item") : "" });
-                  }}
-                />
+            <div className="min-h-0 min-w-0 flex-1 space-y-4 overflow-x-hidden overflow-y-auto px-1 pb-1">
+              <div className="min-w-0 space-y-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <Label>Item do cadastro</Label>
+                  <Button type="button" variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => setRapido(true)}>
+                    <Plus className="mr-1 h-3.5 w-3.5" /> Novo item rápido
+                  </Button>
+                </div>
+                <div className="min-w-0 [&_button]:max-w-full [&_button_span]:truncate">
+                  <SearchSelect
+                    value={edit.item_id}
+                    options={itemOpts}
+                    placeholder="Selecione o item"
+                    onChange={(v) => {
+                      const it = itens.find((x) => String(rowId(x)) === v);
+                      setEdit({ ...edit, item_id: v, descricao_item: v ? String(it?.["descricao"] ?? "Item") : "" });
+                    }}
+                  />
+                </div>
+                <p className="text-muted-foreground text-xs">Não achou? Cadastre um item rápido e Compras completa depois.</p>
               </div>
               {inspecao && !edit.item_id && (
                 <div className="space-y-1.5">
