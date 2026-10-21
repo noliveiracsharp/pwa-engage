@@ -63,7 +63,7 @@ import {
   situacaoTitulo,
   valorBaixa,
   parcelasManuais,
-  parcelasCartao, parcelasItensCartao, vencimentoFatura, serieParcelas, vencParcela1Cartao, vencParcela1De, limiteUsadoCartao, limiteDisponivelCartao, type ItemCartao,
+  parcelasCartao, parcelasItensCartao, vencimentoFatura, serieParcelas, vencParcela1Cartao, vencParcela1De, limiteGrupoCartao, type ItemCartao,
   type ModoLancamento,
   type Situacao,
   type TipoTitulo,
