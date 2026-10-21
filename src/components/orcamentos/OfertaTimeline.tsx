@@ -98,7 +98,7 @@ export function OfertaTimeline({ orcamentoId, empresaId, readOnly }: { orcamento
                   </div>
                   {!readOnly && !AUTO.has(t) && (
                     <Button type="button" variant="ghost" size="icon" className="h-6 w-6" aria-label="Apagar"
-                      onClick={async () => { if (await confirmar({ titulo: "Apagar registro?", mensagem: "Essa anotação será removida." } as never)) del.mutate(String(r["id"])); }}>
+                      onClick={async () => { if (await confirmar({ title: "Apagar registro?", description: "Essa anotação será removida." })) del.mutate(String(r["id"])); }}>
                       <Trash2 className="h-3 w-3" />
                     </Button>
                   )}
