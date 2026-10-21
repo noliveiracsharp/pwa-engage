@@ -398,6 +398,7 @@ function UsuariosPage() {
           .map((d) => ({ value: text(rowId(d)), label: text(d["descricao"]) })),
       },
       { fields: ["status"], label: "Status", type: "boolean" },
+      { fields: ["recebe_leads"], label: "Participa da roleta de leads", type: "boolean" },
       {
         fields: ["perfil_id"],
         label: "Perfil",

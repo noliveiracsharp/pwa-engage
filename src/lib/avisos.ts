@@ -1,5 +1,5 @@
 /** Central de avisos: mensagens recebidas ficam guardadas neste aparelho até o usuário apagar. */
-export type AvisoTipo = "cliente" | "equipe" | "frota" | "projeto";
+export type AvisoTipo = "cliente" | "equipe" | "frota" | "projeto" | "lead";
 export type Aviso = {
   id: string;
   titulo: string;
