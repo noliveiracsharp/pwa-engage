@@ -330,6 +330,51 @@ export const ARTIGOS_PADRAO: ArtigoAjuda[] = [
     dica: "É preciso ter uma chave de IA cadastrada no cadastro da empresa.",
     tags: ["audio", "transcricao", "whatsapp", "voz"],
   },
+  {
+    id: "crm-proxima-acao", modulo: "Ofertas", titulo: "Próxima ação, origem do lead e motivo da perda",
+    resumo: "Nunca deixe um negócio parado e saiba por que perdeu.", rota: "/orcamentos", perfil: "Vendedor",
+    passos: [
+      "Abra a Oferta e escolha a Origem do lead (Google Ads, Indicação, Site...).",
+      "Em Próxima ação, escolha o tipo, a data/hora e descreva o que fazer.",
+      "No Kanban o card avisa: vermelho = sem ação ou atrasada, amarelo = hoje, cinza = agendada.",
+      "Ao marcar a Oferta como perdida, reprovada ou cancelada, informe o motivo da perda (obrigatório).",
+    ],
+    tags: ["crm", "proxima", "acao", "follow", "origem", "lead", "perda", "motivo", "atrasada"],
+  },
+  {
+    id: "crm-timeline", modulo: "Ofertas", titulo: "Linha do tempo da Oferta",
+    resumo: "Todo o histórico do negócio em um só lugar.", rota: "/orcamentos", perfil: "Vendedor",
+    passos: [
+      "Abra uma Oferta já salva e desça até Linha do tempo.",
+      "Escolha o tipo (nota, ligação, reunião, visita, WhatsApp, e-mail), escreva e registre.",
+      "Trocas de etapa, de situação e motivo de perda são anotadas sozinhas pelo sistema.",
+    ],
+    tags: ["crm", "timeline", "linha", "tempo", "historico", "nota", "interacao"],
+  },
+  {
+    id: "crm-captacao", modulo: "Ofertas", titulo: "Captação de leads do site e roleta de vendedores",
+    resumo: "Leads do site e anúncios entram sozinhos e vão para o vendedor certo.", rota: "/orcamentos", perfil: "Administrador",
+    passos: [
+      "Em Ofertas, clique em Captação de leads e depois em Gerar endereço.",
+      "Copie o endereço (ou o modelo de formulário) e use no seu site ou ferramenta de anúncios.",
+      "Em Usuários, ligue 'Participa da roleta de leads' para cada vendedor que deve receber.",
+      "Cada lead vira cliente + Oferta em andamento, com ligação agendada em 1 hora.",
+      "O vendedor recebe aviso com bip e no sino: 'Novo lead atribuído a você'.",
+    ],
+    dica: "Se suspeitar que o endereço vazou, use Trocar chave e atualize o site.",
+    tags: ["crm", "lead", "captacao", "webhook", "site", "formulario", "roleta", "rodizio", "anuncio"],
+  },
+  {
+    id: "crm-painel", modulo: "Ofertas", titulo: "Painel Comercial: metas, previsão e perdas",
+    resumo: "Acompanhe metas por vendedor, previsão de vendas e por que os negócios se perdem.", rota: "/relatorios/comercial", perfil: "Gestor",
+    passos: [
+      "Em Relatórios, clique em Painel Comercial e escolha o mês.",
+      "Digite a meta mensal de cada vendedor; a barra mostra o quanto já foi vendido.",
+      "No funil, ajuste a probabilidade (%) de cada etapa; a previsão ponderada se atualiza.",
+      "Veja os motivos de perda e as origens dos negócios do mês.",
+    ],
+    tags: ["crm", "meta", "forecast", "previsao", "painel", "comercial", "funil", "probabilidade", "perdas"],
+  },
 ];
 
 const norm = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
