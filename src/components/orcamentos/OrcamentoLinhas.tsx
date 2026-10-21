@@ -52,6 +52,8 @@ type Props = {
   onRemove: (key: string) => void;
   /** Chamado ao confirmar um item (grava a oferta e mantém aberta). */
   onItemSalvo?: () => void;
+  /** Pagadores possíveis para cada item (faturamento misto). */
+  pagadorOptions?: SearchOption[];
 };
 
 /** Editor das linhas do orçamento: tabela compacta com edição por linha. */
@@ -67,7 +69,9 @@ export function OrcamentoLinhas({
   onAdd,
   onRemove,
   onItemSalvo,
+  pagadorOptions = [],
 }: Props) {
+  const pagadorNome = new Map(pagadorOptions.map((o) => [o.value, o.label]));
   const [quickFor, setQuickFor] = useState<string | null>(null);
   const [abertas, setAbertas] = useState<Set<string>>(() => new Set());
   // Ambientes criados que ainda não têm itens (só existem na tela até receber um item).
@@ -260,6 +264,26 @@ export function OrcamentoLinhas({
                           </>
                         )}
                       </div>
+                      {pagadorOptions.length > 0 && (
+                        <div className="flex flex-wrap items-center gap-2 pt-1">
+                          <Label className="text-xs font-medium">Faturar para</Label>
+                          <SearchSelect
+                            className="w-72 max-w-full"
+                            value={l.faturar_para_id}
+                            onChange={(v) => onChange(l.key, { faturar_para_id: v })}
+                            options={pagadorOptions}
+                            placeholder="Próprio cliente da Oferta"
+                            searchPlaceholder="Nome ou CNPJ…"
+                            emptyText="Nenhum parceiro encontrado."
+                            disabled={Boolean(readOnly)}
+                          />
+                          {l.faturar_para_id && !readOnly && (
+                            <Button type="button" variant="ghost" size="sm" className="h-7 text-xs" onClick={() => onChange(l.key, { faturar_para_id: "" })}>
+                              Usar o cliente
+                            </Button>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <div className="flex shrink-0 gap-0.5">
                       {!readOnly && (
@@ -418,6 +442,9 @@ export function OrcamentoLinhas({
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium break-words"><NaturezaBadge n={l.natureza} />{nomeItem || "—"}</p>
+                    {l.faturar_para_id && pagadorNome.has(l.faturar_para_id) && pagadorOptions.find((o) => o.value === l.faturar_para_id)?.hint !== "Cliente da Oferta" && (
+                      <p className="text-muted-foreground text-xs">Faturado para: {pagadorNome.get(l.faturar_para_id)}</p>
+                    )}
                     {nomeMarca && (
                       <p className="text-muted-foreground truncate text-xs">Marca: {nomeMarca}</p>
                     )}
@@ -444,6 +471,9 @@ export function OrcamentoLinhas({
                   <span className="text-muted-foreground text-xs tabular-nums">{index + 1}.</span>
                   <div className="min-w-0">
                     <p className="text-sm font-medium break-words" title={nomeItem}><NaturezaBadge n={l.natureza} />{nomeItem || "—"}</p>
+                    {l.faturar_para_id && pagadorNome.has(l.faturar_para_id) && pagadorOptions.find((o) => o.value === l.faturar_para_id)?.hint !== "Cliente da Oferta" && (
+                      <p className="text-muted-foreground text-xs">Faturado para: {pagadorNome.get(l.faturar_para_id)}</p>
+                    )}
                     {nomeMarca && (
                       <p className="text-muted-foreground truncate text-xs">Marca: {nomeMarca}</p>
                     )}

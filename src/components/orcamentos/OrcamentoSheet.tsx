@@ -347,6 +347,15 @@ export function OrcamentoSheet({
     [clientes, h.parceiro_id],
   );
 
+  /** Quem pode pagar um item: o cliente e, em destaque, os vinculados a ele (administradora, facilities…). */
+  const pagadorOptions = useMemo<SearchOption[]>(() => {
+    const cli = clientes.find((c) => String(rowId(c)) === h.parceiro_id);
+    const pai = String(cli?.["parceiro_pai_id"] ?? "");
+    return clienteOptions.map((o) =>
+      o.value === h.parceiro_id ? { ...o, hint: "Cliente da Oferta" }
+      : o.value === pai ? { ...o, hint: `Vinculado • ${o.hint ?? ""}`.trim() } : o);
+  }, [clienteOptions, clientes, h.parceiro_id]);
+
   const vendedorOptions = useMemo(
     () =>
       vendedores
@@ -583,8 +592,10 @@ export function OrcamentoSheet({
         margem_pct: c.margem_pct,
         natureza: l.natureza,
         bloco: l.bloco.trim() || null,
+        faturar_para_id: l.faturar_para_id && l.faturar_para_id !== h.parceiro_id ? l.faturar_para_id : null,
       };
     });
+    header["faturamento_misto"] = payloadLinhas.some((l) => l.faturar_para_id);
 
     onSave({ header, linhas: payloadLinhas, manterAberto });
   };
@@ -762,6 +773,7 @@ export function OrcamentoSheet({
             onAdd={addLinha}
             onRemove={removeLinha}
             onItemSalvo={() => submit(true)}
+            pagadorOptions={pagadorOptions}
           />
 
           {/* -------------------------- totais ------------------------- */}

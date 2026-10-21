@@ -8,6 +8,8 @@ import type { Row } from "@/lib/row";
  * - Parcelas de implantação geradas pela própria Oferta: null (seguem o parcelamento).
  */
 export function valorEsperadoDoTitulo(titulo: Row, oferta: Row): number | null {
+  // Faturamento misto: cada pagador tem sua parte, não o total da Oferta.
+  if (oferta["faturamento_misto"] === true || titulo["cliente_atendido_id"]) return null;
   const mensal = round2(num(oferta["total_recorrente"]));
   const liquido = round2(num(oferta["total_liquido"]));
   const geradoPelaOferta = titulo["origem_tipo"] === "oferta";
