@@ -83,25 +83,25 @@ export function BarraAcoesLote({ tabela, selecionados, totalFiltrado, rotulo, on
         <Button variant="ghost" size="sm" onClick={onLimpar}><X className="mr-1 h-4 w-4" />Limpar</Button>
       </div>
       <Dialog open={!!exec} onOpenChange={(o) => { if (!o && !exec?.rodando) { setExec(null); onLimpar(); } }}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>{exec?.titulo}</DialogTitle></DialogHeader>
+        <DialogContent className="flex max-h-[85vh] w-[calc(100vw-2rem)] max-w-lg flex-col overflow-hidden">
+          <DialogHeader className="shrink-0 pr-8"><DialogTitle>{exec?.titulo}</DialogTitle></DialogHeader>
           {exec && (
-            <div className="space-y-3">
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col space-y-3">
               <p className="text-sm text-muted-foreground">
                 {exec.rodando ? `Processando ${exec.feitos} de ${exec.total}…` : `Concluído: ${ok} com sucesso, ${exec.total - ok} com falha ou divergência.`}
               </p>
               <Progress value={(exec.feitos / Math.max(1, exec.total)) * 100} />
-              <div className="max-h-72 space-y-1 overflow-y-auto text-xs">
+              <div className="min-h-0 max-h-[45vh] flex-1 space-y-1 overflow-y-auto pr-1 text-xs">
                 {exec.log.map((l, i) => (
-                  <div key={i} className="flex justify-between gap-2 border-b border-border py-1">
-                    <span className="truncate">{l.nome}</span>
-                    <span className={l.ok ? "text-success" : "text-destructive"}>{l.mensagem ?? (l.ok ? "OK" : "Falha")}</span>
+                  <div key={i} className="flex min-w-0 justify-between gap-2 border-b border-border py-1">
+                    <span className="min-w-0 truncate">{l.nome}</span>
+                    <span className={`shrink-0 ${l.ok ? "text-success" : "text-destructive"}`}>{l.mensagem ?? (l.ok ? "OK" : "Falha")}</span>
                   </div>
                 ))}
               </div>
             </div>
           )}
-          <DialogFooter>
+          <DialogFooter className="shrink-0">
             <Button disabled={exec?.rodando} onClick={() => { setExec(null); onLimpar(); }}>Fechar</Button>
           </DialogFooter>
         </DialogContent>
