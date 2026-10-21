@@ -677,14 +677,20 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
       toast.error("CNPJ / CPF: informe um documento válido.");
       return;
     }
-    for (const key of ["telefone1", "telefone2"]) {
-      if (!isCompletePhone(values[key] ?? "")) {
-        toast.error(`${key === "telefone1" ? "Telefone 1" : "Telefone 2"}: informe um telefone válido.`);
-        return;
+    const comContatos = !!empresa && rowId(empresa) !== undefined;
+    // Empresa existente: telefones vêm da lista de contatos; campos legados ocultos não bloqueiam o salvamento.
+    if (!comContatos) {
+      for (const key of ["telefone1", "telefone2"]) {
+        const v = (values[key] ?? "").trim();
+        const norm = v && !v.startsWith("+") && digitsOnly(v).length >= 10 ? `+55${digitsOnly(v)}` : v;
+        if (norm !== v) values[key] = norm;
+        if (!isCompletePhone(norm)) {
+          toast.error(`${key === "telefone1" ? "Telefone 1" : "Telefone 2"}: informe um telefone válido.`);
+          return;
+        }
       }
     }
     const payload: Row = {};
-    const comContatos = !!empresa && rowId(empresa) !== undefined;
     for (const field of EMPRESA_FIELDS) {
       if (comContatos && (field.key === "telefone1" || field.key === "telefone2")) continue;
       const raw = values[field.key] ?? "";
