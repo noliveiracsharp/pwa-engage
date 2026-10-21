@@ -23,6 +23,7 @@ import { useTableRows } from "@/lib/crud";
 const ITEM_RAPIDO = [{ key: "descricao", label: "Descrição" }, { key: "codigo", label: "Código / referência" }];
 import { PainelAprovacaoCotacao } from "@/components/cotacoes/AprovacaoCompras";
 import { podeGerarPedido } from "@/lib/aprovacao-compras";
+import { ReceberPedidoDialog } from "@/components/cotacoes/ReceberPedidoDialog";
 
 type Props = {
   open: boolean;
@@ -58,6 +59,7 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
   const [novoForn, setNovoForn] = useState("");
   const [novoParc, setNovoParc] = useState<{ nome: string; doc: string; tel: string } | null>(null);
   const [novoItem, setNovoItem] = useState("");
+  const [receber, setReceber] = useState<Row | null>(null);
   const [criarItem, setCriarItem] = useState(false);
   const [busy, setBusy] = useState(false);
   const [criterio, setCriterio] = useState<"preco" | "prazo">("preco");
@@ -218,11 +220,7 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
       invalidar();
     }
   };
-  const marcarRecebido = async (p: Row) => {
-    const { error } = await supabase.from("pedidos_compra").update({ status: "recebido" } as never).eq("id", String(p["id"]));
-    if (error) return void toast.error(error.message);
-    invalidar();
-  };
+  const marcarRecebido = (p: Row) => setReceber(p);
 
   const addFornecedor = async (fid: string) => {
     if (!fid) return;
@@ -656,7 +654,7 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
                           {ped["status"] === "recebido" ? "Recebido" : ped["status"] === "enviado" ? "Enviado" : "Rascunho"}
                         </span>
                         <Button size="sm" variant="outline" onClick={() => enviarPedido(ped)}><MessageCircle className="mr-1 h-4 w-4" />Enviar</Button>
-                        {ped["status"] === "enviado" && canUpdate && <Button size="sm" variant="ghost" onClick={() => marcarRecebido(ped)}>Marcar recebido</Button>}
+                        {ped["status"] === "enviado" && canUpdate && <Button size="sm" variant="ghost" onClick={() => marcarRecebido(ped)}>Receber mercadoria</Button>}
                       </div>
                     ) : (
                       <div className="text-muted-foreground pt-1 text-xs">Pedido ainda não gerado.</div>
