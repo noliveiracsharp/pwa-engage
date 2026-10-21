@@ -67,6 +67,7 @@ import { Route as AuthenticatedAdminPlanosRouteImport } from './routes/_authenti
 import { Route as AuthenticatedAdminVersoesRouteImport } from './routes/_authenticated/admin.versoes'
 import { Route as AuthenticatedProjetosTemplatesRouteImport } from './routes/_authenticated/projetos_.templates'
 import { Route as AuthenticatedRelatoriosBoardRouteImport } from './routes/_authenticated/relatorios_.board'
+import { Route as AuthenticatedRelatoriosComercialRouteImport } from './routes/_authenticated/relatorios_.comercial'
 import { Route as AuthenticatedRelatoriosDreOfertasRouteImport } from './routes/_authenticated/relatorios_.dre-ofertas'
 import { Route as ApiPublicIconeRouteImport } from './routes/api/public/icone'
 import { Route as ApiPublicLeadsRouteImport } from './routes/api/public/leads'
@@ -373,6 +374,12 @@ const AuthenticatedRelatoriosBoardRoute =
     path: '/relatorios/board',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedRelatoriosComercialRoute =
+  AuthenticatedRelatoriosComercialRouteImport.update({
+    id: '/relatorios_/comercial',
+    path: '/relatorios/comercial',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedRelatoriosDreOfertasRoute =
   AuthenticatedRelatoriosDreOfertasRouteImport.update({
     id: '/relatorios_/dre-ofertas',
@@ -463,6 +470,7 @@ export interface FileRoutesByFullPath {
   '/admin/versoes': typeof AuthenticatedAdminVersoesRoute
   '/projetos/templates': typeof AuthenticatedProjetosTemplatesRoute
   '/relatorios/board': typeof AuthenticatedRelatoriosBoardRoute
+  '/relatorios/comercial': typeof AuthenticatedRelatoriosComercialRoute
   '/relatorios/dre-ofertas': typeof AuthenticatedRelatoriosDreOfertasRoute
   '/api/public/icone': typeof ApiPublicIconeRoute
   '/api/public/leads': typeof ApiPublicLeadsRoute
@@ -528,6 +536,7 @@ export interface FileRoutesByTo {
   '/admin/versoes': typeof AuthenticatedAdminVersoesRoute
   '/projetos/templates': typeof AuthenticatedProjetosTemplatesRoute
   '/relatorios/board': typeof AuthenticatedRelatoriosBoardRoute
+  '/relatorios/comercial': typeof AuthenticatedRelatoriosComercialRoute
   '/relatorios/dre-ofertas': typeof AuthenticatedRelatoriosDreOfertasRoute
   '/api/public/icone': typeof ApiPublicIconeRoute
   '/api/public/leads': typeof ApiPublicLeadsRoute
@@ -595,6 +604,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/versoes': typeof AuthenticatedAdminVersoesRoute
   '/_authenticated/projetos_/templates': typeof AuthenticatedProjetosTemplatesRoute
   '/_authenticated/relatorios_/board': typeof AuthenticatedRelatoriosBoardRoute
+  '/_authenticated/relatorios_/comercial': typeof AuthenticatedRelatoriosComercialRoute
   '/_authenticated/relatorios_/dre-ofertas': typeof AuthenticatedRelatoriosDreOfertasRoute
   '/api/public/icone': typeof ApiPublicIconeRoute
   '/api/public/leads': typeof ApiPublicLeadsRoute
@@ -662,6 +672,7 @@ export interface FileRouteTypes {
     | '/admin/versoes'
     | '/projetos/templates'
     | '/relatorios/board'
+    | '/relatorios/comercial'
     | '/relatorios/dre-ofertas'
     | '/api/public/icone'
     | '/api/public/leads'
@@ -727,6 +738,7 @@ export interface FileRouteTypes {
     | '/admin/versoes'
     | '/projetos/templates'
     | '/relatorios/board'
+    | '/relatorios/comercial'
     | '/relatorios/dre-ofertas'
     | '/api/public/icone'
     | '/api/public/leads'
@@ -793,6 +805,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/versoes'
     | '/_authenticated/projetos_/templates'
     | '/_authenticated/relatorios_/board'
+    | '/_authenticated/relatorios_/comercial'
     | '/_authenticated/relatorios_/dre-ofertas'
     | '/api/public/icone'
     | '/api/public/leads'
@@ -1239,6 +1252,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRelatoriosBoardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/relatorios_/comercial': {
+      id: '/_authenticated/relatorios_/comercial'
+      path: '/relatorios/comercial'
+      fullPath: '/relatorios/comercial'
+      preLoaderRoute: typeof AuthenticatedRelatoriosComercialRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/relatorios_/dre-ofertas': {
       id: '/_authenticated/relatorios_/dre-ofertas'
       path: '/relatorios/dre-ofertas'
@@ -1321,6 +1341,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminVersoesRoute: typeof AuthenticatedAdminVersoesRoute
   AuthenticatedProjetosTemplatesRoute: typeof AuthenticatedProjetosTemplatesRoute
   AuthenticatedRelatoriosBoardRoute: typeof AuthenticatedRelatoriosBoardRoute
+  AuthenticatedRelatoriosComercialRoute: typeof AuthenticatedRelatoriosComercialRoute
   AuthenticatedRelatoriosDreOfertasRoute: typeof AuthenticatedRelatoriosDreOfertasRoute
 }
 
@@ -1361,6 +1382,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminVersoesRoute: AuthenticatedAdminVersoesRoute,
   AuthenticatedProjetosTemplatesRoute: AuthenticatedProjetosTemplatesRoute,
   AuthenticatedRelatoriosBoardRoute: AuthenticatedRelatoriosBoardRoute,
+  AuthenticatedRelatoriosComercialRoute: AuthenticatedRelatoriosComercialRoute,
   AuthenticatedRelatoriosDreOfertasRoute:
     AuthenticatedRelatoriosDreOfertasRoute,
 }
