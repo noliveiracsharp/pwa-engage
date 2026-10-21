@@ -129,7 +129,7 @@ export function BannersEmailButton({ empresaId, cor, canEdit }: { empresaId: str
                     <div className="space-y-1"><Label>Cor de fundo</Label><Input type="color" value={form.cor_fundo || cor || "#2563eb"} onChange={(e) => set({ cor_fundo: e.target.value })} /></div>
                     <div className="space-y-1"><Label>Prioridade</Label><Input type="number" value={form.prioridade ?? 0} onChange={(e) => set({ prioridade: Number(e.target.value) })} /></div>
                   </div>
-                  <div className="space-y-1"><Label>Aparece em</Label><SearchSelect value={form.tipo ?? "todos"} onChange={(v) => set({ tipo: v as BannerEmail["tipo"] })} options={TIPOS} /></div>
+                  <div className="space-y-1"><Label>Aparece em</Label><SearchSelect value={form.tipo ?? "todos"} onChange={(v) => set({ tipo: v as "todos" | "cobranca" | "oferta" })} options={TIPOS} /></div>
                   <div className="flex items-center gap-2"><Switch checked={form.ativo !== false} onCheckedChange={(v) => set({ ativo: v })} /><Label>Ativo</Label></div>
                 </div>
                 <div className="space-y-1"><Label>Prévia</Label><iframe title="Prévia do banner" sandbox="" srcDoc={previa} className="h-64 w-full rounded-md border bg-card" /></div>

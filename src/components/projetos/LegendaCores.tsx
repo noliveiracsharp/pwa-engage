@@ -41,7 +41,7 @@ export function LegendaCores({ status }: { status?: Array<{ nome: string; cor: s
       <PopoverTrigger asChild>
         <Button variant="outline" size="sm"><Info className="mr-1 h-4 w-4" />Legenda</Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-[min(92vw,560px)]"><LegendaBlocos status={status} /></PopoverContent>
+      <PopoverContent align="end" className="w-[min(92vw,560px)]"><LegendaBlocos status={status ?? []} /></PopoverContent>
     </Popover>
   );
 }
