@@ -86,29 +86,33 @@ export function CartoesCredito({ perms }: { perms: Perms }) {
           })}
         </div>
       )}
-      {editar !== undefined && <CartaoCreditoSheet registro={editar} contas={contas} readOnly={!!editar && !perms.canUpdate} onClose={() => setEditar(undefined)} onSaved={invalidar} />}
+      {editar !== undefined && <CartaoCreditoSheet registro={editar} contas={contas} cartoes={cartoes} readOnly={!!editar && !perms.canUpdate} onClose={() => setEditar(undefined)} onSaved={invalidar} />}
     </div>
   );
 }
 
-function CartaoCreditoSheet({ registro, contas, readOnly, onClose, onSaved }: { registro: Row | null; contas: Row[]; readOnly: boolean; onClose: () => void; onSaved: () => void }) {
+function CartaoCreditoSheet({ registro, contas, cartoes, readOnly, onClose, onSaved }: { registro: Row | null; contas: Row[]; cartoes: Row[]; readOnly: boolean; onClose: () => void; onSaved: () => void }) {
   const { empresaId } = useAudit();
   const [v, setV] = useState({
     descricao: text(registro?.["descricao"]), bandeira: text(registro?.["bandeira"]), final4: text(registro?.["final4"]),
     conta: text(registro?.["conta_bancaria_id"]), limite: registro ? String(limiteDe(registro)).replace(".", ",") : "",
     fech: text(registro?.["dia_fechamento"]), venc: text(registro?.["dia_vencimento"]), melhor: text(registro?.["melhor_dia_compra"]),
-    ativo: registro ? registro["ativo"] !== false : true,
+    ativo: registro ? registro["ativo"] !== false : true, titular: text(registro?.["cartao_titular_id"]),
   });
+  const meuId = registro ? text(rowId(registro)) : "";
+  const temDependentes = !!meuId && cartoes.some((c) => text(c["cartao_titular_id"]) === meuId);
+  const titulares = temDependentes ? [] : cartoes.filter((c) => text(rowId(c)) !== meuId && !text(c["cartao_titular_id"]));
+  const titularSel = v.titular ? cartoes.find((c) => text(rowId(c)) === v.titular) : undefined;
   const [salvando, setSalvando] = useState(false);
   const sugerido = melhorDiaCompra(Number(v.fech));
   const salvar = async () => {
     if (!v.descricao.trim()) return void toast.error("Informe o nome do cartão.");
     if (!v.fech || !v.venc) return void toast.error("Informe o dia de fechamento e o de vencimento da fatura.");
     const dia = (x: string) => (x ? Math.min(31, Math.max(1, Number(x))) : null);
-    const limite = round2(num(v.limite));
+    const limite = titularSel ? limiteDe(titularSel) : round2(num(v.limite));
     const base = {
       descricao: v.descricao.trim(), bandeira: v.bandeira || null, final4: v.final4.replace(/\D/g, "").slice(0, 4) || null,
-      conta_bancaria_id: v.conta || null, limite_total: limite, limite_mensal: limite,
+      conta_bancaria_id: v.conta || null, limite_total: limite, limite_mensal: limite, cartao_titular_id: titularSel ? v.titular : null,
       dia_fechamento: dia(v.fech), dia_vencimento: dia(v.venc), melhor_dia_compra: dia(v.melhor) ?? (sugerido || null), ativo: v.ativo,
     };
     setSalvando(true);
@@ -116,7 +120,7 @@ function CartaoCreditoSheet({ registro, contas, readOnly, onClose, onSaved }: { 
       ? await supabase.from(TABELA as never).update(base as never).eq("id", text(rowId(registro)))
       : await supabase.from(TABELA as never).insert({ ...base, empresa_id: empresaId } as never);
     setSalvando(false);
-    if (error) return void toast.error(/conta_bancaria_id|limite_total|melhor_dia/.test(error.message) ? "Execute o script de cartões de crédito no SQL Editor." : erroFinanceiro(error));
+    if (error) return void toast.error(/cartao_titular_id/.test(error.message) ? "Execute o script de limite compartilhado no SQL Editor." : /conta_bancaria_id|limite_total|melhor_dia/.test(error.message) ? "Execute o script de cartões de crédito no SQL Editor." : erroFinanceiro(error));
     toast.success("Cartão salvo."); onSaved(); onClose();
   };
   const campo = (k: keyof typeof v, label: string, extra: Record<string, unknown> = {}) => (
@@ -136,7 +140,12 @@ function CartaoCreditoSheet({ registro, contas, readOnly, onClose, onSaved }: { 
           <div className="space-y-1 sm:col-span-2"><Label>Conta bancária vinculada</Label>
             <SearchSelect value={v.conta} disabled={readOnly} placeholder="Escolha a conta" onChange={(x) => setV({ ...v, conta: x })}
               options={contas.map((c) => ({ value: text(rowId(c)), label: text(c["descricao"]) || "—" }))} /></div>
-          {campo("limite", "Limite total (R$)", { inputMode: "decimal", placeholder: "0,00" })}
+          <div className="space-y-1 sm:col-span-2"><Label>Regra de limite</Label>
+            <SearchSelect value={v.titular || "proprio"} disabled={readOnly} onChange={(x) => setV({ ...v, titular: x === "proprio" ? "" : x })}
+              options={[{ value: "proprio", label: "Limite próprio (titular)" }, ...titulares.map((c) => ({ value: text(rowId(c)), label: `Compartilha com ${text(c["descricao"])}` })).sort((a, b) => a.label.localeCompare(b.label, "pt-BR"))]} /></div>
+          {titularSel
+            ? <p className="text-muted-foreground text-sm sm:col-span-2">Compartilha o limite de {formatBRL(limiteDe(titularSel))} do cartão {text(titularSel["descricao"])}.</p>
+            : campo("limite", "Limite total (R$)", { inputMode: "decimal", placeholder: "0,00" })}
           {campo("fech", "Dia de fechamento da fatura *", { type: "number", min: 1, max: 31 })}
           {campo("venc", "Dia de vencimento da fatura *", { type: "number", min: 1, max: 31 })}
           {campo("melhor", "Melhor dia de compra", { type: "number", min: 1, max: 31, placeholder: sugerido ? `Sugerido: ${sugerido}` : "" })}
