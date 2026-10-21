@@ -147,6 +147,8 @@ export type Linha = {
   natureza: Natureza;
   /** Bloco/ambiente opcional (ex.: "Frente do condomínio"). */
   bloco: string;
+  /** Quem paga este item ("" = o próprio cliente da Oferta). */
+  faturar_para_id: string;
 };
 
 /** Agrupa linhas por bloco na ordem em que aparecem; linhas sem bloco ficam no grupo "" (geral). */
@@ -187,6 +189,7 @@ export function novaLinha(): Linha {
     imposto_pct: 0,
     natureza: "produto",
     bloco: "",
+    faturar_para_id: "",
   };
 }
 
@@ -203,6 +206,7 @@ export function linhaFromRow(row: Row, itemTipo?: unknown): Linha {
     imposto_pct: num(pick(row, ["imposto_pct", "imposto"])),
     natureza: naturezaOf(row["natureza"], itemTipo),
     bloco: String(row["bloco"] ?? ""),
+    faturar_para_id: String(row["faturar_para_id"] ?? ""),
   };
 }
 

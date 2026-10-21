@@ -24,6 +24,7 @@ export type LinhaPayload = {
   margem_pct: number;
   natureza?: string;
   bloco?: string | null;
+  faturar_para_id?: string | null;
 };
 
 /**
