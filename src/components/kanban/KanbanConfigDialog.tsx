@@ -81,6 +81,7 @@ type Props = {
   kanbans?: Row[];
   todasEtapas?: Row[];
   onDeleted?: () => void;
+  abaInicial?: string;
 };
 
 export function KanbanConfigDialog({
@@ -95,6 +96,7 @@ export function KanbanConfigDialog({
   kanbans = [],
   todasEtapas = [],
   onDeleted,
+  abaInicial,
 }: Props) {
   const qc = useQueryClient();
   const kanbanId = kanban ? String(kanban["id"]) : "";
@@ -120,7 +122,7 @@ export function KanbanConfigDialog({
 
   useEffect(() => {
     if (!open) return;
-    setTab("dados");
+    setTab(kanban && abaInicial ? abaInicial : "dados");
     setForm({
       nome: String(kanban?.["nome"] ?? ""),
       descricao: String(kanban?.["descricao"] ?? ""),

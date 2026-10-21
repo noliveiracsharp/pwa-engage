@@ -1,10 +1,9 @@
 import { usePagePermissions } from "@/hooks/usePagePermissions";
-import { FileText, Settings2 } from "lucide-react";
+import { FileText, Search, Settings2, X } from "lucide-react";
 import { EtapaCorPicker } from "@/components/kanban/EtapaCorPicker";
 import { corEtapa } from "@/lib/kanban-cores";
 import { KanbanConfigDialog } from "@/components/kanban/KanbanConfigDialog";
 import { useChecklistGate } from "@/components/kanban/ChecklistGate";
-import { SituacaoBadge } from "@/components/orcamentos/SituacaoBadge";
 import { AvaliacaoSelo, usePesquisaSatisfacao } from "@/components/atendimentos/Pesquisa";
 import { formatBRL } from "@/lib/orcamentos";
 import { AtivacaoOfertaDialog } from "@/components/orcamentos/AtivacaoOfertaDialog";
@@ -256,6 +255,42 @@ function KanbanPage() {
   const valorCampo = (o: Row, c: CampoCardTipado): string =>
     formatarValorCard(o[c.key], c, resolverFk);
 
+  const [busca, setBusca] = useState("");
+  const [cfgAba, setCfgAba] = useState("dados");
+  const cardsVisiveis = useMemo(() => {
+    const nrm = (v: unknown) =>
+      String(v ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    const termo = nrm(busca).trim();
+    if (!termo) return cardsByEtapa;
+    const digitos = termo.replace(/\D/g, "");
+    const textoCard = (c: Row): string => {
+      const partes: unknown[] = Object.entries(c)
+        .filter(([, v]) => v !== null && typeof v !== "object")
+        .map(([, v]) => v);
+      for (const [k, v] of Object.entries(c)) {
+        if (/(parceiro|vendedor|usuario)s?_id$/.test(k)) partes.push(resolverFk(k, v));
+      }
+      const pessoa = pessoaById.get(String(pick(c, ["pessoas_id", "pessoa_id", "clientes_id", "cliente_id"]) ?? ""));
+      if (pessoa) partes.push(pessoa["nome"], pessoa["telefone"], pessoa["email"]);
+      if (c["__orc"]) {
+        const t = temperaturaEfetiva(c["situacao"], c["temperatura"]);
+        if (t) partes.push(t.label);
+        partes.push(formatBRL(valorOferta(c)));
+      }
+      return partes.map(nrm).join(" | ");
+    };
+    const out = new Map<string, Row[]>();
+    for (const [k, lista] of cardsByEtapa) {
+      out.set(k, lista.filter((c) => {
+        const t = textoCard(c);
+        if (t.includes(termo)) return true;
+        return digitos.length >= 3 && t.replace(/\D/g, "").includes(digitos);
+      }));
+    }
+    return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [busca, cardsByEtapa, pessoaById, parceiros, usuarios]);
+
   const createKanban = useMutation({
     mutationFn: async (value: { nome: string; descricao: string; status: boolean }) => {
       const payload: Row = {
@@ -462,7 +497,7 @@ function KanbanPage() {
           <h1 className="text-2xl font-bold text-foreground">Kanban</h1>
           {opc.totais && quadroOfertas && (
             <span className="text-sm text-muted-foreground">
-              Total do funil: <strong className="text-foreground">{formatBRL(boardEtapas.flatMap((e) => cardsByEtapa.get(String(e["id"])) ?? []).reduce((a, o) => a + valorOferta(o), 0))}</strong>
+              Total do funil: <strong className="text-foreground">{formatBRL(boardEtapas.flatMap((e) => cardsVisiveis.get(String(e["id"])) ?? []).reduce((a, o) => a + valorOferta(o), 0))}</strong>
             </span>
           )}
         </div>
@@ -487,6 +522,7 @@ function KanbanPage() {
               title="Configurar quadro"
               onClick={() => {
                 setCfgNovo(false);
+                setCfgAba("dados");
                 setCfgOpen(true);
               }}
             >
@@ -506,8 +542,34 @@ function KanbanPage() {
         </div>
       </div>
 
+      {kanbanId && (
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative w-full max-w-md">
+            <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              onKeyDown={(e) => e.key === "Escape" && setBusca("")}
+              placeholder="Buscar por nome, número, telefone, vendedor ou valor..."
+              className="pl-8 pr-8"
+            />
+            {busca && (
+              <button type="button" aria-label="Limpar busca" onClick={() => setBusca("")} className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground">
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          {busca.trim() && (
+            <span className="text-sm text-muted-foreground">
+              {[...cardsVisiveis.values()].reduce((a, l) => a + l.length, 0)} card(s) encontrado(s)
+            </span>
+          )}
+        </div>
+      )}
+
       <KanbanConfigDialog
         open={cfgOpen}
+        abaInicial={cfgAba}
         onOpenChange={setCfgOpen}
         kanban={cfgNovo ? null : (kanbans.find((k) => String(k["id"]) === kanbanId) ?? null)}
         etapas={cfgNovo ? [] : boardEtapas}
@@ -535,7 +597,7 @@ function KanbanPage() {
         <div className="flex gap-4 overflow-x-auto pb-4">
           {boardEtapas.map((etapa) => {
             const id = String(etapa["id"]);
-            const cards = cardsByEtapa.get(id) ?? [];
+            const cards = cardsVisiveis.get(id) ?? [];
             return (
               <div
                 key={id}
@@ -571,16 +633,11 @@ function KanbanPage() {
                     variant="ghost"
                     className="h-7 w-7"
                     aria-label="Editar etapa"
+                    title="Configurar etapas"
                     onClick={() => {
-                      setEditForm({
-                        descricao: text(pick(etapa, ETAPA_FIELDS, "")),
-                        cor: corEtapa(etapa["cor"]).value,
-                        status: String(pick(etapa, ["status"], "true")) !== "false",
-                        is_default_ia: etapa["is_default_ia"] === true,
-                        is_default_humano: etapa["is_default_humano"] === true,
-                        is_default_encerrado: etapa["is_default_encerrado"] === true,
-                      });
-                      setEditEtapa(etapa);
+                      setCfgNovo(false);
+                      setCfgAba("etapas");
+                      setCfgOpen(true);
                     }}
                   >
                     <Pencil className="h-3.5 w-3.5" />
@@ -630,7 +687,6 @@ function KanbanPage() {
                                 {valorCampo(card, c)}
                               </p>
                             ))}
-                            <SituacaoBadge value={card["situacao"]} />
                           </div>
                         </button>
                       );
