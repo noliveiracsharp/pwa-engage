@@ -68,11 +68,11 @@ export function VersoesOferta({ orcamentoId, versaoAtual, atual, itens, readOnly
 
   const criar = async () => {
     if (sujo()) return toast.error("Salve as alterações da Oferta antes de congelar a revisão.");
-    if (await confirmar({ titulo: `Congelar a ${rotuloVersao(versaoAtual)}?`, descricao: `A ${rotuloVersao(versaoAtual)} fica guardada como está e você passa a editar a ${rotuloVersao(versaoAtual + 1)}.`, confirmar: "Criar nova revisão" } as never)) nova.mutate();
+    if (await confirmar({ title: `Congelar a ${rotuloVersao(versaoAtual)}?`, description: `A ${rotuloVersao(versaoAtual)} fica guardada como está e você passa a editar a ${rotuloVersao(versaoAtual + 1)}.`, confirmText: "Criar nova revisão" })) nova.mutate();
   };
 
   const restaurar = async (v: Row) => {
-    if (!(await confirmar({ titulo: `Restaurar a ${rotuloVersao(v["versao"])}?`, descricao: "Os itens e valores dessa revisão voltam para o formulário. Confira e clique em Salvar para aplicar.", confirmar: "Restaurar" } as never))) return;
+    if (!(await confirmar({ title: `Restaurar a ${rotuloVersao(v["versao"])}?`, description: "Os itens e valores dessa revisão voltam para o formulário. Confira e clique em Salvar para aplicar.", confirmText: "Restaurar" }))) return;
     onRestaurar(v["snapshot"] as Snapshot);
     setOpen(false);
     toast.info("Revisão carregada no formulário. Clique em Salvar para aplicar.");
