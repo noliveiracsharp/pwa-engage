@@ -99,3 +99,25 @@ export function calcularPerformance(itens: PlannerItem[], desde: string, ate: st
 }
 
 export const horas = (min: number) => (min >= 60 ? `${Math.floor(min / 60)}h${min % 60 ? String(min % 60).padStart(2, "0") : ""}` : `${min}min`);
+
+/** Linha do tempo da tarefa: comentários do usuário e marcos automáticos. */
+export type EventoTarefa = { id: string; tipo: "comentario" | "sistema"; autor_id: string; texto: string; em: string };
+
+export function lerEventos(v: unknown): EventoTarefa[] {
+  if (!Array.isArray(v)) return [];
+  return (v as EventoTarefa[]).filter((e) => e && typeof e.texto === "string" && typeof e.em === "string");
+}
+
+/** Acrescenta um evento e devolve a lista em ordem cronológica. Texto vazio não entra. */
+export function adicionarEvento(lista: unknown, ev: Omit<EventoTarefa, "id">): EventoTarefa[] {
+  const atual = lerEventos(lista);
+  const texto = ev.texto.trim();
+  if (!texto) return atual;
+  const novo = { ...ev, texto, id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}` };
+  return [...atual, novo].sort((a, b) => a.em.localeCompare(b.em));
+}
+
+export const textoRemarcacao = (de: string | null, para: string | null) => {
+  const f = (s: string | null) => (s ? s.split("-").reverse().join("/") : "Backlog");
+  return `Planejamento alterado de ${f(de)} para ${f(para)}.`;
+};
