@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { NovoTitulo, OrigemTitulo } from "@/lib/financeiro";
+import type { Row } from "@/lib/row";
 
 /** Quantos títulos uma origem já gerou (evita duplicar). */
 export async function contarTitulosDaOrigem(origemIds: string[], tipos: OrigemTitulo[]) {

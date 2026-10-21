@@ -23,7 +23,7 @@ import { OrcamentoPDF } from "@/components/orcamentos/OrcamentoPDF";
 import { PropostaDialog } from "@/components/orcamentos/PropostaDialog";
 import { MinutaDialog } from "@/components/orcamentos/MinutaDialog";
 import { titulosDaOferta } from "@/lib/financeiro";
-import { apagarAbertosDaOrigem, contarTitulosDaOrigem, erroFinanceiro, inserirTitulos } from "@/lib/financeiro-db";
+import { apagarAbertosDaOrigem, contarTitulosDaOrigem, erroFinanceiro, inserirTitulos, itensDaOferta } from "@/lib/financeiro-db";
 import { GerarPedidosDialog } from "@/components/orcamentos/GerarPedidosDialog";
 import { SituacaoBadge } from "@/components/orcamentos/SituacaoBadge";
 import { useAlterarSituacao, useSaveOrcamento } from "@/hooks/useSaveOrcamento";
