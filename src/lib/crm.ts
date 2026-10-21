@@ -1,6 +1,6 @@
 /** Regras comerciais do CRM: origem do lead, motivos de perda e próxima ação. */
 export const ORIGENS_LEAD = [
-  "Evento", "Google Ads", "Indicação", "Meta Ads (Instagram/Facebook)", "Outro",
+  "Evento", "Google Ads", "Indicação", "Inspeção técnica", "Meta Ads (Instagram/Facebook)", "Outro",
   "Prospecção ativa", "Site", "WhatsApp",
 ] as const;
 
