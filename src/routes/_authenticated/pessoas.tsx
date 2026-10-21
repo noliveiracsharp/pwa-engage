@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { User } from "lucide-react";
+import { Ban, CheckCircle2, MessageCircle, Trash2, User } from "lucide-react";
+import { BarraAcoesLote, useAcoesComuns } from "@/components/data-table/AcoesLote";
 import { createFileRoute } from "@tanstack/react-router";
 import { DataTable, type Column } from "@/components/data-table/DataTable";
 import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
@@ -100,6 +101,8 @@ function PessoasPage() {
   const [open, setOpen] = useState(false);
   const [record, setRecord] = useState<Row | null>(null);
   const [f, setF] = useState({ busca: "", status: "todos", nota: "todas" });
+  const [sel, setSel] = useState<Set<string>>(new Set());
+  const lote = useAcoesComuns("pessoas");
   const { data: parceiros = [] } = useTableRows("parceiros");
   const formFields = useMemo<Field[]>(() => {
     const opts = [
@@ -211,6 +214,25 @@ function PessoasPage() {
         editReadOnly={!perms.canUpdate}
         onDelete={perms.canDelete ? (row) => setToDelete(row) : undefined}
         skipDeleteConfirm
+        selection={{ selected: sel, onChange: setSel }}
+        bulkBar={
+          <BarraAcoesLote
+            tabela="pessoas"
+            selecionados={filtered.filter((r, i) => sel.has(String(rowId(r) ?? i)))}
+            totalFiltrado={filtered.length}
+            rotulo={(r) => String(pick(r, ["nome", "email"], "—"))}
+            onSelecionarTodos={() => setSel(new Set(filtered.map((r, i) => String(rowId(r) ?? i))))}
+            onLimpar={() => setSel(new Set())}
+            acoes={[
+              { label: "Verificar WhatsApp", icon: <MessageCircle className="h-4 w-4" />, intervalo: 300, executar: lote.verificarWhatsApp() },
+              ...(perms.canUpdate ? [
+                { label: "Ativar", icon: <CheckCircle2 className="h-4 w-4" />, executar: lote.definirStatus(true) },
+                { label: "Inativar", icon: <Ban className="h-4 w-4" />, confirmacao: "Inativar {n} pessoa(s)?", executar: lote.definirStatus(false) },
+              ] : []),
+              ...(perms.canDelete ? [{ label: "Excluir", icon: <Trash2 className="h-4 w-4" />, destrutiva: true, confirmacao: "Excluir permanentemente {n} pessoa(s)? As que tiverem vínculos serão mantidas.", executar: lote.excluir }] : []),
+            ]}
+          />
+        }
         filters={
           <>
             <FilterInput
