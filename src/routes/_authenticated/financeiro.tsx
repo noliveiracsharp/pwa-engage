@@ -452,7 +452,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
         <p className="text-muted-foreground text-xs">{t["__fatura"] ? `Cartão de crédito • ${(t["__itens"] as Row[]).length} item(ns) — clique para ver` : <>{ORIGEM_LABEL[text(t["origem_tipo"])] ?? "Manual"}{t["categoria"] ? ` • ${text(t["categoria"])}` : ""}</>}</p>
       </div>
     ) },
-    { key: "parc", header: tipo === "receber" ? "Cliente" : "Fornecedor", fields: [], render: (t) => t["__fatura"] ? ([...new Set((t["__itens"] as Row[]).map((x) => nomeParc(x["parceiro_id"])).filter(Boolean))].join(", ") || "—") : (t["cliente_atendido_id"] ? <span>{nomeParc(t["parceiro_id"]) || "—"}<span className="text-muted-foreground block text-xs">Ref.: {nomeParc(t["cliente_atendido_id"])}</span></span> : nomeParc(t["parceiro_id"]) || "—") },
+    { key: "parc", header: tipo === "receber" ? "Cliente" : "Fornecedor", fields: [], render: (t) => t["__fatura"] ? ([...new Set((t["__itens"] as Row[]).map((x) => nomeParc(x["parceiro_id"])).filter(Boolean))].join(", ") || "—") : (Boolean(t["cliente_atendido_id"]) ? <span>{nomeParc(t["parceiro_id"]) || "—"}<span className="text-muted-foreground block text-xs">Ref.: {nomeParc(t["cliente_atendido_id"])}</span></span> : nomeParc(t["parceiro_id"]) || "—") },
     { key: "valor", header: "Valor", fields: ["valor"], render: (t) => <span className="font-semibold tabular-nums">{formatBRL(t["valor"])}</span> },
     { key: "sit", header: "Situação", fields: [], render: (t) => {
       if (t["__filho"]) return <span className="text-muted-foreground text-xs">na fatura</span>;
@@ -684,7 +684,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
                       return (<tr key={text(rowId(t))} className="border-t">
                         <td className="p-2 whitespace-nowrap tabular-nums">{formatDate(t["data_compra"]) || "—"}</td>
                         <td className="p-2">{text(t["descricao"]).replace(/\s*\(\d+\/\d+\)\s*$/, "")}{pos && <span className="bg-primary/10 text-primary ml-1.5 rounded px-1.5 py-0.5 text-[10px] font-semibold">{pos}</span>}
-                          {nomeParc(t["parceiro_id"]) && <p className="text-muted-foreground text-xs">{nomeParc(t["parceiro_id"])}</p>}{t["cliente_atendido_id"] && <p className="text-muted-foreground text-xs">Ref.: {nomeParc(t["cliente_atendido_id"])}</p>}</td>
+                          {nomeParc(t["parceiro_id"]) && <p className="text-muted-foreground text-xs">{nomeParc(t["parceiro_id"])}</p>}{Boolean(t["cliente_atendido_id"]) && <p className="text-muted-foreground text-xs">Ref.: {nomeParc(t["cliente_atendido_id"])}</p>}</td>
                         <td className="p-2">{text(t["categoria"]) || "—"}</td>
                         <td className="p-2 text-right font-medium tabular-nums">{formatBRL(t["valor"])}</td>
                         <td className="p-2"><span className={cn("rounded px-2 py-0.5 text-xs font-medium", SITUACAO_META[st].badge)}>{SITUACAO_META[st].label(tipo)}</span></td>
@@ -788,7 +788,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
                     {itens.map((t) => (<tr key={text(rowId(t))} className="border-t">
                       <td className="p-2 whitespace-nowrap tabular-nums">{formatDate(t["data_compra"]) || "—"}</td>
                       <td className="p-2">{text(t["descricao"]).replace(/\s*\(\d+\/\d+\)\s*$/, "")}
-                        {nomeParc(t["parceiro_id"]) && <p className="text-muted-foreground text-xs">{nomeParc(t["parceiro_id"])}</p>}{t["cliente_atendido_id"] && <p className="text-muted-foreground text-xs">Ref.: {nomeParc(t["cliente_atendido_id"])}</p>}</td>
+                        {nomeParc(t["parceiro_id"]) && <p className="text-muted-foreground text-xs">{nomeParc(t["parceiro_id"])}</p>}{Boolean(t["cliente_atendido_id"]) && <p className="text-muted-foreground text-xs">Ref.: {nomeParc(t["cliente_atendido_id"])}</p>}</td>
                       <td className="p-2">{text(t["categoria"]) || "—"}</td>
                       <td className="p-2">{posSerie.get(text(rowId(t))) || "—"}</td>
                       <td className="p-2 text-right font-medium tabular-nums">{formatBRL(t["valor"])}</td>
