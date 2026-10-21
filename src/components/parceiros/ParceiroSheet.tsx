@@ -11,7 +11,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DocumentosButton } from "@/components/documentos/DocumentosPainel";
-import { ContatosButton } from "@/components/contatos/ContatosButton";
+import { ContatosPainel } from "@/components/contatos/ContatosButton";
 import { rowId as docRowId } from "@/lib/crud";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { DocumentInput } from "@/components/data-table/DocumentInput";
@@ -267,6 +267,8 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly, saving, on
       tipo_hierarquia: f.tipo_hierarquia,
     };
     for (const k of TEXT_KEYS) values[k] = f[k].trim() || null;
+    // com cadastro existente, telefones/e-mail vêm da lista de contatos (sincronizados por ela)
+    if (record) for (const k of ["telefone", "telefone2", "email"]) delete values[k];
     // só grava a preferência de cobrança quando escolhida (coluna criada pelo script da régua)
     if (!values["cobranca_canais"]) delete values["cobranca_canais"];
     if (!values["oferta_canais"] && !record?.["oferta_canais"]) delete values["oferta_canais"];
@@ -306,7 +308,6 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly, saving, on
             <SheetTitle>{record ? "Editar parceiro" : "Novo parceiro"}</SheetTitle>
             {record && (
               <div className="ml-auto">
-                <ContatosButton entidade="parceiro" entidadeId={String(docRowId(record) ?? "")} />
                 <DocumentosButton entidadeTipo="parceiro" entidadeId={String(docRowId(record) ?? "")} entidadeNome={String(record["razao_social"] ?? record["nome"] ?? record["nome_fantasia"] ?? "")} registro={record} />
               </div>
             )}
@@ -426,6 +427,12 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly, saving, on
               <div>
                 {section("Contatos")}
                 <div className="grid gap-x-4 gap-y-5 sm:grid-cols-2">
+                  {record ? (
+                    <div className="sm:col-span-2 rounded-lg border bg-muted/30 p-3">
+                      <p className="mb-2 text-xs text-muted-foreground">Telefones e e-mails usados nos envios. Cobranças usam "Financeiro", ofertas "Comercial" e notas "Fiscal" (ou o Principal ⭐).</p>
+                      <ContatosPainel entidade="parceiro" entidadeId={String(docRowId(record) ?? "")} />
+                    </div>
+                  ) : (<>
                   {field("email", "E-mail", "sm:col-span-2", { type: "email" })}
                   <div className="sm:col-span-2">
                     <Label className="mb-1.5 block text-sm font-medium">Telefone Principal</Label>
@@ -435,6 +442,8 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly, saving, on
                     <Label className="mb-1.5 block text-sm font-medium">Telefone Secundário</Label>
                     <PhoneInput value={f.telefone2} onChange={(v) => set("telefone2", v)} />
                   </div>
+                  <p className="sm:col-span-2 text-xs text-muted-foreground">Depois de salvar, você poderá cadastrar vários contatos com finalidade.</p>
+                  </>)}
                   <div className="sm:col-span-2">
                     <Label className="mb-1.5 block text-sm font-medium">Receber cobranças automáticas por</Label>
                     <Select value={f.cobranca_canais || "padrao"} onValueChange={(v) => set("cobranca_canais", v === "padrao" ? "" : v)}>

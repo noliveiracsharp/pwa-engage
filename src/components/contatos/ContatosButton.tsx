@@ -80,7 +80,7 @@ export function ContatosPainel({ entidade, entidadeId }: Props) {
     if (error) return void toast.error(/cadastro_contatos/.test(error.message) ? "Rode o script atendeai-contatos-reajuste.sql no banco." : error.message);
     const l = (data ?? []) as Contato[];
     setLista(l);
-    void sincronizarPai(entidade, entidadeId, l);
+    if (l.length) void sincronizarPai(entidade, entidadeId, l);
   };
   useEffect(() => { if (open) void carregar(); }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 

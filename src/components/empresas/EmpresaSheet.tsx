@@ -9,7 +9,7 @@ import { configurarWebhookZapi, desconectarWhatsApp } from "@/lib/zapi.functions
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { DocumentosButton } from "@/components/documentos/DocumentosPainel";
-import { ContatosButton } from "@/components/contatos/ContatosButton";
+import { ContatosPainel } from "@/components/contatos/ContatosButton";
 import { IaConfigPainel } from "@/components/financeiro/IaConfigDialog";
 import { useAudit } from "@/lib/audit";
 import { rowId } from "@/lib/crud";
@@ -684,7 +684,9 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
       }
     }
     const payload: Row = {};
+    const comContatos = !!empresa && rowId(empresa) !== undefined;
     for (const field of EMPRESA_FIELDS) {
+      if (comContatos && (field.key === "telefone1" || field.key === "telefone2")) continue;
       const raw = values[field.key] ?? "";
       if (raw === "" && !empresa) continue;
       if (field.type === "boolean") {
@@ -711,7 +713,6 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
             <SheetTitle>{title}</SheetTitle>
             {empresa && rowId(empresa) !== undefined && (
               <div className="ml-auto flex gap-2">
-                <ContatosButton entidade="empresa" entidadeId={String(rowId(empresa))} />
                 <DocumentosButton entidadeTipo="empresa" entidadeId={String(rowId(empresa))} entidadeNome={String(empresa["razao_social"] ?? empresa["nome"] ?? "")} registro={empresa} />
               </div>
             )}
@@ -752,6 +753,7 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
             <div className="grid gap-4 sm:grid-cols-2">
             {EMPRESA_FIELDS.filter((field) => field.type !== "photo")
               .filter((field) => field.key !== "compartilhar_catalogo_filiais" || !empresa?.["empresa_pai_id"])
+              .filter((field) => !(empresa && rowId(empresa) !== undefined && (field.key === "telefone1" || field.key === "telefone2")))
               .map((field) => (
               <Fragment key={field.key}>
               {field.key === "site_url" && (
