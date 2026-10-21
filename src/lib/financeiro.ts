@@ -31,6 +31,8 @@ export type NovoTitulo = {
   origem_tipo: OrigemTitulo;
   origem_id: string | null;
   parcela_n: number;
+  /** Cliente que recebe o serviço quando quem paga é outro (administradora, facilities…). */
+  cliente_atendido_id?: string | null;
 };
 
 export const CATEGORIAS_FINANCEIRO: Record<TipoTitulo, string[]> = {
@@ -97,44 +99,93 @@ export const SITUACAO_META: Record<Situacao, { label: (tipo: TipoTitulo) => stri
 export const valorBaixa = (valor: number, juros: number, desconto: number) =>
   round2(Math.max(0, num(valor) + num(juros) - num(desconto)));
 
-/** Títulos de uma Oferta: parcelas do cliente (a receber) e despesas operacionais (a pagar). */
-export function titulosDaOferta(orc: Row): NovoTitulo[] {
+/**
+ * Divide `total` entre pagadores na proporção dos pesos (centavos exatos).
+ * A sobra de arredondamento fica com o `principal` (ou o maior peso).
+ */
+export function ratearPorPagador(total: number, pesos: Map<string, number>, principal: string): Map<string, number> {
+  const t = round2(total);
+  const validos = [...pesos.entries()].filter(([, p]) => p > 0);
+  const soma = validos.reduce((s, [, p]) => s + p, 0);
+  if (t <= 0 || soma <= 0 || validos.length <= 1) return new Map([[validos[0]?.[0] ?? principal, t]]);
+  const out = new Map<string, number>();
+  for (const [k, p] of validos) out.set(k, Math.floor((t * p / soma) * 100) / 100);
+  const resto = round2(t - [...out.values()].reduce((s, v) => s + v, 0));
+  const alvo = out.has(principal) ? principal : validos.sort((a, b) => b[1] - a[1])[0]![0];
+  out.set(alvo, round2(out.get(alvo)! + resto));
+  return out;
+}
+
+/** Pagador de cada item da Oferta: o sacado escolhido no item ou o próprio cliente. */
+function pesosPorPagador(itens: Row[], cliente: string, recorrente: boolean): Map<string, number> {
+  const m = new Map<string, number>();
+  for (const it of itens) {
+    if ((String(it["natureza"] ?? "") === "recorrente") !== recorrente) continue;
+    const quem = String(it["faturar_para_id"] ?? "") || cliente;
+    m.set(quem, (m.get(quem) ?? 0) + Math.max(0, num(it["total_linha"])));
+  }
+  return m;
+}
+
+/**
+ * Títulos de uma Oferta: parcelas do cliente (a receber) e despesas operacionais (a pagar).
+ * Com `itens`, cada item pode ser faturado para outro pagador (administradora, facilities…):
+ * implantação e mensalidade são divididas por pagador, guardando o cliente atendido.
+ */
+export function titulosDaOferta(orc: Row, itens: Row[] = []): NovoTitulo[] {
   const id = String(orc["id"] ?? "");
   const numero = String(orc["numero"] ?? "");
   const cliente = (orc["parceiro_id"] ?? orc["parceiros_id"] ?? null) as string | null;
+  const chaveCliente = cliente ?? "";
+  const pagadorDe = (k: string) => (k === chaveCliente ? cliente : k);
+  const atendido = (k: string) => (k !== chaveCliente && cliente ? { cliente_atendido_id: cliente } : {});
   let parcelas = parcelasFromValue(orc["parcelas"]);
   if (!parcelas.length && num(orc["total_liquido"]) > 0)
     parcelas = [{ numero: 1, vencimento: iso(orc["data"] ?? orc["created_at"]) || hojeISO(), valor: num(orc["total_liquido"]) }];
   const total = parcelas.length;
-  const out: NovoTitulo[] = parcelas.map((p) => ({
-    tipo: "receber",
-    descricao: `Oferta ${numero} — Implantação ${p.numero}/${total}`,
-    categoria: "Implantação / Venda",
-    vencimento: p.vencimento || hojeISO(),
-    valor: round2(p.valor),
-    parceiro_id: cliente,
-    origem_tipo: "oferta",
-    origem_id: id,
-    parcela_n: p.numero,
-  }));
-  // Mensalidades do contrato: série separada da implantação (1 boleto/mês).
+  const pesosImpl = pesosPorPagador(itens, chaveCliente, false);
+  const out: NovoTitulo[] = [];
+  let seqN = 0;
+  for (const p of parcelas) {
+    for (const [k, v] of ratearPorPagador(p.valor, pesosImpl, chaveCliente)) {
+      if (v <= 0) continue;
+      out.push({
+        tipo: "receber",
+        descricao: `Oferta ${numero} — Implantação ${p.numero}/${total}`,
+        categoria: "Implantação / Venda",
+        vencimento: p.vencimento || hojeISO(),
+        valor: round2(v),
+        parceiro_id: pagadorDe(k),
+        origem_tipo: "oferta",
+        origem_id: id,
+        parcela_n: ++seqN,
+        ...atendido(k),
+      });
+    }
+  }
+  // Mensalidades do contrato: série separada da implantação (1 boleto/mês por pagador).
   const mensal = round2(num(orc["total_recorrente"]));
   if (mensal > 0) {
     const meses = Math.max(1, Math.min(120, Math.floor(num(orc["vigencia_meses"])) || 12));
     const base = iso(orc["dt_orcamento"] ?? orc["data"] ?? orc["created_at"]) || hojeISO();
     const primeira = parcelas[0]?.vencimento ? addMonthsISO(parcelas[0].vencimento, 1) : addMonthsISO(base, 1);
+    const rateio = ratearPorPagador(mensal, pesosPorPagador(itens, chaveCliente, true), chaveCliente);
     for (let i = 0; i < meses; i++) {
-      out.push({
-        tipo: "receber",
-        descricao: `Oferta ${numero} — Mensalidade ${i + 1}/${meses}`,
-        categoria: "Mensalidade de contrato",
-        vencimento: addMonthsISO(primeira, i),
-        valor: mensal,
-        parceiro_id: cliente,
-        origem_tipo: "oferta",
-        origem_id: id,
-        parcela_n: total + i + 1,
-      });
+      for (const [k, v] of rateio) {
+        if (v <= 0) continue;
+        out.push({
+          tipo: "receber",
+          descricao: `Oferta ${numero} — Mensalidade ${i + 1}/${meses}`,
+          categoria: "Mensalidade de contrato",
+          vencimento: addMonthsISO(primeira, i),
+          valor: v,
+          parceiro_id: pagadorDe(k),
+          origem_tipo: "oferta",
+          origem_id: id,
+          parcela_n: ++seqN,
+          ...atendido(k),
+        });
+      }
     }
   }
   const forn = cronogramaCompra({
