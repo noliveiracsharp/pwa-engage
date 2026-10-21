@@ -108,6 +108,7 @@ function UsuariosPage() {
   const [toDelete, setToDelete] = useState<Row | null>(null);
   const [sel, setSel] = useState<Set<string>>(new Set());
   const lote = useAcoesComuns("usuarios");
+  const meuId = text(usuarioAtualId());
   const [removing, setRemoving] = useState(false);
 
   const inativar = async () => {
@@ -509,14 +510,14 @@ function UsuariosPage() {
         editReadOnly={!perms.canUpdate}
         onDelete={perms.canDelete ? (row) => setToDelete(row) : undefined}
         skipDeleteConfirm
-        selection={{ selected: sel, onChange: (s) => { s.delete(text(rowId(usuario))); setSel(s); } }}
+        selection={{ selected: sel, onChange: (s) => { s.delete(meuId); setSel(s); } }}
         bulkBar={
           <BarraAcoesLote
             tabela="usuarios"
-            selecionados={filtered.filter((r, i) => sel.has(String(rowId(r) ?? i)) && text(rowId(r)) !== text(rowId(usuario)))}
+            selecionados={filtered.filter((r, i) => sel.has(String(rowId(r) ?? i)) && text(rowId(r)) !== meuId)}
             totalFiltrado={filtered.length}
             rotulo={(r) => text(pick(r, ["nome", "email"], "—"))}
-            onSelecionarTodos={() => setSel(new Set(filtered.map((r, i) => String(rowId(r) ?? i)).filter((k) => k !== text(rowId(usuario)))))}
+            onSelecionarTodos={() => setSel(new Set(filtered.map((r, i) => String(rowId(r) ?? i)).filter((k) => k !== meuId)))}
             onLimpar={() => setSel(new Set())}
             acoes={[
               { label: "Verificar WhatsApp", icon: <MessageCircle className="h-4 w-4" />, intervalo: 300, executar: lote.verificarWhatsApp() },
