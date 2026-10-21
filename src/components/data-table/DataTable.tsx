@@ -21,6 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils";
 import type { Row } from "@/lib/row";
 import { confirmar } from "@/components/layout/DialogoGlobal";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export type Column = {
   key: string;
@@ -61,6 +62,10 @@ type Props = {
   rowMenu?: (row: Row) => ReactNode;
   /** Per-row toggle of the built-in Editar/Excluir actions in the ⋮ menu. */
   rowActions?: (row: Row) => { edit: boolean; delete: boolean };
+  /** Enables a checkbox per row (keys come from rowKey). */
+  selection?: { selected: Set<string>; onChange: (s: Set<string>) => void } | undefined;
+  /** Rendered above the table (e.g. bulk actions bar). */
+  bulkBar?: ReactNode;
 };
 
 export function DataTable({
@@ -84,6 +89,8 @@ export function DataTable({
   rowHasChildren,
   rowExpanded,
   onToggleRow,
+  selection,
+  bulkBar,
 }: Props) {
   const [sort, setSort] = useState<{ key: string; dir: "asc" | "desc" } | null>(null);
   const [page, setPage] = useState(1);
@@ -116,7 +123,7 @@ export function DataTable({
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const current = Math.min(page, totalPages);
   const pageRows = sorted.slice((current - 1) * pageSize, current * pageSize);
-  const colSpan = columns.length + (onReorder ? 2 : 1);
+  const colSpan = columns.length + (onReorder ? 2 : 1) + (selection ? 1 : 0);
   const canDrag = Boolean(onReorder) && !sort;
 
   const handleDrop = (target: number) => {
@@ -155,10 +162,25 @@ export function DataTable({
         </FilterBar>
       )}
 
+      {bulkBar}
+
       <div className="overflow-x-auto rounded-lg border border-border bg-card">
         <Table>
           <TableHeader>
             <TableRow>
+              {selection && (
+                <TableHead className="w-10">
+                  <Checkbox
+                    aria-label="Selecionar página"
+                    checked={pageRows.length > 0 && pageRows.every((r, i) => selection.selected.has(rowKey(r, i)))}
+                    onCheckedChange={(v) => {
+                      const n = new Set(selection.selected);
+                      pageRows.forEach((r, i) => (v ? n.add(rowKey(r, i)) : n.delete(rowKey(r, i))));
+                      selection.onChange(n);
+                    }}
+                  />
+                </TableHead>
+              )}
               {onReorder && <TableHead className="w-10" />}
               {columns.map((col) => (
                 <TableHead key={col.key} className={col.className}>
@@ -225,6 +247,20 @@ export function DataTable({
                     dropIndex === globalIndex && dragIndex !== null && dragIndex !== globalIndex && "border-t-2 border-primary",
                   )}
                 >
+                  {selection && (
+                    <TableCell className="w-10">
+                      <Checkbox
+                        aria-label="Selecionar registro"
+                        checked={selection.selected.has(rowKey(row, index))}
+                        onCheckedChange={() => {
+                          const k = rowKey(row, index);
+                          const n = new Set(selection.selected);
+                          if (n.has(k)) n.delete(k); else n.add(k);
+                          selection.onChange(n);
+                        }}
+                      />
+                    </TableCell>
+                  )}
                   {onReorder && (
                     <TableCell className="w-10 text-muted-foreground">
                       <GripVertical className="h-4 w-4" />
