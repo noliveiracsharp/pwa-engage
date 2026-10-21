@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, CheckCircle2, FileText, Loader2, Maximize2, Paperclip, Plus, X } from "lucide-react";
 import { PlannerPainel, ItemLinha, usePlannerItens } from "@/components/chat-interno/PlannerPainel";
+import { TarefaDetalhe } from "@/components/chat-interno/TarefaDetalhe";
 import { diaDoItem, ordenar, PRIORIDADES, type Prioridade } from "@/lib/planner";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -43,7 +44,8 @@ export function TarefasChat({ me, empresaId, usuarios, onAvisar }: {
   const [aba, setAba] = useState<"minhas" | "delegadas">("minhas");
   const [visao, setVisao] = useState<"hoje" | "proximos" | "backlog" | "concluidas">("hoje");
   const [expandido, setExpandido] = useState(false);
-  const planner = usePlannerItens(me);
+  const planner = usePlannerItens(me, me);
+  const [aberta, setAberta] = useState<string | null>(null);
   const [criando, setCriando] = useState(false);
   const nomes = useMemo(() => new Map(usuarios.map((u) => [String(u["id"]), String(pick(u, ["nome"], "Usuário"))])), [usuarios]);
   const nome = (id: unknown) => (String(id) === me ? "Você" : nomes.get(String(id)) ?? "Usuário");
@@ -108,6 +110,7 @@ export function TarefasChat({ me, empresaId, usuarios, onAvisar }: {
         <Button size="sm" onClick={() => setCriando(true)}><Plus className="mr-1 h-4 w-4" /> Nova</Button>
         <Button size="icon" variant="outline" className="h-8 w-8" aria-label="Expandir planner" title="Expandir planner" onClick={() => setExpandido(true)}><Maximize2 className="h-4 w-4" /></Button>
       </div>
+      <TarefaDetalhe id={aberta} me={me} usuarios={usuarios} onFechar={() => setAberta(null)} onAvisar={onAvisar} />
       {expandido && <PlannerPainel me={me} usuarios={usuarios} onFechar={() => setExpandido(false)} />}
       {aba === "minhas" && (
         <div className="flex gap-1 px-4 pb-2 text-[11px]">
@@ -123,7 +126,7 @@ export function TarefasChat({ me, empresaId, usuarios, onAvisar }: {
           {lista.map((t) => <CardTarefa key={String(t["id"])} t={t} me={me} nome={nome} onAtualizar={atualizar} />)}
           {aba === "minhas" && doDia.map((i) => (
             <div key={i.id} className="flex items-center gap-1">
-              <div className="min-w-0 flex-1"><ItemLinha i={i} onCheck={(f) => void planner.concluir(i, f)} /></div>
+              <div className="min-w-0 flex-1"><ItemLinha i={i} onCheck={(f) => void planner.concluir(i, f)} onAbrir={() => setAberta(i.id)} /></div>
               {i.origem === "tarefa" && i.status !== "concluida" && (
                 <select aria-label="Planejar para" className="h-7 rounded border border-border bg-background text-[10px]" value=""
                   onChange={(e) => { const v = e.target.value; void planner.planejar(i, v === "backlog" ? null : v === "hoje" ? h : new Date(Date.now() + 864e5).toISOString().slice(0, 10)); }}>

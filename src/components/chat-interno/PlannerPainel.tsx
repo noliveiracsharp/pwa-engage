@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, CheckCircle2, Circle, Inbox, Printer, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, CheckCircle2, Circle, Inbox, MessageSquare, Printer, X } from "lucide-react";
+import { TarefaDetalhe, registrarEvento } from "@/components/chat-interno/TarefaDetalhe";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { pick, type Row } from "@/lib/row";
@@ -14,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  calcularPerformance, diaDoItem, horas, inicioSemana, normalizarPrioridade, novasRemarcacoes, ordenar, somarDias,
+  calcularPerformance, diaDoItem, horas, inicioSemana, lerEventos, normalizarPrioridade, novasRemarcacoes, ordenar, somarDias, textoRemarcacao,
   type PlannerItem,
 } from "@/lib/planner";
 
@@ -35,6 +36,7 @@ function deTarefa(t: Row): PlannerItem {
     status: st === "concluida" ? "concluida" : st === "recusada" ? "recusada" : st === "aguardando" ? "aguardando" : "aberta",
     concluidoEm: t["concluido_em"] ? String(t["concluido_em"]) : null,
     remarcacoes: Number(t["remarcacoes"] ?? 0),
+    comentarios: lerEventos(t["comentarios"]).filter((e) => e.tipo === "comentario").length,
   };
 }
 function deProjeto(t: Row): PlannerItem {
@@ -49,7 +51,7 @@ function deProjeto(t: Row): PlannerItem {
 }
 
 /** Itens do planner de um usuário: tarefas diretas aceitas + tarefas de projeto em que é responsável. */
-export function usePlannerItens(usuarioId: string) {
+export function usePlannerItens(usuarioId: string, autorId?: string) {
   const qc = useQueryClient();
   const key = ["planner", usuarioId];
   const q = useQuery({
@@ -76,18 +78,20 @@ export function usePlannerItens(usuarioId: string) {
       : await tb("projetos_tarefas").update({ situacao: feito ? "Concluída" : "Em andamento", progresso: feito ? 100 : 0 } as never).eq("id", i.id);
     if (r.error) { toast.error(r.error.message); return; }
     if (feito) tocarSom("equipe");
+    if (i.origem === "tarefa" && autorId) await registrarEvento(i.id, autorId, feito ? "Tarefa concluída." : "Tarefa reaberta.");
     recarregar();
   };
   const planejar = async (i: PlannerItem, dia: string | null) => {
     if (i.origem === "projeto") { toast.info("Tarefas de projeto seguem o prazo definido no projeto."); return; }
     const r = await tb("tarefas_usuarios").update({ data_planejada: dia, remarcacoes: novasRemarcacoes(i.remarcacoes, i.planejada, dia) } as never).eq("id", i.id);
     if (r.error) { toast.error(r.error.message.includes("data_planejada") ? "Rode o script atendeai-planner.sql no banco." : r.error.message); return; }
+    if (autorId && i.planejada !== dia) await registrarEvento(i.id, autorId, textoRemarcacao(i.planejada, dia));
     recarregar();
   };
   return { itens: q.data ?? [], isLoading: q.isLoading, concluir, planejar };
 }
 
-export function ItemLinha({ i, onCheck, compacto, editavel = true }: { i: PlannerItem; onCheck: (feito: boolean) => void; compacto?: boolean; editavel?: boolean }) {
+export function ItemLinha({ i, onCheck, compacto, editavel = true, onAbrir }: { i: PlannerItem; onCheck: (feito: boolean) => void; compacto?: boolean; editavel?: boolean; onAbrir?: () => void }) {
   const feito = i.status === "concluida";
   const atraso = !feito && !!i.entrega && i.entrega < hoje();
   return (
@@ -96,7 +100,9 @@ export function ItemLinha({ i, onCheck, compacto, editavel = true }: { i: Planne
         {feito ? <CheckCircle2 className="h-4 w-4 text-success" /> : <Circle className="h-4 w-4 text-muted-foreground" />}
       </button>
       <div className="min-w-0 flex-1">
-        <p className={cn("font-medium leading-tight", feito && "line-through")}>{i.titulo}</p>
+        {onAbrir && i.origem === "tarefa"
+          ? <button type="button" onClick={onAbrir} className={cn("text-left font-medium leading-tight hover:underline", feito && "line-through")}>{i.titulo}</button>
+          : <p className={cn("font-medium leading-tight", feito && "line-through")}>{i.titulo}</p>}
         {!compacto && (
           <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[10px] text-muted-foreground">
             <span className="inline-flex items-center gap-1"><span className={cn("h-1.5 w-1.5 rounded-full", COR_PRI[i.prioridade])} />{i.prioridade === "media" ? "Média" : i.prioridade === "alta" ? "Alta" : "Baixa"}</span>
@@ -104,6 +110,7 @@ export function ItemLinha({ i, onCheck, compacto, editavel = true }: { i: Planne
             {i.estimativaMin ? <span>{horas(i.estimativaMin)}</span> : null}
             {i.entrega && <span className={cn(atraso && "font-semibold text-destructive")}>Prazo {dataBR(i.entrega)}</span>}
             {i.remarcacoes > 0 && <span>↻ {i.remarcacoes}</span>}
+            {i.comentarios ? <span className="inline-flex items-center gap-0.5"><MessageSquare className="h-3 w-3" />{i.comentarios}</span> : null}
           </p>
         )}
       </div>
@@ -122,7 +129,8 @@ export function PlannerPainel({ me, usuarios, onFechar }: { me: string; usuarios
   const [desde, setDesde] = useState(somarDias(hoje(), -29));
   const [ate, setAte] = useState(hoje());
   const [arrastando, setArrastando] = useState<string | null>(null);
-  const { itens, concluir, planejar } = usePlannerItens(alvo);
+  const [aberta, setAberta] = useState<string | null>(null);
+  const { itens, concluir, planejar } = usePlannerItens(alvo, me);
   const proprio = alvo === me;
   const ativos = itens.filter((i) => i.status === "aberta" || i.status === "concluida");
   const backlog = ordenar(ativos.filter((i) => !diaDoItem(i) && i.status !== "concluida"));
@@ -151,7 +159,7 @@ export function PlannerPainel({ me, usuarios, onFechar }: { me: string; usuarios
         <div className="space-y-1.5">
           {lista.map((i) => (
             <div key={i.id} draggable={proprio && i.origem === "tarefa"} onDragStart={() => setArrastando(i.id)} className={cn(proprio && i.origem === "tarefa" && "cursor-grab")}>
-              <ItemLinha i={i} editavel={proprio} onCheck={(f) => void concluir(i, f)} />
+              <ItemLinha i={i} editavel={proprio} onCheck={(f) => void concluir(i, f)} onAbrir={() => setAberta(i.id)} />
             </div>
           ))}
         </div>
@@ -179,6 +187,7 @@ export function PlannerPainel({ me, usuarios, onFechar }: { me: string; usuarios
         )}
         <Button size="sm" variant="ghost" aria-label="Fechar planner" onClick={onFechar}><X className="h-5 w-5" /></Button>
       </div>
+      <TarefaDetalhe id={aberta} me={me} usuarios={usuarios} onFechar={() => setAberta(null)} />
 
       <div className="min-h-0 flex-1 overflow-auto p-4">
         <div className="mb-3 flex items-center gap-2">
@@ -194,7 +203,7 @@ export function PlannerPainel({ me, usuarios, onFechar }: { me: string; usuarios
             <div className="space-y-1.5">
               {backlog.map((i) => (
                 <div key={i.id} draggable={proprio && i.origem === "tarefa"} onDragStart={() => setArrastando(i.id)}>
-                  <ItemLinha i={i} editavel={proprio} onCheck={(f) => void concluir(i, f)} />
+                  <ItemLinha i={i} editavel={proprio} onCheck={(f) => void concluir(i, f)} onAbrir={() => setAberta(i.id)} />
                 </div>
               ))}
             </div>
