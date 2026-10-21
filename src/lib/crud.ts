@@ -25,22 +25,46 @@ export function useTableRows(table: string, enabled = true, orderBy?: string) {
     queryKey: ctx ? ["table", table, "ctx", ctx] : ["table", table],
     enabled: enabled && ready,
     queryFn: async (): Promise<Row[]> => {
-      let q = supabase.from(table).select("*");
-      // Anti-escalonamento: o perfil Master (ordem 0) nunca aparece em listas/selects.
-      if (table === "perfil") q = q.gt("ordem", 0) as typeof q;
-      if (orderBy) q = q.order(orderBy, { ascending: true }) as typeof q;
-      // Filtra a empresa direto no banco; se a tabela não tiver empresa_id, cai na consulta completa.
-      let res: { data: unknown; error: { code?: string } | null };
-      if (ctx && !isEmpresas && !CATALOG_TABLES.has(table)) {
-        res = await (isMaster ? q.or(`empresa_id.eq.${ctx},empresa_id.is.null`) : q.eq("empresa_id", ctx));
-        if (res.error) {
-          let q2 = supabase.from(table).select("*");
-          if (table === "perfil") q2 = q2.gt("ordem", 0) as typeof q2;
-          if (orderBy) q2 = q2.order(orderBy, { ascending: true }) as typeof q2;
-          res = await q2;
+      // Busca em lotes de 1000 até trazer tudo (o banco corta cada resposta em 1000 linhas).
+      type Res = { data: unknown; error: { code?: string } | null };
+      const base = () => {
+        let q = supabase.from(table).select("*");
+        if (table === "perfil") q = q.gt("ordem", 0) as typeof q;
+        if (orderBy) q = q.order(orderBy, { ascending: true }) as typeof q;
+        return q;
+      };
+      const todos = async (make: (from: number, to: number) => PromiseLike<Res>): Promise<Res> => {
+        const PAGE = 1000;
+        const out: unknown[] = [];
+        for (let from = 0; from < 1_000_000; from += PAGE) {
+          const r = await make(from, from + PAGE - 1);
+          if (r.error) return r;
+          const arr = (r.data ?? []) as unknown[];
+          out.push(...arr);
+          if (arr.length < PAGE) break;
         }
+        return { data: out, error: null };
+      };
+      // Ordem estável por id garante que nenhuma linha se perca entre os lotes.
+      const paged = (q: ReturnType<typeof base>, from: number, to: number) => {
+        let qq = q;
+        if (!orderBy) qq = qq.order("id", { ascending: true }) as typeof qq;
+        return qq.range(from, to) as unknown as PromiseLike<Res>;
+      };
+      const run = async (filtro?: (q: ReturnType<typeof base>) => ReturnType<typeof base>): Promise<Res> => {
+        const r = await todos((f, t) => paged(filtro ? filtro(base()) : base(), f, t));
+        // Tabela sem coluna "id": tenta sem a ordenação extra.
+        if (r.error && !orderBy) {
+          return todos((f, t) => ((filtro ? filtro(base()) : base()).range(f, t) as unknown as PromiseLike<Res>));
+        }
+        return r;
+      };
+      let res: Res;
+      if (ctx && !isEmpresas && !CATALOG_TABLES.has(table)) {
+        res = await run((q) => (isMaster ? q.or(`empresa_id.eq.${ctx},empresa_id.is.null`) : q.eq("empresa_id", ctx)) as typeof q);
+        if (res.error) res = await run();
       } else {
-        res = await q;
+        res = await run();
       }
       const { data, error } = res;
       if (error) throw error;
