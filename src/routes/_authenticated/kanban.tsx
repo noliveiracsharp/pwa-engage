@@ -1,5 +1,6 @@
 import { usePagePermissions } from "@/hooks/usePagePermissions";
-import { FileText, Search, Settings2, X } from "lucide-react";
+import { CalendarClock, FileText, Search, Settings2, X } from "lucide-react";
+import { ROTULO_STATUS_ACAO, TIPOS_ACAO, statusProximaAcao } from "@/lib/crm";
 import { EtapaCorPicker } from "@/components/kanban/EtapaCorPicker";
 import { corEtapa } from "@/lib/kanban-cores";
 import { KanbanConfigDialog } from "@/components/kanban/KanbanConfigDialog";
@@ -687,6 +688,21 @@ function KanbanPage() {
                                 {valorCampo(card, c)}
                               </p>
                             ))}
+                            {(() => {
+                              const st = statusProximaAcao(card["proxima_acao_em"], card["situacao"]);
+                              if (st === "encerrado") return null;
+                              const tipo = TIPOS_ACAO.find((t) => t.value === card["proxima_acao_tipo"])?.label;
+                              return (
+                                <p className={cn("flex items-center gap-1 text-xs font-medium",
+                                  st === "agendada" ? "text-muted-foreground" : st === "hoje" ? "text-warning" : "text-destructive")}>
+                                  <CalendarClock className="h-3 w-3" />
+                                  {ROTULO_STATUS_ACAO[st]}
+                                  {st !== "sem_acao" && card["proxima_acao_em"]
+                                    ? ` · ${tipo ? `${tipo} ` : ""}${new Date(String(card["proxima_acao_em"])).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}`
+                                    : ""}
+                                </p>
+                              );
+                            })()}
                           </div>
                         </button>
                       );
