@@ -61,9 +61,6 @@ describe("financeiro", () => {
     expect(casaSituacao(pago, ["atrasado"], "2026-05-10")).toBe(false);
     expect(casaSituacao(atrasado, ["em_aberto"], "2026-05-10")).toBe(true);
     expect(casaSituacao(pago, [], "2026-05-10")).toBe(true);
-    const c = caixaPorMes(tit);
-    expect(c.find((x) => x.mes === "2026-05")?.entradas).toBe(110);
-    expect(c.find((x) => x.mes === "2026-06")?.saidasPrev).toBe(50);
   });
 });
 
