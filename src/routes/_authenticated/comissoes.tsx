@@ -104,7 +104,6 @@ function Extrato({ canUpdate, canDelete }: { canUpdate: boolean; canDelete: bool
 
   /** Fundo/reserva: o pagamento vira um aporte no Contas a Pagar, na conta de aplicação do fundo. */
   const lancarAporte = async (r: Row, valor: number, hoje: string) => {
-    if (r["beneficiario_id"] || !r["conta_bancaria_id"] && !String(r["papel_nome"] ?? "")) return null;
     if (r["beneficiario_id"]) return null;
     const orc = orcById.get(text(r["orcamento_id"]));
     const { error } = await supabase.from("financeiro_titulos").insert({
