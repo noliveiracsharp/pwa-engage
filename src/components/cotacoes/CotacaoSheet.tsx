@@ -393,6 +393,8 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
   const vencedorNome = analise.vencedor ? nomeParc(parceiroById.get(analise.vencedor)) : null;
 
   return (
+    <>
+    {receber && <ReceberPedidoDialog pedido={receber} empresaId={String(empresaId ?? "")} onClose={() => setReceber(null)} onDone={invalidar} />}
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent data-panel-full="" className="flex w-full flex-col gap-0 p-0 sm:max-w-none">
         <SheetHeader className="border-b px-6 py-4">
