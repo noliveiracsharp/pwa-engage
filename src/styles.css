@@ -101,6 +101,10 @@
   --temp-quente: oklch(0.94 0.05 20);
   --temp-ganho: oklch(0.94 0.06 150);
   --temp-perdido: oklch(0.93 0.005 255);
+  --mapa-cliente: oklch(0.6 0.16 150);
+  --mapa-fornecedor: oklch(0.58 0.16 250);
+  --mapa-ambos: oklch(0.55 0.18 300);
+  --mapa-inativo: oklch(0.65 0.01 255);
   --lido: oklch(0.88 0.13 200);
   --progress-0: #94a3b8;
   --progress-25: #38bdf8;
@@ -155,6 +159,10 @@
   --temp-quente: oklch(0.3 0.07 20);
   --temp-ganho: oklch(0.3 0.07 150);
   --temp-perdido: oklch(0.3 0.01 255);
+  --mapa-cliente: oklch(0.7 0.16 150);
+  --mapa-fornecedor: oklch(0.7 0.14 250);
+  --mapa-ambos: oklch(0.68 0.16 300);
+  --mapa-inativo: oklch(0.55 0.01 255);
   --lido: oklch(0.85 0.14 200);
   --success-foreground: oklch(0.16 0.04 150);
   --warning: oklch(0.82 0.16 88);
