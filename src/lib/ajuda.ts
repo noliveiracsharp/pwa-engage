@@ -375,6 +375,52 @@ export const ARTIGOS_PADRAO: ArtigoAjuda[] = [
     ],
     tags: ["crm", "meta", "forecast", "previsao", "painel", "comercial", "funil", "probabilidade", "perdas"],
   },
+  {
+    id: "oferta-baixa-estoque", modulo: "Ofertas", titulo: "Baixa automática no estoque ao ativar a Oferta",
+    resumo: "Os produtos vendidos ou em comodato saem do estoque sozinhos na ativação.", rota: "/orcamentos", perfil: "Vendedor",
+    passos: [
+      "Abra a Oferta ganha e clique em Ativar.",
+      "Deixe ligada a opção Dar baixa no estoque dos produtos.",
+      "Escolha de qual local os produtos vão sair.",
+      "Confirme: venda gera saída; comodato envia para o local do cliente.",
+    ],
+    dica: "Só entram produtos com controle de estoque ligado. A mesma Oferta não dá baixa duas vezes.",
+    tags: ["estoque", "baixa", "ativacao", "comodato", "venda", "produto"],
+  },
+  {
+    id: "contrato-sem-prazo", modulo: "Ofertas", titulo: "Contrato sem prazo de término",
+    resumo: "Mensalidades geradas sempre 12 meses à frente, sem lançar à mão.", rota: "/orcamentos", perfil: "Financeiro",
+    passos: [
+      "Na Oferta, na parte de serviços mensais, ligue Contrato sem prazo de término.",
+      "Ative a Oferta: as 12 primeiras mensalidades vão para Contas a Receber.",
+      "Todo dia o sistema cria os meses que faltam para manter 12 à frente.",
+      "Cada mês novo repete o valor e o pagador da última mensalidade.",
+    ],
+    dica: "Reajustes aplicados na última mensalidade passam para os meses seguintes.",
+    tags: ["contrato", "mensalidade", "recorrente", "indeterminado", "mrr"],
+  },
+  {
+    id: "receber-pedido", modulo: "Suprimentos", titulo: "Receber mercadoria do Pedido de Compra",
+    resumo: "Entrada no estoque e contas a pagar do fornecedor de uma vez.", rota: "/cotacoes", perfil: "Compras",
+    passos: [
+      "Abra o pedido enviado e clique em Receber mercadoria.",
+      "Escolha o local de destino para a entrada no estoque.",
+      "Ligue Gerar contas a pagar e informe o 1º vencimento e as parcelas.",
+      "Confirme: o pedido fica como recebido.",
+    ],
+    dica: "O sistema bloqueia entrada ou contas repetidas para o mesmo pedido.",
+    tags: ["pedido", "compra", "recebimento", "estoque", "fornecedor", "contas a pagar"],
+  },
+  {
+    id: "excluir-cascata", modulo: "Administração", titulo: "Por que não consigo apagar um cliente?",
+    resumo: "Clientes com contas no Financeiro ou Ofertas não podem ser apagados.", rota: "/parceiros", perfil: "Todos",
+    passos: [
+      "Ao apagar uma Oferta, Atendimento ou Projeto, tudo o que pertence a ele sai junto.",
+      "Se o cliente tiver contas ou Ofertas, o sistema avisa que ele está em uso.",
+      "Nesse caso, inative o cadastro em vez de apagar.",
+    ],
+    tags: ["excluir", "apagar", "inativar", "cliente", "em uso"],
+  },
 ];
 
 const norm = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
