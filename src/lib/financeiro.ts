@@ -386,6 +386,19 @@ export function limiteUsadoCartao(titulos: Row[], cartaoId: string): number {
   }, 0));
 }
 
+/** Limite do cartão considerando compartilhamento: virtuais/adicionais usam o limite do titular e o usado soma o grupo todo. */
+export function limiteGrupoCartao(cartoes: Row[], titulos: Row[], cartaoId: string) {
+  const id = (c: Row | undefined) => String(c?.["id"] ?? "");
+  const proprio = cartoes.find((c) => id(c) === cartaoId);
+  const titularId = String(proprio?.["cartao_titular_id"] ?? "") || cartaoId;
+  const titular = cartoes.find((c) => id(c) === titularId) ?? proprio;
+  const grupo = cartoes.filter((c) => id(c) === titularId || String(c["cartao_titular_id"] ?? "") === titularId);
+  const limite = num(titular?.["limite_total"]) || num(titular?.["limite_mensal"]);
+  const usadoProprio = limiteUsadoCartao(titulos, cartaoId);
+  const usadoGrupo = round2(grupo.reduce((s, c) => s + limiteUsadoCartao(titulos, id(c)), 0));
+  return { limite, usadoProprio, usadoGrupo, disponivel: limiteDisponivelCartao(limite, usadoGrupo), compartilhado: grupo.length > 1, titular, ehTitular: titularId === cartaoId };
+}
+
 /** Limite disponível = limite total − usado; nunca negativo. */
 export function limiteDisponivelCartao(limite: unknown, usado: number): number {
   return round2(Math.max(0, num(limite) - num(usado)));

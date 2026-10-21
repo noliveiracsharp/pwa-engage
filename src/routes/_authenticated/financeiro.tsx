@@ -63,7 +63,7 @@ import {
   situacaoTitulo,
   valorBaixa,
   parcelasManuais,
-  parcelasCartao, parcelasItensCartao, vencimentoFatura, serieParcelas, vencParcela1Cartao, vencParcela1De, limiteUsadoCartao, limiteDisponivelCartao, type ItemCartao,
+  parcelasCartao, parcelasItensCartao, vencimentoFatura, serieParcelas, vencParcela1Cartao, vencParcela1De, limiteGrupoCartao, type ItemCartao,
   type ModoLancamento,
   type Situacao,
   type TipoTitulo,
@@ -979,9 +979,10 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
     const ii = Math.min(tot, Math.max(1, Math.floor(num(i.inicio)) || 1));
     return s + num(i.valor) * (tot - ii + 1);
   }, 0));
-  const usadoCartao = cartao ? limiteUsadoCartao(titulosCartao, text(rowId(cartao))) : 0;
-  const limiteCartao = num(cartao?.["limite_total"]) || num(cartao?.["limite_mensal"]);
-  const dispCartao = limiteDisponivelCartao(limiteCartao, usadoCartao);
+  const grupoCartao = cartao ? limiteGrupoCartao(cartoes, titulosCartao, text(rowId(cartao))) : null;
+  const usadoCartao = grupoCartao?.usadoGrupo ?? 0;
+  const limiteCartao = grupoCartao?.limite ?? 0;
+  const dispCartao = grupoCartao?.disponivel ?? 0;
   const papel = tipo === "receber" ? "cliente" : "fornecedor";
 
   const [novoTotal, setNovoTotal] = useState(() => {
