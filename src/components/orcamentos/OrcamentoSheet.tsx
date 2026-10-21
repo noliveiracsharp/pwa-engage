@@ -498,6 +498,7 @@ export function OrcamentoSheet({
   }, [calcs, linhasValidas, totais.total_itens, totais.desconto_valor]);
   const comissaoCfg = useComissaoConfig();
   const [totalComissoes, setTotalComissoes] = useState(0);
+  const [aba, setAba] = useState<"oferta" | "crm" | "financeiro">("oferta");
   const avista = calcAvista(totais.total_liquido, h.desconto_avista_tipo, h.desconto_avista);
   const ehAvista = h.modalidade === "avista";
   const ehComodato = h.modalidade === "comodato";
