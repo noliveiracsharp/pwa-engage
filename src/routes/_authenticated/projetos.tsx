@@ -43,6 +43,7 @@ import { useAudit } from "@/lib/audit";
 import { usePagePermissions, type Perms } from "@/hooks/usePagePermissions";
 import { ATIVIDADES, atividadePct, periodo, C, doneValue, duplicarAtividade, duplicarTarefa, excluirTarefaComFilhos, filterPayload, fmtDate, isDone, nomePessoa, prioridadeClass, progressoCor, resolveCol, sincronizarTarefa, tarefaPct, useCols } from "@/lib/projetos";
 import { AcoesTarefa } from "@/components/projetos/AcoesTarefa";
+import { LegendaCores } from "@/components/projetos/LegendaCores";
 import { ArrowDown, ArrowUp, Copy } from "lucide-react";
 import type { Row } from "@/lib/row";
 import { confirmar, perguntar } from "@/components/layout/DialogoGlobal";
@@ -313,6 +314,7 @@ function Painel({ d, perms, espacoId, onOpen }: { d: D; perms: Perms; espacoId: 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-foreground">{espacoNome || "Projetos"}</h1>
         <div className="flex gap-2">
+          <LegendaCores status={grupos.filter((x) => x.id !== "__sem").map((x) => ({ nome: String(x.nome), cor: String(x.cor ?? "") }))} />
           <Button variant="outline" size="icon" onClick={() => setStatusOpen(true)} aria-label="Gerenciar status" title="Gerenciar status">
             <Settings className="h-4 w-4" />
           </Button>
