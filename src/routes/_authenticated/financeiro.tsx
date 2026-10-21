@@ -53,6 +53,7 @@ import {
   FORMAS_PAGAMENTO,
   hojeISO,
   resumoTitulos,
+  casaSituacao,
   reajusteEmCarencia,
   infoReajuste,
   valorReajustado,
@@ -131,7 +132,14 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
   };
   const { data: cartoes = [] } = useTableRows("despesas_cartoes");
   const categorias = useCategoriasFinanceiro(tipo);
-  const [f, setF] = useState({ busca: "", situacao: "todos", categoria: "todos", cartao: "todos", per: periodoPreset("mes") });
+  const { data: centrosCusto = [] } = useTableRows("centro_custo");
+  const nomeCentro = (id: unknown) => {
+    const c = centrosCusto.find((x) => text(rowId(x)) === text(id));
+    return c ? [text(c["codigo"]), text(c["descricao"])].filter(Boolean).join(" - ") : "";
+  };
+  const [f, setF] = useState({ busca: "", situacao: "todos", categoria: "todos", cartao: "todos", centro: "todos", per: periodoPreset("mes") });
+  const situacoesSel = f.situacao === "todos" ? [] : f.situacao.split(",").filter(Boolean);
+  const [relatorio, setRelatorio] = useState(false);
   const [sel, setSel] = useState<Set<string>>(new Set());
   const [confirmarLote, setConfirmarLote] = useState(false);
   const periodoF = f.per;
@@ -159,23 +167,26 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
     }
     return mapa;
   }, [doTipo]);
-  const rows = useMemo(
+  // Base = todos os filtros menos a situação (os cards do topo não zeram ao filtrar uma situação).
+  const base = useMemo(
     () =>
       doTipo
         .filter((t) => {
           const v = text(t["vencimento"]).slice(0, 10);
           return (
             matchesAny([t["descricao"], nomeParc(t["parceiro_id"]), nomeParc(t["cliente_atendido_id"]), t["categoria"], moedaDeNumero(num(t["valor"])), num(t["valor"]).toFixed(2)], f.busca) &&
-            (f.situacao === "todos" || (f.situacao === "em_aberto" ? ["aberto", "atrasado", "agendado", "parcial"].includes(situacaoTitulo(t, hoje)) : situacaoTitulo(t, hoje) === f.situacao)) &&
             (f.categoria === "todos" || t["categoria"] === f.categoria) &&
             (f.cartao === "todos" || text(t["cartao_id"]) === f.cartao) &&
+            (f.centro === "todos" || (f.centro === "sem" ? !t["centro_custo_id"] : text(t["centro_custo_id"]) === f.centro)) &&
             (!periodoF.de || v >= periodoF.de) && (!periodoF.ate || v <= periodoF.ate)
           );
         })
         .sort((a, b) => text(a["vencimento"]).localeCompare(text(b["vencimento"]))),
-    [doTipo, f, hoje], // eslint-disable-line react-hooks/exhaustive-deps
+    [doTipo, f.busca, f.categoria, f.cartao, f.centro, periodoF, parceiroById], // eslint-disable-line react-hooks/exhaustive-deps
   );
-  const resumo = resumoTitulos(rows, hoje);
+  const rows = useMemo(() => base.filter((t) => casaSituacao(t, situacoesSel, hoje)), [base, f.situacao, hoje]); // eslint-disable-line react-hooks/exhaustive-deps
+  const resumo = resumoTitulos(base, hoje, periodoF);
+  const totalFiltrado = round2(rows.reduce((s, t) => s + num(t["valor"]), 0));
   // Visão geral de Contas a Pagar: compras no cartão aparecem agrupadas como uma fatura por cartão/vencimento.
   const [faturaSel, setFatura] = useState<Row | null>(null);
   const [novaCompra, setNovaCompra] = useState<Row | null>(null);
