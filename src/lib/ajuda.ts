@@ -234,6 +234,102 @@ export const ARTIGOS_PADRAO: ArtigoAjuda[] = [
     ],
     tags: ["documento", "contrato", "termo", "assinatura", "modelo"],
   },
+  {
+    id: "implantacao", modulo: "Primeiros passos", titulo: "Checklist de implantação (Primeiros passos)",
+    resumo: "As 7 etapas para deixar sua empresa pronta para usar.", rota: "/dashboard", perfil: "Administrador",
+    passos: [
+      "No Dashboard, veja o quadro Primeiros passos da sua empresa.",
+      "Cada etapa pendente tem um botão que leva direto à tela certa.",
+      "A etapa é marcada sozinha assim que você conclui (ex.: cadastrar o primeiro cliente).",
+      "Quando terminar, clique no X para dispensar o quadro.",
+    ],
+    tags: ["implantacao", "onboarding", "inicio", "configurar", "checklist"],
+  },
+  {
+    id: "fin-importar-fatura", modulo: "Financeiro", titulo: "Importar fatura do cartão (PDF)",
+    resumo: "Lance todas as compras do cartão de uma vez a partir do PDF do banco.", rota: "/financeiro",
+    passos: [
+      "Em Contas a Pagar, clique em Importar fatura (PDF).",
+      "Escolha o cartão e envie o PDF baixado do banco.",
+      "Confira as linhas, ajuste categorias e confirme.",
+    ],
+    dica: "O total importado deve bater com o total da fatura; se não bater, revise as linhas antes de confirmar.",
+    tags: ["fatura", "cartao", "pdf", "importar"],
+  },
+  {
+    id: "fin-importar-boleto", modulo: "Financeiro", titulo: "Importar boleto, conta ou nota fiscal",
+    resumo: "Lance contas a pagar lendo o código de barras ou o XML da NF.", rota: "/financeiro",
+    passos: [
+      "Em Contas a Pagar, clique em Importar boleto / NF.",
+      "Cole a linha digitável ou envie o XML/PDF.",
+      "Confira fornecedor, vencimentos e valores e confirme.",
+    ],
+    tags: ["boleto", "nota", "nfe", "xml", "codigo de barras"],
+  },
+  {
+    id: "fin-saldo-extrato", modulo: "Financeiro", titulo: "Saldo e extrato do banco em tempo real",
+    resumo: "Consulte o saldo e as movimentações das contas ligadas ao banco.", rota: "/financeiro",
+    passos: [
+      "Em Financeiro, abra Contas Bancárias.",
+      "Na conta integrada, clique em Atualizar saldo.",
+      "Clique em Ver extrato e escolha o período (até 90 dias).",
+      "No Controller, use Puxar saldo do banco para preencher o caixa de hoje.",
+    ],
+    tags: ["saldo", "extrato", "banco", "inter", "movimentacoes"],
+  },
+  {
+    id: "fin-fale-controller", modulo: "Financeiro", titulo: "Fale com o Controller",
+    resumo: "Pergunte sobre seus números e receba estimativas.", rota: "/financeiro",
+    passos: [
+      "Em Financeiro, abra a aba Controller.",
+      "Abaixo do Parecer, escreva sua pergunta (ex.: estimativa de caixa para dezembro).",
+      "Use Nova conversa para recomeçar.",
+    ],
+    dica: "A conversa não fica salva: copie a resposta se precisar guardar.",
+    tags: ["controller", "ia", "pergunta", "estimativa", "caixa"],
+  },
+  {
+    id: "fin-faturamento-misto", modulo: "Financeiro", titulo: "Faturamento misto (quem paga cada item)",
+    resumo: "Uma Oferta, vários pagadores: administradora, condomínio, facilities…", rota: "/orcamentos",
+    passos: [
+      "Na Oferta, o Cliente é quem recebe o serviço.",
+      "Em cada item, escolha em Faturar para quem paga aquele item.",
+      "Ao ativar, o sistema gera uma cobrança separada para cada pagador.",
+    ],
+    tags: ["faturamento", "sacado", "pagador", "administradora", "condominio"],
+  },
+  {
+    id: "parc-importar", modulo: "Administração", titulo: "Importar clientes e fornecedores (CSV) e ver no mapa",
+    resumo: "Traga sua planilha e veja todos no mapa.", rota: "/parceiros",
+    passos: [
+      "Em Clientes e Fornecedores, clique em Importar e baixe o modelo.",
+      "Preencha, envie o arquivo, confira e confirme.",
+      "Marque os registros e use as ações em lote (CNPJ, WhatsApp, localização).",
+      "Troque para Mapa para ver os pinos de cada cliente.",
+    ],
+    tags: ["importar", "csv", "planilha", "mapa", "lote", "cnpj"],
+  },
+  {
+    id: "kanban-busca", modulo: "Ofertas", titulo: "Temperatura, busca e totais no Kanban",
+    resumo: "Frio, Morno, Quente, Ganho e Perdido; busque cards rapidamente.", rota: "/kanban",
+    passos: [
+      "Na Oferta, escolha a Temperatura; o card fica colorido no Kanban.",
+      "Ofertas ativadas ficam verdes (Ganho) e perdidas, cinza (Perdido).",
+      "Use a busca no topo para achar por nome, número, telefone ou valor.",
+      "Na engrenagem do quadro, ligue o totalizador e a temperatura.",
+    ],
+    tags: ["kanban", "temperatura", "busca", "total", "funil"],
+  },
+  {
+    id: "atend-transcricao", modulo: "Atendimentos", titulo: "Transcrever áudios do WhatsApp",
+    resumo: "Leia o que o cliente falou sem ouvir o áudio.", rota: "/atendimentos",
+    passos: [
+      "Abra a conversa e localize a mensagem de áudio.",
+      "Clique em Transcrever áudio abaixo do player.",
+    ],
+    dica: "É preciso ter uma chave de IA cadastrada no cadastro da empresa.",
+    tags: ["audio", "transcricao", "whatsapp", "voz"],
+  },
 ];
 
 const norm = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
