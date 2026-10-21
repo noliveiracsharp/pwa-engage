@@ -166,7 +166,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
           const v = text(t["vencimento"]).slice(0, 10);
           return (
             matchesAny([t["descricao"], nomeParc(t["parceiro_id"]), nomeParc(t["cliente_atendido_id"]), t["categoria"], moedaDeNumero(num(t["valor"])), num(t["valor"]).toFixed(2)], f.busca) &&
-            (f.situacao === "todos" || situacaoTitulo(t, hoje) === f.situacao) &&
+            (f.situacao === "todos" || (f.situacao === "em_aberto" ? ["aberto", "atrasado", "agendado", "parcial"].includes(situacaoTitulo(t, hoje)) : situacaoTitulo(t, hoje) === f.situacao)) &&
             (f.categoria === "todos" || t["categoria"] === f.categoria) &&
             (f.cartao === "todos" || text(t["cartao_id"]) === f.cartao) &&
             (!periodoF.de || v >= periodoF.de) && (!periodoF.ate || v <= periodoF.ate)
@@ -539,7 +539,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
     <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
         {cards.map((c) => (
-          <button key={c.label} type="button" onClick={() => setF((s) => ({ ...s, situacao: c.sit === "em_aberto" || s.situacao === c.sit ? "todos" : c.sit }))}
+          <button key={c.label} type="button" onClick={() => setF((s) => ({ ...s, situacao: s.situacao === c.sit ? "todos" : c.sit }))}
             className={cn("bg-card rounded-lg border border-l-4 p-3 text-left transition hover:shadow-sm", c.cls, f.situacao === c.sit && c.sit !== "todos" && "ring-primary ring-2")}>
             <p className="text-muted-foreground text-xs">{c.label}</p>
             <p className="text-lg font-bold tabular-nums">{formatBRL(c.valor)}</p>
