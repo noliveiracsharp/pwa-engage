@@ -66,6 +66,7 @@ import { Route as AuthenticatedAdminModulosRouteImport } from './routes/_authent
 import { Route as AuthenticatedAdminPlanosRouteImport } from './routes/_authenticated/admin.planos'
 import { Route as AuthenticatedAdminVersoesRouteImport } from './routes/_authenticated/admin.versoes'
 import { Route as AuthenticatedProjetosTemplatesRouteImport } from './routes/_authenticated/projetos_.templates'
+import { Route as AuthenticatedRelatoriosBoardRouteImport } from './routes/_authenticated/relatorios_.board'
 import { Route as AuthenticatedRelatoriosDreOfertasRouteImport } from './routes/_authenticated/relatorios_.dre-ofertas'
 import { Route as ApiPublicIconeRouteImport } from './routes/api/public/icone'
 import { Route as ApiPublicManifestRouteImport } from './routes/api/public/manifest'
@@ -365,6 +366,12 @@ const AuthenticatedProjetosTemplatesRoute =
     path: '/projetos/templates',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedRelatoriosBoardRoute =
+  AuthenticatedRelatoriosBoardRouteImport.update({
+    id: '/relatorios_/board',
+    path: '/relatorios/board',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedRelatoriosDreOfertasRoute =
   AuthenticatedRelatoriosDreOfertasRouteImport.update({
     id: '/relatorios_/dre-ofertas',
@@ -449,6 +456,7 @@ export interface FileRoutesByFullPath {
   '/admin/planos': typeof AuthenticatedAdminPlanosRoute
   '/admin/versoes': typeof AuthenticatedAdminVersoesRoute
   '/projetos/templates': typeof AuthenticatedProjetosTemplatesRoute
+  '/relatorios/board': typeof AuthenticatedRelatoriosBoardRoute
   '/relatorios/dre-ofertas': typeof AuthenticatedRelatoriosDreOfertasRoute
   '/api/public/icone': typeof ApiPublicIconeRoute
   '/api/public/manifest': typeof ApiPublicManifestRoute
@@ -512,6 +520,7 @@ export interface FileRoutesByTo {
   '/admin/planos': typeof AuthenticatedAdminPlanosRoute
   '/admin/versoes': typeof AuthenticatedAdminVersoesRoute
   '/projetos/templates': typeof AuthenticatedProjetosTemplatesRoute
+  '/relatorios/board': typeof AuthenticatedRelatoriosBoardRoute
   '/relatorios/dre-ofertas': typeof AuthenticatedRelatoriosDreOfertasRoute
   '/api/public/icone': typeof ApiPublicIconeRoute
   '/api/public/manifest': typeof ApiPublicManifestRoute
@@ -577,6 +586,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/planos': typeof AuthenticatedAdminPlanosRoute
   '/_authenticated/admin/versoes': typeof AuthenticatedAdminVersoesRoute
   '/_authenticated/projetos_/templates': typeof AuthenticatedProjetosTemplatesRoute
+  '/_authenticated/relatorios_/board': typeof AuthenticatedRelatoriosBoardRoute
   '/_authenticated/relatorios_/dre-ofertas': typeof AuthenticatedRelatoriosDreOfertasRoute
   '/api/public/icone': typeof ApiPublicIconeRoute
   '/api/public/manifest': typeof ApiPublicManifestRoute
@@ -642,6 +652,7 @@ export interface FileRouteTypes {
     | '/admin/planos'
     | '/admin/versoes'
     | '/projetos/templates'
+    | '/relatorios/board'
     | '/relatorios/dre-ofertas'
     | '/api/public/icone'
     | '/api/public/manifest'
@@ -705,6 +716,7 @@ export interface FileRouteTypes {
     | '/admin/planos'
     | '/admin/versoes'
     | '/projetos/templates'
+    | '/relatorios/board'
     | '/relatorios/dre-ofertas'
     | '/api/public/icone'
     | '/api/public/manifest'
@@ -769,6 +781,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/planos'
     | '/_authenticated/admin/versoes'
     | '/_authenticated/projetos_/templates'
+    | '/_authenticated/relatorios_/board'
     | '/_authenticated/relatorios_/dre-ofertas'
     | '/api/public/icone'
     | '/api/public/manifest'
@@ -1206,6 +1219,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjetosTemplatesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/relatorios_/board': {
+      id: '/_authenticated/relatorios_/board'
+      path: '/relatorios/board'
+      fullPath: '/relatorios/board'
+      preLoaderRoute: typeof AuthenticatedRelatoriosBoardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/relatorios_/dre-ofertas': {
       id: '/_authenticated/relatorios_/dre-ofertas'
       path: '/relatorios/dre-ofertas'
@@ -1280,6 +1300,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminPlanosRoute: typeof AuthenticatedAdminPlanosRoute
   AuthenticatedAdminVersoesRoute: typeof AuthenticatedAdminVersoesRoute
   AuthenticatedProjetosTemplatesRoute: typeof AuthenticatedProjetosTemplatesRoute
+  AuthenticatedRelatoriosBoardRoute: typeof AuthenticatedRelatoriosBoardRoute
   AuthenticatedRelatoriosDreOfertasRoute: typeof AuthenticatedRelatoriosDreOfertasRoute
 }
 
@@ -1319,6 +1340,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminPlanosRoute: AuthenticatedAdminPlanosRoute,
   AuthenticatedAdminVersoesRoute: AuthenticatedAdminVersoesRoute,
   AuthenticatedProjetosTemplatesRoute: AuthenticatedProjetosTemplatesRoute,
+  AuthenticatedRelatoriosBoardRoute: AuthenticatedRelatoriosBoardRoute,
   AuthenticatedRelatoriosDreOfertasRoute:
     AuthenticatedRelatoriosDreOfertasRoute,
 }
