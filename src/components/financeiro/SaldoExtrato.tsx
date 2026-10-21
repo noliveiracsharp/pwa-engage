@@ -28,7 +28,6 @@ export function haQuanto(s: unknown) {
 /** Card de saldo em tempo real de uma conta com API ativa. */
 export function SaldoCard({ conta, onAtualizado, onExtrato }: { conta: Row; onAtualizado: () => void; onExtrato: () => void }) {
   const [carregando, setCarregando] = useState(false);
-  const [conciliar, setConciliar] = useState(false);
   const atualizar = async () => {
     setCarregando(true);
     try { await chamarBanco("saldo", { conta_id: text(rowId(conta)) }); toast.success("Saldo atualizado com o banco."); onAtualizado(); }
@@ -63,6 +62,7 @@ export function ExtratoSheet({ conta, onClose }: { conta: Row; onClose: () => vo
   const [fim, setFim] = useState(iso(hoje));
   const [busca, setBusca] = useState("");
   const [lista, setLista] = useState<Transacao[] | null>(null);
+  const [conciliar, setConciliar] = useState(false);
   const [carregando, setCarregando] = useState(false);
 
   const consultar = async () => {
