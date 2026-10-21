@@ -141,6 +141,9 @@ function Lista({
           <Button variant="outline" asChild>
             <Link to="/relatorios/board">Painel do Board</Link>
           </Button>
+          <Button variant="outline" asChild>
+            <Link to="/relatorios/kpis">Cockpit de KPIs</Link>
+          </Button>
           {perms.canCreate && (
             <Button onClick={onNew}>
               <Plus className="mr-1 h-4 w-4" /> Novo Relatório
