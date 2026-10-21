@@ -1,6 +1,8 @@
 import { PessoaCampos } from "@/components/pessoas/PessoaCampos";
 import { OfertaTimeline } from "@/components/orcamentos/OfertaTimeline";
 import { ConsultorComercial } from "@/components/orcamentos/ConsultorComercial";
+import { VersoesOferta } from "@/components/orcamentos/VersoesOferta";
+import type { Snapshot } from "@/lib/oferta-versoes";
 import { TEMPERATURAS } from "@/lib/temperatura";
 import { MOTIVOS_PERDA, ORIGENS_LEAD, TIPOS_ACAO, negocioPerdido } from "@/lib/crm";
 import { OrcamentoDespesas } from "@/components/orcamentos/OrcamentoDespesas";
@@ -499,6 +501,23 @@ export function OrcamentoSheet({
   const comissaoCfg = useComissaoConfig();
   const [totalComissoes, setTotalComissoes] = useState(0);
   const [aba, setAba] = useState<"oferta" | "crm" | "financeiro">("oferta");
+  const [versao, setVersao] = useState(1);
+  useEffect(() => { setVersao(Number(record?.["versao_atual"] ?? 1) || 1); }, [record]);
+  const restaurarVersao = (snap: Snapshot) => {
+    const base = headerFromRecord({ ...(record ?? {}), ...snap.orcamento } as Row);
+    setH((atual) => ({ ...base, situacao: atual.situacao, kanban_etapa_id: atual.kanban_etapa_id }));
+    setLinhas(
+      (snap.itens as Row[])
+        .slice()
+        .sort((a, b) => Number(a["ordem"] ?? 0) - Number(b["ordem"] ?? 0))
+        .map((row, i) => {
+          const it = itens.find((x) => String(rowId(x)) === String(row["item_id"] ?? ""));
+          return { ...linhaFromRow(row, it?.["tipo"]), id: undefined, key: `rev-${i}-${Math.random().toString(36).slice(2)}` };
+        }),
+    );
+    dirty.current = true;
+    setAba("oferta");
+  };
   const avista = calcAvista(totais.total_liquido, h.desconto_avista_tipo, h.desconto_avista);
   const ehAvista = h.modalidade === "avista";
   const ehComodato = h.modalidade === "comodato";
@@ -662,6 +681,19 @@ export function OrcamentoSheet({
           <SheetTitle className="flex flex-wrap items-center gap-2">
             {record ? `Oferta ${numero || ""}`.trim() : "Nova oferta"}
             {record && <SituacaoBadge value={etapaAtual?.descricao ?? h.situacao} cor={etapaAtual?.cor} />}
+            {record && recordId && (
+              <VersoesOferta
+                orcamentoId={recordId}
+                versaoAtual={versao}
+                atual={{ orcamento: record, itens: linhasRecord as Snapshot["itens"] }}
+                itens={itens}
+                readOnly={Boolean(readOnly)}
+                assinada={Boolean(record["assinado_em"])}
+                sujo={() => dirty.current}
+                onRestaurar={restaurarVersao}
+                onNovaVersao={setVersao}
+              />
+            )}
           </SheetTitle>
           <SheetDescription>
             {record
