@@ -35,3 +35,16 @@ describe("planner", () => {
     expect(inicioSemana("2026-10-21")).toBe("2026-10-19");
   });
 });
+
+import { adicionarEvento, textoRemarcacao } from "./planner";
+describe("linha do tempo da tarefa", () => {
+  it("ordena eventos pela data e ignora comentário vazio", () => {
+    let l = adicionarEvento([], { tipo: "comentario", autor_id: "u", texto: "segundo", em: "2026-10-21T12:00:00Z" });
+    l = adicionarEvento(l, { tipo: "comentario", autor_id: "u", texto: "primeiro", em: "2026-10-20T12:00:00Z" });
+    l = adicionarEvento(l, { tipo: "comentario", autor_id: "u", texto: "   ", em: "2026-10-22T12:00:00Z" });
+    expect(l.map((e) => e.texto)).toEqual(["primeiro", "segundo"]);
+  });
+  it("descreve remarcação com datas", () => {
+    expect(textoRemarcacao(null, "2026-10-21")).toBe("Planejamento alterado de Backlog para 21/10/2026.");
+  });
+});
