@@ -25,3 +25,28 @@ export function nomeProjetoDaOferta(numero: unknown, cliente: string): string {
   const n = String(numero ?? "").trim();
   return `${n ? `[Oferta #${n.replace(/^#/, "")}] ` : ""}${cliente || "Novo cliente"}`.trim();
 }
+
+export type MovEstoqueOferta = { item_id: string; quantidade: number; custo_unitario: number | null };
+
+/** Documento gravado nas movimentações — usado também para não baixar a mesma Oferta duas vezes. */
+export const documentoEstoqueOferta = (numero: unknown, id: string) =>
+  `Oferta #${String(numero ?? "").replace(/^#/, "").trim() || id.slice(0, 8)}`;
+
+/**
+ * Saídas de estoque da Oferta ativada: só itens de natureza "produto" cujo cadastro controla estoque.
+ * Soma linhas repetidas do mesmo item e ignora quantidades zeradas.
+ */
+export function movimentosEstoqueDaOferta(itens: Record<string, unknown>[], controlaEstoque: Set<string>): MovEstoqueOferta[] {
+  const mapa = new Map<string, MovEstoqueOferta>();
+  for (const it of itens) {
+    const item = String(it["item_id"] ?? "");
+    const nat = String(it["natureza"] ?? "produto").toLowerCase();
+    const q = Number(it["quantidade"]);
+    if (!item || nat !== "produto" || !controlaEstoque.has(item) || !(q > 0)) continue;
+    const custo = Number(it["preco_custo"]);
+    const atual = mapa.get(item);
+    if (atual) atual.quantidade += q;
+    else mapa.set(item, { item_id: item, quantidade: q, custo_unitario: custo > 0 ? custo : null });
+  }
+  return [...mapa.values()];
+}
