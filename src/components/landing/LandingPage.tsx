@@ -29,9 +29,9 @@ const COMP: { grupo: string; linhas: [string, Cel, Cel, Cel][] }[] = [
     ["Pesquisa de satisfação (CSAT)", true, true, true],
     ["Portal do Cliente", true, true, true],
   ] },
-  { grupo: "Vendas e orçamentos", linhas: [
+  { grupo: "Vendas e ofertas", linhas: [
     ["Funil de vendas (Kanban)", true, true, true],
-    ["Orçamentos em PDF", "Opcional", true, true],
+    ["Ofertas em PDF", "Opcional", true, true],
     ["Cálculo de markup e margem", "Opcional", true, true],
     ["Tabela de juros parcelados", "Opcional", true, true],
   ] },
@@ -263,10 +263,10 @@ export function LandingPage() {
             </Badge>
             <h1 className="text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl lg:text-[3.4rem]">
               Sua Empresa no Controle:{" "}
-              <span className="text-brand-sky">Atendimentos WhatsApp, Orçamentos e Projetos</span> em uma só Plataforma
+              <span className="text-brand-sky">Atendimentos WhatsApp, Ofertas e Projetos</span> em uma só Plataforma
             </h1>
             <p className="max-w-xl text-lg text-brand-on/80">
-              Centralize seus canais de atendimento, automatize processos com IA, gerencie funis de vendas e calcule orçamentos com taxa de juros automática.
+              Centralize seus canais de atendimento, automatize processos com IA, gerencie funis de vendas e calcule ofertas com taxa de juros automática.
             </p>
             <div className="flex flex-col gap-3 sm:flex-row">
               <Button size="lg" onClick={() => go("planos")} className="gap-2 bg-brand-magenta text-brand-on shadow-lg shadow-brand-magenta/30 hover:bg-brand-magenta/90">
@@ -321,7 +321,7 @@ export function LandingPage() {
           {[
             { icon: MessageCircle, t: "Central do WhatsApp", d: "Múltiplos atendentes, notas internas, filas, etiquetas e suporte a grupos." },
             { icon: KanbanSquare, t: "Kanban e Funis", d: "Gestão visual de leads e chamados por etapas personalizáveis." },
-            { icon: Calculator, t: "Orçamentos Inteligentes", d: "Cálculo de margem, custo, impostos e tabela de juros parcelados automática." },
+            { icon: Calculator, t: "Ofertas Inteligentes", d: "Cálculo de margem, custo, impostos e tabela de juros parcelados automática." },
             { icon: FolderKanban, t: "Gestão de Projetos", d: "Espaços, subespaços, modelos de tarefas e acompanhamento de prazos." },
           ].map((m) => (
             <Card key={m.t} className="group transition-all duration-300 hover:-translate-y-1 hover:border-primary/50 hover:shadow-lg">
@@ -491,15 +491,15 @@ function Mockup() {
             ))}
           </div>
           <div className="flex flex-col gap-2 rounded-lg bg-muted/60 p-3">
-            <div className="max-w-[80%] rounded-lg bg-card p-2 text-xs shadow-sm">Olá, gostaria de um orçamento 👋</div>
+            <div className="max-w-[80%] rounded-lg bg-card p-2 text-xs shadow-sm">Olá, gostaria de uma oferta 👋</div>
             <div className="ml-auto max-w-[80%] rounded-lg bg-primary p-2 text-xs text-primary-foreground">Claro! Já estou preparando para você.</div>
             <div className="max-w-[85%] rounded-lg border border-warning/40 bg-warning/15 p-2 text-xs">📝 Nota interna: cliente prioritário</div>
-            <div className="ml-auto max-w-[80%] rounded-lg bg-primary p-2 text-xs text-primary-foreground">Orçamento #2026-15 enviado ✓✓</div>
+            <div className="ml-auto max-w-[80%] rounded-lg bg-primary p-2 text-xs text-primary-foreground">Oferta #2026-15 enviada ✓✓</div>
           </div>
         </div>
       </div>
       <div className="absolute -bottom-5 -left-4 hidden rounded-xl border border-border bg-card text-foreground px-4 py-3 shadow-lg sm:block">
-        <p className="text-xs text-muted-foreground">Orçamento aprovado</p>
+        <p className="text-xs text-muted-foreground">Oferta aprovada</p>
         <p className="font-bold text-success">R$ 12.480,00</p>
       </div>
       <div className="absolute -right-3 -top-4 hidden rounded-xl border border-border bg-card text-foreground px-4 py-3 shadow-lg sm:block">
