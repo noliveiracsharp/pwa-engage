@@ -698,5 +698,6 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
         onSaved={invalidar}
       />
     </Sheet>
+    </>
   );
 }
