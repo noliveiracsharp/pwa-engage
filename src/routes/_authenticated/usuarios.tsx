@@ -2,7 +2,8 @@ import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
-import { User } from "lucide-react";
+import { Ban, CheckCircle2, MessageCircle, ShieldCheck, Trash2, User } from "lucide-react";
+import { BarraAcoesLote, useAcoesComuns } from "@/components/data-table/AcoesLote";
 import { toast } from "sonner";
 import { createEphemeralAuthClient, supabase } from "@/integrations/supabase/client";
 import { DataTable, type Column } from "@/components/data-table/DataTable";
@@ -105,6 +106,8 @@ function UsuariosPage() {
   const [cred, setCred] = useState<Credenciais | null>(null);
   const [f, setF] = useState({ busca: "", status: "todos", perfil: "todos" });
   const [toDelete, setToDelete] = useState<Row | null>(null);
+  const [sel, setSel] = useState<Set<string>>(new Set());
+  const lote = useAcoesComuns("usuarios");
   const [removing, setRemoving] = useState(false);
 
   const inativar = async () => {
@@ -506,6 +509,44 @@ function UsuariosPage() {
         editReadOnly={!perms.canUpdate}
         onDelete={perms.canDelete ? (row) => setToDelete(row) : undefined}
         skipDeleteConfirm
+        selection={{ selected: sel, onChange: (s) => { s.delete(text(rowId(usuario))); setSel(s); } }}
+        bulkBar={
+          <BarraAcoesLote
+            tabela="usuarios"
+            selecionados={filtered.filter((r, i) => sel.has(String(rowId(r) ?? i)) && text(rowId(r)) !== text(rowId(usuario)))}
+            totalFiltrado={filtered.length}
+            rotulo={(r) => text(pick(r, ["nome", "email"], "—"))}
+            onSelecionarTodos={() => setSel(new Set(filtered.map((r, i) => String(rowId(r) ?? i)).filter((k) => k !== text(rowId(usuario)))))}
+            onLimpar={() => setSel(new Set())}
+            acoes={[
+              { label: "Verificar WhatsApp", icon: <MessageCircle className="h-4 w-4" />, intervalo: 300, executar: lote.verificarWhatsApp() },
+              ...(perms.canUpdate ? [
+                { label: "Ativar", icon: <CheckCircle2 className="h-4 w-4" />, executar: lote.definirStatus(true) },
+                { label: "Inativar", icon: <Ban className="h-4 w-4" />, confirmacao: "Inativar {n} usuário(s)? Eles perderão o acesso.", executar: lote.definirStatus(false) },
+                ...[...perfisPermitidos]
+                  .sort((a, b) => text(pick(a, ["descricao"])).localeCompare(text(pick(b, ["descricao"])), "pt-BR"))
+                  .map((p) => ({
+                    label: `Atribuir perfil: ${text(pick(p, ["descricao"], "Perfil"))}`,
+                    icon: <ShieldCheck className="h-4 w-4" />,
+                    confirmacao: `Atribuir o perfil "${text(pick(p, ["descricao"], "Perfil"))}" a {n} usuário(s)?`,
+                    executar: (r: Row) => lote.atualizar(r, { perfil_id: rowId(p) }),
+                  })),
+              ] : []),
+              ...(perms.canDelete ? [{
+                label: "Excluir", icon: <Trash2 className="h-4 w-4" />, destrutiva: true,
+                confirmacao: "Excluir permanentemente {n} usuário(s) e seus acessos? Os que tiverem vínculos serão mantidos.",
+                executar: async (r: Row) => {
+                  const uid = rowId(r) as never;
+                  await supabase.from("usuario_kanban").delete().eq("usuario_id", uid);
+                  const res = await lote.excluir(r);
+                  if (!res.ok) return res;
+                  const { error } = await supabase.rpc("admin_delete_auth_user" as never, { p_user_id: uid } as never);
+                  return error ? { ok: false, mensagem: "Excluído, mas login não removido" } : { ok: true, mensagem: "Excluído" };
+                },
+              }] : []),
+            ]}
+          />
+        }
         filters={
           <>
             <FilterInput
