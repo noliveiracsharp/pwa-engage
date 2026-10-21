@@ -17,6 +17,7 @@ import { formatBRL } from "@/lib/orcamentos";
 import { COTACAO_STATUS } from "@/lib/laudos";
 import { pick, type Row } from "@/lib/row";
 import { etapasDoKanban, kanbanDoModulo, type EtapaKanban } from "@/lib/orcamento-kanban";
+import { ChecklistImplantacao } from "@/components/dashboard/ChecklistImplantacao";
 
 const normTxt = (v: unknown) => String(v ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 type GrupoEtapa = EtapaKanban & { n: number; v: number };
@@ -401,6 +402,7 @@ function Dashboard() {
         )}
         </div>
       </div>
+      <ChecklistImplantacao />
       <EscopoCtx.Provider value={escopo}>
       <MeuTrabalho />
       {projetos && <PainelProjetos />}
