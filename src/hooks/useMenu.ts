@@ -42,13 +42,19 @@ function asBool(v: unknown, fallback = true): boolean {
 // Colunas reais da view vw_menu_usuario_perfil:
 // menu_id, perfil_id, funcao_id, can_create, can_read, can_update, can_delete,
 // funcao_descricao, funcao_ordem, funcao_status, path, icone, perfil_descricao
-function normalize(row: Row, index: number): MenuItem {
+function normalize(row: Row, index: number): MenuItem & { parentId?: string } {
+  // ordem_hierarquia vem como array ([pai, filho]); usa o último nível como ordem local.
+  const oh = row["ordem_hierarquia"];
+  const local = Array.isArray(oh) && oh.length ? Number(oh[oh.length - 1]) : Number(oh);
+  const ordem = Number.isFinite(local) ? local : Number(pick(row, ["funcao_ordem", "ordem"], index + 1));
+  const pai = pick(row, ["funcao_pai_id", "funcoes_pai_id"]);
   return {
-    id: String(pick(row, ["funcao_id", "menu_id", "funcoes_id", "id"], `menu-${index}`)),
+    id: String(pick(row, ["funcao_id", "funcoes_id", "menu_id", "id"], `menu-${index}`)),
     label: String(pick(row, ["funcao_descricao", "descricao", "nome", "label"], "Menu")),
-    path: String(pick(row, ["path", "funcao_path", "rota", "url"], "")),
+    path: String(pick(row, ["path", "funcao_path", "rota", "url"], "") ?? ""),
     icon: String(pick(row, ["icone", "funcao_icone", "icon"], "circle")),
-    order: Number(pick(row, ["ordem_hierarquia", "funcao_ordem", "ordem", "order"], index + 1)),
+    order: Number.isFinite(ordem) ? ordem : index + 1,
+    ...(pai ? { parentId: String(pai) } : {}),
   };
 }
 
@@ -98,11 +104,12 @@ export function useMenu() {
 
       const items = rows.map(normalize).sort((a, b) => a.order - b.order);
 
+      // Deduplica por id da função (a view repete linhas); nunca por nome, senão
+      // um agrupador homônimo descarta o pai verdadeiro e os filhos caem na raiz.
       const seen = new Set<string>();
       const unique = items.filter((item) => {
-        const key = item.path + item.label;
-        if (seen.has(key)) return false;
-        seen.add(key);
+        if (seen.has(item.id)) return false;
+        seen.add(item.id);
         return true;
       });
 
@@ -116,13 +123,18 @@ export function useMenu() {
 }
 
 /** Funções com funcoes_pai_id e menu ativo viram submenu (drilldown) do pai. */
-function buildMenuTree(items: MenuItem[], funcoes: Row[]): MenuItem[] {
+function buildMenuTree(items: (MenuItem & { parentId?: string })[], funcoes: Row[]): MenuItem[] {
   const parentOf = new Map<string, string>();
   for (const f of funcoes) {
     const pai = pick(f, ["funcoes_pai_id"]);
     if (pai) parentOf.set(String(f["id"]), String(pai));
   }
-  const byId = new Map(items.map((i) => [i.id, { ...i, children: [] as MenuItem[] }]));
+  // O pai informado pela própria view de permissões tem prioridade.
+  for (const i of items) if (i.parentId) parentOf.set(i.id, i.parentId);
+  const byId = new Map(items.map((i) => {
+    const { parentId: _p, ...rest } = i;
+    return [i.id, { ...rest, children: [] as MenuItem[] }];
+  }));
   const roots: MenuItem[] = [];
   for (const item of byId.values()) {
     const pai = parentOf.get(item.id);
