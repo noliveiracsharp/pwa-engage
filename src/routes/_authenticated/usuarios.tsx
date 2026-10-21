@@ -150,7 +150,7 @@ function UsuariosPage() {
       const fk = err.code === "23503" || /foreign key|violates|viola/i.test(err.message ?? "");
       toast.error(
         fk
-          ? "Este usuário possui registros associados no sistema (tarefas, atendimentos ou orçamentos) e não pode ser excluído fisicamente. Recomendamos inativá-lo."
+          ? "Este usuário possui registros associados no sistema (tarefas, atendimentos ou ofertas) e não pode ser excluído fisicamente. Recomendamos inativá-lo."
           : err.message || "Não foi possível excluir.",
       );
     } finally {

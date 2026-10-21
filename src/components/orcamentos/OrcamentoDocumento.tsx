@@ -406,7 +406,7 @@ export function OrcamentoDocumento({ id, orcamento, linhas, empresa, cliente, ve
           </div>)}
 
           <footer className="orc-rodape">
-            {empresaNome} · Proposta {numero} · Válida até{" "}
+            {empresaNome} · Oferta {numero} · Válida até{" "}
             {formatDate(orcamento["validade_orcamento"])}
           </footer>
         </div>

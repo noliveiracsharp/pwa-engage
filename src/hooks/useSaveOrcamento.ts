@@ -172,7 +172,7 @@ export function useSaveOrcamento() {
       );
     },
     onError: (error: unknown) => {
-      toast.error(error instanceof Error ? error.message : "Não foi possível salvar o orçamento.");
+      toast.error(error instanceof Error ? error.message : "Não foi possível salvar a oferta.");
     },
   });
 }

@@ -210,7 +210,7 @@ export function ContatoPainel({ atendimento, pessoa, usuarios, participantes, et
           {checklist.dialog}
           {orcamento && (
             <p className="text-sm text-muted-foreground">
-              Orçamento {text(orcamento["numero"])} · {text(orcamento["situacao"])}
+              Oferta {text(orcamento["numero"])} · {text(orcamento["situacao"])}
               {orcamento["total_liquido"] != null && ` · ${Number(orcamento["total_liquido"]).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`}
             </p>
           )}

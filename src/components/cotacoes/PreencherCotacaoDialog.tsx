@@ -93,7 +93,7 @@ export function PreencherCotacaoDialog({ open, onOpenChange, cotacaoId, forneced
       <SheetContent data-panel-side="right" className="flex w-full flex-col gap-0 p-0">
         <SheetHeader className="border-b px-6 py-4">
           <SheetTitle>Preencher cotação — {fornecedorNome}</SheetTitle>
-          <p className="text-muted-foreground text-sm">Use para compras em marketplace, balcão ou orçamentos recebidos por telefone/e-mail.</p>
+          <p className="text-muted-foreground text-sm">Use para compras em marketplace, balcão ou cotações recebidas por telefone/e-mail.</p>
         </SheetHeader>
         <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5">
           <div className="grid gap-3 sm:grid-cols-2">

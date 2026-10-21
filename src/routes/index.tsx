@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { LandingPage } from "@/components/landing/LandingPage";
 
-const TITLE = "Atende.ai — WhatsApp, Orçamentos e Projetos em uma só plataforma";
+const TITLE = "Atende.ai — WhatsApp, Ofertas e Projetos em uma só plataforma";
 const DESC =
-  "Centralize atendimentos WhatsApp com IA, gerencie funis de vendas em Kanban, calcule orçamentos com juros automáticos e organize projetos.";
+  "Centralize atendimentos WhatsApp com IA, gerencie funis de vendas em Kanban, calcule ofertas com juros automáticos e organize projetos.";
 
 export const Route = createFileRoute("/")({
   staticData: { sitemap: true },

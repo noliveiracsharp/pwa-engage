@@ -26,7 +26,7 @@ const FALLBACK: MenuItem[] = [
   { id: "unid_medida", label: "Unidades de Medida", path: "/unid_medida", icon: "ruler", order: 10 },
   { id: "centro_custos", label: "Centros de Custo", path: "/centro_custos", icon: "landmark", order: 11 },
   { id: "parceiros", label: "Parceiros", path: "/parceiros", icon: "handshake", order: 12 },
-  { id: "orcamentos", label: "Orçamentos", path: "/orcamentos", icon: "file-text", order: 13 },
+  { id: "orcamentos", label: "Ofertas", path: "/orcamentos", icon: "file-text", order: 13 },
   { id: "relatorios", label: "Relatórios", path: "/relatorios", icon: "bar-chart-3", order: 14 },
 ];
 
