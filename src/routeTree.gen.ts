@@ -69,6 +69,7 @@ import { Route as AuthenticatedProjetosTemplatesRouteImport } from './routes/_au
 import { Route as AuthenticatedRelatoriosBoardRouteImport } from './routes/_authenticated/relatorios_.board'
 import { Route as AuthenticatedRelatoriosDreOfertasRouteImport } from './routes/_authenticated/relatorios_.dre-ofertas'
 import { Route as ApiPublicIconeRouteImport } from './routes/api/public/icone'
+import { Route as ApiPublicLeadsRouteImport } from './routes/api/public/leads'
 import { Route as ApiPublicManifestRouteImport } from './routes/api/public/manifest'
 import { Route as ApiPublicVersaoRouteImport } from './routes/api/public/versao'
 import { Route as ApiPublicZapiWebhookRouteImport } from './routes/api/public/zapi-webhook'
@@ -383,6 +384,11 @@ const ApiPublicIconeRoute = ApiPublicIconeRouteImport.update({
   path: '/api/public/icone',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicLeadsRoute = ApiPublicLeadsRouteImport.update({
+  id: '/api/public/leads',
+  path: '/api/public/leads',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicManifestRoute = ApiPublicManifestRouteImport.update({
   id: '/api/public/manifest',
   path: '/api/public/manifest',
@@ -459,6 +465,7 @@ export interface FileRoutesByFullPath {
   '/relatorios/board': typeof AuthenticatedRelatoriosBoardRoute
   '/relatorios/dre-ofertas': typeof AuthenticatedRelatoriosDreOfertasRoute
   '/api/public/icone': typeof ApiPublicIconeRoute
+  '/api/public/leads': typeof ApiPublicLeadsRoute
   '/api/public/manifest': typeof ApiPublicManifestRoute
   '/api/public/versao': typeof ApiPublicVersaoRoute
   '/api/public/zapi-webhook': typeof ApiPublicZapiWebhookRoute
@@ -523,6 +530,7 @@ export interface FileRoutesByTo {
   '/relatorios/board': typeof AuthenticatedRelatoriosBoardRoute
   '/relatorios/dre-ofertas': typeof AuthenticatedRelatoriosDreOfertasRoute
   '/api/public/icone': typeof ApiPublicIconeRoute
+  '/api/public/leads': typeof ApiPublicLeadsRoute
   '/api/public/manifest': typeof ApiPublicManifestRoute
   '/api/public/versao': typeof ApiPublicVersaoRoute
   '/api/public/zapi-webhook': typeof ApiPublicZapiWebhookRoute
@@ -589,6 +597,7 @@ export interface FileRoutesById {
   '/_authenticated/relatorios_/board': typeof AuthenticatedRelatoriosBoardRoute
   '/_authenticated/relatorios_/dre-ofertas': typeof AuthenticatedRelatoriosDreOfertasRoute
   '/api/public/icone': typeof ApiPublicIconeRoute
+  '/api/public/leads': typeof ApiPublicLeadsRoute
   '/api/public/manifest': typeof ApiPublicManifestRoute
   '/api/public/versao': typeof ApiPublicVersaoRoute
   '/api/public/zapi-webhook': typeof ApiPublicZapiWebhookRoute
@@ -655,6 +664,7 @@ export interface FileRouteTypes {
     | '/relatorios/board'
     | '/relatorios/dre-ofertas'
     | '/api/public/icone'
+    | '/api/public/leads'
     | '/api/public/manifest'
     | '/api/public/versao'
     | '/api/public/zapi-webhook'
@@ -719,6 +729,7 @@ export interface FileRouteTypes {
     | '/relatorios/board'
     | '/relatorios/dre-ofertas'
     | '/api/public/icone'
+    | '/api/public/leads'
     | '/api/public/manifest'
     | '/api/public/versao'
     | '/api/public/zapi-webhook'
@@ -784,6 +795,7 @@ export interface FileRouteTypes {
     | '/_authenticated/relatorios_/board'
     | '/_authenticated/relatorios_/dre-ofertas'
     | '/api/public/icone'
+    | '/api/public/leads'
     | '/api/public/manifest'
     | '/api/public/versao'
     | '/api/public/zapi-webhook'
@@ -813,6 +825,7 @@ export interface RootRouteChildren {
   PropostaTokenRoute: typeof PropostaTokenRoute
   WidgetInstanciaIdRoute: typeof WidgetInstanciaIdRoute
   ApiPublicIconeRoute: typeof ApiPublicIconeRoute
+  ApiPublicLeadsRoute: typeof ApiPublicLeadsRoute
   ApiPublicManifestRoute: typeof ApiPublicManifestRoute
   ApiPublicVersaoRoute: typeof ApiPublicVersaoRoute
   ApiPublicZapiWebhookRoute: typeof ApiPublicZapiWebhookRoute
@@ -1240,6 +1253,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicIconeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/leads': {
+      id: '/api/public/leads'
+      path: '/api/public/leads'
+      fullPath: '/api/public/leads'
+      preLoaderRoute: typeof ApiPublicLeadsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/manifest': {
       id: '/api/public/manifest'
       path: '/api/public/manifest'
@@ -1372,6 +1392,7 @@ const rootRouteChildren: RootRouteChildren = {
   PropostaTokenRoute: PropostaTokenRoute,
   WidgetInstanciaIdRoute: WidgetInstanciaIdRoute,
   ApiPublicIconeRoute: ApiPublicIconeRoute,
+  ApiPublicLeadsRoute: ApiPublicLeadsRoute,
   ApiPublicManifestRoute: ApiPublicManifestRoute,
   ApiPublicVersaoRoute: ApiPublicVersaoRoute,
   ApiPublicZapiWebhookRoute: ApiPublicZapiWebhookRoute,
