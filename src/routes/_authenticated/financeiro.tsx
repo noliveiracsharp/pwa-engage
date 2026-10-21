@@ -1,3 +1,5 @@
+import { imprimirDre } from "@/components/relatorios/DreRelatorioPDF";
+import { useEmpresaAtiva } from "@/hooks/useEmpresaAtiva";
 import { PeriodoNavegavel } from "@/components/financeiro/PeriodoNavegavel";
 import { buscarIpca12m } from "@/lib/indices.functions";
 import { periodoPreset, type Periodo } from "@/lib/periodo-vencimento";
@@ -152,43 +154,53 @@ function RelatorioTitulos({ tipo, rows, hoje, filtros, resumo, nomeParc, nomeCen
 }) {
   const titulo = tipo === "receber" ? "Relatório de Contas a Receber" : "Relatório de Contas a Pagar";
   const pago = tipo === "receber" ? "Recebido" : "Pago";
-  const imprimir = () => {
-    const el = document.getElementById("relatorio-titulos");
-    const w = window.open("", "_blank");
-    if (!el || !w) return void toast.error("Permita a abertura de janelas para imprimir.");
-    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${titulo}</title><style>
-      body{font-family:Arial,sans-serif;font-size:11px;color:#111;margin:16px}h2{margin:0 0 4px}table{width:100%;border-collapse:collapse;margin-top:8px}
-      th,td{border-bottom:1px solid #ddd;padding:4px;text-align:left}th{background:#f2f2f2}.r{text-align:right}.cards{display:flex;gap:8px;margin:8px 0}
-      .cards div{border:1px solid #ccc;border-radius:4px;padding:6px;flex:1}.muted{color:#666}tfoot td{font-weight:bold}</style></head><body>${el.innerHTML}</body></html>`);
-    w.document.close(); w.focus(); setTimeout(() => w.print(), 300);
-  };
+  const emp = useEmpresaAtiva();
   const cards = [["Total", resumo.total, resumo.qtd.total], ["A vencer", resumo.aVencer, resumo.qtd.aVencer], ["Vencidos", resumo.vencidos, resumo.qtd.vencidos],
     [pago, resumo.pagoMes, resumo.qtd.pago], ["Em aberto", resumo.emAberto, resumo.qtd.emAberto]] as const;
   const total = round2(rows.reduce((s, t) => s + num(t["valor"]), 0));
+  const cab = ["Vencimento", "Descrição", tipo === "receber" ? "Cliente" : "Fornecedor", "Categoria", "Centro de custo", "Situação"];
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-h-[90vh] overflow-auto sm:max-w-5xl">
         <DialogHeader><DialogTitle>{titulo}</DialogTitle></DialogHeader>
-        <div id="relatorio-titulos">
-          <h2 className="text-lg font-bold">{titulo}</h2>
-          <p className="muted text-muted-foreground text-xs">Emitido em {formatDate(hoje)} • {filtros.join(" • ")}</p>
-          <div className="cards my-2 grid grid-cols-5 gap-2">
-            {cards.map(([l, v, q]) => <div key={l} className="rounded border p-2 text-xs"><p className="text-muted-foreground">{l}</p><p className="font-bold">{formatBRL(v)}</p><p className="text-muted-foreground">{q} título(s)</p></div>)}
+        <div className="overflow-auto rounded border">
+          <div id="dre-print" className="dre-doc p-4">
+            <header className="dre-head">
+              <div className="dre-emp">
+                {emp.logo && <img src={String(emp.logo)} alt="" data-no-zoom />}
+                <div>
+                  <div className="dre-emp-nome">{emp.nome}</div>
+                  <div className="dre-rot">Relatório financeiro • Confidencial</div>
+                </div>
+              </div>
+              <div className="dre-head-dir"><div className="dre-rot">Emitido em</div><div>{new Date().toLocaleString("pt-BR")}</div></div>
+            </header>
+            <div className="dre-titulo">
+              <h1>{titulo}</h1>
+              <p>{rows.length} título(s) • {filtros.join(" • ") || "Sem filtros"}</p>
+            </div>
+            <table className="dre-kpis"><tbody><tr>
+              {cards.map(([l, v, q], i) => (
+                <td key={l} className={i === cards.length - 1 ? "dre-kpi-res" : ""}><span>{l}</span><strong>{formatBRL(v)}</strong><small>{q} título(s)</small></td>
+              ))}
+            </tr></tbody></table>
+            <h2>1. Títulos</h2>
+            <table className="dre-tab">
+              <thead><tr>{cab.map((c) => <th key={c}>{c}</th>)}<th className="r">Valor (R$)</th></tr></thead>
+              <tbody>
+                {rows.map((t) => { const s = situacaoTitulo(t, hoje); return (
+                  <tr key={text(rowId(t))}>
+                    <td>{formatDate(t["vencimento"])}</td><td>{text(t["descricao"])}</td><td>{nomeParc(t["parceiro_id"])}</td>
+                    <td>{text(t["categoria"])}</td><td>{nomeCentro(t["centro_custo_id"])}</td><td>{SITUACAO_META[s].label(tipo)}</td>
+                    <td className="r">{formatBRL(t["valor"])}</td>
+                  </tr>); })}
+                {!rows.length && <tr><td colSpan={7}>Nenhum título encontrado.</td></tr>}
+                <tr className="tot"><td colSpan={6}>Total • {rows.length} título(s)</td><td className="r">{formatBRL(total)}</td></tr>
+              </tbody>
+            </table>
           </div>
-          <table className="w-full text-xs">
-            <thead><tr className="bg-muted text-left"><th className="p-1">Vencimento</th><th className="p-1">Descrição</th><th className="p-1">{tipo === "receber" ? "Cliente" : "Fornecedor"}</th><th className="p-1">Categoria</th><th className="p-1">Centro de custo</th><th className="p-1">Situação</th><th className="r p-1 text-right">Valor</th></tr></thead>
-            <tbody>
-              {rows.map((t) => { const s = situacaoTitulo(t, hoje); return (
-                <tr key={text(rowId(t))} className="border-t">
-                  <td className="p-1">{formatDate(t["vencimento"])}</td><td className="p-1">{text(t["descricao"])}</td><td className="p-1">{nomeParc(t["parceiro_id"])}</td>
-                  <td className="p-1">{text(t["categoria"])}</td><td className="p-1">{nomeCentro(t["centro_custo_id"])}</td><td className="p-1">{SITUACAO_META[s].label(tipo)}</td>
-                  <td className="r p-1 text-right tabular-nums">{formatBRL(t["valor"])}</td>
-                </tr>); })}
-            </tbody>
-            <tfoot><tr className="border-t font-bold"><td className="p-1" colSpan={6}>{rows.length} título(s)</td><td className="r p-1 text-right tabular-nums">{formatBRL(total)}</td></tr></tfoot>
-          </table>
         </div>
-        <DialogFooter><Button variant="outline" onClick={onClose}>Fechar</Button><Button onClick={imprimir}><FileText className="mr-1 h-4 w-4" />Imprimir / PDF</Button></DialogFooter>
+        <DialogFooter><Button variant="outline" onClick={onClose}>Fechar</Button><Button onClick={imprimirDre}><FileText className="mr-1 h-4 w-4" />Imprimir / PDF</Button></DialogFooter>
       </DialogContent>
     </Dialog>
   );
