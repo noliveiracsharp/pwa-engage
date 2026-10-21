@@ -265,22 +265,44 @@ export function titulosDoPedido(opts: {
   });
 }
 
-export type ResumoTitulos = { aVencer: number; vencidos: number; pagoMes: number; emAberto: number; total: number };
+export type ResumoTitulos = {
+  aVencer: number; vencidos: number; pagoMes: number; emAberto: number; total: number;
+  qtd: { total: number; aVencer: number; vencidos: number; pago: number; emAberto: number };
+};
 
-/** Cards do topo: em aberto a vencer, vencidos, baixados no mês corrente e total em aberto. */
-export function resumoTitulos(titulos: Row[], hoje = hojeISO()): ResumoTitulos {
+const SITUACOES_EM_ABERTO = ["aberto", "atrasado", "agendado", "parcial"];
+
+/** Filtro de situação com múltipla escolha: lista vazia ou "todos" = todas; "em_aberto" reúne aberto/atrasado/agendado/parcial. */
+export function casaSituacao(t: Row, selecionadas: string[], hoje = hojeISO()): boolean {
+  if (!selecionadas.length || selecionadas.includes("todos")) return true;
+  const s = situacaoTitulo(t, hoje);
+  return selecionadas.some((x) => (x === "em_aberto" ? SITUACOES_EM_ABERTO.includes(s) : x === "aberto" ? s === "aberto" || s === "agendado" : x === s));
+}
+
+/**
+ * Cards do topo. Cancelados não entram no total. "Pago" considera as baixas
+ * dentro do período informado (pela data do pagamento) ou, sem período, o mês corrente.
+ */
+export function resumoTitulos(titulos: Row[], hoje = hojeISO(), periodo?: { de?: string; ate?: string }): ResumoTitulos {
   const mes = hoje.slice(0, 7);
+  const temPeriodo = !!periodo && (!!periodo.de || !!periodo.ate);
+  const noPeriodo = (d: string) => (temPeriodo ? (!periodo!.de || d >= periodo!.de) && (!periodo!.ate || d <= periodo!.ate) : d.slice(0, 7) === mes);
   const r = { aVencer: 0, vencidos: 0, pagoMes: 0, emAberto: 0, total: 0 };
+  const q = { total: 0, aVencer: 0, vencidos: 0, pago: 0, emAberto: 0 };
   for (const t of titulos) {
     const s = situacaoTitulo(t, hoje);
+    if (s === "cancelado") continue;
     const v = num(t["valor"]);
-    r.total += v;
-    if (s === "parcial") { const sd = saldoTitulo(t); r.emAberto += sd; if (iso(t["vencimento"]) < hoje) r.vencidos += sd; else r.aVencer += sd; }
-    else if (s === "aberto" || s === "agendado") { r.aVencer += v; r.emAberto += v; }
-    else if (s === "atrasado") { r.vencidos += v; r.emAberto += v; }
-    else if (s === "pago" && iso(t["pago_em"]).slice(0, 7) === mes) r.pagoMes += num(t["valor_pago"]) || v;
+    r.total += v; q.total++;
+    if (s === "parcial") {
+      const sd = saldoTitulo(t); r.emAberto += sd; q.emAberto++;
+      if (iso(t["vencimento"]) < hoje) { r.vencidos += sd; q.vencidos++; } else { r.aVencer += sd; q.aVencer++; }
+      if (noPeriodo(iso(t["pago_em"]))) { r.pagoMes += num(t["valor_pago"]); q.pago++; }
+    } else if (s === "aberto" || s === "agendado") { r.aVencer += v; r.emAberto += v; q.aVencer++; q.emAberto++; }
+    else if (s === "atrasado") { r.vencidos += v; r.emAberto += v; q.vencidos++; q.emAberto++; }
+    else if (s === "pago" && noPeriodo(iso(t["pago_em"]))) { r.pagoMes += num(t["valor_pago"]) || v; q.pago++; }
   }
-  return { aVencer: round2(r.aVencer), vencidos: round2(r.vencidos), pagoMes: round2(r.pagoMes), emAberto: round2(r.emAberto), total: round2(r.total) };
+  return { aVencer: round2(r.aVencer), vencidos: round2(r.vencidos), pagoMes: round2(r.pagoMes), emAberto: round2(r.emAberto), total: round2(r.total), qtd: q };
 }
 
 export type MesCaixa = { mes: string; entradas: number; saidas: number; entradasPrev: number; saidasPrev: number };
