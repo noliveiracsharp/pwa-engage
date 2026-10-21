@@ -69,6 +69,7 @@ import { Route as AuthenticatedProjetosTemplatesRouteImport } from './routes/_au
 import { Route as AuthenticatedRelatoriosBoardRouteImport } from './routes/_authenticated/relatorios_.board'
 import { Route as AuthenticatedRelatoriosComercialRouteImport } from './routes/_authenticated/relatorios_.comercial'
 import { Route as AuthenticatedRelatoriosDreOfertasRouteImport } from './routes/_authenticated/relatorios_.dre-ofertas'
+import { Route as AuthenticatedRelatoriosKpisRouteImport } from './routes/_authenticated/relatorios_.kpis'
 import { Route as ApiPublicIconeRouteImport } from './routes/api/public/icone'
 import { Route as ApiPublicLeadsRouteImport } from './routes/api/public/leads'
 import { Route as ApiPublicManifestRouteImport } from './routes/api/public/manifest'
@@ -386,6 +387,12 @@ const AuthenticatedRelatoriosDreOfertasRoute =
     path: '/relatorios/dre-ofertas',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedRelatoriosKpisRoute =
+  AuthenticatedRelatoriosKpisRouteImport.update({
+    id: '/relatorios_/kpis',
+    path: '/relatorios/kpis',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const ApiPublicIconeRoute = ApiPublicIconeRouteImport.update({
   id: '/api/public/icone',
   path: '/api/public/icone',
@@ -472,6 +479,7 @@ export interface FileRoutesByFullPath {
   '/relatorios/board': typeof AuthenticatedRelatoriosBoardRoute
   '/relatorios/comercial': typeof AuthenticatedRelatoriosComercialRoute
   '/relatorios/dre-ofertas': typeof AuthenticatedRelatoriosDreOfertasRoute
+  '/relatorios/kpis': typeof AuthenticatedRelatoriosKpisRoute
   '/api/public/icone': typeof ApiPublicIconeRoute
   '/api/public/leads': typeof ApiPublicLeadsRoute
   '/api/public/manifest': typeof ApiPublicManifestRoute
@@ -538,6 +546,7 @@ export interface FileRoutesByTo {
   '/relatorios/board': typeof AuthenticatedRelatoriosBoardRoute
   '/relatorios/comercial': typeof AuthenticatedRelatoriosComercialRoute
   '/relatorios/dre-ofertas': typeof AuthenticatedRelatoriosDreOfertasRoute
+  '/relatorios/kpis': typeof AuthenticatedRelatoriosKpisRoute
   '/api/public/icone': typeof ApiPublicIconeRoute
   '/api/public/leads': typeof ApiPublicLeadsRoute
   '/api/public/manifest': typeof ApiPublicManifestRoute
@@ -606,6 +615,7 @@ export interface FileRoutesById {
   '/_authenticated/relatorios_/board': typeof AuthenticatedRelatoriosBoardRoute
   '/_authenticated/relatorios_/comercial': typeof AuthenticatedRelatoriosComercialRoute
   '/_authenticated/relatorios_/dre-ofertas': typeof AuthenticatedRelatoriosDreOfertasRoute
+  '/_authenticated/relatorios_/kpis': typeof AuthenticatedRelatoriosKpisRoute
   '/api/public/icone': typeof ApiPublicIconeRoute
   '/api/public/leads': typeof ApiPublicLeadsRoute
   '/api/public/manifest': typeof ApiPublicManifestRoute
@@ -674,6 +684,7 @@ export interface FileRouteTypes {
     | '/relatorios/board'
     | '/relatorios/comercial'
     | '/relatorios/dre-ofertas'
+    | '/relatorios/kpis'
     | '/api/public/icone'
     | '/api/public/leads'
     | '/api/public/manifest'
@@ -740,6 +751,7 @@ export interface FileRouteTypes {
     | '/relatorios/board'
     | '/relatorios/comercial'
     | '/relatorios/dre-ofertas'
+    | '/relatorios/kpis'
     | '/api/public/icone'
     | '/api/public/leads'
     | '/api/public/manifest'
@@ -807,6 +819,7 @@ export interface FileRouteTypes {
     | '/_authenticated/relatorios_/board'
     | '/_authenticated/relatorios_/comercial'
     | '/_authenticated/relatorios_/dre-ofertas'
+    | '/_authenticated/relatorios_/kpis'
     | '/api/public/icone'
     | '/api/public/leads'
     | '/api/public/manifest'
@@ -1266,6 +1279,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRelatoriosDreOfertasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/relatorios_/kpis': {
+      id: '/_authenticated/relatorios_/kpis'
+      path: '/relatorios/kpis'
+      fullPath: '/relatorios/kpis'
+      preLoaderRoute: typeof AuthenticatedRelatoriosKpisRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/api/public/icone': {
       id: '/api/public/icone'
       path: '/api/public/icone'
@@ -1343,6 +1363,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedRelatoriosBoardRoute: typeof AuthenticatedRelatoriosBoardRoute
   AuthenticatedRelatoriosComercialRoute: typeof AuthenticatedRelatoriosComercialRoute
   AuthenticatedRelatoriosDreOfertasRoute: typeof AuthenticatedRelatoriosDreOfertasRoute
+  AuthenticatedRelatoriosKpisRoute: typeof AuthenticatedRelatoriosKpisRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -1385,6 +1406,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedRelatoriosComercialRoute: AuthenticatedRelatoriosComercialRoute,
   AuthenticatedRelatoriosDreOfertasRoute:
     AuthenticatedRelatoriosDreOfertasRoute,
+  AuthenticatedRelatoriosKpisRoute: AuthenticatedRelatoriosKpisRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
