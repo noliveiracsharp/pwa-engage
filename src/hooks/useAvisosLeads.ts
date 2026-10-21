@@ -16,15 +16,13 @@ export function useAvisosLeads(usuarioId: unknown) {
     const checar = async () => {
       const { data, error } = await supabase.from("orcamentos" as never)
         .select("id, descricao, origem_lead, created_at, parceiro:parceiro_id(nome_fantasia, razao_social)")
-        .eq("usuario_id", uid as never).not("origem_lead", "is", null)
+        .eq("usuario_id", uid as never).eq("proxima_acao_obs", "Primeiro contato com o lead" as never)
         .gte("created_at", desde as never).order("created_at", { ascending: false }).limit(20);
       if (parado || error || !data) return;
       const existentes = new Set(listarAvisos().map((a) => a.chave));
       for (const o of (data as Row[]).reverse()) {
         const chave = `lead:${String(o["id"])}`;
         if (existentes.has(chave)) continue;
-        // só leads que entraram pela captação geram linha automática na descrição
-        if (!String(o["descricao"] ?? "").toLowerCase().includes("lead")) continue;
         const p = (o["parceiro"] ?? {}) as Row;
         const nome = String(p["nome_fantasia"] || p["razao_social"] || "Cliente");
         const texto = `${nome} (${String(o["origem_lead"])})`;

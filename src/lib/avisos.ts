@@ -36,7 +36,7 @@ function projetosDescartados(): string[] {
   } catch { return []; }
 }
 function descartarProjetos(avisos: Aviso[]) {
-  const chaves = avisos.flatMap((a) => a.chave?.startsWith("projeto:") ? [a.chave] : []);
+  const chaves = avisos.flatMap((a) => (a.chave?.startsWith("projeto:") || a.chave?.startsWith("lead:")) ? [a.chave] : []);
   if (chaves.length === 0) return;
   // Guarda apenas IDs, antes de apagar: o polling não pode recriar eventos descartados.
   localStorage.setItem(DESCARTADOS_KEY, JSON.stringify([...new Set([...projetosDescartados(), ...chaves])]));
