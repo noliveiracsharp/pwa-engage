@@ -5,7 +5,8 @@ import { pick, type Row } from "@/lib/row";
 import { useAuth } from "@/hooks/useAuth";
 
 /** Tabelas globais: nunca filtradas pelo contexto de empresa do Master. */
-const GLOBAL_TABLES = new Set(["empresas", "funcoes", "perfil", "menu", "planos", "modulos", "planos_funcoes", "modulos_funcoes", "planos_base", "modulos_adicionais"]);
+// "perfil" NÃO é global: cada empresa tem seus perfis (só o Master fica sem empresa).
+const GLOBAL_TABLES = new Set(["empresas", "funcoes", "menu", "planos", "modulos", "planos_funcoes", "modulos_funcoes", "planos_base", "modulos_adicionais"]);
 /** Tabelas de catálogo que a matriz pode compartilhar com as filiais (só leitura nas filiais). */
 const CATALOG_TABLES = new Set(["itens", "marcas", "categorias", "unidades", "centro_custo"]);
 
