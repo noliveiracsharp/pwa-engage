@@ -5,7 +5,7 @@ import { corEtapa } from "@/lib/kanban-cores";
 import { createFileRoute } from "@tanstack/react-router";
 import { ChevronDown, Copy, FileSignature, FileText, Info, MessageCircle, ScrollText, ShoppingCart, Thermometer, Trash2, Wallet } from "lucide-react";
 import { BarraAcoesLote, useAcoesComuns } from "@/components/data-table/AcoesLote";
-import { TEMPERATURAS } from "@/lib/temperatura";
+import { TEMPERATURAS, temperaturaEfetiva } from "@/lib/temperatura";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
 import { DataTable, type Column } from "@/components/data-table/DataTable";
@@ -369,6 +369,21 @@ function OrcamentosPage() {
             <span className="font-semibold tabular-nums">{formatBRL(imp)}</span>
             {rec > 0 && <span className="text-muted-foreground text-xs tabular-nums">+ {formatBRL(rec)}/mês</span>}
           </div>
+        );
+      },
+    },
+    {
+      key: "temperatura",
+      header: "Temperatura",
+      fields: ["temperatura", "situacao"],
+      render: (r) => {
+        const t = temperaturaEfetiva(r["situacao"], r["temperatura"]);
+        if (!t) return <span className="text-muted-foreground">—</span>;
+        return (
+          <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium", t.card)}>
+            <span className={cn("h-2 w-2 rounded-full", t.dot)} />
+            {t.label}
+          </span>
         );
       },
     },

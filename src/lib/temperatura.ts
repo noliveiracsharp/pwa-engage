@@ -5,9 +5,23 @@ export const TEMPERATURAS = [
   { value: "quente", label: "Quente", dot: "bg-rose-500", card: "bg-temp-quente" },
 ] as const;
 
+/** Temperaturas automáticas: definidas pela etapa/situação, não pela escolha do vendedor. */
+export const TEMP_GANHO = { value: "ganho", label: "Ganho", dot: "bg-success", card: "bg-temp-ganho" } as const;
+export const TEMP_PERDIDO = { value: "perdido", label: "Perdido", dot: "bg-muted-foreground", card: "bg-temp-perdido" } as const;
+
 export function classeTemperatura(v: unknown): string | null {
   const t = TEMPERATURAS.find((x) => x.value === String(v ?? "").toLowerCase().trim());
   return t ? t.card : null;
+}
+
+const norm = (v: unknown) => String(v ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+
+/** Ativação/ganha vira "Ganho" (verde); perdida/reprovada/desistência vira "Perdido" (cinza); senão a temperatura escolhida. */
+export function temperaturaEfetiva(situacao: unknown, temperatura: unknown, etapa?: unknown) {
+  const s = `${norm(situacao)} ${norm(etapa)}`;
+  if (/ativa|ganh|aprovad/.test(s)) return TEMP_GANHO;
+  if (/perd|reprov|desist|cancel/.test(s)) return TEMP_PERDIDO;
+  return TEMPERATURAS.find((x) => x.value === norm(temperatura)) ?? null;
 }
 
 const on = (v: unknown) => v === true || v === 1 || ["true", "t", "1"].includes(String(v ?? ""));

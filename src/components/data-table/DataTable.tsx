@@ -94,7 +94,7 @@ export function DataTable({
 }: Props) {
   const [sort, setSort] = useState<{ key: string; dir: "asc" | "desc" } | null>(null);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(0);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dropIndex, setDropIndex] = useState<number | null>(null);
 
@@ -120,9 +120,10 @@ export function DataTable({
   }, [rows, sort, columns, getValue]);
 
   const total = sorted.length;
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const size = pageSize || Math.max(total, 1);
+  const totalPages = Math.max(1, Math.ceil(total / size));
   const current = Math.min(page, totalPages);
-  const pageRows = sorted.slice((current - 1) * pageSize, current * pageSize);
+  const pageRows = sorted.slice((current - 1) * size, current * size);
   const colSpan = columns.length + (onReorder ? 2 : 1) + (selection ? 1 : 0);
   const canDrag = Boolean(onReorder) && !sort;
 
@@ -232,7 +233,7 @@ export function DataTable({
             )}
             {!loading &&
               pageRows.map((row, index) => {
-                const globalIndex = (current - 1) * pageSize + index;
+                const globalIndex = (current - 1) * size + index;
                 return (
                 <TableRow
                   key={rowKey(row, index)}
@@ -375,13 +376,13 @@ export function DataTable({
               setPage(1);
             }}
           >
-            <SelectTrigger className="h-8 w-20">
+            <SelectTrigger className="h-8 w-24">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {[10, 50, 100].map((n) => (
+              {[10, 50, 100, 0].map((n) => (
                 <SelectItem key={n} value={String(n)}>
-                  {n}
+                  {n || "Todos"}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -389,7 +390,7 @@ export function DataTable({
         </div>
         <div className="flex items-center gap-2">
           <span>
-            {total === 0 ? 0 : (current - 1) * pageSize + 1}–{Math.min(current * pageSize, total)} de {total}
+            {total === 0 ? 0 : (current - 1) * size + 1}–{Math.min(current * size, total)} de {total}
           </span>
           <Button variant="outline" size="sm" disabled={current <= 1} onClick={() => setPage(current - 1)}>
             Anterior

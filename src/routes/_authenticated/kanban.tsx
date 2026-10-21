@@ -11,7 +11,7 @@ import { AtivacaoOfertaDialog } from "@/components/orcamentos/AtivacaoOfertaDial
 import { situacaoAtivada } from "@/lib/oferta-ativacao";
 import { executarHandoff } from "@/lib/kanban-handoff";
 import { OfertaKanbanSheet } from "@/components/kanban/OfertaKanbanSheet";
-import { classeTemperatura, opcoesQuadro, valorOferta } from "@/lib/temperatura";
+import { temperaturaEfetiva, opcoesQuadro, valorOferta } from "@/lib/temperatura";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   CAMPOS_CARD_ORCAMENTO,
@@ -618,7 +618,7 @@ function KanbanPage() {
                           onClick={() => setOfertaAberta(card)}
                           className={cn(
                             "flex w-full items-start gap-2 rounded-md border border-border bg-card p-3 text-left shadow-sm transition hover:border-primary",
-                            opc.temperatura && classeTemperatura(card["temperatura"]),
+                            opc.temperatura && temperaturaEfetiva(card["situacao"], card["temperatura"])?.card,
                             dragId === dk && "opacity-50",
                           )}
                         >

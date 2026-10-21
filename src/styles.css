@@ -46,6 +46,8 @@
   --color-temp-frio: var(--temp-frio);
   --color-temp-morno: var(--temp-morno);
   --color-temp-quente: var(--temp-quente);
+  --color-temp-ganho: var(--temp-ganho);
+  --color-temp-perdido: var(--temp-perdido);
   --color-success-foreground: var(--success-foreground);
   --color-lido: var(--lido);
   --color-warning: var(--warning);
@@ -97,6 +99,8 @@
   --temp-frio: oklch(0.95 0.04 230);
   --temp-morno: oklch(0.95 0.05 70);
   --temp-quente: oklch(0.94 0.05 20);
+  --temp-ganho: oklch(0.94 0.06 150);
+  --temp-perdido: oklch(0.93 0.005 255);
   --lido: oklch(0.88 0.13 200);
   --progress-0: #94a3b8;
   --progress-25: #38bdf8;
@@ -149,6 +153,8 @@
   --temp-frio: oklch(0.3 0.06 230);
   --temp-morno: oklch(0.32 0.06 60);
   --temp-quente: oklch(0.3 0.07 20);
+  --temp-ganho: oklch(0.3 0.07 150);
+  --temp-perdido: oklch(0.3 0.01 255);
   --lido: oklch(0.85 0.14 200);
   --success-foreground: oklch(0.16 0.04 150);
   --warning: oklch(0.82 0.16 88);

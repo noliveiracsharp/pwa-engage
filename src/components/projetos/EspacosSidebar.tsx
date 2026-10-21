@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, ChevronRight, Layers, Pencil, Plus, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Layers, PanelLeftClose, PanelLeftOpen, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -67,6 +67,7 @@ type Props = { espacos: Row[]; ativo: string | null; onSelect: (id: string | nul
 
 export function EspacosSidebar({ espacos, ativo, onSelect, perms, onMoverProjeto }: Props) {
   const [alvo, setAlvo] = useState<string | null>(null);
+  const [recolhido, setRecolhido] = useState(true);
   const [abertos, setAbertos] = useState<Set<string>>(new Set());
   const [form, setForm] = useState<{ row: Row | null; pai: string | null; paiTipo?: string | undefined } | null>(null);
   const qc = useQueryClient();
@@ -131,10 +132,21 @@ export function EspacosSidebar({ espacos, ativo, onSelect, perms, onMoverProjeto
       );
     });
 
+  if (recolhido)
+    return (
+      <aside className="shrink-0 self-start rounded-lg border border-border bg-card p-1">
+        <Button size="sm" variant="ghost" className="h-8 gap-1 px-2" onClick={() => setRecolhido(false)} aria-label="Mostrar espaços" title="Mostrar espaços">
+          <PanelLeftOpen className="h-4 w-4" /><span className="text-xs md:hidden">Espaços</span>
+        </Button>
+      </aside>
+    );
   return (
     <aside className="w-full shrink-0 rounded-lg border border-border bg-card p-2 md:w-64">
-      <div className="mb-2 flex items-center justify-between px-1">
-        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Espaços</span>
+      <div className="mb-2 flex items-center justify-between gap-1 px-1">
+        <span className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setRecolhido(true)} aria-label="Recolher espaços" title="Recolher espaços"><PanelLeftClose className="h-4 w-4" /></Button>
+          Espaços
+        </span>
         {perms.canCreate && <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => setForm({ row: null, pai: null })}><Plus className="mr-1 h-3.5 w-3.5" />Novo Espaço</Button>}
       </div>
       <button className={cn("mb-1 flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent", ativo === null && "bg-primary/10 font-semibold text-primary")} onClick={() => onSelect(null)}>
