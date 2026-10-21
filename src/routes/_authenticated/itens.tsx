@@ -290,8 +290,10 @@ function ItensPage() {
             (n(original["preco_custo"]) !== n(values["preco_custo"]) ||
               n(original["preco_venda"]) !== n(values["preco_venda"]) ||
               n(original["imposto"]) !== n(values["imposto"]));
+          // Ao Compras salvar o item completo, sai da pendência criada em campo.
+          const vals = original?.["pendente_compras"] === true ? { ...values, pendente_compras: false } : values;
           save.mutate(
-            { values: stamp(values, !original), original },
+            { values: stamp(vals, !original), original },
             {
               onSuccess: () => {
                 setOpen(false);
