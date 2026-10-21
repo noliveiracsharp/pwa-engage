@@ -14,7 +14,7 @@ import type { Row } from "@/lib/row";
 import { ESPACOS } from "@/components/projetos/EspacosSidebar";
 import { titulosDaOferta } from "@/lib/financeiro";
 import { contarTitulosDaOrigem, erroFinanceiro, inserirTitulos, itensDaOferta } from "@/lib/financeiro-db";
-import { nomeProjetoDaOferta } from "@/lib/oferta-ativacao";
+import { documentoEstoqueOferta, movimentosEstoqueDaOferta, nomeProjetoDaOferta } from "@/lib/oferta-ativacao";
 import { formatBRL } from "@/lib/orcamentos";
 
 type Props = {
@@ -30,6 +30,9 @@ export function AtivacaoOfertaDialog({ open, onOpenChange, oferta, cliente, empr
   const { data: espacos = [] } = useTableRows(ESPACOS);
   const [criarProjeto, setCriarProjeto] = useState(true);
   const [gerarFin, setGerarFin] = useState(true);
+  const { data: locais = [] } = useTableRows("estoque_locais");
+  const [baixarEstoque, setBaixarEstoque] = useState(true);
+  const [local, setLocal] = useState("");
   const [nome, setNome] = useState("");
   const [espaco, setEspaco] = useState("");
   const [busy, setBusy] = useState(false);
@@ -39,12 +42,57 @@ export function AtivacaoOfertaDialog({ open, onOpenChange, oferta, cliente, empr
       setNome(nomeProjetoDaOferta(oferta["numero"], cliente));
       setCriarProjeto(true);
       setGerarFin(true);
+      setBaixarEstoque(true);
     }
   }, [open, oferta, cliente]);
 
   const espOpts = espacos
     .filter((e) => !e["empresa_id"] || String(e["empresa_id"]) === empresaId)
     .map((e) => ({ value: String(rowId(e)), label: String(e["nome"] ?? e["descricao"] ?? "Espaço") }));
+
+  const locOpts = locais
+    .filter((l) => l["status"] !== false && String(l["empresa_id"] ?? "") === empresaId && l["tipo"] !== "Cliente / Comodato")
+    .map((l) => ({ value: String(rowId(l)), label: String(l["descricao"] ?? "Local") }))
+    .sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
+  useEffect(() => { if (open && !local && locOpts.length) setLocal(locOpts[0]!.value); }, [open, locOpts, local]);
+
+  /** Saída do estoque dos produtos que controlam estoque; comodato vira remessa para o local do cliente. */
+  async function baixarEstoqueDaOferta(id: string): Promise<string> {
+    const emp = String(oferta!["empresa_id"] ?? empresaId);
+    const documento = documentoEstoqueOferta(oferta!["numero"], id);
+    const ja = await supabase.from("estoque_movimentacoes").select("id", { count: "exact", head: true }).eq("empresa_id", emp).eq("documento", documento);
+    if (ja.error) throw ja.error;
+    if ((ja.count ?? 0) > 0) return "estoque já tinha sido baixado";
+    const itens = await itensDaOferta(id);
+    const ids = [...new Set(itens.map((i) => String(i["item_id"] ?? "")).filter(Boolean))];
+    if (!ids.length) return "";
+    const cad = await supabase.from("itens").select("id, controla_estoque").in("id", ids);
+    if (cad.error) throw cad.error;
+    const controla = new Set((cad.data ?? []).filter((c) => c.controla_estoque !== false).map((c) => String(c.id)));
+    const movs = movimentosEstoqueDaOferta(itens, controla);
+    if (!movs.length) return "";
+    if (!local) throw new Error("Escolha de qual local sai o estoque.");
+    const comodato = oferta!["modalidade"] === "comodato";
+    let destino: string | null = null;
+    if (comodato) {
+      const parceiro = String(oferta!["parceiro_id"] ?? "");
+      const existente = locais.find((l) => l["tipo"] === "Cliente / Comodato" && String(l["parceiro_id"] ?? "") === parceiro && String(l["empresa_id"] ?? "") === emp);
+      if (existente) destino = String(rowId(existente));
+      else {
+        const novo = await supabase.from("estoque_locais").insert({ empresa_id: emp, descricao: `Comodato — ${cliente || "Cliente"}`, tipo: "Cliente / Comodato", parceiro_id: parceiro || null } as never).select("id").single();
+        if (novo.error) throw novo.error;
+        destino = String((novo.data as { id: string }).id);
+      }
+    }
+    const { error } = await supabase.from("estoque_movimentacoes").insert(movs.map((m) => ({
+      ...m, empresa_id: emp, tipo: comodato ? "remessa_comodato" : "saida_venda",
+      local_origem_id: local, local_destino_id: destino, documento,
+      observacoes: `Baixa automática na ativação da ${documento}`,
+    })) as never);
+    if (error) throw error;
+    qc.invalidateQueries({ queryKey: ["table", "estoque_movimentacoes"] });
+    return `${movs.length} produto(s) ${comodato ? "enviados em comodato" : "baixados do estoque"}`;
+  }
 
   async function confirmar() {
     if (!oferta) return;
@@ -80,6 +128,10 @@ export function AtivacaoOfertaDialog({ open, onOpenChange, oferta, cliente, empr
           msgs.push(`${n} conta(s) no Financeiro`);
           qc.invalidateQueries({ queryKey: ["table", "financeiro_titulos"] });
         }
+      }
+      if (baixarEstoque) {
+        const r = await baixarEstoqueDaOferta(id);
+        if (r) msgs.push(r);
       }
       if (msgs.length) toast.success(`Ativação concluída: ${msgs.join(", ")}.`);
       onOpenChange(false);
@@ -121,10 +173,21 @@ export function AtivacaoOfertaDialog({ open, onOpenChange, oferta, cliente, empr
               <li>Contas a pagar separadas: fornecedor dos produtos e despesas operacionais.</li>
             </ul>
           )}
+          <div className="flex items-center justify-between gap-3">
+            <Label htmlFor="at-est">Dar baixa no estoque dos produtos</Label>
+            <Switch id="at-est" checked={baixarEstoque} onCheckedChange={setBaixarEstoque} />
+          </div>
+          {baixarEstoque && (
+            <div className="space-y-1 rounded-md border p-3">
+              <Label>Sai do local</Label>
+              <SearchSelect value={local} onChange={setLocal} options={locOpts} placeholder="Escolha o local de estoque" />
+              <p className="text-muted-foreground text-xs">Só produtos com "controla estoque" ligado. {oferta?.["modalidade"] === "comodato" ? "Como é comodato, os equipamentos vão para o local do cliente." : "Registra saída por venda."}</p>
+            </div>
+          )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Agora não</Button>
-          <Button onClick={confirmar} disabled={busy || (!criarProjeto && !gerarFin)}>Confirmar</Button>
+          <Button onClick={confirmar} disabled={busy || (!criarProjeto && !gerarFin && !baixarEstoque)}>Confirmar</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
