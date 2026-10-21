@@ -31,7 +31,7 @@ const pct = (v: number) => `${v.toLocaleString("pt-BR", { maximumFractionDigits:
 const x = (v: number) => `${v.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}×`;
 const FAROL = { verde: "border-l-success", amarelo: "border-l-warning", vermelho: "border-l-destructive" } as const;
 type Cor = keyof typeof FAROL;
-type K = { t: string; v: string; s?: string; c?: Cor };
+type K = { t: string; v: string; s?: string; c?: Cor | undefined };
 
 const PERIODOS = [{ m: 1, l: "Mês atual" }, { m: 3, l: "3 meses" }, { m: 6, l: "6 meses" }, { m: 12, l: "12 meses" }];
 function inicio(meses: number) { const d = new Date(); d.setMonth(d.getMonth() - (meses - 1), 1); return d.toISOString().slice(0, 10); }
