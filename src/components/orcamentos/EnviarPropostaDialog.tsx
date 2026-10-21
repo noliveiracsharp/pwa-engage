@@ -129,7 +129,7 @@ export function EnviarPropostaDialog({ open, onOpenChange, orcamento, empresa, c
   };
 
   const enviarEmail = async () => {
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return toast.error("Informe um e-mail válido.");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { toast.error("Informe um e-mail válido."); return; }
     if (!(await antesDeEnviar())) return;
     setEnviando(true);
     try {

@@ -67,7 +67,7 @@ export function VersoesOferta({ orcamentoId, versaoAtual, atual, itens, readOnly
   });
 
   const criar = async () => {
-    if (sujo()) return toast.error("Salve as alterações da Oferta antes de congelar a revisão.");
+    if (sujo()) { toast.error("Salve as alterações da Oferta antes de congelar a revisão."); return; }
     if (await confirmar({ title: `Congelar a ${rotuloVersao(versaoAtual)}?`, description: `A ${rotuloVersao(versaoAtual)} fica guardada como está e você passa a editar a ${rotuloVersao(versaoAtual + 1)}.`, confirmText: "Criar nova revisão" })) nova.mutate();
   };
 
