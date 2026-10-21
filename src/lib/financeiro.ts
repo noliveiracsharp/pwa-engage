@@ -166,7 +166,9 @@ export function titulosDaOferta(orc: Row, itens: Row[] = []): NovoTitulo[] {
   // Mensalidades do contrato: série separada da implantação (1 boleto/mês por pagador).
   const mensal = round2(num(orc["total_recorrente"]));
   if (mensal > 0) {
-    const meses = Math.max(1, Math.min(120, Math.floor(num(orc["vigencia_meses"])) || 12));
+    const semPrazo = orc["prazo_indeterminado"] === true;
+    // Sem prazo: lança os 12 primeiros meses; a rotina diária do banco mantém sempre 12 à frente.
+    const meses = semPrazo ? 12 : Math.max(1, Math.min(120, Math.floor(num(orc["vigencia_meses"])) || 12));
     const base = iso(orc["dt_orcamento"] ?? orc["data"] ?? orc["created_at"]) || hojeISO();
     const primeira = parcelas[0]?.vencimento ? addMonthsISO(parcelas[0].vencimento, 1) : addMonthsISO(base, 1);
     const rateio = ratearPorPagador(mensal, pesosPorPagador(itens, chaveCliente, true), chaveCliente);
@@ -175,7 +177,7 @@ export function titulosDaOferta(orc: Row, itens: Row[] = []): NovoTitulo[] {
         if (v <= 0) continue;
         out.push({
           tipo: "receber",
-          descricao: `Oferta ${numero} — Mensalidade ${i + 1}/${meses}`,
+          descricao: semPrazo ? `Oferta ${numero} — Mensalidade ${i + 1}` : `Oferta ${numero} — Mensalidade ${i + 1}/${meses}`,
           categoria: "Mensalidade de contrato",
           vencimento: addMonthsISO(primeira, i),
           valor: v,
