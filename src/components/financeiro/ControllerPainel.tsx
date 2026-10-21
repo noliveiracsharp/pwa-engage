@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { AlertTriangle, BrainCircuit, CheckCircle2, Loader2, Printer, ShieldAlert } from "lucide-react";
+import { AlertTriangle, BrainCircuit, CheckCircle2, Landmark, Loader2, Printer, ShieldAlert } from "lucide-react";
+import { chamarBanco } from "@/lib/banco-api";
+import { moedaDeNumero } from "@/lib/input-masks";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,6 +50,20 @@ export function ControllerPainel({ titulos }: { titulos: Row[] }) {
   const gerar = useServerFn(parecerController);
   const [parecer, setParecer] = useState("");
   const [carregando, setCarregando] = useState(false);
+  const { data: contasBanco = [] } = useTableRows("financeiro_contas_bancarias");
+  const integradas = contasBanco.filter((c) => c["provedor_api"] && c["api_ativo"] && c["ativo"] !== false);
+  const [puxando, setPuxando] = useState(false);
+  const puxarDoBanco = async () => {
+    setPuxando(true);
+    try {
+      let total = 0;
+      for (const c of integradas) total += num((await chamarBanco<{ saldo_atual: number }>("saldo", { conta_id: text(rowId(c)) })).saldo_atual);
+      const v = moedaDeNumero(total);
+      setSaldo(v); localStorage.setItem(SALDO_KEY, v);
+      toast.success(`Saldo de ${integradas.length} conta(s) puxado do banco: ${formatBRL(total)}`);
+    } catch (e) { toast.error((e as Error).message); }
+    finally { setPuxando(false); }
+  };
 
   const pedirParecer = async () => {
     setCarregando(true);
@@ -88,6 +104,11 @@ export function ControllerPainel({ titulos }: { titulos: Row[] }) {
           <Label>Saldo em caixa hoje (R$)</Label>
           <Input className="w-56" inputMode="decimal" value={saldo} placeholder="0,00"
             onChange={(e) => { setSaldo(e.target.value); localStorage.setItem(SALDO_KEY, e.target.value); }} />
+          {integradas.length > 0 && (
+            <Button variant="link" size="sm" className="h-auto p-0 print:hidden" onClick={puxarDoBanco} disabled={puxando}>
+              {puxando ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Landmark className="mr-1 h-3.5 w-3.5" />}Puxar saldo do banco
+            </Button>
+          )}
         </div>
         <div className="flex gap-2 print:hidden">
           <Button variant="outline" onClick={imprimirDre}><Printer className="mr-2 h-4 w-4" />Relatório gerencial</Button>

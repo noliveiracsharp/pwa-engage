@@ -20,7 +20,7 @@ export const STATUS_COBRANCA: Record<string, { label: string; cls: string }> = {
   baixado: { label: "Baixado", cls: "bg-destructive/10 text-destructive" },
 };
 
-export type AcaoBanco = "emitir" | "consultar" | "pdf" | "cancelar" | "webhook_registrar";
+export type AcaoBanco = "emitir" | "consultar" | "pdf" | "cancelar" | "webhook_registrar" | "saldo" | "extrato";
 
 /** Chama o motor bancário (função "banco-cobranca"). Lança erro com a mensagem amigável. */
 export async function chamarBanco<T = Record<string, unknown>>(acao: AcaoBanco, dados: Record<string, unknown>): Promise<T> {
