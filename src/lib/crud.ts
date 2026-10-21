@@ -37,13 +37,11 @@ export function useTableRows(table: string, enabled = true, orderBy?: string) {
         const PAGE = 1000;
         const out: unknown[] = [];
         for (let from = 0; from < 1_000_000; from += PAGE) {
-          let r = await make(from, from + PAGE - 1);
-          if (r.error && from === 0 && !orderBy) return r;
+          const r = await make(from, from + PAGE - 1);
           if (r.error) return r;
           const arr = (r.data ?? []) as unknown[];
           out.push(...arr);
           if (arr.length < PAGE) break;
-          r = r;
         }
         return { data: out, error: null };
       };
