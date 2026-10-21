@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { caixaPorMes, resumoTitulos, situacaoTitulo, titulosDaOferta, titulosDoPedido, valorBaixa, parcelasManuais } from "./financeiro";
+import { caixaPorMes, casaSituacao, resumoTitulos, situacaoTitulo, titulosDaOferta, titulosDoPedido, valorBaixa, parcelasManuais } from "./financeiro";
 
 describe("financeiro", () => {
   it("aberto vencido antes de hoje fica atrasado", () => {
@@ -46,10 +46,24 @@ describe("financeiro", () => {
       { tipo: "pagar", status: "aberto", valor: 50, vencimento: "2026-06-01" },
       { tipo: "pagar", status: "cancelado", valor: 999, vencimento: "2026-06-01" },
     ];
-    expect(resumoTitulos(tit, "2026-05-10")).toEqual({ aVencer: 50, vencidos: 200, pagoMes: 110, emAberto: 250, total: 1349 });
+    expect(resumoTitulos(tit, "2026-05-10")).toMatchObject({ aVencer: 50, vencidos: 200, pagoMes: 110, emAberto: 250, total: 350 });
+    expect(resumoTitulos(tit, "2026-05-10").qtd).toEqual({ total: 3, aVencer: 1, vencidos: 1, pago: 1, emAberto: 2 });
+    // Recebido segue o período filtrado, não o mês do relógio
+    expect(resumoTitulos(tit, "2026-07-10", { de: "2026-05-01", ate: "2026-05-31" }).pagoMes).toBe(110);
+    expect(resumoTitulos(tit, "2026-07-10").pagoMes).toBe(0);
     const c = caixaPorMes(tit);
     expect(c.find((x) => x.mes === "2026-05")?.entradas).toBe(110);
     expect(c.find((x) => x.mes === "2026-06")?.saidasPrev).toBe(50);
+  });
+
+  it("situação aceita múltipla escolha", () => {
+    const atrasado = { status: "aberto", vencimento: "2026-04-01" };
+    const pago = { status: "pago", vencimento: "2026-04-01" };
+    expect(casaSituacao(atrasado, ["atrasado", "pago"], "2026-05-10")).toBe(true);
+    expect(casaSituacao(pago, ["atrasado", "pago"], "2026-05-10")).toBe(true);
+    expect(casaSituacao(pago, ["atrasado"], "2026-05-10")).toBe(false);
+    expect(casaSituacao(atrasado, ["em_aberto"], "2026-05-10")).toBe(true);
+    expect(casaSituacao(pago, [], "2026-05-10")).toBe(true);
   });
 });
 

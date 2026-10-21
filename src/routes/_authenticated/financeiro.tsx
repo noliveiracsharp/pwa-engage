@@ -10,6 +10,7 @@ import { ImportarContaDialog } from "@/components/financeiro/ImportarContaDialog
 import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { ReciboDialog } from "@/components/financeiro/ReciboDialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ParceiroSheet } from "@/components/parceiros/ParceiroSheet";
 import { buildTree } from "@/lib/hierarchy";
 import { formatCpfCnpj } from "@/lib/input-masks";
@@ -53,6 +54,7 @@ import {
   FORMAS_PAGAMENTO,
   hojeISO,
   resumoTitulos,
+  casaSituacao,
   reajusteEmCarencia,
   infoReajuste,
   valorReajustado,
@@ -121,6 +123,77 @@ function FinanceiroPage() {
 
 const ORIGEM_LABEL: Record<string, string> = { manual: "Manual", oferta: "Oferta", pedido: "Pedido", despesa: "Despesa", comissao: "Comissão", reembolso: "Reembolso" };
 
+function FiltroMulti({ label, selecionadas, options, onChange }: { label: string; selecionadas: string[]; options: Array<{ value: string; label: string }>; onChange: (v: string[]) => void }) {
+  const resumo = !selecionadas.length ? "Todas" : selecionadas.length === 1 ? options.find((o) => o.value === selecionadas[0])?.label ?? "1 selecionada" : `${selecionadas.length} selecionadas`;
+  const alternar = (v: string) => onChange(selecionadas.includes(v) ? selecionadas.filter((x) => x !== v) : [...selecionadas, v]);
+  return (
+    <div className="space-y-1">
+      <Label className="text-xs">{label}</Label>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button variant="outline" className="w-full justify-between font-normal"><span className="truncate">{resumo}</span><ChevronDown className="h-4 w-4 opacity-60" /></Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-60 p-2" align="start">
+          <button type="button" className="hover:bg-muted w-full rounded px-2 py-1.5 text-left text-sm" onClick={() => onChange([])}>Todas</button>
+          {options.map((o) => (
+            <label key={o.value} className="hover:bg-muted flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm">
+              <Checkbox checked={selecionadas.includes(o.value)} onCheckedChange={() => alternar(o.value)} />{o.label}
+            </label>
+          ))}
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
+function RelatorioTitulos({ tipo, rows, hoje, filtros, resumo, nomeParc, nomeCentro, onClose }: {
+  tipo: TipoTitulo; rows: Row[]; hoje: string; filtros: string[]; resumo: ReturnType<typeof resumoTitulos>;
+  nomeParc: (id: unknown) => string; nomeCentro: (id: unknown) => string; onClose: () => void;
+}) {
+  const titulo = tipo === "receber" ? "Relatório de Contas a Receber" : "Relatório de Contas a Pagar";
+  const pago = tipo === "receber" ? "Recebido" : "Pago";
+  const imprimir = () => {
+    const el = document.getElementById("relatorio-titulos");
+    const w = window.open("", "_blank");
+    if (!el || !w) return void toast.error("Permita a abertura de janelas para imprimir.");
+    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${titulo}</title><style>
+      body{font-family:Arial,sans-serif;font-size:11px;color:#111;margin:16px}h2{margin:0 0 4px}table{width:100%;border-collapse:collapse;margin-top:8px}
+      th,td{border-bottom:1px solid #ddd;padding:4px;text-align:left}th{background:#f2f2f2}.r{text-align:right}.cards{display:flex;gap:8px;margin:8px 0}
+      .cards div{border:1px solid #ccc;border-radius:4px;padding:6px;flex:1}.muted{color:#666}tfoot td{font-weight:bold}</style></head><body>${el.innerHTML}</body></html>`);
+    w.document.close(); w.focus(); setTimeout(() => w.print(), 300);
+  };
+  const cards = [["Total", resumo.total, resumo.qtd.total], ["A vencer", resumo.aVencer, resumo.qtd.aVencer], ["Vencidos", resumo.vencidos, resumo.qtd.vencidos],
+    [pago, resumo.pagoMes, resumo.qtd.pago], ["Em aberto", resumo.emAberto, resumo.qtd.emAberto]] as const;
+  const total = round2(rows.reduce((s, t) => s + num(t["valor"]), 0));
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-h-[90vh] overflow-auto sm:max-w-5xl">
+        <DialogHeader><DialogTitle>{titulo}</DialogTitle></DialogHeader>
+        <div id="relatorio-titulos">
+          <h2 className="text-lg font-bold">{titulo}</h2>
+          <p className="muted text-muted-foreground text-xs">Emitido em {formatDate(hoje)} • {filtros.join(" • ")}</p>
+          <div className="cards my-2 grid grid-cols-5 gap-2">
+            {cards.map(([l, v, q]) => <div key={l} className="rounded border p-2 text-xs"><p className="text-muted-foreground">{l}</p><p className="font-bold">{formatBRL(v)}</p><p className="text-muted-foreground">{q} título(s)</p></div>)}
+          </div>
+          <table className="w-full text-xs">
+            <thead><tr className="bg-muted text-left"><th className="p-1">Vencimento</th><th className="p-1">Descrição</th><th className="p-1">{tipo === "receber" ? "Cliente" : "Fornecedor"}</th><th className="p-1">Categoria</th><th className="p-1">Centro de custo</th><th className="p-1">Situação</th><th className="r p-1 text-right">Valor</th></tr></thead>
+            <tbody>
+              {rows.map((t) => { const s = situacaoTitulo(t, hoje); return (
+                <tr key={text(rowId(t))} className="border-t">
+                  <td className="p-1">{formatDate(t["vencimento"])}</td><td className="p-1">{text(t["descricao"])}</td><td className="p-1">{nomeParc(t["parceiro_id"])}</td>
+                  <td className="p-1">{text(t["categoria"])}</td><td className="p-1">{nomeCentro(t["centro_custo_id"])}</td><td className="p-1">{SITUACAO_META[s].label(tipo)}</td>
+                  <td className="r p-1 text-right tabular-nums">{formatBRL(t["valor"])}</td>
+                </tr>); })}
+            </tbody>
+            <tfoot><tr className="border-t font-bold"><td className="p-1" colSpan={6}>{rows.length} título(s)</td><td className="r p-1 text-right tabular-nums">{formatBRL(total)}</td></tr></tfoot>
+          </table>
+        </div>
+        <DialogFooter><Button variant="outline" onClick={onClose}>Fechar</Button><Button onClick={imprimir}><FileText className="mr-1 h-4 w-4" />Imprimir / PDF</Button></DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row[]; loading: boolean; perms: Perms }) {
   const qc = useQueryClient();
   const { data: parceiros = [] } = useTableRows("parceiros");
@@ -131,7 +204,14 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
   };
   const { data: cartoes = [] } = useTableRows("despesas_cartoes");
   const categorias = useCategoriasFinanceiro(tipo);
-  const [f, setF] = useState({ busca: "", situacao: "todos", categoria: "todos", cartao: "todos", per: periodoPreset("mes") });
+  const { data: centrosCusto = [] } = useTableRows("centro_custo");
+  const nomeCentro = (id: unknown) => {
+    const c = centrosCusto.find((x) => text(rowId(x)) === text(id));
+    return c ? [text(c["codigo"]), text(c["descricao"])].filter(Boolean).join(" - ") : "";
+  };
+  const [f, setF] = useState({ busca: "", situacao: "todos", categoria: "todos", cartao: "todos", centro: "todos", per: periodoPreset("mes") });
+  const situacoesSel = f.situacao === "todos" ? [] : f.situacao.split(",").filter(Boolean);
+  const [relatorio, setRelatorio] = useState(false);
   const [sel, setSel] = useState<Set<string>>(new Set());
   const [confirmarLote, setConfirmarLote] = useState(false);
   const periodoF = f.per;
@@ -159,23 +239,26 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
     }
     return mapa;
   }, [doTipo]);
-  const rows = useMemo(
+  // Base = todos os filtros menos a situação (os cards do topo não zeram ao filtrar uma situação).
+  const base = useMemo(
     () =>
       doTipo
         .filter((t) => {
           const v = text(t["vencimento"]).slice(0, 10);
           return (
             matchesAny([t["descricao"], nomeParc(t["parceiro_id"]), nomeParc(t["cliente_atendido_id"]), t["categoria"], moedaDeNumero(num(t["valor"])), num(t["valor"]).toFixed(2)], f.busca) &&
-            (f.situacao === "todos" || (f.situacao === "em_aberto" ? ["aberto", "atrasado", "agendado", "parcial"].includes(situacaoTitulo(t, hoje)) : situacaoTitulo(t, hoje) === f.situacao)) &&
             (f.categoria === "todos" || t["categoria"] === f.categoria) &&
             (f.cartao === "todos" || text(t["cartao_id"]) === f.cartao) &&
+            (f.centro === "todos" || (f.centro === "sem" ? !t["centro_custo_id"] : text(t["centro_custo_id"]) === f.centro)) &&
             (!periodoF.de || v >= periodoF.de) && (!periodoF.ate || v <= periodoF.ate)
           );
         })
         .sort((a, b) => text(a["vencimento"]).localeCompare(text(b["vencimento"]))),
-    [doTipo, f, hoje], // eslint-disable-line react-hooks/exhaustive-deps
+    [doTipo, f.busca, f.categoria, f.cartao, f.centro, periodoF, parceiroById], // eslint-disable-line react-hooks/exhaustive-deps
   );
-  const resumo = resumoTitulos(rows, hoje);
+  const rows = useMemo(() => base.filter((t) => casaSituacao(t, situacoesSel, hoje)), [base, f.situacao, hoje]); // eslint-disable-line react-hooks/exhaustive-deps
+  const resumo = resumoTitulos(base, hoje, periodoF);
+  const totalFiltrado = round2(rows.reduce((s, t) => s + num(t["valor"]), 0));
   // Visão geral de Contas a Pagar: compras no cartão aparecem agrupadas como uma fatura por cartão/vencimento.
   const [faturaSel, setFatura] = useState<Row | null>(null);
   const [novaCompra, setNovaCompra] = useState<Row | null>(null);
@@ -408,12 +491,12 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
   };
 
   const pagoLabel = tipo === "receber" ? "Recebido" : "Pago";
-  const cards: Array<{ label: string; valor: number; sit: string; cls: string }> = [
-    { label: "Total do período", valor: resumo.total, sit: "todos", cls: "border-l-muted-foreground" },
-    { label: "A vencer", valor: resumo.aVencer, sit: "aberto", cls: "border-l-primary" },
-    { label: "Vencidos", valor: resumo.vencidos, sit: "atrasado", cls: "border-l-destructive" },
-    { label: `${pagoLabel} no mês`, valor: resumo.pagoMes, sit: "pago", cls: "border-l-success" },
-    { label: "Total em aberto", valor: resumo.emAberto, sit: "em_aberto", cls: "border-l-warning" },
+  const cards: Array<{ label: string; valor: number; qtd: number; sit: string; cls: string }> = [
+    { label: "Total do período", valor: resumo.total, qtd: resumo.qtd.total, sit: "todos", cls: "border-l-muted-foreground" },
+    { label: "A vencer", valor: resumo.aVencer, qtd: resumo.qtd.aVencer, sit: "aberto", cls: "border-l-primary" },
+    { label: "Vencidos", valor: resumo.vencidos, qtd: resumo.qtd.vencidos, sit: "atrasado", cls: "border-l-destructive" },
+    { label: `${pagoLabel} ${periodoF.de || periodoF.ate ? "no período" : "no mês"}`, valor: resumo.pagoMes, qtd: resumo.qtd.pago, sit: "pago", cls: "border-l-success" },
+    { label: "Total em aberto", valor: resumo.emAberto, qtd: resumo.qtd.emAberto, sit: "em_aberto", cls: "border-l-warning" },
   ];
 
   const columns: Column[] = [
@@ -523,10 +606,10 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
   };
 
   const exportarCsv = () => {
-    const linhas = [["Vencimento", "Descrição", "Parceiro", "Categoria", "Valor", "Situação", "Pago em", "Valor pago"]];
+    const linhas = [["Vencimento", "Descrição", "Parceiro", "Categoria", "Centro de custo", "Valor", "Situação", "Pago em", "Valor pago"]];
     for (const t of rows) {
       const s = situacaoTitulo(t, hoje);
-      linhas.push([formatDate(t["vencimento"]), text(t["descricao"]), nomeParc(t["parceiro_id"]), text(t["categoria"]),
+      linhas.push([formatDate(t["vencimento"]), text(t["descricao"]), nomeParc(t["parceiro_id"]), text(t["categoria"]), nomeCentro(t["centro_custo_id"]),
         num(t["valor"]).toFixed(2).replace(".", ","), SITUACAO_META[s].label(tipo), formatDate(t["pago_em"]), t["valor_pago"] ? num(t["valor_pago"]).toFixed(2).replace(".", ",") : ""]);
     }
     const csv = "\uFEFF" + linhas.map((l) => l.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(";")).join("\n");
@@ -534,6 +617,17 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
     a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
     a.download = `contas-a-${tipo}.csv`; a.click();
   };
+
+  const situacoesOpts = [{ value: "em_aberto", label: "Em aberto (todos)" }, ...(["aberto", "parcial", "atrasado", "pago", "cancelado"] as Situacao[]).map((s) => ({ value: s, label: SITUACAO_META[s].label(tipo) }))];
+  const centroOpts = [{ value: "todos", label: "Todos" }, { value: "sem", label: "Sem centro de custo" },
+    ...centrosCusto.map((c) => ({ value: text(rowId(c)), label: nomeCentro(rowId(c)) })).sort((a, b) => a.label.localeCompare(b.label, "pt-BR"))];
+  const filtrosTexto = [
+    `Período: ${periodoF.de || periodoF.ate ? `${formatDate(periodoF.de) || "início"} a ${formatDate(periodoF.ate) || "fim"}` : "Todo o período"}`,
+    `Situação: ${situacoesSel.length ? situacoesSel.map((s) => situacoesOpts.find((o) => o.value === s)?.label ?? s).join(", ") : "Todas"}`,
+    `Categoria: ${f.categoria === "todos" ? "Todas" : f.categoria}`,
+    `Centro de custo: ${centroOpts.find((o) => o.value === f.centro)?.label ?? "Todos"}`,
+    ...(f.busca ? [`Busca: "${f.busca}"`] : []),
+  ];
 
   return (
     <div className="space-y-4">
@@ -543,9 +637,20 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
             className={cn("bg-card rounded-lg border border-l-4 p-3 text-left transition hover:shadow-sm", c.cls, f.situacao === c.sit && c.sit !== "todos" && "ring-primary ring-2")}>
             <p className="text-muted-foreground text-xs">{c.label}</p>
             <p className="text-lg font-bold tabular-nums">{formatBRL(c.valor)}</p>
+            <p className="text-muted-foreground text-xs">{c.qtd} título(s)</p>
           </button>
         ))}
       </div>
+
+      <div className="bg-muted/40 flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm">
+        <span><strong>{rows.length}</strong> título(s) encontrado(s) de {doTipo.length} cadastrados • Total filtrado: <strong className="tabular-nums">{formatBRL(totalFiltrado)}</strong></span>
+        <Button variant="outline" size="sm" onClick={() => setRelatorio(true)}><FileText className="mr-1 h-4 w-4" />Relatório</Button>
+      </div>
+      {relatorio && (
+        <RelatorioTitulos tipo={tipo} rows={rows} hoje={hoje} filtros={filtrosTexto} resumo={resumoTitulos(rows, hoje, periodoF)}
+          nomeParc={nomeParc} nomeCentro={nomeCentro} onClose={() => setRelatorio(false)} />
+      )}
+
 
       {(perms.canDelete || perms.canUpdate) && rows.length > 0 && (
         <div className={cn("bg-card flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3", selecionados.length > 0 && "border-primary")}>
@@ -737,8 +842,10 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
         filters={
           <>
             <FilterInput label="Busca" value={f.busca} onChange={(v) => setF((s) => ({ ...s, busca: v }))} placeholder="Descrição, parceiro, categoria" />
-            <FilterSelect label="Situação" value={f.situacao} onChange={(v) => setF((s) => ({ ...s, situacao: v }))}
-              options={[{ value: "todos", label: "Todas" }, { value: "em_aberto", label: "Em aberto (todos)" }, ...(["aberto", "parcial", "atrasado", "pago", "cancelado"] as Situacao[]).map((s) => ({ value: s, label: SITUACAO_META[s].label(tipo) }))]} />
+            <FiltroMulti label="Situação" selecionadas={situacoesSel} options={situacoesOpts}
+              onChange={(l) => setF((s) => ({ ...s, situacao: l.length ? l.join(",") : "todos" }))} />
+            <div className="space-y-1"><Label className="text-xs">Centro de custo</Label>
+              <SearchSelect value={f.centro} options={centroOpts} placeholder="Todos" onChange={(v) => setF((s) => ({ ...s, centro: v || "todos" }))} /></div>
             <FilterSelect label="Categoria" value={f.categoria} onChange={(v) => setF((s) => ({ ...s, categoria: v }))}
               options={[{ value: "todos", label: "Todas" }, ...categorias.todas.map((c) => ({ value: c, label: c }))]} />
             {tipo === "pagar" && cartoes.length > 0 && (
