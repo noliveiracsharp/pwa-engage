@@ -17,6 +17,10 @@ export type Papel = {
   ordem: number;
   ativo: boolean;
   pct: Record<Natureza, number>;
+  /** "pessoa" = colaborador recebe; "fundo" = reserva/aplicação da própria empresa (ex.: Marketing, Fundo de Reserva). */
+  tipo?: "pessoa" | "fundo";
+  /** Conta bancária de aplicação que recebe o aporte quando o papel é um fundo. */
+  conta_bancaria_id?: string | null;
 };
 
 export const NATUREZAS_COMISSAO: Array<{ value: Natureza; label: string }> = [

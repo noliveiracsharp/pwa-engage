@@ -22,6 +22,7 @@ import { formatBRL, formatDate, formatPct, num, parcelasFromValue, round2 } from
 import type { Natureza } from "@/lib/orcamentos";
 import { pick, type Row } from "@/lib/row";
 import { confirmar } from "@/components/layout/DialogoGlobal";
+import { SearchSelect } from "@/components/data-table/SearchSelect";
 
 export const Route = createFileRoute("/_authenticated/comissoes")({
   staticData: { sitemap: false },
@@ -101,12 +102,27 @@ function Extrato({ canUpdate, canDelete }: { canUpdate: boolean; canDelete: bool
   };
   const soma = (k: "aguardando" | "disponivel" | "pago") => rows.reduce((t, r) => t + calc(r)[k], 0);
 
+  /** Fundo/reserva: o pagamento vira um aporte no Contas a Pagar, na conta de aplicação do fundo. */
+  const lancarAporte = async (r: Row, valor: number, hoje: string) => {
+    if (r["beneficiario_id"]) return null;
+    const orc = orcById.get(text(r["orcamento_id"]));
+    const { error } = await supabase.from("financeiro_titulos").insert({
+      tipo: "pagar", empresa_id: r["empresa_id"], origem_tipo: "manual",
+      descricao: `Aporte ${text(r["papel_nome"])} — Oferta ${text(orc?.["numero"])}`.trim(),
+      categoria: "Aplicação / Fundos", conta_bancaria_id: r["conta_bancaria_id"] ?? null,
+      data_competencia: hoje, vencimento: hoje, valor, valor_pago: valor, pago_em: hoje, status: "pago",
+    } as never);
+    return error;
+  };
+
   const pagar = async (r: Row) => {
     const c = calc(r);
     if (c.disponivel <= 0) return;
     if (!await confirmar(`Registrar pagamento de ${formatBRL(c.disponivel)}?`)) return;
     const novoPago = round2(c.pago + c.disponivel);
     const status = novoPago >= c.valor ? "paga" : "a_pagar";
+    const errAporte = await lancarAporte(r, c.disponivel, new Date().toISOString().slice(0, 10));
+    if (errAporte) return void toast.error(errAporte.message);
     const { error } = await supabase
       .from("orcamento_comissoes")
       .update({ valor_pago: novoPago, status, pago_em: new Date().toISOString().slice(0, 10) } as never)
@@ -128,7 +144,7 @@ function Extrato({ canUpdate, canDelete }: { canUpdate: boolean; canDelete: bool
     { key: "oferta", header: "Oferta", fields: [], render: (r) => <span className="font-semibold tabular-nums">{text(orcById.get(text(r["orcamento_id"]))?.["numero"]) || "—"}</span> },
     { key: "data", header: "Data", fields: ["created_at"], render: (r) => formatDate(r["created_at"]) },
     { key: "papel", header: "Papel", fields: ["papel_nome"] },
-    { key: "benef", header: "Beneficiário", fields: [], render: (r) => text(pick(userById.get(text(r["beneficiario_id"])) ?? {}, ["nome", "email"])) || "—" },
+    { key: "benef", header: "Beneficiário", fields: [], render: (r) => text(pick(userById.get(text(r["beneficiario_id"])) ?? {}, ["nome", "email"])) || (r["beneficiario_id"] ? "—" : `Fundo: ${text(r["papel_nome"])}`) },
     { key: "nat", header: "Natureza", fields: ["natureza"], render: (r) => NAT_LABEL[text(r["natureza"])] ?? "—" },
     { key: "base", header: "Base", fields: ["base_valor"], render: (r) => formatBRL(r["base_valor"]) },
     { key: "pct", header: "%", fields: ["pct"], render: (r) => formatPct(r["pct"]) },
@@ -204,6 +220,8 @@ function Extrato({ canUpdate, canDelete }: { canUpdate: boolean; canDelete: bool
       const c = calc(r);
       if (c.disponivel <= 0) continue;
       const novoPago = round2(c.pago + c.disponivel);
+      const errAporte = await lancarAporte(r, c.disponivel, hoje);
+      if (errAporte) return void toast.error(errAporte.message);
       const { error } = await supabase
         .from("orcamento_comissoes")
         .update({ valor_pago: novoPago, status: novoPago >= c.valor ? "paga" : "a_pagar", pago_em: hoje } as never)
@@ -335,7 +353,7 @@ function Extrato({ canUpdate, canDelete }: { canUpdate: boolean; canDelete: bool
   );
 }
 
-type PapelEdit = { id?: string; nome: string; ativo: boolean; ordem: number; pct_produto: string; pct_servico: string; pct_recorrente: string };
+type PapelEdit = { id?: string; nome: string; ativo: boolean; ordem: number; pct_produto: string; pct_servico: string; pct_recorrente: string; tipo?: "pessoa" | "fundo"; conta_bancaria_id?: string };
 
 function Configuracao({ canEdit }: { canEdit: boolean }) {
   const qc = useQueryClient();
@@ -348,6 +366,10 @@ function Configuracao({ canEdit }: { canEdit: boolean }) {
   const [papeis, setPapeis] = useState<PapelEdit[]>([]);
   const [removidos, setRemovidos] = useState<string[]>([]);
   const [salvando, setSalvando] = useState(false);
+  const { data: contasBanc = [] } = useTableRows("financeiro_contas_bancarias");
+  const contaOptions = useMemo(() => contasBanc
+    .map((c) => ({ value: text(rowId(c)), label: text(pick(c, ["descricao", "nome", "apelido", "banco"])) || "Conta" }))
+    .sort((a, b) => a.label.localeCompare(b.label, "pt-BR")), [contasBanc]);
 
   useEffect(() => setParams(parametros), [parametros]);
   useEffect(() => {
@@ -355,6 +377,7 @@ function Configuracao({ canEdit }: { canEdit: boolean }) {
       papelRows.map((r) => ({
         id: text(rowId(r)), nome: text(r["nome"]), ativo: r["ativo"] !== false, ordem: num(r["ordem"]),
         pct_produto: text(r["pct_produto"] ?? 0), pct_servico: text(r["pct_servico"] ?? 0), pct_recorrente: text(r["pct_recorrente"] ?? 0),
+        tipo: r["tipo"] === "fundo" ? "fundo" : "pessoa", conta_bancaria_id: text(r["conta_bancaria_id"]),
       })),
     );
     setRemovidos([]);
@@ -390,6 +413,7 @@ function Configuracao({ canEdit }: { canEdit: boolean }) {
         const payload = {
           empresa_id: empresaId, nome: p.nome.trim(), ativo: p.ativo, ordem: i + 1,
           pct_produto: num(p.pct_produto), pct_servico: num(p.pct_servico), pct_recorrente: num(p.pct_recorrente),
+          tipo: p.tipo ?? "pessoa", conta_bancaria_id: p.tipo === "fundo" && p.conta_bancaria_id ? p.conta_bancaria_id : null,
         };
         const { error } = p.id
           ? await supabase.from("comissao_papeis").update(payload as never).eq("id", p.id)
@@ -468,7 +492,7 @@ function Configuracao({ canEdit }: { canEdit: boolean }) {
         <div className="overflow-x-auto rounded-lg border">
           <table className="w-full text-sm">
             <thead className="bg-muted/50 text-left">
-              <tr><th className="p-2">Papel</th><th className="p-2">Produto %</th><th className="p-2">Serviço %</th><th className="p-2">Mensal %</th><th className="p-2">Ativo</th><th className="p-2" /></tr>
+              <tr><th className="p-2">Papel</th><th className="p-2">Produto %</th><th className="p-2">Serviço %</th><th className="p-2">Mensal %</th><th className="p-2">Tipo</th><th className="p-2">Conta de aplicação</th><th className="p-2">Ativo</th><th className="p-2" /></tr>
             </thead>
             <tbody>
               {papeis.map((p, i) => (
@@ -477,6 +501,21 @@ function Configuracao({ canEdit }: { canEdit: boolean }) {
                   <td className="p-2"><Input type="number" step="0.01" className="w-24" value={p.pct_produto} onChange={(e) => setPapel(i, { pct_produto: e.target.value })} /></td>
                   <td className="p-2"><Input type="number" step="0.01" className="w-24" value={p.pct_servico} onChange={(e) => setPapel(i, { pct_servico: e.target.value })} /></td>
                   <td className="p-2"><Input type="number" step="0.01" className="w-24" value={p.pct_recorrente} onChange={(e) => setPapel(i, { pct_recorrente: e.target.value })} /></td>
+                  <td className="p-2">
+                    <Select value={p.tipo ?? "pessoa"} onValueChange={(v) => setPapel(i, { tipo: v as "pessoa" | "fundo" })}>
+                      <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="fundo">Fundo / Reserva</SelectItem>
+                        <SelectItem value="pessoa">Pessoa / Colaborador</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </td>
+                  <td className="p-2">
+                    {p.tipo === "fundo" ? (
+                      <SearchSelect value={p.conta_bancaria_id ?? ""} onChange={(v) => setPapel(i, { conta_bancaria_id: v })} placeholder="Selecione"
+                        searchPlaceholder="Pesquisar…" options={contaOptions} />
+                    ) : <span className="text-muted-foreground text-xs">—</span>}
+                  </td>
                   <td className="p-2"><Switch checked={p.ativo} onCheckedChange={(v) => setPapel(i, { ativo: v })} /></td>
                   <td className="p-2">
                     <Button variant="ghost" size="icon" aria-label="Remover papel" onClick={() => { if (p.id) setRemovidos((r) => [...r, p.id!]); setPapeis((s) => s.filter((_, j) => j !== i)); }}>

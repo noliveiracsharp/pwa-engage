@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useComissaoConfig } from "@/hooks/useComissaoConfig";
@@ -25,6 +26,8 @@ type Props = {
 };
 
 const NONE = "__none__";
+/** Marca um papel do tipo fundo/reserva como ligado nesta oferta. */
+const FUNDO = "__fundo__";
 
 export function OrcamentoComissoes({ linhas, orcamentoId, vendedorId, usuarios, onTotalChange }: Props) {
   const perms = usePagePermissions("/comissoes");
@@ -41,19 +44,20 @@ export function OrcamentoComissoes({ linhas, orcamentoId, vendedorId, usuarios, 
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orcamento_comissoes")
-        .select("papel_id, beneficiario_id")
+        .select("*")
         .eq("orcamento_id", orcamentoId as string);
       if (error) throw error;
-      return (data ?? []) as Array<{ papel_id: string; beneficiario_id: string | null }>;
+      return (data ?? []) as unknown as Array<{ papel_id: string; beneficiario_id: string | null }>;
     },
   });
   useEffect(() => {
     const rs = registradas.data;
     if (!rs || rs.length === 0) return;
     const m: Record<string, string> = {};
-    for (const r of rs) m[r.papel_id] = r.beneficiario_id ?? "";
+    const fundos = new Set(papeis.filter((p) => p.tipo === "fundo").map((p) => p.id));
+    for (const r of rs) m[r.papel_id] = r.beneficiario_id ?? (fundos.has(r.papel_id) ? FUNDO : "");
     setBenef((b) => ({ ...m, ...b }));
-  }, [registradas.data]);
+  }, [registradas.data, papeis]);
   const temRegistro = (registradas.data?.length ?? 0) > 0;
 
   const memoria = useMemo(() => calcMemoria(linhas, parametros, papeis), [linhas, parametros, papeis]);
@@ -71,6 +75,9 @@ export function OrcamentoComissoes({ linhas, orcamentoId, vendedorId, usuarios, 
 
   const papeisUsados = Array.from(new Map(memoria.flatMap((g) => g.comissoes).map((c) => [c.papel_id, c.nome])));
   const labelNat = (n: string) => NATUREZAS_COMISSAO.find((x) => x.value === n)?.label ?? n;
+  const papelPorId = new Map(papeis.map((p) => [p.id, p]));
+  const pessoas = papeisUsados.filter(([id]) => papelPorId.get(id)?.tipo !== "fundo");
+  const fundos = papeisUsados.filter(([id]) => papelPorId.get(id)?.tipo === "fundo");
   const benefDe = (papelId: string, nome: string, mapa = benef) =>
     mapa[papelId] ?? (temRegistro ? "" : /vend|comerc/i.test(nome) && vendedorId ? vendedorId : "");
 
@@ -93,7 +100,9 @@ export function OrcamentoComissoes({ linhas, orcamentoId, vendedorId, usuarios, 
           papel_id: c.papel_id,
           papel_nome: c.nome,
           natureza: g.natureza,
-          beneficiario_id: benefDe(c.papel_id, c.nome, mapa),
+          ...(papelPorId.get(c.papel_id)?.tipo === "fundo"
+            ? { beneficiario_id: null, conta_bancaria_id: papelPorId.get(c.papel_id)?.conta_bancaria_id ?? null }
+            : { beneficiario_id: benefDe(c.papel_id, c.nome, mapa) }),
           base_valor: g.base_valor,
           pct: c.pct,
           valor: c.valor,
@@ -163,9 +172,9 @@ export function OrcamentoComissoes({ linhas, orcamentoId, vendedorId, usuarios, 
 
         {orcamentoId && papeisUsados.length > 0 && perms.canCreate && (
           <div className="space-y-2 border-t pt-3">
-            <p className="text-sm font-medium">Beneficiários</p>
+            <p className="text-sm font-medium">Beneficiários da equipe</p>
             <div className="grid gap-2 sm:grid-cols-3">
-              {papeisUsados.map(([id, nome]) => (
+              {pessoas.map(([id, nome]) => (
                 <div key={id} className="space-y-1">
                   <span className="text-muted-foreground text-xs">{nome}</span>
                   <Select value={benefDe(id, nome) || NONE} onValueChange={(v) => {
@@ -184,12 +193,29 @@ export function OrcamentoComissoes({ linhas, orcamentoId, vendedorId, usuarios, 
                 </div>
               ))}
             </div>
+            {fundos.length > 0 && (
+              <>
+                <p className="pt-2 text-sm font-medium">Fundos &amp; reservas da empresa</p>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {fundos.map(([id, nome]) => (
+                    <label key={id} className="flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm">
+                      <span>{nome}{!papelPorId.get(id)?.conta_bancaria_id && <span className="block text-xs text-muted-foreground">Sem conta de aplicação definida</span>}</span>
+                      <Switch checked={benefDe(id, nome) === FUNDO} onCheckedChange={(v) => {
+                        const novo = { ...benef, [id]: v ? FUNDO : "" };
+                        setBenef(novo);
+                        void registrar(novo, true);
+                      }} />
+                    </label>
+                  ))}
+                </div>
+              </>
+            )}
             <div className="flex justify-end">
               <Button size="sm" onClick={() => void registrar()} disabled={salvando}>
                 {salvando ? "Registrando…" : "Registrar comissões"}
               </Button>
             </div>
-            <p className="text-muted-foreground text-xs">Somente papéis com beneficiário informado geram comissão. A escolha é salva automaticamente; "Registrar" recalcula as comissões não pagas.</p>
+            <p className="text-muted-foreground text-xs">Somente papéis com beneficiário informado (ou fundo ligado) geram comissão. Ao pagar um fundo, o aporte entra no Contas a Pagar na conta de aplicação. A escolha é salva automaticamente; "Registrar" recalcula as comissões não pagas.</p>
           </div>
         )}
         {!orcamentoId && <p className="text-muted-foreground text-xs">Salve a oferta para registrar as comissões.</p>}

@@ -32,6 +32,8 @@ export function useComissaoConfig() {
         ordem: num(r["ordem"]),
         ativo: r["ativo"] !== false,
         pct: { produto: num(r["pct_produto"]), servico: num(r["pct_servico"]), recorrente: num(r["pct_recorrente"]) },
+        tipo: (r["tipo"] === "fundo" ? "fundo" : "pessoa") as "pessoa" | "fundo",
+        conta_bancaria_id: r["conta_bancaria_id"] ? String(r["conta_bancaria_id"]) : null,
       })),
     [papeisQ.data],
   );
