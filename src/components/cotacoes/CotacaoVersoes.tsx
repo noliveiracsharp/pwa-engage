@@ -37,7 +37,7 @@ export function CotacaoVersoes({ cotacao, itensCot, precos, itens, canUpdate, us
   async function salvar() {
     if (q.data?.faltaScript) return void toast.error(SCRIPT);
     if (diff?.igual) return void toast.info("Nada mudou desde a última revisão.");
-    const motivo = await perguntar({ titulo: "Nova revisão da cotação", mensagem: "Descreva o motivo (opcional):", placeholder: "Ex.: fornecedor pediu ajuste de quantidade" } as never);
+    const motivo = await perguntar({ title: "Nova revisão da cotação", description: "Descreva o motivo (opcional):", placeholder: "Ex.: fornecedor pediu ajuste de quantidade", confirmText: "Salvar revisão" });
     if (motivo === null) return;
     const versao = Number(ultima?.["versao"] ?? 0) + 1;
     const { error } = await supabase.from("cotacoes_versoes" as never).insert({ cotacao_id: cid, empresa_id: cotacao["empresa_id"] ?? null, versao, snapshot: atual, motivo: String(motivo ?? "") || null, criado_por_nome: usuarioNome || null } as never);
