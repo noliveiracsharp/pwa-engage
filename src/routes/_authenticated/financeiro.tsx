@@ -419,12 +419,12 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
   };
 
   const pagoLabel = tipo === "receber" ? "Recebido" : "Pago";
-  const cards: Array<{ label: string; valor: number; sit: string; cls: string }> = [
-    { label: "Total do período", valor: resumo.total, sit: "todos", cls: "border-l-muted-foreground" },
-    { label: "A vencer", valor: resumo.aVencer, sit: "aberto", cls: "border-l-primary" },
-    { label: "Vencidos", valor: resumo.vencidos, sit: "atrasado", cls: "border-l-destructive" },
-    { label: `${pagoLabel} no mês`, valor: resumo.pagoMes, sit: "pago", cls: "border-l-success" },
-    { label: "Total em aberto", valor: resumo.emAberto, sit: "em_aberto", cls: "border-l-warning" },
+  const cards: Array<{ label: string; valor: number; qtd: number; sit: string; cls: string }> = [
+    { label: "Total do período", valor: resumo.total, qtd: resumo.qtd.total, sit: "todos", cls: "border-l-muted-foreground" },
+    { label: "A vencer", valor: resumo.aVencer, qtd: resumo.qtd.aVencer, sit: "aberto", cls: "border-l-primary" },
+    { label: "Vencidos", valor: resumo.vencidos, qtd: resumo.qtd.vencidos, sit: "atrasado", cls: "border-l-destructive" },
+    { label: `${pagoLabel} ${periodoF.de || periodoF.ate ? "no período" : "no mês"}`, valor: resumo.pagoMes, qtd: resumo.qtd.pago, sit: "pago", cls: "border-l-success" },
+    { label: "Total em aberto", valor: resumo.emAberto, qtd: resumo.qtd.emAberto, sit: "em_aberto", cls: "border-l-warning" },
   ];
 
   const columns: Column[] = [
@@ -534,10 +534,10 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
   };
 
   const exportarCsv = () => {
-    const linhas = [["Vencimento", "Descrição", "Parceiro", "Categoria", "Valor", "Situação", "Pago em", "Valor pago"]];
+    const linhas = [["Vencimento", "Descrição", "Parceiro", "Categoria", "Centro de custo", "Valor", "Situação", "Pago em", "Valor pago"]];
     for (const t of rows) {
       const s = situacaoTitulo(t, hoje);
-      linhas.push([formatDate(t["vencimento"]), text(t["descricao"]), nomeParc(t["parceiro_id"]), text(t["categoria"]),
+      linhas.push([formatDate(t["vencimento"]), text(t["descricao"]), nomeParc(t["parceiro_id"]), text(t["categoria"]), nomeCentro(t["centro_custo_id"]),
         num(t["valor"]).toFixed(2).replace(".", ","), SITUACAO_META[s].label(tipo), formatDate(t["pago_em"]), t["valor_pago"] ? num(t["valor_pago"]).toFixed(2).replace(".", ",") : ""]);
     }
     const csv = "\uFEFF" + linhas.map((l) => l.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(";")).join("\n");
@@ -545,6 +545,17 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
     a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
     a.download = `contas-a-${tipo}.csv`; a.click();
   };
+
+  const situacoesOpts = [{ value: "em_aberto", label: "Em aberto (todos)" }, ...(["aberto", "parcial", "atrasado", "pago", "cancelado"] as Situacao[]).map((s) => ({ value: s, label: SITUACAO_META[s].label(tipo) }))];
+  const centroOpts = [{ value: "todos", label: "Todos" }, { value: "sem", label: "Sem centro de custo" },
+    ...centrosCusto.map((c) => ({ value: text(rowId(c)), label: nomeCentro(rowId(c)) })).sort((a, b) => a.label.localeCompare(b.label, "pt-BR"))];
+  const filtrosTexto = [
+    `Período: ${periodoF.de || periodoF.ate ? `${formatDate(periodoF.de) || "início"} a ${formatDate(periodoF.ate) || "fim"}` : "Todo o período"}`,
+    `Situação: ${situacoesSel.length ? situacoesSel.map((s) => situacoesOpts.find((o) => o.value === s)?.label ?? s).join(", ") : "Todas"}`,
+    `Categoria: ${f.categoria === "todos" ? "Todas" : f.categoria}`,
+    `Centro de custo: ${centroOpts.find((o) => o.value === f.centro)?.label ?? "Todos"}`,
+    ...(f.busca ? [`Busca: "${f.busca}"`] : []),
+  ];
 
   return (
     <div className="space-y-4">
@@ -554,9 +565,20 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
             className={cn("bg-card rounded-lg border border-l-4 p-3 text-left transition hover:shadow-sm", c.cls, f.situacao === c.sit && c.sit !== "todos" && "ring-primary ring-2")}>
             <p className="text-muted-foreground text-xs">{c.label}</p>
             <p className="text-lg font-bold tabular-nums">{formatBRL(c.valor)}</p>
+            <p className="text-muted-foreground text-xs">{c.qtd} título(s)</p>
           </button>
         ))}
       </div>
+
+      <div className="bg-muted/40 flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm">
+        <span><strong>{rows.length}</strong> título(s) encontrado(s) de {doTipo.length} cadastrados • Total filtrado: <strong className="tabular-nums">{formatBRL(totalFiltrado)}</strong></span>
+        <Button variant="outline" size="sm" onClick={() => setRelatorio(true)}><FileText className="mr-1 h-4 w-4" />Relatório</Button>
+      </div>
+      {relatorio && (
+        <RelatorioTitulos tipo={tipo} rows={rows} hoje={hoje} filtros={filtrosTexto} resumo={resumoTitulos(rows, hoje, periodoF)}
+          nomeParc={nomeParc} nomeCentro={nomeCentro} onClose={() => setRelatorio(false)} />
+      )}
+
 
       {(perms.canDelete || perms.canUpdate) && rows.length > 0 && (
         <div className={cn("bg-card flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3", selecionados.length > 0 && "border-primary")}>
