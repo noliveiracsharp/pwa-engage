@@ -97,7 +97,20 @@ export async function getAllowedPaths(userId: string, email?: string): Promise<s
   }
 }
 
+/**
+ * Sub-rotas que têm função própria na tabela `funcoes`: exigem permissão
+ * específica — ter acesso ao pai (/relatorios) não libera estas telas.
+ */
+export const ROTAS_PERMISSAO_PROPRIA = [
+  "/relatorios/dre-ofertas",
+  "/relatorios/comercial",
+  "/relatorios/board",
+  "/relatorios/kpis",
+];
+
 export function isPathAllowed(pathname: string, allowed: string[]): boolean {
+  const propria = ROTAS_PERMISSAO_PROPRIA.find((r) => pathname === r || pathname.startsWith(r + "/"));
+  if (propria) return allowed.some((p) => propria === p || propria.startsWith(p + "/") && ROTAS_PERMISSAO_PROPRIA.includes(p));
   return allowed.some((p) => pathname === p || pathname.startsWith(p + "/"));
 }
 
