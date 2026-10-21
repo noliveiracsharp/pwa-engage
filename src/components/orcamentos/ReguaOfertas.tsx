@@ -10,6 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
+import { BannersEmailButton, useBannersEmail } from "@/components/layout/BannersEmail";
+import { escolherBanner } from "@/lib/regua-cobranca";
 import { REGUA_OFERTA_PADRAO, reguaOfertaSchema, montarEmailOferta, preencherModelo, type ReguaOferta, type EtapaOferta } from "@/lib/regua-ofertas";
 import { verificarNumeroWhatsApp } from "@/lib/ofertas-acompanhamento.functions";
 import { telefoneConsulta } from "@/lib/whatsapp-verificacao";
@@ -26,6 +28,7 @@ export function ReguaOfertas({ open, onOpenChange, canEdit, situacoes }: { open:
   const [historico,setHistorico] = useState<Row[]>([]);
   const [lote,setLote] = useState("");
   const { empresa } = useAuth();
+  const banners = useBannersEmail(empresaId);
   const consultar = useServerFn(verificarNumeroWhatsApp);
   useEffect(() => {
     if (!open) return;
@@ -81,14 +84,14 @@ export function ReguaOfertas({ open, onOpenChange, canEdit, situacoes }: { open:
   };
   const mostrarPrevia = (e:EtapaOferta) => {
     const vars={cliente:"Cliente Exemplo",empresa:String(empresa?.["nome_fantasia"] ?? empresa?.["razao_social"] ?? "Empresa"),numero:"#2026-0001",valor:"R$ 299,90",validade:"30/10/2026",descricao:"Oferta de serviços",link:"#"};
-    setPrevia(montarEmailOferta({empresaNome:vars.empresa,logo:String(empresa?.["logo"] ?? empresa?.["logo_url"] ?? ""),cor:String(empresa?.["cor_primaria_claro"] ?? ""),cliente:vars.cliente,dias:0,descricao:vars.descricao,valor:299.90,vencimento:"2026-10-30",link:"#",numero:vars.numero,mensagem:preencherModelo(e.mensagem,vars),documento:String(empresa?.["cnpj_cpf"] ?? ""),endereco:String(empresa?.["endereco"] ?? ""),telefone:String(empresa?.["telefone1"] ?? ""),site:String(empresa?.["site_url"] ?? "")}));
+    setPrevia(montarEmailOferta({empresaNome:vars.empresa,logo:String(empresa?.["logo"] ?? empresa?.["logo_url"] ?? ""),cor:String(empresa?.["cor_primaria_claro"] ?? ""),cliente:vars.cliente,dias:0,descricao:vars.descricao,valor:299.90,vencimento:"2026-10-30",link:"#",numero:vars.numero,mensagem:preencherModelo(e.mensagem,vars),documento:String(empresa?.["cnpj_cpf"] ?? ""),endereco:String(empresa?.["endereco"] ?? ""),telefone:String(empresa?.["telefone1"] ?? ""),site:String(empresa?.["site_url"] ?? ""),banner:escolherBanner(banners.data?.rows ?? [],"oferta")}));
   };
   return <Sheet open={open} onOpenChange={v=>{if(!busy)onOpenChange(v)}}><SheetContent className="flex flex-col gap-0 p-0 sm:max-w-none">
     <SheetHeader className="border-b p-5"><SheetTitle>Régua de acompanhamento de Ofertas</SheetTitle></SheetHeader>
     <div className="min-h-0 flex-1 overflow-y-auto p-5 space-y-6">
       {erro ? <p className="text-sm text-muted-foreground">{erro}</p> : !cfg ? <Loader2 className="h-5 w-5 animate-spin"/> : <>
         <fieldset disabled={!canEdit || busy} className="space-y-6">
-          <div className="flex items-center gap-3"><Switch checked={cfg.ativo} onCheckedChange={ativo=>setCfg({...cfg,ativo})}/><Label>Régua ligada</Label></div>
+          <div className="flex flex-wrap items-center justify-between gap-3"><div className="flex items-center gap-3"><Switch checked={cfg.ativo} onCheckedChange={ativo=>setCfg({...cfg,ativo})}/><Label>Régua ligada</Label></div><BannersEmailButton empresaId={empresaId} cor={String(empresa?.["cor_primaria_claro"] ?? "")} canEdit={canEdit} /></div>
           <div className="grid gap-4 sm:grid-cols-2"><div className="space-y-2"><Label>Horário (Brasília)</Label><Select value={String(cfg.hora_disparo)} onValueChange={v=>setCfg({...cfg,hora_disparo:Number(v)})}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{Array.from({length:24},(_,h)=><SelectItem key={h} value={String(h)}>{String(h).padStart(2,"0")}:00</SelectItem>)}</SelectContent></Select></div>
           <div className="space-y-2"><Label>Dias da semana</Label><div className="flex flex-wrap gap-3">{SEMANA.map((s,i)=><label key={s} className="flex items-center gap-1 text-xs"><Switch checked={cfg.dias_semana.includes(i)} onCheckedChange={v=>setCfg({...cfg,dias_semana:v?[...cfg.dias_semana,i]:cfg.dias_semana.filter(d=>d!==i)})}/>{s}</label>)}</div></div></div>
           <div className="space-y-2"><Label>Situações acompanhadas</Label><div className="flex flex-wrap gap-4">{[...new Set([...situacoes,...cfg.situacoes])].sort((a,b)=>a.localeCompare(b,"pt-BR")).map(s=><label key={s} className="flex items-center gap-2 text-sm"><Switch checked={cfg.situacoes.includes(s)} onCheckedChange={v=>setCfg({...cfg,situacoes:v?[...cfg.situacoes,s]:cfg.situacoes.filter(x=>x!==s)})}/>{s}</label>)}</div></div>

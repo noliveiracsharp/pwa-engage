@@ -16,6 +16,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useEmpresaAtiva } from "@/hooks/useEmpresaAtiva";
 import { EXEMPLO_EMAIL, montarEmailCobrancaHtml, ETAPAS_PADRAO, MODELO_EMAIL_ASSUNTO_PADRAO, MODELO_WHATSAPP_PADRAO, rotuloEtapa, type Canal, type Etapa } from "@/lib/regua-cobranca";
 import { useAuth } from "@/hooks/useAuth";
+import { BannersEmailButton, useBannersEmail } from "@/components/layout/BannersEmail";
+import { escolherBanner } from "@/lib/regua-cobranca";
 import { formatBRL } from "@/lib/orcamentos";
 import { text } from "@/lib/crud";
 
@@ -53,6 +55,7 @@ export function ReguaCobranca({ canEdit }: { canEdit: boolean }) {
   const empresaAtiva = useEmpresaAtiva();
   const [previa, setPrevia] = useState(false);
   const { empresa: empresaRow } = useAuth();
+  const banners = useBannersEmail(empresaId);
   const htmlPrevia = useMemo(() => {
     const e = (empresaRow ?? {}) as Record<string, unknown>;
     const s = (k: string) => (e[k] ? String(e[k]) : null);
@@ -61,8 +64,9 @@ export function ReguaCobranca({ canEdit }: { canEdit: boolean }) {
       vencimento: new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10), link: "#",
       documento: s("cnpj_cpf"), endereco: s("endereco"), telefone: s("telefone1"),
       emailContato: cfg?.responder_para || cfg?.remetente_email || null, site: empresaAtiva.site || null,
+      banner: escolherBanner(banners.data?.rows ?? [], "cobranca"),
     });
-  }, [empresaAtiva.nome, empresaAtiva.logo, empresaAtiva.claro, empresaAtiva.site, empresaRow, cfg?.responder_para, cfg?.remetente_email]);
+  }, [banners.data, empresaAtiva.nome, empresaAtiva.logo, empresaAtiva.claro, empresaAtiva.site, empresaRow, cfg?.responder_para, cfg?.remetente_email]);
 
   useEffect(() => {
     void (async () => {
@@ -124,6 +128,7 @@ export function ReguaCobranca({ canEdit }: { canEdit: boolean }) {
           <TabsTrigger value="auditoria">Auditoria de leitura</TabsTrigger>
         </TabsList>
         <div className="flex gap-2">
+          <BannersEmailButton empresaId={empresaId} cor={empresaAtiva.claro ?? ""} canEdit={canEdit} />
           <Button variant="outline" disabled={rodando} onClick={executar}>{rodando ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Play className="mr-1 h-4 w-4" />}Executar agora</Button>
           {canEdit && <Button disabled={salvando} onClick={salvar}>{salvando && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}Salvar</Button>}
         </div>
