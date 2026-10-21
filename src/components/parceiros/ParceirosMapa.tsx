@@ -55,5 +55,5 @@ export default function ParceirosMapa({ rows, onAbrir }: { rows: Row[]; onAbrir:
 
   useEffect(() => { void import("leaflet").then((L) => desenhar(L)); }, [rows]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  return <div ref={el} className="h-[calc(100vh-16rem)] min-h-[420px] w-full overflow-hidden rounded-lg border" />;
+  return <div ref={el} className="relative z-0 isolate h-[calc(100vh-16rem)] min-h-[420px] w-full overflow-hidden rounded-lg border" />;
 }
