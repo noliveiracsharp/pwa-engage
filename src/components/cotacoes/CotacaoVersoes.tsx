@@ -56,7 +56,7 @@ export function CotacaoVersoes({ cotacao, itensCot, precos, itens, canUpdate, us
       <div>
         <h3 className="font-semibold">Revisões {ultima ? <span className="ml-1 rounded-full bg-muted px-2 py-0.5 text-xs">{rotuloVersao(ultima["versao"])}</span> : null}</h3>
         <p className="text-xs text-muted-foreground">
-          {q.data?.faltaScript ? SCRIPT : !ultima ? "Nenhuma revisão salva. Salve a primeira para congelar os itens e preços atuais." : diff?.igual ? "Sem alterações desde a última revisão." : `Alterações pendentes: ${diff?.itens.length ?? 0} item(ns) mudaram desde a última revisão.`}
+          {q.data?.faltaScript ? SCRIPT : !ultima ? "Nenhuma revisão salva. Salve a primeira para congelar os itens e preços atuais." : diff?.igual ? "Sem alterações desde a última revisão." : `Há alterações desde a última revisão (${diff?.itens.length ?? 0} item(ns)${diff?.precosMudaram ? " e preços" : ""}).`}
         </p>
       </div>
       <div className="flex gap-2">
