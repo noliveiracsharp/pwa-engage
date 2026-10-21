@@ -1,5 +1,6 @@
 import { PessoaCampos } from "@/components/pessoas/PessoaCampos";
 import { TEMPERATURAS } from "@/lib/temperatura";
+import { MOTIVOS_PERDA, ORIGENS_LEAD, TIPOS_ACAO, negocioPerdido } from "@/lib/crm";
 import { OrcamentoDespesas } from "@/components/orcamentos/OrcamentoDespesas";
 import { OrcamentoCompra } from "@/components/orcamentos/OrcamentoCompra";
 import { condicaoCompraFromValue, condicaoCompraPadrao, condicaoCompraToValue, cronogramaCompra, type CondicaoCompra } from "@/lib/orcamentos";
@@ -84,9 +85,23 @@ const NONE = "__none__";
 /** Validade padrão de um novo orçamento (dias após a data). */
 const VALIDADE_PADRAO_DIAS = 15;
 
+/** ISO do banco → valor de input datetime-local (hora local). */
+const paraLocal = (v: unknown) => {
+  const d = new Date(String(v ?? ""));
+  if (!v || Number.isNaN(d.getTime())) return "";
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+};
+
 type Header = {
   situacao: string;
   temperatura: string;
+  origem_lead: string;
+  motivo_perda: string;
+  motivo_perda_obs: string;
+  proxima_acao_tipo: string;
+  proxima_acao_em: string;
+  proxima_acao_obs: string;
   kanban_etapa_id: string;
   dt_orcamento: string;
   validade_orcamento: string;
@@ -107,6 +122,12 @@ const emptyHeader = (vendedorId: string): Header => {
   return {
     situacao: "Em andamento",
     temperatura: "",
+    origem_lead: "",
+    motivo_perda: "",
+    motivo_perda_obs: "",
+    proxima_acao_tipo: "",
+    proxima_acao_em: "",
+    proxima_acao_obs: "",
     kanban_etapa_id: "",
     dt_orcamento: hoje,
     validade_orcamento: addDaysISO(hoje, VALIDADE_PADRAO_DIAS),
@@ -169,6 +190,12 @@ const headerFromRecord = (r: Row): Header => {
   return {
     situacao: String(r["situacao"] ?? "") || "Em andamento",
     temperatura: String(r["temperatura"] ?? ""),
+    origem_lead: String(r["origem_lead"] ?? ""),
+    motivo_perda: String(r["motivo_perda"] ?? ""),
+    motivo_perda_obs: String(r["motivo_perda_obs"] ?? ""),
+    proxima_acao_tipo: String(r["proxima_acao_tipo"] ?? ""),
+    proxima_acao_em: paraLocal(r["proxima_acao_em"]),
+    proxima_acao_obs: String(r["proxima_acao_obs"] ?? ""),
     kanban_etapa_id: String(r["kanban_etapa_id"] ?? ""),
     dt_orcamento: dt,
     validade_orcamento: toISODate(r["validade_orcamento"]),
@@ -530,7 +557,22 @@ export function OrcamentoSheet({
       return;
     }
 
+    if (negocioPerdido(h.situacao) && !h.motivo_perda) {
+      toast.error("Informe o motivo da perda.");
+      return;
+    }
+    const crm: Row = {};
+    const campoCrm = (k: keyof Header, v: string | null) => {
+      if (v || (record && record[k] != null)) crm[k] = v || null;
+    };
+    campoCrm("origem_lead", h.origem_lead);
+    campoCrm("motivo_perda", negocioPerdido(h.situacao) ? h.motivo_perda : "");
+    campoCrm("motivo_perda_obs", negocioPerdido(h.situacao) ? h.motivo_perda_obs : "");
+    campoCrm("proxima_acao_tipo", h.proxima_acao_tipo);
+    campoCrm("proxima_acao_em", h.proxima_acao_em ? new Date(h.proxima_acao_em).toISOString() : "");
+    campoCrm("proxima_acao_obs", h.proxima_acao_obs);
     const header: Row = {
+      ...crm,
       situacao: h.situacao,
       ...(h.temperatura || record?.["temperatura"] ? { temperatura: h.temperatura || null } : {}),
       ...(h.kanban_etapa_id ? { kanban_etapa_id: h.kanban_etapa_id } : {}),
@@ -681,6 +723,54 @@ export function OrcamentoSheet({
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="min-w-0 space-y-1.5">
+              <Label className="block text-sm font-medium">Origem do lead</Label>
+              <SearchSelect
+                value={h.origem_lead}
+                onChange={(v) => patchHeader({ origem_lead: v })}
+                options={ORIGENS_LEAD.map((o) => ({ value: o, label: o }))}
+                placeholder="Selecione"
+                searchPlaceholder="Pesquisar…"
+                disabled={Boolean(readOnly)}
+              />
+            </div>
+
+            <div className="min-w-0 space-y-1.5 sm:col-span-2 rounded-md border border-border p-3">
+              <p className="text-sm font-medium">Próxima ação</p>
+              <div className="grid gap-2 sm:grid-cols-3">
+                <SearchSelect
+                  value={h.proxima_acao_tipo}
+                  onChange={(v) => patchHeader({ proxima_acao_tipo: v })}
+                  options={TIPOS_ACAO.map((t) => ({ value: t.value, label: t.label }))}
+                  placeholder="Tipo"
+                  searchPlaceholder="Pesquisar…"
+                  disabled={Boolean(readOnly)}
+                />
+                <Input type="datetime-local" value={h.proxima_acao_em} disabled={Boolean(readOnly)}
+                  onChange={(e) => patchHeader({ proxima_acao_em: e.target.value })} aria-label="Data e hora da próxima ação" />
+                <Input value={h.proxima_acao_obs} disabled={Boolean(readOnly)} placeholder="O que fazer"
+                  onChange={(e) => patchHeader({ proxima_acao_obs: e.target.value })} />
+              </div>
+            </div>
+
+            {negocioPerdido(h.situacao) && (
+              <div className="min-w-0 space-y-1.5 sm:col-span-2 rounded-md border border-destructive/40 p-3">
+                <p className="text-sm font-medium">Motivo da perda *</p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <SearchSelect
+                    value={h.motivo_perda}
+                    onChange={(v) => patchHeader({ motivo_perda: v })}
+                    options={MOTIVOS_PERDA.map((m) => ({ value: m, label: m }))}
+                    placeholder="Selecione o motivo"
+                    searchPlaceholder="Pesquisar…"
+                    disabled={Boolean(readOnly)}
+                  />
+                  <Input value={h.motivo_perda_obs} disabled={Boolean(readOnly)} placeholder="Detalhes (ex.: concorrente)"
+                    onChange={(e) => patchHeader({ motivo_perda_obs: e.target.value })} />
+                </div>
+              </div>
+            )}
 
             <div className="min-w-0 space-y-1.5">
               <Label htmlFor="dt_orcamento" className="block text-sm font-medium">
