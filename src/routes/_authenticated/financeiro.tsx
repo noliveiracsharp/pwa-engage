@@ -770,8 +770,10 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
         filters={
           <>
             <FilterInput label="Busca" value={f.busca} onChange={(v) => setF((s) => ({ ...s, busca: v }))} placeholder="Descrição, parceiro, categoria" />
-            <FilterSelect label="Situação" value={f.situacao} onChange={(v) => setF((s) => ({ ...s, situacao: v }))}
-              options={[{ value: "todos", label: "Todas" }, { value: "em_aberto", label: "Em aberto (todos)" }, ...(["aberto", "parcial", "atrasado", "pago", "cancelado"] as Situacao[]).map((s) => ({ value: s, label: SITUACAO_META[s].label(tipo) }))]} />
+            <FiltroMulti label="Situação" selecionadas={situacoesSel} options={situacoesOpts}
+              onChange={(l) => setF((s) => ({ ...s, situacao: l.length ? l.join(",") : "todos" }))} />
+            <div className="space-y-1"><Label className="text-xs">Centro de custo</Label>
+              <SearchSelect value={f.centro} options={centroOpts} placeholder="Todos" onChange={(v) => setF((s) => ({ ...s, centro: v || "todos" }))} /></div>
             <FilterSelect label="Categoria" value={f.categoria} onChange={(v) => setF((s) => ({ ...s, categoria: v }))}
               options={[{ value: "todos", label: "Todas" }, ...categorias.todas.map((c) => ({ value: c, label: c }))]} />
             {tipo === "pagar" && cartoes.length > 0 && (
