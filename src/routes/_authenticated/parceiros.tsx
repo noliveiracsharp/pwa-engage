@@ -135,14 +135,34 @@ function ParceirosPage() {
     { key: "status", header: "Status", fields: ["status"], render: (r) => <StatusBadge value={r["status"]} /> },
   ];
 
+  const comPin = rows.filter((r) => coordenadas(r)).length;
+
   return (
     <>
-      {perms.canCreate && (
-        <div className="mb-2 flex justify-end">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <div className="inline-flex rounded-md border p-0.5">
+          <Button variant={visao === "tabela" ? "secondary" : "ghost"} size="sm" onClick={() => setVisao("tabela")}><List className="mr-1 h-4 w-4" />Tabela</Button>
+          <Button variant={visao === "mapa" ? "secondary" : "ghost"} size="sm" onClick={() => setVisao("mapa")}><MapIcon className="mr-1 h-4 w-4" />Mapa</Button>
+        </div>
+        {perms.canCreate && (
           <Button variant="outline" size="sm" onClick={() => setImpOpen(true)}><Upload className="mr-1 h-4 w-4" />Importar CSV</Button>
+        )}
+      </div>
+      <ImportarParceirosDialog open={impOpen} onOpenChange={setImpOpen} existentes={escopo} empresaId={empresaId} stamp={stamp} />
+      {visao === "mapa" && (
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+            {LEGENDA_PINS.map((l) => <span key={l.cat} className="inline-flex items-center gap-1.5"><span className={`h-3 w-3 rounded-full dot-${l.cat}`} />{l.label}</span>)}
+            <span className="ml-auto">{comPin} de {rows.length} com localização{comPin < rows.length ? " — use \"Geolocalizar pelo endereço\" na tabela para os demais" : ""}</span>
+          </div>
+          <ClientOnly fallback={<div className="h-[420px] rounded-lg border" />}>
+            <Suspense fallback={<div className="h-[420px] rounded-lg border" />}>
+              <ParceirosMapa rows={rows} onAbrir={(r) => { setRecord(r); setOpen(true); }} />
+            </Suspense>
+          </ClientOnly>
         </div>
       )}
-      <ImportarParceirosDialog open={impOpen} onOpenChange={setImpOpen} existentes={escopo} empresaId={empresaId} stamp={stamp} />
+      <div className={visao === "mapa" ? "hidden" : undefined}>
       <DataTable
         title="Parceiros de Negócios"
         columns={columns}
