@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { atividadePct, C, fmtDate, isDone, periodo, prioridadeClass, progressoCor, tarefaPct } from "@/lib/projetos";
 import { pick, type Row } from "@/lib/row";
+import { LegendaBlocos } from "@/components/projetos/LegendaCores";
 
 export const Route = createFileRoute("/compartilhado/$token")({
   staticData: { sitemap: false },
@@ -230,6 +231,7 @@ function Compartilhado() {
             </div>
           </div>
         )}
+        <section className="rounded-lg border border-border bg-card p-4"><p className="mb-3 text-sm font-semibold text-foreground">Legenda</p><LegendaBlocos /></section>
         <p className="text-xs text-muted-foreground">A linha vermelha marca o dia de hoje. Página somente para consulta.</p>
       </main>
     </div>

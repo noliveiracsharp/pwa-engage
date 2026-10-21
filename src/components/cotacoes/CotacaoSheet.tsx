@@ -24,6 +24,7 @@ const ITEM_RAPIDO = [{ key: "descricao", label: "Descrição" }, { key: "codigo"
 import { PainelAprovacaoCotacao } from "@/components/cotacoes/AprovacaoCompras";
 import { podeGerarPedido } from "@/lib/aprovacao-compras";
 import { ReceberPedidoDialog } from "@/components/cotacoes/ReceberPedidoDialog";
+import { CotacaoVersoes } from "@/components/cotacoes/CotacaoVersoes";
 
 type Props = {
   open: boolean;
@@ -302,10 +303,27 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
   const semToken = () => toast.error("Link indisponível: rode o script atendeai-cotacao-online.sql no banco.");
   const respNome = String(pick(usuario ?? {}, ["nome", "name"]) ?? "").trim();
   const respFone = String(pick(usuario ?? {}, ["whatsapp", "celular", "telefone"]) ?? "").trim();
+  // Responsável escolhido na cotação; se vazio, usa os dados de quem está enviando.
+  const salvoNome = String(cotacao["responsavel_nome"] ?? "").trim();
+  const salvoFone = String(cotacao["responsavel_telefone"] ?? "").trim();
+  const contatoNome = salvoNome || respNome;
+  const contatoFone = salvoFone || respFone;
   const gravarResponsavel = async () => {
-    if (!respNome && !respFone) return;
-    if (cotacao["responsavel_nome"] === respNome && cotacao["responsavel_telefone"] === respFone) return;
+    if (salvoNome || salvoFone || (!respNome && !respFone)) return;
     await supabase.from("cotacoes").update({ responsavel_nome: respNome || null, responsavel_telefone: respFone || null } as never).eq("id", cid);
+  };
+  const salvarResponsavel = async (campo: "responsavel_nome" | "responsavel_telefone", v: string) => {
+    const t = v.trim();
+    if (t === String(cotacao[campo] ?? "").trim()) return;
+    const { error } = await supabase.from("cotacoes").update({ [campo]: t || null } as never).eq("id", cid);
+    if (error) return void toast.error(error.message);
+    toast.success("Responsável atualizado.");
+    invalidar();
+  };
+  const usarMeusDados = async () => {
+    const { error } = await supabase.from("cotacoes").update({ responsavel_nome: respNome || null, responsavel_telefone: respFone || null } as never).eq("id", cid);
+    if (error) return void toast.error(error.message);
+    invalidar();
   };
   const copiarLink = async (f: Row) => {
     const url = linkDe(f);
@@ -321,7 +339,7 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
     const fone = String(pick(p ?? {}, ["whatsapp", "celular", "telefone"]) ?? "").replace(/\D/g, "");
     const numero = fone && !fone.startsWith("55") ? `55${fone}` : fone;
     void gravarResponsavel();
-    const assinatura = respNome ? `\n\n${respNome}${respFone ? ` — WhatsApp ${formatPhoneDisplay(respFone)}` : ""}` : "";
+    const assinatura = contatoNome ? `\n\n${contatoNome}${contatoFone ? ` — WhatsApp ${formatPhoneDisplay(contatoFone)}` : ""}` : "";
     const texto = `Olá, ${nomeParc(p)}!\n\nSegue a solicitação da cotação ${String(cotacao["numero"] ?? "")}${cotacao["titulo"] ? ` — ${String(cotacao["titulo"])}` : ""}.\n\nPara informar seus preços, prazos e condições, acesse o link abaixo:\n\n${url}\n\nQualquer dúvida, ficamos à disposição.${assinatura}`;
     window.open(`https://wa.me/${numero}?text=${encodeURIComponent(texto)}`, "_blank", "noopener");
   };
@@ -417,6 +435,22 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
         </SheetHeader>
 
         <div className="flex-1 space-y-6 overflow-y-auto px-6 py-5">
+          <section className="space-y-2 rounded-lg border p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h3 className="font-semibold">Comprador responsável</h3>
+                <p className="text-xs text-muted-foreground">Aparece para o fornecedor no link da cotação, com botão para falar no WhatsApp.</p>
+              </div>
+              {canUpdate && (respNome || respFone) && <Button variant="outline" size="sm" onClick={() => void usarMeusDados()}>Usar meus dados</Button>}
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1"><Label>Nome</Label>
+                <Input key={"rn" + cid + salvoNome} disabled={!canUpdate} defaultValue={salvoNome} placeholder={respNome || "Nome do comprador"} onBlur={(e) => void salvarResponsavel("responsavel_nome", e.target.value)} /></div>
+              <div className="space-y-1"><Label>WhatsApp</Label>
+                <Input key={"rf" + cid + salvoFone} disabled={!canUpdate} defaultValue={salvoFone} placeholder={respFone || "(00) 00000-0000"} inputMode="tel" onBlur={(e) => void salvarResponsavel("responsavel_telefone", e.target.value)} /></div>
+            </div>
+          </section>
+          <CotacaoVersoes cotacao={cotacao} itensCot={itensCot} precos={precos} itens={itens} canUpdate={canUpdate} usuarioNome={respNome} />
           <section className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 className="font-semibold">Fornecedores participantes</h3>

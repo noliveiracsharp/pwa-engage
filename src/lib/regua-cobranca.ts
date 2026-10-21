@@ -72,7 +72,41 @@ export type DadosEmailCobranca = {
   empresaNome: string; logo?: string | null | undefined; cor: string; cliente: string; dias: number;
   descricao: string; valor: number; vencimento: string; linhaDigitavel?: string; link: string; pixel?: string;
   documento?: string | null; endereco?: string | null; telefone?: string | null; emailContato?: string | null; site?: string | null;
+  banner?: BannerEmail | null;
 };
+
+/** Modelo de banner de upsell exibido acima do rodapé dos e-mails. */
+export type BannerEmail = {
+  id?: string; nome?: string; titulo: string; descricao?: string | null; imagem_url?: string | null;
+  texto_botao?: string | null; url_destino: string; cor_fundo?: string | null;
+  ativo?: boolean; tipo?: "todos" | "cobranca" | "oferta" | null; prioridade?: number | null;
+};
+
+/** Garante protocolo no site da empresa (https:// quando ausente); vazio se não houver. */
+export function urlSite(v: unknown): string {
+  const t = String(v ?? "").trim();
+  if (!t) return "";
+  return /^https?:\/\//i.test(t) ? t : `https://${t}`;
+}
+
+/** Escolhe o banner ativo do contexto (cobrança/oferta) com menor prioridade. */
+export function escolherBanner(banners: BannerEmail[], contexto: "cobranca" | "oferta"): BannerEmail | null {
+  return [...banners]
+    .filter((b) => b.ativo !== false && b.url_destino && b.titulo && (!b.tipo || b.tipo === "todos" || b.tipo === contexto))
+    .sort((a, b) => Number(a.prioridade ?? 0) - Number(b.prioridade ?? 0))[0] ?? null;
+}
+
+/** HTML do banner: imagem clicável ou cartão na cor da marca; sempre abre em nova aba. */
+export function bannerEmailHtml(b: BannerEmail | null | undefined, cor: string): string {
+  if (!b) return "";
+  const url = escHtml(urlSite(b.url_destino));
+  if (b.imagem_url) return `<tr><td style="padding:0 24px 20px"><a href="${url}" target="_blank" rel="noopener noreferrer"><img src="${escHtml(b.imagem_url)}" alt="${escHtml(b.titulo)}" width="512" style="display:block;width:100%;max-width:512px;border-radius:10px;border:0"></a></td></tr>`;
+  const fundo = b.cor_fundo || cor;
+  return `<tr><td style="padding:0 24px 20px"><table width="100%" cellpadding="0" cellspacing="0" style="background:${escHtml(fundo)};border-radius:10px"><tr><td style="padding:18px 20px;color:#fff">
+<div style="font-size:17px;font-weight:bold;line-height:1.3">${escHtml(b.titulo)}</div>${b.descricao ? `<div style="font-size:13px;line-height:1.5;margin-top:6px;opacity:.95">${escHtml(b.descricao)}</div>` : ""}
+<div style="margin-top:12px"><a href="${url}" target="_blank" rel="noopener noreferrer" style="display:inline-block;background:#fff;color:${escHtml(fundo)};padding:9px 18px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:13px">${escHtml(b.texto_botao || "Falar com o comercial")}</a></div>
+</td></tr></table></td></tr>`;
+}
 
 /** Formata CPF/CNPJ só com dígitos; outros textos voltam como vieram. */
 export function formatarDocumento(v: unknown): string {
@@ -87,13 +121,16 @@ export function montarEmailCobrancaHtml(d: DadosEmailCobranca, oferta?: { mensag
   const cor = d.cor || "#2563eb";
   const doc = formatarDocumento(d.documento);
   const benef = `${escHtml(d.empresaNome)}${doc ? ` — CNPJ/CPF ${escHtml(doc)}` : ""}`;
-  const contatos = [d.telefone && `WhatsApp/Telefone: ${escHtml(d.telefone)}`, d.emailContato && `E-mail: ${escHtml(d.emailContato)}`, d.site && `<a href="${escHtml(d.site)}" style="color:${cor}">${escHtml(d.site.replace(/^https?:\/\//, ""))}</a>`].filter(Boolean).join(" · ");
+  const site = urlSite(d.site);
+  const siteLink = site ? `<a href="${escHtml(site)}" target="_blank" rel="noopener noreferrer" style="color:${cor}">${escHtml(site.replace(/^https?:\/\//, "").replace(/\/$/, ""))}</a>` : "";
+  const contatos = [d.telefone && `WhatsApp/Telefone: ${escHtml(d.telefone)}`, d.emailContato && `E-mail: ${escHtml(d.emailContato)}`, siteLink].filter(Boolean).join(" · ");
+  const marca = d.logo ? `<img src="${escHtml(d.logo)}" height="44" alt="${escHtml(d.empresaNome)}" style="display:block;border:0">` : `<span style="font-size:20px;font-weight:bold;color:${cor}">${escHtml(d.empresaNome)}</span>`;
   return `<!doctype html><html><body style="margin:0;background:#f4f4f5;font-family:Arial,sans-serif">
 <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:24px">
 <table width="560" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;max-width:100%;border-top:6px solid ${cor}">
 <tr><td style="padding:22px 24px 16px;border-bottom:1px solid #e4e4e7"><table width="100%" cellpadding="0" cellspacing="0"><tr>
-<td>${d.logo ? `<img src="${escHtml(d.logo)}" height="44" alt="${escHtml(d.empresaNome)}" style="display:block">` : `<span style="font-size:20px;font-weight:bold;color:${cor}">${escHtml(d.empresaNome)}</span>`}</td>
-<td align="right" style="font-size:11px;color:#71717a;line-height:1.4">${doc ? `CNPJ/CPF ${escHtml(doc)}<br>` : ""}${d.endereco ? escHtml(d.endereco) : ""}</td></tr></table></td></tr>
+<td>${site ? `<a href="${escHtml(site)}" target="_blank" rel="noopener noreferrer" style="text-decoration:none">${marca}</a>` : marca}</td>
+<td align="right" style="font-size:11px;color:#71717a;line-height:1.4">${doc ? `CNPJ/CPF ${escHtml(doc)}<br>` : ""}${d.endereco ? `${escHtml(d.endereco)}<br>` : ""}${siteLink}</td></tr></table></td></tr>
 <tr><td style="padding:24px;color:#18181b;font-size:15px;line-height:1.5">
 <p>Olá, ${escHtml(d.cliente)}!</p><p>${escHtml(oferta?.mensagem ?? avisoEtapa(d.dias)).replace(/\n/g, "<br>")}</p>
 <table width="100%" style="background:#f4f4f5;border-left:4px solid ${cor};border-radius:8px;padding:12px;margin:16px 0">
@@ -104,6 +141,7 @@ ${d.linhaDigitavel ? `<p style="font-size:12px;color:#52525b">Linha digitável:<
 ${oferta ? `<b>Dica de segurança:</b> confira se esta Oferta foi enviada por <b>${benef}</b>. Em caso de dúvida, entre em contato pelos canais oficiais.` : `<b>Dica de segurança:</b> antes de confirmar o Pix ou o boleto, confira no seu banco se o beneficiário é <b>${benef}</b>. Se for diferente, não pague e fale com a gente.`}</td></tr></table>
 <p style="font-size:12px;color:#71717a">${oferta ? "Se já respondeu sobre esta Oferta, desconsidere esta mensagem." : "Se já realizou o pagamento, desconsidere esta mensagem."}</p>
 </td></tr>
+${bannerEmailHtml(d.banner, cor)}
 <tr><td style="background:#fafafa;border-top:1px solid #e4e4e7;padding:16px 24px;font-size:11px;color:#71717a;line-height:1.5">
 <b style="color:#3f3f46">${benef}</b>${d.endereco ? `<br>${escHtml(d.endereco)}` : ""}
 ${contatos ? `<br>Dúvidas sobre esta ${oferta ? "Oferta" : "fatura"}? ${contatos}` : ""}
