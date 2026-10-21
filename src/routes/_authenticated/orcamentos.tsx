@@ -487,8 +487,12 @@ function OrcamentosPage() {
 
   return (
     <>
-      <div className="mb-3 flex justify-end"><Button variant="outline" onClick={() => setReguaOpen(true)}><MessageCircle className="mr-2 h-4 w-4" />Régua de acompanhamento</Button></div>
+      <div className="mb-3 flex justify-end gap-2">
+        <Button variant="outline" onClick={() => setLeadsOpen(true)}><Inbox className="mr-2 h-4 w-4" />Captação de leads</Button>
+        <Button variant="outline" onClick={() => setReguaOpen(true)}><MessageCircle className="mr-2 h-4 w-4" />Régua de acompanhamento</Button>
+      </div>
       <ReguaOfertas open={reguaOpen} onOpenChange={setReguaOpen} canEdit={perms.canUpdate} situacoes={situacoes.map(s => s.value)} />
+      <CaptacaoLeadsDialog open={leadsOpen} onOpenChange={setLeadsOpen} canEdit={perms.canUpdate} />
       <div className="mb-4 flex gap-3 overflow-x-auto pb-1">
         {cards.map((c) => {
           const ativo = f.situacao === c.value;
