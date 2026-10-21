@@ -69,7 +69,7 @@ export function ImportarParceirosDialog({ open, onOpenChange, existentes, empres
         const { data, error } = await supabase.from("parceiros").insert(fatia.map((p) => p.row) as never).select("id");
         if (error) throw error;
         const ids = (data ?? []) as { id: string }[];
-        const contatos = fatia.flatMap((p, j) => ids[j] ? contatosDaLinha(p.l.valores).map((c) => ({ ...c, entidade: "parceiro", entidade_id: ids[j].id })) : []);
+        const contatos = fatia.flatMap((p, j) => ids[j] ? contatosDaLinha(p.l.valores).map((c) => ({ ...c, entidade: "parceiro", entidade_id: ids[j]!.id })) : []);
         if (contatos.length) {
           const { error: e2 } = await supabase.from("cadastro_contatos" as never).insert(contatos as never);
           if (e2) semContatos = true;
