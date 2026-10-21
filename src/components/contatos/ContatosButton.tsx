@@ -18,6 +18,17 @@ import { validarEmailProvedor } from "@/lib/contatos.functions";
 type Contato = { id: string; tipo: "telefone" | "email"; valor: string; finalidade: string; nome: string | null; principal: boolean; ativo: boolean };
 type Props = { entidade: "parceiro" | "empresa"; entidadeId: string };
 
+/** Espelha o contato principal (ou o primeiro ativo) nas colunas legadas do cadastro pai. */
+async function sincronizarPai(entidade: Props["entidade"], entidadeId: string, lista: Contato[]) {
+  const ativos = lista.filter((c) => c.ativo);
+  const melhor = (tipo: Contato["tipo"]) => (ativos.find((c) => c.tipo === tipo && c.principal) ?? ativos.find((c) => c.tipo === tipo))?.valor ?? null;
+  const fones = ativos.filter((c) => c.tipo === "telefone").sort((a, b) => Number(b.principal) - Number(a.principal)).map((c) => c.valor);
+  const patch = entidade === "parceiro"
+    ? { telefone: fones[0] ?? null, telefone2: fones[1] ?? null, email: melhor("email") }
+    : { telefone1: fones[0] ?? null, telefone2: fones[1] ?? null };
+  await supabase.from((entidade === "parceiro" ? "parceiros" : "empresas") as never).update(patch as never).eq("id", entidadeId);
+}
+
 const finLabel = (v: string) => FINALIDADES.find((f) => f.value === v)?.label ?? v;
 
 function EmailStatus({ email }: { email: string }) {
@@ -37,8 +48,27 @@ function EmailStatus({ email }: { email: string }) {
   return <p className={`flex items-center gap-1 text-xs ${st === "sem_provedor" ? "text-destructive" : "text-muted-foreground"}`}><Icon className={`h-3.5 w-3.5 ${st === "consultando" ? "animate-spin" : ""}`} /> {txt}</p>;
 }
 
-export function ContatosButton({ entidade, entidadeId }: Props) {
+export function ContatosButton(props: Props) {
   const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)}><Contact className="mr-1 h-4 w-4" /> Contatos</Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Telefones e e-mails</DialogTitle>
+            <DialogDescription>Usados nos envios do sistema. "Financeiro" tem prioridade nas cobranças, "Comercial" nas ofertas e "Fiscal" nas notas.</DialogDescription>
+          </DialogHeader>
+          {open && <ContatosPainel {...props} />}
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+/** Lista de contatos exibida direto no corpo do formulário. */
+export function ContatosPainel({ entidade, entidadeId }: Props) {
+  const open = true;
   const [lista, setLista] = useState<Contato[]>([]);
   const [carregando, setCarregando] = useState(false);
   const [novo, setNovo] = useState({ tipo: "telefone" as "telefone" | "email", valor: "", finalidade: "financeiro", nome: "", principal: false });
@@ -48,7 +78,9 @@ export function ContatosButton({ entidade, entidadeId }: Props) {
     const { data, error } = await supabase.from("cadastro_contatos" as never).select("*").eq("entidade", entidade).eq("entidade_id", entidadeId).order("tipo").order("created_at");
     setCarregando(false);
     if (error) return void toast.error(/cadastro_contatos/.test(error.message) ? "Rode o script atendeai-contatos-reajuste.sql no banco." : error.message);
-    setLista((data ?? []) as Contato[]);
+    const l = (data ?? []) as Contato[];
+    setLista(l);
+    void sincronizarPai(entidade, entidadeId, l);
   };
   useEffect(() => { if (open) void carregar(); }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -76,14 +108,7 @@ export function ContatosButton({ entidade, entidadeId }: Props) {
   };
 
   return (
-    <>
-      <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)}><Contact className="mr-1 h-4 w-4" /> Contatos</Button>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Telefones e e-mails</DialogTitle>
-            <DialogDescription>Usados nos envios do sistema: cobranças, boletos, notas fiscais, reajustes e avisos. A finalidade "Financeiro" tem prioridade nas cobranças.</DialogDescription>
-          </DialogHeader>
+    <div className="space-y-3">
           <div className="space-y-3 rounded-lg border p-3">
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1"><Label>Tipo</Label>
@@ -123,8 +148,6 @@ export function ContatosButton({ entidade, entidadeId }: Props) {
               </div>
             ))}
           </div>
-        </DialogContent>
-      </Dialog>
-    </>
+    </div>
   );
 }
