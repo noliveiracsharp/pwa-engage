@@ -46,6 +46,7 @@ function ParceirosPage() {
   const [open, setOpen] = useState(false);
   const [impOpen, setImpOpen] = useState(false);
   const [visao, setVisao] = useState<"tabela" | "mapa">("tabela");
+  const [mf, setMf] = useState({ papel: "todos", uf: "todos", cidade: "todos" });
   const [record, setRecord] = useState<Row | null>(null);
   const [f, setF] = useState({ busca: "", papel: "todos", status: "todos", situacao: "todos", estrutura: "todos", pai: "todos", classificacao: "todos" });
 
@@ -139,7 +140,15 @@ function ParceirosPage() {
     { key: "status", header: "Status", fields: ["status"], render: (r) => <StatusBadge value={r["status"]} /> },
   ];
 
-  const comPin = rows.filter((r) => coordenadas(r)).length;
+  const norm = (v: unknown) => String(v ?? "").trim();
+  const ufs = [...new Set(rows.map((r) => norm(r["uf"]).toUpperCase()).filter(Boolean))].sort((a, b) => a.localeCompare(b, "pt-BR"));
+  const cidades = [...new Set(rows.filter((r) => mf.uf === "todos" || norm(r["uf"]).toUpperCase() === mf.uf).map((r) => norm(r["cidade"])).filter(Boolean))].sort((a, b) => a.localeCompare(b, "pt-BR"));
+  const rowsMapa = rows.filter((r) =>
+    (mf.papel === "todos" || (mf.papel === "cliente" ? r["is_cliente"] === true : r["is_fornecedor"] === true)) &&
+    (mf.uf === "todos" || norm(r["uf"]).toUpperCase() === mf.uf) &&
+    (mf.cidade === "todos" || norm(r["cidade"]) === mf.cidade));
+  const ehCondominio = (r: Row) => /condom/i.test(`${r["razao_social"] ?? ""} ${r["nome_fantasia"] ?? ""} ${caminhoClassificacao(classificacoes, r["classificacao_id"])}`);
+  const comPin = rowsMapa.filter((r) => coordenadas(r)).length;
 
   return (
     <>
@@ -155,13 +164,27 @@ function ParceirosPage() {
       <ImportarParceirosDialog open={impOpen} onOpenChange={setImpOpen} existentes={escopo} empresaId={empresaId} stamp={stamp} />
       {visao === "mapa" && (
         <div className="space-y-2">
+          <div className="grid gap-2 sm:grid-cols-3">
+            <FilterSelect label="Mostrar" value={mf.papel} onChange={(v) => setMf({ ...mf, papel: v })}
+              options={[{ value: "todos", label: "Clientes e fornecedores" }, { value: "cliente", label: "Só clientes" }, { value: "fornecedor", label: "Só fornecedores" }]} />
+            <FilterSelect label="Estado" value={mf.uf} onChange={(v) => setMf({ uf: v, cidade: "todos", papel: mf.papel })}
+              options={[{ value: "todos", label: "Todos" }, ...ufs.map((u) => ({ value: u, label: u }))]} />
+            <FilterSelect label="Cidade" value={mf.cidade} onChange={(v) => setMf({ ...mf, cidade: v })}
+              options={[{ value: "todos", label: "Todas" }, ...cidades.map((c) => ({ value: c, label: c }))]} />
+          </div>
+          <div className="flex flex-wrap gap-2 text-sm">
+            <Badge variant="secondary">Total: {rowsMapa.length}</Badge>
+            <Badge variant="secondary">Clientes: {rowsMapa.filter((r) => r["is_cliente"] === true).length}</Badge>
+            <Badge variant="secondary">Fornecedores: {rowsMapa.filter((r) => r["is_fornecedor"] === true).length}</Badge>
+            <Badge className="bg-primary text-primary-foreground"><Building2 className="mr-1 h-3.5 w-3.5" />Condomínios: {rowsMapa.filter(ehCondominio).length}</Badge>
+          </div>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
             {LEGENDA_PINS.map((l) => <span key={l.cat} className="inline-flex items-center gap-1.5"><span className={`h-3 w-3 rounded-full dot-${l.cat}`} />{l.label}</span>)}
-            <span className="ml-auto">{comPin} de {rows.length} com localização{comPin < rows.length ? " — use \"Geolocalizar pelo endereço\" na tabela para os demais" : ""}</span>
+            <span className="ml-auto">{comPin} de {rowsMapa.length} com localização{comPin < rowsMapa.length ? " — use \"Geolocalizar pelo endereço\" na tabela para os demais" : ""}</span>
           </div>
           <ClientOnly fallback={<div className="h-[420px] rounded-lg border" />}>
             <Suspense fallback={<div className="h-[420px] rounded-lg border" />}>
-              <ParceirosMapa rows={rows} onAbrir={(r) => { setRecord(r); setOpen(true); }} />
+              <ParceirosMapa rows={rowsMapa} onAbrir={(r) => { setRecord(r); setOpen(true); }} />
             </Suspense>
           </ClientOnly>
         </div>
