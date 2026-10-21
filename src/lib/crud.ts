@@ -136,7 +136,10 @@ export function useDeleteRecord(table: string) {
       toast.success("Registro removido.");
     },
     onError: (error: unknown) => {
-      toast.error(error instanceof Error ? error.message : "Não foi possível remover.");
+      const e = error as { code?: string; message?: string } | null;
+      if (e?.code === "23503" || /foreign key|viola/i.test(e?.message ?? ""))
+        return void toast.error("Este registro está em uso (Ofertas, Financeiro ou outro cadastro) e não pode ser apagado. Inative-o.");
+      toast.error(e?.message || "Não foi possível remover.");
     },
   });
 }
