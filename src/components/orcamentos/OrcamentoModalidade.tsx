@@ -17,6 +17,8 @@ export type ModalidadeState = {
   taxa_instalacao: string;
   taxa_instalacao_isenta: boolean;
   vigencia_meses: string;
+  /** Contrato sem prazo de término: mensalidades geradas continuamente. */
+  prazo_indeterminado: boolean;
   reajuste_indice: string;
 };
 
@@ -175,6 +177,7 @@ export function OrcamentoModalidade({
               min={1}
               inputMode="numeric"
               value={value.vigencia_meses}
+              disabled={value.prazo_indeterminado}
               onChange={(e) => onChange({ vigencia_meses: e.target.value })}
             />
           </div>
@@ -189,6 +192,13 @@ export function OrcamentoModalidade({
               onChange={(e) => onChange({ reajuste_indice: e.target.value })}
             />
           </div>
+        </div>
+        <div className="flex items-center justify-between gap-3 rounded-md border p-3">
+          <div>
+            <Label htmlFor="prazo_indeterminado" className="text-sm">Contrato sem prazo de término</Label>
+            <p className="text-muted-foreground text-xs">O sistema mantém sempre os próximos 12 meses de mensalidade lançados.</p>
+          </div>
+          <Switch id="prazo_indeterminado" checked={value.prazo_indeterminado} disabled={Boolean(readOnly)} onCheckedChange={(x) => onChange({ prazo_indeterminado: x })} />
         </div>
         {totalRecorrente <= 0 && (
           <p className="text-muted-foreground text-xs">

@@ -158,6 +158,7 @@ const emptyHeader = (vendedorId: string): Header => {
     taxa_instalacao: "",
     taxa_instalacao_isenta: false,
     vigencia_meses: "36",
+    prazo_indeterminado: false,
     reajuste_indice: "IPCA",
   };
 };
@@ -223,6 +224,7 @@ const headerFromRecord = (r: Row): Header => {
     taxa_instalacao: num(r["taxa_instalacao"]) ? String(num(r["taxa_instalacao"])) : "",
     taxa_instalacao_isenta: r["taxa_instalacao_isenta"] === true,
     vigencia_meses: String(num(r["vigencia_meses"]) || 36),
+    prazo_indeterminado: r["prazo_indeterminado"] === true,
     reajuste_indice: String(r["reajuste_indice"] ?? "") || "IPCA",
   };
 };
@@ -614,6 +616,8 @@ export function OrcamentoSheet({
       total_recorrente: totalRecorrente,
       vigencia_meses: Math.max(1, Math.floor(num(h.vigencia_meses) || 36)),
       reajuste_indice: h.reajuste_indice.trim() || "IPCA",
+      // Só envia a coluna quando já existe no banco (registro carregado) ou quando foi ligada.
+      ...(h.prazo_indeterminado || (record && "prazo_indeterminado" in record) ? { prazo_indeterminado: h.prazo_indeterminado } : {}),
     };
 
     const payloadLinhas: LinhaPayload[] = linhasValidas.map((l, index) => {
