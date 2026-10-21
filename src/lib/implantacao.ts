@@ -24,7 +24,9 @@ const txt = (v: unknown) => String(v ?? "").trim();
 
 export function passosImplantacao(d: DadosImplantacao): PassoImplantacao[] {
   const e = d.empresa ?? {};
-  const empresaOk = Boolean(txt(e["cnpj"] ?? e["documento"]) && txt(e["logo"] ?? e["logo_url"] ?? e["logomarca"]));
+  const doc = txt(e["cnpj_cpf"]) || txt(e["cnpj"]) || txt(e["documento"]);
+  const marca = txt(e["logo"]) || txt(e["logo_url"]) || txt(e["logomarca"]) || txt(e["endereco"]);
+  const empresaOk = Boolean(doc && marca);
   const whatsOk = d.instancias.some((i) => i["webhook_ativo"] === true || /conect/i.test(txt(i["status"])));
   return [
     { id: "empresa", titulo: "Dados da empresa e marca", descricao: "CNPJ, endereço e logotipo.", rota: "/empresas", acao: "Completar cadastro", feito: empresaOk },

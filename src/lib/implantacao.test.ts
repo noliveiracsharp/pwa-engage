@@ -17,4 +17,12 @@ describe("checklist de implantação", () => {
     const p = passosImplantacao({ ...vazio, instancias: [{ webhook_ativo: true }] }).find((x) => x.id === "whatsapp");
     expect(p?.feito).toBe(true);
   });
+  it("dados da empresa contam com cnpj_cpf e endereço", () => {
+    const p = passosImplantacao({ ...vazio, empresa: { cnpj_cpf: "12345678000190", endereco: "Rua A" } }).find((x) => x.id === "empresa");
+    expect(p?.feito).toBe(true);
+  });
+  it("dados da empresa sem documento continuam pendentes", () => {
+    const p = passosImplantacao({ ...vazio, empresa: { endereco: "Rua A", logo: "x" } }).find((x) => x.id === "empresa");
+    expect(p?.feito).toBe(false);
+  });
 });
