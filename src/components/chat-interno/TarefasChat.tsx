@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, CheckCircle2, FileText, Loader2, Paperclip, Plus, X } from "lucide-react";
+import { Check, CheckCircle2, FileText, Loader2, Maximize2, Paperclip, Plus, X } from "lucide-react";
+import { PlannerPainel, ItemLinha, usePlannerItens } from "@/components/chat-interno/PlannerPainel";
+import { diaDoItem, ordenar, PRIORIDADES, type Prioridade } from "@/lib/planner";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { pick, type Row } from "@/lib/row";
@@ -39,6 +41,9 @@ export function TarefasChat({ me, empresaId, usuarios, onAvisar }: {
 }) {
   const qc = useQueryClient();
   const [aba, setAba] = useState<"minhas" | "delegadas">("minhas");
+  const [visao, setVisao] = useState<"hoje" | "proximos" | "backlog" | "concluidas">("hoje");
+  const [expandido, setExpandido] = useState(false);
+  const planner = usePlannerItens(me);
   const [criando, setCriando] = useState(false);
   const nomes = useMemo(() => new Map(usuarios.map((u) => [String(u["id"]), String(pick(u, ["nome"], "Usuário"))])), [usuarios]);
   const nome = (id: unknown) => (String(id) === me ? "Você" : nomes.get(String(id)) ?? "Usuário");
@@ -63,7 +68,17 @@ export function TarefasChat({ me, empresaId, usuarios, onAvisar }: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [me]);
 
-  const lista = tarefas.filter((t) => aba === "minhas" ? String(t["responsavel_id"]) === me : String(t["criado_por"]) === me && String(t["responsavel_id"]) !== me);
+  const lista = tarefas.filter((t) => aba === "minhas" ? String(t["responsavel_id"]) === me && t["status"] === "aguardando" : String(t["criado_por"]) === me && String(t["responsavel_id"]) !== me);
+  const ativos = planner.itens.filter((i) => i.status === "aberta" || i.status === "concluida");
+  const h = hoje();
+  const doDia = ordenar(ativos.filter((i) => {
+    const d = diaDoItem(i);
+    if (visao === "concluidas") return i.status === "concluida";
+    if (i.status === "concluida") return visao === "hoje" && d === h;
+    if (visao === "hoje") return !!d && d <= h;
+    if (visao === "proximos") return !!d && d > h;
+    return !d;
+  }));
   const pendentes = tarefas.filter((t) => String(t["responsavel_id"]) === me && t["status"] === "aguardando").length;
 
   const atualizar = async (t: Row, patch: Record<string, unknown>, aviso: string) => {
@@ -91,12 +106,34 @@ export function TarefasChat({ me, empresaId, usuarios, onAvisar }: {
           ))}
         </div>
         <Button size="sm" onClick={() => setCriando(true)}><Plus className="mr-1 h-4 w-4" /> Nova</Button>
+        <Button size="icon" variant="outline" className="h-8 w-8" aria-label="Expandir planner" title="Expandir planner" onClick={() => setExpandido(true)}><Maximize2 className="h-4 w-4" /></Button>
       </div>
+      {expandido && <PlannerPainel me={me} usuarios={usuarios} onFechar={() => setExpandido(false)} />}
+      {aba === "minhas" && (
+        <div className="flex gap-1 px-4 pb-2 text-[11px]">
+          {([["hoje", "Hoje"], ["proximos", "Próximos"], ["backlog", "Backlog"], ["concluidas", "Concluídas"]] as const).map(([v, l]) => (
+            <button key={v} type="button" onClick={() => setVisao(v)} className={cn("rounded-full border border-border px-2.5 py-1", visao === v && "border-primary bg-primary/10 text-primary")}>{l}</button>
+          ))}
+        </div>
+      )}
       <ScrollArea className="min-h-0 flex-1">
         <div className="space-y-2 px-3 pb-3">
           {isLoading && <Loader2 className="mx-auto my-6 h-5 w-5 animate-spin text-muted-foreground" />}
-          {!isLoading && lista.length === 0 && <p className="py-6 text-center text-sm text-muted-foreground">Nenhuma tarefa aqui.</p>}
+          {aba === "minhas" && lista.length > 0 && <p className="pt-1 text-[11px] font-semibold text-warning">Aguardando seu aceite</p>}
           {lista.map((t) => <CardTarefa key={String(t["id"])} t={t} me={me} nome={nome} onAtualizar={atualizar} />)}
+          {aba === "minhas" && doDia.map((i) => (
+            <div key={i.id} className="flex items-center gap-1">
+              <div className="min-w-0 flex-1"><ItemLinha i={i} onCheck={(f) => void planner.concluir(i, f)} /></div>
+              {i.origem === "tarefa" && i.status !== "concluida" && (
+                <select aria-label="Planejar para" className="h-7 rounded border border-border bg-background text-[10px]" value=""
+                  onChange={(e) => { const v = e.target.value; void planner.planejar(i, v === "backlog" ? null : v === "hoje" ? h : new Date(Date.now() + 864e5).toISOString().slice(0, 10)); }}>
+                  <option value="" disabled>Mover…</option>
+                  <option value="hoje">Hoje</option><option value="amanha">Amanhã</option><option value="backlog">Backlog</option>
+                </select>
+              )}
+            </div>
+          ))}
+          {!isLoading && lista.length === 0 && (aba === "delegadas" || doDia.length === 0) && <p className="py-6 text-center text-sm text-muted-foreground">Nenhuma tarefa aqui.</p>}
         </div>
       </ScrollArea>
     </div>
@@ -173,6 +210,9 @@ function NovaTarefa({ me, empresaId, usuarios, onCancel, onSaved }: {
   const [descricao, setDescricao] = useState("");
   const [resp, setResp] = useState(me);
   const [entrega, setEntrega] = useState("");
+  const [prioridade, setPrioridade] = useState<Prioridade>("media");
+  const [estimativa, setEstimativa] = useState("");
+  const [planejada, setPlanejada] = useState(hoje());
   const [anexos, setAnexos] = useState<Anexo[]>([]);
   const [enviando, setEnviando] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -198,6 +238,8 @@ function NovaTarefa({ me, empresaId, usuarios, onCancel, onSaved }: {
       empresa_id: empresaId, criado_por: me, responsavel_id: resp, titulo: titulo.trim(),
       descricao: descricao.trim() || null, data_solicitacao: hoje(), data_entrega: entrega || null, anexos,
       status: resp === me ? "andamento" : "aguardando",
+      prioridade, estimativa_min: estimativa ? Math.max(1, Math.round(Number(estimativa))) : null,
+      data_planejada: resp === me ? planejada || null : null,
     } as never);
     setEnviando(false);
     if (error) { toast.error(error.message); return; }
@@ -223,6 +265,17 @@ function NovaTarefa({ me, empresaId, usuarios, onCancel, onSaved }: {
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1"><Label>Solicitação</Label><Input type="date" value={hoje()} disabled /></div>
             <div className="space-y-1"><Label>Previsão de entrega</Label><Input type="date" value={entrega} min={hoje()} onChange={(e) => setEntrega(e.target.value)} /></div>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="space-y-1">
+              <Label>Prioridade</Label>
+              <Select value={prioridade} onValueChange={(v) => setPrioridade(v as Prioridade)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{[...PRIORIDADES].sort((a, b) => a.label.localeCompare(b.label, "pt-BR")).map((p) => <SelectItem key={p.v} value={p.v}>{p.label}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1"><Label>Tempo (min)</Label><Input type="number" min={1} value={estimativa} onChange={(e) => setEstimativa(e.target.value)} placeholder="Opcional" /></div>
+            <div className="space-y-1"><Label>Fazer em</Label><Input type="date" value={planejada} disabled={resp !== me} onChange={(e) => setPlanejada(e.target.value)} title="Deixe vazio para ir ao backlog" /></div>
           </div>
           <div className="space-y-1"><Label>Descrição</Label><Textarea rows={4} value={descricao} onChange={(e) => setDescricao(e.target.value)} /></div>
           <div className="space-y-1">
