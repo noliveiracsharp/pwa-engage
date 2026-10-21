@@ -1158,9 +1158,13 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
         }
         // Situação/baixa sempre aplicada só a este lançamento.
         if (!(podeConverter && v.ja_pago)) {
+          // Pagamento parcial (aberto com valor_pago > 0) é preservado ao editar outros campos.
+          const parcialAnterior = v.status === "aberto" && registro["status"] !== "pago" && num(registro["valor_pago"]) > 0;
           const baixa = v.status === "pago"
             ? { status: "pago", pago_em: v.pago_em || hojeISO(), valor_pago: round2(num(v.valor_pago)) || valor }
-            : { status: v.status, pago_em: null, valor_pago: null };
+            : parcialAnterior
+              ? { status: "aberto" }
+              : { status: v.status, pago_em: null, valor_pago: null };
           const { error: eb } = await supabase.from("financeiro_titulos").update(baixa as never).eq("id", text(rowId(registro)));
           if (eb) throw eb;
         }
