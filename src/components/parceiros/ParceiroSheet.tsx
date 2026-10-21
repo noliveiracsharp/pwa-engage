@@ -251,8 +251,9 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly, saving, on
     if (precisaPai && !f.parceiro_pai_id) { toast.error("Escolha a matriz/administradora responsável."); return; }
     const dup = duplicado;
     if (dup) { toast.error(`Este ${pf ? "CPF" : "CNPJ"} já está cadastrado para: ${String(dup["razao_social"] ?? "—")}.`); return; }
-    if (!isCompletePhone(f.telefone)) { toast.error("Telefone principal incompleto."); return; }
-    if (!isCompletePhone(f.telefone2)) { toast.error("Telefone secundário incompleto."); return; }
+    // Cadastro existente: telefones são geridos pela lista de contatos (campos legados não bloqueiam).
+    if (!record && !isCompletePhone(f.telefone)) { toast.error("Telefone principal incompleto."); return; }
+    if (!record && !isCompletePhone(f.telefone2)) { toast.error("Telefone secundário incompleto."); return; }
     if (f.email.trim() && !/^\S+@\S+\.\S+$/.test(f.email.trim())) { toast.error("E-mail inválido."); return; }
     const values: Row = {
       is_cliente: f.is_cliente,
