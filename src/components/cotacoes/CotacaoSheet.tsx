@@ -674,6 +674,7 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
                 <thead className="bg-muted/50">
                   <tr>
                     <th className="px-3 py-2 text-left">Item</th>
+                    <th className="px-3 py-2 text-right" title="Custo atual no cadastro de Produtos e Serviços">Custo atual</th>
                     <th className="px-3 py-2 text-right">Qtd.</th>
                     <th className="px-3 py-2 text-left">Un.</th>
                     {fornCot.map((f) => (
@@ -693,6 +694,7 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
                           <div className="font-medium">{String(item?.["descricao"] ?? "Item")}</div>
                           {item?.["codigo"] ? <div className="text-muted-foreground text-xs">{String(item["codigo"])}</div> : null}
                         </td>
+                        <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{num(item?.["preco_custo"]) > 0 ? formatBRL(item?.["preco_custo"]) : "—"}</td>
                         <td className="px-2 py-1.5 text-right tabular-nums">
                           {editavel ? (
                             <div className="flex items-center justify-end gap-1">
