@@ -34,10 +34,19 @@ export function FuncaoPerfis({ funcaoId }: Props) {
   const queryClient = useQueryClient();
   const { empresaId } = useAudit();
   const { data: todosPerfis = [] } = useTableRows("perfil");
+  // Isolamento: somente perfis da empresa ativa (empresa_id é a âncora de tudo).
   const perfis = useMemo(
-    () => todosPerfis.filter((p) => !p["empresa_id"] || empresaId === undefined || String(p["empresa_id"]) === String(empresaId)),
+    () =>
+      empresaId === undefined || empresaId === null
+        ? []
+        : todosPerfis
+            .filter((p) => String(p["empresa_id"] ?? "") === String(empresaId))
+            .sort((a, b) =>
+              text(pick(a, ["descricao", "nome"])).localeCompare(text(pick(b, ["descricao", "nome"])), "pt-BR", { sensitivity: "base" }),
+            ),
     [todosPerfis, empresaId],
   );
+  const idsPerfisEmpresa = useMemo(() => new Set(perfis.map((p) => String(rowId(p)))), [perfis]);
   const { data: menu = [] } = useTableRows("menu");
   const removeMenu = useDeleteRecord("menu");
 
@@ -81,10 +90,11 @@ export function FuncaoPerfis({ funcaoId }: Props) {
       text(pick(perfis.find((p) => String(rowId(p)) === String(id)) ?? {}, ["descricao", "nome", "titulo"]));
     return menu
       .filter((row) => String(pick(row, ["funcoes_id", "funcao_id"]) ?? "") === String(funcaoId ?? ""))
+      .filter((row) => idsPerfisEmpresa.has(String(pick(row, ["perfil_id"]) ?? "")))
       .sort((a, b) =>
         nome(pick(a, ["perfil_id"])).localeCompare(nome(pick(b, ["perfil_id"])), "pt-BR", { sensitivity: "base" }),
       );
-  }, [menu, funcaoId, perfis]);
+  }, [menu, funcaoId, perfis, idsPerfisEmpresa]);
 
   const perfilNome = (id: unknown) => {
     const found = perfis.find((p) => String(rowId(p)) === String(id));

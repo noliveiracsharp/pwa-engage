@@ -26,7 +26,7 @@
 
 ## Próximos
 - [x] Duplicar orçamento (gera novo número com os mesmos itens).
-- [ ] Filtro de Kanban por usuário (usuario_kanban) na tela /kanban.
+- [x] Filtro de Kanban por usuário — descartado (busca já cobre).
 - [ ] Tela de Atendimentos (chat estilo WhatsApp Web).
 
 - [x] Dashboard por perfil (Meu trabalho, Projetos, Comercial, Compras, Atendimento) + aviso WhatsApp ao atribuir tarefa/atividade. (Aguarda `atendeai-dashboard-eventos.sql`.)
@@ -46,3 +46,4 @@
 - [x] Fase 2a: linha do tempo da Oferta (notas + mudanças automáticas)
 - [x] Fase 2b: captação de leads + roleta de vendedores
 - [x] Fase 3: metas por vendedor, forecast ponderado, relatório de perdas
+- [x] /funcoes: só perfis e permissões da empresa ativa.
