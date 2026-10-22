@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { CheckCircle2, Circle, Printer } from "lucide-react";
+import { CheckCircle2, Circle, MessageSquare, Paperclip, Printer, Send } from "lucide-react";
+import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { iniciais } from "@/components/projetos/ResponsaveisPicker";
 import { supabase } from "@/integrations/supabase/client";
@@ -245,6 +248,92 @@ function Compartilhado() {
         <section className="rounded-lg border border-border bg-card p-4"><p className="mb-3 text-sm font-semibold text-foreground">Legenda</p><LegendaBlocos /></section>
         <p className="text-xs text-muted-foreground">A linha vermelha marca o dia de hoje. Página somente para consulta.</p>
       </main>
+    </div>
+  );
+}
+
+type Extra = { gestor: string; atividades: Row[]; comentarios: Record<string, Row[]> };
+
+/** Textos e anexos das atividades + comentários do cliente nas tarefas marcadas como públicas. */
+function DetalhesPublicos({ token, tarefas, extra, onRecarregar }: { token: string; tarefas: Row[]; extra: Extra; onRecarregar: () => void }) {
+  const blocos = tarefas.map((t) => {
+    const id = String(pick(t, ["id"]));
+    const ativs = extra.atividades.filter((a) => String(a["tarefa_id"]) === id && (String(a["descricao"] ?? "").trim() || (Array.isArray(a["anexos"]) && (a["anexos"] as Row[]).length)));
+    const comentarios = extra.comentarios[id];
+    return { id, nome: String(pick(t, C.tarefa.nome) ?? "Tarefa"), ativs, comentarios, publica: Array.isArray(comentarios) };
+  }).filter((b) => b.ativs.length || b.publica);
+  if (!blocos.length) return null;
+  return (
+    <section className="space-y-3 print:hidden">
+      <h2 className="text-lg font-semibold text-foreground">Detalhes das tarefas</h2>
+      {blocos.map((b) => (
+        <details key={b.id} className="rounded-lg border border-border bg-card p-4" open={b.publica}>
+          <summary className="flex cursor-pointer items-center gap-2 font-medium text-foreground">
+            <span className="flex-1">{b.nome}</span>
+            {b.publica && <span className="flex items-center gap-1 text-xs text-muted-foreground"><MessageSquare className="h-3.5 w-3.5" />{b.comentarios!.length}</span>}
+          </summary>
+          <div className="mt-3 space-y-4">
+            {b.ativs.map((a) => (
+              <div key={String(a["id"])} className="rounded-md border border-border p-3">
+                <p className="text-sm font-medium text-foreground">↳ {String(a["nome"] ?? "")}</p>
+                {String(a["descricao"] ?? "").trim() && <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">{String(a["descricao"])}</p>}
+                {Array.isArray(a["anexos"]) && (a["anexos"] as Row[]).length > 0 && (
+                  <ul className="mt-2 space-y-1">
+                    {(a["anexos"] as Row[]).map((x, i) => (
+                      <li key={i}>
+                        <button className="flex items-center gap-2 text-sm text-primary hover:underline" onClick={() => abrirAnexo(String(x["path"] ?? ""))}>
+                          <Paperclip className="h-3.5 w-3.5" />{String(x["nome"] ?? "arquivo")}
+                          {x["tamanho"] ? <span className="text-xs text-muted-foreground">{(Number(x["tamanho"]) / 1024).toFixed(0)} KB</span> : null}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            ))}
+            {b.publica && <ComentarCliente token={token} tarefaId={b.id} comentarios={b.comentarios!} onEnviado={onRecarregar} />}
+          </div>
+        </details>
+      ))}
+    </section>
+  );
+}
+
+async function abrirAnexo(path: string) {
+  if (!path) return;
+  const { data } = await supabase.storage.from("projetos").createSignedUrl(path, 300);
+  const url = data?.signedUrl ?? supabase.storage.from("projetos").getPublicUrl(path).data.publicUrl;
+  window.open(url, "_blank", "noopener");
+}
+
+function ComentarCliente({ token, tarefaId, comentarios, onEnviado }: { token: string; tarefaId: string; comentarios: Row[]; onEnviado: () => void }) {
+  const [nome, setNome] = useState(() => (typeof window !== "undefined" ? localStorage.getItem("cmp-nome") ?? "" : ""));
+  const [txt, setTxt] = useState("");
+  const [busy, setBusy] = useState(false);
+  async function enviar() {
+    if (!nome.trim() || !txt.trim()) { toast.error("Informe seu nome e o comentário."); return; }
+    setBusy(true);
+    const { error } = await supabase.rpc("compartilhado_comentar" as never, { p_token: token, p_tarefa_id: tarefaId, p_autor: nome.trim(), p_texto: txt.trim() } as never);
+    setBusy(false);
+    if (error) { toast.error(error.message); return; }
+    localStorage.setItem("cmp-nome", nome.trim());
+    setTxt(""); toast.success("Comentário enviado."); onEnviado();
+  }
+  return (
+    <div className="space-y-2 border-t border-border pt-3">
+      <p className="text-sm font-semibold text-foreground">Comentários</p>
+      {comentarios.length === 0 && <p className="text-sm text-muted-foreground">Nenhum comentário ainda.</p>}
+      <ul className="space-y-2">
+        {comentarios.map((c, i) => (
+          <li key={i} className={`rounded-md border border-border p-2 text-sm ${c["origem"] === "cliente" ? "bg-muted/40" : ""}`}>
+            <p className="mb-1 text-xs text-muted-foreground"><span className="font-medium text-foreground">{String(c["autor"] ?? "")}</span>{c["origem"] === "equipe" ? " · Equipe" : ""} · {new Date(String(c["data"])).toLocaleString("pt-BR")}</p>
+            <p className="whitespace-pre-wrap break-words">{String(c["texto"] ?? "")}</p>
+          </li>
+        ))}
+      </ul>
+      <Input placeholder="Seu nome" value={nome} onChange={(e) => setNome(e.target.value)} maxLength={120} />
+      <Textarea rows={3} placeholder="Escreva seu comentário…" value={txt} onChange={(e) => setTxt(e.target.value)} maxLength={4000} />
+      <div className="flex justify-end"><Button size="sm" disabled={busy} onClick={enviar}><Send className="mr-1 h-4 w-4" />{busy ? "Enviando…" : "Enviar comentário"}</Button></div>
     </div>
   );
 }
