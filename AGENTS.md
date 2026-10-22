@@ -15,3 +15,4 @@
 - Offer follow-ups reuse the existing external billing mail engine; database jobs own scheduling and unique send claims to prevent duplicate sends.
 - Phone verification is shared through PhoneInput and authenticated server functions; unavailable provider responses must never be saved as negative results.
 - Mixed billing: each Oferta item may name its own payer (`faturar_para_id`); `titulosDaOferta(orc, itens)` splits receivables per payer and stores `cliente_atendido_id` — always pass the saved items when generating titles.
+- Finance receiving, paying and cash tabs share bank summaries using the existing bank engine and company-scoped table cache; unknown balances remain unknown and totals identify incomplete coverage to avoid misleading cash figures.
