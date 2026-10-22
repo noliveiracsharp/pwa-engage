@@ -160,7 +160,7 @@ export function TarefaSheet({ tarefa, tarefasDoProjeto, projetoId, perms, onClos
               <Switch disabled={readOnly} checked={form["comentarios_publicos"] === true} onCheckedChange={(v) => set("comentarios_publicos", v)} />
             </label>
           )}
-          {tarefa && <ComentariosTarefa tarefaId={String(rowId(tarefa))} autorNome={String(usuario?.["nome"] ?? "")} usuarioId={usuarioId} readOnly={!perms.canUpdate} />}
+          {tarefa && <ComentariosTarefa tarefaId={String(rowId(tarefa))} autorNome={String(usuario?.["nome"] ?? "")} usuarioId={usuarioId ? String(usuarioId) : null} readOnly={!perms.canUpdate} />}
           <p className="rounded-md border border-dashed border-border p-3 text-sm text-muted-foreground">
             As atividades (com checklist, dependências e anexos) são criadas pelo botão + de cada tarefa na lista.
           </p>
