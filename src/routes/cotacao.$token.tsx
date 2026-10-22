@@ -137,7 +137,7 @@ function CotacaoPublica() {
           );
         })()}
         <section className="rounded-lg border bg-card p-4">
-          <h1 className="text-lg font-bold">{dados.cotacao.titulo ?? "Cotação"}</h1>
+          <h1 className="text-lg font-bold">Cotação {dados.cotacao.numero ?? ""}</h1>
           <p className="text-sm text-muted-foreground">
             Fornecedor: <span className="font-medium text-foreground">{dados.fornecedor?.nome ?? "—"}</span>
           </p>

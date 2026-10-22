@@ -5,7 +5,7 @@ import { pick, type Row } from "@/lib/row";
 
 const CTX_KEY = "atendeai.empresaContexto";
 /** Mude este valor a cada atualização publicada: força novo login de todos. */
-const APP_RELEASE = "2026-10-22-caixa-filtros-alinhados";
+const APP_RELEASE = "2026-10-22-cotacao-codigo-parceiro";
 const RELEASE_KEY = "atendeai.release";
 
 type AuthContextValue = {
