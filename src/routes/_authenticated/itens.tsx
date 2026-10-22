@@ -327,6 +327,37 @@ function ItensPage() {
           novo={reajuste.novo}
         />
       )}
+      {relOpen && (
+        <RelatorioLista
+          titulo="Relatório de Produtos e Serviços"
+          rotulo="Cadastro de itens"
+          rows={filtered}
+          filtros={[
+            f.busca && `Busca: ${f.busca}`,
+            f.tipo !== "todos" && `Natureza: ${TIPO_OPTIONS.find((o) => o.value === f.tipo)?.label}`,
+            f.status !== "todos" && `Status: ${f.status === "ativo" ? "Ativo" : "Inativo"}`,
+          ].filter((x): x is string => Boolean(x))}
+          kpis={[
+            { label: "Produtos", valor: filtered.filter((r) => r["tipo"] === "Produto").length },
+            { label: "Serviços", valor: filtered.filter((r) => String(r["tipo"] ?? "").startsWith("Serviço")).length },
+            { label: "Ativos", valor: filtered.filter((r) => r["status"] === true).length },
+            { label: "Total", valor: filtered.length },
+          ]}
+          colunas={[
+            { header: "Código", cell: (r) => String(r["codigo"] ?? "—") },
+            { header: "Descrição", cell: (r) => String(r["descricao"] ?? "—") },
+            { header: "Natureza", cell: (r) => String(r["tipo"] ?? "—") },
+            { header: "Marca", cell: (r) => String(marcaById.get(String(r["itens_marcas_id"] ?? ""))?.["descricao"] ?? "—") },
+            { header: "Un.", cell: (r) => String(r["unidade"] ?? "—") },
+            { header: "NCM", cell: (r) => String(r["ncm"] ?? "—") },
+            { header: "Custo (R$)", right: true, cell: (r) => brl(r["preco_custo"]) },
+            { header: "Venda (R$)", right: true, cell: (r) => brl(r["preco_venda"]) },
+            { header: "Status", cell: (r) => (r["status"] === false ? "Inativo" : "Ativo") },
+          ]}
+          chave={(r, i) => String(rowId(r) ?? i)}
+          onClose={() => setRelOpen(false)}
+        />
+      )}
       <PrecificacaoDialog open={precOpen} onOpenChange={setPrecOpen} />
       <FiscalContadorDialog open={fiscalOpen} onOpenChange={setFiscalOpen} itens={rows as Row[]} />
       <ImagensCarrosselDialog
