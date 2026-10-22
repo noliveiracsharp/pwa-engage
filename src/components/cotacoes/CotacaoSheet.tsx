@@ -1,6 +1,8 @@
 import { useMemo, useRef, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Circle, CircleDot, Download, Link2, Loader2, MessageCircle, PencilLine, Plus, ShoppingCart, Trash2, Trophy, Upload } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { CheckCircle2, Circle, CircleDot, Download, Link2, Loader2, MessageCircle, PencilLine, Plus, Send, ShoppingCart, Trash2, Trophy, Upload } from "lucide-react";
+import { dispararMensagem, sanitizarTelefone } from "@/lib/atendimentos-envio";
+import { aplicarModelo, textoModelo, useModelosMensagem } from "@/lib/mensagens-modelos";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { PreencherCotacaoDialog } from "@/components/cotacoes/PreencherCotacaoDialog";
@@ -51,6 +53,16 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
   const { usuario } = useAuth();
   const { stamp } = useAudit();
   const [cadParc, setCadParc] = useState(false);
+  const [enviandoId, setEnviandoId] = useState<string | null>(null);
+  const { data: modelos = [] } = useModelosMensagem(empresaId);
+  const { data: instancias = [] } = useQuery({
+    queryKey: ["cotacao-instancias", String(empresaId ?? "")],
+    enabled: open && !!empresaId,
+    queryFn: async () => {
+      const { data } = await supabase.from("empresas_instancias").select("*").eq("empresa_id", String(empresaId) as never);
+      return ((data ?? []) as Row[]).filter((i) => i["status"] !== false && i["ativo"] !== false && String(i["tipo"] ?? "") !== "chat");
+    },
+  });
   const [salvandoParc, setSalvandoParc] = useState(false);
   const { data: unidadesRows = [] } = useTableRows("unidade_medida");
   const unidadeOpts = useMemo(() => unidadesRows
@@ -253,6 +265,14 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
     toast.success("Título atualizado.");
     invalidar();
   };
+  const salvarProjeto = async (v: string) => {
+    const t = v.trim();
+    if (t === String(cotacao["projeto_nome"] ?? "").trim()) return;
+    const { error } = await supabase.from("cotacoes").update({ projeto_nome: t || null } as never).eq("id", cid);
+    if (error) return void toast.error("Não foi possível salvar o projeto. Rode o script atendeai-cotacao-projeto-mensagens.sql no banco.");
+    toast.success("Projeto atualizado.");
+    invalidar();
+  };
 
   const cadastrarParceiro = async (values: Row) => {
     setSalvandoParc(true);
@@ -356,16 +376,41 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
     await navigator.clipboard.writeText(url);
     toast.success("Link copiado.");
   };
+  const montarTexto = (f: Row, url: string) => {
+    const p = parceiroById.get(String(f["fornecedor_id"]));
+    return aplicarModelo(textoModelo(modelos, "cotacao_fornecedor"), {
+      fornecedor: nomeParc(p),
+      numero: String(cotacao["numero"] ?? ""),
+      projeto: String(cotacao["projeto_nome"] ?? ""),
+      link: url,
+      comprador: contatoNome,
+      comprador_whatsapp: contatoFone ? formatPhoneDisplay(contatoFone) : "",
+    });
+  };
+  const foneForn = (f: Row) => String(pick(parceiroById.get(String(f["fornecedor_id"])) ?? {}, ["whatsapp", "celular", "telefone"]) ?? "").replace(/\D/g, "");
   const enviarWhats = (f: Row) => {
     const url = linkDe(f);
     if (!url) { semToken(); return; }
-    const p = parceiroById.get(String(f["fornecedor_id"]));
-    const fone = String(pick(p ?? {}, ["whatsapp", "celular", "telefone"]) ?? "").replace(/\D/g, "");
+    const fone = foneForn(f);
     const numero = fone && !fone.startsWith("55") ? `55${fone}` : fone;
     void gravarResponsavel();
-    const assinatura = contatoNome ? `\n\n${contatoNome}${contatoFone ? ` — WhatsApp ${formatPhoneDisplay(contatoFone)}` : ""}` : "";
-    const texto = `Olá, ${nomeParc(p)}!\n\nSegue a solicitação da cotação ${String(cotacao["numero"] ?? "")}.\n\nPara informar seus preços, prazos e condições, acesse o link abaixo:\n\n${url}\n\nQualquer dúvida, ficamos à disposição.${assinatura}`;
-    window.open(`https://wa.me/${numero}?text=${encodeURIComponent(texto)}`, "_blank", "noopener");
+    window.open(`https://wa.me/${numero}?text=${encodeURIComponent(montarTexto(f, url))}`, "_blank", "noopener");
+  };
+  const enviarAuto = async (f: Row) => {
+    const url = linkDe(f);
+    if (!url) { semToken(); return; }
+    const fone = foneForn(f);
+    if (!sanitizarTelefone(fone)) return void toast.error("O fornecedor não tem WhatsApp cadastrado.");
+    setEnviandoId(String(f["id"]));
+    try {
+      await gravarResponsavel();
+      await dispararMensagem({ instancia: instancias[0], mensagemId: null, atendimentoId: null, telefone: fone, texto: montarTexto(f, url) });
+      toast.success(`Cotação enviada para ${nomeParc(parceiroById.get(String(f["fornecedor_id"])))}.`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Falha ao enviar.");
+    } finally {
+      setEnviandoId(null);
+    }
   };
 
   const exportar = (f: Row) => {
@@ -446,7 +491,8 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
             <span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", st.badge)}>{st.label}</span>
           </SheetTitle>
           {canUpdate ? (
-            <div className="flex max-w-xl gap-2">
+            <div className="grid max-w-4xl gap-2 sm:grid-cols-2">
+            <div className="flex gap-2">
               <div className="flex-1">
                 <SearchSelect
                   value={parceirosOpts.find((o) => o.label === String(cotacao["titulo"] ?? ""))?.value ?? ""}
@@ -459,8 +505,10 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
               </div>
               <Button type="button" variant="outline" size="icon" title="Cadastrar cliente ou fornecedor" aria-label="Cadastrar cliente ou fornecedor" onClick={() => setCadParc(true)}><Plus className="h-4 w-4" /></Button>
             </div>
+            <Input key={"pj" + cid + String(cotacao["projeto_nome"] ?? "")} defaultValue={String(cotacao["projeto_nome"] ?? "")} placeholder="Nome do projeto" aria-label="Nome do projeto" onBlur={(e) => void salvarProjeto(e.target.value)} />
+            </div>
           ) : (
-            <p className="text-muted-foreground text-sm">{String(cotacao["titulo"] ?? "")}</p>
+            <p className="text-muted-foreground text-sm">{String(cotacao["titulo"] ?? "")}{cotacao["projeto_nome"] ? ` · ${String(cotacao["projeto_nome"])}` : ""}</p>
           )}
         </SheetHeader>
 
@@ -540,7 +588,12 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
                   <div className="flex flex-wrap gap-2">
                     {editavel && <Button size="sm" onClick={() => setPreencher(f)}><PencilLine className="mr-1 h-4 w-4" />Preencher</Button>}
                     <Button size="sm" variant="outline" onClick={() => copiarLink(f)}><Link2 className="mr-1 h-4 w-4" />Copiar link</Button>
-                    <Button size="sm" variant="outline" onClick={() => enviarWhats(f)}><MessageCircle className="mr-1 h-4 w-4" />WhatsApp</Button>
+                    <Button size="sm" variant="outline" onClick={() => enviarWhats(f)}><MessageCircle className="mr-1 h-4 w-4" />Abrir WhatsApp</Button>
+                    {instancias.length > 0 && (
+                      <Button size="sm" onClick={() => void enviarAuto(f)} disabled={enviandoId === String(f["id"])}>
+                        <Send className="mr-1 h-4 w-4" />{enviandoId === String(f["id"]) ? "Enviando..." : "Enviar automático"}
+                      </Button>
+                    )}
                     <Button size="sm" variant="ghost" onClick={() => exportar(f)}><Download className="mr-1 h-4 w-4" />CSV</Button>
                   </div>
                 </div>
