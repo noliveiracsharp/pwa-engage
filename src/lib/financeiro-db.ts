@@ -54,13 +54,12 @@ async function classificacaoDosItens(ids: string[]) {
   const m = new Map<string, { centro: string | null; conta: string | null; nome: string }>();
   const unicos = [...new Set(ids.filter(Boolean))];
   if (!unicos.length) return m;
-  let { data, error } = await supabase.from("itens").select("*").in("id", unicos);
+  const { data, error } = await supabase.from("itens").select("*").in("id", unicos);
   if (error) throw error;
   for (const r of (data ?? []) as Row[]) m.set(String(r["id"]), {
     centro: (r["centro_custo_id"] as string) || null, conta: (r["plano_contas_id"] as string) || null,
     nome: String(r["descricao"] ?? r["nome"] ?? ""),
   });
-  data = null;
   return m;
 }
 
