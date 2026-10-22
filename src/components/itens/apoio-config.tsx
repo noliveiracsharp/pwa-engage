@@ -86,3 +86,34 @@ export const marcaConfig = {
     { fields: ["status"], label: "Status", type: "boolean" },
   ] as Field[],
 };
+
+const NATUREZAS_PLANO = [
+  { value: "custo", label: "Custo direto" },
+  { value: "deducao", label: "Dedução da receita" },
+  { value: "despesa", label: "Despesa operacional" },
+  { value: "receita", label: "Receita" },
+  { value: "financeiro", label: "Resultado financeiro" },
+];
+
+export const planoContasConfig = {
+  table: "plano_contas",
+  title: "Plano de Contas",
+  path: "/plano_contas",
+  singular: "conta gerencial",
+  searchFields: ["codigo", "descricao"],
+  searchPlaceholder: "Código ou descrição",
+  hierarchy: { parentKey: "plano_contas_pai_id", label: "Conta Pai" },
+  columns: [
+    { key: "codigo", header: "Código", fields: ["codigo"] },
+    { key: "descricao", header: "Descrição", fields: ["descricao"] },
+    { key: "natureza", header: "Natureza", fields: ["natureza"],
+      render: (row) => NATUREZAS_PLANO.find((n) => n.value === row["natureza"])?.label ?? "—" },
+    statusColumn,
+  ] as Column[],
+  fields: [
+    { fields: ["codigo"], label: "Código" },
+    { fields: ["descricao"], label: "Descrição" },
+    { fields: ["natureza"], label: "Natureza", type: "select", options: NATUREZAS_PLANO },
+    { fields: ["status"], label: "Status", type: "boolean" },
+  ] as Field[],
+};
