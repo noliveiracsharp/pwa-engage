@@ -27,7 +27,11 @@ function opcoesArvore(rows: Row[], pai: string) {
 }
 
 /** Itens / rateio do título por centro de custo e conta gerencial. Grava direto, independente do formulário. */
-export function RateioTitulo({ tituloId, empresaId, valorTitulo, readOnly }: { tituloId: string; empresaId: string; valorTitulo: number; readOnly: boolean }) {
+export function RateioTitulo({ tituloId, empresaId, valorTitulo, readOnly, tipoTitulo = "receber" }: { tituloId: string; empresaId: string; valorTitulo: number; readOnly: boolean; tipoTitulo?: string }) {
+  const { data: itens = [] } = useTableRows("itens");
+  const itemOpts = useMemo(() => itens.filter((r) => r["status"] !== false && r["ativo"] !== false)
+    .map((r) => ({ value: text(rowId(r)), label: [text(r["codigo"]), text(r["descricao"] ?? r["nome"])].filter(Boolean).join(" - ") }))
+    .sort((a, b) => a.label.localeCompare(b.label, "pt-BR")), [itens]);
   const qc = useQueryClient();
   const chave = ["financeiro_titulos_itens", tituloId];
   const q = useQuery({
@@ -57,6 +61,21 @@ export function RateioTitulo({ tituloId, empresaId, valorTitulo, readOnly }: { t
   if (q.data && !q.data.ok) return null; // script do rateio ainda não rodado
   const dif = diferencaRateio(valorTitulo, linhas.map((l) => ({ valor: valorNum(l.valor) })));
   const set = (i: number, p: Partial<Linha>) => setLinhas(linhas.map((l, k) => (k === i ? { ...l, ...p } : l)));
+  /** Ao escolher um produto/serviço, herda descrição, centro de custo, conta e preço (respeitando o que falta fechar). */
+  function escolherItem(i: number, id: string) {
+    const it = itens.find((r) => text(rowId(r)) === id);
+    if (!it) return set(i, { item_id: null });
+    const atual = linhas[i]!;
+    const preco = num(it[tipoTitulo === "pagar" ? "preco_custo" : "preco_venda"]) || num(it["preco_venda"]);
+    const resto = round2(dif + valorNum(atual.valor));
+    const valor = atual.valor && valorNum(atual.valor) > 0 ? atual.valor : moedaDeNumero(preco > 0 ? preco : Math.max(resto, 0));
+    set(i, {
+      item_id: id, descricao: text(it["descricao"] ?? it["nome"]),
+      centro_custo_id: text(it["centro_custo_id"]) || atual.centro_custo_id,
+      plano_contas_id: text(it["plano_contas_id"]) || atual.plano_contas_id,
+      valor, origem_tipo: atual.origem_tipo === "manual" ? "manual" : atual.origem_tipo,
+    });
+  }
 
   async function salvar() {
     if (linhas.length && dif !== 0) { toast.error(`A soma das linhas precisa fechar com o título (diferença de ${formatBRL(dif)}).`); return; }
@@ -97,6 +116,10 @@ export function RateioTitulo({ tituloId, empresaId, valorTitulo, readOnly }: { t
       </div>
       {linhas.map((l, i) => (
         <div key={l.id ?? `n${i}`} className="grid gap-2 rounded-md bg-muted/40 p-2 sm:grid-cols-[1fr_8rem_auto]">
+          <div className="sm:col-span-3">
+            <SearchSelect value={l.item_id ?? ""} disabled={readOnly} options={itemOpts} placeholder="Produto ou serviço do cadastro (preenche centro de custo e valor)"
+              onChange={(x) => escolherItem(i, x)} />
+          </div>
           <Input value={l.descricao} disabled={readOnly} placeholder="Descrição do item" onChange={(e) => set(i, { descricao: e.target.value })} />
           <Input value={l.valor} disabled={readOnly} inputMode="decimal" placeholder="0,00" onChange={(e) => set(i, { valor: mascaraMoeda(e.target.value) })} />
           {!readOnly && <Button type="button" variant="ghost" size="icon" aria-label="Remover linha" onClick={() => setLinhas(linhas.filter((_, k) => k !== i))}><Trash2 className="h-4 w-4" /></Button>}
