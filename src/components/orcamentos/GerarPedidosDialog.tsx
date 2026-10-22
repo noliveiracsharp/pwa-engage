@@ -20,7 +20,7 @@ import {
 } from "@/lib/orcamentos";
 import { rowId } from "@/lib/crud";
 import { titulosDoPedido } from "@/lib/financeiro";
-import { inserirTitulos } from "@/lib/financeiro-db";
+import { fontesDoPedido, inserirTitulos } from "@/lib/financeiro-db";
 import type { Row } from "@/lib/row";
 
 type Props = {
@@ -123,7 +123,7 @@ export function GerarPedidosDialog({ open, onOpenChange, orcamento, linhas, iten
         );
         if (e2) throw e2;
         try {
-          await inserirTitulos(String(empresaId), titulosDoPedido({ pedidoId: pid, numero, fornecedorId: fid, total: totalG, cronograma }));
+          await inserirTitulos(String(empresaId), titulosDoPedido({ pedidoId: pid, numero, fornecedorId: fid, total: totalG, cronograma }), { fontes: await fontesDoPedido(pid) });
         } catch {
           semFinanceiro = true;
         }

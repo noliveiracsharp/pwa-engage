@@ -24,7 +24,7 @@ import { OrcamentoPDF } from "@/components/orcamentos/OrcamentoPDF";
 import { PropostaDialog } from "@/components/orcamentos/PropostaDialog";
 import { MinutaDialog } from "@/components/orcamentos/MinutaDialog";
 import { titulosDaOferta } from "@/lib/financeiro";
-import { apagarAbertosDaOrigem, contarTitulosDaOrigem, erroFinanceiro, inserirTitulos, itensDaOferta } from "@/lib/financeiro-db";
+import { apagarAbertosDaOrigem, contarTitulosDaOrigem, erroFinanceiro, fontesDaOferta, inserirTitulos, itensDaOferta } from "@/lib/financeiro-db";
 import { GerarPedidosDialog } from "@/components/orcamentos/GerarPedidosDialog";
 import { SituacaoBadge } from "@/components/orcamentos/SituacaoBadge";
 import { useAlterarSituacao, useSaveOrcamento } from "@/hooks/useSaveOrcamento";
@@ -158,7 +158,9 @@ function OrcamentosPage() {
         await apagarAbertosDaOrigem([id], [...tipos]);
       } else if (!await confirmar("Lançar no Financeiro as parcelas do cliente (a receber), as parcelas do fornecedor/produtos e as despesas operacionais (a pagar)?\n\nSe você também gerar Pedidos de Compra desta oferta, apague as parcelas de produtos para não pagar em dobro.")) return;
       const atual = todos.find((t) => rowId(t) === rowId(r)) ?? r;
-      const n = await inserirTitulos(String(atual["empresa_id"] ?? empresaId ?? ""), titulosDaOferta({ ...atual, id }, await itensDaOferta(id)));
+      const itensOf = await itensDaOferta(id);
+      const n = await inserirTitulos(String(atual["empresa_id"] ?? empresaId ?? ""), titulosDaOferta({ ...atual, id }, itensOf),
+        { fontes: await fontesDaOferta(itensOf), clienteId: (atual["parceiro_id"] ?? atual["parceiros_id"] ?? null) as string | null });
       toast.success(n ? `${n} conta(s) lançada(s) no Financeiro.` : "Nada a lançar nesta oferta.");
       qcOrc.invalidateQueries({ queryKey: ["table", "financeiro_titulos"] });
     } catch (e) {

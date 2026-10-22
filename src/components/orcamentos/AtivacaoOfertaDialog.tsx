@@ -13,7 +13,7 @@ import { useTableRows, rowId } from "@/lib/crud";
 import type { Row } from "@/lib/row";
 import { ESPACOS } from "@/components/projetos/EspacosSidebar";
 import { titulosDaOferta } from "@/lib/financeiro";
-import { contarTitulosDaOrigem, erroFinanceiro, inserirTitulos, itensDaOferta } from "@/lib/financeiro-db";
+import { contarTitulosDaOrigem, erroFinanceiro, fontesDaOferta, inserirTitulos, itensDaOferta } from "@/lib/financeiro-db";
 import { documentoEstoqueOferta, movimentosEstoqueDaOferta, nomeProjetoDaOferta } from "@/lib/oferta-ativacao";
 import { formatBRL } from "@/lib/orcamentos";
 
@@ -124,7 +124,9 @@ export function AtivacaoOfertaDialog({ open, onOpenChange, oferta, cliente, empr
         const ja = await contarTitulosDaOrigem([id], ["oferta", "despesa"]);
         if (ja > 0) msgs.push(`financeiro já tinha ${ja} conta(s)`);
         else {
-          const n = await inserirTitulos(String(oferta["empresa_id"] ?? empresaId), titulosDaOferta({ ...oferta, id }, await itensDaOferta(id)));
+          const itensOf = await itensDaOferta(id);
+          const n = await inserirTitulos(String(oferta["empresa_id"] ?? empresaId), titulosDaOferta({ ...oferta, id }, itensOf),
+            { fontes: await fontesDaOferta(itensOf), clienteId: (oferta["parceiro_id"] ?? oferta["parceiros_id"] ?? null) as string | null });
           msgs.push(`${n} conta(s) no Financeiro`);
           qc.invalidateQueries({ queryKey: ["table", "financeiro_titulos"] });
         }
