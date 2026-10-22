@@ -115,13 +115,13 @@ export function ContatosPainel({ entidade, entidadeId }: Props) {
     if (patch.principal) await supabase.from("cadastro_contatos" as never).update({ principal: false } as never).eq("entidade", entidade).eq("entidade_id", entidadeId).eq("tipo", c.tipo);
     const { error } = await supabase.from("cadastro_contatos" as never).update(patch as never).eq("id", c.id);
     if (error) return void toast.error(error.message);
-    void carregar();
+    void carregar(false);
   };
   const remover = async (c: Contato) => {
     if (!await confirmar(`Remover ${c.tipo === "telefone" ? formatPhoneDisplay(c.valor) : c.valor}?`)) return;
     const { error } = await supabase.from("cadastro_contatos" as never).delete().eq("id", c.id);
     if (error) return void toast.error(error.message);
-    void carregar();
+    void carregar(false);
   };
 
   return (
