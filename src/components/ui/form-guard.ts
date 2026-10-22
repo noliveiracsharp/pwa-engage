@@ -36,7 +36,7 @@ export function useFormGuard(props: Handlers) {
   return {
     closeRef,
     handlers: {
-      onInput: (e: React.FormEvent<HTMLDivElement>) => {
+      onInput: (e: Parameters<NonNullable<Handlers["onInput"]>>[0]) => {
         sujo.current = true;
         props.onInput?.(e);
       },
