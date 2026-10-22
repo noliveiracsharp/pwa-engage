@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { Ban, CheckCircle2, ImageIcon, Landmark, Package, Settings2, Trash2 } from "lucide-react";
+import { RelatorioLista } from "@/components/relatorios/RelatorioLista";
+import { Ban, CheckCircle2, FileText, ImageIcon, Landmark, Package, Settings2, Trash2 } from "lucide-react";
 import { BarraAcoesLote, useAcoesComuns } from "@/components/data-table/AcoesLote";
 import { Button } from "@/components/ui/button";
 import { PrecificacaoDialog } from "@/components/itens/PrecificacaoDialog";
@@ -71,6 +72,7 @@ function ItensPage() {
   const [precOpen, setPrecOpen] = useState(false);
   const [reajuste, setReajuste] = useState<{ itemId: string; nome: string; novo: NovoPreco } | null>(null);
   const [fiscalOpen, setFiscalOpen] = useState(false);
+  const [relOpen, setRelOpen] = useState(false);
   const [galeria, setGaleria] = useState<{ titulo: string; imagens: string[] } | null>(null);
 
   const marcaById = useMemo(() => {
@@ -188,16 +190,21 @@ function ItensPage() {
   return (
     <div className="space-y-4">
       <div className="space-y-3">
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" size="sm" onClick={() => setRelOpen(true)}>
+            <FileText className="mr-2 h-4 w-4" /> Relatório
+          </Button>
         {perms.canUpdate && (
-          <div className="flex justify-end gap-2">
+          <>
             <Button variant="outline" size="sm" onClick={() => setFiscalOpen(true)}>
               <Landmark className="mr-2 h-4 w-4" /> Dados fiscais (contador)
             </Button>
             <Button variant="outline" size="sm" onClick={() => setPrecOpen(true)}>
               <Settings2 className="mr-2 h-4 w-4" /> Parâmetros de Precificação
             </Button>
-          </div>
+          </>
         )}
+        </div>
         <DataTable
           title="Produtos e Serviços"
           columns={columns}
@@ -318,6 +325,37 @@ function ItensPage() {
           itemId={reajuste.itemId}
           itemNome={reajuste.nome}
           novo={reajuste.novo}
+        />
+      )}
+      {relOpen && (
+        <RelatorioLista
+          titulo="Relatório de Produtos e Serviços"
+          rotulo="Cadastro de itens"
+          rows={filtered}
+          filtros={[
+            f.busca && `Busca: ${f.busca}`,
+            f.tipo !== "todos" && `Natureza: ${TIPO_OPTIONS.find((o) => o.value === f.tipo)?.label}`,
+            f.status !== "todos" && `Status: ${f.status === "ativo" ? "Ativo" : "Inativo"}`,
+          ].filter((x): x is string => Boolean(x))}
+          kpis={[
+            { label: "Produtos", valor: filtered.filter((r) => r["tipo"] === "Produto").length },
+            { label: "Serviços", valor: filtered.filter((r) => String(r["tipo"] ?? "").startsWith("Serviço")).length },
+            { label: "Ativos", valor: filtered.filter((r) => r["status"] === true).length },
+            { label: "Total", valor: filtered.length },
+          ]}
+          colunas={[
+            { header: "Código", cell: (r) => String(r["codigo"] ?? "—") },
+            { header: "Descrição", cell: (r) => String(r["descricao"] ?? "—") },
+            { header: "Natureza", cell: (r) => String(r["tipo"] ?? "—") },
+            { header: "Marca", cell: (r) => String(marcaById.get(String(r["itens_marcas_id"] ?? ""))?.["descricao"] ?? "—") },
+            { header: "Un.", cell: (r) => String(r["unidade"] ?? "—") },
+            { header: "NCM", cell: (r) => String(r["ncm"] ?? "—") },
+            { header: "Custo (R$)", right: true, cell: (r) => brl(r["preco_custo"]) },
+            { header: "Venda (R$)", right: true, cell: (r) => brl(r["preco_venda"]) },
+            { header: "Status", cell: (r) => (r["status"] === false ? "Inativo" : "Ativo") },
+          ]}
+          chave={(r, i) => String(rowId(r) ?? i)}
+          onClose={() => setRelOpen(false)}
         />
       )}
       <PrecificacaoDialog open={precOpen} onOpenChange={setPrecOpen} />

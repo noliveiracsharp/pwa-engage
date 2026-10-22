@@ -116,6 +116,8 @@ type Props = {
 export function ItemSheet({ open, onOpenChange, record, saving, readOnly, duplicando, canCreateApoio, onSave }: Props) {
   const [v, setV] = useState<Values>(EMPTY);
   const [quick, setQuick] = useState<null | "unidade" | "centro" | "marca">(null);
+  const [aba, setAba] = useState<"geral" | "fiscal">("geral");
+  useEffect(() => { if (open) setAba("geral"); }, [open]);
 
   const { data: unidades = [] } = useTableRows("unidade_medida");
   const { data: centros = [] } = useTableRows("centro_custo");
@@ -340,7 +342,11 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, duplic
         </SheetHeader>
 
         <fieldset disabled={readOnly} className="min-w-0 px-6 disabled:opacity-70">
-          <div className="grid gap-x-4 gap-y-5 pt-2 sm:grid-cols-2">
+          <div className="mb-2 inline-flex rounded-md border p-0.5" role="tablist">
+            <Button type="button" role="tab" aria-selected={aba === "geral"} variant={aba === "geral" ? "secondary" : "ghost"} size="sm" onClick={() => setAba("geral")}>Geral</Button>
+            <Button type="button" role="tab" aria-selected={aba === "fiscal"} variant={aba === "fiscal" ? "secondary" : "ghost"} size="sm" onClick={() => setAba("fiscal")}>Fiscal</Button>
+          </div>
+          <div className={aba === "geral" ? "grid gap-x-4 gap-y-5 pt-2 sm:grid-cols-2" : "hidden"}>
             <div className="min-w-0 space-y-1.5 sm:col-span-2">
               <Label className="block text-sm font-medium">Galeria de imagens</Label>
               <ImageGallery
@@ -476,7 +482,35 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, duplic
               </>
             )}
 
-            <div className="border-border min-w-0 border-t pt-4 sm:col-span-2">
+
+            <div className="min-w-0 space-y-1.5 sm:col-span-2">
+              <Label htmlFor="observacoes" className="block text-sm font-medium">
+                Observações
+              </Label>
+              <Textarea
+                id="observacoes"
+                rows={4}
+                value={v.observacoes}
+                onChange={(e) => setV((s) => ({ ...s, observacoes: e.target.value }))}
+              />
+            </div>
+
+            <div className="min-w-0 space-y-1.5 sm:col-span-2">
+              <Label htmlFor="status" className="block text-sm font-medium">
+                Status
+              </Label>
+              <div className="bg-background flex h-10 items-center justify-between gap-3 rounded-md border px-3 py-2">
+                <span className="text-muted-foreground text-sm">{v.status === "true" ? "Ativo" : "Inativo"}</span>
+                <Switch
+                  id="status"
+                  checked={v.status === "true"}
+                  onCheckedChange={(checked) => setV((s) => ({ ...s, status: String(checked) }))}
+                />
+              </div>
+            </div>
+          </div>
+          <div className={aba === "fiscal" ? "grid gap-x-4 gap-y-5 pt-2 sm:grid-cols-2" : "hidden"}>
+            <div className="min-w-0 sm:col-span-2">
               <h3 className="text-sm font-semibold">Dados fiscais</h3>
               <p className="text-muted-foreground text-xs">
                 {v.tipo === "Produto" ? "Usados na emissão de NF-e / NFC-e." : "Usados na emissão de NFS-e."}
@@ -528,32 +562,6 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, duplic
                 </div>
               </>
             )}
-
-            <div className="min-w-0 space-y-1.5 sm:col-span-2">
-              <Label htmlFor="observacoes" className="block text-sm font-medium">
-                Observações
-              </Label>
-              <Textarea
-                id="observacoes"
-                rows={4}
-                value={v.observacoes}
-                onChange={(e) => setV((s) => ({ ...s, observacoes: e.target.value }))}
-              />
-            </div>
-
-            <div className="min-w-0 space-y-1.5 sm:col-span-2">
-              <Label htmlFor="status" className="block text-sm font-medium">
-                Status
-              </Label>
-              <div className="bg-background flex h-10 items-center justify-between gap-3 rounded-md border px-3 py-2">
-                <span className="text-muted-foreground text-sm">{v.status === "true" ? "Ativo" : "Inativo"}</span>
-                <Switch
-                  id="status"
-                  checked={v.status === "true"}
-                  onCheckedChange={(checked) => setV((s) => ({ ...s, status: String(checked) }))}
-                />
-              </div>
-            </div>
           </div>
         </fieldset>
 
