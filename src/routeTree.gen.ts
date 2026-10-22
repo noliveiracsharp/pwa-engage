@@ -43,6 +43,7 @@ import { Route as AuthenticatedOrcamentosRouteImport } from './routes/_authentic
 import { Route as AuthenticatedParceirosRouteImport } from './routes/_authenticated/parceiros'
 import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated/perfil'
 import { Route as AuthenticatedPessoasRouteImport } from './routes/_authenticated/pessoas'
+import { Route as AuthenticatedPlano_contasRouteImport } from './routes/_authenticated/plano_contas'
 import { Route as AuthenticatedProjetosRouteImport } from './routes/_authenticated/projetos'
 import { Route as AuthenticatedReembolsosRouteImport } from './routes/_authenticated/reembolsos'
 import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authenticated/relatorios'
@@ -248,6 +249,12 @@ const AuthenticatedPessoasRoute = AuthenticatedPessoasRouteImport.update({
   path: '/pessoas',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPlano_contasRoute =
+  AuthenticatedPlano_contasRouteImport.update({
+    id: '/plano_contas',
+    path: '/plano_contas',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedProjetosRoute = AuthenticatedProjetosRouteImport.update({
   id: '/projetos',
   path: '/projetos',
@@ -453,6 +460,7 @@ export interface FileRoutesByFullPath {
   '/parceiros': typeof AuthenticatedParceirosRoute
   '/perfil': typeof AuthenticatedPerfilRoute
   '/pessoas': typeof AuthenticatedPessoasRoute
+  '/plano_contas': typeof AuthenticatedPlano_contasRoute
   '/projetos': typeof AuthenticatedProjetosRoute
   '/reembolsos': typeof AuthenticatedReembolsosRoute
   '/relatorios': typeof AuthenticatedRelatoriosRoute
@@ -520,6 +528,7 @@ export interface FileRoutesByTo {
   '/parceiros': typeof AuthenticatedParceirosRoute
   '/perfil': typeof AuthenticatedPerfilRoute
   '/pessoas': typeof AuthenticatedPessoasRoute
+  '/plano_contas': typeof AuthenticatedPlano_contasRoute
   '/projetos': typeof AuthenticatedProjetosRoute
   '/reembolsos': typeof AuthenticatedReembolsosRoute
   '/relatorios': typeof AuthenticatedRelatoriosRoute
@@ -589,6 +598,7 @@ export interface FileRoutesById {
   '/_authenticated/parceiros': typeof AuthenticatedParceirosRoute
   '/_authenticated/perfil': typeof AuthenticatedPerfilRoute
   '/_authenticated/pessoas': typeof AuthenticatedPessoasRoute
+  '/_authenticated/plano_contas': typeof AuthenticatedPlano_contasRoute
   '/_authenticated/projetos': typeof AuthenticatedProjetosRoute
   '/_authenticated/reembolsos': typeof AuthenticatedReembolsosRoute
   '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRoute
@@ -658,6 +668,7 @@ export interface FileRouteTypes {
     | '/parceiros'
     | '/perfil'
     | '/pessoas'
+    | '/plano_contas'
     | '/projetos'
     | '/reembolsos'
     | '/relatorios'
@@ -725,6 +736,7 @@ export interface FileRouteTypes {
     | '/parceiros'
     | '/perfil'
     | '/pessoas'
+    | '/plano_contas'
     | '/projetos'
     | '/reembolsos'
     | '/relatorios'
@@ -793,6 +805,7 @@ export interface FileRouteTypes {
     | '/_authenticated/parceiros'
     | '/_authenticated/perfil'
     | '/_authenticated/pessoas'
+    | '/_authenticated/plano_contas'
     | '/_authenticated/projetos'
     | '/_authenticated/reembolsos'
     | '/_authenticated/relatorios'
@@ -1097,6 +1110,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPessoasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/plano_contas': {
+      id: '/_authenticated/plano_contas'
+      path: '/plano_contas'
+      fullPath: '/plano_contas'
+      preLoaderRoute: typeof AuthenticatedPlano_contasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/projetos': {
       id: '/_authenticated/projetos'
       path: '/projetos'
@@ -1348,6 +1368,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedParceirosRoute: typeof AuthenticatedParceirosRoute
   AuthenticatedPerfilRoute: typeof AuthenticatedPerfilRoute
   AuthenticatedPessoasRoute: typeof AuthenticatedPessoasRoute
+  AuthenticatedPlano_contasRoute: typeof AuthenticatedPlano_contasRoute
   AuthenticatedProjetosRoute: typeof AuthenticatedProjetosRoute
   AuthenticatedReembolsosRoute: typeof AuthenticatedReembolsosRoute
   AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRoute
@@ -1390,6 +1411,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedParceirosRoute: AuthenticatedParceirosRoute,
   AuthenticatedPerfilRoute: AuthenticatedPerfilRoute,
   AuthenticatedPessoasRoute: AuthenticatedPessoasRoute,
+  AuthenticatedPlano_contasRoute: AuthenticatedPlano_contasRoute,
   AuthenticatedProjetosRoute: AuthenticatedProjetosRoute,
   AuthenticatedReembolsosRoute: AuthenticatedReembolsosRoute,
   AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRoute,

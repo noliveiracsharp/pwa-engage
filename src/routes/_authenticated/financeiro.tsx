@@ -82,6 +82,7 @@ import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartToo
 import { confirmar } from "@/components/layout/DialogoGlobal";
 import { OfertaConsultaSheet, VincularOfertaDialog, ofertaDoTitulo } from "@/components/financeiro/OfertaVinculo";
 import { camposFiscais, rotulosFiscais } from "@/lib/titulo-fiscal";
+import { RateioTitulo } from "@/components/financeiro/RateioTitulo";
 
 export const Route = createFileRoute("/_authenticated/financeiro")({
   staticData: { sitemap: false },
@@ -1406,6 +1407,9 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
             <Input value={v.codigo_referencia} disabled={readOnly} placeholder="Nº da NF, pedido…" onChange={(e) => setV({ ...v, codigo_referencia: e.target.value })} /></div>
           <div className="space-y-1 sm:col-span-2"><Label>Centro de custo</Label>
             <SearchSelect value={v.centro_custo_id} disabled={readOnly} options={centroOpts} placeholder="Escolha o centro de custo" onChange={(x) => setV({ ...v, centro_custo_id: x })} /></div>
+          {registro && rowId(registro) && (
+            <RateioTitulo tituloId={text(rowId(registro))} empresaId={text(registro["empresa_id"])} valorTitulo={num(registro["valor"])} readOnly={readOnly} />
+          )}
           <div className="space-y-1"><Label>Forma de pagamento</Label>
             <SearchSelect value={v.forma_pagamento} disabled={readOnly || cartaoModo} options={FORMAS_PAGAMENTO.map((x) => ({ value: x, label: x }))} placeholder="Escolha" onChange={(x) => setV({
               ...v, forma_pagamento: x,

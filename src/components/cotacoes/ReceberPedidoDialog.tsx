@@ -12,7 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { rowId, useTableRows } from "@/lib/crud";
 import { entradasDoPedido } from "@/lib/estoque";
 import { titulosDoPedido } from "@/lib/financeiro";
-import { contarTitulosDaOrigem, erroFinanceiro, inserirTitulos } from "@/lib/financeiro-db";
+import { contarTitulosDaOrigem, erroFinanceiro, fontesDoPedido, inserirTitulos } from "@/lib/financeiro-db";
 import { formatBRL, num } from "@/lib/orcamentos";
 import type { Row } from "@/lib/row";
 
@@ -77,7 +77,7 @@ export function ReceberPedidoDialog({ pedido, empresaId, onClose, onDone }: { pe
           const d = new Date(`${vencimento}T12:00:00`); d.setMonth(d.getMonth() + i);
           return { numero: i + 1, vencimento: d.toISOString().slice(0, 10), valor: 1 };
         });
-        const qtd = await inserirTitulos(emp, titulosDoPedido({ pedidoId: id, numero: String(pedido["numero"] ?? ""), fornecedorId: String(pedido["fornecedor_id"]), total, cronograma }));
+        const qtd = await inserirTitulos(emp, titulosDoPedido({ pedidoId: id, numero: String(pedido["numero"] ?? ""), fornecedorId: String(pedido["fornecedor_id"]), total, cronograma }), { fontes: await fontesDoPedido(id) });
         msgs.push(`${qtd} conta(s) a pagar`);
         qc.invalidateQueries({ queryKey: ["table", "financeiro_titulos"] });
       }
