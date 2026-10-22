@@ -22,6 +22,7 @@ import { confirmar } from "@/components/layout/DialogoGlobal";
 import { QuickCreateDialog } from "@/components/itens/QuickCreateDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useTableRows } from "@/lib/crud";
+import { novoCustoMenor, ofertaAceitaNovoCusto, recalcLinhaCusto } from "@/lib/custo-cotacao";
 const ITEM_RAPIDO = [{ key: "descricao", label: "Descrição" }, { key: "codigo", label: "Código / referência" }];
 import { PainelAprovacaoCotacao } from "@/components/cotacoes/AprovacaoCompras";
 import { podeGerarPedido } from "@/lib/aprovacao-compras";
@@ -180,6 +181,47 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
   };
 
   const pedidosCot = pedidos.filter((p) => String(p["cotacao_id"]) === cid);
+  /** Preço aprovado menor que o custo do cadastro: atualiza o custo (mantém a venda) e as Ofertas fora de Ativação/Fechamento. */
+  const atualizarCustos = async () => {
+    let nItens = 0, nOfertas = 0;
+    try {
+      for (const e of analise.escolhas) {
+        const itemId = String(e.cotacaoItem["item_id"] ?? "");
+        const item = itemById.get(itemId);
+        if (!itemId || !item) continue;
+        const novo = novoCustoMenor(num(item["preco_custo"]), e.preco);
+        if (novo == null) continue;
+        const { error } = await supabase.from("itens").update({ preco_custo: novo } as never).eq("id", itemId);
+        if (error) continue;
+        nItens++;
+        const { data: linhas } = await supabase.from("orcamento_itens").select("*").eq("item_id", itemId);
+        const ids = [...new Set(((linhas ?? []) as Row[]).map((l) => String(l["orcamento_id"])))];
+        if (!ids.length) continue;
+        const { data: ofs } = await supabase.from("orcamentos").select("*").in("id", ids).eq("empresa_id", String(empresaId) as never);
+        const abertas = ((ofs ?? []) as Row[]).filter((o) => ofertaAceitaNovoCusto(o["situacao"]));
+        for (const o of abertas) {
+          const oid = String(o["id"]);
+          const { data: todas } = await supabase.from("orcamento_itens").select("*").eq("orcamento_id", oid);
+          let totalCusto = 0, totalLucro = 0;
+          for (const l of (todas ?? []) as Row[]) {
+            if (String(l["item_id"] ?? "") === itemId) {
+              const c = recalcLinhaCusto(l as never, novo);
+              await supabase.from("orcamento_itens").update(c as never).eq("id", String(l["id"]));
+              totalCusto += c.custo_total; totalLucro += c.lucro;
+            } else { totalCusto += num(l["custo_total"]); totalLucro += num(l["lucro"]); }
+          }
+          await supabase.from("orcamentos").update({ total_custo: round2(totalCusto), total_lucro: round2(totalLucro) } as never).eq("id", oid);
+          nOfertas++;
+        }
+      }
+      if (nItens) {
+        toast.success(`Custo reduzido em ${nItens} item(ns) do cadastro${nOfertas ? ` e em ${nOfertas} Oferta(s) em aberto` : ""}.`);
+        void qc.invalidateQueries({ queryKey: ["table", "itens"] });
+        void qc.invalidateQueries({ queryKey: ["table", "orcamentos"] });
+        void qc.invalidateQueries({ queryKey: ["table", "orcamento_itens"] });
+      }
+    } catch { toast.error("Pedidos gerados, mas não foi possível atualizar todos os custos."); }
+  };
   const gerarPedidos = async () => {
     if (pedidosCot.length && !await confirmar("Já existem pedidos desta cotação. Gerar novamente substituirá os pedidos em aberto. Continuar?")) return;
     setGerando(true);
@@ -214,6 +256,7 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
         n++;
       }
       toast.success(n === 1 ? "1 pedido de compra gerado." : `${n} pedidos de compra gerados.`);
+      await atualizarCustos();
       invalidar();
     } catch (e) {
       const m = e instanceof Error ? e.message : String((e as { message?: string })?.message ?? "");
