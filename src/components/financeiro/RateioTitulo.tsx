@@ -12,6 +12,8 @@ import { mascaraMoeda, moedaDeNumero } from "@/lib/input-masks";
 import { formatBRL, num, round2 } from "@/lib/orcamentos";
 import { diferencaRateio } from "@/lib/rateio";
 import { erroFinanceiro } from "@/lib/financeiro-db";
+import { calcularTarifa } from "@/lib/financeiro-tarifas";
+import { tarifaPorLinha } from "@/lib/rateio-tarifa";
 import type { Row } from "@/lib/row";
 
 type Linha = { id?: string; descricao: string; valor: string; centro_custo_id: string; plano_contas_id: string; item_id: string | null; origem_tipo: string; origem_id: string | null };
@@ -64,6 +66,7 @@ export function RateioTitulo({ tituloId, empresaId, valorTitulo, readOnly, tipoT
 
   if (q.data && !q.data.ok) return null; // script do rateio ainda não rodado
   const dif = diferencaRateio(valorTitulo, linhas.map((l) => ({ valor: valorNum(l.valor) })));
+  const tarifas = tarifaPorLinha(tarifaTitulo, linhas.map((l) => valorNum(l.valor)));
   const set = (i: number, p: Partial<Linha>) => setLinhas(linhas.map((l, k) => (k === i ? { ...l, ...p } : l)));
   /** Ao escolher um produto/serviço, herda descrição, centro de custo, conta e preço (respeitando o que falta fechar). */
   function escolherItem(i: number, id: string) {
@@ -131,6 +134,13 @@ export function RateioTitulo({ tituloId, empresaId, valorTitulo, readOnly, tipoT
             <SearchSelect value={l.centro_custo_id} disabled={readOnly} options={centroOpts} placeholder="Centro de custo" onChange={(x) => set(i, { centro_custo_id: x })} />
             <SearchSelect value={l.plano_contas_id} disabled={readOnly} options={contaOpts} placeholder="Conta gerencial (Plano de Contas)" onChange={(x) => set(i, { plano_contas_id: x })} />
           </div>
+          {tarifaTitulo > 0 && (
+            <div className="sm:col-span-3 grid grid-cols-3 gap-2 rounded bg-background px-2 py-1 text-xs tabular-nums">
+              <div><span className="text-muted-foreground block">Preço de venda</span>{formatBRL(valorNum(l.valor))}</div>
+              <div><span className="text-muted-foreground block">Baixa ({formaPagamento})</span><span className="text-destructive">− {formatBRL(tarifas[i] ?? 0)}</span></div>
+              <div><span className="text-muted-foreground block">Valor final</span><strong>{formatBRL(round2(valorNum(l.valor) - (tarifas[i] ?? 0)))}</strong></div>
+            </div>
+          )}
         </div>
       ))}
       {!readOnly && (
