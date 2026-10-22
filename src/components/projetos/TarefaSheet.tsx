@@ -20,6 +20,8 @@ import { useAudit } from "@/lib/audit";
 import { C, PRIORIDADES, filterPayload, isDone, prioridadeClass, progressoCor, resolveCol, tarefaPct, useCols } from "@/lib/projetos";
 import type { Row } from "@/lib/row";
 import type { Perms } from "@/hooks/usePagePermissions";
+import { Switch } from "@/components/ui/switch";
+import { ComentariosTarefa } from "@/components/projetos/ComentariosTarefa";
 
 export function TarefaSheet({ tarefa, tarefasDoProjeto, projetoId, perms, onClose, isNew, espacoId, statusId, statusOpcoes, statusNomeCol }: {
   tarefa: Row | null; tarefasDoProjeto: Row[]; projetoId: string; perms: Perms; onClose: () => void; isNew: boolean;
@@ -62,6 +64,7 @@ export function TarefaSheet({ tarefa, tarefasDoProjeto, projetoId, perms, onClos
       [tc.ini]: form[tc.ini] || null, [tc.fim]: form[tc.fim] || null, [tc.prio]: form[tc.prio] ?? "Normal",
     };
     if (statusOpcoes) base["status_id"] = form["status_id"] || null;
+    if (tCols?.includes("comentarios_publicos")) base["comentarios_publicos"] = form["comentarios_publicos"] === true;
     if (tc.nome === tc.descricao) delete base[tc.descricao];
     let error;
     if (tarefa) {
@@ -148,6 +151,16 @@ export function TarefaSheet({ tarefa, tarefasDoProjeto, projetoId, perms, onClos
             </div>
           </section>
 
+          {tCols?.includes("comentarios_publicos") && (
+            <label className="flex items-center justify-between gap-3 rounded-lg border border-border p-3">
+              <span>
+                <span className="block text-sm font-medium text-foreground">Pública para o cliente</span>
+                <span className="block text-xs text-muted-foreground">O cliente pode comentar nesta tarefa pelo link público do projeto.</span>
+              </span>
+              <Switch disabled={readOnly} checked={form["comentarios_publicos"] === true} onCheckedChange={(v) => set("comentarios_publicos", v)} />
+            </label>
+          )}
+          {tarefa && <ComentariosTarefa tarefaId={String(rowId(tarefa))} autorNome={String(usuario?.["nome"] ?? "")} usuarioId={usuarioId} readOnly={!perms.canUpdate} />}
           <p className="rounded-md border border-dashed border-border p-3 text-sm text-muted-foreground">
             As atividades (com checklist, dependências e anexos) são criadas pelo botão + de cada tarefa na lista.
           </p>
