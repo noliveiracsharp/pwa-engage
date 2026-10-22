@@ -136,8 +136,9 @@ export function useChecklistGate() {
     const res = resolver.current;
     resolver.current = null;
     setPedido(null);
-    const ok = await atual.executar();
+    // Libera antes de executar: no gate de saída, `executar` abre o gate de entrada e só resolve quando ele fecha.
     setOcupado(false);
+    const ok = await atual.executar();
     if (ok && atual.modo !== "saida") toast.success("Checklist registrado e card transferido.");
     res?.(ok);
   }
