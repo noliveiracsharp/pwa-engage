@@ -6,6 +6,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { Maximize2, Minimize2, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { useFormGuard } from "@/components/ui/form-guard";
 
 const Sheet = SheetPrimitive.Root;
 
