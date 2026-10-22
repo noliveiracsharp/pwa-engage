@@ -3,7 +3,7 @@ import { useEmpresaAtiva } from "@/hooks/useEmpresaAtiva";
 import { PeriodoNavegavel } from "@/components/financeiro/PeriodoNavegavel";
 import { buscarIpca12m } from "@/lib/indices.functions";
 import { periodoPreset, type Periodo } from "@/lib/periodo-vencimento";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { CalendarClock, CheckCircle2, ChevronDown, ChevronRight, Copy, CreditCard, FileText, FileUp, TrendingUp, Paperclip, Plus, QrCode, Receipt, Trash2, Undo2 } from "lucide-react";
@@ -18,6 +18,7 @@ import { buildTree } from "@/lib/hierarchy";
 import { formatCpfCnpj } from "@/lib/input-masks";
 import { ContasBancarias } from "@/components/financeiro/ContasBancarias";
 import { SaldosBancarios } from "@/components/financeiro/SaldosBancarios";
+import { contasDaEmpresa, somarSaldos } from "@/lib/saldos-bancarios";
 import { CartoesCredito } from "@/components/financeiro/CartoesCredito";
 import { ControllerPainel } from "@/components/financeiro/ControllerPainel";
 import { ReguaCobranca } from "@/components/financeiro/ReguaCobranca";
@@ -1735,6 +1736,16 @@ const nomeMes = (k: string) => {
 
 function Caixa({ titulos }: { titulos: Row[] }) {
   const [saldoInicial, setSaldoInicial] = useState("");
+  const { empresa } = useAuth();
+  const empresaIdCaixa = empresa ? text(rowId(empresa)) : "";
+  const { data: contasCaixa = [] } = useTableRows("financeiro_contas_bancarias", !!empresaIdCaixa);
+  const somaBancos = somarSaldos(contasDaEmpresa(contasCaixa, empresaIdCaixa));
+  const preenchido = useRef(false);
+  useEffect(() => {
+    if (preenchido.current || somaBancos.total === null) return;
+    preenchido.current = true;
+    setSaldoInicial((s) => s || moedaDeNumero(somaBancos.total ?? 0));
+  }, [somaBancos.total]);
   const [per, setPer] = useState<Periodo>(() => periodoPreset("mes"));
   const [modo, setModo] = useState<ModoCaixa>("ambos");
   const periodo = useMemo(() => {
@@ -1764,7 +1775,12 @@ function Caixa({ titulos }: { titulos: Row[] }) {
             </SelectContent>
           </Select></div>
         <div className="space-y-1"><Label>Saldo inicial (R$)</Label>
-          <Input className="w-40" inputMode="decimal" value={saldoInicial} onChange={(e) => setSaldoInicial(e.target.value)} placeholder="0,00" /></div>
+          <div className="flex gap-2">
+            <Input className="w-40" inputMode="decimal" value={saldoInicial} onChange={(e) => setSaldoInicial(mascaraMoeda(e.target.value))} placeholder="0,00" />
+            {somaBancos.total !== null && <Button type="button" variant="outline" size="sm" className="h-9" title="Usar a soma dos saldos bancários consultados" onClick={() => setSaldoInicial(moedaDeNumero(somaBancos.total ?? 0))}>Usar saldo dos bancos</Button>}
+          </div>
+          {somaBancos.total !== null && <p className="text-muted-foreground text-xs">Bancos: {formatBRL(somaBancos.total)}{somaBancos.pendentes ? ` • ${somaBancos.pendentes} conta(s) sem consulta` : ""}</p>}
+        </div>
       </div>
       <p className="text-muted-foreground text-xs">Realizado = baixas pela data do pagamento. Previsto = contas em aberto pelo vencimento.</p>
       <div className="grid gap-3 sm:grid-cols-3">
