@@ -13,6 +13,7 @@ import { PhoneInput } from "@/components/data-table/PhoneInput";
 import { WhatsAppStatus } from "@/components/data-table/WhatsAppStatus";
 import { confirmar } from "@/components/layout/DialogoGlobal";
 import { emailValido, FINALIDADES } from "@/lib/contatos";
+import { digitsOnly, formatPhoneDisplay, normalizePhone } from "@/lib/input-masks";
 import { validarEmailProvedor } from "@/lib/contatos.functions";
 
 type Contato = { id: string; tipo: "telefone" | "email"; valor: string; finalidade: string; nome: string | null; principal: boolean; ativo: boolean };
@@ -117,7 +118,7 @@ export function ContatosPainel({ entidade, entidadeId }: Props) {
     void carregar();
   };
   const remover = async (c: Contato) => {
-    if (!await confirmar(`Remover ${c.valor}?`)) return;
+    if (!await confirmar(`Remover ${c.tipo === "telefone" ? formatPhoneDisplay(c.valor) : c.valor}?`)) return;
     const { error } = await supabase.from("cadastro_contatos" as never).delete().eq("id", c.id);
     if (error) return void toast.error(error.message);
     void carregar();
@@ -154,9 +155,9 @@ export function ContatosPainel({ entidade, entidadeId }: Props) {
               <div key={c.id} className="flex flex-wrap items-center gap-2 rounded-md border p-2 text-sm">
                 {c.tipo === "email" ? <Mail className="h-4 w-4 text-muted-foreground" /> : <Phone className="h-4 w-4 text-muted-foreground" />}
                 <div className="min-w-0 flex-1">
-                  <div className="truncate font-medium">{c.valor}{c.nome ? <span className="font-normal text-muted-foreground"> · {c.nome}</span> : null}</div>
+                  <div className="truncate font-medium">{c.tipo === "telefone" ? formatPhoneDisplay(c.valor) : c.valor}{c.nome ? <span className="font-normal text-muted-foreground"> · {c.nome}</span> : null}</div>
                   <div className="text-xs text-muted-foreground">{finLabel(c.finalidade)}{c.principal ? " · Principal" : ""}</div>
-                  {c.tipo === "telefone" && <WhatsAppStatus telefone={`+${c.valor.startsWith("55") ? c.valor : `55${c.valor}`}`} />}
+                  {c.tipo === "telefone" && <WhatsAppStatus telefone={normalizePhone(c.valor)} />}
                 </div>
                 <Button type="button" size="icon" variant="ghost" title="Tornar principal" aria-label="Tornar principal" onClick={() => void alterar(c, { principal: !c.principal })}><Star className={`h-4 w-4 ${c.principal ? "fill-primary text-primary" : ""}`} /></Button>
                 <Switch checked={c.ativo} onCheckedChange={(x) => void alterar(c, { ativo: x })} aria-label="Ativo" />
