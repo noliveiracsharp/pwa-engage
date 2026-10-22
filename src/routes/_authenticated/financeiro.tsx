@@ -17,6 +17,7 @@ import { ParceiroSheet } from "@/components/parceiros/ParceiroSheet";
 import { buildTree } from "@/lib/hierarchy";
 import { formatCpfCnpj } from "@/lib/input-masks";
 import { ContasBancarias } from "@/components/financeiro/ContasBancarias";
+import { SaldosBancarios } from "@/components/financeiro/SaldosBancarios";
 import { CartoesCredito } from "@/components/financeiro/CartoesCredito";
 import { ControllerPainel } from "@/components/financeiro/ControllerPainel";
 import { ReguaCobranca } from "@/components/financeiro/ReguaCobranca";
@@ -101,11 +102,13 @@ type Perms = { canCreate: boolean; canUpdate: boolean; canDelete: boolean };
 
 function FinanceiroPage() {
   const perms = usePagePermissions("/financeiro");
+  const [aba, setAba] = useState("receber");
   const { data: titulos = [], isLoading } = useTableRows("financeiro_titulos");
   if (!perms.loading && !perms.canRead) return <p className="text-muted-foreground text-sm">Você não tem acesso a esta página.</p>;
   return (
-    <Tabs defaultValue="receber" className="space-y-4">
-      <TabsList>
+    <Tabs value={aba} onValueChange={setAba} className="min-w-0 space-y-4">
+      <div className="min-w-0 overflow-x-auto">
+      <TabsList className="w-max min-w-full justify-start">
         <TabsTrigger value="receber">Contas a Receber</TabsTrigger>
         <TabsTrigger value="pagar">Contas a Pagar</TabsTrigger>
         <TabsTrigger value="caixa">Fluxo de Caixa</TabsTrigger>
@@ -113,6 +116,8 @@ function FinanceiroPage() {
         <TabsTrigger value="regua">Cobrança automática</TabsTrigger>
         <TabsTrigger value="bancos">Contas Bancárias</TabsTrigger>
       </TabsList>
+      </div>
+      {["receber", "pagar", "caixa"].includes(aba) && <SaldosBancarios />}
       <TabsContent value="receber"><Titulos tipo="receber" todos={titulos} loading={isLoading} perms={perms} /></TabsContent>
       <TabsContent value="pagar"><Titulos tipo="pagar" todos={titulos} loading={isLoading} perms={perms} /></TabsContent>
       <TabsContent value="caixa"><Caixa titulos={titulos} /></TabsContent>
