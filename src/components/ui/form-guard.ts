@@ -1,15 +1,11 @@
 import * as React from "react";
+import type * as DialogPrimitive from "@radix-ui/react-dialog";
 import { confirmar } from "@/components/layout/DialogoGlobal";
 
 /** Botão principal acionado por Ctrl/Cmd+Enter (último visível e habilitado). */
 const ROTULO_SALVAR = /^\s*(salvar|confirmar|criar|gravar|enviar|cadastrar|adicionar|aplicar)/i;
 
-type Handlers = {
-  onEscapeKeyDown?: (e: KeyboardEvent) => void;
-  onInteractOutside?: (e: Event) => void;
-  onKeyDown?: React.KeyboardEventHandler<HTMLDivElement>;
-  onInput?: React.FormEventHandler<HTMLDivElement>;
-};
+type Handlers = Pick<React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>, "onEscapeKeyDown" | "onInteractOutside" | "onKeyDown" | "onInput">;
 
 /**
  * Proteção dos formulários: atalho Ctrl/Cmd+Enter para salvar e aviso de
@@ -64,7 +60,7 @@ export function useFormGuard(props: Handlers) {
         props.onEscapeKeyDown?.(e);
         proteger(e);
       },
-      onInteractOutside: (e: Event) => {
+      onInteractOutside: (e: Parameters<NonNullable<Handlers["onInteractOutside"]>>[0]) => {
         props.onInteractOutside?.(e);
         proteger(e);
       },
