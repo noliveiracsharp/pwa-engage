@@ -25,6 +25,8 @@ import { PainelAprovacaoCotacao } from "@/components/cotacoes/AprovacaoCompras";
 import { podeGerarPedido } from "@/lib/aprovacao-compras";
 import { ReceberPedidoDialog } from "@/components/cotacoes/ReceberPedidoDialog";
 import { CotacaoVersoes } from "@/components/cotacoes/CotacaoVersoes";
+import { ParceiroSheet } from "@/components/parceiros/ParceiroSheet";
+import { useAudit } from "@/lib/audit";
 
 type Props = {
   open: boolean;
@@ -47,6 +49,9 @@ const nomeParc = (p: Row | undefined) => String(pick(p ?? {}, ["nome_fantasia", 
 export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, precos, parceiros, itens, pedidos, empresaId, canUpdate, aprovando, onAprovar }: Props) {
   const qc = useQueryClient();
   const { usuario } = useAuth();
+  const { stamp } = useAudit();
+  const [cadParc, setCadParc] = useState(false);
+  const [salvandoParc, setSalvandoParc] = useState(false);
   const { data: unidadesRows = [] } = useTableRows("unidade_medida");
   const unidadeOpts = useMemo(() => unidadesRows
     .map((u) => { const sig = String(pick(u, ["sigla", "abreviacao", "codigo", "descricao"]) ?? ""); const d = String(pick(u, ["descricao"]) ?? sig); return { value: sig, label: sig === d ? d : `${sig} — ${d}`, keywords: [d] }; })
@@ -79,6 +84,13 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
       .filter((p) => !usados.has(String(rowId(p))))
       .map((p) => ({ value: String(rowId(p)), label: nomeParc(p), keywords: [String(p["razao_social"] ?? "")] }));
   }, [parceiros, fornCot]);
+
+  const parceirosOpts = useMemo(
+    () => parceiros
+      .map((p) => ({ value: String(rowId(p)), label: nomeParc(p), keywords: [String(p["razao_social"] ?? ""), String(p["documento"] ?? "")] }))
+      .sort((a, b) => a.label.localeCompare(b.label, "pt-BR")),
+    [parceiros],
+  );
 
   const itemOpts = useMemo(
     () => itens.map((i) => ({ value: String(rowId(i)), label: String(i["descricao"] ?? "Item"), hint: i["codigo"] ? String(i["codigo"]) : undefined, keywords: [String(i["codigo"] ?? "")] })),
@@ -242,6 +254,18 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
     invalidar();
   };
 
+  const cadastrarParceiro = async (values: Row) => {
+    setSalvandoParc(true);
+    const { data, error } = await supabase.from("parceiros").insert(stamp({ ...values }, true) as never).select("id").maybeSingle();
+    setSalvandoParc(false);
+    if (error) return void toast.error(error.code === "23505" ? "Já existe um cadastro com este CPF/CNPJ." : error.message);
+    await qc.invalidateQueries({ queryKey: ["table", "parceiros"] });
+    setCadParc(false);
+    toast.success("Cadastro criado.");
+    const nome = String(pick(values, ["nome_fantasia", "razao_social"]) ?? "").trim();
+    if (data && nome) await salvarTitulo(nome);
+  };
+
   const criarFornecedor = async () => {
     if (!novoParc) return;
     const nome = novoParc.nome.trim();
@@ -340,7 +364,7 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
     const numero = fone && !fone.startsWith("55") ? `55${fone}` : fone;
     void gravarResponsavel();
     const assinatura = contatoNome ? `\n\n${contatoNome}${contatoFone ? ` — WhatsApp ${formatPhoneDisplay(contatoFone)}` : ""}` : "";
-    const texto = `Olá, ${nomeParc(p)}!\n\nSegue a solicitação da cotação ${String(cotacao["numero"] ?? "")}${cotacao["titulo"] ? ` — ${String(cotacao["titulo"])}` : ""}.\n\nPara informar seus preços, prazos e condições, acesse o link abaixo:\n\n${url}\n\nQualquer dúvida, ficamos à disposição.${assinatura}`;
+    const texto = `Olá, ${nomeParc(p)}!\n\nSegue a solicitação da cotação ${String(cotacao["numero"] ?? "")}.\n\nPara informar seus preços, prazos e condições, acesse o link abaixo:\n\n${url}\n\nQualquer dúvida, ficamos à disposição.${assinatura}`;
     window.open(`https://wa.me/${numero}?text=${encodeURIComponent(texto)}`, "_blank", "noopener");
   };
 
@@ -413,6 +437,7 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
   return (
     <>
     {receber && <ReceberPedidoDialog pedido={receber} empresaId={String(empresaId ?? "")} onClose={() => setReceber(null)} onDone={invalidar} />}
+    <ParceiroSheet open={cadParc} onOpenChange={setCadParc} record={null} parceiros={parceiros} readOnly={false} saving={salvandoParc} onSave={(vals) => void cadastrarParceiro(vals)} />
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent data-panel-full="" className="flex w-full flex-col gap-0 p-0 sm:max-w-none">
         <SheetHeader className="border-b px-6 py-4">
@@ -421,14 +446,19 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
             <span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", st.badge)}>{st.label}</span>
           </SheetTitle>
           {canUpdate ? (
-            <Input
-              key={cid + String(cotacao["titulo"] ?? "")}
-              aria-label="Título da cotação"
-              defaultValue={String(cotacao["titulo"] ?? "")}
-              className="h-8 max-w-xl text-sm"
-              onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-              onBlur={(e) => void salvarTitulo(e.target.value)}
-            />
+            <div className="flex max-w-xl gap-2">
+              <div className="flex-1">
+                <SearchSelect
+                  value={parceirosOpts.find((o) => o.label === String(cotacao["titulo"] ?? ""))?.value ?? ""}
+                  options={parceirosOpts}
+                  placeholder={String(cotacao["titulo"] ?? "") || "Escolha o cliente ou fornecedor"}
+                  searchPlaceholder="Nome ou CPF/CNPJ…"
+                  emptyText="Não encontrado. Use o + para cadastrar."
+                  onChange={(id) => { const o = parceirosOpts.find((x) => x.value === id); if (o) void salvarTitulo(o.label); }}
+                />
+              </div>
+              <Button type="button" variant="outline" size="icon" title="Cadastrar cliente ou fornecedor" aria-label="Cadastrar cliente ou fornecedor" onClick={() => setCadParc(true)}><Plus className="h-4 w-4" /></Button>
+            </div>
           ) : (
             <p className="text-muted-foreground text-sm">{String(cotacao["titulo"] ?? "")}</p>
           )}
