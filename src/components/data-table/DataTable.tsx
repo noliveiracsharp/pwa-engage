@@ -303,7 +303,7 @@ export function DataTable({
                     );
                   })}
                   <TableCell className="text-right">
-                    {rowMenu ? (
+                    {(rowMenu || onEdit || onDuplicate || onDelete) && (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon" aria-label="Ações" title="Ações">
@@ -311,12 +311,18 @@ export function DataTable({
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-60">
-                          {rowMenu(row)}
-                          {((onEdit && rowActions?.(row).edit !== false) || (onDelete && rowActions?.(row).delete !== false)) && <DropdownMenuSeparator />}
+                          {rowMenu?.(row)}
+                          {rowMenu && ((onEdit && rowActions?.(row).edit !== false) || onDuplicate || (onDelete && rowActions?.(row).delete !== false)) && <DropdownMenuSeparator />}
                           {onEdit && rowActions?.(row).edit !== false && (
                             <DropdownMenuItem onClick={() => onEdit(row)}>
                               {editReadOnly ? <Eye className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
                               {editReadOnly ? "Visualizar" : "Editar"}
+                            </DropdownMenuItem>
+                          )}
+                          {onDuplicate && (
+                            <DropdownMenuItem onClick={() => onDuplicate(row)}>
+                              <Copy className="h-4 w-4" />
+                              Duplicar
                             </DropdownMenuItem>
                           )}
                           {onDelete && rowActions?.(row).delete !== false && (
@@ -332,31 +338,6 @@ export function DataTable({
                           )}
                         </DropdownMenuContent>
                       </DropdownMenu>
-                    ) : (
-                    <div className="flex justify-end gap-1">
-                      {onEdit && (
-                        <Button variant="ghost" size="icon" aria-label={editReadOnly ? "Visualizar" : "Editar"} title={editReadOnly ? "Visualizar" : "Editar"} onClick={() => onEdit(row)}>
-                          {editReadOnly ? <Eye className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
-                        </Button>
-                      )}
-                      {onDuplicate && (
-                        <Button variant="ghost" size="icon" aria-label="Duplicar" title="Duplicar" onClick={() => onDuplicate(row)}>
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                      )}
-                      {onDelete && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          aria-label="Excluir"
-                          onClick={async () => {
-                            if (skipDeleteConfirm || await confirmar("Deseja realmente excluir este registro?")) onDelete(row);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      )}
-                    </div>
                     )}
                   </TableCell>
                 </TableRow>

@@ -11,6 +11,7 @@ import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
 import { CotacaoSheet } from "@/components/cotacoes/CotacaoSheet";
 import { ConfigAprovacaoDialog } from "@/components/cotacoes/AprovacaoCompras";
 import { ShieldCheck } from "lucide-react";
+import { ModelosMensagemButton } from "@/components/layout/ModelosMensagem";
 import { supabase } from "@/integrations/supabase/client";
 import { useSaveOrcamento, type LinhaPayload } from "@/hooks/useSaveOrcamento";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
@@ -83,7 +84,7 @@ function CotacoesPage() {
 
   const [selId, setSelId] = useState<string | null>(null);
   const [aprovando, setAprovando] = useState(false);
-  const [f, setF] = useState({ busca: "", status: "todos" });
+  const [f, setF] = useState({ busca: "", status: "todos", projeto: "" });
 
   const sel = cotacoes.find((c) => String(rowId(c)) === selId) ?? null;
   const laudoById = useMemo(() => new Map(laudos.map((l) => [String(rowId(l)), l])), [laudos]);
@@ -169,7 +170,7 @@ function CotacoesPage() {
   const rows = useMemo(
     () =>
       cotacoes
-        .filter((r) => matchesAny([r["numero"], r["titulo"]], f.busca) && (f.status === "todos" || r["status"] === f.status))
+        .filter((r) => matchesAny([r["numero"], r["titulo"], r["projeto_nome"]], f.busca) && (!f.projeto || matchesAny([r["projeto_nome"]], f.projeto)) && (f.status === "todos" || r["status"] === f.status))
         .sort((a, b) => String(b["created_at"] ?? "").localeCompare(String(a["created_at"] ?? ""))),
     [cotacoes, f],
   );
@@ -190,6 +191,7 @@ function CotacoesPage() {
         );
       },
     },
+    { key: "projeto", header: "Projeto", fields: ["projeto_nome"], render: (r) => <span className="max-w-60 truncate">{String(r["projeto_nome"] ?? "") || "—"}</span> },
     { key: "itens", header: "Itens", fields: [], render: (r) => deCot(itensCot, String(rowId(r))).length },
     {
       key: "forn", header: "Fornecedores", fields: [],
@@ -214,7 +216,8 @@ function CotacoesPage() {
   return (
     <>
       {perms.canUpdate && (
-        <div className="mb-3 flex justify-end">
+        <div className="mb-3 flex justify-end gap-2">
+          <ModelosMensagemButton empresaId={empresaId} />
           <Button variant="outline" size="sm" onClick={() => setWfOpen(true)}><ShieldCheck className="mr-1 h-4 w-4" />Workflow de aprovação</Button>
         </div>
       )}
@@ -231,7 +234,8 @@ function CotacoesPage() {
         onDelete={perms.canDelete ? (r) => remove.mutate(r) : undefined}
         filters={
           <>
-            <FilterInput label="Buscar" value={f.busca} onChange={(v) => setF({ ...f, busca: v })} placeholder="Número ou origem" />
+            <FilterInput label="Buscar" value={f.busca} onChange={(v) => setF({ ...f, busca: v })} placeholder="Número, origem ou projeto" />
+            <FilterInput label="Projeto" value={f.projeto} onChange={(v) => setF({ ...f, projeto: v })} placeholder="Nome do projeto" />
             <FilterSelect label="Status" value={f.status} onChange={(v) => setF({ ...f, status: v })} options={[{ value: "todos", label: "Todos" }, ...COTACAO_STATUS]} />
           </>
         }
