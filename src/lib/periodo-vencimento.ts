@@ -1,5 +1,5 @@
 /** Filtro de período navegável (Vencimento): presets, setas e rótulo. Datas ISO yyyy-mm-dd. */
-export type PresetPeriodo = "hoje" | "semana" | "mes" | "ano" | "30d" | "12m" | "todo" | "personalizado";
+export type PresetPeriodo = "hoje" | "semana" | "mes" | "ano" | "30d" | "12m" | "proximos30d" | "proximos120d" | "proximos12m" | "todo" | "personalizado";
 export type Periodo = { preset: PresetPeriodo; de: string; ate: string };
 
 export const PRESETS_PERIODO: { value: PresetPeriodo; label: string }[] = [
@@ -9,11 +9,14 @@ export const PRESETS_PERIODO: { value: PresetPeriodo; label: string }[] = [
   { value: "ano", label: "Este ano" },
   { value: "30d", label: "Últimos 30 dias" },
   { value: "12m", label: "Últimos 12 meses" },
+  { value: "proximos30d", label: "Próximos 30 dias" },
+  { value: "proximos120d", label: "Próximos 120 dias" },
+  { value: "proximos12m", label: "Próximos 12 meses" },
   { value: "todo", label: "Todo o período" },
   { value: "personalizado", label: "Personalizado" },
 ];
 
-const parse = (s: string) => { const [y, m, d] = s.split("-").map(Number); return new Date(Date.UTC(y!, m! - 1, d!)); };
+const parse = (s: string) => { const [y = 2000, m = 1, d = 1] = s.split("-").map(Number); return new Date(Date.UTC(y, m - 1, d)); };
 const fmt = (d: Date) => d.toISOString().slice(0, 10);
 const addDias = (s: string, n: number) => { const d = parse(s); d.setUTCDate(d.getUTCDate() + n); return fmt(d); };
 const fimMes = (y: number, m0: number) => fmt(new Date(Date.UTC(y, m0 + 1, 0)));
@@ -35,6 +38,9 @@ export function periodoPreset(preset: PresetPeriodo, ref = hojeLocal()): Periodo
     case "ano": return { preset, de: `${y}-01-01`, ate: `${y}-12-31` };
     case "30d": return { preset, de: addDias(ref, -29), ate: ref };
     case "12m": return { preset, de: addDias(addMeses(ref, -12), 1), ate: ref };
+    case "proximos30d": return { preset, de: ref, ate: addDias(ref, 29) };
+    case "proximos120d": return { preset, de: ref, ate: addDias(ref, 119) };
+    case "proximos12m": return { preset, de: ref, ate: addDias(addMeses(ref, 12), -1) };
     case "todo": return { preset, de: "", ate: "" };
     default: return { preset, de: ref, ate: ref };
   }
@@ -47,6 +53,9 @@ export function navegarPeriodo(p: Periodo, dir: 1 | -1): Periodo {
     case "hoje": return { ...p, de: addDias(p.de, dir), ate: addDias(p.ate, dir) };
     case "semana": return { ...p, de: addDias(p.de, 7 * dir), ate: addDias(p.ate, 7 * dir) };
     case "30d": return { ...p, de: addDias(p.de, 30 * dir), ate: addDias(p.ate, 30 * dir) };
+    case "proximos30d": return { ...p, de: addDias(p.de, 30 * dir), ate: addDias(p.ate, 30 * dir) };
+    case "proximos120d": return { ...p, de: addDias(p.de, 120 * dir), ate: addDias(p.ate, 120 * dir) };
+    case "proximos12m": { const de = addMeses(p.de, 12 * dir); return { ...p, de, ate: addDias(addMeses(de, 12), -1) }; }
     case "mes": { const de = addMeses(p.de, dir); const x = parse(de); return { ...p, de, ate: fimMes(x.getUTCFullYear(), x.getUTCMonth()) }; }
     case "ano": { const y = Number(p.de.slice(0, 4)) + dir; return { ...p, de: `${y}-01-01`, ate: `${y}-12-31` }; }
     case "12m": return { ...p, de: addMeses(p.de, 12 * dir), ate: addMeses(p.ate, 12 * dir) };

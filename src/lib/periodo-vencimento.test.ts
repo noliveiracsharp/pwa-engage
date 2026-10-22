@@ -2,6 +2,23 @@ import { describe, expect, it } from "vitest";
 import { navegarPeriodo, periodoPreset, rotuloPeriodo } from "./periodo-vencimento";
 
 describe("periodo de vencimento", () => {
+  it("próximos 30 dias incluem hoje e navegam em blocos de 30", () => {
+    const p = periodoPreset("proximos30d", "2026-10-22");
+    expect(p).toMatchObject({ de: "2026-10-22", ate: "2026-11-20" });
+    expect(navegarPeriodo(p, 1)).toMatchObject({ de: "2026-11-21", ate: "2026-12-20" });
+    expect(navegarPeriodo(navegarPeriodo(p, 1), -1)).toEqual(p);
+  });
+  it("próximos 120 dias incluem hoje e navegam em blocos de 120", () => {
+    const p = periodoPreset("proximos120d", "2026-10-22");
+    expect(p).toMatchObject({ de: "2026-10-22", ate: "2027-02-18" });
+    expect(navegarPeriodo(p, 1)).toMatchObject({ de: "2027-02-19", ate: "2027-06-18" });
+  });
+  it("próximos 12 meses terminam na véspera do aniversário", () => {
+    const p = periodoPreset("proximos12m", "2026-10-22");
+    expect(p).toMatchObject({ de: "2026-10-22", ate: "2027-10-21" });
+    expect(navegarPeriodo(p, 1)).toMatchObject({ de: "2027-10-22", ate: "2028-10-21" });
+    expect(periodoPreset("proximos12m", "2027-03-01")).toMatchObject({ ate: "2028-02-29" });
+  });
   it("este mês e setas pulam mês", () => {
     const p = periodoPreset("mes", "2026-10-18");
     expect(p).toMatchObject({ de: "2026-10-01", ate: "2026-10-31" });
