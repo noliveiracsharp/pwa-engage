@@ -45,9 +45,21 @@ function Compartilhado() {
   const [projeto, setProjeto] = useState<Row | null>(null);
   const [empresa, setEmpresa] = useState<Row | null>(null);
   const [tarefas, setTarefas] = useState<Row[]>([]);
-  const [extra, setExtra] = useState<{ gestor: string; atividades: Row[] }>({ gestor: "", atividades: [] });
+  const [extra, setExtra] = useState<Extra>({ gestor: "", atividades: [], comentarios: {} });
   const [pessoas, setPessoas] = useState<Map<string, { nome: string; departamento: string }>>(new Map());
   const [estado, setEstado] = useState<"carregando" | "ok" | "erro">("carregando");
+
+  async function carregarDetalhes() {
+    const { data: det } = await supabase.rpc("compartilhado_detalhes" as never, { p_token: token } as never);
+    const dj = (det ?? {}) as Row;
+    const gj = dj["gestor"] as Row | null | undefined;
+    setExtra({
+      gestor: gj ? String(gj["nome"] ?? "") : "",
+      atividades: Array.isArray(dj["atividades"]) ? (dj["atividades"] as Row[]) : [],
+      comentarios: (dj["comentarios"] && typeof dj["comentarios"] === "object" ? dj["comentarios"] : {}) as Record<string, Row[]>,
+    });
+  }
+  const recarregar = () => { void carregarDetalhes(); };
 
   useEffect(() => {
     (async () => {
@@ -70,12 +82,10 @@ function Compartilhado() {
       const mapa = new Map<string, { nome: string; departamento: string }>();
       for (const r of ((rs ?? []) as Row[])) mapa.set(String(r["id"]), { nome: String(r["nome"] ?? ""), departamento: String(r["departamento"] ?? "") });
       setPessoas(mapa);
-      const { data: det } = await supabase.rpc("compartilhado_detalhes" as never, { p_token: token } as never);
-      const dj = (det ?? {}) as Row;
-      const gj = dj["gestor"] as Row | null | undefined;
-      setExtra({ gestor: gj ? String(gj["nome"] ?? "") : "", atividades: Array.isArray(dj["atividades"]) ? (dj["atividades"] as Row[]) : [] });
+      await carregarDetalhes();
       setProjeto(proj); setEmpresa(emp ?? null); setTarefas(t); setEstado("ok");
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   const g = useMemo(() => {
@@ -231,6 +241,7 @@ function Compartilhado() {
             </div>
           </div>
         )}
+        <DetalhesPublicos token={token} tarefas={tarefas} extra={extra} onRecarregar={recarregar} />
         <section className="rounded-lg border border-border bg-card p-4"><p className="mb-3 text-sm font-semibold text-foreground">Legenda</p><LegendaBlocos /></section>
         <p className="text-xs text-muted-foreground">A linha vermelha marca o dia de hoje. Página somente para consulta.</p>
       </main>
