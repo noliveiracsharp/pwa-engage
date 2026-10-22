@@ -17,6 +17,8 @@ import { formatCpfCnpj, formatPhoneDisplay, matchesAny } from "@/lib/input-masks
 import { Ban, Building2, CheckCircle2, List, Map as MapIcon, MapPin, MessageCircle, Trash2, Upload } from "lucide-react";
 import { BarraAcoesLote, consultarCnpjReceita, geolocalizarRegistro, useAcoesComuns } from "@/components/data-table/AcoesLote";
 import { Button } from "@/components/ui/button";
+import { RelatorioLista } from "@/components/relatorios/RelatorioLista";
+import { FileText } from "lucide-react";
 import { ImportarParceirosDialog } from "@/components/parceiros/ImportarParceirosDialog";
 
 export const Route = createFileRoute("/_authenticated/parceiros")({
@@ -34,6 +36,13 @@ export const Route = createFileRoute("/_authenticated/parceiros")({
   component: ParceirosPage,
 });
 
+const CATEGORIAS = [
+  { value: "administradora", label: "Administradora" },
+  { value: "condominio", label: "Condomínio" },
+  { value: "empresa", label: "Empresa" },
+  { value: "pf", label: "Pessoa física" },
+];
+
 function ParceirosPage() {
   const { data: all = [], isLoading } = useTableRows("parceiros");
   const save = useSaveRecord("parceiros");
@@ -48,7 +57,8 @@ function ParceirosPage() {
   const [visao, setVisao] = useState<"tabela" | "mapa">("tabela");
   const [mf, setMf] = useState({ papel: "todos", uf: "todos", cidade: "todos" });
   const [record, setRecord] = useState<Row | null>(null);
-  const [f, setF] = useState({ busca: "", papel: "todos", status: "todos", situacao: "todos", estrutura: "todos", pai: "todos", classificacao: "todos" });
+  const [f, setF] = useState({ busca: "", papel: "todos", status: "todos", situacao: "todos", estrutura: "todos", pai: "todos", classificacao: "todos", categoria: "todos" });
+  const [relOpen, setRelOpen] = useState(false);
 
   const escopo = useMemo(
     () => all.filter((r) => empresaId === undefined || !r["empresa_id"] || String(r["empresa_id"]) === String(empresaId)),
@@ -69,6 +79,15 @@ function ParceirosPage() {
   };
   const matrizes = useMemo(() => escopo.filter((r) => comFilhos.has(String(rowId(r))) || r["tipo_hierarquia"] === "matriz"), [escopo, comFilhos]);
 
+  const ehCond = (r: Row) => /condom/i.test(`${r["razao_social"] ?? ""} ${r["nome_fantasia"] ?? ""} ${caminhoClassificacao(classificacoes, r["classificacao_id"])}`);
+  const categoriaDe = (r: Row): string => {
+    if (ehCond(r)) return "condominio";
+    if (tipoDe(r) === "matriz" || /administradora/i.test(caminhoClassificacao(classificacoes, r["classificacao_id"]))) return "administradora";
+    const doc = String(r["documento"] ?? "").replace(/\D/g, "");
+    if (doc.length === 11) return "pf";
+    return "empresa";
+  };
+
   const rows = useMemo(
     () =>
       escopo
@@ -81,11 +100,12 @@ function ParceirosPage() {
             (f.situacao === "todos" || (f.situacao === "nao" ? !r["situacao_cadastral"] : String(r["situacao_cadastral"] ?? "").toUpperCase() === f.situacao)) &&
             (f.classificacao === "todos" || String(r["classificacao_id"] ?? "") === f.classificacao) &&
             (f.estrutura === "todos" || tipoDe(r) === f.estrutura) &&
+            (f.categoria === "todos" || categoriaDe(r) === f.categoria) &&
             (f.pai === "todos" || String(r[PARENT_KEY] ?? "") === f.pai || String(rowId(r)) === f.pai)
           );
         })
         .sort((a, b) => String(a["razao_social"] ?? "").localeCompare(String(b["razao_social"] ?? ""), "pt-BR")),
-    [escopo, porId, f],
+    [escopo, porId, f, classificacoes],
   );
 
   const columns: Column[] = [
@@ -157,9 +177,12 @@ function ParceirosPage() {
           <Button variant={visao === "tabela" ? "secondary" : "ghost"} size="sm" onClick={() => setVisao("tabela")}><List className="mr-1 h-4 w-4" />Tabela</Button>
           <Button variant={visao === "mapa" ? "secondary" : "ghost"} size="sm" onClick={() => setVisao("mapa")}><MapIcon className="mr-1 h-4 w-4" />Mapa</Button>
         </div>
-        {perms.canCreate && (
-          <Button variant="outline" size="sm" onClick={() => setImpOpen(true)}><Upload className="mr-1 h-4 w-4" />Importar CSV</Button>
-        )}
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => setRelOpen(true)}><FileText className="mr-1 h-4 w-4" />Relatório</Button>
+          {perms.canCreate && (
+            <Button variant="outline" size="sm" onClick={() => setImpOpen(true)}><Upload className="mr-1 h-4 w-4" />Importar CSV</Button>
+          )}
+        </div>
       </div>
       <ImportarParceirosDialog open={impOpen} onOpenChange={setImpOpen} existentes={escopo} empresaId={empresaId} stamp={stamp} />
       {visao === "mapa" && (
@@ -227,6 +250,8 @@ function ParceirosPage() {
             <FilterInput label="Buscar" value={f.busca} onChange={(v) => setF({ ...f, busca: v })} placeholder="Nome, documento, telefone ou cidade" />
             <FilterSelect label="Tipo" value={f.papel} onChange={(v) => setF({ ...f, papel: v })}
               options={[{ value: "todos", label: "Todos" }, { value: "cliente", label: "Clientes" }, { value: "fornecedor", label: "Fornecedores" }]} />
+            <FilterSelect label="Categoria" value={f.categoria} onChange={(v) => setF({ ...f, categoria: v })}
+              options={[{ value: "todos", label: "Todas" }, ...CATEGORIAS]} />
             <FilterSelect label="Status" value={f.status} onChange={(v) => setF({ ...f, status: v })}
               options={[{ value: "todos", label: "Todos" }, { value: "ativo", label: "Ativo" }, { value: "inativo", label: "Inativo" }]} />
             <FilterSelect label="Situação Receita" value={f.situacao} onChange={(v) => setF({ ...f, situacao: v })}
@@ -241,6 +266,42 @@ function ParceirosPage() {
         }
       />
       </div>
+      {relOpen && (
+        <RelatorioLista
+          titulo="Relatório de Clientes e Fornecedores"
+          rotulo="Cadastro de parceiros"
+          rows={rows}
+          filtros={[
+            f.busca && `Busca: ${f.busca}`,
+            f.papel !== "todos" && `Tipo: ${f.papel === "cliente" ? "Clientes" : "Fornecedores"}`,
+            f.categoria !== "todos" && `Categoria: ${CATEGORIAS.find((c) => c.value === f.categoria)?.label}`,
+            f.status !== "todos" && `Status: ${f.status === "ativo" ? "Ativo" : "Inativo"}`,
+            f.situacao !== "todos" && `Situação Receita: ${f.situacao}`,
+            f.estrutura !== "todos" && `Estrutura: ${tipoHierarquiaLabel(f.estrutura)}`,
+            f.pai !== "todos" && `Matriz: ${String(porId.get(f.pai)?.["razao_social"] ?? "")}`,
+            f.classificacao !== "todos" && `Classificação: ${caminhoClassificacao(classificacoes, f.classificacao)}`,
+          ].filter((x): x is string => Boolean(x))}
+          kpis={[
+            { label: "Clientes", valor: rows.filter((r) => r["is_cliente"] === true).length },
+            { label: "Fornecedores", valor: rows.filter((r) => r["is_fornecedor"] === true).length },
+            { label: "Administradoras", valor: rows.filter((r) => categoriaDe(r) === "administradora").length },
+            { label: "Condomínios", valor: rows.filter((r) => categoriaDe(r) === "condominio").length },
+            { label: "Total", valor: rows.length, sub: `${rows.filter((r) => r["status"] !== false).length} ativo(s)` },
+          ]}
+          colunas={[
+            { header: "Nome / Razão social", cell: (r) => String(r["razao_social"] || r["nome_fantasia"] || "—") },
+            { header: "CPF/CNPJ", cell: (r) => formatCpfCnpj(String(r["documento"] ?? "")) || "—" },
+            { header: "Categoria", cell: (r) => CATEGORIAS.find((c) => c.value === categoriaDe(r))?.label ?? "—" },
+            { header: "Tipo", cell: (r) => [r["is_cliente"] === true && "Cliente", r["is_fornecedor"] === true && "Fornecedor"].filter(Boolean).join(" / ") || "—" },
+            { header: "Cidade/UF", cell: (r) => [r["cidade"], r["uf"]].filter(Boolean).join(" / ") || "—" },
+            { header: "Telefone", cell: (r) => formatPhoneDisplay(String(r["telefone"] ?? "")) || "—" },
+            { header: "Receita", cell: (r) => String(r["situacao_cadastral"] ?? "—") },
+            { header: "Status", cell: (r) => (r["status"] === false ? "Inativo" : "Ativo") },
+          ]}
+          chave={(r, i) => String(rowId(r) ?? i)}
+          onClose={() => setRelOpen(false)}
+        />
+      )}
       <ParceiroSheet
         open={open}
         onOpenChange={setOpen}
