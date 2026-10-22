@@ -100,10 +100,23 @@ export function formatNationalPhone(country: CountryCode, value: string): string
   return new AsYouType(country).input(digitsOnly(value).slice(0, 15));
 }
 
+/** Normaliza telefone salvo em qualquer formato para E.164 (+55...), corrigindo "55" duplicado. */
+export function normalizePhone(value: string): string {
+  const raw = String(value ?? "").trim();
+  const d = digitsOnly(raw);
+  if (!d) return "";
+  if (d.startsWith("5555") && (d.length === 14 || d.length === 15)) return `+${d.slice(2)}`;
+  if (raw.startsWith("+")) return `+${d}`;
+  if (d.startsWith("55") && (d.length === 12 || d.length === 13)) return `+${d}`;
+  if (d.length === 10 || d.length === 11) return `+55${d}`;
+  return `+${d}`;
+}
+
 export function formatPhoneDisplay(value: string): string {
   if (!value) return "";
-  const normalized = value.trim().startsWith("+") ? value.trim() : `+55${digitsOnly(value)}`;
-  return parsePhoneNumberFromString(normalized)?.formatInternational() ?? value;
+  const parsed = parsePhoneNumberFromString(normalizePhone(value));
+  if (!parsed) return value;
+  return parsed.country === "BR" ? parsed.formatNational() : parsed.formatInternational();
 }
 
 export function isCompletePhone(value: string): boolean {

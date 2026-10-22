@@ -13,6 +13,7 @@ import { PhoneInput } from "@/components/data-table/PhoneInput";
 import { WhatsAppStatus } from "@/components/data-table/WhatsAppStatus";
 import { confirmar } from "@/components/layout/DialogoGlobal";
 import { emailValido, FINALIDADES } from "@/lib/contatos";
+import { digitsOnly, formatPhoneDisplay, normalizePhone } from "@/lib/input-masks";
 import { validarEmailProvedor } from "@/lib/contatos.functions";
 
 type Contato = { id: string; tipo: "telefone" | "email"; valor: string; finalidade: string; nome: string | null; principal: boolean; ativo: boolean };
@@ -73,38 +74,54 @@ export function ContatosPainel({ entidade, entidadeId }: Props) {
   const [carregando, setCarregando] = useState(false);
   const [novo, setNovo] = useState({ tipo: "telefone" as "telefone" | "email", valor: "", finalidade: "financeiro", nome: "", principal: false });
 
-  const carregar = async () => {
+  const carregar = async (migrar = true) => {
     setCarregando(true);
     const { data, error } = await supabase.from("cadastro_contatos" as never).select("*").eq("entidade", entidade).eq("entidade_id", entidadeId).order("tipo").order("created_at");
-    setCarregando(false);
-    if (error) return void toast.error(/cadastro_contatos/.test(error.message) ? "Rode o script atendeai-contatos-reajuste.sql no banco." : error.message);
+    if (error) { setCarregando(false); return void toast.error(/cadastro_contatos/.test(error.message) ? "Rode o script atendeai-contatos-reajuste.sql no banco." : error.message); }
     const l = (data ?? []) as Contato[];
+    if (!l.length && migrar && entidadeId) {
+      // Cadastro antigo: traz telefone/e-mail gravados no próprio cadastro para a lista.
+      const tabela = entidade === "parceiro" ? "parceiros" : "empresas";
+      const { data: pai } = await supabase.from(tabela as never).select("*").eq("id", entidadeId).maybeSingle();
+      const p = (pai ?? {}) as Record<string, unknown>;
+      const fones = [p["telefone"] ?? p["telefone1"], p["telefone2"]].map((v) => normalizePhone(String(v ?? ""))).filter((v) => digitsOnly(v).length >= 10);
+      const email = String(p["email"] ?? "").trim().toLowerCase();
+      const novos = [
+        ...[...new Set(fones)].map((valor, i) => ({ entidade, entidade_id: entidadeId, tipo: "telefone", valor, finalidade: "geral", principal: i === 0 })),
+        ...(entidade === "parceiro" && emailValido(email) ? [{ entidade, entidade_id: entidadeId, tipo: "email", valor: email, finalidade: "geral", principal: true }] : []),
+      ];
+      if (novos.length) {
+        const ins = await supabase.from("cadastro_contatos" as never).insert(novos as never);
+        if (!ins.error) return void carregar(false);
+      }
+    }
+    setCarregando(false);
     setLista(l);
     if (l.length) void sincronizarPai(entidade, entidadeId, l);
   };
-  useEffect(() => { if (open) void carregar(); }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (open && entidadeId) void carregar(); }, [open, entidadeId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const adicionar = async () => {
-    const valor = novo.tipo === "email" ? novo.valor.trim().toLowerCase() : novo.valor.replace(/\D/g, "");
+    const valor = novo.tipo === "email" ? novo.valor.trim().toLowerCase() : normalizePhone(novo.valor);
     if (novo.tipo === "email" && !emailValido(valor)) return void toast.error("E-mail inválido.");
-    if (novo.tipo === "telefone" && valor.length < 10) return void toast.error("Telefone incompleto.");
+    if (novo.tipo === "telefone" && digitsOnly(valor).length < 10) return void toast.error("Telefone incompleto.");
     if (novo.principal) await supabase.from("cadastro_contatos" as never).update({ principal: false } as never).eq("entidade", entidade).eq("entidade_id", entidadeId).eq("tipo", novo.tipo);
     const { error } = await supabase.from("cadastro_contatos" as never).insert({ entidade, entidade_id: entidadeId, tipo: novo.tipo, valor, finalidade: novo.finalidade, nome: novo.nome || null, principal: novo.principal } as never);
     if (error) return void toast.error(error.code === "23505" ? "Este contato já está cadastrado." : error.message);
     setNovo((s) => ({ ...s, valor: "", nome: "", principal: false }));
-    toast.success("Contato adicionado."); void carregar();
+    toast.success("Contato adicionado."); void carregar(false);
   };
   const alterar = async (c: Contato, patch: Partial<Contato>) => {
     if (patch.principal) await supabase.from("cadastro_contatos" as never).update({ principal: false } as never).eq("entidade", entidade).eq("entidade_id", entidadeId).eq("tipo", c.tipo);
     const { error } = await supabase.from("cadastro_contatos" as never).update(patch as never).eq("id", c.id);
     if (error) return void toast.error(error.message);
-    void carregar();
+    void carregar(false);
   };
   const remover = async (c: Contato) => {
-    if (!await confirmar(`Remover ${c.valor}?`)) return;
+    if (!await confirmar(`Remover ${c.tipo === "telefone" ? formatPhoneDisplay(c.valor) : c.valor}?`)) return;
     const { error } = await supabase.from("cadastro_contatos" as never).delete().eq("id", c.id);
     if (error) return void toast.error(error.message);
-    void carregar();
+    void carregar(false);
   };
 
   return (
@@ -138,9 +155,9 @@ export function ContatosPainel({ entidade, entidadeId }: Props) {
               <div key={c.id} className="flex flex-wrap items-center gap-2 rounded-md border p-2 text-sm">
                 {c.tipo === "email" ? <Mail className="h-4 w-4 text-muted-foreground" /> : <Phone className="h-4 w-4 text-muted-foreground" />}
                 <div className="min-w-0 flex-1">
-                  <div className="truncate font-medium">{c.valor}{c.nome ? <span className="font-normal text-muted-foreground"> · {c.nome}</span> : null}</div>
+                  <div className="truncate font-medium">{c.tipo === "telefone" ? formatPhoneDisplay(c.valor) : c.valor}{c.nome ? <span className="font-normal text-muted-foreground"> · {c.nome}</span> : null}</div>
                   <div className="text-xs text-muted-foreground">{finLabel(c.finalidade)}{c.principal ? " · Principal" : ""}</div>
-                  {c.tipo === "telefone" && <WhatsAppStatus telefone={`+${c.valor.startsWith("55") ? c.valor : `55${c.valor}`}`} />}
+                  {c.tipo === "telefone" && <WhatsAppStatus telefone={normalizePhone(c.valor)} />}
                 </div>
                 <Button type="button" size="icon" variant="ghost" title="Tornar principal" aria-label="Tornar principal" onClick={() => void alterar(c, { principal: !c.principal })}><Star className={`h-4 w-4 ${c.principal ? "fill-primary text-primary" : ""}`} /></Button>
                 <Switch checked={c.ativo} onCheckedChange={(x) => void alterar(c, { ativo: x })} aria-label="Ativo" />
