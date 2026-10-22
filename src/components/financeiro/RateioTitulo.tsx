@@ -27,8 +27,12 @@ function opcoesArvore(rows: Row[], pai: string) {
 }
 
 /** Itens / rateio do título por centro de custo e conta gerencial. Grava direto, independente do formulário. */
-export function RateioTitulo({ tituloId, empresaId, valorTitulo, readOnly, tipoTitulo = "receber" }: { tituloId: string; empresaId: string; valorTitulo: number; readOnly: boolean; tipoTitulo?: string }) {
+export function RateioTitulo({ tituloId, empresaId, valorTitulo, readOnly, tipoTitulo = "receber", formaPagamento = "", contaBancariaId = "" }: { tituloId: string; empresaId: string; valorTitulo: number; readOnly: boolean; tipoTitulo?: string; formaPagamento?: string; contaBancariaId?: string }) {
   const { data: itens = [] } = useTableRows("itens");
+  const { data: contasBanc = [] } = useTableRows("financeiro_contas_bancarias");
+  const contaBanc = contasBanc.find((c) => text(rowId(c)) === contaBancariaId) ?? contasBanc.find((c) => c["padrao"]) ?? null;
+  // Tarifa de baixa (Pix/Boleto) da conta; sem forma ou sem tarifa cadastrada = 0 e nada muda.
+  const tarifaTitulo = tipoTitulo === "receber" ? calcularTarifa(contaBanc as never, formaPagamento, Number.MAX_SAFE_INTEGER - 1).tarifa : 0;
   const itemOpts = useMemo(() => itens.filter((r) => r["status"] !== false && r["ativo"] !== false)
     .map((r) => ({ value: text(rowId(r)), label: [text(r["codigo"]), text(r["descricao"] ?? r["nome"])].filter(Boolean).join(" - ") }))
     .sort((a, b) => a.label.localeCompare(b.label, "pt-BR")), [itens]);
