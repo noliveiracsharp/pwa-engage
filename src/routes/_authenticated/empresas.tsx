@@ -6,7 +6,8 @@ import { StatusBadge } from "@/components/data-table/StatusBadge";
 import { EmpresaSheet } from "@/components/empresas/EmpresaSheet";
 import { rowId, useDeleteRecord, useSaveRecord, useTableRows } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
-import { usePagePermissions } from "@/hooks/usePagePermissions";
+import { usePagePermissions, subtabKind } from "@/hooks/usePagePermissions";
+import { secoesComPermissao } from "@/lib/secoes-permissao";
 import { formatCpfCnpj, formatPhoneDisplay, matchesAny } from "@/lib/input-masks";
 
 export const Route = createFileRoute("/_authenticated/empresas")({
@@ -38,6 +39,27 @@ function EmpresasPage() {
   const remove = useDeleteRecord("empresas");
   const [open, setOpen] = useState(false);
   const [record, setRecord] = useState<Row | null>(null);
+  const { data: funcoes = [] } = useTableRows("funcoes");
+  const sections = useMemo(() => {
+    const pai = funcoes.find((x) => String(pick(x, ["path"]) ?? "") === "/empresas" && !pick(x, ["funcoes_pai_id"]));
+    const paiId = pai ? String(rowId(pai) ?? "") : "";
+    const definidas = new Set(
+      funcoes
+        .filter((x) => paiId && String(pick(x, ["funcoes_pai_id"]) ?? "") === paiId && x["menu_ativo"] === false && x["status"] !== false)
+        .map((x) => subtabKind({ id: String(rowId(x) ?? ""), descricao: String(x["descricao"] ?? "") })),
+    );
+    const base = [
+      { key: "dados", kind: "dados", label: "Dados" },
+      { key: "instancias", kind: "instancias", label: "Instâncias" },
+      { key: "campos", kind: "campos", label: "Campos" },
+      { key: "etiquetas", kind: "etiquetas", label: "Etiquetas" },
+      { key: "notas", kind: "notas", label: "Notas rápidas" },
+      { key: "ia", kind: "ia", label: "Inteligência Artificial" },
+      { key: "documentos", kind: "documentos", label: "Documentos" },
+    ];
+    const paiPerms = { canRead: perms.canRead, canCreate: perms.canCreate, canUpdate: perms.canUpdate, canDelete: perms.canDelete };
+    return secoesComPermissao(base, paiPerms, definidas, perms.subtabs.map((t) => ({ ...t, kind: subtabKind(t), label: t.descricao })));
+  }, [funcoes, perms]);
   const [f, setF] = useState({ busca: "", status: "todos" });
 
   const filtered = useMemo(
@@ -122,6 +144,7 @@ function EmpresasPage() {
         onOpenChange={setOpen}
         empresa={record}
         saving={save.isPending}
+        sections={sections}
         readOnly={record ? !perms.canUpdate : !perms.canCreate}
         onSave={(values) => save.mutate({ values, original: record }, { onSuccess: () => setOpen(false) })}
       />
