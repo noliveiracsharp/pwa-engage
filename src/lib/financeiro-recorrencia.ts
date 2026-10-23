@@ -130,3 +130,18 @@ export function planoPosicaoSerie(titulos: Row[], atualId: unknown, posicao: num
   return { renomear: mantidas.map((t, j) => ({ id: t["id"], descricao: nome(desloc + j + 1), parcela_n: desloc + j + 1 })),
     criar: [...antes, ...depois], remover: excedentes.map((t) => t["id"]) };
 }
+
+/** Parcelas de uma mesma série gerada por Oferta: mesma oferta, tipo e descrição base (sem "(n/m)"). */
+export function parcelasDaOferta(atual: Row, titulos: Row[]): Row[] {
+  if (atual["origem_tipo"] !== "oferta" || !atual["origem_id"]) return [];
+  const base = (t: Row) => String(t["descricao"] ?? "").replace(SUFIXO, "").trim();
+  return titulos.filter((t) => t["origem_tipo"] === "oferta" && t["origem_id"] === atual["origem_id"]
+    && t["tipo"] === atual["tipo"] && t["empresa_id"] === atual["empresa_id"] && base(t) === base(atual));
+}
+
+/** Alvos de edição em série de Oferta (mesmas regras de alcance da série manual). */
+export function alvosOferta(atual: Row, titulos: Row[], escopo: EscopoRecorrencia, hoje: string): Row[] {
+  const irmas = parcelasDaOferta(atual, titulos);
+  return alvosRecorrencia({ ...atual, origem_tipo: "manual" }, irmas.map((t) => ({ ...t, origem_tipo: "manual" })), escopo, hoje)
+    .map((t) => irmas.find((i) => i["id"] === t["id"]) ?? t);
+}

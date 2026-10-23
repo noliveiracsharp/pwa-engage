@@ -191,7 +191,8 @@ export function titulosDaOferta(orc: Row, itens: Row[] = []): NovoTitulo[] {
     }
   }
   const forn = cronogramaCompra({
-    custo: num(orc["total_custo"]),
+    custo: num(orc["total_custo"]) > 0 ? num(orc["total_custo"])
+      : round2(itens.reduce((s, l) => s + (num(l["custo_total"]) || num(l["preco_custo"]) * num(l["quantidade"])), 0)),
     condicao: condicaoCompraFromValue(orc["compra_condicao"]),
     parcelasCliente: parcelas,
     dataPadrao: iso(orc["dt_orcamento"] ?? orc["created_at"]) || hojeISO(),
