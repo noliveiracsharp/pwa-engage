@@ -16,20 +16,47 @@ export function useFormGuard(props: Handlers) {
   const liberado = React.useRef(false);
   const closeRef = React.useRef<HTMLButtonElement>(null);
 
+  const contentRef = React.useRef<HTMLElement | null>(null);
+
+  const fecharLiberado = () => {
+    liberado.current = true;
+    closeRef.current?.click();
+  };
+
+  /** Grava o campo em edição (auto-save no blur) e aciona o botão Salvar, se houver. */
+  const sairESalvar = () => {
+    const ativo = document.activeElement as HTMLElement | null;
+    ativo?.blur?.();
+    const raiz = contentRef.current;
+    const botoes = raiz
+      ? Array.from(raiz.querySelectorAll("button")).filter(
+          (b) => !b.disabled && b.offsetParent !== null && ROTULO_SALVAR.test(b.textContent ?? ""),
+        )
+      : [];
+    const alvo = botoes[botoes.length - 1];
+    sujo.current = false;
+    // espera o salvamento disparado pelo blur antes de fechar
+    window.setTimeout(() => {
+      if (alvo) alvo.click();
+      else fecharLiberado();
+    }, 150);
+  };
+
   const proteger = (e: Event) => {
     if (!sujo.current || liberado.current || e.defaultPrevented) return;
     e.preventDefault();
+    const alvo = (e.target as HTMLElement | null)?.closest?.("[role=dialog]") as HTMLElement | null;
+    contentRef.current = alvo ?? (closeRef.current?.parentElement ?? null);
     void confirmar({
       title: "Dados não salvos",
-      description: "Você tem alterações que ainda não foram salvas. Deseja sair e descartar o que digitou?",
+      description: "Você tem alterações que ainda não foram salvas. Deseja salvar antes de sair?",
       confirmText: "Sair sem salvar",
       cancelText: "Continuar editando",
+      extraText: "Sair e salvar",
+      onExtra: sairESalvar,
       destructive: true,
     }).then((ok) => {
-      if (ok) {
-        liberado.current = true;
-        closeRef.current?.click();
-      }
+      if (ok) fecharLiberado();
     });
   };
 
