@@ -43,6 +43,11 @@ export function useFormGuard(props: Handlers) {
   };
 
   const proteger = (e: Event) => {
+    // Telas com salvamento automático (data-no-guard): grava o campo atual e fecha sem perguntar.
+    if (closeRef.current?.closest("[data-no-guard]")) {
+      (document.activeElement as HTMLElement | null)?.blur?.();
+      return;
+    }
     if (!sujo.current || liberado.current || e.defaultPrevented) return;
     e.preventDefault();
     const alvo = (e.target as HTMLElement | null)?.closest?.("[role=dialog]") as HTMLElement | null;
