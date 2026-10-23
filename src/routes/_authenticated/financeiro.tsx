@@ -83,6 +83,7 @@ import { confirmar } from "@/components/layout/DialogoGlobal";
 import { OfertaConsultaSheet, VincularOfertaDialog, ofertaDoTitulo } from "@/components/financeiro/OfertaVinculo";
 import { camposFiscais, rotulosFiscais } from "@/lib/titulo-fiscal";
 import { RateioTitulo } from "@/components/financeiro/RateioTitulo";
+import { ItensChip, ItensTituloDialog, useItensPorTitulo } from "@/components/financeiro/ItensTituloResumo";
 
 export const Route = createFileRoute("/_authenticated/financeiro")({
   staticData: { sitemap: false },
@@ -401,6 +402,8 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
   const [vincOferta, setVincOferta] = useState<Row | null>(null);
   const [consultaOferta, setConsultaOferta] = useState("");
   const [consultaTitulo, setConsultaTitulo] = useState<Row | null>(null);
+  const [verItens, setVerItens] = useState<Row | null>(null);
+  const itensPorTitulo = useItensPorTitulo();
   const { data: ofertasFin = [] } = useTableRows("orcamentos");
   const numOferta = (id: string) => text(ofertasFin.find((o) => text(rowId(o)) === id)?.["numero"]);
   const [excluirSerie, setExcluirSerie] = useState<Row | null>(null);
@@ -555,7 +558,12 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
       </div>
     ) },
     { key: "parc", header: tipo === "receber" ? "Cliente" : "Fornecedor", fields: [], render: (t) => t["__fatura"] ? ([...new Set((t["__itens"] as Row[]).map((x) => nomeParc(x["parceiro_id"])).filter(Boolean))].join(", ") || "—") : (Boolean(t["cliente_atendido_id"]) ? <span>{nomeParc(t["parceiro_id"]) || "—"}<span className="text-muted-foreground block text-xs">Ref.: {nomeParc(t["cliente_atendido_id"])}</span></span> : nomeParc(t["parceiro_id"]) || "—") },
-    { key: "valor", header: "Valor", fields: ["valor"], render: (t) => <span className="font-semibold tabular-nums">{formatBRL(t["valor"])}</span> },
+    { key: "valor", header: "Valor", fields: ["valor"], render: (t) => (
+      <div className="flex flex-col items-start gap-1">
+        <span className="font-semibold tabular-nums">{formatBRL(t["valor"])}</span>
+        {!t["__fatura"] && <ItensChip qtd={(itensPorTitulo.get(text(rowId(t))) ?? []).length} onClick={() => setVerItens(t)} />}
+      </div>
+    ) },
     { key: "sit", header: "Situação", fields: [], render: (t) => {
       if (t["__filho"]) return <span className="text-muted-foreground text-xs">na fatura</span>;
       const s = situacaoTitulo(t, hoje);
@@ -897,6 +905,8 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
       )}
       {vincOferta && <VincularOfertaDialog titulo={vincOferta} onClose={() => setVincOferta(null)} />}
       {consultaOferta && <OfertaConsultaSheet ofertaId={consultaOferta} titulo={consultaTitulo} onClose={() => { setConsultaOferta(""); setConsultaTitulo(null); }} />}
+      <ItensTituloDialog titulo={verItens} itens={verItens ? itensPorTitulo.get(text(rowId(verItens))) ?? [] : []} nomeParceiro={verItens ? nomeParc(verItens["parceiro_id"]) : ""}
+        onClose={() => setVerItens(null)} onEditar={() => { const t = verItens; setVerItens(null); if (t) setEditar(t); }} />
       {recibo && <ReciboDialog tipo={tipo} titulo={recibo} parceiro={parceiroById.get(text(recibo["parceiro_id"]))} onClose={() => setRecibo(null)} />}
       <Dialog open={!!excluirFat} onOpenChange={(o) => !o && setExcluirFat(null)}>
         <DialogContent className="sm:max-w-3xl">
