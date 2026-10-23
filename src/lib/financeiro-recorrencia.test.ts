@@ -22,7 +22,7 @@ describe("edição recorrente", () => {
   });
   it("preserva o número da parcela na descrição", () => expect(patchRecorrencia({ ...atual, descricao: "Aluguel (1/3)" }, { ...atual, id: "2", descricao: "Aluguel (2/3)" }, { descricao: "Locação (1/3)" })).toEqual({ descricao: "Locação (2/3)" }));
 });
-import { parcelasLegadas } from "./financeiro-recorrencia";
+import { parcelasLegadas, serieLegada } from "./financeiro-recorrencia";
 describe("séries antigas sem identificador", () => {
   const b = { origem_tipo: "manual", origem_id: null, empresa_id: "e1", tipo: "pagar", parceiro_id: "p1" };
   const lista = [
@@ -32,4 +32,19 @@ describe("séries antigas sem identificador", () => {
   ];
   it("agrupa só mesma descrição, total, parceiro e empresa", () => expect(parcelasLegadas(lista[0]!, lista).map((t) => t["id"])).toEqual(["1", "2"]));
   it("lançamento sem sufixo não é série", () => expect(parcelasLegadas({ ...b, id: "9", descricao: "Aluguel" }, lista)).toEqual([]));
+  it("data MM/AAAA no nome não identifica uma série manual", () => {
+    expect(serieLegada({ ...b, id: "10", descricao: "Aluguel 10/2026" })).toBeNull();
+  });
+  it("não agrupa contas avulsas de meses diferentes para edição ou exclusão", () => {
+    const atual = { ...b, id: "10", descricao: "Aluguel 10/2026" };
+    const meses = [
+      { ...b, id: "9", descricao: "Aluguel 09/2026" },
+      atual,
+      { ...b, id: "11", descricao: "Aluguel 11/2026" },
+    ];
+    expect(parcelasLegadas(atual, meses)).toEqual([]);
+  });
+  it("mantém o reconhecimento das parcelas manuais antigas com parênteses", () => {
+    expect(serieLegada({ ...b, id: "1", descricao: "Aluguel (1/3)" })).toEqual({ base: "Aluguel", total: 3 });
+  });
 });
