@@ -9,7 +9,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { CalendarClock, CheckCircle2, ChevronDown, ChevronRight, Copy, CreditCard, FileText, FileUp, TrendingUp, Paperclip, Plus, QrCode, Receipt, Trash2, Undo2 } from "lucide-react";
 import { ImportarFaturaDialog } from "@/components/financeiro/ImportarFaturaDialog";
 import { ImportarContaDialog } from "@/components/financeiro/ImportarContaDialog";
-import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { MoreHorizontal, Tags, Download } from "lucide-react";
 import { ReciboDialog } from "@/components/financeiro/ReciboDialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -224,6 +225,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
   };
   const { data: cartoes = [] } = useTableRows("despesas_cartoes");
   const categorias = useCategoriasFinanceiro(tipo);
+  const [catAberto, setCatAberto] = useState(false);
   const { data: centrosCusto = [] } = useTableRows("centro_custo");
   const nomeCentro = (id: unknown) => {
     const c = centrosCusto.find((x) => text(rowId(x)) === text(id));
@@ -880,10 +882,20 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
                 options={[{ value: "todos", label: "Todos" }, ...cartoes.map((c) => ({ value: text(rowId(c)), label: nomeCartao(c) }))]} />
             )}
             <PeriodoNavegavel value={f.per} onChange={(p) => setF((s) => ({ ...s, per: p }))} />
-            <div className="flex items-end gap-2"><Button variant="outline" onClick={exportarCsv}>CSV</Button>
-              {tipo === "pagar" && perms.canCreate && <Button variant="outline" onClick={() => setImportar(true)}><FileUp className="mr-1 h-4 w-4" />Importar fatura do cartão (PDF)</Button>}
-              {tipo === "pagar" && perms.canCreate && <Button variant="outline" onClick={() => setImportarConta(true)}><FileUp className="mr-1 h-4 w-4" />Importar boleto / NF</Button>}
-              <CategoriasDialog tipo={tipo} podeEditar={perms.canCreate || perms.canUpdate} /></div>
+            <div className="flex items-end">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild><Button variant="outline"><MoreHorizontal className="mr-1 h-4 w-4" />Ações<ChevronDown className="ml-1 h-4 w-4" /></Button></DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {tipo === "pagar" && perms.canCreate && <>
+                    <DropdownMenuItem onClick={() => setImportar(true)}><FileUp className="h-4 w-4" /> Importar fatura do cartão (PDF)</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setImportarConta(true)}><FileUp className="h-4 w-4" /> Importar boleto / NF</DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>}
+                  <DropdownMenuItem onClick={() => setCatAberto(true)}><Tags className="h-4 w-4" /> Gerenciar categorias</DropdownMenuItem>
+                  <DropdownMenuItem onClick={exportarCsv}><Download className="h-4 w-4" /> Exportar CSV</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <CategoriasDialog tipo={tipo} podeEditar={perms.canCreate || perms.canUpdate} open={catAberto} onOpenChange={setCatAberto} /></div>
           </>
         }
       />
