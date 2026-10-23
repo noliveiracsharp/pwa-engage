@@ -700,7 +700,25 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
       toast.success("Coordenadas preenchidas.");
     } finally { setGeoLoading(false); }
   }
-  const configFor: Record<string, ChildConfig> = { instancias: INSTANCIAS, campos: CAMPOS, etiquetas: ETIQUETAS, notas: NOTAS };
+  const { data: quadros = [] } = useTableRows("kanban_nome");
+  const etiquetasCfg = useMemo<ChildConfig>(() => {
+    const eid = text(pick(empresa, ["id", "empresa_id"]));
+    const lista = quadros
+      .filter((k) => !eid || !pick(k, ["empresa_id"]) || text(pick(k, ["empresa_id"])) === eid)
+      .map((k) => ({ id: text(rowId(k)), nome: text(pick(k, ["nome", "descricao"])) }))
+      .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+    const labels: Record<string, string> = { "": "Todos os quadros", [TODOS_QUADROS]: "Todos os quadros" };
+    for (const q of lista) labels[q.id] = q.nome;
+    return {
+      ...ETIQUETAS,
+      columns: [
+        ...ETIQUETAS.columns.slice(0, 2),
+        { key: "kanban_id", label: "Quadro (Kanban)", type: "select", nullable: true, options: [TODOS_QUADROS, ...lista.map((q) => q.id)], optionLabels: labels },
+        ...ETIQUETAS.columns.slice(2),
+      ],
+    };
+  }, [quadros, empresa]);
+  const configFor: Record<string, ChildConfig> = { instancias: INSTANCIAS, campos: CAMPOS, etiquetas: etiquetasCfg, notas: NOTAS };
   const [values, setValues] = useState<Record<string, string>>({});
   const dadosPerms = tabs.find((t) => t.kind === "dados")?.perms;
   const dadosLocked =

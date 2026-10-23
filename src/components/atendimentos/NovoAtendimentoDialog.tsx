@@ -177,8 +177,9 @@ export function NovoAtendimentoDialog({ open, onOpenChange, instancias, kanbans,
             <SearchSelect
               value=""
               onChange={(v) => v && setTags((t) => (t.includes(v) ? t : [...t, v]))}
-              options={etiquetas
+              options={etiquetasDoQuadro(etiquetas, kanban)
                 .filter((e) => e["status"] !== false && !tags.includes(text(rowId(e))))
+                .sort((a, b) => text(pick(a, ["descricao", "nome"])).localeCompare(text(pick(b, ["descricao", "nome"])), "pt-BR"))
                 .map((e) => ({ value: text(rowId(e)), label: text(pick(e, ["descricao", "nome"])) }))}
               placeholder="Adicionar etiqueta"
               searchPlaceholder="Buscar etiqueta…"
