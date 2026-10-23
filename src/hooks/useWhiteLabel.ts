@@ -15,6 +15,27 @@ function contraste(hex: string) {
   return lum > 0.4 ? "oklch(0.15 0.03 255)" : "oklch(0.99 0.005 247)";
 }
 
+function luminancia(hex: string) {
+  const n = parseInt(hex.slice(1), 16);
+  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => {
+    const c = v / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
+}
+
+/** No tema escuro, clareia cores de marca muito escuras (mistura com branco) até ficarem legíveis sobre fundo escuro. */
+export function clarearParaEscuro(hex: string, minLum = 0.25) {
+  if (!HEX.test(hex) || luminancia(hex) >= minLum) return hex;
+  const n = parseInt(hex.slice(1), 16);
+  const rgb = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  for (let t = 0.05; t <= 1; t += 0.05) {
+    const out = "#" + rgb.map((v) => Math.round(v + (255 - v) * t).toString(16).padStart(2, "0")).join("");
+    if (luminancia(out) >= minLum) return out;
+  }
+  return "#ffffff";
+}
+
 function bloco(seletor: string, cor: string) {
   if (!HEX.test(cor)) return "";
   const fg = contraste(cor);
@@ -28,7 +49,7 @@ export function useWhiteLabel() {
   useEffect(() => {
     const id = "white-label-cores";
     let el = document.getElementById(id) as HTMLStyleElement | null;
-    const css = bloco(":root", claro ?? "") + bloco(".dark", escuro || claro || "");
+    const css = bloco(":root", claro ?? "") + bloco(".dark", clarearParaEscuro(escuro || claro || ""));
     if (!css) { el?.remove(); return; }
     if (!el) { el = document.createElement("style"); el.id = id; document.head.appendChild(el); }
     el.textContent = css;
