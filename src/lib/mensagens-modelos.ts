@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Row } from "@/lib/row";
+import { variaveisPersonalizadasAtivas } from "@/lib/variaveis";
 
 /** Modelos de mensagens automáticas de WhatsApp. Cada chave tem um texto padrão e variáveis {assim}. */
 export type ModeloDef = { chave: string; nome: string; variaveis: string[]; padrao: string };
@@ -28,10 +29,16 @@ export const MODELOS: ModeloDef[] = [
   },
 ];
 
-/** Troca {variavel} pelo valor; linhas que ficam só com separadores vazios são removidas. */
-export function aplicarModelo(texto: string, vars: Record<string, string>): string {
+/**
+ * Troca {{variavel}} (ou o formato antigo {variavel}) pelo valor; variáveis personalizadas
+ * da empresa completam o que não veio do contexto. Linhas só com separadores vazios somem.
+ */
+export function aplicarModelo(texto: string, vars: Record<string, string>, extras: Record<string, string> = variaveisPersonalizadasAtivas()): string {
   return texto
-    .replace(/\{(\w+)\}/g, (_, k: string) => vars[k] ?? "")
+    .replace(/\{\{\s*(\w+)\s*\}\}|\{(\w+)\}/g, (_, a: string | undefined, b: string | undefined) => {
+      const k = (a ?? b)!;
+      return vars[k] ?? extras[k] ?? "";
+    })
     .split("\n")
     .filter((l) => !/^\s*[—-]\s*(WhatsApp\s*)?$/.test(l))
     .join("\n")
