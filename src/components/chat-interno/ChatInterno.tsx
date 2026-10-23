@@ -4,7 +4,7 @@ import { Linkify } from "@/components/ui/linkify";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Check, ArrowLeftRight, ArrowLeft, Maximize2, MessageSquare, Minimize2, Paperclip, Search, Send, Users, X, FileText, Loader2, Phone, Video } from "lucide-react";
+import { Plus, Check, ArrowLeftRight, ArrowLeft, Maximize2, MessageSquare, Minimize2, Paperclip, Search, Send, Users, X, FileText, Loader2, Phone, Video, Mic, ClipboardList } from "lucide-react";
 import { ChamadaFlutuante, duracao, novaSala, type Chamada } from "@/components/atendimentos/ChamadaFlutuante";
 
 const CONVITE = "📞CONVITE|";
@@ -705,7 +705,7 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack }: { me: stri
             }
             const anexos = (Array.isArray(m["anexos"]) ? m["anexos"] : []) as Anexo[];
             return (
-              <div key={String(m["id"])} className={cn("flex", mine ? "justify-end" : "justify-start")}>
+              <div key={String(m["id"])} className={cn("group flex items-center gap-1", mine ? "flex-row-reverse" : "flex-row")}>
                 <div className={cn("max-w-[80%] rounded-2xl px-3 py-2 text-sm", mine ? "rounded-br-sm bg-primary text-primary-foreground" : "rounded-bl-sm bg-muted")}>
                   {!mine && sel.tipo === "grupo" && <p className="mb-0.5 text-xs font-semibold text-primary">{nomes.get(String(m["remetente_id"])) ?? "Usuário"}</p>}
                   {anexos.map((a, i) =>
@@ -713,6 +713,10 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack }: { me: stri
                       <a key={i} href={a.url} target="_blank" rel="noreferrer">
                         <img src={a.url} alt={a.nome || "Imagem"} className="mb-1 max-h-48 rounded-lg" />
                       </a>
+                    ) : a.tipo === "audio" ? (
+                      <audio key={i} src={a.url} controls preload="metadata" className="mb-1 h-10 w-56 max-w-full" />
+                    ) : a.tipo === "video" ? (
+                      <video key={i} src={a.url} controls preload="metadata" className="mb-1 max-h-60 max-w-full rounded-lg" />
                     ) : (
                       <a key={i} href={a.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 underline">
                         <FileText className="h-4 w-4" /> {a.nome || "Arquivo"}
@@ -722,6 +726,11 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack }: { me: stri
                   {anexos.length === 0 && <p className="break-words whitespace-pre-wrap"><Linkify text={String(m["mensagem"] ?? "")} /></p>}
                   <p className={cn("mt-0.5 text-right text-[10px]", mine ? "text-primary-foreground/70" : "text-muted-foreground")}>{hora(m["criado_em"])}</p>
                 </div>
+                {anexos.length === 0 && txt.trim() && (
+                  <Button type="button" variant="ghost" size="icon" className="h-7 w-7 shrink-0 opacity-0 transition group-hover:opacity-100 focus:opacity-100" title="Transformar em tarefa" aria-label="Transformar em tarefa" onClick={() => void criarTarefa(txt)}>
+                    <ClipboardList className="h-3.5 w-3.5" />
+                  </Button>
+                )}
               </div>
             );
           })}
@@ -736,15 +745,37 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack }: { me: stri
           void enviar();
         }}
       >
-        <input ref={fileRef} type="file" hidden onChange={(e) => e.target.files?.[0] && void anexar(e.target.files[0])} />
-        <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => fileRef.current?.click()} aria-label="Anexar arquivo" disabled={enviando || !canalId}>
-          <Paperclip className="h-4 w-4" />
-        </Button>
-        <UploadInfo perfil="chat" arquivos />
-        <Input value={texto} onChange={(e) => setTexto(e.target.value)} placeholder="Digite uma mensagem..." className="flex-1" />
-        <Button type="submit" size="icon" className="h-9 w-9 shrink-0" disabled={enviando || !texto.trim() || !canalId} aria-label="Enviar">
-          {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-        </Button>
+        <input ref={fileRef} type="file" accept="image/*,video/*,audio/*,application/pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.zip" hidden onChange={(e) => e.target.files?.[0] && void anexar(e.target.files[0])} />
+        {gravando ? (
+          <>
+            <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={cancelarGravacao} aria-label="Cancelar gravação">
+              <X className="h-4 w-4" />
+            </Button>
+            <div className="flex flex-1 items-center gap-2 px-2 text-sm text-destructive">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-destructive" /> Gravando {Math.floor(segundos / 60)}:{String(segundos % 60).padStart(2, "0")}
+            </div>
+            <Button type="button" size="icon" className="h-9 w-9 shrink-0" onClick={() => void gravar()} aria-label="Enviar áudio">
+              <Send className="h-4 w-4" />
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => fileRef.current?.click()} aria-label="Anexar arquivo, imagem ou vídeo" title="Anexar arquivo, imagem ou vídeo" disabled={enviando || !canalId}>
+              <Paperclip className="h-4 w-4" />
+            </Button>
+            <UploadInfo perfil="chat" arquivos />
+            <Input value={texto} onChange={(e) => setTexto(e.target.value)} onPaste={colar} placeholder="Digite uma mensagem ou cole um print (Ctrl+V)..." className="flex-1" />
+            {texto.trim() ? (
+              <Button type="submit" size="icon" className="h-9 w-9 shrink-0" disabled={enviando || !canalId} aria-label="Enviar">
+                {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              </Button>
+            ) : (
+              <Button type="button" size="icon" className="h-9 w-9 shrink-0" disabled={enviando || !canalId} onClick={() => void gravar()} aria-label="Gravar áudio" title="Gravar áudio">
+                {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mic className="h-4 w-4" />}
+              </Button>
+            )}
+          </>
+        )}
       </form>
     </div>
   );
