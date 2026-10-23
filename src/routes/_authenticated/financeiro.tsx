@@ -48,7 +48,7 @@ import { calcularTarifa, modalidadeTarifa } from "@/lib/financeiro-tarifas";
 import { formatBRL, formatDate, num, round2 } from "@/lib/orcamentos";
 import { uploadFoto } from "@/lib/laudos";
 import { erroFinanceiro } from "@/lib/financeiro-db";
-import { alvosRecorrencia, parcelasLegadas, patchRecorrencia, planoTamanhoSerie, serieLegada, type EscopoRecorrencia } from "@/lib/financeiro-recorrencia";
+import { alvosRecorrencia, parcelasLegadas, patchRecorrencia, planoPosicaoSerie, planoTamanhoSerie, serieLegada, type EscopoRecorrencia } from "@/lib/financeiro-recorrencia";
 import {
   fluxoPeriodo,
   periodoVisao,
@@ -1093,7 +1093,7 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
   // Parcelas anteriores à atual (ex.: 1/10 quando começa na 2/10): só em lançamento novo.
   const [incluirAnt, setIncluirAnt] = useState(true);
   const [statusAnt, setStatusAnt] = useState<"pago" | "aberto">("pago");
-  const comAnt = !registro && incluirAnt;
+  const comAnt = incluirAnt;
   const algumMeio = ini > 1 || (cartaoModo && porItem && itens.some((i) => Math.floor(num(i.inicio)) > 1));
   const fC = num(cartao?.["dia_fechamento"]); const vC = num(cartao?.["dia_vencimento"]);
   type Prev = { vencimento: string; valor: number; descricao?: string; categoria?: string; rotulo?: string; grupo?: number; n?: number; total?: number; dataCompra?: string; anterior?: boolean };
@@ -1126,6 +1126,8 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
     return m ? m[2]! : "";
   });
   const [serie, setSerie] = useState<Row[]>([]);
+  const [posAtual, setPosAtual] = useState("1");
+  const [statusAntSerie, setStatusAntSerie] = useState<"pago" | "aberto">("pago");
   useEffect(() => {
     if (!temSerie || !registro) return;
     let vivo = true;
@@ -1136,7 +1138,11 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
       let l = (data ?? []) as Row[];
       if (!registro["origem_id"]) l = parcelasLegadas(registro, l);
       l.sort((a, b) => text(a["vencimento"]).localeCompare(text(b["vencimento"])));
-      if (vivo) { setSerie(l); if (l.length > 1) setNovoTotal(String(l.length)); }
+      if (vivo) {
+        setSerie(l); if (l.length > 1) setNovoTotal(String(l.length));
+        const pn = num(registro["parcela_n"]); const idx = l.findIndex((t) => t["id"] === registro["id"]);
+        setPosAtual(String(pn > 0 ? pn : idx + 1));
+      }
     })();
     return () => { vivo = false; };
   }, [temSerie, registro, tipo]);
@@ -1198,6 +1204,36 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
         if (error) throw error;
       }
       toast.success(`Série ajustada para ${total} parcelas.`); onSaved(); onClose();
+    } catch (e) { toast.error(erroFinanceiro(e)); } finally { setSalvando(false); }
+  };
+  const aplicarPosicao = async () => {
+    if (!registro) return;
+    const total = Math.floor(num(novoTotal)); const pos = Math.floor(num(posAtual));
+    setSalvando(true);
+    try {
+      const titulos = await carregarSerie();
+      const plano = planoPosicaoSerie(titulos, registro["id"], pos, total);
+      if (plano.bloqueio) return void toast.error(plano.bloqueio);
+      const nAnt = plano.criar.filter((c) => c.anterior).length; const nPos = plano.criar.length - nAnt;
+      const partes = [nAnt && `${nAnt} parcela(s) anterior(es) como ${statusAntSerie === "pago" ? "pagas" : "em aberto"}`, nPos && `${nPos} parcela(s) futura(s)`, plano.remover.length && `remove ${plano.remover.length} em aberto do final`].filter(Boolean);
+      if (!await confirmar({ title: `Esta passa a ser a parcela ${pos} de ${total}?`, description: `${partes.length ? `Serão criadas/ajustadas: ${partes.join("; ")}.` : "Só a numeração será ajustada."}`, confirmText: "Aplicar", destructive: plano.remover.length > 0 })) return;
+      if (plano.remover.length) {
+        const { error } = await supabase.from("financeiro_titulos").delete().in("id", plano.remover as never);
+        if (error) throw error;
+      }
+      for (const r of plano.renomear) {
+        const { error } = await supabase.from("financeiro_titulos").update({ descricao: r.descricao, parcela_n: r.parcela_n } as never).eq("id", r.id as never);
+        if (error) throw error;
+      }
+      if (plano.criar.length) {
+        const modelo = titulos[0]!;
+        const copia = ["tipo", "categoria", "parceiro_id", "observacao", "centro_custo_id", "codigo_referencia", "conta_bancaria_id", "forma_pagamento", "empresa_id", "origem_tipo", "origem_id"];
+        const lote = plano.criar.map(({ anterior, ...c }) => ({ ...Object.fromEntries(copia.map((k) => [k, modelo[k] ?? null])), ...c, data_competencia: c.vencimento,
+          ...(anterior && statusAntSerie === "pago" ? { status: "pago", pago_em: c.vencimento, valor_pago: c.valor } : { status: "aberto" }) }));
+        const { error } = await supabase.from("financeiro_titulos").insert(lote as never);
+        if (error) throw error;
+      }
+      toast.success(`Série ajustada: esta é a parcela ${pos} de ${total}.`); onSaved(); onClose();
     } catch (e) { toast.error(erroFinanceiro(e)); } finally { setSalvando(false); }
   };
 
@@ -1273,16 +1309,19 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
             throw error;
           }
         } else if (podeConverter && previa.length > 1) {
-          // Converte um lançamento único em série: o atual vira a 1ª parcela e as demais são criadas.
+          // Converte um lançamento único em série: o atual vira a parcela inicial escolhida; anteriores e posteriores são criadas.
           const n = previa[0]?.total ?? previa.length;
-          const n0 = previa[0]?.n ?? 1;
+          const iAtual = Math.max(0, previa.findIndex((p) => !p.anterior));
+          const cur = previa[iAtual]!;
+          const n0 = cur.n ?? 1;
           const serieId = crypto.randomUUID();
-          const pago = v.ja_pago ? { status: "pago", pago_em: previa[0]!.vencimento, valor_pago: previa[0]!.valor } : {};
+          const pago = v.ja_pago ? { status: "pago", pago_em: cur.vencimento, valor_pago: cur.valor } : {};
           const { error } = await supabase.from("financeiro_titulos").update({ ...base, origem_tipo: "manual", origem_id: serieId, parcela_n: n0,
-            descricao: `${base.descricao} (${n0}/${n})`, vencimento: previa[0]!.vencimento, valor: previa[0]!.valor, ...pago } as never).eq("id", text(rowId(registro)));
+            descricao: `${base.descricao} (${n0}/${n})`, vencimento: cur.vencimento, valor: cur.valor, ...pago } as never).eq("id", text(rowId(registro)));
           if (error) throw error;
-          const resto = previa.slice(1).map((p, i) => ({ ...base, empresa_id: registro["empresa_id"], origem_tipo: "manual", origem_id: serieId,
-            parcela_n: p.n ?? i + 2, descricao: `${base.descricao} (${p.n ?? i + 2}/${n})`, vencimento: p.vencimento, valor: p.valor, status: "aberto" }));
+          const resto = previa.filter((_, i) => i !== iAtual).map((p, i) => ({ ...base, empresa_id: registro["empresa_id"], origem_tipo: "manual", origem_id: serieId,
+            parcela_n: p.n ?? i + 2, descricao: `${base.descricao} (${p.n ?? i + 2}/${n})`, vencimento: p.vencimento, valor: p.valor, data_competencia: p.vencimento,
+            ...(p.anterior && statusAnt === "pago" ? { status: "pago", pago_em: p.vencimento, valor_pago: p.valor } : { status: "aberto" }) }));
           const { error: e2 } = await supabase.from("financeiro_titulos").insert(resto as never);
           if (e2) throw e2;
         } else {
@@ -1356,6 +1395,14 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
                   <div className="space-y-1"><Label>Quantidade de parcelas/meses da série</Label>
                     <Input type="number" min={1} max={120} className="w-32" value={novoTotal} onChange={(e) => setNovoTotal(e.target.value)} /></div>
                   <Button type="button" variant="outline" disabled={salvando || !num(novoTotal)} onClick={() => void aplicarTamanho()}>Alterar quantidade</Button>
+                  <div className="space-y-1"><Label>Esta é a parcela nº</Label>
+                    <Input type="number" min={1} max={Math.max(1, num(novoTotal))} className="w-24" value={posAtual} onChange={(e) => setPosAtual(e.target.value)} /></div>
+                  <div className="space-y-1"><Label>Anteriores criadas como</Label>
+                    <Select value={statusAntSerie} onValueChange={(x) => setStatusAntSerie(x as "pago" | "aberto")}>
+                      <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+                      <SelectContent><SelectItem value="aberto">Em aberto</SelectItem><SelectItem value="pago">Pago</SelectItem></SelectContent>
+                    </Select></div>
+                  <Button type="button" disabled={salvando || !num(novoTotal) || !num(posAtual)} onClick={() => void aplicarPosicao()}>Aplicar {posAtual || "?"} de {novoTotal || "?"}</Button>
                   <p className="w-full text-xs text-muted-foreground">Aumentar cria novas parcelas mensais após a última; reduzir remove só parcelas em aberto do final. Parcelas pagas são preservadas.</p>
                 </div>
               )}
@@ -1524,7 +1571,7 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
               <Input type="number" min={1} max={totParc} value={inicio} onChange={(e) => setInicio(e.target.value)} />
               <p className="text-muted-foreground text-xs">Ex.: 2 para lançar de 2/{totParc} em diante .</p></div>
           </>)}
-          {!registro && podeConverter && algumMeio && (
+          {podeConverter && algumMeio && (
             <div className="flex flex-wrap items-center gap-3 rounded-lg border p-3 sm:col-span-2">
               <Switch checked={incluirAnt} onCheckedChange={setIncluirAnt} id="incl-ant" />
               <Label htmlFor="incl-ant" className="flex-1">Incluir histórico das parcelas anteriores</Label>

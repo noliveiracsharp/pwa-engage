@@ -93,3 +93,40 @@ export function planoTamanhoSerie(titulos: Row[], novoTotal: number): PlanoTaman
   });
   return { renomear: mantidas.map((t, i) => ({ id: t["id"], descricao: nome(i + 1), parcela_n: i + 1 })), criar, remover: excedentes.map((t) => t["id"]) };
 }
+
+export type PlanoPosicao = {
+  renomear: { id: unknown; descricao: string; parcela_n: number }[];
+  criar: { parcela_n: number; descricao: string; vencimento: string; valor: number; anterior: boolean }[];
+  remover: unknown[];
+  bloqueio?: string;
+};
+
+/** Reposiciona a série: o lançamento atual vira a parcela `posicao` de `total`.
+ * Cria as anteriores que faltam (antes da 1ª existente) e as posteriores até o total; remove excedentes em aberto. */
+export function planoPosicaoSerie(titulos: Row[], atualId: unknown, posicao: number, total: number): PlanoPosicao {
+  const vazio: PlanoPosicao = { renomear: [], criar: [], remover: [] };
+  const ord = [...titulos].sort((a, b) => String(a["vencimento"]).localeCompare(String(b["vencimento"])));
+  const k = ord.findIndex((t) => t["id"] === atualId);
+  if (k < 0 || total < 1 || total > 120 || posicao < 1 || posicao > total) return { ...vazio, bloqueio: "Informe uma parcela entre 1 e o total." };
+  const desloc = posicao - 1 - k; // posição (0-based) do 1º título existente
+  if (desloc < 0) {
+    const sobra = ord.slice(0, -desloc);
+    if (sobra.length) return { ...vazio, bloqueio: `Há ${sobra.length} parcela(s) antes desta na série. Use uma posição maior ou desvincule-as.` };
+  }
+  const base = String(ord[0]!["descricao"] ?? "").replace(SUFIXO, "").trim();
+  const nome = (n: number) => (total > 1 ? `${base} (${n}/${total})` : base);
+  const mantidas = ord.filter((_, j) => desloc + j < total);
+  const excedentes = ord.filter((_, j) => desloc + j >= total);
+  if (excedentes.some((t) => t["status"] === "pago" || !!t["pago_em"] || num(t["valor_pago"]) > 0))
+    return { ...vazio, bloqueio: "Há parcelas já pagas além do novo total. Estorne-as antes de reduzir." };
+  const primeira = ord[0]!; const ultima = mantidas[mantidas.length - 1]!;
+  const antes = Array.from({ length: desloc }, (_, i) => ({ parcela_n: i + 1, descricao: nome(i + 1),
+    vencimento: maisMeses(String(primeira["vencimento"]), -(desloc - i)), valor: num(primeira["valor"]), anterior: true }));
+  const nDepois = Math.max(0, total - (desloc + mantidas.length));
+  const depois = Array.from({ length: nDepois }, (_, i) => {
+    const n = desloc + mantidas.length + i + 1;
+    return { parcela_n: n, descricao: nome(n), vencimento: maisMeses(String(ultima["vencimento"]), i + 1), valor: num(ultima["valor"]), anterior: false };
+  });
+  return { renomear: mantidas.map((t, j) => ({ id: t["id"], descricao: nome(desloc + j + 1), parcela_n: desloc + j + 1 })),
+    criar: [...antes, ...depois], remover: excedentes.map((t) => t["id"]) };
+}
