@@ -4,7 +4,29 @@ import { comprimirImagem } from "@/lib/image-compress";
 
 export type TipoResposta = "cnc" | "numero";
 export type ItemModelo = { texto: string; tipo: TipoResposta; unidade?: string | undefined };
-export type ItemChecklist = ItemModelo & { resposta?: "C" | "NC" | "NA" | null; valor?: string; obs?: string };
+export type ItemChecklist = ItemModelo & { resposta?: "C" | "NC" | "NA" | null; valor?: string; obs?: string; equipamento?: string };
+/** Linha do roteiro de uma preventiva por cliente: equipamento + checklist dele. */
+export type ItemRoteiro = { ativo_id: string; modelo_id: string };
+
+/**
+ * Checklist único da visita: para cada equipamento do roteiro, os itens do modelo escolhido,
+ * marcados com o nome do equipamento. Equipamentos sem modelo ou inexistentes são ignorados.
+ */
+export function checklistDaVisita(
+  roteiro: ItemRoteiro[],
+  modelos: { id: string; itens: unknown }[],
+  ativos: { id: string; nome: string; local?: string | null }[],
+): ItemChecklist[] {
+  const out: ItemChecklist[] = [];
+  for (const r of roteiro) {
+    const a = ativos.find((x) => x.id === r.ativo_id);
+    const m = modelos.find((x) => x.id === r.modelo_id);
+    if (!a || !m) continue;
+    const rotulo = a.local ? `${a.nome} · ${a.local}` : a.nome;
+    out.push(...checklistDoModelo(m.itens).map((i) => ({ ...i, equipamento: rotulo })));
+  }
+  return out;
+}
 export type Anexo = { url: string; nome: string; grupo: "antes" | "depois" | "documento" };
 
 export const TIPOS = [

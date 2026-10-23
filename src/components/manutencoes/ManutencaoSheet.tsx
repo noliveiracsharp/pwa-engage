@@ -267,6 +267,7 @@ export function ManutencaoSheet({ open, onOpenChange, record, inicial, onSaved }
                   <Input placeholder="Observação" value={it.obs ?? ""} onChange={(e) => setItem(i, { obs: e.target.value })} />
                 )}
               </div>
+              </div>
             ))}
             {!checklist.length && <p className="text-sm text-muted-foreground">Aplique um modelo para carregar o roteiro de verificação.</p>}
           </section>
