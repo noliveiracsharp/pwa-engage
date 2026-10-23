@@ -322,15 +322,42 @@ export function ChatInterno({ sidebarOpen, onAbrir }: { sidebarOpen: boolean; on
           </div>
 
           {sel ? (
-            <Conversa
-              key={sel.tipo === "direto" ? `d${sel.outro["id"]}` : `g${sel.canal["id"]}`}
-              me={me}
-              empresaId={empresaId}
-              sel={sel}
-              usuarios={usuarios}
-              isOnline={sel.tipo === "direto" && online.has(String(sel.outro["id"]))}
-              onBack={() => setSel(null)}
-            />
+            <div className="flex min-h-0 flex-1">
+              <ScrollArea className="w-14 shrink-0 border-r border-border max-sm:hidden">
+                <div className="flex flex-col items-center gap-1 py-2">
+                  {lista.map((u) => {
+                    const id = String(u["id"]);
+                    const nomeU = String(pick(u, ["nome"], "Usuário"));
+                    const ativo = sel.tipo === "direto" && String(sel.outro["id"]) === id;
+                    const n = naoLidas[id] ?? 0;
+                    return (
+                      <Tooltip key={id}>
+                        <TooltipTrigger asChild>
+                          <button type="button" onClick={() => { setSel({ tipo: "direto", outro: u }); setNaoLidas((x) => ({ ...x, [id]: 0 })); }} aria-label={nomeU} className={cn("relative rounded-full p-0.5 transition", ativo ? "ring-2 ring-primary" : "hover:ring-2 hover:ring-accent")}>
+                            <Avatar className="h-9 w-9">
+                              <AvatarImage src={String(pick(u, ["foto"], ""))} alt={nomeU} />
+                              <AvatarFallback className="text-xs">{iniciais(nomeU)}</AvatarFallback>
+                            </Avatar>
+                            <span className={cn("absolute right-0 bottom-0 h-2.5 w-2.5 rounded-full border-2 border-popover", online.has(id) ? "bg-success" : "bg-muted-foreground")} />
+                            {n > 0 && <span className="absolute -top-1 -right-1 rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground">{n}</span>}
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="right">{nomeU}</TooltipContent>
+                      </Tooltip>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+              <Conversa
+                key={sel.tipo === "direto" ? `d${sel.outro["id"]}` : `g${sel.canal["id"]}`}
+                me={me}
+                empresaId={empresaId}
+                sel={sel}
+                usuarios={usuarios}
+                isOnline={sel.tipo === "direto" && online.has(String(sel.outro["id"]))}
+                onBack={() => setSel(null)}
+              />
+            </div>
           ) : (
             <Tabs defaultValue="atendentes" className="flex min-h-0 flex-1 flex-col animate-in fade-in">
               <TabsList className="mx-4 mt-3 grid grid-cols-3">
