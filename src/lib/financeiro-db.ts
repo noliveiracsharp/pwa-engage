@@ -27,8 +27,17 @@ export async function apagarAbertosDaOrigem(origemIds: string[], tipos: OrigemTi
 
 export async function inserirTitulos(empresaId: string, titulos: NovoTitulo[], rateio?: { fontes: FonteRateio[]; clienteId?: string | null }) {
   if (!titulos.length) return 0;
-  const linhas = titulos.map((t) => ({ ...t, empresa_id: empresaId, status: "aberto" }));
+  const base = titulos.map((t) => ({ ...t, empresa_id: empresaId, status: "aberto" }));
+  // Títulos da Oferta já nascem com os valores de NF-e (produtos) e NFS-e (serviços) preenchidos.
+  let linhas: Record<string, unknown>[] = base.map((t, i) => {
+    const f = rateio?.fontes.length ? valoresFiscaisDoTitulo(titulos[i]!, rateio.fontes, rateio.clienteId ?? null) : null;
+    return f ? { ...t, ...f } : t;
+  });
   let { data, error } = await supabase.from("financeiro_titulos").insert(linhas as never).select("id");
+  if (error && /nfe_valor|nfse_valor/.test(error.message)) {
+    linhas = base;
+    ({ data, error } = await supabase.from("financeiro_titulos").insert(linhas as never).select("id"));
+  }
   if (error && /cliente_atendido_id/.test(error.message)) {
     // Script do faturamento misto ainda não rodado: grava sem o cliente atendido.
     ({ data, error } = await supabase
@@ -72,7 +81,7 @@ export async function fontesDaOferta(itens: Row[]): Promise<FonteRateio[]> {
       item_id: (i["item_id"] as string) || null, descricao: String(i["detalhe"] ?? "") || c?.nome || "Item",
       quantidade: Number(i["quantidade"] ?? 1) || 1, peso: Number(i["total_linha"] ?? 0) || 0,
       centro_custo_id: (i["centro_custo_id"] as string) || c?.centro || null, plano_contas_id: c?.conta ?? null,
-      recorrente: String(i["natureza"] ?? "") === "recorrente", pagador: (i["faturar_para_id"] as string) || null,
+      recorrente: String(i["natureza"] ?? "") === "recorrente", produto: String(i["natureza"] ?? "") === "produto", pagador: (i["faturar_para_id"] as string) || null,
       origem_tipo: "oferta_item" as const, origem_id: (i["id"] as string) || null,
     };
   });
