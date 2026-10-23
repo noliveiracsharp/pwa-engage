@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Ban, CheckCircle2, MessageCircle, Trash2, User } from "lucide-react";
+import { nomeProprio } from "@/lib/nome-proprio";
 import { BarraAcoesLote, useAcoesComuns } from "@/components/data-table/AcoesLote";
 import { createFileRoute } from "@tanstack/react-router";
 import { DataTable, type Column } from "@/components/data-table/DataTable";
@@ -290,6 +291,7 @@ function PessoasPage() {
           };
         })()}
         onSave={(values) => {
+          if (typeof values["nome"] === "string") values["nome"] = nomeProprio(values["nome"]);
           if (values["parceiro_id"] === "__none__" || values["parceiro_id"] === "") values["parceiro_id"] = null;
           save.mutate(
             { values, original: record },

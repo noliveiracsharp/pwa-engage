@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { fetchCnpj } from "@/lib/cnpj";
+import { nomeProprio } from "@/lib/nome-proprio";
 import { Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -200,8 +201,8 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly, saving, on
       const d = await res.json();
       setF((p) => ({
         ...p,
-        razao_social: d.razao_social || p.razao_social,
-        nome_fantasia: d.nome_fantasia || p.nome_fantasia,
+        razao_social: d.razao_social ? nomeProprio(d.razao_social) : p.razao_social,
+        nome_fantasia: d.nome_fantasia ? nomeProprio(d.nome_fantasia) : p.nome_fantasia,
         telefone: phone55(d.ddd_telefone_1) || p.telefone,
         telefone2: phone55(d.ddd_telefone_2) || p.telefone2,
         email: d.email ? String(d.email).toLowerCase() : p.email,
@@ -290,13 +291,15 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly, saving, on
       values["cnaes_secundarios"] = [];
       values["qsa"] = [];
     }
+    for (const k of ["razao_social", "nome_fantasia"]) if (typeof values[k] === "string") values[k] = nomeProprio(values[k]);
     onSave(values);
   }
 
   const field = (k: TextKey, label: string, cls = "", extra: Partial<React.ComponentProps<typeof Input>> = {}) => (
     <div className={cls}>
       <Label htmlFor={`p-${k}`} className="mb-1.5 block text-sm font-medium">{label}</Label>
-      <Input id={`p-${k}`} value={f[k]} disabled={readOnly} onChange={(e) => set(k, e.target.value)} {...extra} />
+      <Input id={`p-${k}`} value={f[k]} disabled={readOnly} onChange={(e) => set(k, e.target.value)}
+        onBlur={k === "razao_social" || k === "nome_fantasia" ? () => set(k, nomeProprio(f[k])) : undefined} {...extra} />
     </div>
   );
   const section = (t: string) => <h3 className="text-muted-foreground mb-3 text-sm font-semibold uppercase tracking-wide">{t}</h3>;

@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { fetchCnpj } from "@/lib/cnpj";
+import { nomeProprio } from "@/lib/nome-proprio";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Code, Inbox, Loader2, Pencil, Plus, QrCode, Search, Trash2, Unplug } from "lucide-react";
 import { digitsOnly } from "@/lib/input-masks";
@@ -626,8 +627,8 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
       ].filter(Boolean).join(" - ");
       setValues((p) => ({
         ...p,
-        nome: d.razao_social || p["nome"] || "",
-        titulo: d.nome_fantasia || d.razao_social || p["titulo"] || "",
+        nome: nomeProprio(d.razao_social || p["nome"] || ""),
+        titulo: nomeProprio(d.nome_fantasia || d.razao_social || p["titulo"] || ""),
         endereco: endereco || p["endereco"] || "",
         telefone1: tel(d.ddd_telefone_1) || p["telefone1"] || "",
         telefone2: tel(d.ddd_telefone_2) || p["telefone2"] || "",
@@ -709,6 +710,7 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
         payload[field.key] = raw;
       }
     }
+    for (const k of ["nome", "titulo"]) if (typeof payload[k] === "string") payload[k] = nomeProprio(payload[k]);
     onSave(payload);
   };
 
