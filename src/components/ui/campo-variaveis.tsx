@@ -18,10 +18,14 @@ type Props = {
   rows?: number;
   placeholder?: string;
   className?: string;
+  /** Campo de linha única (URL, valor). Enter não quebra linha. */
+  linha?: boolean;
+  /** Classe aplicada ao campo de texto (ex.: fonte mono). */
+  campoClassName?: string;
 };
 
 /** Campo de texto que abre a lista de variáveis ao digitar `{{` e permite criar variáveis da empresa. */
-export function CampoVariaveis({ value, onChange, variaveis, empresaId, rows = 8, placeholder, className }: Props) {
+export function CampoVariaveis({ value, onChange, variaveis, empresaId, rows = 8, placeholder, className, linha, campoClassName }: Props) {
   const qc = useQueryClient();
   const ref = useRef<HTMLTextAreaElement>(null);
   const { data: proprias = [] } = useVariaveisPersonalizadas(empresaId);
@@ -86,13 +90,15 @@ export function CampoVariaveis({ value, onChange, variaveis, empresaId, rows = 8
     <div className={cn("relative", className)}>
       <Textarea
         ref={ref}
-        rows={rows}
+        rows={linha ? 1 : rows}
         value={value}
+        className={cn(linha && "min-h-9 resize-none overflow-hidden whitespace-nowrap pr-24", campoClassName)}
         placeholder={placeholder}
         onChange={(e) => { onChange(e.target.value); atualizarGatilho(e.target.value, e.target.selectionStart); }}
         onClick={(e) => atualizarGatilho(value, e.currentTarget.selectionStart)}
         onBlur={() => setTimeout(() => { if (!criando) setGatilho(null); }, 150)}
         onKeyDown={(e) => {
+          if (linha && e.key === "Enter" && !gatilho) { e.preventDefault(); return; }
           if (!gatilho || criando) return;
           if (e.key === "ArrowDown") { e.preventDefault(); setAtivo((a) => Math.min(a + 1, Math.max(filtradas.length - 1, 0))); }
           else if (e.key === "ArrowUp") { e.preventDefault(); setAtivo((a) => Math.max(a - 1, 0)); }
@@ -100,7 +106,7 @@ export function CampoVariaveis({ value, onChange, variaveis, empresaId, rows = 8
           else if (e.key === "Escape") { e.preventDefault(); setGatilho(null); }
         }}
       />
-      <Button type="button" variant="ghost" size="sm" className="absolute top-1 right-1 h-7 px-2 text-xs" onMouseDown={(e) => e.preventDefault()} onClick={abrirLista} title="Inserir variável">
+      <Button type="button" variant="ghost" size="sm" className={cn("absolute right-1 h-7 px-2 text-xs", linha ? "top-1" : "top-1")} onMouseDown={(e) => e.preventDefault()} onClick={abrirLista} title="Inserir variável">
         <Braces className="mr-1 h-3.5 w-3.5" />Variável
       </Button>
       {gatilho && (
