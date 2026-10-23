@@ -241,7 +241,11 @@ export function ManutencaoSheet({ open, onOpenChange, record, inicial, onSaved }
               </div>
             )}
             {checklist.map((it, i) => (
-              <div key={i} className="space-y-2 rounded-md bg-muted/40 p-3">
+              <div key={i} className="space-y-2">
+              {it.equipamento && it.equipamento !== checklist[i - 1]?.equipamento && (
+                <div className="mt-2 border-b pb-1 text-sm font-semibold text-primary">{it.equipamento}</div>
+              )}
+              <div className="space-y-2 rounded-md bg-muted/40 p-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="text-sm font-medium">{i + 1}. {it.texto}</span>
                   {it.tipo === "numero" ? (
@@ -262,6 +266,7 @@ export function ManutencaoSheet({ open, onOpenChange, record, inicial, onSaved }
                 {(it.resposta === "NC" || it.obs) && (
                   <Input placeholder="Observação" value={it.obs ?? ""} onChange={(e) => setItem(i, { obs: e.target.value })} />
                 )}
+              </div>
               </div>
             ))}
             {!checklist.length && <p className="text-sm text-muted-foreground">Aplique um modelo para carregar o roteiro de verificação.</p>}

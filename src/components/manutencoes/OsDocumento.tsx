@@ -78,7 +78,7 @@ export function OsDocumento({ id, os, empresa, cliente, tecnico }: Props) {
             {checklist.map((it, i) => (
               <tr key={i}>
                 <td className="orc-col-num">{i + 1}</td>
-                <td><strong>{it.texto}</strong>{it.obs && <div className="orc-detalhe">{it.obs}</div>}</td>
+                <td>{it.equipamento && <div className="orc-detalhe">{it.equipamento}</div>}<strong>{it.texto}</strong>{it.obs && <div className="orc-detalhe">{it.obs}</div>}</td>
                 <td className="orc-right" style={it.resposta === "NC" ? { color: "#b91c1c", fontWeight: 600 } : undefined}>
                   {it.tipo === "numero" ? (txt(it.valor) ? `${it.valor} ${it.unidade ?? ""}` : "—") : (it.resposta ? RESP[it.resposta] : "—")}
                 </td>
