@@ -77,21 +77,21 @@ function NotasFiscaisPage() {
 
   const calcularPrevia = async (id: string, rec: boolean) => {
     setOfertaId(id);
-    if (!id) return setPrevia([]);
+    if (!id) { setPrevia([]); return; }
     const { data, error } = await supabase.from("orcamento_itens").select("*").eq("orcamento_id", id);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     const cat = new Map(catalogo.map((i) => [String(rowId(i)), i]));
     setPrevia(notasDaOferta(ofById.get(id) ?? {}, (data ?? []) as Row[], cat, rec));
   };
 
   const criarRascunhos = async () => {
-    if (!previa.length) return;
+    if (!previa.length) return undefined;
     const of = ofById.get(ofertaId);
     const { error } = await supabase.from("notas_fiscais").insert(previa.map((n) => ({
       empresa_id: empresaId, tipo: n.tipo, parceiro_id: n.parceiro_id, orcamento_id: ofertaId, valor: n.valor, itens: n.itens,
       discriminacao: n.tipo === "nfse" ? `Oferta ${String(of?.["numero"] ?? "")} — ${n.itens.map((i) => i.descricao).join("; ")}` : null,
     })) as never);
-    if (error) return toast.error(error.message.includes("notas_fiscais") ? "Rode o script de Notas Fiscais no SQL Editor." : error.message);
+    if (error) { toast.error(error.message.includes("notas_fiscais") ? "Rode o script de Notas Fiscais no SQL Editor." : error.message); return; }
     toast.success(`${previa.length} nota(s) criada(s) como rascunho.`);
     setGerar(false); setPrevia([]); setOfertaId(""); void recarregar();
   };
@@ -103,7 +103,7 @@ function NotasFiscaisPage() {
       const p = parcById.get(String(n["parceiro_id"] ?? ""));
       const pend = pendenciasNota({ tipo: n["tipo"] as "nfe", parceiro_id: (n["parceiro_id"] as string) ?? null, valor: Number(n["valor"] ?? 0), itens: (n["itens"] as never) ?? [] },
         String(pick(p ?? {}, ["documento", "cnpj", "cpf"]) ?? ""));
-      if (pend.length) return toast.error(pend.join(" "));
+      if (pend.length) { toast.error(pend.join(" ")); return; }
       if (!(await confirmar({ title: "Emitir nota fiscal?", description: `${n["tipo"] === "nfe" ? "NF-e" : "NFS-e"} de ${formatBRL(n["valor"])} para ${nomeParc(p)}.` }))) return;
     }
     if (tipo === "cancelar") {
