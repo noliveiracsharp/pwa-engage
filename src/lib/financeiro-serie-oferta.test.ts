@@ -20,3 +20,11 @@ describe("contas a pagar da Oferta", () => {
     expect(pagar.reduce((s, x) => s + x.valor, 0)).toBe(500);
   });
 });
+
+import { parcelasDaOferta as pdo } from "./financeiro-recorrencia";
+describe("parcelas da Oferta sem parênteses", () => {
+  it("agrupa 'Implantação 1/5' com 'Implantação 2/5'", () => {
+    const r = (id: string, n: number) => ({ id, tipo: "receber", empresa_id: "e", origem_tipo: "oferta", origem_id: "o", descricao: `Oferta #2026-0008 — Implantação ${n}/5` });
+    expect(pdo(r("a", 1), [r("a", 1), r("b", 2), r("c", 3)]).length).toBe(3);
+  });
+});
