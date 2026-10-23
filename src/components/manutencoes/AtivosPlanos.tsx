@@ -138,7 +138,7 @@ export function Ativos({ podeEditar, podeExcluir }: { podeEditar: boolean; podeE
                   <span className="text-sm font-semibold">{i + 1}. {l.nome || "Novo equipamento"}</span>
                   <div className="flex items-center gap-1">
                     <label className="mr-2 flex items-center gap-1.5 text-xs"><Switch checked={l.ativo} disabled={!podeEditar} onCheckedChange={(v) => setLinha(i, { ativo: v })} /> Ativo</label>
-                    {podeEditar && <Button size="icon" variant="ghost" aria-label="Duplicar" onClick={() => setLinhas((x) => [...x.slice(0, i + 1), { ...l, id: undefined, numero_serie: "" }, ...x.slice(i + 1)])}><Copy className="h-4 w-4" /></Button>}
+                    {podeEditar && <Button size="icon" variant="ghost" aria-label="Duplicar" onClick={() => setLinhas((x) => [...x.slice(0, i + 1), (({ id: _id, ...resto }) => ({ ...resto, numero_serie: "" }))(l), ...x.slice(i + 1)])}><Copy className="h-4 w-4" /></Button>}
                     {podeEditar && (!l.id || podeExcluir) && <Button size="icon" variant="ghost" aria-label="Remover" onClick={() => setLinhas((x) => x.filter((_, j) => j !== i))}><Trash2 className="h-4 w-4" /></Button>}
                   </div>
                 </div>
