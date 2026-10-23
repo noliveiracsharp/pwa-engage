@@ -1008,7 +1008,7 @@ export function OrcamentoSheet({
             </div>
           )}
           {!record && <p className="text-sm text-muted-foreground">Salve a oferta para registrar a linha do tempo e usar o Consultor Comercial.</p>}
-          </div>
+          </fieldset>
 
           <div hidden={aba !== "oferta"} className="space-y-6">
           {/* ------------- modalidade e serviços recorrentes ------------- */}
