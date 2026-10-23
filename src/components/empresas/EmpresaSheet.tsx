@@ -641,8 +641,14 @@ const DEFAULT_SECTIONS = [
 
 export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sections, readOnly }: Props) {
   // Instâncias pertencem à empresa editada: aba dentro do formulário.
-  const baseTabs = (sections && sections.length > 0 ? sections : DEFAULT_SECTIONS);
+  const comSecoes = !!sections && sections.length > 0;
+  const todas = comSecoes ? sections! : DEFAULT_SECTIONS;
+  const iaSecao = comSecoes ? todas.find((t) => t.kind === "ia") : { perms: readOnly ? { canCreate: false, canUpdate: false, canDelete: false } : FULL };
+  const docSecao = comSecoes ? todas.find((t) => t.kind === "documentos") : { perms: FULL };
+  const baseTabs = todas.filter((t) => t.kind !== "ia" && t.kind !== "documentos");
   const tabs = [...baseTabs.filter((t) => t.kind === "dados"), ...baseTabs.filter((t) => t.kind !== "dados")];
+  // Com seções vindas de /funcoes, cada aba obedece à própria permissão.
+  if (comSecoes) readOnly = false;
   const [cnpjLoading, setCnpjLoading] = useState(false);
   const { empresaId: empresaAtivaId } = useAudit();
 
@@ -766,9 +772,9 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
               {tabs.map((t) => (
                 <TabsTrigger key={t.key} value={t.key}>{t.label}</TabsTrigger>
               ))}
-              {empresa && <TabsTrigger value="__ia">Inteligência Artificial</TabsTrigger>}
+              {empresa && iaSecao && <TabsTrigger value="__ia">Inteligência Artificial</TabsTrigger>}
             </TabsList>
-            {empresa && rowId(empresa) !== undefined && (
+            {empresa && docSecao && rowId(empresa) !== undefined && (
               <div className="ml-auto">
                 <DocumentosButton entidadeTipo="empresa" entidadeId={String(rowId(empresa))} entidadeNome={String(empresa["razao_social"] ?? empresa["nome"] ?? "")} registro={empresa} />
               </div>
@@ -948,7 +954,7 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
           )}
           <TabsContent value="__ia" className="mt-4">
             {empresa && text(rowId(empresa)) === text(empresaAtivaId) ? (
-              <IaConfigPainel readOnly={dadosLocked} />
+              <IaConfigPainel readOnly={!iaSecao?.perms.canUpdate} />
             ) : (
               <p className="text-sm text-muted-foreground">
                 A configuração de IA vale para a empresa em que você está conectado. Entre nesta empresa para configurá-la.

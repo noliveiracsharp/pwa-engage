@@ -144,7 +144,9 @@ export function subtabKind(tab: { id: string; descricao: string }): string {
   };
   if (ids[tab.id]) return ids[tab.id]!;
   const d = tab.descricao.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-  if (d.includes("instanc")) return "instancias";
+  if (d.includes("instanc") || d.includes("canais")) return "instancias";
+  if (d.includes("intelig") || d === "ia") return "ia";
+  if (d.includes("document")) return "documentos";
   if (d.includes("etiquet")) return "etiquetas";
   if (d.includes("nota")) return "notas";
   if (d.includes("campo")) return "campos";
