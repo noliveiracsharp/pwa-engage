@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { nomeProprio } from "@/lib/nome-proprio";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { Ban, CheckCircle2, MessageCircle, ShieldCheck, Trash2, User } from "lucide-react";
@@ -232,6 +233,7 @@ function UsuariosPage() {
 
   const handleSave = (input: Row) => {
     const values: Row = { ...input };
+    if (typeof values["nome"] === "string") values["nome"] = nomeProprio(values["nome"]);
     // Trava: usuário comum só grava empresas da sua matriz/filiais.
     if (!isMaster) {
       const ids = new Set(empresasPermitidas.map((e) => text(rowId(e))));
