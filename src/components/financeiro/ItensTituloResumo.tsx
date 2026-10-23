@@ -51,15 +51,17 @@ export function ItensTituloDialog({ titulo, itens, nomeParceiro, onClose, onEdit
   const dif = round2(valor - soma);
   return (
     <Dialog open={!!titulo} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="flex max-h-[85vh] max-w-3xl flex-col">
         <DialogHeader><DialogTitle>Itens do título</DialogTitle></DialogHeader>
         {titulo && (
-          <div className="space-y-3">
+          <div className="flex min-h-0 flex-1 flex-col space-y-3">
             <div className="text-muted-foreground text-sm">
               <p className="text-foreground font-medium">{text(titulo["descricao"])}</p>
               <p>{nomeParceiro || "—"} • Vencimento {text(titulo["vencimento"]).split("-").reverse().join("/")}</p>
             </div>
-            <div className="overflow-x-auto rounded border">
+            <div className="min-h-0 flex-1 overflow-auto overscroll-contain rounded border">
+              <table className="w-full text-sm">
+                <thead className="bg-muted text-muted-foreground sticky top-0 z-10 text-xs">
               <table className="w-full text-sm">
                 <thead className="bg-muted/50 text-muted-foreground text-xs">
                   <tr><th className="p-2 text-left">#</th><th className="p-2 text-left">Item</th><th className="p-2 text-left">Centro de custo</th><th className="p-2 text-left">Conta</th><th className="p-2 text-right">Valor</th></tr>
@@ -75,7 +77,7 @@ export function ItensTituloDialog({ titulo, itens, nomeParceiro, onClose, onEdit
                     </tr>
                   ))}
                 </tbody>
-                <tfoot className="border-t font-semibold">
+                <tfoot className="bg-background sticky bottom-0 border-t font-semibold">
                   <tr><td colSpan={4} className="p-2 text-right">Soma dos itens</td><td className="p-2 text-right tabular-nums">{formatBRL(soma)}</td></tr>
                   <tr><td colSpan={4} className="text-muted-foreground p-2 text-right font-normal">Valor do título</td><td className="p-2 text-right tabular-nums">{formatBRL(valor)}</td></tr>
                   {dif !== 0 && <tr><td colSpan={4} className="text-destructive p-2 text-right font-normal">Diferença</td><td className="text-destructive p-2 text-right tabular-nums">{formatBRL(dif)}</td></tr>}
