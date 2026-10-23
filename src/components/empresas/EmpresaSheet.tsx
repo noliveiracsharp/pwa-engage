@@ -421,43 +421,43 @@ export function ChildTable({ config, empresa, perms = FULL }: { config: ChildCon
                     })}
                 </div>
               </div>
-              <div className="flex shrink-0 items-center gap-1">
+              <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
                 {config.table === "empresas_instancias" && text(pick(row, ["tipo"])) === "chat" && (
-                  <Button variant="outline" size="sm" onClick={() => setWidgetInst(row)}>
+                  <Button variant="outline" size="sm" className="h-9" onClick={() => setWidgetInst(row)}>
                     <Code className="mr-1 h-4 w-4" /> Widget do site
                   </Button>
                 )}
                 {config.table === "empresas_instancias" && text(pick(row, ["tipo"])) !== "chat" &&
                   (text(pick(row, ["status_conexao"])).toLowerCase() === "conectado" ? (
                     <>
-                      <Badge className="bg-success text-success-foreground hover:bg-success">WhatsApp Conectado</Badge>
+                      <Badge className="h-9 px-3 text-sm bg-success text-success-foreground hover:bg-success">WhatsApp Conectado</Badge>
                       {row["webhook_ativo"] === true ? (
-                        <Button size="sm" className="bg-success text-success-foreground hover:bg-success/90" onClick={() => void ativarRecebimento(row)} title="Recebimento ativo. Clique para reaplicar na Z-API">
+                        <Button size="sm" className="h-9 bg-success text-success-foreground hover:bg-success/90" onClick={() => void ativarRecebimento(row)} title="Recebimento ativo. Clique para reaplicar na Z-API">
                           <CheckCircle2 className="mr-1 h-4 w-4" /> Recebimento ativo
                         </Button>
                       ) : (
-                        <Button variant="outline" size="sm" onClick={() => void ativarRecebimento(row)} title="Faz as mensagens recebidas entrarem no Atende.ai e acionarem os fluxos">
+                        <Button variant="outline" size="sm" className="h-9" onClick={() => void ativarRecebimento(row)} title="Faz as mensagens recebidas entrarem no Atende.ai e acionarem os fluxos">
                           <Inbox className="mr-1 h-4 w-4" /> Ativar recebimento
                         </Button>
                       )}
-                      <Button variant="outline" size="sm" onClick={() => void desconectar(row)}>
+                      <Button variant="outline" size="sm" className="h-9" onClick={() => void desconectar(row)}>
                         <Unplug className="mr-1 h-4 w-4" /> Desconectar
                       </Button>
                     </>
                   ) : text(pick(row, ["instance_id"])) && text(pick(row, ["client_token"])) ? (
-                    <Button variant="outline" size="sm" onClick={() => setQrInst(row)}>
+                    <Button variant="outline" size="sm" className="h-9" onClick={() => setQrInst(row)}>
                       <QrCode className="mr-1 h-4 w-4" /> Conectar WhatsApp
                     </Button>
                   ) : null)}
                 {perms.canUpdate && (
-                  <Button variant="ghost" size="icon" aria-label="Editar" onClick={() => startEditing(row)}>
+                  <Button variant="outline" size="icon" className="h-9 w-9" aria-label="Editar" onClick={() => startEditing(row)}>
                     <Pencil className="h-4 w-4" />
                   </Button>
                 )}
                 {perms.canDelete && (
                   <Button
                     variant="ghost"
-                    size="icon"
+                    size="icon" className="h-9 w-9"
                     aria-label="Remover"
                     onClick={async () => {
                       if (await confirmar("Deseja realmente excluir este registro?")) remove(row);
@@ -487,7 +487,7 @@ export function ChildTable({ config, empresa, perms = FULL }: { config: ChildCon
         })()}
       </div>
 
-      {!editing && !adding && perms.canCreate && (
+      {(config.sheet || (!editing && !adding)) && perms.canCreate && (
         <div className="flex justify-end">
           <Button variant="outline" onClick={() => setAdding(true)}>
             <Plus className="mr-1 h-4 w-4" /> Adicionar
@@ -495,7 +495,10 @@ export function ChildTable({ config, empresa, perms = FULL }: { config: ChildCon
         </div>
       )}
 
-      {((editing && perms.canUpdate) || (!editing && adding && perms.canCreate)) && (
+      {(() => {
+      const formAberto = Boolean((editing && perms.canUpdate) || (!editing && adding && perms.canCreate));
+      if (!formAberto && !config.sheet) return null;
+      const corpo = (
       <>
       <div className="grid gap-3 sm:grid-cols-2">
         {config.columns.filter((col) => !col.showIf || col.showIf(draft)).map((col) => (
@@ -573,7 +576,19 @@ export function ChildTable({ config, empresa, perms = FULL }: { config: ChildCon
         </Button>
       </div>
       </>
-      )}
+      );
+      if (!config.sheet) return corpo;
+      return (
+        <Sheet open={formAberto} onOpenChange={(o) => { if (!o) resetForm(); }}>
+          <SheetContent side="right" className="flex w-full flex-col gap-4 overflow-y-auto sm:max-w-none md:w-[60vw]">
+            <SheetHeader>
+              <SheetTitle>{editing ? `Editar ${config.title.toLowerCase().replace(/s$/, "")}` : `Nova ${config.title.toLowerCase().replace(/s$/, "")}`}</SheetTitle>
+            </SheetHeader>
+            {formAberto && corpo}
+          </SheetContent>
+        </Sheet>
+      );
+      })()}
       <WidgetChatDialog instancia={widgetInst} onClose={() => setWidgetInst(null)} />
       <QrCodeDialog
         instancia={qrInst}
