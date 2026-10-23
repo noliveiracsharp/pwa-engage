@@ -142,6 +142,6 @@ export function parcelasDaOferta(atual: Row, titulos: Row[]): Row[] {
 /** Alvos de edição em série de Oferta (mesmas regras de alcance da série manual). */
 export function alvosOferta(atual: Row, titulos: Row[], escopo: EscopoRecorrencia, hoje: string): Row[] {
   const irmas = parcelasDaOferta(atual, titulos);
-  return alvosRecorrencia(atual, irmas.map((t) => ({ ...t, origem_tipo: "manual" })), escopo, hoje)
+  return alvosRecorrencia({ ...atual, origem_tipo: "manual" }, irmas.map((t) => ({ ...t, origem_tipo: "manual" })), escopo, hoje)
     .map((t) => irmas.find((i) => i["id"] === t["id"]) ?? t);
 }
