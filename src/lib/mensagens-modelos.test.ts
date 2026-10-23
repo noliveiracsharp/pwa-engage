@@ -14,3 +14,12 @@ describe("modelo de cotação", () => {
     expect(t.endsWith("ficamos à disposição.")).toBe(true);
   });
 });
+
+describe("variáveis {{ }}", () => {
+  it("aceita {{chave}} e usa variáveis personalizadas da empresa", () => {
+    expect(aplicarModelo("Pix: {{chave_pix}} para {{fornecedor}}", { fornecedor: "ACME" }, { chave_pix: "123" })).toBe("Pix: 123 para ACME");
+  });
+  it("contexto vence a personalizada de mesmo nome", () => {
+    expect(aplicarModelo("{{nome}}", { nome: "Ana" }, { nome: "X" })).toBe("Ana");
+  });
+});
