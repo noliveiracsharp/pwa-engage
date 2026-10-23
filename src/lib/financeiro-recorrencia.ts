@@ -38,7 +38,7 @@ export function patchRecorrencia(atual: Row, destino: Row, alteracoes: Row): Row
   }
   return patch;
 }
-const SUFIXO = /\s\((\d+)\/(\d+)\)$/;
+const SUFIXO = /\s\(?(\d+)\/(\d+)\)?$/;
 
 /** Lançamento manual antigo (sem origem_id) com sufixo "(n/m)" na descrição. */
 export function serieLegada(t: Row): { base: string; total: number } | null {
