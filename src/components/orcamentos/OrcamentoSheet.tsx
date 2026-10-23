@@ -84,6 +84,7 @@ import { useQuery } from "@tanstack/react-query";
 import { etapasDoKanban, kanbanDoModuloOrcamentos } from "@/lib/orcamento-kanban";
 import { cn } from "@/lib/utils";
 import { corEtapa } from "@/lib/kanban-cores";
+import type { SecaoPerms } from "@/lib/secoes-permissao";
 
 const NONE = "__none__";
 /** Validade padrão de um novo orçamento (dias após a data). */
@@ -254,6 +255,8 @@ type Props = {
   onSave: (input: { header: Row; linhas: LinhaPayload[]; manterAberto?: boolean }) => void;
   /** Quando informado (e record = null), abre um novo rascunho copiando esta oferta. */
   duplicarDe?: { record: Row; linhas: Row[] } | null;
+  /** Permissão por seção (Funções filhas de /orcamentos). Ausente = segue a tela. */
+  secoes?: Record<string, SecaoPerms | undefined>;
 };
 
 export function OrcamentoSheet({
@@ -263,6 +266,7 @@ export function OrcamentoSheet({
   linhasRecord,
   saving,
   readOnly,
+  secoes,
   clientes,
   vendedores,
   itens,
@@ -501,6 +505,8 @@ export function OrcamentoSheet({
   const comissaoCfg = useComissaoConfig();
   const [totalComissoes, setTotalComissoes] = useState(0);
   const [aba, setAba] = useState<"oferta" | "crm" | "financeiro">("oferta");
+  const verSecao = (k: string) => !secoes || Boolean(secoes[k]?.canRead);
+  const roSecao = (k: string) => Boolean(readOnly) || Boolean(record && secoes && !secoes[k]?.canUpdate);
   const [versao, setVersao] = useState(1);
   useEffect(() => { setVersao(Number(record?.["versao_atual"] ?? 1) || 1); }, [record]);
   const restaurarVersao = (snap: Snapshot) => {
@@ -707,7 +713,7 @@ export function OrcamentoSheet({
           className="min-w-0 space-y-6 px-6 disabled:opacity-70"
         >
           <div role="tablist" className="sticky top-0 z-10 -mx-6 flex gap-1 border-b border-border bg-background px-6 pt-2">
-            {([["oferta", "Oferta & Itens"], ["crm", "CRM & Atendimento"], ["financeiro", "Financeiro & Comissões"]] as const).map(([k, l]) => (
+            {([["oferta", "Oferta & Itens"], ["crm", "CRM & Atendimento"], ["financeiro", "Financeiro & Comissões"]] as const).filter(([k]) => k === "oferta" || verSecao(k)).map(([k, l]) => (
               <button key={k} type="button" role="tab" aria-selected={aba === k} onClick={() => setAba(k)}
                 className={cn("-mb-px border-b-2 px-3 py-2 text-sm font-medium transition-colors",
                   aba === k ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground")}>
@@ -889,7 +895,7 @@ export function OrcamentoSheet({
           />
           </div>
 
-          <div hidden={aba !== "financeiro"} className="space-y-6">
+          <fieldset hidden={aba !== "financeiro" || !verSecao("financeiro")} disabled={roSecao("financeiro")} className="min-w-0 space-y-6">
           <OrcamentoDespesas
             despesas={h.despesas}
             readOnly={readOnly}
@@ -912,9 +918,9 @@ export function OrcamentoSheet({
             usuarios={vendedores}
             onTotalChange={setTotalComissoes}
           />
-          </div>
+          </fieldset>
 
-          <div hidden={aba !== "crm"} className="space-y-6">
+          <fieldset hidden={aba !== "crm" || !verSecao("crm")} disabled={roSecao("crm")} className="min-w-0 space-y-6">
           <div className="grid gap-x-4 gap-y-5 sm:grid-cols-2">
             <div className="min-w-0 space-y-1.5">
               <Label className="block text-sm font-medium">Origem do lead</Label>
@@ -1003,7 +1009,7 @@ export function OrcamentoSheet({
             </div>
           )}
           {!record && <p className="text-sm text-muted-foreground">Salve a oferta para registrar a linha do tempo e usar o Consultor Comercial.</p>}
-          </div>
+          </fieldset>
 
           <div hidden={aba !== "oferta"} className="space-y-6">
           {/* ------------- modalidade e serviços recorrentes ------------- */}
