@@ -56,12 +56,14 @@ export function RateioTitulo({ tituloId, empresaId, valorTitulo, readOnly, tipoT
   const [aberto, setAberto] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [editando, setEditando] = useState<number | null>(null);
+  const [salvo, setSalvo] = useState("[]");
 
   useEffect(() => {
     const rows = q.data?.rows ?? [];
     setLinhas(rows.map((r) => ({ id: text(r["id"]), descricao: text(r["descricao"]), valor: moedaDeNumero(num(r["valor"])),
       centro_custo_id: text(r["centro_custo_id"]), plano_contas_id: text(r["plano_contas_id"]), item_id: (r["item_id"] as string) || null,
       origem_tipo: text(r["origem_tipo"]) || "manual", origem_id: (r["origem_id"] as string) || null })));
+    setSalvo(JSON.stringify(rows.map((r) => [text(r["descricao"]), moedaDeNumero(num(r["valor"])), text(r["centro_custo_id"]), text(r["plano_contas_id"]), (r["item_id"] as string) || null])));
     if (rows.length) setAberto(true);
   }, [q.data]);
 
@@ -199,7 +201,7 @@ export function RateioTitulo({ tituloId, empresaId, valorTitulo, readOnly, tipoT
           );
         })}
       </div>
-      {!readOnly && (
+      {!readOnly && JSON.stringify(linhas.map((l) => [l.descricao, l.valor, l.centro_custo_id, l.plano_contas_id, l.item_id])) !== salvo && (
         <div className="flex justify-end">
           <Button type="button" size="sm" disabled={salvando} onClick={salvar}>Salvar rateio</Button>
         </div>
