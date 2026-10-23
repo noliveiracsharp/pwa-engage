@@ -641,8 +641,14 @@ const DEFAULT_SECTIONS = [
 
 export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sections, readOnly }: Props) {
   // Instâncias pertencem à empresa editada: aba dentro do formulário.
-  const baseTabs = (sections && sections.length > 0 ? sections : DEFAULT_SECTIONS);
+  const comSecoes = !!sections && sections.length > 0;
+  const todas = comSecoes ? sections! : DEFAULT_SECTIONS;
+  const iaSecao = comSecoes ? todas.find((t) => t.kind === "ia") : { perms: readOnly ? { canCreate: false, canUpdate: false, canDelete: false } : FULL };
+  const docSecao = comSecoes ? todas.find((t) => t.kind === "documentos") : { perms: FULL };
+  const baseTabs = todas.filter((t) => t.kind !== "ia" && t.kind !== "documentos");
   const tabs = [...baseTabs.filter((t) => t.kind === "dados"), ...baseTabs.filter((t) => t.kind !== "dados")];
+  // Com seções vindas de /funcoes, cada aba obedece à própria permissão.
+  if (comSecoes) readOnly = false;
   const [cnpjLoading, setCnpjLoading] = useState(false);
   const { empresaId: empresaAtivaId } = useAudit();
 
