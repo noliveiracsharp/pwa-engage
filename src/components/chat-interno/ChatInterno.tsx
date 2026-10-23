@@ -731,6 +731,11 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack }: { me: stri
                     <ClipboardList className="h-3.5 w-3.5" />
                   </Button>
                 )}
+                {mine && (
+                  <Button type="button" variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-destructive opacity-0 transition group-hover:opacity-100 focus:opacity-100" title="Apagar mensagem" aria-label="Apagar mensagem" onClick={() => void apagar(m, anexos)}>
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                )}
               </div>
             );
           })}
