@@ -23,7 +23,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { tocarSom } from "@/lib/som-notificacao";
 import { adicionarAviso, EVT_ABRIR_CHAT } from "@/lib/avisos";
-import { TarefasChat } from "@/components/chat-interno/TarefasChat";
+import { TarefasChat, NovaTarefa } from "@/components/chat-interno/TarefasChat";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 /** Canal da conversa aberta no momento (para não notificar o que já está na tela). */
 let canalAberto = "";
@@ -613,21 +614,7 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack }: { me: stri
     void qc.invalidateQueries({ queryKey: key });
   };
 
-  const criarTarefa = async (txt: string) => {
-    const resp = sel.tipo === "direto" ? String(sel.outro["id"]) : me;
-    const titulo = txt.replace(/\s+/g, " ").trim().slice(0, 80) || "Tarefa do chat";
-    const { error } = await (supabase.from("tarefas_usuarios" as never) as unknown as ReturnType<typeof supabase.from>).insert({
-      empresa_id: empresaId, criado_por: me, responsavel_id: resp, titulo,
-      descricao: txt, data_solicitacao: new Date().toISOString().slice(0, 10), anexos: [],
-      status: resp === me ? "andamento" : "aguardando", prioridade: "media",
-    } as never);
-    if (error) { toast.error(error.message); return; }
-    toast.success(resp === me ? "Tarefa criada." : `Tarefa enviada para ${nome}. Aguardando aceite.`);
-    if (resp !== me && canalId) {
-      await supabase.from(TABLE).insert({ empresa_id: empresaId, canal_id: canalId, remetente_id: me, mensagem: `📋 Nova tarefa: ${titulo}`, anexos: [], lida_por: [me] });
-      void qc.invalidateQueries({ queryKey: key });
-    }
-  };
+  const [novaTarefa, setNovaTarefa] = useState(false);
 
   const iniciarChamada = async (video: boolean) => {
     if (!canalId || chamada) return;
@@ -677,6 +664,9 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack }: { me: stri
             <p className="text-xs text-muted-foreground">Grupo</p>
           )}
         </div>
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setNovaTarefa(true)} aria-label="Nova tarefa" title={sel.tipo === "direto" ? `Nova tarefa para ${nome}` : "Nova tarefa"}>
+          <ClipboardList className="h-4 w-4" />
+        </Button>
         <Button variant="ghost" size="icon" className="h-8 w-8" disabled={!canalId || !!chamada} onClick={() => void iniciarChamada(false)} aria-label="Chamada de áudio">
           <Phone className="h-4 w-4" />
         </Button>
@@ -684,6 +674,23 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack }: { me: stri
           <Video className="h-4 w-4" />
         </Button>
       </div>
+      <Dialog open={novaTarefa} onOpenChange={setNovaTarefa}>
+        <DialogContent className="flex max-h-[90vh] flex-col p-0">
+          <DialogHeader className="px-4 pt-4"><DialogTitle>{sel.tipo === "direto" ? `Nova tarefa para ${nome}` : "Nova tarefa"}</DialogTitle></DialogHeader>
+          {novaTarefa && (
+            <NovaTarefa me={me} empresaId={empresaId} usuarios={usuarios} responsavelInicial={sel.tipo === "direto" ? String(sel.outro["id"]) : me}
+              onCancel={() => setNovaTarefa(false)}
+              onSaved={async (resp, titulo) => {
+                setNovaTarefa(false);
+                void qc.invalidateQueries({ queryKey: ["tarefas-usuarios", me] });
+                if (resp !== me && canalId && sel.tipo === "direto" && resp === String(sel.outro["id"])) {
+                  await supabase.from(TABLE).insert({ empresa_id: empresaId, canal_id: canalId, remetente_id: me, mensagem: `📋 Nova tarefa para você: "${titulo}". Abra a aba Tarefas para aceitar ou recusar.`, anexos: [], lida_por: [me] });
+                  void qc.invalidateQueries({ queryKey: key });
+                }
+              }} />
+          )}
+        </DialogContent>
+      </Dialog>
       {chamada && createPortal(<ChamadaFlutuante chamada={chamada} nome={meuNome} titulo={`Chamada · ${nome}`} onEncerrar={() => void encerrar()} />, document.body)}
 
       <ScrollArea className="min-h-0 flex-1">
@@ -739,11 +746,6 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack }: { me: stri
                   {anexos.length === 0 && <p className="break-words whitespace-pre-wrap"><Linkify text={String(m["mensagem"] ?? "")} /></p>}
                   <p className={cn("mt-0.5 text-right text-[10px]", mine ? "text-primary-foreground/70" : "text-muted-foreground")}>{hora(m["criado_em"])}</p>
                 </div>
-                {anexos.length === 0 && txt.trim() && (
-                  <Button type="button" variant="ghost" size="icon" className="h-7 w-7 shrink-0 opacity-0 transition group-hover:opacity-100 focus:opacity-100" title="Transformar em tarefa" aria-label="Transformar em tarefa" onClick={() => void criarTarefa(txt)}>
-                    <ClipboardList className="h-3.5 w-3.5" />
-                  </Button>
-                )}
                 {mine && (
                   <Button type="button" variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-destructive opacity-0 transition group-hover:opacity-100 focus:opacity-100" title="Apagar mensagem" aria-label="Apagar mensagem" onClick={() => void apagar(m, anexos)}>
                     <Trash2 className="h-3.5 w-3.5" />

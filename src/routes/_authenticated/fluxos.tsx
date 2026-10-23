@@ -31,6 +31,39 @@ import {
   type CategoriaNo, type DadosNo, type TipoNo,
 } from "@/lib/fluxos";
 import { confirmar } from "@/components/layout/DialogoGlobal";
+import { createContext, useContext } from "react";
+import { CampoVariaveis } from "@/components/ui/campo-variaveis";
+import type { VariavelDef } from "@/lib/variaveis";
+
+const VARS_CONTATO: VariavelDef[] = [
+  { chave: "nome", descricao: "Nome do contato" },
+  { chave: "telefone", descricao: "Telefone do contato" },
+  { chave: "email", descricao: "E-mail do contato" },
+  { chave: "protocolo", descricao: "Protocolo do atendimento" },
+  { chave: "ultima_mensagem", descricao: "Última mensagem do cliente" },
+];
+const VarsCtx = createContext<{ vars: VariavelDef[]; empresaId: string | null }>({ vars: VARS_CONTATO, empresaId: null });
+
+/** Variáveis que os blocos do fluxo criam (perguntas, HTTP, JavaScript). */
+function variaveisDoFluxo(nos: FluxoNode[]): VariavelDef[] {
+  const out = [...VARS_CONTATO];
+  for (const n of nos) {
+    const v = String(n.data["variavel"] ?? "").trim();
+    const t = n.data.tipo;
+    if (t === "http") {
+      const b = v || "resposta";
+      out.push({ chave: b, descricao: "Resposta da API (use .campo)" }, { chave: `${b}_status`, descricao: "Status HTTP" }, { chave: `${b}_erro`, descricao: "Erro da chamada" });
+    } else if (v) out.push({ chave: v, descricao: `Criada no bloco ${nomeTipo(t)}` });
+  }
+  const m = new Map(out.map((x) => [x.chave, x]));
+  return [...m.values()];
+}
+
+/** Campo com autocomplete `{{` usando as variáveis do fluxo aberto. */
+function CampoFluxo({ value, onChange, linha, rows, mono }: { value: string; onChange: (v: string) => void; linha?: boolean; rows?: number; mono?: boolean }) {
+  const { vars, empresaId } = useContext(VarsCtx);
+  return <CampoVariaveis value={value} onChange={onChange} variaveis={vars} empresaId={empresaId ?? undefined} linha={!!linha} rows={rows ?? 4} campoClassName={mono ? "font-mono text-xs" : ""} />;
+}
 
 export const Route = createFileRoute("/_authenticated/fluxos")({
   staticData: { sitemap: false },
@@ -389,7 +422,7 @@ function FluxosPage() {
                 <Campo label="Título do bloco">
                   <Input value={String(sel.data.titulo ?? "")} placeholder={nomeTipo(sel.data.tipo)} onChange={(e) => atualizarSel({ titulo: e.target.value })} />
                 </Campo>
-                <Propriedades no={sel} atualizar={atualizarSel} quadros={quadros} etapas={etapas} campos={campos} fluxos={fluxos.filter((f) => String(f["id"]) !== fluxoId)} />
+                <VarsCtx.Provider value={{ vars: variaveisDoFluxo(nodes as FluxoNode[]), empresaId }}><Propriedades no={sel} atualizar={atualizarSel} quadros={quadros} etapas={etapas} campos={campos} fluxos={fluxos.filter((f) => String(f["id"]) !== fluxoId)} /></VarsCtx.Provider>
               </div>
               <SheetFooter className="flex-row justify-between border-t">
                 <Button variant="ghost" onClick={removerSel} disabled={sel.data.tipo === "gatilho"}><Trash2 className="size-4" /> Excluir bloco</Button>
@@ -419,7 +452,7 @@ function Propriedades({ no, atualizar, quadros, etapas, campos, fluxos }: {
   const d = no.data;
   const s = (k: string) => String(d[k] ?? "");
   const texto = (label: string, k = "texto", ajuda?: string) => (
-    <Campo label={label} ajuda={ajuda}><Textarea rows={4} value={s(k)} onChange={(e) => atualizar({ [k]: e.target.value })} /></Campo>
+    <Campo label={label} ajuda={ajuda}><CampoFluxo value={s(k)} onChange={(v) => atualizar({ [k]: v })} /></Campo>
   );
   switch (d.tipo) {
     case "gatilho":
@@ -452,14 +485,14 @@ function Propriedades({ no, atualizar, quadros, etapas, campos, fluxos }: {
             </Select>
           </Campo>
           <Campo label="Endereço (URL)" ajuda="Aceita variáveis, ex.: https://api.site.com/clientes?tel={{telefone}}">
-            <Input value={s("url")} onChange={(e) => atualizar({ url: e.target.value })} />
+            <CampoFluxo linha mono value={s("url")} onChange={(v) => atualizar({ url: v })} />
           </Campo>
           <Campo label="Cabeçalhos" ajuda="Um por linha, ex.: Authorization: Bearer SEU_TOKEN">
-            <Textarea rows={3} className="font-mono text-xs" value={s("cabecalhos")} onChange={(e) => atualizar({ cabecalhos: e.target.value })} />
+            <CampoFluxo rows={3} mono value={s("cabecalhos")} onChange={(v) => atualizar({ cabecalhos: v })} />
           </Campo>
           {!["GET", "DELETE"].includes(s("metodo") || "GET") && (
             <Campo label="Corpo (JSON)" ajuda='Ex.: {"telefone": "{{telefone}}"}'>
-              <Textarea rows={5} className="font-mono text-xs" value={s("corpo")} onChange={(e) => atualizar({ corpo: e.target.value })} />
+              <CampoFluxo rows={5} mono value={s("corpo")} onChange={(v) => atualizar({ corpo: v })} />
             </Campo>
           )}
           <Campo label="Guardar resposta em" ajuda={`Use {{${s("variavel") || "resposta"}.campo}} nas mensagens, ou trate listas no bloco JavaScript. O status fica em {{${s("variavel") || "resposta"}_status}}.`}>
@@ -500,7 +533,7 @@ function Propriedades({ no, atualizar, quadros, etapas, campos, fluxos }: {
               </SelectContent>
             </Select>
           </Campo>
-          <Campo label="Valor"><Input value={s("valor")} onChange={(e) => atualizar({ valor: e.target.value })} /></Campo>
+          <Campo label="Valor"><CampoFluxo linha value={s("valor")} onChange={(v) => atualizar({ valor: v })} /></Campo>
         </>
       );
     case "horario":
@@ -582,7 +615,7 @@ function Propriedades({ no, atualizar, quadros, etapas, campos, fluxos }: {
               </SelectContent>
             </Select>
           </Campo>
-          <Campo label="Valor" ajuda="Use {{variavel}} para gravar uma resposta do cliente"><Input value={s("valor")} onChange={(e) => atualizar({ valor: e.target.value })} /></Campo>
+          <Campo label="Valor" ajuda="Use {{variavel}} para gravar uma resposta do cliente"><CampoFluxo linha value={s("valor")} onChange={(v) => atualizar({ valor: v })} /></Campo>
         </>
       );
     case "subfluxo":
