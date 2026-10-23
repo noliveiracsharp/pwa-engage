@@ -10,6 +10,8 @@ export type ArtigoAjuda = {
   dica?: string | undefined;
   faq?: { p: string; r: string }[];
   video?: string | undefined;
+  /** Print da tela (URL); exibido no guia com zoom ao clicar. */
+  imagem?: string | undefined;
   tags?: string[];
 };
 
@@ -20,6 +22,7 @@ export const MODULOS_AJUDA = [
   "Projetos",
   "Financeiro",
   "Suprimentos",
+  "Manutenções",
   "Administração",
 ] as const;
 
@@ -420,6 +423,171 @@ export const ARTIGOS_PADRAO: ArtigoAjuda[] = [
       "Nesse caso, inative o cadastro em vez de apagar.",
     ],
     tags: ["excluir", "apagar", "inativar", "cliente", "em uso"],
+  },
+  {
+    id: "manu-ativos-cliente", modulo: "Manutenções", titulo: "Equipamentos organizados por cliente",
+    resumo: "Cadastre todos os equipamentos de um cliente de uma vez e imprima as etiquetas QR Code.", rota: "/manutencoes", perfil: "Técnico / Gestor",
+    passos: [
+      "Abra Manutenções e vá na aba Equipamentos.",
+      "A lista mostra cada cliente com a quantidade de equipamentos.",
+      "Clique no cliente para abrir a lista completa dos equipamentos dele.",
+      "Use Adicionar ou Duplicar para incluir vários equipamentos seguidos e salve.",
+      "Use Imprimir etiquetas para gerar todos os QR Codes do cliente.",
+    ],
+    dica: "Duplicar copia marca, modelo e local — só troque o número de série.",
+    tags: ["equipamento", "ativo", "qr code", "etiqueta", "cliente", "manutencao"],
+  },
+  {
+    id: "manu-preventivas-cliente", modulo: "Manutenções", titulo: "Preventiva por cliente com checklist por equipamento",
+    resumo: "Um plano por cliente gera uma única OS com todos os equipamentos.", rota: "/manutencoes", perfil: "Gestor",
+    passos: [
+      "Em Manutenções, abra a aba Preventivas e clique em Novo.",
+      "Escolha o cliente: todos os equipamentos ativos dele são carregados.",
+      "Para cada equipamento, escolha o checklist (o sistema sugere pela categoria).",
+      "Use Aplicar padrão a todos para usar o mesmo checklist em tudo.",
+      "Defina a frequência e salve. Na data, é gerada uma única OS da visita.",
+    ],
+    dica: "Cadastrou equipamento novo? Clique em Recarregar do cliente no plano.",
+    faq: [{ p: "Vai gerar uma OS por equipamento?", r: "Não. É uma OS só, com o checklist separado por equipamento." }],
+    tags: ["preventiva", "plano", "checklist", "os", "visita", "manutencao"],
+  },
+  {
+    id: "manu-os-execucao", modulo: "Manutenções", titulo: "Executar a OS da visita",
+    resumo: "Preencha o checklist de cada equipamento, anexe fotos e colha a assinatura.", rota: "/manutencoes", perfil: "Técnico",
+    passos: [
+      "Abra a OS em Manutenções.",
+      "O checklist aparece agrupado com o nome de cada equipamento.",
+      "Marque os itens, anote observações e anexe fotos.",
+      "Colha a assinatura do responsável e finalize.",
+      "Imprima ou compartilhe a OS pelo link.",
+    ],
+    tags: ["ordem de servico", "os", "executar", "assinatura", "foto", "tecnico"],
+  },
+  {
+    id: "chat-interno-uso", modulo: "Atendimentos", titulo: "Chat da equipe: áudio, vídeo e colar imagem",
+    resumo: "Converse com colegas e troque de conversa rápido pela barra lateral.", perfil: "Todos",
+    passos: [
+      "Abra o Chat da equipe e escolha um colega.",
+      "A barra lateral com as fotos permite trocar de conversa com um clique.",
+      "Clique no microfone para gravar áudio; clique de novo para enviar.",
+      "Use o clipe para enviar vídeo, foto ou documento.",
+      "Copiou uma imagem? Aperte Ctrl+V no campo de mensagem para enviar.",
+    ],
+    tags: ["chat", "equipe", "audio", "video", "colar", "imagem", "interno"],
+  },
+  {
+    id: "chat-apagar-mensagens", modulo: "Atendimentos", titulo: "Apagar mensagem ou arquivo no chat da equipe",
+    resumo: "Remova mensagens, imagens, vídeos ou documentos que você enviou.", perfil: "Todos",
+    passos: [
+      "Passe o mouse sobre a sua mensagem.",
+      "Clique no ícone da lixeira.",
+      "Confirme. A mensagem e o arquivo somem para todos.",
+    ],
+    dica: "Só é possível apagar mensagens enviadas por você.",
+    tags: ["apagar", "excluir", "mensagem", "chat", "arquivo"],
+  },
+  {
+    id: "tarefas-delegar-chat", modulo: "Projetos", titulo: "Criar tarefa para um colega pelo chat",
+    resumo: "Delegue uma tarefa sem sair da conversa e apague se não precisar mais.", perfil: "Todos",
+    passos: [
+      "Abra a conversa com o colega no Chat da equipe.",
+      "Clique no ícone de prancheta no topo da conversa.",
+      "O colega já vem como responsável: preencha título e prazo e salve.",
+      "Ele recebe um aviso no chat.",
+      "Na aba Tarefas, você pode apagar as tarefas que criou (para você ou outra pessoa).",
+    ],
+    tags: ["tarefa", "delegar", "chat", "apagar", "responsavel"],
+  },
+  {
+    id: "vars-dinamicas", modulo: "Administração", titulo: "Variáveis {{...}} nas mensagens",
+    resumo: "Digite {{ para escolher dados do cliente ou criar suas próprias variáveis.", perfil: "Todos",
+    passos: [
+      "Em qualquer texto de mensagem automática, digite {{ .",
+      "Uma lista de variáveis aparece; use as setas e Enter para escolher.",
+      "Também pode clicar no botão Variável ao lado do campo.",
+      "Não achou? Clique em + Criar nova variável e informe nome e valor.",
+      "No envio, a variável é trocada pelo valor real.",
+    ],
+    tags: ["variavel", "variaveis", "modelo", "mensagem", "texto", "personalizada"],
+  },
+  {
+    id: "fluxos-vars-http", modulo: "Atendimentos", titulo: "Variáveis em Fluxos e chamadas de API",
+    resumo: "Use dados do contato e de blocos anteriores em URLs, cabeçalhos e corpo.", rota: "/fluxos", perfil: "Administrador",
+    passos: [
+      "Abra Fluxos e edite o bloco desejado (HTTP, Mensagem, Condição…).",
+      "Digite {{ em qualquer campo para ver as variáveis disponíveis.",
+      "A lista traz dados do contato, respostas de Perguntas e resultados de blocos anteriores.",
+      "No bloco HTTP, a resposta fica disponível como {{resposta}} para os próximos blocos.",
+    ],
+    tags: ["fluxo", "api", "http", "webhook", "variavel", "integracao"],
+  },
+  {
+    id: "fin-dre-gerencial", modulo: "Financeiro", titulo: "DRE Gerencial Consolidado",
+    resumo: "Receitas, custos e resultado mês a mês, por competência ou caixa.", rota: "/relatorios/dre-gerencial", perfil: "Gestor",
+    passos: [
+      "Abra Relatórios > DRE Gerencial.",
+      "Escolha o período De/Até e o regime (Competência ou Caixa).",
+      "Filtre por centro de custo se quiser.",
+      "Veja os indicadores no topo e a tabela por mês.",
+      "Clique em Imprimir para gerar o documento A4 com a logo da empresa.",
+    ],
+    tags: ["dre", "resultado", "relatorio", "lucro", "competencia", "caixa"],
+  },
+  {
+    id: "fin-rateio-centros", modulo: "Financeiro", titulo: "Rateio por plano de contas e centro de custo",
+    resumo: "Divida um lançamento entre várias contas e centros de custo.", rota: "/financeiro", perfil: "Financeiro",
+    passos: [
+      "Abra o lançamento em Contas a Receber ou a Pagar.",
+      "Na parte de itens, inclua uma linha para cada conta/centro de custo.",
+      "Informe valor ou percentual de cada linha e salve.",
+      "Títulos vindos de Oferta ou Cotação já trazem os itens automaticamente.",
+    ],
+    tags: ["rateio", "centro de custo", "plano de contas", "itens"],
+  },
+  {
+    id: "fin-posicao-serie", modulo: "Financeiro", titulo: "Começar uma série a partir da parcela X",
+    resumo: "Lance um contrato já em andamento, ex.: parcela 2 de 5.", rota: "/financeiro", perfil: "Financeiro",
+    passos: [
+      "Abra o lançamento recorrente ou parcelado.",
+      "Use a opção Aplicar X de Y e informe a posição (ex.: 2 de 5).",
+      "As parcelas anteriores são criadas como pagas e as seguintes em aberto.",
+      "Ao editar uma parcela, o sistema pergunta se altera só ela ou a série.",
+    ],
+    dica: "Nomes como \"Aluguel 10/2026\" são tratados como data, não como parcela.",
+    tags: ["serie", "parcela", "recorrencia", "posicao"],
+  },
+  {
+    id: "sup-cotacao-aprovacao", modulo: "Suprimentos", titulo: "Comparar cotações e aprovar",
+    resumo: "Veja o fornecedor mais barato e o melhor preço item a item.", rota: "/cotacoes", perfil: "Compras",
+    passos: [
+      "Abra a cotação e clique em Preencher no fornecedor para lançar os preços.",
+      "Os quadros Fornecedor único mais barato e Melhor preço item a item são calculados.",
+      "Clique em Aprovar e gerar oferta.",
+      "Se o valor passar do mínimo configurado, segue para aprovação formal (ícone de escudo).",
+    ],
+    faq: [{ p: "Aprovou direto sem passar por mim, por quê?", r: "O valor ficou abaixo do mínimo da regra de aprovação." }],
+    tags: ["cotacao", "fornecedor", "aprovacao", "alcada", "compras"],
+  },
+  {
+    id: "adm-permissoes-secoes", modulo: "Administração", titulo: "Permissão por aba dentro de uma tela",
+    resumo: "Libere ou bloqueie partes de uma tela (ex.: Dados, Documentos) por perfil.", rota: "/funcoes", perfil: "Administrador",
+    passos: [
+      "Abra Funções e expanda a tela desejada (ex.: Empresas).",
+      "Cada aba aparece como item filho (Dados, Etiquetas, Documentos…).",
+      "Em Perfis, marque ler, criar, editar e excluir para cada aba.",
+      "Peça para o usuário sair e entrar de novo para valer.",
+    ],
+    tags: ["permissao", "perfil", "aba", "secao", "funcoes", "acesso"],
+  },
+  {
+    id: "adm-etiquetas-kanban", modulo: "Administração", titulo: "Etiquetas por quadro Kanban",
+    resumo: "Crie etiquetas só para Ofertas, Suporte etc. ou globais.", rota: "/empresas", perfil: "Administrador",
+    passos: [
+      "Em Empresas, abra a aba Etiquetas.",
+      "Crie a etiqueta e escolha o Quadro (Kanban).",
+      "Deixe sem quadro para ela valer em todos.",
+    ],
+    tags: ["etiqueta", "kanban", "quadro", "tag"],
   },
 ];
 

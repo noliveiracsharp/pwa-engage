@@ -25,6 +25,7 @@ function useArtigos() {
         resumo: String(r["resumo"] ?? ""), rota: (r["rota"] as string) || undefined, perfil: (r["perfil"] as string) || undefined,
         passos: String(r["conteudo"] ?? "").split("\n").map((l) => l.replace(/^\s*\d+[.)]\s*/, "").trim()).filter(Boolean),
         dica: (r["dica"] as string) || undefined, video: (r["video_url"] as string) || undefined,
+        imagem: (r["imagem_url"] as string) || undefined,
         tags: String(r["tags"] ?? "").split(",").map((t) => t.trim()).filter(Boolean),
       }));
     },
@@ -59,6 +60,11 @@ function ArtigoView({ a, voltar, fechar }: { a: ArtigoAjuda; voltar: () => void;
         <p className="text-sm text-muted-foreground">{a.resumo}</p>
         {a.perfil && <p className="mt-1 text-xs text-muted-foreground">Para quem: {a.perfil}</p>}
       </div>
+      {a.imagem && (
+        <a href={a.imagem} target="_blank" rel="noreferrer" title="Clique para ampliar" className="block overflow-hidden rounded-lg border border-border">
+          <img src={a.imagem} alt={`Tela: ${a.titulo}`} loading="lazy" className="w-full" />
+        </a>
+      )}
       {a.video && (
         <a href={a.video} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-lg border border-border p-3 text-sm hover:bg-muted">
           <PlayCircle className="h-5 w-5 text-primary" /> Assistir vídeo curto
@@ -129,7 +135,7 @@ export function CentralAjuda() {
         <CircleHelp className="h-5 w-5" />
       </Button>
       <Sheet open={aberto} onOpenChange={setAberto}>
-        <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-xl">
+        <SheetContent side="right" data-no-guard className="flex w-full flex-col gap-0 p-0 sm:max-w-xl">
           <SheetHeader className="border-b border-border p-4">
             <SheetTitle className="flex items-center gap-2"><BookOpen className="h-5 w-5 text-primary" /> Central de Ajuda</SheetTitle>
           </SheetHeader>
