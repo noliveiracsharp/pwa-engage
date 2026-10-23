@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { fetchCnpj } from "@/lib/cnpj";
 import { Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -194,7 +195,7 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly, saving, on
     if (!isValidCpfCnpj(cnpj)) { toast.error("CNPJ inválido."); return; }
     setCnpjLoading(true);
     try {
-      const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`);
+      const res = await fetchCnpj(cnpj);
       if (!res.ok) { toast.error("CNPJ não encontrado na Receita Federal."); return; }
       const d = await res.json();
       setF((p) => ({
@@ -305,22 +306,22 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly, saving, on
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-2xl">
         <SheetHeader className="px-6 pt-6 pb-4">
-          <div className="flex items-center gap-2 pr-8">
-            <SheetTitle>{record ? "Editar parceiro" : "Novo parceiro"}</SheetTitle>
+          <SheetTitle className="pr-8">{record ? "Editar parceiro" : "Novo parceiro"}</SheetTitle>
+          <SheetDescription>Clientes e fornecedores usados no financeiro e faturamento.</SheetDescription>
+        </SheetHeader>
+        <Tabs value={pf ? "gerais" : tab} onValueChange={setTab} className="flex min-h-0 flex-1 flex-col">
+          <div className="mx-6 mb-4 flex flex-wrap items-center gap-2">
+            <TabsList className="h-auto w-fit flex-wrap">
+              <TabsTrigger value="gerais">Dados Gerais</TabsTrigger>
+              {!pf && <TabsTrigger value="fiscal">Fiscal e Atividades</TabsTrigger>}
+              {!pf && <TabsTrigger value="qsa">Quadro Societário</TabsTrigger>}
+            </TabsList>
             {record && (
               <div className="ml-auto">
                 <DocumentosButton entidadeTipo="parceiro" entidadeId={String(docRowId(record) ?? "")} entidadeNome={String(record["razao_social"] ?? record["nome"] ?? record["nome_fantasia"] ?? "")} registro={record} />
               </div>
             )}
           </div>
-          <SheetDescription>Clientes e fornecedores usados no financeiro e faturamento.</SheetDescription>
-        </SheetHeader>
-        <Tabs value={pf ? "gerais" : tab} onValueChange={setTab} className="flex min-h-0 flex-1 flex-col">
-          <TabsList className="mx-6 mb-4 w-fit">
-            <TabsTrigger value="gerais">Dados Gerais</TabsTrigger>
-            {!pf && <TabsTrigger value="fiscal">Fiscal e Atividades</TabsTrigger>}
-            {!pf && <TabsTrigger value="qsa">Quadro Societário</TabsTrigger>}
-          </TabsList>
           <fieldset disabled={readOnly} className="min-h-0 flex-1 overflow-y-auto px-6 pb-6">
             <TabsContent value="gerais" className="mt-0 space-y-6">
               <div className="grid gap-3 sm:grid-cols-2">

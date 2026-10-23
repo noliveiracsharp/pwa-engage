@@ -527,7 +527,7 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
     {receber && <ReceberPedidoDialog pedido={receber} empresaId={String(empresaId ?? "")} onClose={() => setReceber(null)} onDone={invalidar} />}
     <ParceiroSheet open={cadParc} onOpenChange={setCadParc} record={null} parceiros={parceiros} readOnly={false} saving={salvandoParc} onSave={(vals) => void cadastrarParceiro(vals)} />
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent data-panel-full="" className="flex w-full flex-col gap-0 p-0 sm:max-w-none">
+      <SheetContent data-panel-full="" data-no-guard="" className="flex w-full flex-col gap-0 p-0 sm:max-w-none">
         <SheetHeader className="border-b px-6 py-4">
           <SheetTitle className="flex flex-wrap items-center gap-2">
             Cotação {String(cotacao["numero"] ?? "")}

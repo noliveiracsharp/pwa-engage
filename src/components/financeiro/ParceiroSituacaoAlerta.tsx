@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { fetchCnpj } from "@/lib/cnpj";
 import { useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, CheckCircle2, Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
@@ -33,7 +34,7 @@ export function ParceiroSituacaoAlerta({ parceiro, papel }: { parceiro: Row | un
     if (doc.length !== 14) return void toast.error("Só é possível consultar a Receita para CNPJ.");
     setConsultando(true);
     try {
-      const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${doc}`);
+      const res = await fetchCnpj(doc);
       if (!res.ok) return void toast.error("Não foi possível consultar a Receita Federal agora.");
       const d = await res.json();
       const nova = String(d.descricao_situacao_cadastral ?? "").toUpperCase();

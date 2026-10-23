@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
+import { fetchCnpj } from "@/lib/cnpj";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Code, Inbox, Loader2, Pencil, Plus, QrCode, Search, Trash2, Unplug } from "lucide-react";
 import { digitsOnly } from "@/lib/input-masks";
@@ -611,7 +612,7 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
     if (!isValidCpfCnpj(cnpj)) { toast.error("CNPJ inválido."); return; }
     setCnpjLoading(true);
     try {
-      const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`);
+      const res = await fetchCnpj(cnpj);
       if (!res.ok) { toast.error("CNPJ não encontrado na Receita Federal."); return; }
       const d = await res.json();
       const tel = (v: unknown) => { const n = digitsOnly(String(v ?? "")); return n.length >= 10 ? `+55${n}` : ""; };
@@ -715,23 +716,23 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full overflow-y-auto pb-0 sm:max-w-2xl">
         <SheetHeader className="px-4 pb-4">
-          <div className="flex items-center gap-2 pr-8">
-            <SheetTitle>{title}</SheetTitle>
+          <SheetTitle className="pr-8">{title}</SheetTitle>
+        </SheetHeader>
+
+        <Tabs key={tabs[0]!.key} defaultValue={tabs[0]!.key} className="px-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <TabsList className="h-auto flex-wrap">
+              {tabs.map((t) => (
+                <TabsTrigger key={t.key} value={t.key}>{t.label}</TabsTrigger>
+              ))}
+              {empresa && <TabsTrigger value="__ia">Inteligência Artificial</TabsTrigger>}
+            </TabsList>
             {empresa && rowId(empresa) !== undefined && (
-              <div className="ml-auto flex gap-2">
+              <div className="ml-auto">
                 <DocumentosButton entidadeTipo="empresa" entidadeId={String(rowId(empresa))} entidadeNome={String(empresa["razao_social"] ?? empresa["nome"] ?? "")} registro={empresa} />
               </div>
             )}
           </div>
-        </SheetHeader>
-
-        <Tabs key={tabs[0]!.key} defaultValue={tabs[0]!.key} className="px-4">
-          <TabsList className="h-auto flex-wrap">
-            {tabs.map((t) => (
-              <TabsTrigger key={t.key} value={t.key}>{t.label}</TabsTrigger>
-            ))}
-            {empresa && <TabsTrigger value="__ia">Inteligência Artificial</TabsTrigger>}
-          </TabsList>
 
           {tabs.map((t) =>
             t.kind === "dados" ? (
