@@ -15,3 +15,11 @@ describe("buscarArtigos", () => {
     expect(buscarArtigos(ARTIGOS_PADRAO, "roleta de leads do site")[0]?.id).toBe("crm-captacao");
   });
 });
+describe("novos guias", () => {
+  it("encontra preventiva por cliente", () => {
+    expect(buscarArtigos(ARTIGOS_PADRAO, "preventiva checklist por equipamento")[0]?.id).toBe("manu-preventivas-cliente");
+  });
+  it("encontra o DRE gerencial", () => {
+    expect(buscarArtigos(ARTIGOS_PADRAO, "dre gerencial competencia")[0]?.id).toBe("fin-dre-gerencial");
+  });
+});
