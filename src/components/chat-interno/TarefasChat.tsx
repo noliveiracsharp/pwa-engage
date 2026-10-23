@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, CheckCircle2, FileText, Loader2, Maximize2, Paperclip, Plus, X } from "lucide-react";
+import { Trash2, Check, CheckCircle2, FileText, Loader2, Maximize2, Paperclip, Plus, X } from "lucide-react";
 import { PlannerPainel, ItemLinha, usePlannerItens } from "@/components/chat-interno/PlannerPainel";
 import { TarefaDetalhe } from "@/components/chat-interno/TarefaDetalhe";
 import { diaDoItem, ordenar, PRIORIDADES, type Prioridade } from "@/lib/planner";
@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { confirmar } from "@/components/layout/DialogoGlobal";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const T = "tarefas_usuarios";
@@ -91,6 +92,17 @@ export function TarefasChat({ me, empresaId, usuarios, onAvisar }: {
     if (criador !== me) await onAvisar(criador, aviso).catch(() => undefined);
   };
 
+  const apagarTarefa = async (id: string, titulo: string) => {
+    const ok = await confirmar({ title: "Apagar tarefa?", description: `A tarefa "${titulo}" será apagada definitivamente.`, destructive: true });
+    if (!ok) return;
+    const { data, error } = await tb().delete().eq("id", id).eq("criado_por", me).select("id");
+    if (error || !data?.length) { toast.error(error?.message ?? "Não foi possível apagar. Rode o script atendeai-tarefas-apagar.sql no banco."); return; }
+    toast.success("Tarefa apagada.");
+    void qc.invalidateQueries({ queryKey: key });
+    void planner.recarregar?.();
+  };
+  const minhaCriacao = new Map(tarefas.filter((t) => String(t["criado_por"]) === me).map((t) => [String(t["id"]), String(t["titulo"] ?? "")]));
+
   if (criando) return <NovaTarefa me={me} empresaId={empresaId} usuarios={usuarios} onCancel={() => setCriando(false)} onSaved={async (resp, titulo) => {
     setCriando(false);
     void qc.invalidateQueries({ queryKey: key });
@@ -123,10 +135,13 @@ export function TarefasChat({ me, empresaId, usuarios, onAvisar }: {
         <div className="space-y-2 px-3 pb-3">
           {isLoading && <Loader2 className="mx-auto my-6 h-5 w-5 animate-spin text-muted-foreground" />}
           {aba === "minhas" && lista.length > 0 && <p className="pt-1 text-[11px] font-semibold text-warning">Aguardando seu aceite</p>}
-          {lista.map((t) => <CardTarefa key={String(t["id"])} t={t} me={me} nome={nome} onAtualizar={atualizar} />)}
+          {lista.map((t) => <CardTarefa key={String(t["id"])} t={t} me={me} nome={nome} onAtualizar={atualizar} onApagar={apagarTarefa} />)}
           {aba === "minhas" && doDia.map((i) => (
             <div key={i.id} className="flex items-center gap-1">
               <div className="min-w-0 flex-1"><ItemLinha i={i} onCheck={(f) => void planner.concluir(i, f)} onAbrir={() => setAberta(i.id)} /></div>
+              {i.origem === "tarefa" && minhaCriacao.has(i.id) && (
+                <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0 text-destructive" title="Apagar tarefa" aria-label="Apagar tarefa" onClick={() => void apagarTarefa(i.id, minhaCriacao.get(i.id)!)}><Trash2 className="h-3.5 w-3.5" /></Button>
+              )}
               {i.origem === "tarefa" && i.status !== "concluida" && (
                 <select aria-label="Planejar para" className="h-7 rounded border border-border bg-background text-[10px]" value=""
                   onChange={(e) => { const v = e.target.value; void planner.planejar(i, v === "backlog" ? null : v === "hoje" ? h : new Date(Date.now() + 864e5).toISOString().slice(0, 10)); }}>
@@ -143,8 +158,8 @@ export function TarefasChat({ me, empresaId, usuarios, onAvisar }: {
   );
 }
 
-function CardTarefa({ t, me, nome, onAtualizar }: {
-  t: Row; me: string; nome: (id: unknown) => string;
+function CardTarefa({ t, me, nome, onAtualizar, onApagar }: {
+  t: Row; me: string; nome: (id: unknown) => string; onApagar: (id: string, titulo: string) => Promise<void>;
   onAtualizar: (t: Row, patch: Record<string, unknown>, aviso: string) => Promise<void>;
 }) {
   const [recusando, setRecusando] = useState(false);
@@ -160,6 +175,9 @@ function CardTarefa({ t, me, nome, onAtualizar }: {
       <div className="flex items-start gap-2">
         <p className="flex-1 font-semibold">{titulo}</p>
         <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold", st.cls)}>{st.label}</span>
+        {String(t["criado_por"]) === me && (
+          <Button size="icon" variant="ghost" className="-my-1 h-6 w-6 shrink-0 text-destructive" title="Apagar tarefa" aria-label="Apagar tarefa" onClick={() => void onApagar(String(t["id"]), titulo)}><Trash2 className="h-3.5 w-3.5" /></Button>
+        )}
       </div>
       {t["descricao"] ? <p className="mt-1 whitespace-pre-wrap text-xs text-muted-foreground">{String(t["descricao"])}</p> : null}
       <div className="mt-2 grid grid-cols-2 gap-x-2 text-[11px] text-muted-foreground">
@@ -205,13 +223,13 @@ function CardTarefa({ t, me, nome, onAtualizar }: {
   );
 }
 
-function NovaTarefa({ me, empresaId, usuarios, onCancel, onSaved }: {
-  me: string; empresaId: string; usuarios: Row[]; onCancel: () => void;
+export function NovaTarefa({ me, empresaId, usuarios, onCancel, onSaved, responsavelInicial }: {
+  me: string; empresaId: string; usuarios: Row[]; onCancel: () => void; responsavelInicial?: string;
   onSaved: (responsavel: string, titulo: string) => Promise<void>;
 }) {
   const [titulo, setTitulo] = useState("");
   const [descricao, setDescricao] = useState("");
-  const [resp, setResp] = useState(me);
+  const [resp, setResp] = useState(responsavelInicial ?? me);
   const [entrega, setEntrega] = useState("");
   const [prioridade, setPrioridade] = useState<Prioridade>("media");
   const [estimativa, setEstimativa] = useState("");
