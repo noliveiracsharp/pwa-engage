@@ -99,7 +99,6 @@ export function TarefasChat({ me, empresaId, usuarios, onAvisar }: {
     if (error || !data?.length) { toast.error(error?.message ?? "Não foi possível apagar. Rode o script atendeai-tarefas-apagar.sql no banco."); return; }
     toast.success("Tarefa apagada.");
     void qc.invalidateQueries({ queryKey: key });
-    void planner.recarregar?.();
   };
   const minhaCriacao = new Map(tarefas.filter((t) => String(t["criado_por"]) === me).map((t) => [String(t["id"]), String(t["titulo"] ?? "")]));
 
