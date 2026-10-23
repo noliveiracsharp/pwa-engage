@@ -221,8 +221,6 @@ export async function gerarPreventivas(empresaId: unknown): Promise<number> {
   ]);
   const listaModelos = ((modelos ?? []) as Row[]).map((m) => ({ id: text(m["id"]), itens: m["itens"] }));
   const listaAtivos = ((ativos ?? []) as Row[]).map((a) => ({ id: text(a["id"]), nome: text(a["nome"]), local: text(a["local"]) || null }));
-  void [
-  ]);
   let criadas = 0;
   for (const pend of pendentes) {
     const p = lista.find((x) => text(x["id"]) === pend.id)!;
