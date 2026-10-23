@@ -1,3 +1,4 @@
+import { useVariaveisPersonalizadas } from "@/lib/variaveis";
 import { useMemo, useRef, useState } from "react";
 import { instanciaParaAvisos, ordenarParaAvisos } from "@/lib/instancia-finalidade";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -57,6 +58,7 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
   const [cadParc, setCadParc] = useState(false);
   const [enviandoId, setEnviandoId] = useState<string | null>(null);
   const { data: modelos = [] } = useModelosMensagem(empresaId);
+  useVariaveisPersonalizadas(empresaId);
   const { data: instancias = [] } = useQuery({
     queryKey: ["cotacao-instancias", String(empresaId ?? "")],
     enabled: open && !!empresaId,
