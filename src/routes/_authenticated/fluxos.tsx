@@ -62,7 +62,7 @@ function variaveisDoFluxo(nos: FluxoNode[]): VariavelDef[] {
 /** Campo com autocomplete `{{` usando as variáveis do fluxo aberto. */
 function CampoFluxo({ value, onChange, linha, rows, mono }: { value: string; onChange: (v: string) => void; linha?: boolean; rows?: number; mono?: boolean }) {
   const { vars, empresaId } = useContext(VarsCtx);
-  return <CampoVariaveis value={value} onChange={onChange} variaveis={vars} empresaId={empresaId ?? undefined} linha={linha} rows={rows ?? 4} campoClassName={mono ? "font-mono text-xs" : undefined} />;
+  return <CampoVariaveis value={value} onChange={onChange} variaveis={vars} empresaId={empresaId ?? undefined} linha={!!linha} rows={rows ?? 4} campoClassName={mono ? "font-mono text-xs" : ""} />;
 }
 
 export const Route = createFileRoute("/_authenticated/fluxos")({
