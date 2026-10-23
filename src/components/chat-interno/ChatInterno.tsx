@@ -503,7 +503,7 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack }: { me: stri
     if (!canalId) return;
     const ch = supabase
       .channel(`chat_interno:${canalId}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: TABLE, filter: `canal_id=eq.${canalId}` }, () => {
+      .on("postgres_changes", { event: "*", schema: "public", table: TABLE, filter: `canal_id=eq.${canalId}` }, () => {
         void qc.invalidateQueries({ queryKey: key });
       })
       .subscribe();
