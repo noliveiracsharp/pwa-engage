@@ -84,6 +84,7 @@ import { useQuery } from "@tanstack/react-query";
 import { etapasDoKanban, kanbanDoModuloOrcamentos } from "@/lib/orcamento-kanban";
 import { cn } from "@/lib/utils";
 import { corEtapa } from "@/lib/kanban-cores";
+import type { SecaoPerms } from "@/lib/secoes-permissao";
 
 const NONE = "__none__";
 /** Validade padrão de um novo orçamento (dias após a data). */

@@ -29,6 +29,7 @@ import { GerarPedidosDialog } from "@/components/orcamentos/GerarPedidosDialog";
 import { SituacaoBadge } from "@/components/orcamentos/SituacaoBadge";
 import { useAlterarSituacao, useSaveOrcamento } from "@/hooks/useSaveOrcamento";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
+import { useSecoes } from "@/hooks/useSecoes";
 import { useAuth } from "@/hooks/useAuth";
 import { rowId, useDeleteRecord, useTableRows } from "@/lib/crud";
 import { useAudit } from "@/lib/audit";
@@ -42,6 +43,11 @@ import { ofertaTravada, situacaoAtivada } from "@/lib/oferta-ativacao";
 import { executarHandoff } from "@/lib/kanban-handoff";
 import { confirmar } from "@/components/layout/DialogoGlobal";
 import { ReguaOfertas } from "@/components/orcamentos/ReguaOfertas";
+
+const SECOES_OFERTA = [
+  { key: "crm", label: "CRM & Atendimento" },
+  { key: "financeiro", label: "Financeiro & Comissões" },
+];
 
 export const Route = createFileRoute("/_authenticated/orcamentos")({
   staticData: { sitemap: false },
@@ -82,6 +88,7 @@ function mesmaEmpresa(row: Row, empresaId: string | number | undefined) {
 
 function OrcamentosPage() {
   const perms = usePagePermissions("/orcamentos");
+  const secoes = useSecoes("/orcamentos", SECOES_OFERTA);
   const { empresaId, usuarioId } = useAudit();
   const { empresa } = useAuth();
   const { data: todos = [], isLoading } = useTableRows("orcamentos");
@@ -633,6 +640,7 @@ function OrcamentosPage() {
         linhasRecord={linhasRecord}
         saving={save.isPending}
         readOnly={record ? !perms.canUpdate : !perms.canCreate}
+        secoes={secoes}
         clientes={clientes}
         vendedores={vendedores}
         itens={itensEmpresa}
