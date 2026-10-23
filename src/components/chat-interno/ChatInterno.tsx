@@ -4,7 +4,8 @@ import { Linkify } from "@/components/ui/linkify";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Check, ArrowLeftRight, ArrowLeft, Maximize2, MessageSquare, Minimize2, Paperclip, Search, Send, Users, X, FileText, Loader2, Phone, Video, Mic, ClipboardList } from "lucide-react";
+import { Plus, Check, ArrowLeftRight, ArrowLeft, Maximize2, MessageSquare, Minimize2, Paperclip, Search, Send, Users, X, FileText, Loader2, Phone, Video, Mic, ClipboardList, Trash2 } from "lucide-react";
+import { confirmar } from "@/components/layout/DialogoGlobal";
 import { ChamadaFlutuante, duracao, novaSala, type Chamada } from "@/components/atendimentos/ChamadaFlutuante";
 
 const CONVITE = "📞CONVITE|";
@@ -598,6 +599,18 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack }: { me: stri
   const cancelarGravacao = () => {
     const r = recRef.current as (MediaRecorder & { cancelado?: boolean }) | null;
     if (r) { r.cancelado = true; r.stop(); }
+  };
+
+  const apagar = async (m: Row, anexos: Anexo[]) => {
+    const ok = await confirmar({ title: "Apagar mensagem?", description: anexos.length ? "A mensagem e o arquivo serão apagados para todos na conversa." : "A mensagem será apagada para todos na conversa.", destructive: true });
+    if (!ok) return;
+    const { data, error } = await supabase.from(TABLE).delete().eq("id", String(m["id"])).eq("remetente_id", me).select("id");
+    if (error || !data?.length) { toast.error(error?.message ?? "Não foi possível apagar. Rode o script atendeai-chat-apagar-mensagens.sql no banco."); return; }
+    const marca = "/object/public/chat_media/";
+    const caminhos = anexos.map((a) => { const i = a.url.indexOf(marca); return i >= 0 ? decodeURIComponent(a.url.slice(i + marca.length).split("?")[0]!) : ""; }).filter(Boolean);
+    if (caminhos.length) await supabase.storage.from("chat_media").remove(caminhos);
+    toast.success("Mensagem apagada.");
+    void qc.invalidateQueries({ queryKey: key });
   };
 
   const criarTarefa = async (txt: string) => {
