@@ -14,7 +14,8 @@ import { DocumentosButton } from "@/components/documentos/DocumentosPainel";
 import { ContatosPainel } from "@/components/contatos/ContatosButton";
 import { IaConfigPainel } from "@/components/financeiro/IaConfigDialog";
 import { useAudit } from "@/lib/audit";
-import { rowId } from "@/lib/crud";
+import { rowId, useTableRows } from "@/lib/crud";
+import { TODOS_QUADROS } from "@/lib/etiquetas";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -103,7 +104,7 @@ export const EMPRESA_FIELDS: EmpresaField[] = [
   { key: "numero_nfse_atual", label: "Último número NFS-e", fiscal: true, numeric: true },
 ];
 
-type ChildColumn = { key: string; label: string; type?: "text" | "boolean" | "select" | "tel" | "icon" | "color"; options?: string[]; optionLabels?: Record<string, string>; showIf?: (d: Record<string, string>) => boolean; required?: boolean; numeric?: boolean };
+type ChildColumn = { key: string; label: string; type?: "text" | "boolean" | "select" | "tel" | "icon" | "color"; options?: string[]; optionLabels?: Record<string, string>; showIf?: (d: Record<string, string>) => boolean; required?: boolean; numeric?: boolean; nullable?: boolean };
 
 type ChildConfig = {
   table: string;
@@ -297,7 +298,7 @@ export function ChildTable({ config, empresa, perms = FULL }: { config: ChildCon
       const value = draft[col.key] ?? "";
       if (value === "" && !editing) continue;
       if (col.type === "tel" && isChat && !digitsOnly(value)) continue;
-      payload[col.key] = col.type === "boolean" ? value === "true" : col.numeric ? (value === "" ? 0 : Number(value) || 0) : value;
+      payload[col.key] = col.nullable && (value === "" || value === TODOS_QUADROS) ? null : col.type === "boolean" ? value === "true" : col.numeric ? (value === "" ? 0 : Number(value) || 0) : value;
     }
     if (isChat) payload["status_conexao"] = "conectado";
     if (config.sortable && !editing) payload["ordem"] = proximaOrdem(rows);
