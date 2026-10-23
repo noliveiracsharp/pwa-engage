@@ -39,13 +39,15 @@ export function patchRecorrencia(atual: Row, destino: Row, alteracoes: Row): Row
   return patch;
 }
 const SUFIXO = /\s\(?(\d+)\/(\d+)\)?$/;
+// Sem origem_id, apenas o formato explícito de parcela distingue a série de uma data no nome.
+const SUFIXO_LEGADO = /\s\((\d+)\/(\d+)\)$/;
 
 /** Lançamento manual antigo (sem origem_id) com sufixo "(n/m)" na descrição. */
 export function serieLegada(t: Row): { base: string; total: number } | null {
   if (t["origem_tipo"] !== "manual" || t["origem_id"]) return null;
-  const m = String(t["descricao"] ?? "").match(SUFIXO);
+  const m = String(t["descricao"] ?? "").match(SUFIXO_LEGADO);
   if (!m || Number(m[2]) < 2) return null;
-  return { base: String(t["descricao"]).replace(SUFIXO, "").trim(), total: Number(m[2]) };
+  return { base: String(t["descricao"]).replace(SUFIXO_LEGADO, "").trim(), total: Number(m[2]) };
 }
 
 /** Parcelas antigas da mesma série: mesma empresa, tipo, parceiro, descrição base e total de parcelas. */
