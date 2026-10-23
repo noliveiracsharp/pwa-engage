@@ -219,11 +219,17 @@ export async function gerarPreventivas(empresaId: unknown): Promise<number> {
     supabase.from("manutencao_modelos").select("id,itens"),
     supabase.from("manutencao_ativos" as never).select("id,nome,local"),
   ]);
+  const listaModelos = ((modelos ?? []) as Row[]).map((m) => ({ id: text(m["id"]), itens: m["itens"] }));
+  const listaAtivos = ((ativos ?? []) as Row[]).map((a) => ({ id: text(a["id"]), nome: text(a["nome"]), local: text(a["local"]) || null }));
+  void [
+  ]);
   let criadas = 0;
   for (const pend of pendentes) {
     const p = lista.find((x) => text(x["id"]) === pend.id)!;
     const modelo = ((modelos ?? []) as Row[]).find((m) => text(m["id"]) === text(p["modelo_id"]));
     const ativo = ((ativos ?? []) as Row[]).find((a) => text(a["id"]) === text(p["ativo_id"]));
+    const roteiro = Array.isArray(p["itens"]) ? (p["itens"] as ItemRoteiro[]) : [];
+    const checklist = roteiro.length ? checklistDaVisita(roteiro, listaModelos, listaAtivos) : modelo ? checklistDoModelo(modelo["itens"]) : [];
     for (const dia of pend.datas) {
       const quando = new Date(`${dia}T${text(p["hora"]) || "09:00"}:00`);
       const { error: e } = await supabase.from("manutencao_os").insert({
@@ -231,10 +237,10 @@ export async function gerarPreventivas(empresaId: unknown): Promise<number> {
         tipo: "preventiva", prioridade: "normal", status: "agendada", plano_id: pend.id,
         parceiro_id: p["parceiro_id"] || null, ativo_id: p["ativo_id"] || null, modelo_id: p["modelo_id"] || null,
         tecnico_usuario_id: p["tecnico_usuario_id"] || null,
-        equipamento: ativo ? text(ativo["nome"]) : null, local: ativo ? text(ativo["local"]) || null : null,
+        equipamento: roteiro.length ? `${roteiro.length} equipamento(s)` : ativo ? text(ativo["nome"]) : null, local: ativo ? text(ativo["local"]) || null : null,
         descricao: `Preventiva programada: ${text(p["nome"])}`,
         data_prevista: quando.toISOString(), prazo_sla: prazoSla(quando, "normal").toISOString(),
-        checklist: modelo ? checklistDoModelo(modelo["itens"]) : [],
+        checklist,
       } as never);
       if (!e) criadas++;
       else if (e.code !== "23505") throw e; // 23505 = já gerada para essa data
@@ -255,6 +261,13 @@ export function Planos({ podeEditar, podeExcluir }: { podeEditar: boolean; podeE
   const clientes = useClientes();
   const [edit, setEdit] = useState<Row | null | undefined>(undefined);
   const [f, setF] = useState(VAZIO_PLANO);
+  const [roteiro, setRoteiro] = useState<ItemRoteiro[]>([]);
+  const modeloPorCategoria = (cat: unknown) => text(rowId(modelos.find((m) => text(cat) && text(m["categoria"]).toLowerCase() === text(cat).toLowerCase()) ?? {}));
+  const carregarRoteiro = (parceiro: string, padrao: string) => setRoteiro(
+    ativos.filter((a) => text(a["parceiro_id"]) === parceiro && a["ativo"] !== false)
+      .sort((a, b) => text(a["nome"]).localeCompare(text(b["nome"]), "pt-BR"))
+      .map((a) => ({ ativo_id: text(rowId(a)), modelo_id: modeloPorCategoria(a["categoria"]) || padrao })),
+  );
   const nomeAtivo = useMemo(() => new Map(ativos.map((a) => [text(rowId(a)), text(a["nome"])])), [ativos]);
   const ativosDoCliente = ativos.filter((a) => !f.parceiro_id || text(a["parceiro_id"]) === f.parceiro_id).map((a) => ({ value: text(rowId(a)), label: `${text(a["nome"])}${a["local"] ? ` · ${text(a["local"])}` : ""}` }));
 
@@ -262,6 +275,7 @@ export function Planos({ podeEditar, podeExcluir }: { podeEditar: boolean; podeE
     setEdit(r);
     setF(r ? Object.fromEntries(Object.keys(VAZIO_PLANO).map((k) => [k, k === "ativo" ? r[k] !== false : text(r[k])])) as typeof VAZIO_PLANO
       : { ...VAZIO_PLANO, proxima_data: new Date().toLocaleDateString("sv-SE") });
+    setRoteiro(r && Array.isArray(r["itens"]) ? (r["itens"] as ItemRoteiro[]) : []);
   };
 
   const save = useMutation({
@@ -273,7 +287,9 @@ export function Planos({ podeEditar, podeExcluir }: { podeEditar: boolean; podeE
         nome: f.nome.trim(), parceiro_id: f.parceiro_id, ativo_id: f.ativo_id || null, modelo_id: f.modelo_id || null,
         tecnico_usuario_id: f.tecnico_usuario_id || null, frequencia_meses: Number(f.frequencia_meses) || 1,
         proxima_data: f.proxima_data, hora: f.hora || "09:00", antecedencia_dias: Math.max(0, Number(f.antecedencia_dias) || 0), ativo: f.ativo,
+        itens: roteiro,
       };
+      if (roteiro.some((x) => !x.modelo_id)) throw new Error("Escolha o checklist de cada equipamento (ou remova-o do roteiro).");
       const { error } = edit
         ? await supabase.from("manutencao_planos" as never).update(payload as never).eq("id", text(rowId(edit)))
         : await supabase.from("manutencao_planos" as never).insert({ ...payload, empresa_id: empresaId } as never);
@@ -294,7 +310,7 @@ export function Planos({ podeEditar, podeExcluir }: { podeEditar: boolean; podeE
   const columns: Column[] = [
     { key: "nome", header: "Plano", fields: ["nome"], render: (r) => <span className="font-medium">{text(r["nome"])}</span> },
     { key: "cliente", header: "Cliente", fields: ["parceiro_id"], render: (r) => <div className="max-w-56 truncate">{clientes.nome.get(text(r["parceiro_id"])) || "—"}</div> },
-    { key: "ativo", header: "Equipamento", fields: ["ativo_id"], render: (r) => nomeAtivo.get(text(r["ativo_id"])) || "Geral" },
+    { key: "ativo", header: "Equipamento", fields: ["ativo_id"], render: (r) => Array.isArray(r["itens"]) && r["itens"].length ? `${r["itens"].length} equipamento(s)` : nomeAtivo.get(text(r["ativo_id"])) || "Geral" },
     { key: "freq", header: "Frequência", fields: ["frequencia_meses"], render: (r) => FREQUENCIAS.find((x) => x.value === text(r["frequencia_meses"]))?.label ?? `A cada ${text(r["frequencia_meses"])} meses` },
     { key: "prox", header: "Próxima", fields: ["proxima_data"], render: (r) => `${fmtData(r["proxima_data"])} ${text(r["hora"])}` },
     { key: "sit", header: "Situação", fields: ["ativo"], render: (r) => r["ativo"] === false ? <span className="text-muted-foreground">Pausado</span> : <span className="text-success">Ativo</span> },
@@ -315,9 +331,8 @@ export function Planos({ podeEditar, podeExcluir }: { podeEditar: boolean; podeE
           <SheetHeader className="border-b p-4"><SheetTitle>{edit ? "Editar plano" : "Novo plano de preventiva"}</SheetTitle></SheetHeader>
           <div className="grid flex-1 content-start gap-3 overflow-y-auto p-4 sm:grid-cols-2">
             <Campo label="Nome do plano *" className="sm:col-span-2"><Input value={f.nome} onChange={(e) => setF({ ...f, nome: e.target.value })} placeholder="Ex.: Preventiva mensal CFTV" /></Campo>
-            <Campo label="Cliente *" className="sm:col-span-2"><SearchSelect value={f.parceiro_id} onChange={(v) => setF({ ...f, parceiro_id: v, ativo_id: "" })} options={clientes.lista} placeholder="Selecione o cliente" /></Campo>
-            <Campo label="Equipamento (opcional)"><SearchSelect value={f.ativo_id} onChange={(v) => setF({ ...f, ativo_id: v })} options={ativosDoCliente} placeholder="Todos / geral" /></Campo>
-            <Campo label="Modelo de checklist">
+            <Campo label="Cliente *" className="sm:col-span-2"><SearchSelect value={f.parceiro_id} onChange={(v) => { setF({ ...f, parceiro_id: v, ativo_id: "" }); carregarRoteiro(v, f.modelo_id); }} options={clientes.lista} placeholder="Selecione o cliente" /></Campo>
+            <Campo label="Checklist padrão">
               <Select value={f.modelo_id || "_"} onValueChange={(v) => setF({ ...f, modelo_id: v === "_" ? "" : v })}><SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent><SelectItem value="_">Sem checklist</SelectItem>{modelos.map((m) => <SelectItem key={text(rowId(m))} value={text(rowId(m))}>{text(m["nome"])}</SelectItem>)}</SelectContent></Select>
             </Campo>
@@ -333,6 +348,26 @@ export function Planos({ podeEditar, podeExcluir }: { podeEditar: boolean; podeE
             <Campo label="Horário"><Input type="time" value={f.hora} onChange={(e) => setF({ ...f, hora: e.target.value })} /></Campo>
             <Campo label="Criar a ordem quantos dias antes"><Input type="number" min={0} value={f.antecedencia_dias} onChange={(e) => setF({ ...f, antecedencia_dias: e.target.value })} /></Campo>
             <label className="flex items-center gap-2 self-end pb-2 text-sm"><Switch checked={f.ativo} onCheckedChange={(v) => setF({ ...f, ativo: v })} /> Plano ativo</label>
+            <div className="space-y-2 sm:col-span-2">
+              <div className="flex items-center justify-between gap-2">
+                <Label>Equipamentos da visita ({roteiro.length})</Label>
+                <div className="flex gap-2">
+                  {f.modelo_id && roteiro.length > 0 && <Button size="sm" variant="ghost" onClick={() => setRoteiro((x) => x.map((i) => ({ ...i, modelo_id: f.modelo_id })))}>Aplicar padrão a todos</Button>}
+                  <Button size="sm" variant="outline" disabled={!f.parceiro_id} onClick={() => carregarRoteiro(f.parceiro_id, f.modelo_id)}><RefreshCw className="mr-1 h-4 w-4" /> Recarregar do cliente</Button>
+                </div>
+              </div>
+              {!roteiro.length && <p className="text-sm text-muted-foreground">{f.parceiro_id ? "Este cliente não tem equipamentos ativos. Cadastre-os na aba Equipamentos." : "Escolha o cliente para carregar todos os equipamentos dele."}</p>}
+              {roteiro.map((it, i) => (
+                <div key={it.ativo_id} className="flex flex-wrap items-center gap-2 rounded-md border bg-muted/30 p-2">
+                  <span className="min-w-40 flex-1 text-sm font-medium">{ativosDoCliente.find((a) => a.value === it.ativo_id)?.label ?? nomeAtivo.get(it.ativo_id) ?? "Equipamento removido"}</span>
+                  <div className="w-64">
+                    <SearchSelect value={it.modelo_id} onChange={(v) => setRoteiro((x) => x.map((y, j) => (j === i ? { ...y, modelo_id: v } : y)))}
+                      options={modelos.map((m) => ({ value: text(rowId(m)), label: text(m["nome"]) })).sort((a, b) => a.label.localeCompare(b.label, "pt-BR"))} placeholder="Checklist *" />
+                  </div>
+                  <Button size="icon" variant="ghost" aria-label="Tirar da visita" onClick={() => setRoteiro((x) => x.filter((_, j) => j !== i))}><Trash2 className="h-4 w-4" /></Button>
+                </div>
+              ))}
+            </div>
           </div>
           <div className="flex justify-end gap-2 border-t p-4">
             <Button variant="outline" onClick={() => setEdit(undefined)}>Cancelar</Button>
