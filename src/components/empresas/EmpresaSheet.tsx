@@ -772,9 +772,9 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
               {tabs.map((t) => (
                 <TabsTrigger key={t.key} value={t.key}>{t.label}</TabsTrigger>
               ))}
-              {empresa && <TabsTrigger value="__ia">Inteligência Artificial</TabsTrigger>}
+              {empresa && iaSecao && <TabsTrigger value="__ia">Inteligência Artificial</TabsTrigger>}
             </TabsList>
-            {empresa && rowId(empresa) !== undefined && (
+            {empresa && docSecao && rowId(empresa) !== undefined && (
               <div className="ml-auto">
                 <DocumentosButton entidadeTipo="empresa" entidadeId={String(rowId(empresa))} entidadeNome={String(empresa["razao_social"] ?? empresa["nome"] ?? "")} registro={empresa} />
               </div>
@@ -954,7 +954,7 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
           )}
           <TabsContent value="__ia" className="mt-4">
             {empresa && text(rowId(empresa)) === text(empresaAtivaId) ? (
-              <IaConfigPainel readOnly={dadosLocked} />
+              <IaConfigPainel readOnly={!iaSecao?.perms.canUpdate} />
             ) : (
               <p className="text-sm text-muted-foreground">
                 A configuração de IA vale para a empresa em que você está conectado. Entre nesta empresa para configurá-la.
