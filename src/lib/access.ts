@@ -106,6 +106,7 @@ export const ROTAS_PERMISSAO_PROPRIA = [
   "/relatorios/comercial",
   "/relatorios/board",
   "/relatorios/kpis",
+  "/relatorios/dre-gerencial",
 ];
 
 export function isPathAllowed(pathname: string, allowed: string[]): boolean {
