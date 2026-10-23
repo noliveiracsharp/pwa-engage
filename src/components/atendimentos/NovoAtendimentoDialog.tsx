@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { etiquetasDoQuadro } from "@/lib/etiquetas";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -177,8 +178,9 @@ export function NovoAtendimentoDialog({ open, onOpenChange, instancias, kanbans,
             <SearchSelect
               value=""
               onChange={(v) => v && setTags((t) => (t.includes(v) ? t : [...t, v]))}
-              options={etiquetas
+              options={etiquetasDoQuadro(etiquetas, kanban)
                 .filter((e) => e["status"] !== false && !tags.includes(text(rowId(e))))
+                .sort((a, b) => text(pick(a, ["descricao", "nome"])).localeCompare(text(pick(b, ["descricao", "nome"])), "pt-BR"))
                 .map((e) => ({ value: text(rowId(e)), label: text(pick(e, ["descricao", "nome"])) }))}
               placeholder="Adicionar etiqueta"
               searchPlaceholder="Buscar etiqueta…"

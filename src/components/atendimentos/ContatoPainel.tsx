@@ -1,4 +1,5 @@
 import { useChecklistGate } from "@/components/kanban/ChecklistGate";
+import { etiquetasDoQuadro } from "@/lib/etiquetas";
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -175,7 +176,7 @@ export function ContatoPainel({ atendimento, pessoa, usuarios, participantes, et
         <section className="space-y-2">
           <p className="flex items-center gap-1 text-xs font-medium uppercase text-muted-foreground"><Tag className="h-3 w-3" /> Etiquetas</p>
           <div className="flex flex-wrap gap-1.5">
-            {etiquetas.filter((e) => e["status"] !== false).map((e) => {
+            {etiquetasDoQuadro(etiquetas, text(pick(atendimento, A.kanban))).filter((e) => e["status"] !== false || minhasEt.has(text(rowId(e)))).map((e) => {
               const eid = text(rowId(e));
               const on = minhasEt.has(eid);
               const cor = corEtiqueta(e);
