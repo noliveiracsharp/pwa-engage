@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { ehRespostaAutomatica } from "@/lib/instancia-finalidade";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/integrations/supabase/client";
@@ -79,6 +80,10 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
           },
         });
 
+        // Linha exclusiva de notificações: respostas (ex.: auto-resposta de fornecedor) não abrem atendimento nem robô.
+        const { data: fin } = await db.rpc("instancia_finalidade", { p_token: k });
+        if (String(fin ?? "") === "notificacoes") return ok({ ignorada: true, motivo: "notificacoes" });
+
         const { data, error } = await db.rpc("fluxo_webhook_receber", {
           p_token: k, p_telefone: body.phone, p_nome: body.senderName || body.chatName || "",
           p_texto: texto, p_tipo: tipo, p_midia: midia, p_externo: body.messageId ?? null,
@@ -96,6 +101,8 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
           if (eF) console.error("zapi-webhook foto", eF.message);
         }
         if (r.duplicada || r.interno || !r.fluxo) return ok();
+        // Auto-resposta comercial (ex.: fornecedor) em conversa nova: registra, mas não aciona o robô.
+        if (!r.execucao && tipo === "texto" && ehRespostaAutomatica(texto)) return ok({ robo: false, motivo: "auto_resposta" });
 
         const acao = (nome: string, dados: Record<string, unknown>) =>
           db.rpc("fluxo_webhook_acao", { p_token: k, p_atendimento: r.atendimento_id, p_acao: nome, p_dados: dados });

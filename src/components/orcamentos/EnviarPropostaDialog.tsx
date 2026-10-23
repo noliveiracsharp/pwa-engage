@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { instanciaParaAvisos, ordenarParaAvisos } from "@/lib/instancia-finalidade";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Mail, MessageCircle, Send, User } from "lucide-react";
@@ -88,7 +89,7 @@ export function EnviarPropostaDialog({ open, onOpenChange, orcamento, empresa, c
     enabled: open && !!empresaId,
     queryFn: async () => {
       const { data } = await supabase.from("empresas_instancias").select("*").eq("empresa_id", empresaId as never);
-      return ((data ?? []) as Row[]).filter((i) => i["status"] !== false && i["ativo"] !== false && text(i["tipo"]) !== "chat");
+      return ordenarParaAvisos(((data ?? []) as Row[]).filter((i) => i["status"] !== false && i["ativo"] !== false && text(i["tipo"]) !== "chat"));
     },
   });
 

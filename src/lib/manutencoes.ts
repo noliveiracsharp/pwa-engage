@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { instanciaParaAvisos, ordenarParaAvisos } from "@/lib/instancia-finalidade";
 import { comprimirImagem } from "@/lib/image-compress";
 
 export type TipoResposta = "cnc" | "numero";
@@ -141,7 +142,7 @@ export async function enviarWhatsappEmpresa(empresaId: unknown, telefone: string
   const { dispararMensagem, sanitizarTelefone } = await import("@/lib/atendimentos-envio");
   if (!sanitizarTelefone(telefone)) return "Cliente sem telefone cadastrado.";
   const { data } = await supabase.from("empresas_instancias").select("*").eq("empresa_id", String(empresaId) as never);
-  const inst = ((data ?? []) as Record<string, unknown>[]).find((i) => i["status"] !== false && i["ativo"] !== false && String(i["tipo"] ?? "") !== "chat");
+  const inst = instanciaParaAvisos((data ?? []) as Record<string, unknown>[]);
   if (!inst) return "Nenhum WhatsApp da empresa conectado.";
   await dispararMensagem({ instancia: inst, mensagemId: null, atendimentoId: null, telefone, texto });
   return null;
