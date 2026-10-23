@@ -70,6 +70,7 @@ import { Route as AuthenticatedAdminVersoesRouteImport } from './routes/_authent
 import { Route as AuthenticatedProjetosTemplatesRouteImport } from './routes/_authenticated/projetos_.templates'
 import { Route as AuthenticatedRelatoriosBoardRouteImport } from './routes/_authenticated/relatorios_.board'
 import { Route as AuthenticatedRelatoriosComercialRouteImport } from './routes/_authenticated/relatorios_.comercial'
+import { Route as AuthenticatedRelatoriosDreGerencialRouteImport } from './routes/_authenticated/relatorios_.dre-gerencial'
 import { Route as AuthenticatedRelatoriosDreOfertasRouteImport } from './routes/_authenticated/relatorios_.dre-ofertas'
 import { Route as AuthenticatedRelatoriosKpisRouteImport } from './routes/_authenticated/relatorios_.kpis'
 import { Route as ApiPublicIconeRouteImport } from './routes/api/public/icone'
@@ -395,6 +396,12 @@ const AuthenticatedRelatoriosComercialRoute =
     path: '/relatorios/comercial',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedRelatoriosDreGerencialRoute =
+  AuthenticatedRelatoriosDreGerencialRouteImport.update({
+    id: '/relatorios_/dre-gerencial',
+    path: '/relatorios/dre-gerencial',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedRelatoriosDreOfertasRoute =
   AuthenticatedRelatoriosDreOfertasRouteImport.update({
     id: '/relatorios_/dre-ofertas',
@@ -494,6 +501,7 @@ export interface FileRoutesByFullPath {
   '/projetos/templates': typeof AuthenticatedProjetosTemplatesRoute
   '/relatorios/board': typeof AuthenticatedRelatoriosBoardRoute
   '/relatorios/comercial': typeof AuthenticatedRelatoriosComercialRoute
+  '/relatorios/dre-gerencial': typeof AuthenticatedRelatoriosDreGerencialRoute
   '/relatorios/dre-ofertas': typeof AuthenticatedRelatoriosDreOfertasRoute
   '/relatorios/kpis': typeof AuthenticatedRelatoriosKpisRoute
   '/api/public/icone': typeof ApiPublicIconeRoute
@@ -563,6 +571,7 @@ export interface FileRoutesByTo {
   '/projetos/templates': typeof AuthenticatedProjetosTemplatesRoute
   '/relatorios/board': typeof AuthenticatedRelatoriosBoardRoute
   '/relatorios/comercial': typeof AuthenticatedRelatoriosComercialRoute
+  '/relatorios/dre-gerencial': typeof AuthenticatedRelatoriosDreGerencialRoute
   '/relatorios/dre-ofertas': typeof AuthenticatedRelatoriosDreOfertasRoute
   '/relatorios/kpis': typeof AuthenticatedRelatoriosKpisRoute
   '/api/public/icone': typeof ApiPublicIconeRoute
@@ -634,6 +643,7 @@ export interface FileRoutesById {
   '/_authenticated/projetos_/templates': typeof AuthenticatedProjetosTemplatesRoute
   '/_authenticated/relatorios_/board': typeof AuthenticatedRelatoriosBoardRoute
   '/_authenticated/relatorios_/comercial': typeof AuthenticatedRelatoriosComercialRoute
+  '/_authenticated/relatorios_/dre-gerencial': typeof AuthenticatedRelatoriosDreGerencialRoute
   '/_authenticated/relatorios_/dre-ofertas': typeof AuthenticatedRelatoriosDreOfertasRoute
   '/_authenticated/relatorios_/kpis': typeof AuthenticatedRelatoriosKpisRoute
   '/api/public/icone': typeof ApiPublicIconeRoute
@@ -705,6 +715,7 @@ export interface FileRouteTypes {
     | '/projetos/templates'
     | '/relatorios/board'
     | '/relatorios/comercial'
+    | '/relatorios/dre-gerencial'
     | '/relatorios/dre-ofertas'
     | '/relatorios/kpis'
     | '/api/public/icone'
@@ -774,6 +785,7 @@ export interface FileRouteTypes {
     | '/projetos/templates'
     | '/relatorios/board'
     | '/relatorios/comercial'
+    | '/relatorios/dre-gerencial'
     | '/relatorios/dre-ofertas'
     | '/relatorios/kpis'
     | '/api/public/icone'
@@ -844,6 +856,7 @@ export interface FileRouteTypes {
     | '/_authenticated/projetos_/templates'
     | '/_authenticated/relatorios_/board'
     | '/_authenticated/relatorios_/comercial'
+    | '/_authenticated/relatorios_/dre-gerencial'
     | '/_authenticated/relatorios_/dre-ofertas'
     | '/_authenticated/relatorios_/kpis'
     | '/api/public/icone'
@@ -1312,6 +1325,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRelatoriosComercialRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/relatorios_/dre-gerencial': {
+      id: '/_authenticated/relatorios_/dre-gerencial'
+      path: '/relatorios/dre-gerencial'
+      fullPath: '/relatorios/dre-gerencial'
+      preLoaderRoute: typeof AuthenticatedRelatoriosDreGerencialRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/relatorios_/dre-ofertas': {
       id: '/_authenticated/relatorios_/dre-ofertas'
       path: '/relatorios/dre-ofertas'
@@ -1404,6 +1424,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedProjetosTemplatesRoute: typeof AuthenticatedProjetosTemplatesRoute
   AuthenticatedRelatoriosBoardRoute: typeof AuthenticatedRelatoriosBoardRoute
   AuthenticatedRelatoriosComercialRoute: typeof AuthenticatedRelatoriosComercialRoute
+  AuthenticatedRelatoriosDreGerencialRoute: typeof AuthenticatedRelatoriosDreGerencialRoute
   AuthenticatedRelatoriosDreOfertasRoute: typeof AuthenticatedRelatoriosDreOfertasRoute
   AuthenticatedRelatoriosKpisRoute: typeof AuthenticatedRelatoriosKpisRoute
 }
@@ -1448,6 +1469,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedProjetosTemplatesRoute: AuthenticatedProjetosTemplatesRoute,
   AuthenticatedRelatoriosBoardRoute: AuthenticatedRelatoriosBoardRoute,
   AuthenticatedRelatoriosComercialRoute: AuthenticatedRelatoriosComercialRoute,
+  AuthenticatedRelatoriosDreGerencialRoute:
+    AuthenticatedRelatoriosDreGerencialRoute,
   AuthenticatedRelatoriosDreOfertasRoute:
     AuthenticatedRelatoriosDreOfertasRoute,
   AuthenticatedRelatoriosKpisRoute: AuthenticatedRelatoriosKpisRoute,

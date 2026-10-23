@@ -22,8 +22,9 @@ const r2 = (v: number) => Math.round(v * 100) / 100;
 
 export function mesesEntre(inicio: string, fim: string): string[] {
   const out: string[] = [];
-  let [y, m] = inicio.slice(0, 7).split("-").map(Number);
-  const [fy, fm] = fim.slice(0, 7).split("-").map(Number);
+  let y = Number(inicio.slice(0, 4)), m = Number(inicio.slice(5, 7));
+  const fy = Number(fim.slice(0, 4)), fm = Number(fim.slice(5, 7));
+  if (!y || !m || !fy || !fm) return out;
   while (y < fy || (y === fy && m <= fm)) {
     out.push(`${y}-${String(m).padStart(2, "0")}`);
     m++; if (m > 12) { m = 1; y++; }

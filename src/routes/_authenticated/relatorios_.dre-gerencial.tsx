@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -161,9 +161,9 @@ function TabelaDre({ a, doc }: { a: ApuracaoDre; doc?: boolean }) {
         </tr>
       </thead>
       <tbody>
-        {GRUPOS.map((g) => {
+        {GRUPOS.flatMap((g) => {
           const cs = a.contas.filter((c) => c.natureza === g.nat);
-          return [
+          const rows: React.ReactNode[] = [
             <tr key={g.nat} className="border-t font-semibold">
               <td className="p-2">{g.titulo}</td>
               {meses.map((m) => <td key={m} className="p-2 text-right">{formatBRL(exib(g.nat, cs.reduce((s, c) => s + (c.meses[m] ?? 0), 0)))}</td>)}
@@ -176,17 +176,14 @@ function TabelaDre({ a, doc }: { a: ApuracaoDre; doc?: boolean }) {
                 <td className="p-2 text-right">{formatBRL(exib(g.nat, c.valor))}</td>
               </tr>
             )),
-            g.nat === "deducao" ? <tr key="rl">{null}</tr> : null,
-          ].filter(Boolean).map((x, i) => (g.nat === "deducao" && i === cs.length + 1 ? <TotalRow key="rl" el={total("= Receita líquida", a.receitaLiquida)} /> : x))
-            .concat(g.nat === "custo" ? [<TotalRow key="lb" el={total("= Lucro bruto", a.lucroBruto)} />] : [])
-            .concat(g.nat === "despesa" ? [<TotalRow key="ro" el={total("= Resultado operacional", a.resultadoOperacional)} />] : []);
+          ];
+          if (g.nat === "deducao") rows.push(<Fragment key="rl">{total("= Receita líquida", a.receitaLiquida)}</Fragment>);
+          if (g.nat === "custo") rows.push(<Fragment key="lb">{total("= Lucro bruto", a.lucroBruto)}</Fragment>);
+          if (g.nat === "despesa") rows.push(<Fragment key="ro">{total("= Resultado operacional", a.resultadoOperacional)}</Fragment>);
+          return rows;
         })}
         {total("= Resultado líquido", a.resultadoLiquido)}
       </tbody>
     </table>
   );
-}
-
-function TotalRow({ el }: { el: React.ReactElement }) {
-  return el;
 }
