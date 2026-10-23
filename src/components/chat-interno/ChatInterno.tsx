@@ -541,15 +541,79 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack }: { me: stri
   };
 
   const anexar = async (original: File) => {
-    const file = await comprimirImagem(original, "chat");
+    const file = original.type.startsWith("image/") ? await comprimirImagem(original, "chat") : original;
     setEnviando(true);
     const path = `interno/${crypto.randomUUID()}-${file.name.replace(/[^\w.-]/g, "_")}`;
     const up = await supabase.storage.from("chat_media").upload(path, file, file.type ? { contentType: file.type } : undefined);
     setEnviando(false);
     if (up.error) { toast.error(up.error.message); return; }
     const url = supabase.storage.from("chat_media").getPublicUrl(path).data.publicUrl;
-    await enviar({ url, nome: file.name, tipo: file.type.startsWith("image/") ? "imagem" : "documento" });
+    const t = file.type;
+    await enviar({ url, nome: file.name, tipo: t.startsWith("image/") ? "imagem" : t.startsWith("audio/") ? "audio" : t.startsWith("video/") ? "video" : "documento" });
     if (fileRef.current) fileRef.current.value = "";
+  };
+
+  const colar = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const item = Array.from(e.clipboardData.items).find((i) => i.type.startsWith("image/"));
+    const f = item?.getAsFile();
+    if (!f) return;
+    e.preventDefault();
+    const ext = f.type.split("/")[1] || "png";
+    void anexar(new File([f], `print-${Date.now()}.${ext}`, { type: f.type }));
+  };
+
+  const [gravando, setGravando] = useState(false);
+  const [segundos, setSegundos] = useState(0);
+  const recRef = useRef<MediaRecorder | null>(null);
+  useEffect(() => {
+    if (!gravando) return;
+    const t = setInterval(() => setSegundos((s) => s + 1), 1000);
+    return () => clearInterval(t);
+  }, [gravando]);
+
+  const gravar = async () => {
+    if (gravando) { recRef.current?.stop(); return; }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const rec = new MediaRecorder(stream);
+      const partes: Blob[] = [];
+      rec.ondataavailable = (ev) => ev.data.size && partes.push(ev.data);
+      rec.onstop = () => {
+        stream.getTracks().forEach((t) => t.stop());
+        setGravando(false);
+        const tipo = rec.mimeType || "audio/webm";
+        const blob = new Blob(partes, { type: tipo });
+        if (blob.size > 0 && !(rec as MediaRecorder & { cancelado?: boolean }).cancelado) {
+          void anexar(new File([blob], `audio-${Date.now()}.${tipo.includes("ogg") ? "ogg" : tipo.includes("mp4") ? "m4a" : "webm"}`, { type: tipo }));
+        }
+      };
+      recRef.current = rec;
+      setSegundos(0);
+      setGravando(true);
+      rec.start();
+    } catch {
+      toast.error("Não foi possível acessar o microfone. Verifique a permissão do navegador.");
+    }
+  };
+  const cancelarGravacao = () => {
+    const r = recRef.current as (MediaRecorder & { cancelado?: boolean }) | null;
+    if (r) { r.cancelado = true; r.stop(); }
+  };
+
+  const criarTarefa = async (txt: string) => {
+    const resp = sel.tipo === "direto" ? String(sel.outro["id"]) : me;
+    const titulo = txt.replace(/\s+/g, " ").trim().slice(0, 80) || "Tarefa do chat";
+    const { error } = await (supabase.from("tarefas_usuarios" as never) as unknown as ReturnType<typeof supabase.from>).insert({
+      empresa_id: empresaId, criado_por: me, responsavel_id: resp, titulo,
+      descricao: txt, data_solicitacao: new Date().toISOString().slice(0, 10), anexos: [],
+      status: resp === me ? "andamento" : "aguardando", prioridade: "media",
+    } as never);
+    if (error) { toast.error(error.message); return; }
+    toast.success(resp === me ? "Tarefa criada." : `Tarefa enviada para ${nome}. Aguardando aceite.`);
+    if (resp !== me && canalId) {
+      await supabase.from(TABLE).insert({ empresa_id: empresaId, canal_id: canalId, remetente_id: me, mensagem: `📋 Nova tarefa: ${titulo}`, anexos: [], lida_por: [me] });
+      void qc.invalidateQueries({ queryKey: key });
+    }
   };
 
   const iniciarChamada = async (video: boolean) => {
