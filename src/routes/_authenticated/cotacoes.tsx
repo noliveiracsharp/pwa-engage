@@ -58,7 +58,7 @@ function CotacoesPage() {
   const [wfOpen, setWfOpen] = useState(false);
   const [novoTitulo, setNovoTitulo] = useState<string | null>(null);
   const [criando, setCriando] = useState(false);
-  const novaCotacao = () => setNovoTitulo("Cotação avulsa");
+  const novaCotacao = () => setNovoTitulo("");
   const criarCotacao = async () => {
     if (novoTitulo === null) return;
     const titulo = novoTitulo;
@@ -67,7 +67,7 @@ function CotacoesPage() {
     const numero = await proximoNumero("cotacoes", "COT", empresaId);
     const { data, error } = await supabase
       .from("cotacoes")
-      .insert({ empresa_id: empresaId, numero, titulo: titulo.trim() || "Cotação avulsa", status: "pendente" })
+      .insert({ empresa_id: empresaId, numero, titulo: "", projeto_nome: titulo.trim() || null, status: "pendente" } as never)
       .select("id")
       .single();
     if (error) return void toast.error(error.message);
@@ -244,8 +244,8 @@ function CotacoesPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader><DialogTitle>Nova cotação avulsa</DialogTitle></DialogHeader>
           <div className="space-y-1.5">
-            <Label htmlFor="cot-titulo">Título</Label>
-            <Input id="cot-titulo" autoFocus value={novoTitulo ?? ""} onChange={(e) => setNovoTitulo(e.target.value)} onKeyDown={(e) => e.key === "Enter" && void criarCotacao()} />
+            <Label htmlFor="cot-titulo">Nome do projeto</Label>
+            <Input id="cot-titulo" autoFocus placeholder="Ex.: Condomínio Parque das Flores" value={novoTitulo ?? ""} onChange={(e) => setNovoTitulo(e.target.value)} onKeyDown={(e) => e.key === "Enter" && void criarCotacao()} />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setNovoTitulo(null)}>Cancelar</Button>
