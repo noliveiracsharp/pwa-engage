@@ -4,7 +4,7 @@ import { Linkify } from "@/components/ui/linkify";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Check, ArrowLeftRight, ArrowLeft, Maximize2, MessageSquare, Minimize2, Paperclip, Search, Send, Users, X, FileText, Loader2, Phone, Video } from "lucide-react";
+import { Plus, Check, ArrowLeftRight, ArrowLeft, Maximize2, MessageSquare, Minimize2, Paperclip, Search, Send, Users, X, FileText, Loader2, Phone, Video, Mic, ClipboardList } from "lucide-react";
 import { ChamadaFlutuante, duracao, novaSala, type Chamada } from "@/components/atendimentos/ChamadaFlutuante";
 
 const CONVITE = "📞CONVITE|";
@@ -322,15 +322,42 @@ export function ChatInterno({ sidebarOpen, onAbrir }: { sidebarOpen: boolean; on
           </div>
 
           {sel ? (
-            <Conversa
-              key={sel.tipo === "direto" ? `d${sel.outro["id"]}` : `g${sel.canal["id"]}`}
-              me={me}
-              empresaId={empresaId}
-              sel={sel}
-              usuarios={usuarios}
-              isOnline={sel.tipo === "direto" && online.has(String(sel.outro["id"]))}
-              onBack={() => setSel(null)}
-            />
+            <div className="flex min-h-0 flex-1">
+              <ScrollArea className="w-14 shrink-0 border-r border-border max-sm:hidden">
+                <div className="flex flex-col items-center gap-1 py-2">
+                  {lista.map((u) => {
+                    const id = String(u["id"]);
+                    const nomeU = String(pick(u, ["nome"], "Usuário"));
+                    const ativo = sel.tipo === "direto" && String(sel.outro["id"]) === id;
+                    const n = naoLidas[id] ?? 0;
+                    return (
+                      <Tooltip key={id}>
+                        <TooltipTrigger asChild>
+                          <button type="button" onClick={() => { setSel({ tipo: "direto", outro: u }); setNaoLidas((x) => ({ ...x, [id]: 0 })); }} aria-label={nomeU} className={cn("relative rounded-full p-0.5 transition", ativo ? "ring-2 ring-primary" : "hover:ring-2 hover:ring-accent")}>
+                            <Avatar className="h-9 w-9">
+                              <AvatarImage src={String(pick(u, ["foto"], ""))} alt={nomeU} />
+                              <AvatarFallback className="text-xs">{iniciais(nomeU)}</AvatarFallback>
+                            </Avatar>
+                            <span className={cn("absolute right-0 bottom-0 h-2.5 w-2.5 rounded-full border-2 border-popover", online.has(id) ? "bg-success" : "bg-muted-foreground")} />
+                            {n > 0 && <span className="absolute -top-1 -right-1 rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground">{n}</span>}
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="right">{nomeU}</TooltipContent>
+                      </Tooltip>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+              <Conversa
+                key={sel.tipo === "direto" ? `d${sel.outro["id"]}` : `g${sel.canal["id"]}`}
+                me={me}
+                empresaId={empresaId}
+                sel={sel}
+                usuarios={usuarios}
+                isOnline={sel.tipo === "direto" && online.has(String(sel.outro["id"]))}
+                onBack={() => setSel(null)}
+              />
+            </div>
           ) : (
             <Tabs defaultValue="atendentes" className="flex min-h-0 flex-1 flex-col animate-in fade-in">
               <TabsList className="mx-4 mt-3 grid grid-cols-3">
@@ -514,15 +541,79 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack }: { me: stri
   };
 
   const anexar = async (original: File) => {
-    const file = await comprimirImagem(original, "chat");
+    const file = original.type.startsWith("image/") ? await comprimirImagem(original, "chat") : original;
     setEnviando(true);
     const path = `interno/${crypto.randomUUID()}-${file.name.replace(/[^\w.-]/g, "_")}`;
     const up = await supabase.storage.from("chat_media").upload(path, file, file.type ? { contentType: file.type } : undefined);
     setEnviando(false);
     if (up.error) { toast.error(up.error.message); return; }
     const url = supabase.storage.from("chat_media").getPublicUrl(path).data.publicUrl;
-    await enviar({ url, nome: file.name, tipo: file.type.startsWith("image/") ? "imagem" : "documento" });
+    const t = file.type;
+    await enviar({ url, nome: file.name, tipo: t.startsWith("image/") ? "imagem" : t.startsWith("audio/") ? "audio" : t.startsWith("video/") ? "video" : "documento" });
     if (fileRef.current) fileRef.current.value = "";
+  };
+
+  const colar = (e: import("react").ClipboardEvent<HTMLInputElement>) => {
+    const item = Array.from(e.clipboardData.items).find((i) => i.type.startsWith("image/"));
+    const f = item?.getAsFile();
+    if (!f) return;
+    e.preventDefault();
+    const ext = f.type.split("/")[1] || "png";
+    void anexar(new File([f], `print-${Date.now()}.${ext}`, { type: f.type }));
+  };
+
+  const [gravando, setGravando] = useState(false);
+  const [segundos, setSegundos] = useState(0);
+  const recRef = useRef<MediaRecorder | null>(null);
+  useEffect(() => {
+    if (!gravando) return;
+    const t = setInterval(() => setSegundos((s) => s + 1), 1000);
+    return () => clearInterval(t);
+  }, [gravando]);
+
+  const gravar = async () => {
+    if (gravando) { recRef.current?.stop(); return; }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const rec = new MediaRecorder(stream);
+      const partes: Blob[] = [];
+      rec.ondataavailable = (ev) => ev.data.size && partes.push(ev.data);
+      rec.onstop = () => {
+        stream.getTracks().forEach((t) => t.stop());
+        setGravando(false);
+        const tipo = rec.mimeType || "audio/webm";
+        const blob = new Blob(partes, { type: tipo });
+        if (blob.size > 0 && !(rec as MediaRecorder & { cancelado?: boolean }).cancelado) {
+          void anexar(new File([blob], `audio-${Date.now()}.${tipo.includes("ogg") ? "ogg" : tipo.includes("mp4") ? "m4a" : "webm"}`, { type: tipo }));
+        }
+      };
+      recRef.current = rec;
+      setSegundos(0);
+      setGravando(true);
+      rec.start();
+    } catch {
+      toast.error("Não foi possível acessar o microfone. Verifique a permissão do navegador.");
+    }
+  };
+  const cancelarGravacao = () => {
+    const r = recRef.current as (MediaRecorder & { cancelado?: boolean }) | null;
+    if (r) { r.cancelado = true; r.stop(); }
+  };
+
+  const criarTarefa = async (txt: string) => {
+    const resp = sel.tipo === "direto" ? String(sel.outro["id"]) : me;
+    const titulo = txt.replace(/\s+/g, " ").trim().slice(0, 80) || "Tarefa do chat";
+    const { error } = await (supabase.from("tarefas_usuarios" as never) as unknown as ReturnType<typeof supabase.from>).insert({
+      empresa_id: empresaId, criado_por: me, responsavel_id: resp, titulo,
+      descricao: txt, data_solicitacao: new Date().toISOString().slice(0, 10), anexos: [],
+      status: resp === me ? "andamento" : "aguardando", prioridade: "media",
+    } as never);
+    if (error) { toast.error(error.message); return; }
+    toast.success(resp === me ? "Tarefa criada." : `Tarefa enviada para ${nome}. Aguardando aceite.`);
+    if (resp !== me && canalId) {
+      await supabase.from(TABLE).insert({ empresa_id: empresaId, canal_id: canalId, remetente_id: me, mensagem: `📋 Nova tarefa: ${titulo}`, anexos: [], lida_por: [me] });
+      void qc.invalidateQueries({ queryKey: key });
+    }
   };
 
   const iniciarChamada = async (video: boolean) => {
@@ -614,7 +705,7 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack }: { me: stri
             }
             const anexos = (Array.isArray(m["anexos"]) ? m["anexos"] : []) as Anexo[];
             return (
-              <div key={String(m["id"])} className={cn("flex", mine ? "justify-end" : "justify-start")}>
+              <div key={String(m["id"])} className={cn("group flex items-center gap-1", mine ? "flex-row-reverse" : "flex-row")}>
                 <div className={cn("max-w-[80%] rounded-2xl px-3 py-2 text-sm", mine ? "rounded-br-sm bg-primary text-primary-foreground" : "rounded-bl-sm bg-muted")}>
                   {!mine && sel.tipo === "grupo" && <p className="mb-0.5 text-xs font-semibold text-primary">{nomes.get(String(m["remetente_id"])) ?? "Usuário"}</p>}
                   {anexos.map((a, i) =>
@@ -622,6 +713,10 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack }: { me: stri
                       <a key={i} href={a.url} target="_blank" rel="noreferrer">
                         <img src={a.url} alt={a.nome || "Imagem"} className="mb-1 max-h-48 rounded-lg" />
                       </a>
+                    ) : a.tipo === "audio" ? (
+                      <audio key={i} src={a.url} controls preload="metadata" className="mb-1 h-10 w-56 max-w-full" />
+                    ) : a.tipo === "video" ? (
+                      <video key={i} src={a.url} controls preload="metadata" className="mb-1 max-h-60 max-w-full rounded-lg" />
                     ) : (
                       <a key={i} href={a.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 underline">
                         <FileText className="h-4 w-4" /> {a.nome || "Arquivo"}
@@ -631,6 +726,11 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack }: { me: stri
                   {anexos.length === 0 && <p className="break-words whitespace-pre-wrap"><Linkify text={String(m["mensagem"] ?? "")} /></p>}
                   <p className={cn("mt-0.5 text-right text-[10px]", mine ? "text-primary-foreground/70" : "text-muted-foreground")}>{hora(m["criado_em"])}</p>
                 </div>
+                {anexos.length === 0 && txt.trim() && (
+                  <Button type="button" variant="ghost" size="icon" className="h-7 w-7 shrink-0 opacity-0 transition group-hover:opacity-100 focus:opacity-100" title="Transformar em tarefa" aria-label="Transformar em tarefa" onClick={() => void criarTarefa(txt)}>
+                    <ClipboardList className="h-3.5 w-3.5" />
+                  </Button>
+                )}
               </div>
             );
           })}
@@ -645,15 +745,37 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack }: { me: stri
           void enviar();
         }}
       >
-        <input ref={fileRef} type="file" hidden onChange={(e) => e.target.files?.[0] && void anexar(e.target.files[0])} />
-        <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => fileRef.current?.click()} aria-label="Anexar arquivo" disabled={enviando || !canalId}>
-          <Paperclip className="h-4 w-4" />
-        </Button>
-        <UploadInfo perfil="chat" arquivos />
-        <Input value={texto} onChange={(e) => setTexto(e.target.value)} placeholder="Digite uma mensagem..." className="flex-1" />
-        <Button type="submit" size="icon" className="h-9 w-9 shrink-0" disabled={enviando || !texto.trim() || !canalId} aria-label="Enviar">
-          {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-        </Button>
+        <input ref={fileRef} type="file" accept="image/*,video/*,audio/*,application/pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.zip" hidden onChange={(e) => e.target.files?.[0] && void anexar(e.target.files[0])} />
+        {gravando ? (
+          <>
+            <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={cancelarGravacao} aria-label="Cancelar gravação">
+              <X className="h-4 w-4" />
+            </Button>
+            <div className="flex flex-1 items-center gap-2 px-2 text-sm text-destructive">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-destructive" /> Gravando {Math.floor(segundos / 60)}:{String(segundos % 60).padStart(2, "0")}
+            </div>
+            <Button type="button" size="icon" className="h-9 w-9 shrink-0" onClick={() => void gravar()} aria-label="Enviar áudio">
+              <Send className="h-4 w-4" />
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => fileRef.current?.click()} aria-label="Anexar arquivo, imagem ou vídeo" title="Anexar arquivo, imagem ou vídeo" disabled={enviando || !canalId}>
+              <Paperclip className="h-4 w-4" />
+            </Button>
+            <UploadInfo perfil="chat" arquivos />
+            <Input value={texto} onChange={(e) => setTexto(e.target.value)} onPaste={colar} placeholder="Digite uma mensagem ou cole um print (Ctrl+V)..." className="flex-1" />
+            {texto.trim() ? (
+              <Button type="submit" size="icon" className="h-9 w-9 shrink-0" disabled={enviando || !canalId} aria-label="Enviar">
+                {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              </Button>
+            ) : (
+              <Button type="button" size="icon" className="h-9 w-9 shrink-0" disabled={enviando || !canalId} onClick={() => void gravar()} aria-label="Gravar áudio" title="Gravar áudio">
+                {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mic className="h-4 w-4" />}
+              </Button>
+            )}
+          </>
+        )}
       </form>
     </div>
   );
