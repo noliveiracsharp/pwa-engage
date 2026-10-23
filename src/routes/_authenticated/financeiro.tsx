@@ -1052,6 +1052,16 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
   const [confirmarSerie, setConfirmarSerie] = useState(false);
   const [escopo, setEscopo] = useState<EscopoRecorrencia>("atual");
   const temSerie = !!registro && registro["origem_tipo"] === "manual" && (!!registro["origem_id"] || !!serieLegada(registro));
+  const [irmasOferta, setIrmasOferta] = useState<Row[]>([]);
+  useEffect(() => {
+    if (!registro || registro["origem_tipo"] !== "oferta" || !registro["origem_id"]) return;
+    let vivo = true;
+    void supabase.from("financeiro_titulos").select("*").eq("origem_tipo", "oferta").eq("origem_id", text(registro["origem_id"]))
+      .eq("tipo", tipo).eq("empresa_id", text(registro["empresa_id"]))
+      .then(({ data }) => { if (vivo) setIrmasOferta(parcelasDaOferta(registro, (data ?? []) as Row[])); });
+    return () => { vivo = false; };
+  }, [registro, tipo]);
+  const serieOferta = irmasOferta.length > 1;
   const qc = useQueryClient();
   const [novoParc, setNovoParc] = useState(false);
   const [salvandoParc, setSalvandoParc] = useState(false);
@@ -1247,7 +1257,7 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
     if (cartaoModo && limiteCartao > 0 && valor > dispCartao && !await confirmar(`Esta compra (${formatBRL(valor)}) passa do limite disponível do cartão (${formatBRL(dispCartao)}). Lançar mesmo assim?`)) return;
     { const prob = problemaParceiro(parceiros.find((p) => text(rowId(p)) === v.parceiro_id));
       if (prob && !registro && !await confirmar({ title: `Lançar para ${papel} irregular?`, description: `Este ${papel} está com ${prob}. Deseja lançar mesmo assim?`, confirmText: "Lançar mesmo assim", destructive: true })) return; }
-    if (temSerie && !alcance && !v.desvincular) { setEscopo("atual"); setConfirmarSerie(true); return; }
+    if ((temSerie || serieOferta) && !alcance && !v.desvincular) { setEscopo("atual"); setConfirmarSerie(true); return; }
     if (registro && v.status === "pago" && !v.pago_em) return void toast.error("Informe a data do pagamento.");
     setSalvando(true);
     try {
@@ -1280,7 +1290,15 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
         toast.success(`Compra dividida em ${ps.length} parcelas no cartão.`); onSaved(); onClose(); return;
       }
       if (registro) {
-        if (temSerie && alcance && !v.desvincular) {
+        if (serieOferta && alcance && !v.desvincular) {
+          const alvos = alvosOferta(registro, irmasOferta, alcance, hojeISO());
+          for (const t of alvos) {
+            const patch = t["id"] === registro["id"] ? base : patchRecorrencia(registro, t, base);
+            if (!Object.keys(patch).length) continue;
+            const { error } = await supabase.from("financeiro_titulos").update(patch as never).eq("id", text(t["id"]));
+            if (error) throw error;
+          }
+        } else if (temSerie && alcance && !v.desvincular) {
           let reg: Row = registro;
           let serieId = text(reg["origem_id"]);
           if (!serieId) {
