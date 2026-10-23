@@ -640,7 +640,7 @@ const DEFAULT_SECTIONS = [
 ];
 
 export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sections, readOnly }: Props) {
-  // Instâncias são geridas na aba "Canais & Instâncias" (/instancias), nunca no formulário.
+  // Instâncias pertencem à empresa editada: aba dentro do formulário.
   const baseTabs = (sections && sections.length > 0 ? sections : DEFAULT_SECTIONS);
   const tabs = [...baseTabs.filter((t) => t.kind === "dados"), ...baseTabs.filter((t) => t.kind !== "dados")];
   const [cnpjLoading, setCnpjLoading] = useState(false);
