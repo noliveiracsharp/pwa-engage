@@ -1093,7 +1093,7 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
   // Parcelas anteriores à atual (ex.: 1/10 quando começa na 2/10): só em lançamento novo.
   const [incluirAnt, setIncluirAnt] = useState(true);
   const [statusAnt, setStatusAnt] = useState<"pago" | "aberto">("pago");
-  const comAnt = !registro && incluirAnt;
+  const comAnt = incluirAnt;
   const algumMeio = ini > 1 || (cartaoModo && porItem && itens.some((i) => Math.floor(num(i.inicio)) > 1));
   const fC = num(cartao?.["dia_fechamento"]); const vC = num(cartao?.["dia_vencimento"]);
   type Prev = { vencimento: string; valor: number; descricao?: string; categoria?: string; rotulo?: string; grupo?: number; n?: number; total?: number; dataCompra?: string; anterior?: boolean };
@@ -1392,6 +1392,14 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
                   <div className="space-y-1"><Label>Quantidade de parcelas/meses da série</Label>
                     <Input type="number" min={1} max={120} className="w-32" value={novoTotal} onChange={(e) => setNovoTotal(e.target.value)} /></div>
                   <Button type="button" variant="outline" disabled={salvando || !num(novoTotal)} onClick={() => void aplicarTamanho()}>Alterar quantidade</Button>
+                  <div className="space-y-1"><Label>Esta é a parcela nº</Label>
+                    <Input type="number" min={1} max={Math.max(1, num(novoTotal))} className="w-24" value={posAtual} onChange={(e) => setPosAtual(e.target.value)} /></div>
+                  <div className="space-y-1"><Label>Anteriores criadas como</Label>
+                    <Select value={statusAntSerie} onValueChange={(x) => setStatusAntSerie(x as "pago" | "aberto")}>
+                      <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+                      <SelectContent><SelectItem value="aberto">Em aberto</SelectItem><SelectItem value="pago">Pago</SelectItem></SelectContent>
+                    </Select></div>
+                  <Button type="button" disabled={salvando || !num(novoTotal) || !num(posAtual)} onClick={() => void aplicarPosicao()}>Aplicar {posAtual || "?"} de {novoTotal || "?"}</Button>
                   <p className="w-full text-xs text-muted-foreground">Aumentar cria novas parcelas mensais após a última; reduzir remove só parcelas em aberto do final. Parcelas pagas são preservadas.</p>
                 </div>
               )}
@@ -1560,7 +1568,7 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
               <Input type="number" min={1} max={totParc} value={inicio} onChange={(e) => setInicio(e.target.value)} />
               <p className="text-muted-foreground text-xs">Ex.: 2 para lançar de 2/{totParc} em diante .</p></div>
           </>)}
-          {!registro && podeConverter && algumMeio && (
+          {podeConverter && algumMeio && (
             <div className="flex flex-wrap items-center gap-3 rounded-lg border p-3 sm:col-span-2">
               <Switch checked={incluirAnt} onCheckedChange={setIncluirAnt} id="incl-ant" />
               <Label htmlFor="incl-ant" className="flex-1">Incluir histórico das parcelas anteriores</Label>
