@@ -62,8 +62,6 @@ export function ItensTituloDialog({ titulo, itens, nomeParceiro, onClose, onEdit
             <div className="min-h-0 flex-1 overflow-auto overscroll-contain rounded border">
               <table className="w-full text-sm">
                 <thead className="bg-muted text-muted-foreground sticky top-0 z-10 text-xs">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50 text-muted-foreground text-xs">
                   <tr><th className="p-2 text-left">#</th><th className="p-2 text-left">Item</th><th className="p-2 text-left">Centro de custo</th><th className="p-2 text-left">Conta</th><th className="p-2 text-right">Valor</th></tr>
                 </thead>
                 <tbody>
