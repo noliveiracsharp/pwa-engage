@@ -4,7 +4,7 @@ import { MessageSquareText } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { CampoVariaveis } from "@/components/ui/campo-variaveis";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { MODELOS, textoModelo, useModelosMensagem } from "@/lib/mensagens-modelos";
@@ -45,9 +45,9 @@ export function ModelosMensagemButton({ empresaId }: { empresaId: string | numbe
                   <Label>{m.nome}</Label>
                   <Button variant="ghost" size="sm" onClick={() => setTextos({ ...textos, [m.chave]: m.padrao })}>Restaurar padrão</Button>
                 </div>
-                <Textarea rows={14} value={textos[m.chave] ?? ""} onChange={(e) => setTextos({ ...textos, [m.chave]: e.target.value })} />
+                <CampoVariaveis rows={14} empresaId={empresaId} variaveis={m.variaveis.map((chave) => ({ chave }))} value={textos[m.chave] ?? ""} onChange={(v) => setTextos({ ...textos, [m.chave]: v })} />
                 <p className="text-muted-foreground text-xs">
-                  Variáveis: {m.variaveis.map((v) => `{${v}}`).join(", ")}. Para negrito, use *texto*.
+                  Digite {"{{"} para inserir uma variável ou criar uma nova. Para negrito, use *texto*.
                 </p>
               </div>
             ))}
