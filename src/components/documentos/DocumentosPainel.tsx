@@ -362,7 +362,7 @@ export function DocumentosButton(props: PainelProps) {
   if (!props.entidadeId) return null;
   return (
     <>
-      <Button type="button" variant="ghost" size="sm" className="gap-1" onClick={() => setOpen(true)}>
+      <Button type="button" variant="outline" size="sm" className="h-9 gap-1.5" onClick={() => setOpen(true)}>
         <FileText className="size-4" /> Documentos
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>

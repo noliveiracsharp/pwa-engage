@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
+import { fetchCnpj } from "@/lib/cnpj";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Code, Inbox, Loader2, Pencil, Plus, QrCode, Search, Trash2, Unplug } from "lucide-react";
 import { digitsOnly } from "@/lib/input-masks";
@@ -611,7 +612,7 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
     if (!isValidCpfCnpj(cnpj)) { toast.error("CNPJ inválido."); return; }
     setCnpjLoading(true);
     try {
-      const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`);
+      const res = await fetchCnpj(cnpj);
       if (!res.ok) { toast.error("CNPJ não encontrado na Receita Federal."); return; }
       const d = await res.json();
       const tel = (v: unknown) => { const n = digitsOnly(String(v ?? "")); return n.length >= 10 ? `+55${n}` : ""; };

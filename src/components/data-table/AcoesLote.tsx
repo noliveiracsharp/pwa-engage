@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { fetchCnpj } from "@/lib/cnpj";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Layers, X } from "lucide-react";
@@ -146,7 +147,7 @@ export function useAcoesComuns(tabela: string) {
 export async function consultarCnpjReceita(row: Row, atualizar: (row: Row, v: Record<string, unknown>) => Promise<ResultadoLote>): Promise<ResultadoLote> {
   const cnpj = String(row["documento"] ?? "").replace(/\D/g, "");
   if (cnpj.length !== 14) return { ok: false, mensagem: "Não é CNPJ" };
-  const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`);
+  const res = await fetchCnpj(cnpj);
   if (!res.ok) return { ok: false, mensagem: res.status === 429 ? "Limite da Receita, tente depois" : "Não encontrado na Receita" };
   const d = await res.json();
   const situacao = String(d.descricao_situacao_cadastral ?? "").toUpperCase();

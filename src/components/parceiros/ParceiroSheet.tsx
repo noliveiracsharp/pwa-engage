@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { fetchCnpj } from "@/lib/cnpj";
 import { Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -194,7 +195,7 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly, saving, on
     if (!isValidCpfCnpj(cnpj)) { toast.error("CNPJ inválido."); return; }
     setCnpjLoading(true);
     try {
-      const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`);
+      const res = await fetchCnpj(cnpj);
       if (!res.ok) { toast.error("CNPJ não encontrado na Receita Federal."); return; }
       const d = await res.json();
       setF((p) => ({
