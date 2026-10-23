@@ -15,6 +15,9 @@ export type ConfirmOpts = {
   confirmText?: string;
   cancelText?: string;
   destructive?: boolean;
+  /** Botão extra (verde), ex.: "Sair e salvar". */
+  extraText?: string;
+  onExtra?: () => void;
 };
 export type PromptOpts = ConfirmOpts & { defaultValue?: string; placeholder?: string; multiline?: boolean; required?: boolean };
 
@@ -83,6 +86,11 @@ export function DialogoGlobal() {
               onKeyDown={(e) => { if (e.key === "Enter" && !bloqueado) fechar(true); }} />)}
         <AlertDialogFooter>
           {atual.kind !== "alert" && <AlertDialogCancel>{opts.cancelText ?? "Cancelar"}</AlertDialogCancel>}
+          {atual.kind === "confirm" && opts.extraText && (
+            <Button className="bg-success text-success-foreground hover:bg-success/90" onClick={() => { opts.onExtra?.(); fechar(false); }}>
+              {opts.extraText}
+            </Button>
+          )}
           <Button autoFocus={atual.kind !== "prompt"} disabled={bloqueado} variant={destructive ? "destructive" : "default"} onClick={() => fechar(true)}>
             {opts.confirmText ?? (atual.kind === "alert" ? "Entendi" : destructive ? "Sim, continuar" : "Confirmar")}
           </Button>
