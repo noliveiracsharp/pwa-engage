@@ -111,6 +111,8 @@ type ChildConfig = {
   columns: ChildColumn[];
   /** Quando true, as linhas são ordenadas por `ordem` e podem ser reordenadas arrastando. */
   sortable?: boolean;
+  /** Quando true, o formulário abre em painel lateral à direita. */
+  sheet?: boolean;
 };
 
 /** Linha arrastável: aplica ref/estilo do dnd-kit e exibe a alça à esquerda. */
@@ -148,9 +150,22 @@ export const INSTANCIAS: ChildConfig = {
       showIf: notChat,
     },
     { key: "n8n_webhook_url", label: "URL Webhook n8n", showIf: (d) => notChat(d) && d["tipo_envio"] === "n8n_webhook", required: true },
+    {
+      key: "finalidade",
+      label: "Finalidade",
+      type: "select",
+      options: ["ambos", "atendimento", "notificacoes"],
+      optionLabels: {
+        atendimento: "Atendimento geral (robô e CRM)",
+        notificacoes: "Notificações do sistema (cotações, ofertas, cobranças)",
+        ambos: "Ambos (atendimento e notificações)",
+      },
+      showIf: notChat,
+    },
     { key: "icone", label: "Ícone", type: "icon" },
     { key: "status", label: "Status", type: "boolean" },
   ],
+  sheet: true,
 };
 
 const CAMPOS: ChildConfig = {
