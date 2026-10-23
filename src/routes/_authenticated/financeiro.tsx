@@ -537,7 +537,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
           return (
             <div className="flex min-w-0 items-center gap-1.5">
               <p className="truncate font-medium">{m ? m[1] : text(t["descricao"])}</p>
-              {m && <span className="bg-primary/10 text-primary shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold tabular-nums">{m[2]}</span>}
+              {m && <span className="bg-muted text-foreground border-border shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-semibold tabular-nums">{m[2]}</span>}
             </div>
           );
         })()}
@@ -817,7 +817,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
                       const st = situacaoTitulo(t, hoje); const pos = posSerie.get(text(rowId(t)));
                       return (<tr key={text(rowId(t))} className="border-t">
                         <td className="p-2 whitespace-nowrap tabular-nums">{formatDate(t["data_compra"]) || "—"}</td>
-                        <td className="p-2">{text(t["descricao"]).replace(/\s*\(\d+\/\d+\)\s*$/, "")}{pos && <span className="bg-primary/10 text-primary ml-1.5 rounded px-1.5 py-0.5 text-[10px] font-semibold">{pos}</span>}
+                        <td className="p-2">{text(t["descricao"]).replace(/\s*\(\d+\/\d+\)\s*$/, "")}{pos && <span className="bg-muted text-foreground border-border ml-1.5 rounded border px-1.5 py-0.5 text-[10px] font-semibold tabular-nums">{pos}</span>}
                           {nomeParc(t["parceiro_id"]) && <p className="text-muted-foreground text-xs">{nomeParc(t["parceiro_id"])}</p>}{Boolean(t["cliente_atendido_id"]) && <p className="text-muted-foreground text-xs">Ref.: {nomeParc(t["cliente_atendido_id"])}</p>}</td>
                         <td className="p-2">{text(t["categoria"]) || "—"}</td>
                         <td className="p-2 text-right font-medium tabular-nums">{formatBRL(t["valor"])}</td>
