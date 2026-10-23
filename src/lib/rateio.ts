@@ -12,6 +12,8 @@ export type FonteRateio = {
   plano_contas_id: string | null;
   /** Só Ofertas: itens recorrentes alimentam as mensalidades; os demais, a implantação. */
   recorrente?: boolean;
+  /** Só Ofertas: item de produto (NF-e); os demais são serviços (NFS-e). */
+  produto?: boolean;
   /** Só Ofertas: pagador do item quando diferente do cliente. */
   pagador?: string | null;
   origem_tipo: "oferta_item" | "pedido_item";
@@ -66,4 +68,14 @@ export function linhasDoTitulo(t: NovoTitulo, fontes: FonteRateio[], clienteId: 
 /** Diferença entre o total do título e a soma das linhas (0 = fechado). */
 export function diferencaRateio(valorTitulo: number, linhas: { valor: number }[]): number {
   return round2(round2(valorTitulo) - linhas.reduce((s, l) => s + num(l.valor), 0));
+}
+
+/** Valores de NF-e (produtos) e NFS-e (serviços) de um título gerado pela Oferta, a partir do rateio. */
+export function valoresFiscaisDoTitulo(t: NovoTitulo, fontes: FonteRateio[], clienteId: string | null = null): { nfe_valor: number; nfse_valor: number } | null {
+  const fs = fontesDoTitulo(t, fontes, clienteId).filter((f) => f.origem_tipo === "oferta_item");
+  const linhas = ratearValor(t.valor, fs);
+  if (!linhas.length) return null;
+  const prod = new Set(fs.filter((f) => f.produto).map((f) => f.origem_id));
+  const nfe = round2(linhas.filter((l) => prod.has(l.origem_id)).reduce((s, l) => s + l.valor, 0));
+  return { nfe_valor: nfe, nfse_valor: round2(round2(t.valor) - nfe) };
 }
