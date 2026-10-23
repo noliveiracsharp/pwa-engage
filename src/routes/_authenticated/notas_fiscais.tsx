@@ -107,7 +107,7 @@ function NotasFiscaisPage() {
       if (!(await confirmar({ title: "Emitir nota fiscal?", description: `${n["tipo"] === "nfe" ? "NF-e" : "NFS-e"} de ${formatBRL(n["valor"])} para ${nomeParc(p)}.` }))) return;
     }
     if (tipo === "cancelar") {
-      motivo = await perguntar({ title: "Cancelar nota fiscal", description: "Informe a justificativa (mínimo 15 caracteres).", multiline: true } as never);
+      motivo = await perguntar({ title: "Cancelar nota fiscal", description: "Informe a justificativa (mínimo 15 caracteres).", multiline: true, required: true });
       if (!motivo) return;
     }
     setOcupado(id);

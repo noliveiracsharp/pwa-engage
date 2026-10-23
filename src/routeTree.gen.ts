@@ -39,6 +39,7 @@ import { Route as AuthenticatedLaudosRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedManutencoesRouteImport } from './routes/_authenticated/manutencoes'
 import { Route as AuthenticatedMarcasRouteImport } from './routes/_authenticated/marcas'
 import { Route as AuthenticatedMeusDadosRouteImport } from './routes/_authenticated/meus-dados'
+import { Route as AuthenticatedNotas_fiscaisRouteImport } from './routes/_authenticated/notas_fiscais'
 import { Route as AuthenticatedOrcamentosRouteImport } from './routes/_authenticated/orcamentos'
 import { Route as AuthenticatedParceirosRouteImport } from './routes/_authenticated/parceiros'
 import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated/perfil'
@@ -229,6 +230,12 @@ const AuthenticatedMeusDadosRoute = AuthenticatedMeusDadosRouteImport.update({
   path: '/meus-dados',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedNotas_fiscaisRoute =
+  AuthenticatedNotas_fiscaisRouteImport.update({
+    id: '/notas_fiscais',
+    path: '/notas_fiscais',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedOrcamentosRoute = AuthenticatedOrcamentosRouteImport.update({
   id: '/orcamentos',
   path: '/orcamentos',
@@ -456,6 +463,7 @@ export interface FileRoutesByFullPath {
   '/manutencoes': typeof AuthenticatedManutencoesRoute
   '/marcas': typeof AuthenticatedMarcasRoute
   '/meus-dados': typeof AuthenticatedMeusDadosRoute
+  '/notas_fiscais': typeof AuthenticatedNotas_fiscaisRoute
   '/orcamentos': typeof AuthenticatedOrcamentosRoute
   '/parceiros': typeof AuthenticatedParceirosRoute
   '/perfil': typeof AuthenticatedPerfilRoute
@@ -524,6 +532,7 @@ export interface FileRoutesByTo {
   '/manutencoes': typeof AuthenticatedManutencoesRoute
   '/marcas': typeof AuthenticatedMarcasRoute
   '/meus-dados': typeof AuthenticatedMeusDadosRoute
+  '/notas_fiscais': typeof AuthenticatedNotas_fiscaisRoute
   '/orcamentos': typeof AuthenticatedOrcamentosRoute
   '/parceiros': typeof AuthenticatedParceirosRoute
   '/perfil': typeof AuthenticatedPerfilRoute
@@ -594,6 +603,7 @@ export interface FileRoutesById {
   '/_authenticated/manutencoes': typeof AuthenticatedManutencoesRoute
   '/_authenticated/marcas': typeof AuthenticatedMarcasRoute
   '/_authenticated/meus-dados': typeof AuthenticatedMeusDadosRoute
+  '/_authenticated/notas_fiscais': typeof AuthenticatedNotas_fiscaisRoute
   '/_authenticated/orcamentos': typeof AuthenticatedOrcamentosRoute
   '/_authenticated/parceiros': typeof AuthenticatedParceirosRoute
   '/_authenticated/perfil': typeof AuthenticatedPerfilRoute
@@ -664,6 +674,7 @@ export interface FileRouteTypes {
     | '/manutencoes'
     | '/marcas'
     | '/meus-dados'
+    | '/notas_fiscais'
     | '/orcamentos'
     | '/parceiros'
     | '/perfil'
@@ -732,6 +743,7 @@ export interface FileRouteTypes {
     | '/manutencoes'
     | '/marcas'
     | '/meus-dados'
+    | '/notas_fiscais'
     | '/orcamentos'
     | '/parceiros'
     | '/perfil'
@@ -801,6 +813,7 @@ export interface FileRouteTypes {
     | '/_authenticated/manutencoes'
     | '/_authenticated/marcas'
     | '/_authenticated/meus-dados'
+    | '/_authenticated/notas_fiscais'
     | '/_authenticated/orcamentos'
     | '/_authenticated/parceiros'
     | '/_authenticated/perfil'
@@ -1080,6 +1093,13 @@ declare module '@tanstack/react-router' {
       path: '/meus-dados'
       fullPath: '/meus-dados'
       preLoaderRoute: typeof AuthenticatedMeusDadosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/notas_fiscais': {
+      id: '/_authenticated/notas_fiscais'
+      path: '/notas_fiscais'
+      fullPath: '/notas_fiscais'
+      preLoaderRoute: typeof AuthenticatedNotas_fiscaisRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/orcamentos': {
@@ -1364,6 +1384,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedManutencoesRoute: typeof AuthenticatedManutencoesRoute
   AuthenticatedMarcasRoute: typeof AuthenticatedMarcasRoute
   AuthenticatedMeusDadosRoute: typeof AuthenticatedMeusDadosRoute
+  AuthenticatedNotas_fiscaisRoute: typeof AuthenticatedNotas_fiscaisRoute
   AuthenticatedOrcamentosRoute: typeof AuthenticatedOrcamentosRoute
   AuthenticatedParceirosRoute: typeof AuthenticatedParceirosRoute
   AuthenticatedPerfilRoute: typeof AuthenticatedPerfilRoute
@@ -1407,6 +1428,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedManutencoesRoute: AuthenticatedManutencoesRoute,
   AuthenticatedMarcasRoute: AuthenticatedMarcasRoute,
   AuthenticatedMeusDadosRoute: AuthenticatedMeusDadosRoute,
+  AuthenticatedNotas_fiscaisRoute: AuthenticatedNotas_fiscaisRoute,
   AuthenticatedOrcamentosRoute: AuthenticatedOrcamentosRoute,
   AuthenticatedParceirosRoute: AuthenticatedParceirosRoute,
   AuthenticatedPerfilRoute: AuthenticatedPerfilRoute,

@@ -2,7 +2,7 @@ import { num, round2 } from "@/lib/orcamentos";
 import type { Row } from "@/lib/row";
 
 export type TipoNota = "nfe" | "nfse";
-export type ItemNota = { item_id: string | null; descricao: string; quantidade: number; valor_unitario: number; total: number; ncm?: string; cfop?: string; lc116?: string };
+export type ItemNota = { item_id: string | null; descricao: string; quantidade: number; valor_unitario: number; total: number; ncm?: string | undefined; cfop?: string | undefined; lc116?: string | undefined };
 export type RascunhoNota = { tipo: TipoNota; parceiro_id: string | null; valor: number; itens: ItemNota[] };
 
 export const STATUS_NOTA: Record<string, { label: string; badge: string }> = {
