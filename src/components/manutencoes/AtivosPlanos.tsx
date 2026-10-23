@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import QRCode from "qrcode";
-import { CalendarClock, Printer, QrCode, RefreshCw } from "lucide-react";
+import { CalendarClock, Copy, Plus, Printer, QrCode, RefreshCw, Trash2 } from "lucide-react";
 import { DataTable, type Column } from "@/components/data-table/DataTable";
 import { FilterInput } from "@/components/data-table/FilterField";
 import { SearchSelect } from "@/components/data-table/SearchSelect";
@@ -21,7 +21,7 @@ import { matchesAny } from "@/lib/input-masks";
 import { imprimirElemento } from "@/lib/propostas";
 import { pick, type Row } from "@/lib/row";
 import {
-  FREQUENCIAS, checklistDoModelo, linkAtivo, prazoSla, preventivasAGerar, proximoNumeroOs, type PlanoPreventiva,
+  FREQUENCIAS, checklistDaVisita, checklistDoModelo, type ItemRoteiro, linkAtivo, prazoSla, preventivasAGerar, proximoNumeroOs, type PlanoPreventiva,
 } from "@/lib/manutencoes";
 
 const fmtData = (v: unknown) => (v ? new Date(`${text(v).slice(0, 10)}T12:00:00`).toLocaleDateString("pt-BR") : "—");
@@ -39,80 +39,126 @@ const Campo = ({ label, children, className }: { label: string; children: React.
 
 /* ------------------------------- Equipamentos ------------------------------- */
 
-const VAZIO_ATIVO = { parceiro_id: "", nome: "", categoria: "", marca: "", modelo: "", numero_serie: "", local: "", instalado_em: "", garantia_ate: "", observacoes: "", ativo: true };
+type LinhaAtivo = { id?: string; nome: string; categoria: string; marca: string; modelo: string; numero_serie: string; local: string; instalado_em: string; garantia_ate: string; ativo: boolean };
+const LINHA_VAZIA: LinhaAtivo = { nome: "", categoria: "", marca: "", modelo: "", numero_serie: "", local: "", instalado_em: "", garantia_ate: "", ativo: true };
+const paraLinha = (r: Row): LinhaAtivo => ({
+  id: text(rowId(r)), nome: text(r["nome"]), categoria: text(r["categoria"]), marca: text(r["marca"]), modelo: text(r["modelo"]),
+  numero_serie: text(r["numero_serie"]), local: text(r["local"]), instalado_em: text(r["instalado_em"]).slice(0, 10),
+  garantia_ate: text(r["garantia_ate"]).slice(0, 10), ativo: r["ativo"] !== false,
+});
 
+/** Equipamentos organizados por cliente: cada cliente abre a sua lista completa para editar em lote. */
 export function Ativos({ podeEditar, podeExcluir }: { podeEditar: boolean; podeExcluir: boolean }) {
   const qc = useQueryClient();
   const { empresaId } = useAudit();
   const { data: ativos = [], isLoading } = useTableRows("manutencao_ativos");
-  const remove = useDeleteRecord("manutencao_ativos");
   const clientes = useClientes();
   const [busca, setBusca] = useState("");
-  const [edit, setEdit] = useState<Row | null | undefined>(undefined);
-  const [f, setF] = useState(VAZIO_ATIVO);
+  const [cliente, setCliente] = useState<string | null>(null); // null = fechado; "" = novo
+  const [clienteSel, setClienteSel] = useState("");
+  const [linhas, setLinhas] = useState<LinhaAtivo[]>([]);
   const [etiquetas, setEtiquetas] = useState<Row[] | null>(null);
 
-  const abrir = (r: Row | null) => {
-    setEdit(r);
-    setF(r ? Object.fromEntries(Object.keys(VAZIO_ATIVO).map((k) => [k, k === "ativo" ? r[k] !== false : text(r[k]).slice(0, k.endsWith("_em") || k.endsWith("_ate") ? 10 : undefined)])) as typeof VAZIO_ATIVO : VAZIO_ATIVO);
+  const porCliente = useMemo(() => {
+    const m = new Map<string, Row[]>();
+    for (const a of ativos) { const k = text(a["parceiro_id"]); m.set(k, [...(m.get(k) ?? []), a]); }
+    return m;
+  }, [ativos]);
+  const rows = useMemo(() => [...porCliente.entries()].map(([id, lista]) => ({
+    id, cliente: clientes.nome.get(id) || "—", qtd: lista.length, ativos_qtd: lista.filter((a) => a["ativo"] !== false).length,
+    categorias: [...new Set(lista.map((a) => text(a["categoria"])).filter(Boolean))].sort().join(", "),
+    busca: lista.map((a) => [a["nome"], a["numero_serie"], a["local"], a["marca"]].map(text).join(" ")).join(" "),
+  }) as Row).filter((r) => matchesAny([r["cliente"], r["categorias"], r["busca"]], busca))
+    .sort((x, y) => text(x["cliente"]).localeCompare(text(y["cliente"]), "pt-BR")), [porCliente, clientes, busca]);
+
+  const abrir = (id: string) => {
+    setCliente(id); setClienteSel(id);
+    const lista = (porCliente.get(id) ?? []).map(paraLinha).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+    setLinhas(lista.length ? lista : [{ ...LINHA_VAZIA }]);
   };
-  const rows = useMemo(() => ativos.filter((r) => matchesAny([r["nome"], r["marca"], r["modelo"], r["numero_serie"], r["local"], clientes.nome.get(text(r["parceiro_id"]))], busca)), [ativos, busca, clientes]);
+  const setLinha = (i: number, p: Partial<LinhaAtivo>) => setLinhas((l) => l.map((x, j) => (j === i ? { ...x, ...p } : x)));
 
   const save = useMutation({
     mutationFn: async () => {
-      if (!f.nome.trim()) throw new Error("Informe o nome do equipamento.");
-      if (!f.parceiro_id) throw new Error("Selecione o cliente.");
-      const payload = Object.fromEntries(Object.entries(f).map(([k, v]) => [k, typeof v === "string" ? v.trim() || null : v]));
-      const { error } = edit
-        ? await supabase.from("manutencao_ativos" as never).update(payload as never).eq("id", text(rowId(edit)))
-        : await supabase.from("manutencao_ativos" as never).insert({ ...payload, empresa_id: empresaId } as never);
-      if (error) throw error;
+      if (!clienteSel) throw new Error("Selecione o cliente.");
+      const validas = linhas.filter((l) => l.nome.trim() || l.id);
+      if (validas.some((l) => !l.nome.trim())) throw new Error("Todo equipamento precisa de nome.");
+      const limpa = (l: LinhaAtivo) => Object.fromEntries(Object.entries(l).filter(([k]) => k !== "id").map(([k, v]) => [k, typeof v === "string" ? v.trim() || null : v]));
+      const existentes = new Set((porCliente.get(cliente ?? "") ?? []).map((r) => text(rowId(r))));
+      const mantidos = new Set(validas.map((l) => l.id).filter(Boolean));
+      const removidos = [...existentes].filter((id) => !mantidos.has(id));
+      if (removidos.length) {
+        if (!podeExcluir) throw new Error("Você não tem permissão para excluir equipamentos.");
+        const { error } = await supabase.from("manutencao_ativos" as never).delete().in("id", removidos);
+        if (error) throw error;
+      }
+      for (const l of validas.filter((x) => x.id)) {
+        const { error } = await supabase.from("manutencao_ativos" as never).update({ ...limpa(l), parceiro_id: clienteSel } as never).eq("id", l.id!);
+        if (error) throw error;
+      }
+      const novos = validas.filter((x) => !x.id).map((l) => ({ ...limpa(l), parceiro_id: clienteSel, empresa_id: empresaId }));
+      if (novos.length) {
+        const { error } = await supabase.from("manutencao_ativos" as never).insert(novos as never);
+        if (error) throw error;
+      }
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["table", "manutencao_ativos"] }); toast.success("Equipamento salvo."); setEdit(undefined); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["table", "manutencao_ativos"] }); toast.success("Equipamentos do cliente salvos."); setCliente(null); },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro ao salvar."),
   });
 
   const columns: Column[] = [
-    { key: "nome", header: "Equipamento", fields: ["nome"], render: (r) => <span className="font-medium">{text(r["nome"])}</span> },
-    { key: "cliente", header: "Cliente", fields: ["parceiro_id"], render: (r) => <div className="max-w-56 truncate">{clientes.nome.get(text(r["parceiro_id"])) || "—"}</div> },
-    { key: "local", header: "Local", fields: ["local"], render: (r) => text(r["local"]) || "—" },
-    { key: "marca", header: "Marca / modelo", fields: ["marca"], render: (r) => [text(r["marca"]), text(r["modelo"])].filter(Boolean).join(" · ") || "—" },
-    { key: "serie", header: "Nº série", fields: ["numero_serie"], render: (r) => text(r["numero_serie"]) || "—" },
-    { key: "qr", header: "QR Code", fields: ["token"], render: (r) => (
-      <Button size="icon" variant="ghost" aria-label="Etiqueta QR Code" disabled={!r["token"]} onClick={(e) => { e.stopPropagation(); setEtiquetas([r]); }}><QrCode className="h-4 w-4" /></Button>
+    { key: "cliente", header: "Cliente", fields: ["cliente"], render: (r) => <span className="font-medium">{text(r["cliente"])}</span> },
+    { key: "qtd", header: "Equipamentos", fields: ["qtd"], render: (r) => `${text(r["qtd"])}${r["ativos_qtd"] !== r["qtd"] ? ` (${text(r["ativos_qtd"])} ativos)` : ""}` },
+    { key: "cat", header: "Categorias", fields: ["categorias"], render: (r) => <div className="max-w-72 truncate">{text(r["categorias"]) || "—"}</div> },
+    { key: "qr", header: "QR Code", fields: ["id"], render: (r) => (
+      <Button size="icon" variant="ghost" aria-label="Etiquetas do cliente" onClick={(e) => { e.stopPropagation(); setEtiquetas(porCliente.get(text(r["id"])) ?? []); }}><QrCode className="h-4 w-4" /></Button>
     ) },
   ];
+  const opcoesCliente = clientes.lista.filter((o) => o.value === cliente || !porCliente.has(o.value)).sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
 
   return (
     <div className="space-y-3">
-      <DataTable title="Equipamentos dos clientes" columns={columns} rows={rows} loading={isLoading}
-        getValue={(r, fl) => r[fl[0]!]} rowKey={(r) => text(rowId(r))}
-        onAdd={podeEditar ? () => abrir(null) : undefined} onEdit={podeEditar ? abrir : undefined}
-        onDelete={podeExcluir ? (r) => remove.mutate(r) : undefined}
+      <DataTable title="Equipamentos por cliente" columns={columns} rows={rows} loading={isLoading}
+        getValue={(r, fl) => r[fl[0]!]} rowKey={(r) => text(r["id"])}
+        onAdd={podeEditar ? () => { setCliente(""); setClienteSel(""); setLinhas([{ ...LINHA_VAZIA }]); } : undefined}
+        onEdit={(r) => abrir(text(r["id"]))}
         filters={<>
-          <FilterInput label="Busca" value={busca} onChange={setBusca} placeholder="Equipamento, cliente, série…" />
-          <div className="flex items-end"><Button variant="outline" size="sm" disabled={!rows.length} onClick={() => setEtiquetas(rows)}><Printer className="mr-1 h-4 w-4" /> Etiquetas da lista</Button></div>
+          <FilterInput label="Busca" value={busca} onChange={setBusca} placeholder="Cliente, equipamento, série…" />
+          <div className="flex items-end"><Button variant="outline" size="sm" disabled={!ativos.length} onClick={() => setEtiquetas(ativos)}><Printer className="mr-1 h-4 w-4" /> Etiquetas de todos</Button></div>
         </>}
       />
-      <Sheet open={edit !== undefined} onOpenChange={(o) => !o && setEdit(undefined)}>
-        <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-2xl">
-          <SheetHeader className="border-b p-4"><SheetTitle>{edit ? "Editar equipamento" : "Novo equipamento"}</SheetTitle></SheetHeader>
-          <div className="grid flex-1 content-start gap-3 overflow-y-auto p-4 sm:grid-cols-2">
-            <Campo label="Cliente *" className="sm:col-span-2"><SearchSelect value={f.parceiro_id} onChange={(v) => setF({ ...f, parceiro_id: v })} options={clientes.lista} placeholder="Selecione o cliente" /></Campo>
-            <Campo label="Nome do equipamento *"><Input value={f.nome} onChange={(e) => setF({ ...f, nome: e.target.value })} placeholder="Ex.: Motor portão garagem" /></Campo>
-            <Campo label="Categoria"><Input value={f.categoria} onChange={(e) => setF({ ...f, categoria: e.target.value })} placeholder="Ex.: Portões, CFTV" /></Campo>
-            <Campo label="Marca"><Input value={f.marca} onChange={(e) => setF({ ...f, marca: e.target.value })} /></Campo>
-            <Campo label="Modelo"><Input value={f.modelo} onChange={(e) => setF({ ...f, modelo: e.target.value })} /></Campo>
-            <Campo label="Número de série"><Input value={f.numero_serie} onChange={(e) => setF({ ...f, numero_serie: e.target.value })} /></Campo>
-            <Campo label="Local no cliente"><Input value={f.local} onChange={(e) => setF({ ...f, local: e.target.value })} placeholder="Ex.: Bloco A — subsolo" /></Campo>
-            <Campo label="Instalado em"><Input type="date" value={f.instalado_em} onChange={(e) => setF({ ...f, instalado_em: e.target.value })} /></Campo>
-            <Campo label="Garantia até"><Input type="date" value={f.garantia_ate} onChange={(e) => setF({ ...f, garantia_ate: e.target.value })} /></Campo>
-            <Campo label="Observações" className="sm:col-span-2"><Textarea rows={3} value={f.observacoes} onChange={(e) => setF({ ...f, observacoes: e.target.value })} /></Campo>
-            <label className="flex items-center gap-2 text-sm"><Switch checked={f.ativo} onCheckedChange={(v) => setF({ ...f, ativo: v })} /> Equipamento ativo</label>
+      <Sheet open={cliente !== null} onOpenChange={(o) => !o && setCliente(null)}>
+        <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-[60vw] max-lg:sm:max-w-full">
+          <SheetHeader className="border-b p-4"><SheetTitle>{cliente ? `Equipamentos — ${clientes.nome.get(cliente) ?? ""}` : "Equipamentos de um cliente"}</SheetTitle></SheetHeader>
+          <div className="flex-1 space-y-3 overflow-y-auto p-4">
+            <Campo label="Cliente *"><SearchSelect value={clienteSel} onChange={setClienteSel} options={opcoesCliente} placeholder="Selecione o cliente" /></Campo>
+            {linhas.map((l, i) => (
+              <div key={l.id ?? `n${i}`} className="space-y-2 rounded-lg border bg-muted/30 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-semibold">{i + 1}. {l.nome || "Novo equipamento"}</span>
+                  <div className="flex items-center gap-1">
+                    <label className="mr-2 flex items-center gap-1.5 text-xs"><Switch checked={l.ativo} disabled={!podeEditar} onCheckedChange={(v) => setLinha(i, { ativo: v })} /> Ativo</label>
+                    {podeEditar && <Button size="icon" variant="ghost" aria-label="Duplicar" onClick={() => setLinhas((x) => [...x.slice(0, i + 1), { ...l, id: undefined, numero_serie: "" }, ...x.slice(i + 1)])}><Copy className="h-4 w-4" /></Button>}
+                    {podeEditar && (!l.id || podeExcluir) && <Button size="icon" variant="ghost" aria-label="Remover" onClick={() => setLinhas((x) => x.filter((_, j) => j !== i))}><Trash2 className="h-4 w-4" /></Button>}
+                  </div>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  <Input disabled={!podeEditar} value={l.nome} onChange={(e) => setLinha(i, { nome: e.target.value })} placeholder="Nome * (ex.: Motor portão)" />
+                  <Input disabled={!podeEditar} value={l.categoria} onChange={(e) => setLinha(i, { categoria: e.target.value })} placeholder="Categoria (ex.: CFTV)" />
+                  <Input disabled={!podeEditar} value={l.local} onChange={(e) => setLinha(i, { local: e.target.value })} placeholder="Local (ex.: Bloco A)" />
+                  <Input disabled={!podeEditar} value={l.marca} onChange={(e) => setLinha(i, { marca: e.target.value })} placeholder="Marca" />
+                  <Input disabled={!podeEditar} value={l.modelo} onChange={(e) => setLinha(i, { modelo: e.target.value })} placeholder="Modelo" />
+                  <Input disabled={!podeEditar} value={l.numero_serie} onChange={(e) => setLinha(i, { numero_serie: e.target.value })} placeholder="Nº de série" />
+                  <div className="space-y-1"><Label className="text-xs">Instalado em</Label><Input type="date" disabled={!podeEditar} value={l.instalado_em} onChange={(e) => setLinha(i, { instalado_em: e.target.value })} /></div>
+                  <div className="space-y-1"><Label className="text-xs">Garantia até</Label><Input type="date" disabled={!podeEditar} value={l.garantia_ate} onChange={(e) => setLinha(i, { garantia_ate: e.target.value })} /></div>
+                </div>
+              </div>
+            ))}
+            {podeEditar && <Button variant="outline" onClick={() => setLinhas((x) => [...x, { ...LINHA_VAZIA }])}><Plus className="mr-1 h-4 w-4" /> Adicionar equipamento</Button>}
           </div>
           <div className="flex justify-end gap-2 border-t p-4">
-            <Button variant="outline" onClick={() => setEdit(undefined)}>Cancelar</Button>
-            <Button onClick={() => save.mutate()} disabled={save.isPending}>Salvar</Button>
+            <Button variant="outline" onClick={() => setCliente(null)}>Cancelar</Button>
+            {podeEditar && <Button onClick={() => save.mutate()} disabled={save.isPending}>Salvar</Button>}
           </div>
         </SheetContent>
       </Sheet>
