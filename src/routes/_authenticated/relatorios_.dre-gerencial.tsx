@@ -31,7 +31,7 @@ export const Route = createFileRoute("/_authenticated/relatorios_/dre-gerencial"
 
 const ano = new Date().getFullYear();
 const pct = (v: number) => `${v.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`;
-const mesLabel = (m: string) => { const [y, mm] = m.split("-"); return `${mm}/${y.slice(2)}`; };
+const mesLabel = (m: string) => `${m.slice(5, 7)}/${m.slice(2, 4)}`;
 const GRUPOS: { nat: Natureza; titulo: string }[] = [
   { nat: "receita", titulo: "Receita bruta" },
   { nat: "deducao", titulo: "(-) Deduções" },

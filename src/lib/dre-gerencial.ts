@@ -3,7 +3,7 @@ type R = Record<string, unknown>;
 export type Natureza = "receita" | "deducao" | "custo" | "despesa" | "financeiro";
 export const NATUREZAS: Natureza[] = ["receita", "deducao", "custo", "despesa", "financeiro"];
 export type Regime = "competencia" | "caixa";
-export type FiltroDre = { inicio: string; fim: string; regime: Regime; centro?: string };
+export type FiltroDre = { inicio: string; fim: string; regime: Regime; centro?: string | undefined };
 
 export type ContaDre = { id: string; codigo: string; descricao: string; natureza: Natureza; valor: number; meses: Record<string, number> };
 export type ApuracaoDre = {
