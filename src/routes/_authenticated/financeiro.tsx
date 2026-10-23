@@ -48,7 +48,7 @@ import { calcularTarifa, modalidadeTarifa } from "@/lib/financeiro-tarifas";
 import { formatBRL, formatDate, num, round2 } from "@/lib/orcamentos";
 import { uploadFoto } from "@/lib/laudos";
 import { erroFinanceiro } from "@/lib/financeiro-db";
-import { alvosRecorrencia, parcelasLegadas, patchRecorrencia, planoTamanhoSerie, serieLegada, type EscopoRecorrencia } from "@/lib/financeiro-recorrencia";
+import { alvosRecorrencia, parcelasLegadas, patchRecorrencia, planoPosicaoSerie, planoTamanhoSerie, serieLegada, type EscopoRecorrencia } from "@/lib/financeiro-recorrencia";
 import {
   fluxoPeriodo,
   periodoVisao,
@@ -1126,6 +1126,8 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
     return m ? m[2]! : "";
   });
   const [serie, setSerie] = useState<Row[]>([]);
+  const [posAtual, setPosAtual] = useState("1");
+  const [statusAntSerie, setStatusAntSerie] = useState<"pago" | "aberto">("pago");
   useEffect(() => {
     if (!temSerie || !registro) return;
     let vivo = true;
@@ -1136,7 +1138,11 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
       let l = (data ?? []) as Row[];
       if (!registro["origem_id"]) l = parcelasLegadas(registro, l);
       l.sort((a, b) => text(a["vencimento"]).localeCompare(text(b["vencimento"])));
-      if (vivo) { setSerie(l); if (l.length > 1) setNovoTotal(String(l.length)); }
+      if (vivo) {
+        setSerie(l); if (l.length > 1) setNovoTotal(String(l.length));
+        const pn = num(registro["parcela_n"]); const idx = l.findIndex((t) => t["id"] === registro["id"]);
+        setPosAtual(String(pn > 0 ? pn : idx + 1));
+      }
     })();
     return () => { vivo = false; };
   }, [temSerie, registro, tipo]);
@@ -1198,6 +1204,36 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
         if (error) throw error;
       }
       toast.success(`Série ajustada para ${total} parcelas.`); onSaved(); onClose();
+    } catch (e) { toast.error(erroFinanceiro(e)); } finally { setSalvando(false); }
+  };
+  const aplicarPosicao = async () => {
+    if (!registro) return;
+    const total = Math.floor(num(novoTotal)); const pos = Math.floor(num(posAtual));
+    setSalvando(true);
+    try {
+      const titulos = await carregarSerie();
+      const plano = planoPosicaoSerie(titulos, registro["id"], pos, total);
+      if (plano.bloqueio) return void toast.error(plano.bloqueio);
+      const nAnt = plano.criar.filter((c) => c.anterior).length; const nPos = plano.criar.length - nAnt;
+      const partes = [nAnt && `${nAnt} parcela(s) anterior(es) como ${statusAntSerie === "pago" ? "pagas" : "em aberto"}`, nPos && `${nPos} parcela(s) futura(s)`, plano.remover.length && `remove ${plano.remover.length} em aberto do final`].filter(Boolean);
+      if (!await confirmar({ title: `Esta passa a ser a parcela ${pos} de ${total}?`, description: `${partes.length ? `Serão criadas/ajustadas: ${partes.join("; ")}.` : "Só a numeração será ajustada."}`, confirmText: "Aplicar", destructive: plano.remover.length > 0 })) return;
+      if (plano.remover.length) {
+        const { error } = await supabase.from("financeiro_titulos").delete().in("id", plano.remover as never);
+        if (error) throw error;
+      }
+      for (const r of plano.renomear) {
+        const { error } = await supabase.from("financeiro_titulos").update({ descricao: r.descricao, parcela_n: r.parcela_n } as never).eq("id", r.id as never);
+        if (error) throw error;
+      }
+      if (plano.criar.length) {
+        const modelo = titulos[0]!;
+        const copia = ["tipo", "categoria", "parceiro_id", "observacao", "centro_custo_id", "codigo_referencia", "conta_bancaria_id", "forma_pagamento", "empresa_id", "origem_tipo", "origem_id"];
+        const lote = plano.criar.map(({ anterior, ...c }) => ({ ...Object.fromEntries(copia.map((k) => [k, modelo[k] ?? null])), ...c, data_competencia: c.vencimento,
+          ...(anterior && statusAntSerie === "pago" ? { status: "pago", pago_em: c.vencimento, valor_pago: c.valor } : { status: "aberto" }) }));
+        const { error } = await supabase.from("financeiro_titulos").insert(lote as never);
+        if (error) throw error;
+      }
+      toast.success(`Série ajustada: esta é a parcela ${pos} de ${total}.`); onSaved(); onClose();
     } catch (e) { toast.error(erroFinanceiro(e)); } finally { setSalvando(false); }
   };
 
