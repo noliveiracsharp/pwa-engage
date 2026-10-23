@@ -7,6 +7,8 @@
 - [ ] Ativar e consultar cadastros reais — depende de executar o SQL, atualizar cobranca-regua e publicar no banco próprio; sem sessão autenticada nesta execução.
 
 ## Ajuste atual
+- [x] Inspecionar script e tela de Funções; entregar consulta somente leitura para diagnosticar ausência do DRE sem alterar permissões.
+- [ ] Confirmar e corrigir ausência do DRE Gerencial em Funções — aguarda resultado da consulta no banco próprio; acesso autenticado indisponível.
 - [x] Financeiro: períodos futuros de 30/120 dias e 12 meses; saldos bancários e total em receber, pagar e caixa (16 testes passaram).
 - [ ] Validar saldos reais e disposição das três abas no Financeiro — acesso autenticado ao banco próprio indisponível nesta execução.
 - [x] Avisos de projetos: preservar exclusões individuais e Limpar entre atualizações e recargas, com testes de regressão.
