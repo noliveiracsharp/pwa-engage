@@ -11,6 +11,7 @@ import { PARENT_KEY, ParceiroSheet, TIPOS_HIERARQUIA, tipoHierarquiaLabel } from
 import { rowId, useDeleteRecord, useSaveRecord, useTableRows } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
+import { useSecoes } from "@/hooks/useSecoes";
 import { useAudit } from "@/lib/audit";
 import { caminhoClassificacao, useClassificacoes } from "@/components/parceiros/ClassificacaoField";
 import { formatCpfCnpj, formatPhoneDisplay, matchesAny } from "@/lib/input-masks";
@@ -20,6 +21,14 @@ import { Button } from "@/components/ui/button";
 import { RelatorioLista } from "@/components/relatorios/RelatorioLista";
 import { FileText } from "lucide-react";
 import { ImportarParceirosDialog } from "@/components/parceiros/ImportarParceirosDialog";
+
+const SECOES_PARCEIRO = [
+  { key: "dados", label: "Dados gerais" },
+  { key: "fiscal", label: "Fiscal e Atividades" },
+  { key: "qsa", label: "Quadro Societário" },
+  { key: "contatos", label: "Contatos" },
+  { key: "documentos", label: "Documentos" },
+];
 
 export const Route = createFileRoute("/_authenticated/parceiros")({
   staticData: { sitemap: false },
@@ -48,6 +57,7 @@ function ParceirosPage() {
   const save = useSaveRecord("parceiros");
   const remove = useDeleteRecord("parceiros");
   const perms = usePagePermissions("/parceiros");
+  const secoes = useSecoes("/parceiros", SECOES_PARCEIRO);
   const { empresaId, stamp } = useAudit();
   const { data: classificacoes = [] } = useClassificacoes();
   const [sel, setSel] = useState<Set<string>>(new Set());
@@ -307,6 +317,7 @@ function ParceirosPage() {
         onOpenChange={setOpen}
         record={record}
         parceiros={escopo}
+        secoes={secoes}
         readOnly={record ? !perms.canUpdate : !perms.canCreate}
         saving={save.isPending}
         onSave={(values) =>

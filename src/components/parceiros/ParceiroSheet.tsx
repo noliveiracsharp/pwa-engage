@@ -24,6 +24,7 @@ import { ClassificacaoField } from "@/components/parceiros/ClassificacaoField";
 import { coordNum, geocodificar, gpsNavegador } from "@/lib/geocodificacao";
 import { MapPin, LocateFixed } from "lucide-react";
 import { rowId } from "@/lib/crud";
+import type { SecaoPerms } from "@/lib/secoes-permissao";
 import type { Row } from "@/lib/row";
 
 export const PARENT_KEY = "parceiro_pai_id";
@@ -132,9 +133,13 @@ type Props = {
   saving: boolean;
   onSave: (values: Row) => void;
   parceiros?: Row[];
+  /** Permissão por seção (Funções filhas de /parceiros). Ausente = segue a tela. */
+  secoes?: Record<string, SecaoPerms | undefined>;
 };
 
-export function ParceiroSheet({ open, onOpenChange, record, readOnly, saving, onSave, parceiros = [] }: Props) {
+export function ParceiroSheet({ open, onOpenChange, record, readOnly: roTela, saving, onSave, parceiros = [], secoes }: Props) {
+  const ver = (k: string) => !secoes || Boolean(secoes[k]?.canRead);
+  const readOnly = roTela || Boolean(record && secoes && !secoes["dados"]?.canUpdate);
   const [f, setF] = useState<Form>(() => toForm(record));
   const [tab, setTab] = useState("gerais");
   const [cepLoading, setCepLoading] = useState(false);
@@ -316,10 +321,10 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly, saving, on
           <div className="mx-6 mb-4 flex flex-wrap items-center gap-2">
             <TabsList className="h-auto w-fit flex-wrap">
               <TabsTrigger value="gerais">Dados Gerais</TabsTrigger>
-              {!pf && <TabsTrigger value="fiscal">Fiscal e Atividades</TabsTrigger>}
-              {!pf && <TabsTrigger value="qsa">Quadro Societário</TabsTrigger>}
+              {!pf && ver("fiscal") && <TabsTrigger value="fiscal">Fiscal e Atividades</TabsTrigger>}
+              {!pf && ver("qsa") && <TabsTrigger value="qsa">Quadro Societário</TabsTrigger>}
             </TabsList>
-            {record && (
+            {record && ver("documentos") && (
               <div className="ml-auto">
                 <DocumentosButton entidadeTipo="parceiro" entidadeId={String(docRowId(record) ?? "")} entidadeNome={String(record["razao_social"] ?? record["nome"] ?? record["nome_fantasia"] ?? "")} registro={record} />
               </div>
@@ -432,7 +437,7 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly, saving, on
               <div>
                 {section("Contatos")}
                 <div className="grid gap-x-4 gap-y-5 sm:grid-cols-2">
-                  {record ? (
+                  {record ? (!ver("contatos") ? null :
                     <div className="sm:col-span-2 rounded-lg border bg-muted/30 p-3">
                       <p className="mb-2 text-xs text-muted-foreground">Telefones e e-mails usados nos envios. Cobranças usam "Financeiro", ofertas "Comercial" e notas "Fiscal" (ou o Principal ⭐).</p>
                       <ContatosPainel entidade="parceiro" entidadeId={String(docRowId(record) ?? "")} />
@@ -514,7 +519,7 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly, saving, on
               </div>
             </TabsContent>
 
-            {!pf && (
+            {!pf && ver("fiscal") && (
               <TabsContent value="fiscal" className="mt-0 space-y-6">
                 <div>
                   {section("Situação Cadastral")}
@@ -575,7 +580,7 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly, saving, on
               </TabsContent>
             )}
 
-            {!pf && (
+            {!pf && ver("qsa") && (
               <TabsContent value="qsa" className="mt-0">
                 {f.qsa.length === 0
                   ? <div className="text-muted-foreground rounded-lg border border-dashed p-8 text-center text-sm">Nenhum sócio registrado na consulta.</div>
