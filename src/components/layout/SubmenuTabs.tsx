@@ -11,7 +11,7 @@ const PAGINA = "__pagina__";
 /** Abas da página atual: funções filhas ocultas do menu, liberadas ao perfil (mesma view do menu lateral). */
 export function SubmenuTabs({ children }: { children: ReactNode }) {
   const pathname = useLocation({ select: (l) => l.pathname });
-  const abas = useSubmenuAbas(pathname).filter((a) => SUBMENU_REGISTRY[a.path] && a.path !== pathname);
+  const abas = useSubmenuAbas(pathname).filter((a) => SUBMENU_REGISTRY[a.path] && a.path !== pathname && !(pathname === "/empresas" && a.path === "/instancias"));
   const { data: funcoes = [] } = useTableRows("funcoes");
   const pai = funcoes.find((f) => String(f["path"] ?? "") === pathname);
   const [aba, setAba] = useState<string>(PAGINA);

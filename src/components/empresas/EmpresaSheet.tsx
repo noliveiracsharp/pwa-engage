@@ -16,6 +16,7 @@ import { IaConfigPainel } from "@/components/financeiro/IaConfigDialog";
 import { useAudit } from "@/lib/audit";
 import { rowId } from "@/lib/crud";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -487,7 +488,7 @@ export function ChildTable({ config, empresa, perms = FULL }: { config: ChildCon
         })()}
       </div>
 
-      {(config.sheet || (!editing && !adding)) && perms.canCreate && (
+      {perms.canCreate && (
         <div className="flex justify-end">
           <Button variant="outline" onClick={() => setAdding(true)}>
             <Plus className="mr-1 h-4 w-4" /> Adicionar
@@ -577,7 +578,14 @@ export function ChildTable({ config, empresa, perms = FULL }: { config: ChildCon
       </div>
       </>
       );
-      if (!config.sheet) return corpo;
+      if (!config.sheet) return (
+        <Dialog open={formAberto} onOpenChange={(o) => { if (!o) resetForm(); }}>
+          <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
+            <DialogHeader><DialogTitle>{editing ? `Editar — ${config.title}` : `Novo — ${config.title}`}</DialogTitle></DialogHeader>
+            {formAberto && corpo}
+          </DialogContent>
+        </Dialog>
+      );
       return (
         <Sheet open={formAberto} onOpenChange={(o) => { if (!o) resetForm(); }}>
           <SheetContent side="right" className="flex w-full flex-col gap-4 overflow-y-auto sm:max-w-none md:w-[60vw]">
@@ -625,14 +633,15 @@ type Props = {
 
 const DEFAULT_SECTIONS = [
   { key: "dados", kind: "dados", label: "Dados", perms: FULL },
+  { key: "instancias", kind: "instancias", label: "Instâncias", perms: FULL },
   { key: "campos", kind: "campos", label: "Campos", perms: FULL },
   { key: "etiquetas", kind: "etiquetas", label: "Etiquetas", perms: FULL },
   { key: "notas", kind: "notas", label: "Notas rápidas", perms: FULL },
 ];
 
 export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sections, readOnly }: Props) {
-  // Instâncias são geridas na aba "Canais & Instâncias" (/instancias), nunca no formulário.
-  const baseTabs = (sections && sections.length > 0 ? sections : DEFAULT_SECTIONS).filter((t) => t.kind !== "instancias");
+  // Instâncias pertencem à empresa editada: aba dentro do formulário.
+  const baseTabs = (sections && sections.length > 0 ? sections : DEFAULT_SECTIONS);
   const tabs = [...baseTabs.filter((t) => t.kind === "dados"), ...baseTabs.filter((t) => t.kind !== "dados")];
   const [cnpjLoading, setCnpjLoading] = useState(false);
   const { empresaId: empresaAtivaId } = useAudit();

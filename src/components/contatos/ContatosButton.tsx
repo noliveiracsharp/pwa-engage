@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { CheckCircle2, CircleHelp, Contact, Loader2, Mail, Phone, Plus, Star, Trash2, XCircle } from "lucide-react";
+import { CheckCircle2, CircleHelp, Contact, Loader2, Mail, Pencil, Phone, Plus, Star, Trash2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -101,6 +101,22 @@ export function ContatosPainel({ entidade, entidadeId }: Props) {
   };
   useEffect(() => { if (open && entidadeId) void carregar(); }, [open, entidadeId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const [modal, setModal] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const vazio = { tipo: "telefone" as "telefone" | "email", valor: "", finalidade: "financeiro", nome: "", principal: false };
+  const abrirNovo = () => { setEditId(null); setNovo(vazio); setModal(true); };
+  const abrirEdicao = (c: Contato) => { setEditId(c.id); setNovo({ tipo: c.tipo, valor: c.valor, finalidade: c.finalidade, nome: c.nome ?? "", principal: c.principal }); setModal(true); };
+  const fecharModal = () => { setModal(false); setEditId(null); };
+  const salvar = async () => {
+    if (!editId) return adicionar();
+    const valor = novo.tipo === "email" ? novo.valor.trim().toLowerCase() : normalizePhone(novo.valor);
+    if (novo.tipo === "email" && !emailValido(valor)) return void toast.error("E-mail inválido.");
+    if (novo.tipo === "telefone" && digitsOnly(valor).length < 10) return void toast.error("Telefone incompleto.");
+    if (novo.principal) await supabase.from("cadastro_contatos" as never).update({ principal: false } as never).eq("entidade", entidade).eq("entidade_id", entidadeId).eq("tipo", novo.tipo);
+    const { error } = await supabase.from("cadastro_contatos" as never).update({ tipo: novo.tipo, valor, finalidade: novo.finalidade, nome: novo.nome || null, principal: novo.principal } as never).eq("id", editId);
+    if (error) return void toast.error(error.code === "23505" ? "Este contato já está cadastrado." : error.message);
+    fecharModal(); toast.success("Contato atualizado."); void carregar(false);
+  };
   const adicionar = async () => {
     const valor = novo.tipo === "email" ? novo.valor.trim().toLowerCase() : normalizePhone(novo.valor);
     if (novo.tipo === "email" && !emailValido(valor)) return void toast.error("E-mail inválido.");
@@ -109,7 +125,7 @@ export function ContatosPainel({ entidade, entidadeId }: Props) {
     const { error } = await supabase.from("cadastro_contatos" as never).insert({ entidade, entidade_id: entidadeId, tipo: novo.tipo, valor, finalidade: novo.finalidade, nome: novo.nome || null, principal: novo.principal } as never);
     if (error) return void toast.error(error.code === "23505" ? "Este contato já está cadastrado." : error.message);
     setNovo((s) => ({ ...s, valor: "", nome: "", principal: false }));
-    toast.success("Contato adicionado."); void carregar(false);
+    fecharModal(); toast.success("Contato adicionado."); void carregar(false);
   };
   const alterar = async (c: Contato, patch: Partial<Contato>) => {
     if (patch.principal) await supabase.from("cadastro_contatos" as never).update({ principal: false } as never).eq("entidade", entidade).eq("entidade_id", entidadeId).eq("tipo", c.tipo);
@@ -126,8 +142,11 @@ export function ContatosPainel({ entidade, entidadeId }: Props) {
 
   return (
     <div className="space-y-3">
-          <div className="space-y-3 rounded-lg border p-3">
-            <div className="grid gap-3 sm:grid-cols-2">
+          <div className="flex justify-end"><Button type="button" onClick={abrirNovo}><Plus className="mr-1 h-4 w-4" /> Adicionar contato</Button></div>
+          <Dialog open={modal} onOpenChange={(o) => { if (!o) fecharModal(); }}>
+            <DialogContent className="max-w-xl">
+              <DialogHeader><DialogTitle>{editId ? "Editar contato" : "Novo contato"}</DialogTitle><DialogDescription>Telefone ou e-mail usado nos envios do sistema.</DialogDescription></DialogHeader>
+              <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1"><Label>Tipo</Label>
                 <Select value={novo.tipo} onValueChange={(v) => setNovo({ ...novo, tipo: v as "telefone" | "email", valor: "" })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
@@ -146,8 +165,9 @@ export function ContatosPainel({ entidade, entidadeId }: Props) {
               <div className="space-y-1"><Label>Responsável (opcional)</Label><Input value={novo.nome} onChange={(e) => setNovo({ ...novo, nome: e.target.value })} /></div>
               <div className="flex items-end gap-2 pb-2"><Switch checked={novo.principal} onCheckedChange={(x) => setNovo({ ...novo, principal: x })} /><Label>Principal</Label></div>
             </div>
-            <div className="flex justify-end"><Button type="button" onClick={() => void adicionar()}><Plus className="mr-1 h-4 w-4" /> Adicionar</Button></div>
-          </div>
+            <div className="flex justify-end gap-2 border-t pt-4"><Button type="button" variant="ghost" onClick={fecharModal}>Cancelar</Button><Button type="button" onClick={() => void salvar()}>{editId ? "Salvar" : "Adicionar"}</Button></div>
+            </DialogContent>
+          </Dialog>
           <div className="max-h-80 space-y-2 overflow-y-auto">
             {carregando && <p className="text-sm text-muted-foreground">Carregando…</p>}
             {!carregando && lista.length === 0 && <p className="rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground">Nenhum contato adicional.</p>}
@@ -159,6 +179,7 @@ export function ContatosPainel({ entidade, entidadeId }: Props) {
                   <div className="text-xs text-muted-foreground">{finLabel(c.finalidade)}{c.principal ? " · Principal" : ""}</div>
                   {c.tipo === "telefone" && <WhatsAppStatus telefone={normalizePhone(c.valor)} />}
                 </div>
+                <Button type="button" size="icon" variant="ghost" title="Editar" aria-label="Editar" onClick={() => abrirEdicao(c)}><Pencil className="h-4 w-4" /></Button>
                 <Button type="button" size="icon" variant="ghost" title="Tornar principal" aria-label="Tornar principal" onClick={() => void alterar(c, { principal: !c.principal })}><Star className={`h-4 w-4 ${c.principal ? "fill-primary text-primary" : ""}`} /></Button>
                 <Switch checked={c.ativo} onCheckedChange={(x) => void alterar(c, { ativo: x })} aria-label="Ativo" />
                 <Button type="button" size="icon" variant="ghost" aria-label="Remover" onClick={() => void remover(c)}><Trash2 className="h-4 w-4" /></Button>
