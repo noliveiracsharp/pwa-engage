@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from "react";
+import { instanciaParaAvisos, ordenarParaAvisos } from "@/lib/instancia-finalidade";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Circle, CircleDot, Download, Link2, Loader2, MessageCircle, PencilLine, Plus, Send, ShoppingCart, Trash2, Trophy, Upload } from "lucide-react";
 import { dispararMensagem, sanitizarTelefone } from "@/lib/atendimentos-envio";
@@ -447,7 +448,7 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
     setEnviandoId(String(f["id"]));
     try {
       await gravarResponsavel();
-      await dispararMensagem({ instancia: instancias[0], mensagemId: null, atendimentoId: null, telefone: fone, texto: montarTexto(f, url) });
+      await dispararMensagem({ instancia: instanciaParaAvisos(instancias), mensagemId: null, atendimentoId: null, telefone: fone, texto: montarTexto(f, url) });
       toast.success(`Cotação enviada para ${nomeParc(parceiroById.get(String(f["fornecedor_id"])))}.`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Falha ao enviar.");
