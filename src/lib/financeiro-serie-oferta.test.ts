@@ -9,7 +9,7 @@ describe("série gerada por Oferta", () => {
   it("edição em 'todos' alcança as parcelas irmãs da mesma oferta", () => {
     const outra = { ...t("x", 1), descricao: "Oferta #1 — Mensalidade (1/12)" };
     const r = alvosOferta(t("a", 1), [t("a", 1), t("b", 2), t("c", 3), outra], "todos", "2026-01-01");
-    expect(r.map((x) => x.id).sort()).toEqual(["a", "b", "c"]);
+    expect(r.map((x) => x["id"]).sort()).toEqual(["a", "b", "c"]);
   });
 });
 
