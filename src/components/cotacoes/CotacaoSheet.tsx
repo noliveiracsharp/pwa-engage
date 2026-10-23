@@ -534,9 +534,9 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
             <span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", st.badge)}>{st.label}</span>
           </SheetTitle>
           {canUpdate ? (
-            <div className="grid max-w-4xl gap-2 sm:grid-cols-2">
-            <div className="flex gap-2">
-              <div className="flex-1">
+            <div className="grid max-w-4xl gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+            <div className="flex min-w-0 gap-2">
+              <div className="min-w-0 flex-1 [&_button]:min-w-0 [&_button>span]:truncate">
                 <SearchSelect
                   value={parceirosOpts.find((o) => o.label === String(cotacao["titulo"] ?? ""))?.value ?? ""}
                   options={parceirosOpts}
