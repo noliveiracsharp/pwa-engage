@@ -185,6 +185,8 @@ export function PainelAprovacaoCotacao({ cotacaoId, valorTotal, onSituacao, chil
     const { error } = await supabase.from("cotacao_aprovacoes" as never).insert({ empresa_id: empresaId, cotacao_id: cotacaoId, usuario_id: uid, status, justificativa } as never);
     if (error) return void toast.error(faltaTabela(error.message) ? SQL_MSG : error.message);
     await qc.invalidateQueries({ queryKey: ["compras-workflow", "votos", cotacaoId] });
+    void qc.invalidateQueries({ queryKey: ["barra-aprovacao-cotacao"] });
+    void qc.invalidateQueries({ queryKey: ["table", "cotacoes"] });
     toast.success(status === "aprovado" ? "Cotação aprovada por você." : "Cotação rejeitada.");
   };
 
