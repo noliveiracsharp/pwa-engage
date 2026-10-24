@@ -99,7 +99,7 @@ export async function dispararMensagem(e: Envio): Promise<boolean> {
       }).catch(() => null);
       if (rb?.ok) return true;
       body = { phone, message: `${mensagem}\n\n${url}` };
-  }
+    }
   }
   const r = await fetch(`${base}/${endpoint}`, { method: "POST", headers, body: JSON.stringify(body) });
   if (!r.ok) {
