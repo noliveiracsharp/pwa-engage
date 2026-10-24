@@ -23,3 +23,16 @@ describe("novos guias", () => {
     expect(buscarArtigos(ARTIGOS_PADRAO, "dre gerencial competencia")[0]?.id).toBe("fin-dre-gerencial");
   });
 });
+
+import { mesclarArtigos } from "./ajuda";
+describe("mesclarArtigos", () => {
+  const of = [{ id: "a", modulo: "M", titulo: "Oficial", resumo: "r", passos: ["p"] }];
+  it("personalização com chave substitui o guia oficial e ganha o print", () => {
+    const r = mesclarArtigos(of, [{ id: "db-1", dbId: "1", chave: "a", modulo: "M", titulo: "Novo título", resumo: "r", passos: ["p"], imagem: "https://x/y.webp" }]);
+    expect(r).toHaveLength(1);
+    expect(r[0]).toMatchObject({ id: "a", titulo: "Novo título", imagem: "https://x/y.webp" });
+  });
+  it("registro sem chave vira guia extra", () => {
+    expect(mesclarArtigos(of, [{ id: "db-2", dbId: "2", modulo: "M", titulo: "Extra", resumo: "", passos: [] }])).toHaveLength(2);
+  });
+});

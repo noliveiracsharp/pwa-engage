@@ -626,3 +626,17 @@ export function artigoTexto(a: ArtigoAjuda): string {
     ...(a.faq ?? []).map((f) => `P: ${f.p} R: ${f.r}`),
   ].filter(Boolean).join("\n");
 }
+
+/** Guia vindo do banco; `chave` aponta para o guia oficial que ele personaliza. */
+export type ArtigoBanco = ArtigoAjuda & { chave?: string | undefined; dbId: string };
+
+/** Junta guias oficiais e personalizações: registro com chave igual substitui o oficial; sem chave vira guia novo. */
+export function mesclarArtigos(oficiais: ArtigoAjuda[], banco: ArtigoBanco[]): ArtigoAjuda[] {
+  const porChave = new Map(banco.filter((b) => b.chave).map((b) => [b.chave as string, b]));
+  const base = oficiais.map((o) => {
+    const b = porChave.get(o.id);
+    return b ? { ...o, ...b, id: o.id, faq: o.faq, tags: b.tags?.length ? b.tags : o.tags } : o;
+  });
+  const ids = new Set(oficiais.map((o) => o.id));
+  return [...base, ...banco.filter((b) => !b.chave || !ids.has(b.chave))];
+}
