@@ -23,7 +23,7 @@ export function CriarRapido() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button size="sm" className="mr-1 h-9 gap-1 px-2 sm:px-3" aria-label="Criar">
+        <Button variant="ghost" size="sm" className="h-9 gap-1 px-2 sm:px-3" aria-label="Criar" title="Criar">
           <Plus className="h-4 w-4" />
           <span className="hidden sm:inline">Criar</span>
         </Button>

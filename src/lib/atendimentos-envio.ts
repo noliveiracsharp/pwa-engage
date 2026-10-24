@@ -10,6 +10,19 @@ export function sanitizarTelefone(v: unknown): string {
   return phone.length === 10 || phone.length === 11 ? `55${phone}` : phone;
 }
 
+/** Tira o último link do texto (para virar botão) e limpa rótulos soltos como "Revise e aprove:". */
+export function separarLink(texto: string): { mensagem: string; url: string | null } {
+  const achados = texto.match(/https?:\/\/[^\s<>"']+/g);
+  if (!achados?.length) return { mensagem: texto, url: null };
+  const url = achados[achados.length - 1]!;
+  const i = texto.lastIndexOf(url);
+  const mensagem = (texto.slice(0, i) + texto.slice(i + url.length))
+    .replace(/[ \t]*[^\n.!?]*:[ \t]*$/m, (m) => (m.trim().endsWith(":") ? "" : m))
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  return { mensagem: mensagem || "Toque no botão abaixo.", url };
+}
+
 type Envio = {
   instancia: Row | undefined;
   mensagemId: unknown;
@@ -75,7 +88,18 @@ export async function dispararMensagem(e: Envio): Promise<boolean> {
       const ext = (e.nomeArquivo ?? e.midiaUrl).split(".").pop()?.split("?")[0] || "pdf";
       endpoint = `send-document/${ext}`; // a Z-API exige a extensão no caminho
       body = { phone, document: e.midiaUrl, fileName: e.nomeArquivo };
+  } else {
+    // Link vira botão "Acesse" (URL escondida); se o WhatsApp recusar botões, cai no texto com o link em linha própria.
+    const { mensagem, url } = separarLink(e.texto);
+    if (url) {
+      const rb = await fetch(`${base}/send-button-actions`, {
+        method: "POST", headers,
+        body: JSON.stringify({ phone, message: mensagem, buttonActions: [{ id: "1", type: "URL", url, label: "Acesse" }] }),
+      }).catch(() => null);
+      if (rb?.ok) return true;
+      body = { phone, message: `${mensagem}\n\n${url}` };
     }
+  }
   }
   const r = await fetch(`${base}/${endpoint}`, { method: "POST", headers, body: JSON.stringify(body) });
   if (!r.ok) {
