@@ -233,6 +233,10 @@ function UsuariosPage() {
 
   const handleSave = (input: Row) => {
     const values: Row = { ...input };
+    // Trava: sem permissão de alterar em /perfil, o perfil do usuário não muda.
+    if (record && !(isMaster || permsPerfil.canUpdate)) {
+      for (const k of ["perfil_id", "id_perfil"]) if (k in record) values[k] = record[k]; else delete values[k];
+    }
     if (typeof values["nome"] === "string") values["nome"] = nomeProprio(values["nome"]);
     // Trava: usuário comum só grava empresas da sua matriz/filiais.
     if (!isMaster) {
@@ -385,9 +389,11 @@ function UsuariosPage() {
       { fields: ["recebe_leads"], label: "Participa da roleta de leads", type: "boolean" },
       {
         fields: ["perfil_id"],
-        label: "Perfil",
+        label: record && !(isMaster || permsPerfil.canUpdate) ? "Perfil (somente leitura)" : "Perfil",
         type: "select",
-        options: perfilOptions.filter((o) => o.value !== "todos"),
+        options: perfilOptions.filter((o) =>
+          o.value !== "todos" &&
+          (!record || isMaster || permsPerfil.canUpdate || o.value === text(pick(record, ["perfil_id", "id_perfil"])))),
       },
       ...(empresasPermitidas.length > 1 || (isMaster && empresasPermitidas.length > 0)
         ? [
