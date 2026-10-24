@@ -18,6 +18,7 @@ import { matchesAny } from "@/lib/input-masks";
 import { useAudit } from "@/lib/audit";
 import { pick, type Row } from "@/lib/row";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
+import { CATEGORIAS_ITENS } from "@/lib/itens-categorias";
 
 export const Route = createFileRoute("/_authenticated/itens")({
   staticData: { sitemap: false },
@@ -68,7 +69,7 @@ function ItensPage() {
   const [sel, setSel] = useState<Set<string>>(new Set());
   const lote = useAcoesComuns("itens");
   const [duplicando, setDuplicando] = useState(false);
-  const [f, setF] = useState({ busca: "", tipo: "todos", status: "todos" });
+  const [f, setF] = useState({ busca: "", tipo: "todos", categoria: "todos", status: "todos" });
   const [precOpen, setPrecOpen] = useState(false);
   const [reajuste, setReajuste] = useState<{ itemId: string; nome: string; novo: NovoPreco } | null>(null);
   const [fiscalOpen, setFiscalOpen] = useState(false);
@@ -87,10 +88,11 @@ function ItensPage() {
         const marca = marcaById.get(String(pick(row, ["itens_marcas_id"]) ?? ""));
         return (
           matchesAny(
-            [pick(row, ["codigo"]), pick(row, ["descricao"]), pick(row, ["tipo"]), pick(marca ?? {}, ["descricao"])],
+            [pick(row, ["codigo"]), pick(row, ["descricao"]), pick(row, ["tipo"]), pick(row, ["categoria"]), pick(marca ?? {}, ["descricao"])],
             f.busca,
           ) &&
           (f.tipo === "todos" || String(pick(row, ["tipo"]) ?? "") === f.tipo) &&
+          (f.categoria === "todos" || String(row["categoria"] ?? "") === f.categoria) &&
           (f.status === "todos" || (f.status === "ativo" ? row["status"] === true : row["status"] === false))
         );
       }),
@@ -146,6 +148,7 @@ function ItensPage() {
       ),
     },
     { key: "tipo", header: "Natureza", fields: ["tipo"] },
+    { key: "categoria", header: "Categoria", fields: ["categoria"], render: (row) => String(row["categoria"] ?? "—") },
     {
       key: "marca",
       header: "Marca",
@@ -270,6 +273,12 @@ function ItensPage() {
                 options={TIPO_OPTIONS}
               />
               <FilterSelect
+                label="Categoria"
+                value={f.categoria}
+                onChange={(v) => setF({ ...f, categoria: v })}
+                options={[{ value: "todos", label: "Todas" }, ...CATEGORIAS_ITENS.map((c) => ({ value: c, label: c }))]}
+              />
+              <FilterSelect
                 label="Status"
                 value={f.status}
                 onChange={(v) => setF({ ...f, status: v })}
@@ -335,17 +344,19 @@ function ItensPage() {
           filtros={[
             f.busca && `Busca: ${f.busca}`,
             f.tipo !== "todos" && `Natureza: ${TIPO_OPTIONS.find((o) => o.value === f.tipo)?.label}`,
+            f.categoria !== "todos" && `Categoria: ${f.categoria}`,
             f.status !== "todos" && `Status: ${f.status === "ativo" ? "Ativo" : "Inativo"}`,
           ].filter((x): x is string => Boolean(x))}
           kpis={[
-            { label: "Produtos", valor: filtered.filter((r) => r["tipo"] === "Produto").length },
-            { label: "Serviços", valor: filtered.filter((r) => String(r["tipo"] ?? "").startsWith("Serviço")).length },
-            { label: "Ativos", valor: filtered.filter((r) => r["status"] === true).length },
-            { label: "Total", valor: filtered.length },
+            { label: "Total de itens", valor: filtered.length },
+            { label: "Custo em catálogo", valor: brl(filtered.reduce((s, r) => s + (Number(r["preco_custo"]) || 0), 0)) },
+            { label: "Venda média", valor: brl(filtered.length ? filtered.reduce((s, r) => s + (Number(r["preco_venda"]) || 0), 0) / filtered.length : 0) },
+            { label: "Margem média", valor: (() => { const m = filtered.map((r) => Number(r["margem_lucro"])).filter((x) => x > 0); return m.length ? `${(m.reduce((a, b) => a + b, 0) / m.length).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%` : "—"; })() },
           ]}
           colunas={[
             { header: "Código", cell: (r) => String(r["codigo"] ?? "—") },
             { header: "Descrição", cell: (r) => String(r["descricao"] ?? "—") },
+            { header: "Categoria", cell: (r) => String(r["categoria"] ?? "—") },
             { header: "Natureza", cell: (r) => String(r["tipo"] ?? "—") },
             { header: "Marca", cell: (r) => String(marcaById.get(String(r["itens_marcas_id"] ?? ""))?.["descricao"] ?? "—") },
             { header: "Un.", cell: (r) => String(r["unidade"] ?? "—") },
