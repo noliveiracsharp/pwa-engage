@@ -140,6 +140,7 @@ function OrcamentosPage() {
   const { abrir } = Route.useSearch();
   const navOrc = Route.useNavigate();
   useEffect(() => {
+    if (abrir === "novo") { setRecord(null); setOpen(true); void navOrc({ search: {}, replace: true }); return; }
     if (!abrir || !todos.length) return;
     const achado = todos.find((t) => String(rowId(t)) === abrir);
     if (achado) { setRecord(achado); setOpen(true); void navOrc({ search: {}, replace: true }); }
