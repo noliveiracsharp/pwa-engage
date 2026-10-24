@@ -635,7 +635,7 @@ export function mesclarArtigos(oficiais: ArtigoAjuda[], banco: ArtigoBanco[]): A
   const porChave = new Map(banco.filter((b) => b.chave).map((b) => [b.chave as string, b]));
   const base = oficiais.map((o) => {
     const b = porChave.get(o.id);
-    return b ? { ...o, ...b, id: o.id, faq: o.faq, tags: b.tags?.length ? b.tags : o.tags } : o;
+    return b ? ({ ...o, ...b, id: o.id, faq: o.faq, tags: b.tags?.length ? b.tags : o.tags } as ArtigoAjuda) : o;
   });
   const ids = new Set(oficiais.map((o) => o.id));
   return [...base, ...banco.filter((b) => !b.chave || !ids.has(b.chave))];
