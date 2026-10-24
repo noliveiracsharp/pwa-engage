@@ -108,6 +108,8 @@ export function CentralAjuda() {
   const [resposta, setResposta] = useState("");
   const [carregando, setCarregando] = useState(false);
   const perguntar = useServerFn(perguntarCopiloto);
+  const { isMaster } = useAuth();
+  const [editando, setEditando] = useState<ArtigoAjuda | "novo" | null>(null);
 
   const lista = useMemo(() => {
     if (busca.trim().length > 2) return buscarArtigos(artigos, busca, 8);
@@ -140,8 +142,22 @@ export function CentralAjuda() {
       <Sheet open={aberto} onOpenChange={setAberto}>
         <SheetContent side="right" data-no-guard className="flex w-full flex-col gap-0 p-0 sm:max-w-xl">
           <SheetHeader className="border-b border-border p-4">
-            <SheetTitle className="flex items-center gap-2"><BookOpen className="h-5 w-5 text-primary" /> Central de Ajuda</SheetTitle>
+            <SheetTitle className="flex items-center gap-2">
+              <BookOpen className="h-5 w-5 text-primary" /> {editando ? (editando === "novo" ? "Novo guia" : "Editar guia") : "Central de Ajuda"}
+              {isMaster && !editando && (
+                <span className="ml-auto mr-6 flex gap-1">
+                  {atual && <Button size="sm" variant="outline" onClick={() => setEditando(atual)}><Pencil className="mr-1 h-4 w-4" /> Editar</Button>}
+                  {!atual && <Button size="sm" variant="outline" onClick={() => setEditando("novo")}><Plus className="mr-1 h-4 w-4" /> Novo guia</Button>}
+                </span>
+              )}
+            </SheetTitle>
           </SheetHeader>
+          {editando ? (
+            <div className="min-h-0 flex-1">
+              <EditorArtigoAjuda key={editando === "novo" ? "novo" : editando.id} artigo={editando === "novo" ? null : editando} modulos={modulos}
+                fechar={() => { setEditando(null); setAtual(null); }} />
+            </div>
+          ) : (<>
           <div className="flex-1 overflow-y-auto p-4">
             {atual ? (
               <ArtigoView a={atual} voltar={() => setAtual(null)} fechar={() => setAberto(false)} />
