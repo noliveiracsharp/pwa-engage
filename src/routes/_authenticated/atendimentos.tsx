@@ -23,9 +23,9 @@ import { AvaliacaoSelo } from "@/components/atendimentos/Pesquisa";
 
 export const Route = createFileRoute("/_authenticated/atendimentos")({
   staticData: { sitemap: false },
-  validateSearch: (search: Record<string, unknown>) => ({
+  validateSearch: (search: Record<string, unknown>): { id?: string; novo?: string } => ({
     id: typeof search["id"] === "string" ? search["id"] : undefined,
-    novo: search["novo"] === "1" || search["novo"] === 1 ? "1" : undefined,
+    ...(search["novo"] === "1" || search["novo"] === 1 ? { novo: "1" } : {}),
   }),
   head: () => ({
     meta: [
