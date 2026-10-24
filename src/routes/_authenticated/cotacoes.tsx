@@ -268,7 +268,6 @@ function CotacoesPage() {
           </>
         }
       />
-      )}
       <Dialog open={novoTitulo !== null} onOpenChange={(o) => !o && setNovoTitulo(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader><DialogTitle>Nova cotação avulsa</DialogTitle></DialogHeader>
