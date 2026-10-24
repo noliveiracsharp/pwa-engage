@@ -2,12 +2,13 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import { fetchCnpj } from "@/lib/cnpj";
 import { nomeProprio } from "@/lib/nome-proprio";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Code, Inbox, Loader2, Pencil, Plus, QrCode, Search, Trash2, Unplug } from "lucide-react";
+import { CheckCircle2, Code, Inbox, Loader2, Pencil, Plus, QrCode, RotateCcw, Search, Trash2, Unplug, UserCog } from "lucide-react";
 import { digitsOnly } from "@/lib/input-masks";
 import { useServerFn } from "@tanstack/react-start";
 import { QrCodeDialog } from "@/components/empresas/QrCodeDialog";
 import { WidgetChatDialog } from "@/components/empresas/WidgetChatDialog";
-import { configurarWebhookZapi, desconectarWhatsApp } from "@/lib/zapi.functions";
+import { configurarWebhookZapi, desconectarWhatsApp, reiniciarZapi } from "@/lib/zapi.functions";
+import { PerfilWhatsAppDialog } from "@/components/empresas/PerfilWhatsAppDialog";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { DocumentosButton } from "@/components/documentos/DocumentosPainel";
@@ -227,6 +228,8 @@ export function ChildTable({ config, empresa, perms = FULL }: { config: ChildCon
   const [widgetInst, setWidgetInst] = useState<Row | null>(null);
   const desconectarFn = useServerFn(desconectarWhatsApp);
   const webhookFn = useServerFn(configurarWebhookZapi);
+  const reiniciarFn = useServerFn(reiniciarZapi);
+  const [perfilInst, setPerfilInst] = useState<Row | null>(null);
 
   const { data: rows = [], isError } = useQuery({
     queryKey: ["child", config.table, text(empresaId)],
@@ -350,6 +353,14 @@ export function ChildTable({ config, empresa, perms = FULL }: { config: ChildCon
     } else toast.error(`A Z-API recusou (${r.message ?? ""}). O endereço foi copiado: cole em "Ao receber" no painel da Z-API.`);
   };
 
+  const reiniciar = async (row: Row) => {
+    const clientToken = text(pick(row, ["client_token"]));
+    const token = text(pick(row, ["token"])) || clientToken;
+    const r = await reiniciarFn({ data: { instanceId: text(pick(row, ["instance_id"])), token, clientToken: clientToken || undefined } });
+    if (r.ok) toast.success("Instância reiniciada. Aguarde alguns segundos.");
+    else toast.error(`Não foi possível reiniciar: ${r.message ?? ""}`);
+  };
+
   const desconectar = async (row: Row) => {
     if (!await confirmar("Deseja desconectar este WhatsApp?")) return;
     const clientToken = text(pick(row, ["client_token"]));
@@ -442,6 +453,12 @@ export function ChildTable({ config, empresa, perms = FULL }: { config: ChildCon
                           <Inbox className="mr-1 h-4 w-4" /> Ativar recebimento
                         </Button>
                       )}
+                      <Button variant="outline" size="sm" className="h-9" onClick={() => setPerfilInst(row)} title="Nome, recado e foto do WhatsApp">
+                        <UserCog className="mr-1 h-4 w-4" /> Perfil
+                      </Button>
+                      <Button variant="outline" size="icon" className="h-9 w-9" aria-label="Reiniciar instância" title="Reiniciar instância" onClick={() => void reiniciar(row)}>
+                        <RotateCcw className="h-4 w-4" />
+                      </Button>
                       <Button variant="outline" size="sm" className="h-9" onClick={() => void desconectar(row)}>
                         <Unplug className="mr-1 h-4 w-4" /> Desconectar
                       </Button>
@@ -599,6 +616,7 @@ export function ChildTable({ config, empresa, perms = FULL }: { config: ChildCon
       );
       })()}
       <WidgetChatDialog instancia={widgetInst} onClose={() => setWidgetInst(null)} />
+      <PerfilWhatsAppDialog instancia={perfilInst} onClose={() => setPerfilInst(null)} />
       <QrCodeDialog
         instancia={qrInst}
         onOpenChange={(o) => !o && setQrInst(null)}
