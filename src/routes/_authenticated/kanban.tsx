@@ -533,7 +533,7 @@ function KanbanPage() {
               ))}
             </SelectContent>
           </Select>
-          {kanbanId && (
+          {kanbanId && (isMaster || kanbanPerms.canUpdate) && (
             <Button
               size="icon"
               variant="outline"
