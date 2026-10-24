@@ -2,13 +2,14 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import { fetchCnpj } from "@/lib/cnpj";
 import { nomeProprio } from "@/lib/nome-proprio";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Code, Inbox, Loader2, Pencil, Plus, QrCode, RotateCcw, Search, Trash2, Unplug, UserCog } from "lucide-react";
+import { CheckCircle2, Code, Inbox, Loader2, Pencil, Plus, QrCode, RotateCcw, Search, Trash2, Unplug, UserCog, Webhook } from "lucide-react";
 import { digitsOnly } from "@/lib/input-masks";
 import { useServerFn } from "@tanstack/react-start";
 import { QrCodeDialog } from "@/components/empresas/QrCodeDialog";
 import { WidgetChatDialog } from "@/components/empresas/WidgetChatDialog";
 import { configurarWebhookZapi, desconectarWhatsApp, reiniciarZapi } from "@/lib/zapi.functions";
 import { PerfilWhatsAppDialog } from "@/components/empresas/PerfilWhatsAppDialog";
+import { WebhookDetalhesDialog } from "@/components/empresas/WebhookDetalhesDialog";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { DocumentosButton } from "@/components/documentos/DocumentosPainel";
@@ -230,6 +231,7 @@ export function ChildTable({ config, empresa, perms = FULL }: { config: ChildCon
   const webhookFn = useServerFn(configurarWebhookZapi);
   const reiniciarFn = useServerFn(reiniciarZapi);
   const [perfilInst, setPerfilInst] = useState<Row | null>(null);
+  const [webhookInst, setWebhookInst] = useState<Row | null>(null);
 
   const { data: rows = [], isError } = useQuery({
     queryKey: ["child", config.table, text(empresaId)],
@@ -387,6 +389,43 @@ export function ChildTable({ config, empresa, perms = FULL }: { config: ChildCon
           const Icon = getIcon(iconValue);
           const nomeValue = text(pick(row, ["nome"], ""));
           const rowKey = text(row[idColumn(row)] ?? index);
+          const isInst = config.table === "empresas_instancias";
+          const conectado = text(pick(row, ["status_conexao"])).toLowerCase() === "conectado";
+          const SECRETOS = ["token", "client_token"];
+          const camposGrid = (
+            <div className={isInst ? "grid min-w-0 gap-x-6 gap-y-3 rounded-md bg-muted/30 p-3 sm:grid-cols-2 lg:grid-cols-4" : "grid min-w-0 gap-2 sm:grid-cols-2 lg:grid-cols-3"}>
+              {config.columns
+                .filter((col) => col.key !== "nome" && col.key !== "icone")
+                .filter((col) => !isInst || !col.showIf || col.showIf(Object.fromEntries(Object.entries(row).map(([a, b]) => [a, text(b)]))))
+                .map((col) => {
+                  let colValue = text(pick(row, [col.key]));
+                  if (isInst && SECRETOS.includes(col.key) && colValue.length > 8) colValue = `${colValue.slice(0, 4)}••••${colValue.slice(-4)}`;
+                  const ColIcon = col.type === "icon" ? getIcon(colValue) : undefined;
+                  return (
+                    <div key={col.key} className="min-w-0">
+                      <p className="text-xs text-muted-foreground">{col.label}</p>
+                      {col.type === "boolean" ? (
+                        <p className="truncate text-foreground">{row[col.key] === true ? "Ativo" : "Inativo"}</p>
+                      ) : col.type === "tel" ? (
+                        <p className="truncate text-foreground">{formatPhoneDisplay(colValue) || "—"}</p>
+                      ) : col.type === "color" ? (
+                        <div className="flex items-center gap-2 text-foreground">
+                          {colValue ? <span className="h-4 w-4 shrink-0 rounded-full border border-border" style={{ backgroundColor: colValue }} /> : null}
+                          <span className="truncate">{colValue || "—"}</span>
+                        </div>
+                      ) : col.type === "icon" ? (
+                        <div className="flex items-center gap-2 text-foreground">
+                          {colValue && ColIcon ? <ColIcon className="h-4 w-4" /> : null}
+                          <span className="truncate">{colValue || "—"}</span>
+                        </div>
+                      ) : (
+                        <p className="truncate text-foreground" title={isInst && SECRETOS.includes(col.key) ? undefined : colValue}>{(col.optionLabels?.[colValue] ?? colValue) || "—"}</p>
+                      )}
+                    </div>
+                  );
+                })}
+            </div>
+          );
           const rowContent = (
             <div className={isInst ? "flex flex-col gap-3 p-4 text-sm" : "flex items-start gap-3 p-3 text-sm"}>
               <div className={isInst ? "flex flex-wrap items-center gap-2" : "grid min-w-0 flex-1 gap-2"}>
