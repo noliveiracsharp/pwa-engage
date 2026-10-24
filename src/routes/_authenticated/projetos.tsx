@@ -36,6 +36,7 @@ import { EspacosSidebar, ESPACOS, cadeiaEspaco, espacoEDescendentes, tipoEspaco 
 import { TarefaSheet } from "@/components/projetos/TarefaSheet";
 import { AtividadeSheet } from "@/components/projetos/AtividadeSheet";
 import { EspacoDashboard } from "@/components/projetos/EspacoDashboard";
+import { DashboardGeral } from "@/components/projetos/DashboardGeral";
 import { TarefasEspaco } from "@/components/projetos/TarefasEspaco";
 import { useTableRows, rowId, idColumn, matches } from "@/lib/crud";
 import { SortableList, salvarOrdem, useSortableRow } from "@/lib/reorder";
@@ -131,11 +132,17 @@ function ProjetosPage() {
   }
   // Lista abre as tarefas por status; Espaço, Pasta e Projeto abrem a visão geral.
   const raiz = !!espAtual && tipoEspaco(espAtual) !== "lista";
-  const abaAtual = !espacoId ? "projetos" : aba ?? (raiz ? "painel" : "tarefas");
+  const abaAtual = !espacoId ? (aba === "projetos" ? "projetos" : "geral") : aba ?? (raiz ? "painel" : "tarefas");
   return (
     <div className="flex flex-col gap-4 md:flex-row md:items-start">
       <EspacosSidebar espacos={d.espacos} ativo={espacoId} perms={perms} onSelect={(id) => { setAba(null); ir(id); }} onMoverProjeto={moverEspaco} />
       <div className="min-w-0 flex-1 space-y-3">
+        {!espacoId && (
+          <div className="flex rounded-md border border-border p-0.5 w-fit" role="tablist" aria-label="Visão geral">
+            <Button size="sm" variant={abaAtual === "geral" ? "secondary" : "ghost"} onClick={() => setAba(null)}>Visão geral</Button>
+            <Button size="sm" variant={abaAtual === "projetos" ? "secondary" : "ghost"} onClick={() => setAba("projetos")}>Projetos</Button>
+          </div>
+        )}
         {espacoId && (
           <div className="flex flex-wrap items-center gap-3">
             {abaAtual === "tarefas" && <h1 className="text-2xl font-bold text-foreground">{String(espAtual?.["nome"] ?? "")}</h1>}
@@ -146,7 +153,9 @@ function ProjetosPage() {
             </div>
           </div>
         )}
-        {abaAtual === "painel" && espAtual
+        {abaAtual === "geral"
+          ? <DashboardGeral espacos={d.espacos} projetos={d.projetos} tarefas={d.tarefas} status={d.status} pc={d.pc} tc={d.tc} onAcessar={(id) => { setAba(null); ir(id); }} onAbrirProjeto={(id) => setSelId(id)} />
+          : abaAtual === "painel" && espAtual
           ? <EspacoDashboard espaco={espAtual} espacos={d.espacos} projetos={d.projetos} tarefas={d.tarefas} status={d.status} pc={d.pc} tc={d.tc} onAcessar={ir} />
           : abaAtual === "tarefas" && espacoId
             ? <TarefasEspaco espacoId={espacoId} espacos={d.espacos} projetos={d.projetos} tarefas={d.tarefas} atividades={d.atividades}
