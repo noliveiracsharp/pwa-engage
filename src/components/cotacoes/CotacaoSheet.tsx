@@ -549,6 +549,13 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
       { onConflict: "cotacao_item_id,fornecedor_id" },
     );
     if (error) return void toast.error(error.message);
+    if (preco > 0) {
+      const total = itensCot.reduce((acc, i) => {
+        const v = String(i["id"]) === String(it["id"]) ? preco : num(precoDe(String(i["id"]), String(f["fornecedor_id"]))?.["preco_unitario"]);
+        return acc + v * num(i["quantidade"]);
+      }, 0);
+      await supabase.from("cotacoes_fornecedores").update({ respondido: true, data_resposta: new Date().toISOString(), total_cotado: round2(total) }).eq("id", String(f["id"]));
+    }
     invalidar();
   };
 
@@ -665,7 +672,7 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
                       <div className="truncate font-medium">{nomeParc(parceiroById.get(String(f["fornecedor_id"])))}</div>
                       <div className="text-muted-foreground text-xs">
                         Código {String(f["codigo_envio"] ?? "—")} ·{" "}
-                        {f["respondido"] ? (
+                        {fornecedorRespondeu(f, precos) ? (
                           <span className="text-success font-medium">respondido{f["data_resposta"] ? ` em ${new Date(String(f["data_resposta"])).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}` : ""}</span>
                         ) : f["visualizado_em"] ? "link aberto, aguardando" : "aguardando"}
                       </div>
