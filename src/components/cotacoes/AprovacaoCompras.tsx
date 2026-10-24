@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Clock, ShieldCheck, Star, X, XCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -151,12 +151,12 @@ const ROTULO: Record<SituacaoAprovacao, { t: string; cls: string }> = {
 };
 
 /** Painel de aprovação dentro da cotação; devolve a situação via render-prop. */
-export function PainelAprovacaoCotacao({ cotacaoId, valorTotal, children }: { cotacaoId: string; valorTotal: number; children: (s: SituacaoAprovacao) => React.ReactNode }) {
+export function PainelAprovacaoCotacao({ cotacaoId, valorTotal, onSituacao, children }: { cotacaoId: string; valorTotal: number; onSituacao?: (s: SituacaoAprovacao) => void; children: (s: SituacaoAprovacao) => React.ReactNode }) {
   const qc = useQueryClient();
   const { usuarioId, empresaId } = useAudit();
-  const { data: cfg = null } = useConfigAprovacao();
+  const { data: cfg = null, isSuccess: cfgOk } = useConfigAprovacao();
   const { data: usuarios = [] } = useUsuarios();
-  const { data: votosRows = [] } = useQuery({
+  const { data: votosRows = [], isSuccess: votosOk } = useQuery({
     queryKey: ["compras-workflow", "votos", cotacaoId],
     enabled: Boolean(cotacaoId),
     queryFn: async () => {
@@ -166,6 +166,11 @@ export function PainelAprovacaoCotacao({ cotacaoId, valorTotal, children }: { co
   });
   const votos: VotoAprovacao[] = votosRows.map((r) => ({ usuarioId: String(r["usuario_id"]), status: r["status"] === "rejeitado" ? "rejeitado" : "aprovado", justificativa: r["justificativa"] as string | null, em: String(r["created_at"] ?? "") }));
   const sit = situacaoAprovacao(cfg, valorTotal, votos);
+  // Só sincroniza o status depois de carregar a alçada e os votos (evita aprovar por engano).
+  useEffect(() => {
+    if (cfgOk && votosOk && onSituacao) onSituacao(sit);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cfgOk, votosOk, sit, valorTotal]);
   const uid = String(usuarioId ?? "");
   const lista = cfg ? aprovadoresDe(cfg) : [];
   const souAprovador = lista.includes(uid);

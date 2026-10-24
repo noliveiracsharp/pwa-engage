@@ -26,7 +26,10 @@ export const COTACAO_STATUS = [
   { value: "pendente", label: "Pendente", badge: "bg-secondary text-secondary-foreground" },
   { value: "em_cotacao", label: "Em cotação", badge: "bg-warning text-warning-foreground" },
   { value: "cotado", label: "Cotado", badge: "bg-primary text-primary-foreground" },
+  { value: "aguardando_aprovacao", label: "Aguardando aprovação", badge: "bg-warning/20 text-warning" },
   { value: "aprovado", label: "Aprovado", badge: "bg-success text-success-foreground" },
+  { value: "pedido_gerado", label: "Pedido gerado", badge: "bg-success/20 text-success" },
+  { value: "reprovado", label: "Reprovado", badge: "bg-destructive/20 text-destructive" },
   { value: "cancelado", label: "Cancelado", badge: "bg-destructive text-destructive-foreground" },
 ];
 export const cotacaoStatusMeta = (v: unknown) =>

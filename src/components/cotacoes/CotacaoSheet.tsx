@@ -27,7 +27,8 @@ import { useTableRows } from "@/lib/crud";
 import { novoCustoCotacao, ofertaAceitaNovoCusto, recalcLinhaCusto, vendaPreservandoMargem } from "@/lib/custo-cotacao";
 const ITEM_RAPIDO = [{ key: "descricao", label: "Descrição" }, { key: "codigo", label: "Código / referência" }];
 import { PainelAprovacaoCotacao } from "@/components/cotacoes/AprovacaoCompras";
-import { podeGerarPedido } from "@/lib/aprovacao-compras";
+import { podeGerarPedido, type SituacaoAprovacao } from "@/lib/aprovacao-compras";
+import { statusPelaAlcada } from "@/lib/cotacao-fluxo";
 import { ReceberPedidoDialog } from "@/components/cotacoes/ReceberPedidoDialog";
 import { CotacaoVersoes } from "@/components/cotacoes/CotacaoVersoes";
 import { ParceiroSheet } from "@/components/parceiros/ParceiroSheet";
@@ -88,8 +89,21 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
   const [gerando, setGerando] = useState(false);
   const [preencher, setPreencher] = useState<Row | null>(null);
   const cid = cotacao ? String(rowId(cotacao)) : "";
-  const aprovada = cotacao?.["status"] === "aprovado";
+  // Travada quando a oferta já foi gerada ou a cotação foi encerrada (pedido gerado / cancelada).
+  const aprovada = !!cotacao?.["orcamento_id"] || ["pedido_gerado", "cancelado"].includes(String(cotacao?.["status"] ?? ""));
   const editavel = canUpdate && !aprovada;
+  const sincronizarStatus = async (sit: SituacaoAprovacao) => {
+    if (!cotacao || !canUpdate) return;
+    const atual = String(cotacao["status"] ?? "pendente");
+    const novo = statusPelaAlcada(atual, { temPreco: precos.some((p) => num(p["preco_unitario"]) > 0), situacao: sit, temPedido: pedidos.some((p) => String(p["cotacao_id"]) === cid) });
+    if (novo === atual) return;
+    const { error } = await supabase.from("cotacoes").update({ status: novo } as never).eq("id", cid);
+    if (error) {
+      if (/check|violat/i.test(error.message)) toast.error("Rode o script atendeai-cotacoes-kanban.sql para liberar os novos status.");
+      return;
+    }
+    void qc.invalidateQueries({ queryKey: ["table", "cotacoes"] });
+  };
 
   const parceiroById = useMemo(() => new Map(parceiros.map((p) => [String(rowId(p)), p])), [parceiros]);
   const itemById = useMemo(() => new Map(itens.map((i) => [String(rowId(i)), i])), [itens]);
