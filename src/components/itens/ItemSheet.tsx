@@ -16,6 +16,7 @@ import { useAudit } from "@/lib/audit";
 import { ImageGallery } from "@/components/itens/ImageGallery";
 import { padraoPorNatureza, usePrecificacao } from "@/components/itens/PrecificacaoDialog";
 import { CATEGORIAS_ITENS } from "@/lib/itens-categorias";
+import { HistoricoCompras } from "@/components/itens/HistoricoCompras";
 
 const NONE = "__none__";
 
@@ -119,7 +120,7 @@ type Props = {
 export function ItemSheet({ open, onOpenChange, record, saving, readOnly, duplicando, canCreateApoio, onSave }: Props) {
   const [v, setV] = useState<Values>(EMPTY);
   const [quick, setQuick] = useState<null | "unidade" | "centro" | "marca">(null);
-  const [aba, setAba] = useState<"geral" | "fiscal">("geral");
+  const [aba, setAba] = useState<"geral" | "fiscal" | "compras">("geral");
   useEffect(() => { if (open) setAba("geral"); }, [open]);
 
   const { data: unidades = [] } = useTableRows("unidade_medida");
@@ -350,6 +351,7 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, duplic
           <div className="mb-2 inline-flex rounded-md border p-0.5" role="tablist">
             <Button type="button" role="tab" aria-selected={aba === "geral"} variant={aba === "geral" ? "secondary" : "ghost"} size="sm" onClick={() => setAba("geral")}>Geral</Button>
             <Button type="button" role="tab" aria-selected={aba === "fiscal"} variant={aba === "fiscal" ? "secondary" : "ghost"} size="sm" onClick={() => setAba("fiscal")}>Fiscal</Button>
+            <Button type="button" role="tab" aria-selected={aba === "compras"} variant={aba === "compras" ? "secondary" : "ghost"} size="sm" onClick={() => setAba("compras")}>Compras</Button>
           </div>
           <div className={aba === "geral" ? "grid gap-x-4 gap-y-5 pt-2 sm:grid-cols-2" : "hidden"}>
             <div className="min-w-0 space-y-1.5 sm:col-span-2">
@@ -520,6 +522,12 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, duplic
               </div>
             </div>
           </div>
+          {aba === "compras" && (
+            <div className="space-y-2 pt-2">
+              <h3 className="text-sm font-semibold">Últimas compras</h3>
+              {record && !duplicando ? <HistoricoCompras itemId={String(rowId(record) ?? "")} /> : <p className="text-muted-foreground text-sm">Salve o item para ver o histórico de compras.</p>}
+            </div>
+          )}
           <div className={aba === "fiscal" ? "grid gap-x-4 gap-y-5 pt-2 sm:grid-cols-2" : "hidden"}>
             <div className="min-w-0 sm:col-span-2">
               <h3 className="text-sm font-semibold">Dados fiscais</h3>
