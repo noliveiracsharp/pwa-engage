@@ -548,16 +548,18 @@ function KanbanPage() {
               <Settings2 className="h-4 w-4" />
             </Button>
           )}
-          <Button
-            size="icon"
-            aria-label="Novo kanban"
-            onClick={() => {
-              setCfgNovo(true);
-              setCfgOpen(true);
-            }}
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
+          {(isMaster || kanbanPerms.canCreate) && (
+            <Button
+              size="icon"
+              aria-label="Novo kanban"
+              onClick={() => {
+                setCfgNovo(true);
+                setCfgOpen(true);
+              }}
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </div>
 
