@@ -25,22 +25,36 @@ export const unidadeConfig = {
   ] as Field[],
 };
 
+const TIPOS_CENTRO = [
+  { value: "administrativo", label: "Administrativo / Diretoria" },
+  { value: "comercial", label: "Comercial / Vendas" },
+  { value: "operacoes", label: "Operações / Campo" },
+  { value: "projetos", label: "Projetos / Contratos" },
+  { value: "ti", label: "TI & Suporte" },
+];
+
+/** Centro de custo = ONDE/QUEM (departamento, projeto); a natureza contábil fica no Plano de Contas. */
 export const centroCustoConfig = {
   table: "centro_custo",
   title: "Centros de Custo",
   path: "/centro_custos",
   singular: "centro de custo",
-  searchFields: ["codigo", "descricao"],
-  searchPlaceholder: "Código ou descrição",
+  searchFields: ["codigo", "descricao", "responsavel"],
+  searchPlaceholder: "Código, descrição ou responsável",
   hierarchy: { parentKey: "centro_custo_pai_id", label: "Centro de Custo Pai" },
   columns: [
     { key: "codigo", header: "Código", fields: ["codigo"] },
-    { key: "descricao", header: "Descrição", fields: ["descricao"] },
+    { key: "descricao", header: "Departamento / Projeto", fields: ["descricao"] },
+    { key: "tipo", header: "Tipo", fields: ["tipo"],
+      render: (row) => TIPOS_CENTRO.find((t) => t.value === row["tipo"])?.label ?? "—" },
+    { key: "responsavel", header: "Responsável", fields: ["responsavel"] },
     statusColumn,
   ] as Column[],
   fields: [
     { fields: ["codigo"], label: "Código" },
-    { fields: ["descricao"], label: "Descrição" },
+    { fields: ["descricao"], label: "Departamento / Projeto" },
+    { fields: ["tipo"], label: "Tipo", type: "select", options: TIPOS_CENTRO },
+    { fields: ["responsavel"], label: "Responsável" },
     { fields: ["status"], label: "Status", type: "boolean" },
   ] as Field[],
 };
