@@ -53,6 +53,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { pick, type Row } from "@/lib/row";
 import { text } from "@/lib/crud";
 import { cn } from "@/lib/utils";
+import { COTACAO_STATUS } from "@/lib/laudos";
+import { bloqueioMovimento } from "@/lib/cotacao-fluxo";
 import { formatPhoneDisplay } from "@/lib/input-masks";
 
 export const Route = createFileRoute("/_authenticated/kanban")({
@@ -127,6 +129,7 @@ function KanbanPage() {
   const { data: atendimentos = [] } = useRows("atendimentos");
   const { data: pessoas = [] } = useRows("pessoas");
   const { data: orcamentos = [] } = useRows("orcamentos");
+  const { data: cotacoesQ = [] } = useRows("cotacoes");
 
   const [kanbanId, setKanbanId] = useState<string>("");
   const [newKanban, setNewKanban] = useState(false);
@@ -165,13 +168,14 @@ function KanbanPage() {
     queryFn: () => tabelaDoKanban(kanbanId),
   });
   const quadroOfertas = tabelaQuadro === "orcamentos";
+  const quadroCotacoes = tabelaQuadro === "cotacoes";
   const [ofertaAberta, setOfertaAberta] = useState<Row | null>(null);
   const kanbanAtual = kanbans.find((k) => String(k["id"]) === kanbanId) ?? null;
   const opc = opcoesQuadro(kanbanAtual, quadroOfertas);
   const cardsByEtapa = useMemo(() => {
     const map = new Map<string, Row[]>();
     // Cada quadro mostra só a entidade da função vinculada (padrão: atendimentos).
-    if (!quadroOfertas) for (const a of atendimentos) {
+    if (!quadroOfertas && !quadroCotacoes) for (const a of atendimentos) {
       const etapaId = String(pick(a, ["kanban_etapa_id", "etapa_id", "id_etapa"]) ?? "");
       if (!etapaId) continue;
       const list = map.get(etapaId) ?? [];
@@ -189,8 +193,16 @@ function KanbanPage() {
       list.push({ ...o, __orc: true });
       map.set(etapaId, list);
     }
+    // Cotações: coluna = etapa cujo nome bate com o rótulo (ou código) do status.
+    if (quadroCotacoes) for (const c of cotacoesQ) {
+      const st = COTACAO_STATUS.find((x) => x.value === String(c["status"] ?? "pendente"));
+      const e = boardEtapas.find((et) => [nrm(st?.label), nrm(st?.value)].includes(nrm(et["descricao"])));
+      if (!e) continue;
+      const id = String(e["id"]);
+      map.set(id, [...(map.get(id) ?? []), { ...c, __cot: true }]);
+    }
     return map;
-  }, [atendimentos, orcamentos, quadroOfertas, boardEtapas]);
+  }, [atendimentos, orcamentos, cotacoesQ, quadroOfertas, quadroCotacoes, boardEtapas]);
 
   const { data: parceiros = [] } = useRows("parceiros");
   const { data: usuarios = [] } = useRows("usuarios");
@@ -460,6 +472,24 @@ function KanbanPage() {
 
   const onDrop = (etapaId: string) => {
     if (!dragId) return;
+    if (dragId.startsWith("cot:")) {
+      const id = dragId.slice(4);
+      setDragId(null);
+      const c = cotacoesQ.find((r) => String(r["id"]) === id);
+      const alvo = etapas.find((e) => String(e["id"]) === etapaId);
+      const n = (v: unknown) => String(v ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+      const para = COTACAO_STATUS.find((x) => [n(x.label), n(x.value)].includes(n(alvo?.["descricao"])))?.value;
+      if (!c || !para) return void toast.error("Essa etapa não corresponde a um status de cotação.");
+      const de = String(c["status"] ?? "pendente");
+      const bloq = bloqueioMovimento(de, para);
+      if (bloq) return void toast.error(bloq);
+      if (de === para) return;
+      void supabase.from("cotacoes").update({ status: para } as never).eq("id", id).then(({ error }) => {
+        if (error) return void toast.error(error.message);
+        queryClient.invalidateQueries({ queryKey: ["table", "cotacoes"] });
+      });
+      return;
+    }
     if (dragId.startsWith("orc:")) {
       const id = dragId.slice(4);
       setDragId(null);
@@ -660,10 +690,28 @@ function KanbanPage() {
                 <div className="flex flex-col gap-2">
                   {cards.length === 0 && (
                     <p className="rounded-md border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
-                      {quadroOfertas ? "Arraste ofertas para cá" : "Arraste atendimentos para cá"}
+                      {quadroOfertas ? "Arraste ofertas para cá" : quadroCotacoes ? "Arraste cotações para cá" : "Arraste atendimentos para cá"}
                     </p>
                   )}
                   {cards.map((card) => {
+                    if (card["__cot"]) {
+                      const dk = `cot:${String(card["id"])}`;
+                      return (
+                        <button
+                          key={dk}
+                          type="button"
+                          draggable
+                          onDragStart={() => setDragId(dk)}
+                          onDragEnd={() => setDragId(null)}
+                          onClick={() => navigate({ to: "/cotacoes", search: { id: String(card["id"]) } })}
+                          className={cn("flex w-full flex-col gap-1 rounded-md border border-border bg-card p-3 text-left shadow-sm transition hover:border-primary", dragId === dk && "opacity-50")}
+                        >
+                          <span className="font-semibold tabular-nums text-foreground">{String(card["numero"] ?? "—")}</span>
+                          <span className="truncate text-sm text-foreground">{String(card["titulo"] ?? "")}</span>
+                          {!!card["projeto_nome"] && <span className="truncate text-xs text-muted-foreground">{String(card["projeto_nome"])}</span>}
+                        </button>
+                      );
+                    }
                     if (card["__orc"]) {
                       const dk = `orc:${String(card["id"])}`;
                       return (
