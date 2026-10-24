@@ -211,6 +211,7 @@ export function CentralAjuda() {
               <Link to={"/atendimentos" as never}><MessageCircle className="mr-2 h-4 w-4" /> Falar com o suporte humano</Link>
             </Button>
           </div>
+          </>)}
         </SheetContent>
       </Sheet>
     </>
