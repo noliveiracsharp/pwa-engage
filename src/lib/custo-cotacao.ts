@@ -14,6 +14,23 @@ export function novoCustoMenor(atual: number, cotado: number): number | null {
   return r2(cotado);
 }
 
+/** Novo custo do cadastro: reduções sempre; aumentos só se autorizados. */
+export function novoCustoCotacao(atual: number, cotado: number, permitirAumento: boolean): number | null {
+  if (!(cotado > 0)) return null;
+  if (Math.abs(cotado - atual) < 0.005) return null;
+  if (cotado > atual && atual > 0 && !permitirAumento) return null;
+  return r2(cotado);
+}
+
+/** Preço de venda preservando margem% e imposto%; null quando não há margem cadastrada. */
+export function vendaPreservandoMargem(custo: number, margem: unknown, imposto: unknown): number | null {
+  const m = Number(margem) || 0;
+  const i = Number(imposto) || 0;
+  const div = 1 - m / 100 - i / 100;
+  if (!(custo > 0) || m <= 0 || div <= 0) return null;
+  return r2(custo / div);
+}
+
 /** Recalcula a linha da Oferta com o novo custo, mantendo o preço de venda. */
 export function recalcLinhaCusto(l: { quantidade: unknown; total_linha: unknown; imposto_valor?: unknown }, custo: number) {
   const qtd = Number(l.quantidade) || 0;
