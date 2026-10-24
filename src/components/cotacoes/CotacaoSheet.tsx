@@ -24,7 +24,7 @@ import { confirmar } from "@/components/layout/DialogoGlobal";
 import { QuickCreateDialog } from "@/components/itens/QuickCreateDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useTableRows } from "@/lib/crud";
-import { novoCustoMenor, ofertaAceitaNovoCusto, recalcLinhaCusto } from "@/lib/custo-cotacao";
+import { novoCustoCotacao, ofertaAceitaNovoCusto, recalcLinhaCusto, vendaPreservandoMargem } from "@/lib/custo-cotacao";
 const ITEM_RAPIDO = [{ key: "descricao", label: "Descrição" }, { key: "codigo", label: "Código / referência" }];
 import { PainelAprovacaoCotacao } from "@/components/cotacoes/AprovacaoCompras";
 import { podeGerarPedido } from "@/lib/aprovacao-compras";
@@ -184,17 +184,23 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
   };
 
   const pedidosCot = pedidos.filter((p) => String(p["cotacao_id"]) === cid);
-  /** Preço aprovado menor que o custo do cadastro: atualiza o custo (mantém a venda) e as Ofertas fora de Ativação/Fechamento. */
+  /** Atualiza o custo do cadastro com o preço vencedor (aumentos só com confirmação), recalcula a venda pela margem e as Ofertas em aberto. */
   const atualizarCustos = async () => {
     let nItens = 0, nOfertas = 0;
+    const subiram = analise.escolhas.filter((e) => {
+      const it = itemById.get(String(e.cotacaoItem["item_id"] ?? ""));
+      return it && num(it["preco_custo"]) > 0 && e.preco > num(it["preco_custo"]) + 0.004;
+    }).length;
+    const permitirAumento = subiram > 0 && await confirmar(`${subiram} item(ns) ficaram mais caros nesta cotação. Atualizar também o custo e o preço de venda desses itens no cadastro (mantendo a margem)?`);
     try {
       for (const e of analise.escolhas) {
         const itemId = String(e.cotacaoItem["item_id"] ?? "");
         const item = itemById.get(itemId);
         if (!itemId || !item) continue;
-        const novo = novoCustoMenor(num(item["preco_custo"]), e.preco);
+        const novo = novoCustoCotacao(num(item["preco_custo"]), e.preco, permitirAumento);
         if (novo == null) continue;
-        const { error } = await supabase.from("itens").update({ preco_custo: novo } as never).eq("id", itemId);
+        const venda = vendaPreservandoMargem(novo, item["margem_lucro"], item["imposto"]);
+        const { error } = await supabase.from("itens").update({ preco_custo: novo, ...(venda != null ? { preco_venda: venda } : {}) } as never).eq("id", itemId);
         if (error) continue;
         nItens++;
         const { data: linhas } = await supabase.from("orcamento_itens").select("*").eq("item_id", itemId);
@@ -218,7 +224,7 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
         }
       }
       if (nItens) {
-        toast.success(`Custo reduzido em ${nItens} item(ns) do cadastro${nOfertas ? ` e em ${nOfertas} Oferta(s) em aberto` : ""}.`);
+        toast.success(`Custo e venda atualizados em ${nItens} item(ns) do cadastro${nOfertas ? ` e em ${nOfertas} Oferta(s) em aberto` : ""}.`);
         void qc.invalidateQueries({ queryKey: ["table", "itens"] });
         void qc.invalidateQueries({ queryKey: ["table", "orcamentos"] });
         void qc.invalidateQueries({ queryKey: ["table", "orcamento_itens"] });
