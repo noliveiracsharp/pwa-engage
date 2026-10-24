@@ -248,10 +248,10 @@ function PainelCompras() {
       return por;
     },
   });
-  const tone = { pendente: "primary", em_cotacao: "warning", cotado: "primary", aprovado: "success", cancelado: "destructive" } as const;
+  const tone = { pendente: "primary", em_cotacao: "warning", cotado: "primary", aguardando_aprovacao: "warning", aprovado: "success", pedido_gerado: "success", reprovado: "destructive", cancelado: "destructive" } as const;
   return (
     <Secao title="Compras e cotações" icon={ShoppingCart}>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {COTACAO_STATUS.map((s) => (
           <Kpi key={s.value} title={s.label} value={data?.get(s.value) ?? 0} icon={ShoppingCart} tone={tone[s.value as keyof typeof tone]} />
         ))}
