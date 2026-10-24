@@ -26,8 +26,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { useTableRows } from "@/lib/crud";
 import { novoCustoCotacao, ofertaAceitaNovoCusto, recalcLinhaCusto, vendaPreservandoMargem } from "@/lib/custo-cotacao";
 const ITEM_RAPIDO = [{ key: "descricao", label: "Descrição" }, { key: "codigo", label: "Código / referência" }];
-import { PainelAprovacaoCotacao } from "@/components/cotacoes/AprovacaoCompras";
-import { podeGerarPedido, type SituacaoAprovacao } from "@/lib/aprovacao-compras";
+import { PainelAprovacaoCotacao, useConfigAprovacao } from "@/components/cotacoes/AprovacaoCompras";
+import { aprovadoresDe, podeGerarPedido, type SituacaoAprovacao } from "@/lib/aprovacao-compras";
+import { avisarAprovadoresWhatsapp } from "@/lib/cotacao-alertas";
 import { statusPelaAlcada } from "@/lib/cotacao-fluxo";
 import { ReceberPedidoDialog } from "@/components/cotacoes/ReceberPedidoDialog";
 import { CotacaoVersoes } from "@/components/cotacoes/CotacaoVersoes";
@@ -92,17 +93,24 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
   // Travada quando a oferta já foi gerada ou a cotação foi encerrada (pedido gerado / cancelada).
   const aprovada = !!cotacao?.["orcamento_id"] || ["pedido_gerado", "cancelado"].includes(String(cotacao?.["status"] ?? ""));
   const editavel = canUpdate && !aprovada;
-  const sincronizarStatus = async (sit: SituacaoAprovacao) => {
+  const { data: cfgAprov = null } = useConfigAprovacao();
+  const sincronizarStatus = async (sit: SituacaoAprovacao, valor = 0) => {
     if (!cotacao || !canUpdate) return;
     const atual = String(cotacao["status"] ?? "pendente");
     const novo = statusPelaAlcada(atual, { temPreco: precos.some((p) => num(p["preco_unitario"]) > 0), situacao: sit, temPedido: pedidos.some((p) => String(p["cotacao_id"]) === cid) });
     if (novo === atual) return;
-    const { error } = await supabase.from("cotacoes").update({ status: novo } as never).eq("id", cid);
+    // Só quem efetivamente muda o status dispara o aviso (o update condicional evita envios duplicados).
+    const { data: mudou, error } = await supabase.from("cotacoes").update({ status: novo } as never).eq("id", cid).neq("status", novo as never).select("id");
     if (error) {
-      if (/check|violat/i.test(error.message)) toast.error("Rode o script atendeai-cotacoes-kanban.sql para liberar os novos status.");
+      if (/check|violat|enum/i.test(error.message)) toast.error("Rode o script atendeai-cotacoes-kanban.sql para liberar os novos status.");
       return;
     }
+    cotacao["status"] = novo;
     void qc.invalidateQueries({ queryKey: ["table", "cotacoes"] });
+    if (novo === "aguardando_aprovacao" && mudou?.length && cfgAprov) {
+      const n = await avisarAprovadoresWhatsapp({ empresaId, aprovadores: aprovadoresDe(cfgAprov), codigo: String(cotacao["numero"] ?? ""), valor, cotacaoId: cid });
+      if (n) toast.success(`Aprovador${n > 1 ? "es avisados" : " avisado"} no WhatsApp.`);
+    }
   };
 
   const parceiroById = useMemo(() => new Map(parceiros.map((p) => [String(rowId(p)), p])), [parceiros]);
@@ -808,7 +816,7 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
             </div>
           </section>
 
-          <PainelAprovacaoCotacao cotacaoId={cid} valorTotal={analise.split}>{(sitAprov) => (
+          <PainelAprovacaoCotacao cotacaoId={cid} valorTotal={analise.split} onSituacao={(s) => void sincronizarStatus(s, analise.split)}>{(sitAprov) => (
           <section className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 className="font-semibold">Pedidos de compra</h3>
