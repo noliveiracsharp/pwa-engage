@@ -683,6 +683,7 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
                     {fornCot.map((f) => (
                       <th key={String(f["id"])} className="min-w-32 px-3 py-2 text-right">
                         {nomeParc(parceiroById.get(String(f["fornecedor_id"])))}
+                        <div className="text-muted-foreground text-[10px] font-normal">preço unitário</div>
                       </th>
                     ))}
                   </tr>
@@ -740,6 +741,7 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
                                 </span>
                               )}
                               </div>
+                              {valido && num(it["quantidade"]) !== 1 && <div className="text-muted-foreground mt-0.5 text-xs tabular-nums" title="Preço unitário × quantidade">Total {formatBRL(num(p!["preco_unitario"]) * num(it["quantidade"]))}</div>}
                               {valido && num(p!["prazo_dias"]) > 0 && <div className="text-muted-foreground mt-0.5 text-xs">{num(p!["prazo_dias"])} dias</div>}
                             </td>
                           );
@@ -751,7 +753,7 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
                 {fornCot.length > 0 && (
                   <tfoot className="bg-muted/30 border-t font-semibold">
                     <tr>
-                      <td className="px-3 py-2" colSpan={3}>Total por fornecedor</td>
+                      <td className="px-3 py-2" colSpan={4}>Total por fornecedor</td>
                       {fornCot.map((f) => {
                         const fid = String(f["fornecedor_id"]);
                         const t = analise.totais.get(fid);
