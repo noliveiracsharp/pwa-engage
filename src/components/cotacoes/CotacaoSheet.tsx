@@ -224,7 +224,7 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
         }
       }
       if (nItens) {
-        toast.success(`Custo reduzido em ${nItens} item(ns) do cadastro${nOfertas ? ` e em ${nOfertas} Oferta(s) em aberto` : ""}.`);
+        toast.success(`Custo e venda atualizados em ${nItens} item(ns) do cadastro${nOfertas ? ` e em ${nOfertas} Oferta(s) em aberto` : ""}.`);
         void qc.invalidateQueries({ queryKey: ["table", "itens"] });
         void qc.invalidateQueries({ queryKey: ["table", "orcamentos"] });
         void qc.invalidateQueries({ queryKey: ["table", "orcamento_itens"] });
