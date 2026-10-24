@@ -2,17 +2,19 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, ArrowRight, BookOpen, Bot, CircleHelp, Loader2, MessageCircle, PlayCircle, Search, Send } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpen, Bot, CircleHelp, Loader2, MessageCircle, Pencil, PlayCircle, Plus, Search, Send } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
-import { ARTIGOS_PADRAO, MODULOS_AJUDA, artigoTexto, buscarArtigos, type ArtigoAjuda } from "@/lib/ajuda";
+import { ARTIGOS_PADRAO, MODULOS_AJUDA, artigoTexto, buscarArtigos, mesclarArtigos, type ArtigoAjuda, type ArtigoBanco } from "@/lib/ajuda";
 import { perguntarCopiloto } from "@/lib/ajuda.functions";
+import { useAuth } from "@/hooks/useAuth";
+import { EditorArtigoAjuda } from "./EditorArtigoAjuda";
 
-/** Guias extras cadastrados no banco (tabela opcional ajuda_artigos). */
+/** Guias do banco (ajuda_artigos): personalizam os oficiais (chave) ou criam guias novos. */
 function useArtigos() {
   const { data: extras = [] } = useQuery({
     queryKey: ["ajuda-artigos"],
@@ -20,8 +22,9 @@ function useArtigos() {
     queryFn: async () => {
       const { data, error } = await supabase.from("ajuda_artigos" as never).select("*").eq("publicado", true).order("ordem");
       if (error) return [];
-      return (data as Record<string, unknown>[]).map((r): ArtigoAjuda => ({
-        id: `db-${r["id"]}`, modulo: String(r["modulo"] ?? "Primeiros passos"), titulo: String(r["titulo"] ?? ""),
+      return (data as Record<string, unknown>[]).map((r): ArtigoBanco => ({
+        id: `db-${r["id"]}`, dbId: String(r["id"]), chave: (r["chave"] as string) || undefined,
+        modulo: String(r["modulo"] ?? "Primeiros passos"), titulo: String(r["titulo"] ?? ""),
         resumo: String(r["resumo"] ?? ""), rota: (r["rota"] as string) || undefined, perfil: (r["perfil"] as string) || undefined,
         passos: String(r["conteudo"] ?? "").split("\n").map((l) => l.replace(/^\s*\d+[.)]\s*/, "").trim()).filter(Boolean),
         dica: (r["dica"] as string) || undefined, video: (r["video_url"] as string) || undefined,
@@ -30,7 +33,7 @@ function useArtigos() {
       }));
     },
   });
-  return useMemo(() => [...ARTIGOS_PADRAO, ...extras], [extras]);
+  return useMemo(() => mesclarArtigos(ARTIGOS_PADRAO, extras), [extras]);
 }
 
 function Resposta({ texto }: { texto: string }) {
@@ -105,6 +108,8 @@ export function CentralAjuda() {
   const [resposta, setResposta] = useState("");
   const [carregando, setCarregando] = useState(false);
   const perguntar = useServerFn(perguntarCopiloto);
+  const { isMaster } = useAuth();
+  const [editando, setEditando] = useState<ArtigoAjuda | "novo" | null>(null);
 
   const lista = useMemo(() => {
     if (busca.trim().length > 2) return buscarArtigos(artigos, busca, 8);
@@ -137,8 +142,22 @@ export function CentralAjuda() {
       <Sheet open={aberto} onOpenChange={setAberto}>
         <SheetContent side="right" data-no-guard className="flex w-full flex-col gap-0 p-0 sm:max-w-xl">
           <SheetHeader className="border-b border-border p-4">
-            <SheetTitle className="flex items-center gap-2"><BookOpen className="h-5 w-5 text-primary" /> Central de Ajuda</SheetTitle>
+            <SheetTitle className="flex items-center gap-2">
+              <BookOpen className="h-5 w-5 text-primary" /> {editando ? (editando === "novo" ? "Novo guia" : "Editar guia") : "Central de Ajuda"}
+              {isMaster && !editando && (
+                <span className="ml-auto mr-6 flex gap-1">
+                  {atual && <Button size="sm" variant="outline" onClick={() => setEditando(atual)}><Pencil className="mr-1 h-4 w-4" /> Editar</Button>}
+                  {!atual && <Button size="sm" variant="outline" onClick={() => setEditando("novo")}><Plus className="mr-1 h-4 w-4" /> Novo guia</Button>}
+                </span>
+              )}
+            </SheetTitle>
           </SheetHeader>
+          {editando ? (
+            <div className="min-h-0 flex-1">
+              <EditorArtigoAjuda key={editando === "novo" ? "novo" : editando.id} artigo={editando === "novo" ? null : editando} modulos={modulos}
+                fechar={() => { setEditando(null); setAtual(null); }} />
+            </div>
+          ) : (<>
           <div className="flex-1 overflow-y-auto p-4">
             {atual ? (
               <ArtigoView a={atual} voltar={() => setAtual(null)} fechar={() => setAberto(false)} />
@@ -192,6 +211,7 @@ export function CentralAjuda() {
               <Link to={"/atendimentos" as never}><MessageCircle className="mr-2 h-4 w-4" /> Falar com o suporte humano</Link>
             </Button>
           </div>
+          </>)}
         </SheetContent>
       </Sheet>
     </>
