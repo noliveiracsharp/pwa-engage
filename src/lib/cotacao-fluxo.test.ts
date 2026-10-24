@@ -26,3 +26,14 @@ describe("bloqueioMovimento", () => {
     expect(bloqueioMovimento("cotado", "cancelado")).toBeNull();
   });
 });
+
+import { fornecedorRespondeu } from "./cotacao-fluxo";
+describe("fornecedorRespondeu", () => {
+  const f = { cotacao_id: "c1", fornecedor_id: "f1", respondido: false };
+  it("considera preço manual lançado como resposta", () => {
+    expect(fornecedorRespondeu(f, [{ cotacao_id: "c1", fornecedor_id: "f1", preco_unitario: 53.46 }])).toBe(true);
+  });
+  it("sem preço e sem flag continua aguardando", () => {
+    expect(fornecedorRespondeu(f, [{ cotacao_id: "c1", fornecedor_id: "f1", preco_unitario: 0 }])).toBe(false);
+  });
+});

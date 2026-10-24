@@ -1,3 +1,4 @@
+import { fornecedorRespondeu } from "@/lib/cotacao-fluxo";
 import { useVariaveisPersonalizadas } from "@/lib/variaveis";
 import { useMemo, useRef, useState } from "react";
 import { instanciaParaAvisos, ordenarParaAvisos } from "@/lib/instancia-finalidade";

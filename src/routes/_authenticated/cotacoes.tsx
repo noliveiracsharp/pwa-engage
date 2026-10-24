@@ -1,3 +1,4 @@
+import { fornecedorRespondeu } from "@/lib/cotacao-fluxo";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -221,7 +222,7 @@ function CotacoesPage() {
       key: "forn", header: "Fornecedores", fields: [],
       render: (r) => {
         const fs = deCot(fornCot, String(rowId(r)));
-        return `${fs.filter((x) => x["respondido"]).length}/${fs.length} responderam`;
+        return `${fs.filter((x) => fornecedorRespondeu(x, precos)).length}/${fs.length} responderam`;
       },
     },
     {
@@ -290,7 +291,7 @@ function CotacoesPage() {
                       >
                         <div className="font-semibold tabular-nums">{String(r["numero"] ?? "—")}</div>
                         <div className="truncate text-muted-foreground">{String(r["titulo"] || r["projeto_nome"] || "—")}</div>
-                        <div className="mt-1 text-xs text-muted-foreground">{deCot(itensCot, id).length} itens · {fs.filter((x) => x["respondido"]).length}/{fs.length} fornecedores</div>
+                        <div className="mt-1 text-xs text-muted-foreground">{deCot(itensCot, id).length} itens · {fs.filter((x) => fornecedorRespondeu(x, precos)).length}/{fs.length} fornecedores</div>
                         {r["laudo_id"] ? <div className="mt-1 text-xs text-primary">Origem: laudo técnico</div> : null}
                       </button>
                     );

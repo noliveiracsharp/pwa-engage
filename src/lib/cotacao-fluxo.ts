@@ -34,3 +34,16 @@ export function bloqueioMovimento(de: string, para: string): string | null {
   if (de === "pedido_gerado") return "Cotação com pedido gerado não pode voltar de etapa.";
   return null;
 }
+
+/** Fornecedor conta como respondido se marcado OU se já tem algum preço > 0 lançado na cotação. */
+export function fornecedorRespondeu(
+  f: Record<string, unknown>,
+  precos: Record<string, unknown>[],
+): boolean {
+  if (f["respondido"]) return true;
+  return precos.some(
+    (p) => String(p["cotacao_id"]) === String(f["cotacao_id"]) &&
+      String(p["fornecedor_id"]) === String(f["fornecedor_id"]) &&
+      Number(p["preco_unitario"] ?? 0) > 0,
+  );
+}
