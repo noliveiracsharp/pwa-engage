@@ -409,7 +409,7 @@ function UsuariosPage() {
           ]
         : []),
     ],
-    [perfilOptions, empresasPermitidas, isMaster, record, departamentos],
+    [perfilOptions, empresasPermitidas, isMaster, record, departamentos, permsPerfil.canUpdate],
   );
 
   const filtered = useMemo(
@@ -515,7 +515,7 @@ function UsuariosPage() {
               ...(perms.canUpdate ? [
                 { label: "Ativar", icon: <CheckCircle2 className="h-4 w-4" />, executar: lote.definirStatus(true) },
                 { label: "Inativar", icon: <Ban className="h-4 w-4" />, confirmacao: "Inativar {n} usuário(s)? Eles perderão o acesso.", executar: lote.definirStatus(false) },
-                ...[...perfisPermitidos]
+                ...(isMaster || permsPerfil.canUpdate ? [...perfisPermitidos] : [])
                   .sort((a, b) => text(pick(a, ["descricao"])).localeCompare(text(pick(b, ["descricao"])), "pt-BR"))
                   .map((p) => ({
                     label: `Atribuir perfil: ${text(pick(p, ["descricao"], "Perfil"))}`,
@@ -559,7 +559,7 @@ function UsuariosPage() {
               onChange={(v) => setF({ ...f, perfil: v })}
               options={perfilOptions}
             />
-            <Button variant="outline" className="self-end" onClick={() => setDeptOpen(true)}>Departamentos</Button>
+            {(isMaster || perms.canUpdate) && <Button variant="outline" className="self-end" onClick={() => setDeptOpen(true)}>Departamentos</Button>}
           </>
         }
       />
