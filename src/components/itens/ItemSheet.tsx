@@ -120,7 +120,7 @@ type Props = {
 export function ItemSheet({ open, onOpenChange, record, saving, readOnly, duplicando, canCreateApoio, onSave }: Props) {
   const [v, setV] = useState<Values>(EMPTY);
   const [quick, setQuick] = useState<null | "unidade" | "centro" | "marca">(null);
-  const [aba, setAba] = useState<"geral" | "fiscal">("geral");
+  const [aba, setAba] = useState<"geral" | "fiscal" | "compras">("geral");
   useEffect(() => { if (open) setAba("geral"); }, [open]);
 
   const { data: unidades = [] } = useTableRows("unidade_medida");
