@@ -130,6 +130,31 @@ export const atualizarPerfilZapi = createServerFn({ method: "POST" })
     return { ok: falhas.length === 0, falhas };
   });
 
+/** Aponta os avisos escolhidos da Z-API para a mesma URL do Atende.ai (status e desconexão são ignorados com segurança no recebimento). */
+export const sincronizarWebhooksZapi = createServerFn({ method: "POST" })
+  .middleware([exigirLogin])
+  .inputValidator((d) =>
+    Credenciais.extend({
+      url: z.string().url().max(1000),
+      eventos: z.array(z.enum(["update-webhook-received", "update-webhook-message-status", "update-webhook-disconnected", "update-webhook-connected"])).min(1).max(4),
+    }).parse(d),
+  )
+  .handler(async ({ data }): Promise<{ resultados: Array<{ evento: string; ok: boolean; message?: string }> }> => {
+    const base = `https://api.z-api.io/instances/${encodeURIComponent(data.instanceId)}/token/${encodeURIComponent(data.token)}`;
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (data.clientToken) headers["Client-Token"] = data.clientToken;
+    const resultados: Array<{ evento: string; ok: boolean; message?: string }> = [];
+    for (const evento of data.eventos) {
+      try {
+        const r = await fetch(`${base}/${evento}`, { method: "PUT", headers, body: JSON.stringify({ value: data.url }) });
+        resultados.push(r.ok ? { evento, ok: true } : { evento, ok: false, message: (await r.text()).slice(0, 160) || `HTTP ${r.status}` });
+      } catch (e) {
+        resultados.push({ evento, ok: false, message: e instanceof Error ? e.message : "falha de rede" });
+      }
+    }
+    return { resultados };
+  });
+
 /** Reinicia a instância sem precisar ler o QR Code de novo. */
 export const reiniciarZapi = createServerFn({ method: "POST" })
   .middleware([exigirLogin])
