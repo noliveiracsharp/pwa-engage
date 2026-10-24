@@ -23,6 +23,7 @@ import { SaldosBancarios } from "@/components/financeiro/SaldosBancarios";
 import { contasDaEmpresa, somarSaldos } from "@/lib/saldos-bancarios";
 import { CartoesCredito } from "@/components/financeiro/CartoesCredito";
 import { ControllerPainel } from "@/components/financeiro/ControllerPainel";
+import { VereditoFluxo } from "@/components/financeiro/VereditoFluxo";
 import { ReguaCobranca } from "@/components/financeiro/ReguaCobranca";
 import { CategoriasDialog, useCategoriasFinanceiro } from "@/components/financeiro/CategoriasFinanceiro";
 import { CobrancaDialog } from "@/components/financeiro/CobrancaDialog";
@@ -1853,7 +1854,7 @@ function Caixa({ titulos }: { titulos: Row[] }) {
     preenchido.current = true;
     setSaldoInicial((s) => s || moedaDeNumero(somaBancos.total ?? 0));
   }, [somaBancos.total]);
-  const [per, setPer] = useState<Periodo>(() => periodoPreset("mes"));
+  const [per, setPer] = useState<Periodo>(() => periodoPreset("proximos12m"));
   const [modo, setModo] = useState<ModoCaixa>("ambos");
   const periodo = useMemo(() => {
     if (per.preset !== "todo") return { de: per.de, ate: per.ate };
@@ -1894,6 +1895,7 @@ function Caixa({ titulos }: { titulos: Row[] }) {
         <div className="bg-card rounded-lg border p-3"><p className="text-muted-foreground text-xs">Saídas</p><p className="text-destructive text-lg font-semibold tabular-nums">{formatBRL(tot.s)}</p></div>
         <div className="bg-card rounded-lg border p-3"><p className="text-muted-foreground text-xs">Saldo final</p><p className={cn("text-lg font-semibold tabular-nums", (linhas.at(-1)?.acumulado ?? 0) < 0 && "text-destructive")}>{formatBRL(linhas.at(-1)?.acumulado ?? 0)}</p></div>
       </div>
+      {linhas.length > 0 && <VereditoFluxo contexto={() => JSON.stringify({ periodo, modo, saldoInicial: num(saldoInicial), totalEntradas: tot.e, totalSaidas: tot.s, meses: linhas.map((l) => ({ mes: l.mes, entradas: l.entradas, saidas: l.saidas, saldoAcumulado: l.acumulado })) })} />}
       {linhas.length === 0 ? (
         <p className="text-muted-foreground text-sm">Informe um período válido.</p>
       ) : (

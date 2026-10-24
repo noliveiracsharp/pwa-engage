@@ -107,6 +107,7 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
     }
     cotacao["status"] = novo;
     void qc.invalidateQueries({ queryKey: ["table", "cotacoes"] });
+    void qc.invalidateQueries({ queryKey: ["barra-aprovacao-cotacao"] });
     if (novo === "aguardando_aprovacao" && mudou?.length && cfgAprov) {
       const n = await avisarAprovadoresWhatsapp({ empresaId, aprovadores: aprovadoresDe(cfgAprov), codigo: String(cotacao["numero"] ?? ""), valor, cotacaoId: cid });
       if (n) toast.success(`Aprovador${n > 1 ? "es avisados" : " avisado"} no WhatsApp.`);

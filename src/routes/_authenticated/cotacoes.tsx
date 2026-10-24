@@ -2,7 +2,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -38,7 +38,10 @@ export const Route = createFileRoute("/_authenticated/cotacoes")({
       { name: "robots", content: "noindex" },
     ],
   }),
-  validateSearch: (s: Record<string, unknown>): { id?: string } => (typeof s["id"] === "string" ? { id: s["id"] } : {}),
+  validateSearch: (s: Record<string, unknown>): { id?: string; status?: string } => ({
+    ...(typeof s["id"] === "string" ? { id: s["id"] } : {}),
+    ...(typeof s["status"] === "string" ? { status: s["status"] } : {}),
+  }),
   component: CotacoesPage,
 });
 
@@ -101,7 +104,11 @@ function CotacoesPage() {
     toast.success(`Cotação movida para ${cotacaoStatusMeta(para).label}.`);
   };
   const [aprovando, setAprovando] = useState(false);
-  const [f, setF] = useState({ busca: "", status: "todos", projeto: "" });
+  const [f, setF] = useState({ busca: "", status: search.status ?? "todos", projeto: "" });
+  useEffect(() => {
+    if (search.status) setF((x) => ({ ...x, status: search.status! }));
+    if (search.id) setSelId(search.id);
+  }, [search.status, search.id]);
 
   const sel = cotacoes.find((c) => String(rowId(c)) === selId) ?? null;
   const laudoById = useMemo(() => new Map(laudos.map((l) => [String(rowId(l)), l])), [laudos]);

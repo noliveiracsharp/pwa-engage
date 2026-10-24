@@ -69,9 +69,12 @@ export function BarraAprovacaoCotacao() {
         <Bell className="h-4 w-4 shrink-0 text-warning" />
         <span className="flex-1">Cotações aguardando minha aprovação ({minhas.length})</span>
         {minhas.length > 1 && (
-          <button type="button" onClick={() => setExpandida((v) => !v)} className="flex items-center gap-1 text-xs font-medium text-primary hover:underline">
-            {expandida ? <>Mostrar menos <ChevronUp className="h-3 w-3" /></> : <>Ver todas <ChevronDown className="h-3 w-3" /></>}
-          </button>
+          <>
+            <Link to="/cotacoes" search={{ status: "aguardando_aprovacao" } as never} className="text-xs font-medium text-primary hover:underline">Abrir lista filtrada</Link>
+            <button type="button" onClick={() => setExpandida((v) => !v)} className="flex items-center gap-1 text-xs font-medium text-primary hover:underline">
+              {expandida ? <>Mostrar menos <ChevronUp className="h-3 w-3" /></> : <>Ver todas <ChevronDown className="h-3 w-3" /></>}
+            </button>
+          </>
         )}
         <button type="button" onClick={() => setRecolhida(true)} className="text-xs font-medium text-muted-foreground hover:text-foreground">Recolher</button>
       </div>
@@ -79,7 +82,7 @@ export function BarraAprovacaoCotacao() {
         {visiveis.map((c) => (
           <li key={String(c["id"])} className="flex items-center justify-between gap-2 pl-6">
             <span className="truncate">{String(c["numero"] ?? "")} · {String(c["titulo"] || c["projeto_nome"] || "")}</span>
-            <Link to="/cotacoes" search={{ id: String(c["id"]) } as never} className="shrink-0 font-medium text-primary hover:underline">Revisar</Link>
+            <Link to="/cotacoes" search={{ id: String(c["id"]), ...(minhas.length > 1 ? { status: "aguardando_aprovacao" } : {}) } as never} className="shrink-0 font-medium text-primary hover:underline">Revisar</Link>
           </li>
         ))}
       </ul>
