@@ -15,7 +15,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { SearchSelect } from "@/components/data-table/SearchSelect";
 import { supabase } from "@/integrations/supabase/client";
 import { rowId } from "@/lib/crud";
-import { baixarArquivo, cotacaoStatusMeta, parseCsv, proximoNumero, toCsv } from "@/lib/laudos";
+import { baixarArquivo, COTACAO_STATUS, cotacaoStatusMeta, parseCsv, proximoNumero, toCsv } from "@/lib/laudos";
 import { formatBRL, formatQtd, num, round2 } from "@/lib/orcamentos";
 import { pick, type Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
@@ -550,6 +550,14 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
     invalidar();
   };
 
+  // Ajuste manual do status (destrava cotações antigas ou corrige o fluxo).
+  const alterarStatus = async (novo: string) => {
+    const { error } = await supabase.from("cotacoes").update({ status: novo } as never).eq("id", cid);
+    if (error) return void toast.error(/check|violat|enum/i.test(error.message) ? "Rode o script atendeai-cotacoes-kanban_v2.sql para liberar os novos status." : error.message);
+    cotacao["status"] = novo;
+    qc.invalidateQueries({ queryKey: ["table", "cotacoes"] });
+    toast.success(`Status alterado para ${cotacaoStatusMeta(novo).label}.`);
+  };
   const st = cotacaoStatusMeta(cotacao["status"]);
   const vencedorNome = analise.vencedor ? nomeParc(parceiroById.get(analise.vencedor)) : null;
 
@@ -562,7 +570,18 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
         <SheetHeader className="border-b px-6 py-4">
           <SheetTitle className="flex flex-wrap items-center gap-2">
             Cotação {String(cotacao["numero"] ?? "")}
-            <span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", st.badge)}>{st.label}</span>
+            {canUpdate ? (
+              <select
+                aria-label="Status da cotação"
+                value={String(cotacao["status"] ?? "pendente")}
+                onChange={(e) => void alterarStatus(e.target.value)}
+                className={cn("cursor-pointer rounded-full border-0 px-2 py-0.5 text-xs font-semibold outline-none", st.badge)}
+              >
+                {COTACAO_STATUS.map((s) => <option key={s.value} value={s.value} className="bg-popover text-popover-foreground">{s.label}</option>)}
+              </select>
+            ) : (
+              <span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", st.badge)}>{st.label}</span>
+            )}
           </SheetTitle>
           {canUpdate ? (
             <div className="grid max-w-4xl gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
