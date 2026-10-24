@@ -248,6 +248,27 @@ function PainelCompras() {
       return por;
     },
   });
+  const { usuarioId } = useAudit();
+  // Cotações aguardando o voto deste usuário (aprovador principal ou adicional da alçada).
+  const { data: minhas = [] } = useQuery({
+    queryKey: ["dashboard", "cotacoes-minha-aprovacao", empresaId, usuarioId],
+    enabled: usuarioId != null,
+    queryFn: async () => {
+      const { data: cfg } = await supabase.from("compras_workflow_config" as never).select("*").eq("empresa_id", empresaId as never).maybeSingle();
+      const c = cfg as Row | null;
+      if (!c || c["ativo"] !== true) return [] as Row[];
+      let ad = c["aprovadores_adicionais"];
+      if (typeof ad === "string") { try { ad = JSON.parse(ad); } catch { ad = []; } }
+      const lista = [String(c["aprovador_principal_id"] ?? ""), ...(Array.isArray(ad) ? ad.map(String) : [])];
+      const uid = String(usuarioId);
+      if (!lista.includes(uid)) return [] as Row[];
+      const pend = await rowsOf("cotacoes", empresaId, (q) => q.eq("status", "aguardando_aprovacao"));
+      if (!pend.length) return [] as Row[];
+      const { data: votos } = await supabase.from("cotacao_aprovacoes" as never).select("cotacao_id").eq("usuario_id", uid as never).in("cotacao_id", pend.map((p) => String(p["id"])) as never);
+      const votadas = new Set(((votos ?? []) as Row[]).map((v) => String(v["cotacao_id"])));
+      return pend.filter((p) => !votadas.has(String(p["id"])));
+    },
+  });
   const tone = { pendente: "primary", em_cotacao: "warning", cotado: "primary", aguardando_aprovacao: "warning", aprovado: "success", pedido_gerado: "success", reprovado: "destructive", cancelado: "destructive" } as const;
   return (
     <Secao title="Compras e cotações" icon={ShoppingCart}>
@@ -256,6 +277,19 @@ function PainelCompras() {
           <Kpi key={s.value} title={s.label} value={data?.get(s.value) ?? 0} icon={ShoppingCart} tone={tone[s.value as keyof typeof tone]} />
         ))}
       </div>
+      {minhas.length > 0 && (
+        <div className="rounded-lg border border-warning/50 bg-warning/10 p-4">
+          <div className="mb-2 flex items-center gap-2 font-semibold text-foreground"><Bell className="h-4 w-4 text-warning" />Cotações aguardando minha aprovação ({minhas.length})</div>
+          <ul className="space-y-1 text-sm">
+            {minhas.slice(0, 8).map((c) => (
+              <li key={String(c["id"])} className="flex items-center justify-between gap-2">
+                <span className="truncate">{String(c["numero"] ?? "")} · {String(c["titulo"] || c["projeto_nome"] || "")}</span>
+                <Link to="/cotacoes" search={{ id: String(c["id"]) } as never} className="shrink-0 text-primary hover:underline">Revisar</Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </Secao>
   );
 }
