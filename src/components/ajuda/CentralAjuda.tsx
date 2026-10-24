@@ -2,17 +2,19 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, ArrowRight, BookOpen, Bot, CircleHelp, Loader2, MessageCircle, PlayCircle, Search, Send } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpen, Bot, CircleHelp, Loader2, MessageCircle, Pencil, PlayCircle, Plus, Search, Send } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
-import { ARTIGOS_PADRAO, MODULOS_AJUDA, artigoTexto, buscarArtigos, type ArtigoAjuda } from "@/lib/ajuda";
+import { ARTIGOS_PADRAO, MODULOS_AJUDA, artigoTexto, buscarArtigos, mesclarArtigos, type ArtigoAjuda, type ArtigoBanco } from "@/lib/ajuda";
 import { perguntarCopiloto } from "@/lib/ajuda.functions";
+import { useAuth } from "@/hooks/useAuth";
+import { EditorArtigoAjuda } from "./EditorArtigoAjuda";
 
-/** Guias extras cadastrados no banco (tabela opcional ajuda_artigos). */
+/** Guias do banco (ajuda_artigos): personalizam os oficiais (chave) ou criam guias novos. */
 function useArtigos() {
   const { data: extras = [] } = useQuery({
     queryKey: ["ajuda-artigos"],
@@ -20,8 +22,9 @@ function useArtigos() {
     queryFn: async () => {
       const { data, error } = await supabase.from("ajuda_artigos" as never).select("*").eq("publicado", true).order("ordem");
       if (error) return [];
-      return (data as Record<string, unknown>[]).map((r): ArtigoAjuda => ({
-        id: `db-${r["id"]}`, modulo: String(r["modulo"] ?? "Primeiros passos"), titulo: String(r["titulo"] ?? ""),
+      return (data as Record<string, unknown>[]).map((r): ArtigoBanco => ({
+        id: `db-${r["id"]}`, dbId: String(r["id"]), chave: (r["chave"] as string) || undefined,
+        modulo: String(r["modulo"] ?? "Primeiros passos"), titulo: String(r["titulo"] ?? ""),
         resumo: String(r["resumo"] ?? ""), rota: (r["rota"] as string) || undefined, perfil: (r["perfil"] as string) || undefined,
         passos: String(r["conteudo"] ?? "").split("\n").map((l) => l.replace(/^\s*\d+[.)]\s*/, "").trim()).filter(Boolean),
         dica: (r["dica"] as string) || undefined, video: (r["video_url"] as string) || undefined,
@@ -30,7 +33,7 @@ function useArtigos() {
       }));
     },
   });
-  return useMemo(() => [...ARTIGOS_PADRAO, ...extras], [extras]);
+  return useMemo(() => mesclarArtigos(ARTIGOS_PADRAO, extras), [extras]);
 }
 
 function Resposta({ texto }: { texto: string }) {
