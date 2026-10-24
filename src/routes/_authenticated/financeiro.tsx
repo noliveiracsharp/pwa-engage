@@ -16,6 +16,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ParceiroSheet } from "@/components/parceiros/ParceiroSheet";
 import { buildTree } from "@/lib/hierarchy";
+import { QuickCreateDialog, type QuickField } from "@/components/itens/QuickCreateDialog";
 import { formatCpfCnpj } from "@/lib/input-masks";
 import { ContasBancarias } from "@/components/financeiro/ContasBancarias";
 import { SaldosBancarios } from "@/components/financeiro/SaldosBancarios";
@@ -1076,6 +1077,14 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
   const serieOferta = irmasOferta.length > 1;
   const qc = useQueryClient();
   const [novoParc, setNovoParc] = useState(false);
+  const [novoCentro, setNovoCentro] = useState(false);
+  const camposCentro: QuickField[] = useMemo(() => [
+    { key: "centro_custo_pai_id", label: "Centro de Custo Pai", type: "select",
+      options: centroOpts.map((o) => ({ value: o.value, label: `${"— ".repeat(o.depth)}${o.label}` })) },
+    { key: "codigo", label: "Código" },
+    { key: "descricao", label: "Descrição" },
+    { key: "status", label: "Status", type: "boolean" },
+  ], [centroOpts]);
   const [salvandoParc, setSalvandoParc] = useState(false);
   const { stamp } = useAudit();
   const criarParceiro = async (values: Row) => {
@@ -1493,7 +1502,13 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
           <div className="space-y-1"><Label>Código de referência</Label>
             <Input value={v.codigo_referencia} disabled={readOnly} placeholder="Nº da NF, pedido…" onChange={(e) => setV({ ...v, codigo_referencia: e.target.value })} /></div>
           <div className="space-y-1 sm:col-span-2"><Label>Centro de custo</Label>
-            <SearchSelect value={v.centro_custo_id} disabled={readOnly} options={centroOpts} placeholder="Escolha o centro de custo" onChange={(x) => setV({ ...v, centro_custo_id: x })} /></div>
+            <div className="flex gap-2">
+              <SearchSelect value={v.centro_custo_id} disabled={readOnly} options={centroOpts} placeholder="Escolha o centro de custo" emptyText="Não encontrado. Use o + para cadastrar." onChange={(x) => setV({ ...v, centro_custo_id: x })} />
+              {!readOnly && <Button type="button" variant="outline" size="icon" title="Cadastrar centro de custo" aria-label="Cadastrar centro de custo" onClick={() => setNovoCentro(true)}><Plus className="h-4 w-4" /></Button>}
+            </div>
+            {novoCentro && <QuickCreateDialog open onOpenChange={(o) => !o && setNovoCentro(false)} title="Novo centro de custo" table="centro_custo"
+              fields={camposCentro} onCreated={(id) => setV((s) => ({ ...s, centro_custo_id: id }))} />}
+          </div>
           {registro && rowId(registro) && (
             <RateioTitulo tituloId={text(rowId(registro))} empresaId={text(registro["empresa_id"])} valorTitulo={num(registro["valor"])} readOnly={readOnly} tipoTitulo={tipo}
               formaPagamento={v.forma_pagamento} contaBancariaId={v.conta_bancaria_id} />
