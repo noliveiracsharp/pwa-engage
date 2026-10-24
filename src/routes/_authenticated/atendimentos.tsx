@@ -1,3 +1,4 @@
+import { useKanbansPermitidos } from "@/hooks/useKanbansPermitidos";
 import { ProtocoloBadge } from "@/components/atendimentos/ProtocoloBadge";
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
@@ -74,7 +75,7 @@ function AtendimentosPage() {
 
   const { data: meusKanbans = [] } = useQuery({
     queryKey: ["table", "usuario_kanban", usuarioId],
-    enabled: !!usuarioId && !isMaster,
+    enabled: false && !!usuarioId && !isMaster,
     queryFn: async (): Promise<string[]> => {
       const { data, error } = await supabase.from("usuario_kanban").select("kanban_nome_id").eq("usuario_id", usuarioId);
       if (error) throw error;
