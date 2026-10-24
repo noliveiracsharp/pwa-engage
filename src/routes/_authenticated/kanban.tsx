@@ -1,4 +1,5 @@
 import { usePagePermissions } from "@/hooks/usePagePermissions";
+import { useKanbansPermitidos } from "@/hooks/useKanbansPermitidos";
 import { CalendarClock, FileText, Search, Settings2, X } from "lucide-react";
 import { ROTULO_STATUS_ACAO, TIPOS_ACAO, statusProximaAcao } from "@/lib/crm";
 import { EtapaCorPicker } from "@/components/kanban/EtapaCorPicker";
@@ -98,33 +99,20 @@ function KanbanPage() {
 
   const { data: allKanbans = [], isLoading: loadingAll } = useRows("kanban_nome");
   const usuarioId = usuario?.["id"] ? String(usuario["id"]) : null;
-  const { data: vinculosUsuario = [], isLoading: loadingVinc } = useQuery({
-    queryKey: ["table", "usuario_kanban", usuarioId],
-    enabled: !!usuarioId && !isMaster,
-    queryFn: async (): Promise<string[]> => {
-      const { data, error } = await supabase
-        .from("usuario_kanban")
-        .select("kanban_nome_id")
-        .eq("usuario_id", usuarioId!);
-      if (error) throw error;
-      return ((data ?? []) as Row[]).map((r) => String(r["kanban_nome_id"]));
-    },
-  });
+  const acesso = useKanbansPermitidos();
   const kanbans = useMemo(() => {
-    if (isMaster) {
-      // Master: todos os quadros da empresa selecionada no contexto.
-      if (empresaId === undefined || empresaId === null) return allKanbans;
-      return allKanbans.filter((k) => {
-        const e = pick(k, ["empresa_id", "id_empresa"]);
-        return e === undefined || e === null || String(e) === String(empresaId);
-      });
-    }
-    if (!usuarioId) return [];
-    // Usuário comum: só quadros vinculados em usuario_kanban, na ordem dos vínculos.
-    const byId = new Map(allKanbans.map((k) => [String(k["id"]), k]));
-    return vinculosUsuario.map((id) => byId.get(id)).filter((k): k is Row => !!k);
-  }, [isMaster, allKanbans, empresaId, usuarioId, vinculosUsuario]);
-  const loadingKanbans = loadingAll || (!isMaster && (loadingVinc || !usuarioId));
+    const daEmpresa =
+      empresaId === undefined || empresaId === null
+        ? allKanbans
+        : allKanbans.filter((k) => {
+            const e = pick(k, ["empresa_id", "id_empresa"]);
+            return e === undefined || e === null || String(e) === String(empresaId);
+          });
+    if (isMaster) return daEmpresa;
+    return daEmpresa.filter((k) => acesso.pode(k["id"]));
+  }, [isMaster, allKanbans, empresaId, acesso]);
+  const loadingKanbans = loadingAll || acesso.isLoading;
+  void usuarioId;
   const { data: etapas = [] } = useRows("kanban_etapas");
   const { data: atendimentos = [] } = useRows("atendimentos");
   const { data: pessoas = [] } = useRows("pessoas");
