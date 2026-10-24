@@ -233,6 +233,10 @@ function UsuariosPage() {
 
   const handleSave = (input: Row) => {
     const values: Row = { ...input };
+    // Trava: sem permissão de alterar em /perfil, o perfil do usuário não muda.
+    if (record && !(isMaster || permsPerfil.canUpdate)) {
+      for (const k of ["perfil_id", "id_perfil"]) if (k in record) values[k] = record[k]; else delete values[k];
+    }
     if (typeof values["nome"] === "string") values["nome"] = nomeProprio(values["nome"]);
     // Trava: usuário comum só grava empresas da sua matriz/filiais.
     if (!isMaster) {
@@ -385,9 +389,11 @@ function UsuariosPage() {
       { fields: ["recebe_leads"], label: "Participa da roleta de leads", type: "boolean" },
       {
         fields: ["perfil_id"],
-        label: "Perfil",
+        label: record && !(isMaster || permsPerfil.canUpdate) ? "Perfil (somente leitura)" : "Perfil",
         type: "select",
-        options: perfilOptions.filter((o) => o.value !== "todos"),
+        options: perfilOptions.filter((o) =>
+          o.value !== "todos" &&
+          (!record || isMaster || permsPerfil.canUpdate || o.value === text(pick(record, ["perfil_id", "id_perfil"])))),
       },
       ...(empresasPermitidas.length > 1 || (isMaster && empresasPermitidas.length > 0)
         ? [
@@ -403,7 +409,7 @@ function UsuariosPage() {
           ]
         : []),
     ],
-    [perfilOptions, empresasPermitidas, isMaster, record, departamentos],
+    [perfilOptions, empresasPermitidas, isMaster, record, departamentos, permsPerfil.canUpdate],
   );
 
   const filtered = useMemo(
@@ -509,7 +515,7 @@ function UsuariosPage() {
               ...(perms.canUpdate ? [
                 { label: "Ativar", icon: <CheckCircle2 className="h-4 w-4" />, executar: lote.definirStatus(true) },
                 { label: "Inativar", icon: <Ban className="h-4 w-4" />, confirmacao: "Inativar {n} usuário(s)? Eles perderão o acesso.", executar: lote.definirStatus(false) },
-                ...[...perfisPermitidos]
+                ...(isMaster || permsPerfil.canUpdate ? [...perfisPermitidos] : [])
                   .sort((a, b) => text(pick(a, ["descricao"])).localeCompare(text(pick(b, ["descricao"])), "pt-BR"))
                   .map((p) => ({
                     label: `Atribuir perfil: ${text(pick(p, ["descricao"], "Perfil"))}`,
@@ -553,7 +559,7 @@ function UsuariosPage() {
               onChange={(v) => setF({ ...f, perfil: v })}
               options={perfilOptions}
             />
-            <Button variant="outline" className="self-end" onClick={() => setDeptOpen(true)}>Departamentos</Button>
+            {(isMaster || perms.canUpdate) && <Button variant="outline" className="self-end" onClick={() => setDeptOpen(true)}>Departamentos</Button>}
           </>
         }
       />
