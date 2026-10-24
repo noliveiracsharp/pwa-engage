@@ -1,3 +1,4 @@
+import { useAvisosCotacao } from "@/hooks/useAvisosCotacao";
 import { useEffect, useState, type ReactNode } from "react";
 import { useRouterState } from "@tanstack/react-router";
 import { AppHeader } from "./AppHeader";
@@ -13,6 +14,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const isMobile = useIsMobile();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   useNotificacoesChat();
+  useAvisosCotacao();
   useWhiteLabel();
 
   // No celular, qualquer navegação fecha o menu.
