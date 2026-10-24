@@ -388,53 +388,22 @@ export function ChildTable({ config, empresa, perms = FULL }: { config: ChildCon
           const nomeValue = text(pick(row, ["nome"], ""));
           const rowKey = text(row[idColumn(row)] ?? index);
           const rowContent = (
-            <div className="flex items-start gap-3 p-3 text-sm">
-              <div className="grid min-w-0 flex-1 gap-2">
-                <div className="flex items-center gap-2">
+            <div className={isInst ? "flex flex-col gap-3 p-4 text-sm" : "flex items-start gap-3 p-3 text-sm"}>
+              <div className={isInst ? "flex flex-wrap items-center gap-2" : "grid min-w-0 flex-1 gap-2"}>
+                <div className="flex min-w-0 items-center gap-2">
                   {iconValue && <Icon className="h-5 w-5 shrink-0 text-primary" />}
                   {nomeValue && <p className="truncate font-semibold text-foreground">{nomeValue}</p>}
+                  {isInst && conectado && (
+                    <Badge className="bg-success text-success-foreground hover:bg-success">Conectado</Badge>
+                  )}
+                  {isInst && conectado && row["webhook_ativo"] === true && (
+                    <Badge variant="outline" className="border-success text-success"><CheckCircle2 className="mr-1 h-3 w-3" /> Recebimento ativo</Badge>
+                  )}
                 </div>
-                <div className="grid min-w-0 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                  {config.columns
-                    .filter((col) => col.key !== "nome" && col.key !== "icone")
-                    .map((col) => {
-                      const colValue = text(pick(row, [col.key]));
-                      const ColIcon = col.type === "icon" ? getIcon(colValue) : undefined;
-                      return (
-                        <div key={col.key}>
-                          <p className="text-xs text-muted-foreground">{col.label}</p>
-                          {col.type === "boolean" ? (
-                            <p className="truncate text-foreground">
-                              {row[col.key] === true ? "Ativo" : "Inativo"}
-                            </p>
-                           ) : col.type === "tel" ? (
-                             <p className="truncate text-foreground">
-                               {formatPhoneDisplay(colValue) || "—"}
-                             </p>
-                           ) : col.type === "color" ? (
-                             <div className="flex items-center gap-2 text-foreground">
-                               {colValue ? (
-                                 <span
-                                   className="h-4 w-4 shrink-0 rounded-full border border-border"
-                                   style={{ backgroundColor: colValue }}
-                                 />
-                               ) : null}
-                               <span className="truncate">{colValue || "—"}</span>
-                             </div>
-                           ) : col.type === "icon" ? (
-                            <div className="flex items-center gap-2 text-foreground">
-                              {colValue && ColIcon ? <ColIcon className="h-4 w-4" /> : null}
-                              <span className="truncate">{colValue || "—"}</span>
-                            </div>
-                          ) : (
-                            <p className="truncate text-foreground">{(col.optionLabels?.[colValue] ?? colValue) || "—"}</p>
-                          )}
-                        </div>
-                      );
-                    })}
-                </div>
+                {!isInst && camposGrid}
               </div>
-              <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+              {isInst && camposGrid}
+              <div className={isInst ? "flex flex-wrap items-center gap-2 border-t border-border pt-3" : "flex shrink-0 flex-wrap items-center justify-end gap-2"}>
                 {config.table === "empresas_instancias" && text(pick(row, ["tipo"])) === "chat" && (
                   <Button variant="outline" size="sm" className="h-9" onClick={() => setWidgetInst(row)}>
                     <Code className="mr-1 h-4 w-4" /> Widget do site
@@ -443,16 +412,14 @@ export function ChildTable({ config, empresa, perms = FULL }: { config: ChildCon
                 {config.table === "empresas_instancias" && text(pick(row, ["tipo"])) !== "chat" &&
                   (text(pick(row, ["status_conexao"])).toLowerCase() === "conectado" ? (
                     <>
-                      <Badge className="h-9 px-3 text-sm bg-success text-success-foreground hover:bg-success">WhatsApp Conectado</Badge>
-                      {row["webhook_ativo"] === true ? (
-                        <Button size="sm" className="h-9 bg-success text-success-foreground hover:bg-success/90" onClick={() => void ativarRecebimento(row)} title="Recebimento ativo. Clique para reaplicar na Z-API">
-                          <CheckCircle2 className="mr-1 h-4 w-4" /> Recebimento ativo
-                        </Button>
-                      ) : (
+                      {row["webhook_ativo"] !== true && (
                         <Button variant="outline" size="sm" className="h-9" onClick={() => void ativarRecebimento(row)} title="Faz as mensagens recebidas entrarem no Atende.ai e acionarem os fluxos">
                           <Inbox className="mr-1 h-4 w-4" /> Ativar recebimento
                         </Button>
                       )}
+                      <Button variant="outline" size="sm" className="h-9" onClick={() => setWebhookInst(row)} title="Ver e sincronizar webhooks">
+                        <Webhook className="mr-1 h-4 w-4" /> Webhooks
+                      </Button>
                       <Button variant="outline" size="sm" className="h-9" onClick={() => setPerfilInst(row)} title="Nome, recado e foto do WhatsApp">
                         <UserCog className="mr-1 h-4 w-4" /> Perfil
                       </Button>
@@ -617,6 +584,7 @@ export function ChildTable({ config, empresa, perms = FULL }: { config: ChildCon
       })()}
       <WidgetChatDialog instancia={widgetInst} onClose={() => setWidgetInst(null)} />
       <PerfilWhatsAppDialog instancia={perfilInst} onClose={() => setPerfilInst(null)} />
+      <WebhookDetalhesDialog instancia={webhookInst} onClose={() => setWebhookInst(null)} onSincronizado={refresh} />
       <QrCodeDialog
         instancia={qrInst}
         onOpenChange={(o) => !o && setQrInst(null)}
