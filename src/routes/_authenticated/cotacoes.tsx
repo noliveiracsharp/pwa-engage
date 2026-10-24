@@ -22,6 +22,8 @@ import { useAudit } from "@/lib/audit";
 import { formatDate, num, round2 } from "@/lib/orcamentos";
 import { pick, type Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
+import { bloqueioMovimento, ETAPAS_AUTOMATICAS } from "@/lib/cotacao-fluxo";
+import { KanbanSquare, List, Lock } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/cotacoes")({
   staticData: { sitemap: false },
@@ -36,6 +38,7 @@ export const Route = createFileRoute("/_authenticated/cotacoes")({
       { name: "robots", content: "noindex" },
     ],
   }),
+  validateSearch: (s: Record<string, unknown>): { id?: string } => (typeof s.id === "string" ? { id: s.id } : {}),
   component: CotacoesPage,
 });
 
@@ -82,7 +85,21 @@ function CotacoesPage() {
     }
   };
 
-  const [selId, setSelId] = useState<string | null>(null);
+  const search = Route.useSearch();
+  const [selId, setSelId] = useState<string | null>(search.id ?? null);
+  const [visao, setVisao] = useState<"lista" | "quadro">("lista");
+  const [dragId, setDragId] = useState<string | null>(null);
+  const mover = async (id: string, para: string) => {
+    const c = cotacoes.find((r) => String(rowId(r)) === id);
+    if (!c) return;
+    const msg = bloqueioMovimento(String(c["status"] ?? "pendente"), para);
+    if (msg) return void toast.warning(msg);
+    if (String(c["status"]) === para) return;
+    const { error } = await supabase.from("cotacoes").update({ status: para } as never).eq("id", id);
+    if (error) return void toast.error(/check|violat/i.test(error.message) ? "Rode o script atendeai-cotacoes-kanban.sql para liberar os novos status." : error.message);
+    await qc.invalidateQueries({ queryKey: ["table", "cotacoes"] });
+    toast.success(`Cotação movida para ${cotacaoStatusMeta(para).label}.`);
+  };
   const [aprovando, setAprovando] = useState(false);
   const [f, setF] = useState({ busca: "", status: "todos", projeto: "" });
 
@@ -215,13 +232,69 @@ function CotacoesPage() {
 
   return (
     <>
-      {perms.canUpdate && (
-        <div className="mb-3 flex justify-end gap-2">
-          <ModelosMensagemButton empresaId={empresaId} />
-          <Button variant="outline" size="sm" onClick={() => setWfOpen(true)}><ShieldCheck className="mr-1 h-4 w-4" />Workflow de aprovação</Button>
+      <div className="mb-3 flex flex-wrap justify-end gap-2">
+        <div className="mr-auto inline-flex rounded-md border border-border p-0.5">
+          <Button size="sm" variant={visao === "lista" ? "secondary" : "ghost"} onClick={() => setVisao("lista")}><List className="mr-1 h-4 w-4" />Lista</Button>
+          <Button size="sm" variant={visao === "quadro" ? "secondary" : "ghost"} onClick={() => setVisao("quadro")}><KanbanSquare className="mr-1 h-4 w-4" />Quadro</Button>
         </div>
-      )}
+        {perms.canUpdate && (
+          <>
+            <ModelosMensagemButton empresaId={empresaId} />
+            <Button variant="outline" size="sm" onClick={() => setWfOpen(true)}><ShieldCheck className="mr-1 h-4 w-4" />Workflow de aprovação</Button>
+          </>
+        )}
+      </div>
       <ConfigAprovacaoDialog open={wfOpen} onOpenChange={setWfOpen} />
+      {visao === "quadro" ? (
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-end gap-3">
+            <FilterInput label="Buscar" value={f.busca} onChange={(v) => setF({ ...f, busca: v })} placeholder="Número, origem ou projeto" />
+            {perms.canCreate && <Button size="sm" onClick={novaCotacao}>Nova cotação</Button>}
+          </div>
+          <div className="flex gap-3 overflow-x-auto pb-4">
+            {COTACAO_STATUS.map((st) => {
+              const cards = rows.filter((r) => String(r["status"] ?? "pendente") === st.value);
+              const auto = (ETAPAS_AUTOMATICAS as readonly string[]).includes(st.value);
+              return (
+                <div
+                  key={st.value}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={() => { const id = dragId; setDragId(null); if (id && perms.canUpdate) void mover(id, st.value); }}
+                  className="flex w-64 shrink-0 flex-col gap-2 rounded-lg border border-border bg-muted/40 p-3"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className={cn("h-2 w-2 rounded-full", st.badge)} />
+                    <span className="flex-1 truncate text-sm font-semibold text-foreground">{st.label}</span>
+                    {auto && <Lock className="h-3.5 w-3.5 text-muted-foreground" aria-label="Etapa automática" />}
+                    <span className="rounded-full bg-background px-2 py-0.5 text-xs text-muted-foreground">{cards.length}</span>
+                  </div>
+                  {cards.map((r) => {
+                    const id = String(rowId(r));
+                    const fs = deCot(fornCot, id);
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        draggable={perms.canUpdate}
+                        onDragStart={() => setDragId(id)}
+                        onDragEnd={() => setDragId(null)}
+                        onClick={() => setSelId(id)}
+                        className={cn("w-full rounded-md border border-border bg-card p-3 text-left text-sm shadow-sm transition hover:border-primary", dragId === id && "opacity-50")}
+                      >
+                        <div className="font-semibold tabular-nums">{String(r["numero"] ?? "—")}</div>
+                        <div className="truncate text-muted-foreground">{String(r["titulo"] || r["projeto_nome"] || "—")}</div>
+                        <div className="mt-1 text-xs text-muted-foreground">{deCot(itensCot, id).length} itens · {fs.filter((x) => x["respondido"]).length}/{fs.length} fornecedores</div>
+                        {r["laudo_id"] ? <div className="mt-1 text-xs text-primary">Origem: laudo técnico</div> : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-xs text-muted-foreground">Etapas com cadeado são automáticas: o sistema move a cotação conforme a alçada de aprovação e a geração dos pedidos.</p>
+        </div>
+      ) : (
       <DataTable
         title="Cotações de Compras"
         columns={columns}
@@ -240,6 +313,7 @@ function CotacoesPage() {
           </>
         }
       />
+      )}
       <Dialog open={novoTitulo !== null} onOpenChange={(o) => !o && setNovoTitulo(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader><DialogTitle>Nova cotação avulsa</DialogTitle></DialogHeader>
