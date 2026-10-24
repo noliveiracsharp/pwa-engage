@@ -1,4 +1,5 @@
 import { useAvisosCotacao } from "@/hooks/useAvisosCotacao";
+import { BarraAprovacaoCotacao } from "./BarraAprovacaoCotacao";
 import { useEffect, useState, type ReactNode } from "react";
 import { useRouterState } from "@tanstack/react-router";
 import { AppHeader } from "./AppHeader";
@@ -23,6 +24,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex h-dvh w-full flex-col bg-background">
       <AppHeader onToggleSidebar={() => setOpen((v) => !v)} />
+      <BarraAprovacaoCotacao />
       <div className="relative flex min-h-0 flex-1">
         {isMobile ? (
           <>
