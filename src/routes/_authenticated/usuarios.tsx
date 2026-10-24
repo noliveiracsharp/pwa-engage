@@ -322,27 +322,9 @@ function UsuariosPage() {
     )}
     <div className="space-y-1.5">
       <p className="text-sm font-medium">Kanbans</p>
-      <p className="text-muted-foreground text-xs">Nenhum marcado = acesso a todos.</p>
-      <div className="border-border grid gap-2 rounded-md border p-3 sm:grid-cols-2">
-        {kanbans.length === 0 && (
-          <span className="text-muted-foreground text-sm">Nenhum kanban cadastrado.</span>
-        )}
-        {kanbans.map((k) => {
-          const id = text(rowId(k));
-          return (
-            <label key={id} className="flex cursor-pointer items-center gap-2 text-sm">
-              <Checkbox
-                checked={kanbanSel.includes(id)}
-                disabled={readOnlySheet}
-                onCheckedChange={(c) =>
-                  setKanbanSel((s) => (c ? [...s, id] : s.filter((x) => x !== id)))
-                }
-              />
-              {text(pick(k, ["nome"], "Kanban"))}
-            </label>
-          );
-        })}
-      </div>
+      <p className="text-muted-foreground text-xs">
+        O acesso aos quadros agora vem do perfil do usuário. Configure em Kanban → engrenagem do quadro → Perfis de Acesso.
+      </p>
     </div>
     </div>
   );

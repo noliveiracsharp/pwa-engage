@@ -32,6 +32,7 @@ import {
 import { pick, type Row } from "@/lib/row";
 import { labelAmigavel, parseCamposCardTipado, type CampoCardTipado } from "@/lib/orcamento-kanban";
 import { confirmar } from "@/components/layout/DialogoGlobal";
+import { KanbanPerfisAcesso } from "./KanbanPerfisAcesso";
 
 const errMsg = (e: unknown, f: string) => {
   const m = e && typeof e === "object" && "message" in e ? String((e as { message: unknown }).message) : "";
@@ -422,7 +423,7 @@ export function KanbanConfigDialog({
           <SheetDescription>Dados, etapas e integração do quadro Kanban.</SheetDescription>
         </SheetHeader>
         <Tabs value={tab} onValueChange={setTab} className="flex min-h-0 flex-1 flex-col">
-          <TabsList className="mx-4 my-4 grid h-auto shrink-0 grid-cols-2 gap-1 sm:grid-cols-4">
+          <TabsList className="mx-4 my-4 grid h-auto shrink-0 grid-cols-2 gap-1 sm:grid-cols-5">
             <TabsTrigger value="dados">Dados do Quadro</TabsTrigger>
             <TabsTrigger value="etapas" disabled={!kanbanId}>
               Etapas
@@ -431,6 +432,9 @@ export function KanbanConfigDialog({
               Integração e Cards
             </TabsTrigger>
             <TabsTrigger value="checklists">Checklists</TabsTrigger>
+            <TabsTrigger value="perfis" disabled={!kanbanId}>
+              Perfis de Acesso
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="dados" className="m-0 min-h-0 flex-1 space-y-4 overflow-y-auto px-6 pb-6">
@@ -736,6 +740,10 @@ export function KanbanConfigDialog({
               </div>
               <EtapaCorPicker value={novaCor} onChange={setNovaCor} />
             </div>
+          </TabsContent>
+
+          <TabsContent value="perfis" className="m-0 min-h-0 flex-1 overflow-y-auto px-6 pb-6">
+            {kanbanId && <KanbanPerfisAcesso kanbanId={kanbanId} empresaId={empresaId} />}
           </TabsContent>
 
           <TabsContent value="checklists" className="m-0 min-h-0 flex-1 overflow-y-auto px-6 pb-6">

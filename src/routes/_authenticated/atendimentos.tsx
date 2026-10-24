@@ -1,3 +1,4 @@
+import { useKanbansPermitidos } from "@/hooks/useKanbansPermitidos";
 import { ProtocoloBadge } from "@/components/atendimentos/ProtocoloBadge";
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
@@ -74,7 +75,7 @@ function AtendimentosPage() {
 
   const { data: meusKanbans = [] } = useQuery({
     queryKey: ["table", "usuario_kanban", usuarioId],
-    enabled: !!usuarioId && !isMaster,
+    enabled: false && !!usuarioId && !isMaster,
     queryFn: async (): Promise<string[]> => {
       const { data, error } = await supabase.from("usuario_kanban").select("kanban_nome_id").eq("usuario_id", usuarioId);
       if (error) throw error;
@@ -96,11 +97,12 @@ function AtendimentosPage() {
     },
   });
 
+  const acessoKb = useKanbansPermitidos();
+  void meusKanbans;
   const kanbans = useMemo(() => {
     if (isMaster) return allKanbans;
-    const ids = new Set(meusKanbans);
-    return allKanbans.filter((k) => ids.has(text(rowId(k))));
-  }, [isMaster, allKanbans, meusKanbans]);
+    return allKanbans.filter((k) => acessoKb.pode(rowId(k)));
+  }, [isMaster, allKanbans, acessoKb]);
 
   const instanciasAtivas = useMemo(
     () => instancias.filter((i) => i["status"] !== false && (!empresaId || !("empresa_id" in i) || text(i["empresa_id"]) === empresaId)),
