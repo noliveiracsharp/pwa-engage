@@ -15,6 +15,7 @@ import { buildTree } from "@/lib/hierarchy";
 import { useAudit } from "@/lib/audit";
 import { ImageGallery } from "@/components/itens/ImageGallery";
 import { padraoPorNatureza, usePrecificacao } from "@/components/itens/PrecificacaoDialog";
+import { CATEGORIAS_ITENS } from "@/lib/itens-categorias";
 
 const NONE = "__none__";
 
@@ -42,6 +43,7 @@ type Values = {
   imposto: string;
   preco_venda: string;
   status: string;
+  categoria: string;
   imagens: string[];
   observacoes: string;
   estoque_minimo: string;
@@ -69,6 +71,7 @@ const EMPTY: Values = {
   imposto: "",
   preco_venda: "",
   status: "true",
+  categoria: "",
   imagens: [],
   observacoes: "",
   estoque_minimo: "",
@@ -168,6 +171,7 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, duplic
       imposto: text(pick(record, ["imposto"], "")),
       preco_venda: text(pick(record, ["preco_venda"], "")),
       status: record["status"] === false ? "false" : "true",
+      categoria: text(pick(record, ["categoria"], "")),
       imagens: Array.isArray(record["imagens"]) ? (record["imagens"] as unknown[]).map(String).filter(Boolean) : [],
       observacoes: text(pick(record, ["observacoes"], "")),
       estoque_minimo: text(pick(record, ["estoque_minimo"], "")),
@@ -241,6 +245,7 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, duplic
       imposto: v.imposto === "" ? null : num(v.imposto),
       preco_venda: v.preco_venda === "" ? null : num(v.preco_venda),
       status: v.status === "true",
+      categoria: v.categoria || null,
       imagens: v.imagens,
       observacoes: v.observacoes.trim() || null,
       ...(v.tipo === "Produto"
@@ -400,6 +405,12 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, duplic
               />
             </div>
 
+            <div className="min-w-0 space-y-1.5">
+              <Label className="block text-sm font-medium">Categoria</Label>
+              <SearchSelect value={v.categoria} disabled={readOnly} placeholder="Escolha a categoria"
+                options={CATEGORIAS_ITENS.map((c) => ({ value: c, label: c }))}
+                onChange={(x) => setV((s) => ({ ...s, categoria: x }))} />
+            </div>
             {selectRow("unidade_medida_id", "Unidade de Medida", options.unidade, "unidade")}
             {selectRow("centro_custo_id", "Centro de Custo", options.centro, "centro")}
             {selectRow("itens_marcas_id", "Marca", options.marca, "marca")}
