@@ -88,6 +88,7 @@ export async function dispararMensagem(e: Envio): Promise<boolean> {
       const ext = (e.nomeArquivo ?? e.midiaUrl).split(".").pop()?.split("?")[0] || "pdf";
       endpoint = `send-document/${ext}`; // a Z-API exige a extensão no caminho
       body = { phone, document: e.midiaUrl, fileName: e.nomeArquivo };
+    }
   } else {
     // Link vira botão "Acesse" (URL escondida); se o WhatsApp recusar botões, cai no texto com o link em linha própria.
     const { mensagem, url } = separarLink(e.texto);
