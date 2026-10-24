@@ -23,8 +23,9 @@ import { AvaliacaoSelo } from "@/components/atendimentos/Pesquisa";
 
 export const Route = createFileRoute("/_authenticated/atendimentos")({
   staticData: { sitemap: false },
-  validateSearch: (search: Record<string, unknown>) => ({
+  validateSearch: (search: Record<string, unknown>): { id?: string | undefined; novo?: string | undefined } => ({
     id: typeof search["id"] === "string" ? search["id"] : undefined,
+    ...(search["novo"] === "1" || search["novo"] === 1 ? { novo: "1" } : {}),
   }),
   head: () => ({
     meta: [
@@ -113,6 +114,13 @@ function AtendimentosPage() {
   const [painel, setPainel] = useState(true);
   const [listaAberta, setLista] = useState(true);
   const [novoAberto, setNovoAberto] = useState(false);
+  const { novo: novoSearch } = Route.useSearch();
+  const navAt = Route.useNavigate();
+  useEffect(() => {
+    if (novoSearch !== "1") return;
+    setNovoAberto(true);
+    void navAt({ search: (s: Record<string, unknown>) => ({ ...s, novo: undefined }), replace: true } as never);
+  }, [novoSearch]);
 
   const pessoasMap = useMemo(() => byId(pessoas), [pessoas]);
   const instMap = useMemo(() => byId(instancias), [instancias]);

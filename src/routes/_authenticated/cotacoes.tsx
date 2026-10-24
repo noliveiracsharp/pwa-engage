@@ -241,10 +241,7 @@ function CotacoesPage() {
   return (
     <>
       <div className="mb-3 flex flex-wrap justify-end gap-2">
-        <div className="mr-auto inline-flex rounded-md border border-border p-0.5">
-          <Button size="sm" variant={visao === "lista" ? "secondary" : "ghost"} onClick={() => setVisao("lista")}><List className="mr-1 h-4 w-4" />Lista</Button>
-          <Button size="sm" variant={visao === "quadro" ? "secondary" : "ghost"} onClick={() => setVisao("quadro")}><KanbanSquare className="mr-1 h-4 w-4" />Quadro</Button>
-        </div>
+        <Button variant="outline" size="sm" className="mr-auto" onClick={() => navigate({ to: "/kanban" })}><KanbanSquare className="mr-1 h-4 w-4" />Ver no Kanban</Button>
         {perms.canUpdate && (
           <>
             <ModelosMensagemButton empresaId={empresaId} />
@@ -253,56 +250,6 @@ function CotacoesPage() {
         )}
       </div>
       <ConfigAprovacaoDialog open={wfOpen} onOpenChange={setWfOpen} />
-      {visao === "quadro" ? (
-        <div className="space-y-3">
-          <div className="flex flex-wrap items-end gap-3">
-            <FilterInput label="Buscar" value={f.busca} onChange={(v) => setF({ ...f, busca: v })} placeholder="Número, origem ou projeto" />
-            {perms.canCreate && <Button size="sm" onClick={novaCotacao}>Nova cotação</Button>}
-          </div>
-          <div className="flex gap-3 overflow-x-auto pb-4">
-            {COTACAO_STATUS.map((st) => {
-              const cards = rows.filter((r) => String(r["status"] ?? "pendente") === st.value);
-              const auto = (ETAPAS_AUTOMATICAS as readonly string[]).includes(st.value);
-              return (
-                <div
-                  key={st.value}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={() => { const id = dragId; setDragId(null); if (id && perms.canUpdate) void mover(id, st.value); }}
-                  className="flex w-64 shrink-0 flex-col gap-2 rounded-lg border border-border bg-muted/40 p-3"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className={cn("h-2 w-2 rounded-full", st.badge)} />
-                    <span className="flex-1 truncate text-sm font-semibold text-foreground">{st.label}</span>
-                    {auto && <Lock className="h-3.5 w-3.5 text-muted-foreground" aria-label="Etapa automática" />}
-                    <span className="rounded-full bg-background px-2 py-0.5 text-xs text-muted-foreground">{cards.length}</span>
-                  </div>
-                  {cards.map((r) => {
-                    const id = String(rowId(r));
-                    const fs = deCot(fornCot, id);
-                    return (
-                      <button
-                        key={id}
-                        type="button"
-                        draggable={perms.canUpdate}
-                        onDragStart={() => setDragId(id)}
-                        onDragEnd={() => setDragId(null)}
-                        onClick={() => setSelId(id)}
-                        className={cn("w-full rounded-md border border-border bg-card p-3 text-left text-sm shadow-sm transition hover:border-primary", dragId === id && "opacity-50")}
-                      >
-                        <div className="font-semibold tabular-nums">{String(r["numero"] ?? "—")}</div>
-                        <div className="truncate text-muted-foreground">{String(r["titulo"] || r["projeto_nome"] || "—")}</div>
-                        <div className="mt-1 text-xs text-muted-foreground">{deCot(itensCot, id).length} itens · {fs.filter((x) => fornecedorRespondeu(x, precos)).length}/{fs.length} fornecedores</div>
-                        {r["laudo_id"] ? <div className="mt-1 text-xs text-primary">Origem: laudo técnico</div> : null}
-                      </button>
-                    );
-                  })}
-                </div>
-              );
-            })}
-          </div>
-          <p className="text-xs text-muted-foreground">Etapas com cadeado são automáticas: o sistema move a cotação conforme a alçada de aprovação e a geração dos pedidos.</p>
-        </div>
-      ) : (
       <DataTable
         title="Cotações de Compras"
         columns={columns}
@@ -321,7 +268,6 @@ function CotacoesPage() {
           </>
         }
       />
-      )}
       <Dialog open={novoTitulo !== null} onOpenChange={(o) => !o && setNovoTitulo(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader><DialogTitle>Nova cotação avulsa</DialogTitle></DialogHeader>
