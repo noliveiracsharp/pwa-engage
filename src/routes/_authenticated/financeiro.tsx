@@ -87,6 +87,8 @@ import { OfertaConsultaSheet, VincularOfertaDialog, ofertaDoTitulo } from "@/com
 import { camposFiscais, rotulosFiscais } from "@/lib/titulo-fiscal";
 import { RateioTitulo } from "@/components/financeiro/RateioTitulo";
 import { ItensChip, ItensTituloDialog, useItensPorTitulo } from "@/components/financeiro/ItensTituloResumo";
+import { ApoioCrud } from "@/components/itens/ApoioCrud";
+import { centroCustoConfig, planoContasConfig } from "@/components/itens/apoio-config";
 
 export const Route = createFileRoute("/_authenticated/financeiro")({
   staticData: { sitemap: false },
@@ -121,6 +123,8 @@ function FinanceiroPage() {
         <TabsTrigger value="controller">Controller</TabsTrigger>
         <TabsTrigger value="regua">Cobrança automática</TabsTrigger>
         <TabsTrigger value="bancos">Contas Bancárias</TabsTrigger>
+        <TabsTrigger value="plano">Plano de Contas</TabsTrigger>
+        <TabsTrigger value="centros">Centros de Custo</TabsTrigger>
       </TabsList>
       </div>
       {["receber", "pagar", "caixa"].includes(aba) && <SaldosBancarios />}
@@ -130,6 +134,8 @@ function FinanceiroPage() {
       <TabsContent value="controller"><ControllerPainel titulos={titulos} /></TabsContent>
       <TabsContent value="regua"><ReguaCobranca canEdit={perms.canUpdate || perms.canCreate} /></TabsContent>
       <TabsContent value="bancos" className="space-y-8"><ContasBancarias perms={perms} /><CartoesCredito perms={perms} /></TabsContent>
+      <TabsContent value="plano">{aba === "plano" && <ApoioCrud {...planoContasConfig} />}</TabsContent>
+      <TabsContent value="centros">{aba === "centros" && <ApoioCrud {...centroCustoConfig} />}</TabsContent>
     </Tabs>
   );
 }
