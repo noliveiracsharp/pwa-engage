@@ -17,8 +17,8 @@ describe("classificarItem", () => {
   });
   it("não sobrescreve campos já preenchidos, a menos que pedido", () => {
     const item = { tipo: "Produto", categoria: "Redes & Telecom", cfop_padrao: "5405", centro_custo_id: "x" };
-    expect(classificarItem(item, centros, contas).cfop_padrao).toBeUndefined();
-    expect(classificarItem(item, centros, contas, true).cfop_padrao).toBe("5102");
-    expect(classificarItem(item, centros, contas, true).centro_custo_id).toBe("c21");
+    expect(classificarItem(item, centros, contas)["cfop_padrao"]).toBeUndefined();
+    expect(classificarItem(item, centros, contas, true)["cfop_padrao"]).toBe("5102");
+    expect(classificarItem(item, centros, contas, true)["centro_custo_id"]).toBe("c21");
   });
 });
