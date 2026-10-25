@@ -16,6 +16,7 @@ import { useAudit } from "@/lib/audit";
 import { ImageGallery } from "@/components/itens/ImageGallery";
 import { padraoPorNatureza, usePrecificacao } from "@/components/itens/PrecificacaoDialog";
 import { CATEGORIAS_ITENS } from "@/lib/itens-categorias";
+import { classificarItem } from "@/lib/itens-classificacao";
 import { HistoricoCompras } from "@/components/itens/HistoricoCompras";
 
 const NONE = "__none__";
@@ -38,6 +39,7 @@ type Values = {
   descricao: string;
   unidade_medida_id: string;
   centro_custo_id: string;
+  plano_contas_id: string;
   itens_marcas_id: string;
   preco_custo: string;
   margem_lucro: string;
@@ -66,6 +68,7 @@ const EMPTY: Values = {
   descricao: "",
   unidade_medida_id: NONE,
   centro_custo_id: NONE,
+  plano_contas_id: "",
   itens_marcas_id: NONE,
   preco_custo: "",
   margem_lucro: "",
@@ -125,6 +128,16 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, duplic
 
   const { data: unidades = [] } = useTableRows("unidade_medida");
   const { data: centros = [] } = useTableRows("centro_custo");
+  const { data: contas = [] } = useTableRows("plano_contas");
+  const contaOpts = useMemo(() => contas.filter((c) => c["status"] !== false && String(c["codigo"] ?? "").split(".").length === 3)
+    .map((c) => ({ value: String(rowId(c)), label: `${text(c["codigo"])} ${text(c["descricao"])}` }))
+    .sort((a, b) => a.label.localeCompare(b.label, "pt-BR")), [contas]);
+  /** Ao escolher a categoria, preenche o que estiver vazio com o padrão fiscal/contábil. */
+  const aplicarCategoria = (categoria: string) => setV((s) => {
+    const refs = (rs: Row[]) => rs.filter((r) => r["status"] !== false).map((r) => ({ id: String(rowId(r)), codigo: String(r["codigo"] ?? "") }));
+    const atual = { ...s, categoria, centro_custo_id: s.centro_custo_id === NONE ? "" : s.centro_custo_id };
+    return { ...s, categoria, ...classificarItem(atual, refs(centros), refs(contas)) };
+  });
   const { data: marcas = [] } = useTableRows("itens_marcas");
   const { data: itens = [] } = useTableRows("itens");
   const { empresaId } = useAudit();
@@ -166,6 +179,7 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, duplic
       descricao: text(pick(record, ["descricao"], "")) + (duplicando ? " (Cópia)" : ""),
       unidade_medida_id: text(pick(record, ["unidade_medida_id"], "")) || NONE,
       centro_custo_id: text(pick(record, ["centro_custo_id"], "")) || NONE,
+      plano_contas_id: text(pick(record, ["plano_contas_id"], "")),
       itens_marcas_id: text(pick(record, ["itens_marcas_id"], "")) || NONE,
       preco_custo: text(pick(record, ["preco_custo"], "")),
       margem_lucro: text(pick(record, ["margem_lucro"], "")),
@@ -240,6 +254,7 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, duplic
       descricao: v.descricao,
       unidade_medida_id: v.unidade_medida_id === NONE ? null : v.unidade_medida_id,
       centro_custo_id: v.centro_custo_id === NONE ? null : v.centro_custo_id,
+      plano_contas_id: v.plano_contas_id || null,
       itens_marcas_id: v.itens_marcas_id === NONE ? null : v.itens_marcas_id,
       preco_custo: v.preco_custo === "" ? null : num(v.preco_custo),
       margem_lucro: v.margem_lucro === "" ? null : num(v.margem_lucro),
@@ -411,10 +426,16 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, duplic
               <Label className="block text-sm font-medium">Categoria</Label>
               <SearchSelect value={v.categoria} disabled={readOnly} placeholder="Escolha a categoria"
                 options={CATEGORIAS_ITENS.map((c) => ({ value: c, label: c }))}
-                onChange={(x) => setV((s) => ({ ...s, categoria: x }))} />
+                onChange={aplicarCategoria} />
+              <p className="text-xs text-muted-foreground">Ao escolher, Centro de Custo, Conta Contábil e o fiscal vazios são preenchidos sozinhos.</p>
             </div>
             {selectRow("unidade_medida_id", "Unidade de Medida", options.unidade, "unidade")}
             {selectRow("centro_custo_id", "Centro de Custo", options.centro, "centro")}
+            <div className="min-w-0 space-y-1.5 sm:col-span-2">
+              <Label className="block text-sm font-medium">Conta Contábil (Plano de Contas)</Label>
+              <SearchSelect value={v.plano_contas_id} disabled={readOnly} options={contaOpts} placeholder="Não informado"
+                searchPlaceholder="Pesquisar…" onChange={(x) => setV((s) => ({ ...s, plano_contas_id: x }))} />
+            </div>
             {selectRow("itens_marcas_id", "Marca", options.marca, "marca")}
 
             <div className="min-w-0 space-y-1.5">
