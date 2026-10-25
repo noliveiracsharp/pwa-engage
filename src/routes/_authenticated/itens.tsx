@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { RelatorioLista } from "@/components/relatorios/RelatorioLista";
-import { Ban, CheckCircle2, FileText, ImageIcon, Landmark, Package, Settings2, Trash2 } from "lucide-react";
+import { Ban, CheckCircle2, FileText, ImageIcon, Landmark, Package, Settings2, Trash2, Wand2 } from "lucide-react";
 import { BarraAcoesLote, useAcoesComuns } from "@/components/data-table/AcoesLote";
 import { Button } from "@/components/ui/button";
 import { PrecificacaoDialog } from "@/components/itens/PrecificacaoDialog";
@@ -19,6 +19,7 @@ import { useAudit } from "@/lib/audit";
 import { pick, type Row } from "@/lib/row";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { CATEGORIAS_ITENS } from "@/lib/itens-categorias";
+import { classificarItem } from "@/lib/itens-classificacao";
 
 export const Route = createFileRoute("/_authenticated/itens")({
   staticData: { sitemap: false },
@@ -68,6 +69,14 @@ function ItensPage() {
   const [record, setRecord] = useState<Row | null>(null);
   const [sel, setSel] = useState<Set<string>>(new Set());
   const lote = useAcoesComuns("itens");
+  const { data: centrosCC = [] } = useTableRows("centro_custo");
+  const { data: contasPC = [] } = useTableRows("plano_contas");
+  const refs = (rs: Row[]) => rs.filter((r) => r["status"] !== false).map((r) => ({ id: String(rowId(r)), codigo: String(r["codigo"] ?? "") }));
+  const classificar = (sobrescrever: boolean) => async (row: Row) => {
+    const mud = classificarItem(row, refs(centrosCC), refs(contasPC), sobrescrever);
+    if (!Object.keys(mud).length) return { ok: true, mensagem: row["categoria"] ? "Já classificado" : "Sem categoria" };
+    return lote.atualizar(row, mud);
+  };
   const [duplicando, setDuplicando] = useState(false);
   const [f, setF] = useState({ busca: "", tipo: "todos", categoria: "todos", status: "todos" });
   const [precOpen, setPrecOpen] = useState(false);
@@ -253,6 +262,8 @@ function ItensPage() {
                 ...(perms.canUpdate ? [
                   { label: "Ativar", icon: <CheckCircle2 className="h-4 w-4" />, executar: lote.definirStatus(true) },
                   { label: "Inativar", icon: <Ban className="h-4 w-4" />, confirmacao: "Inativar {n} item(ns)?", executar: lote.definirStatus(false) },
+                  { label: "Classificar automaticamente (preencher vazios)", icon: <Wand2 className="h-4 w-4" />, executar: classificar(false) },
+                  { label: "Reclassificar tudo pela categoria", icon: <Wand2 className="h-4 w-4" />, confirmacao: "Substituir Centro de Custo, Conta Contábil, CFOP, CSOSN e Origem de {n} item(ns) pelo padrão da categoria?", executar: classificar(true) },
                 ] : []),
                 ...(perms.canDelete ? [{ label: "Excluir", icon: <Trash2 className="h-4 w-4" />, destrutiva: true, confirmacao: "Excluir permanentemente {n} item(ns)? Os usados em ofertas serão mantidos.", executar: lote.excluir }] : []),
               ]}
