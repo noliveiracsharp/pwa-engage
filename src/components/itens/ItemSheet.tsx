@@ -386,7 +386,10 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, duplic
                 onValueChange={(value) => {
                   setV((s) => {
                     const auto = /^[PS]\d{5,}$/i.test(s.codigo) || s.codigo === "";
-                    return { ...s, tipo: value, codigo: !record && auto ? nextCodigoFor(value) : s.codigo };
+                    const prefixo = value.startsWith("Serviço") ? "S" : "P";
+                    const mudouPrefixo = !s.codigo.toUpperCase().startsWith(prefixo);
+                    const trocar = auto && (!record || mudouPrefixo);
+                    return { ...s, tipo: value, codigo: trocar ? nextCodigoFor(value) : s.codigo };
                   });
                   const p = padraoPorNatureza(precificacao, value);
                   if (p && (p.margem || p.imposto))
