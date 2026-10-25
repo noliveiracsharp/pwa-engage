@@ -18,6 +18,7 @@ import { padraoPorNatureza, usePrecificacao } from "@/components/itens/Precifica
 import { CATEGORIAS_ITENS } from "@/lib/itens-categorias";
 import { classificarItem } from "@/lib/itens-classificacao";
 import { HistoricoCompras } from "@/components/itens/HistoricoCompras";
+import { NcmBusca } from "@/components/itens/NcmBusca";
 
 const NONE = "__none__";
 
@@ -563,7 +564,7 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, duplic
               <>
                 <div className="min-w-0 space-y-1.5">
                   <Label htmlFor="ncm" className="block text-sm font-medium">NCM</Label>
-                  <Input id="ncm" placeholder="8 dígitos" maxLength={10} value={v.ncm} onChange={(e) => setV((s) => ({ ...s, ncm: e.target.value }))} />
+                  <NcmBusca value={v.ncm} onChange={(ncm) => setV((s) => ({ ...s, ncm }))} />
                 </div>
                 <div className="min-w-0 space-y-1.5">
                   <Label htmlFor="cest" className="block text-sm font-medium">CEST</Label>
