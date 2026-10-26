@@ -97,7 +97,7 @@ export function AbordagemSdr({ fila, empresaId, podeEditar, recarregar }: Props)
     const r = await gerarCadenciaIA({ data: { empresa: minhaEmpresa, negocio: String(negocio), canais: passos.map((p) => p.canal), dias: passos.map((p) => p.dia), token: data.session?.access_token ?? "" } });
     setGerando(false);
     if (r.erro) { toast.error(r.erro); return; }
-    setPassos((ps) => ps.map((p, i) => (r.passos[i] ? { ...p, texto: r.passos[i].texto, assunto: p.canal === "email" ? r.passos[i].assunto || p.assunto : p.assunto } : p)));
+    setPassos((ps) => ps.map((p, i) => (r.passos[i] ? { ...p, texto: r.passos[i].texto, ...(p.canal === "email" ? { assunto: r.passos[i].assunto || p.assunto || "" } : {}) } : p)));
     toast.success("Textos sugeridos. Revise e clique em Salvar sequência.");
   }
 
