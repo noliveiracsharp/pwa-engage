@@ -38,6 +38,7 @@ type Values = {
   tipo: string;
   codigo: string;
   descricao: string;
+  modelo: string;
   unidade_medida_id: string;
   centro_custo_id: string;
   plano_contas_id: string;
@@ -67,6 +68,7 @@ const EMPTY: Values = {
   tipo: "Produto",
   codigo: "",
   descricao: "",
+  modelo: "",
   unidade_medida_id: NONE,
   centro_custo_id: NONE,
   plano_contas_id: "",
@@ -178,6 +180,7 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, duplic
       tipo: text(pick(record, ["tipo"], "Produto")),
       codigo: duplicando ? nextCodigoFor(text(pick(record, ["tipo"], "Produto"))) : text(pick(record, ["codigo"], "")),
       descricao: text(pick(record, ["descricao"], "")) + (duplicando ? " (Cópia)" : ""),
+      modelo: text(pick(record, ["modelo"], "")),
       unidade_medida_id: text(pick(record, ["unidade_medida_id"], "")) || NONE,
       centro_custo_id: text(pick(record, ["centro_custo_id"], "")) || NONE,
       plano_contas_id: text(pick(record, ["plano_contas_id"], "")),
@@ -253,6 +256,7 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, duplic
       tipo: v.tipo,
       codigo: v.codigo,
       descricao: v.descricao,
+      modelo: v.modelo.trim() || null,
       unidade_medida_id: v.unidade_medida_id === NONE ? null : v.unidade_medida_id,
       centro_custo_id: v.centro_custo_id === NONE ? null : v.centro_custo_id,
       plano_contas_id: v.plano_contas_id || null,
@@ -441,6 +445,11 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, duplic
                 searchPlaceholder="Pesquisar…" onChange={(x) => setV((s) => ({ ...s, plano_contas_id: x }))} />
             </div>
             {selectRow("itens_marcas_id", "Marca", options.marca, "marca")}
+            <div className="min-w-0 space-y-1.5 sm:col-span-2">
+              <Label htmlFor="modelo" className="block text-sm font-medium">Modelo</Label>
+              <Input id="modelo" value={v.modelo} disabled={readOnly} placeholder="Ex.: VHD 1120 B G7"
+                onChange={(e) => setV((s) => ({ ...s, modelo: e.target.value }))} />
+            </div>
 
             <div className="min-w-0 space-y-1.5">
               <Label htmlFor="preco_custo" className="block text-sm font-medium">
