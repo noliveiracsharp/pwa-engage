@@ -9,6 +9,7 @@ import { QrCodeDialog } from "@/components/empresas/QrCodeDialog";
 import { WidgetChatDialog } from "@/components/empresas/WidgetChatDialog";
 import { configurarWebhookZapi, desconectarWhatsApp, reiniciarZapi } from "@/lib/zapi.functions";
 import { PerfilWhatsAppDialog } from "@/components/empresas/PerfilWhatsAppDialog";
+import { QrComercialDialog } from "@/components/empresas/QrComercialDialog";
 import { WebhookDetalhesDialog } from "@/components/empresas/WebhookDetalhesDialog";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -231,6 +232,7 @@ export function ChildTable({ config, empresa, perms = FULL }: { config: ChildCon
   const webhookFn = useServerFn(configurarWebhookZapi);
   const reiniciarFn = useServerFn(reiniciarZapi);
   const [perfilInst, setPerfilInst] = useState<Row | null>(null);
+  const [qrComercial, setQrComercial] = useState<Row | null>(null);
   const [webhookInst, setWebhookInst] = useState<Row | null>(null);
 
   const { data: rows = [], isError } = useQuery({
@@ -462,6 +464,9 @@ export function ChildTable({ config, empresa, perms = FULL }: { config: ChildCon
                       <Button variant="outline" size="sm" className="h-9" onClick={() => setPerfilInst(row)} title="Nome, recado e foto do WhatsApp">
                         <UserCog className="mr-1 h-4 w-4" /> Perfil
                       </Button>
+                      <Button variant="outline" size="sm" className="h-9" onClick={() => setQrComercial(row)} title="QR Code que pula o robô e vai direto ao Comercial">
+                        <QrCode className="mr-1 h-4 w-4" /> QR Comercial
+                      </Button>
                       <Button variant="outline" size="icon" className="h-9 w-9" aria-label="Reiniciar instância" title="Reiniciar instância" onClick={() => void reiniciar(row)}>
                         <RotateCcw className="h-4 w-4" />
                       </Button>
@@ -623,6 +628,7 @@ export function ChildTable({ config, empresa, perms = FULL }: { config: ChildCon
       })()}
       <WidgetChatDialog instancia={widgetInst} onClose={() => setWidgetInst(null)} />
       <PerfilWhatsAppDialog instancia={perfilInst} onClose={() => setPerfilInst(null)} />
+      <QrComercialDialog instancia={qrComercial} onClose={() => setQrComercial(null)} />
       <WebhookDetalhesDialog instancia={webhookInst} onClose={() => setWebhookInst(null)} onSincronizado={refresh} />
       <QrCodeDialog
         instancia={qrInst}
