@@ -295,7 +295,7 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, duplic
     list: Array<{ value: string; label: string }>,
     quickKey: "unidade" | "centro" | "marca",
   ) => (
-    <div className="min-w-0 space-y-1.5 sm:col-span-2">
+    <div className="min-w-0 space-y-1.5">
       <Label htmlFor={id} className="block text-sm font-medium">
         {label}
       </Label>
@@ -430,6 +430,12 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, duplic
               />
             </div>
 
+            {selectRow("itens_marcas_id", "Marca", options.marca, "marca")}
+            <div className="min-w-0 space-y-1.5">
+              <Label htmlFor="modelo" className="block text-sm font-medium">Modelo</Label>
+              <Input id="modelo" value={v.modelo} disabled={readOnly} placeholder="Ex.: VHD 1120 B G7"
+                onChange={(e) => setV((s) => ({ ...s, modelo: e.target.value }))} />
+            </div>
             <div className="min-w-0 space-y-1.5">
               <Label className="block text-sm font-medium">Categoria</Label>
               <SearchSelect value={v.categoria} disabled={readOnly} placeholder="Escolha a categoria"
@@ -439,16 +445,10 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, duplic
             </div>
             {selectRow("unidade_medida_id", "Unidade de Medida", options.unidade, "unidade")}
             {selectRow("centro_custo_id", "Centro de Custo", options.centro, "centro")}
-            <div className="min-w-0 space-y-1.5 sm:col-span-2">
+            <div className="min-w-0 space-y-1.5">
               <Label className="block text-sm font-medium">Conta Contábil (Plano de Contas)</Label>
               <SearchSelect value={v.plano_contas_id} disabled={readOnly} options={contaOpts} placeholder="Não informado"
                 searchPlaceholder="Pesquisar…" onChange={(x) => setV((s) => ({ ...s, plano_contas_id: x }))} />
-            </div>
-            {selectRow("itens_marcas_id", "Marca", options.marca, "marca")}
-            <div className="min-w-0 space-y-1.5 sm:col-span-2">
-              <Label htmlFor="modelo" className="block text-sm font-medium">Modelo</Label>
-              <Input id="modelo" value={v.modelo} disabled={readOnly} placeholder="Ex.: VHD 1120 B G7"
-                onChange={(e) => setV((s) => ({ ...s, modelo: e.target.value }))} />
             </div>
 
             <div className="min-w-0 space-y-1.5">
