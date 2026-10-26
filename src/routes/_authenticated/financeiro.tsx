@@ -9,6 +9,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { CalendarClock, CheckCircle2, ChevronDown, ChevronRight, Copy, CreditCard, FileText, FileUp, TrendingUp, Paperclip, Plus, QrCode, Receipt, Trash2, Undo2 } from "lucide-react";
 import { ImportarFaturaDialog } from "@/components/financeiro/ImportarFaturaDialog";
 import { ImportarContaDialog } from "@/components/financeiro/ImportarContaDialog";
+import { DdaInbox } from "@/components/financeiro/DdaInbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Tags, Download } from "lucide-react";
 import { ReciboDialog } from "@/components/financeiro/ReciboDialog";
@@ -129,7 +130,13 @@ function FinanceiroPage() {
       </div>
       {["receber", "pagar", "caixa"].includes(aba) && <SaldosBancarios />}
       <TabsContent value="receber"><Titulos tipo="receber" todos={titulos} loading={isLoading} perms={perms} /></TabsContent>
-      <TabsContent value="pagar"><Titulos tipo="pagar" todos={titulos} loading={isLoading} perms={perms} /></TabsContent>
+      <TabsContent value="pagar">
+        <Tabs defaultValue="titulos" className="space-y-4">
+          <TabsList><TabsTrigger value="titulos">Títulos a pagar</TabsTrigger><TabsTrigger value="dda">Inbox DDA</TabsTrigger></TabsList>
+          <TabsContent value="titulos"><Titulos tipo="pagar" todos={titulos} loading={isLoading} perms={perms} /></TabsContent>
+          <TabsContent value="dda"><DdaInbox titulos={titulos} perms={perms} /></TabsContent>
+        </Tabs>
+      </TabsContent>
       <TabsContent value="caixa"><Caixa titulos={titulos} /></TabsContent>
       <TabsContent value="controller"><ControllerPainel titulos={titulos} /></TabsContent>
       <TabsContent value="regua"><ReguaCobranca canEdit={perms.canUpdate || perms.canCreate} /></TabsContent>
