@@ -18,6 +18,8 @@ import { useTableRows } from "@/lib/crud";
 import { matchesAny } from "@/lib/input-masks";
 import type { Row } from "@/lib/row";
 import { perguntar } from "@/components/layout/DialogoGlobal";
+import { Switch } from "@/components/ui/switch";
+import { AbordagemSdr } from "@/components/sdr/AbordagemSdr";
 import { buscarLeads, enriquecerCnpj, type LeadEncontrado } from "@/lib/sdr-radar.functions";
 
 export const Route = createFileRoute("/_authenticated/sdr")({
@@ -104,6 +106,15 @@ function SdrPage() {
     recarregar();
   }
 
+  async function iniciarNovos() {
+    const ids = fila.filter((l) => l["status"] === "novo" && l["cadencia_ativa"] !== true).map((l) => l["id"]);
+    if (!ids.length) { toast.info("Nenhum lead novo fora da abordagem."); return; }
+    const { error } = await supabase.from("sdr_leads" as never).update({ cadencia_ativa: true, cadencia_passo: 0, cadencia_proxima: null, updated_at: new Date().toISOString() } as never).in("id", ids as never);
+    if (error) { toast.error("Não foi possível iniciar. Confirme se o script da abordagem foi executado."); return; }
+    toast.success(`${ids.length} lead(s) entraram na abordagem automática.`);
+    recarregar();
+  }
+
   async function enriquecer(l: Row) {
     const atual = String(l["cnpj"] ?? "");
         const v = await perguntar({ title: "Enriquecer pelo CNPJ", description: `Informe o CNPJ de ${String(l["nome"])}`, defaultValue: atual, placeholder: "00.000.000/0000-00" });
@@ -140,6 +151,7 @@ function SdrPage() {
         <TabsList>
           <TabsTrigger value="radar">Descobrir empresas</TabsTrigger>
           <TabsTrigger value="fila">Fila do SDR ({fila.length})</TabsTrigger>
+          <TabsTrigger value="abordagem">Abordagem automática</TabsTrigger>
         </TabsList>
 
         <TabsContent value="radar" className="space-y-4">
@@ -200,7 +212,10 @@ function SdrPage() {
         </TabsContent>
 
         <TabsContent value="fila" className="space-y-3">
-          <Input placeholder="Buscar por nome, segmento, cidade, CNPJ, e-mail ou telefone" value={q} onChange={(e) => setQ(e.target.value)} className="max-w-md" />
+          <div className="flex flex-wrap items-center gap-2">
+            <Input placeholder="Buscar por nome, segmento, cidade, CNPJ, e-mail ou telefone" value={q} onChange={(e) => setQ(e.target.value)} className="max-w-md" />
+            {perms.canUpdate && <Button variant="outline" size="sm" onClick={iniciarNovos}>Iniciar abordagem nos “Novos”</Button>}
+          </div>
           <div className="rounded-lg border bg-card">
             <Table>
               <TableHeader>
@@ -208,6 +223,7 @@ function SdrPage() {
                   <TableHead>Empresa</TableHead>
                   <TableHead>Canais</TableHead>
                   <TableHead>Sócios</TableHead>
+                  <TableHead className="w-28">Abordagem</TableHead>
                   <TableHead className="w-44">Situação</TableHead>
                   <TableHead className="w-32" />
                 </TableRow>
@@ -225,6 +241,11 @@ function SdrPage() {
                       <TableCell><Canais telefone={String(l["telefone"] ?? "")} email={String(l["email"] ?? "")} site={String(l["site"] ?? "")} /></TableCell>
                       <TableCell className="text-xs">{socios.length ? <span title={socios.map((s) => s.nome).join("\n")}><Users className="mr-1 inline size-3.5" />{socios[0]!.nome}{socios.length > 1 ? ` +${socios.length - 1}` : ""}</span> : "—"}</TableCell>
                       <TableCell>
+                        <Switch checked={l["cadencia_ativa"] === true} disabled={!perms.canUpdate} aria-label="Abordagem automática"
+                          onCheckedChange={(v) => atualizar(l["id"], v ? { cadencia_ativa: true, cadencia_passo: 0, cadencia_proxima: null } : { cadencia_ativa: false })} />
+                        {l["ultimo_envio"] ? <div className="mt-1 text-[11px] text-muted-foreground">{String(l["ultimo_envio"])}</div> : null}
+                      </TableCell>
+                      <TableCell>
                         <Select value={String(l["status"] ?? "novo")} onValueChange={(v) => atualizar(l["id"], { status: v })} disabled={!perms.canUpdate}>
                           <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
                           <SelectContent>{STATUS.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent>
@@ -237,11 +258,15 @@ function SdrPage() {
                   );
                 })}
                 {!filaFiltrada.length && (
-                  <TableRow><TableCell colSpan={5} className="py-8 text-center text-muted-foreground">Nenhuma empresa na fila. Use “Descobrir empresas” para começar.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={6} className="py-8 text-center text-muted-foreground">Nenhuma empresa na fila. Use “Descobrir empresas” para começar.</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>
           </div>
+        </TabsContent>
+
+        <TabsContent value="abordagem">
+          <AbordagemSdr fila={fila} empresaId={empresaId == null ? null : String(empresaId)} podeEditar={perms.canUpdate} recarregar={recarregar} />
         </TabsContent>
       </Tabs>
     </div>
