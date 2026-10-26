@@ -21,6 +21,7 @@ import { confirmar, perguntar } from "@/components/layout/DialogoGlobal";
 import { Switch } from "@/components/ui/switch";
 import { AbordagemSdr } from "@/components/sdr/AbordagemSdr";
 import { ConsultorMarketing } from "@/components/sdr/ConsultorMarketing";
+import { metricasSdr } from "@/lib/sdr-metricas";
 import { buscarLeads, enriquecerCnpj, type LeadEncontrado } from "@/lib/sdr-radar.functions";
 
 export const Route = createFileRoute("/_authenticated/sdr")({
@@ -155,6 +156,25 @@ function SdrPage() {
           <p className="text-sm text-muted-foreground">Encontre empresas do seu público-alvo e monte a fila de prospecção do SDR.</p>
         </div>
       </div>
+
+      {(() => {
+        const m = metricasSdr(fila);
+        const kpis = [
+          ["Leads na fila", String(m.total)], ["Contatados", String(m.contatados)],
+          ["Responderam", `${m.responderam} (${m.taxaResposta.toLocaleString("pt-BR")}%)`],
+          ["Qualificados", String(m.qualificados)], ["No CRM", `${m.convertidos} (${m.taxaConversao.toLocaleString("pt-BR")}%)`],
+        ];
+        return (
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+            {kpis.map(([t, v]) => (
+              <div key={t} className="rounded-lg border bg-card p-3">
+                <div className="text-xs text-muted-foreground">{t}</div>
+                <div className="text-xl font-semibold">{v}</div>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
 
       <Tabs defaultValue="radar">
         <TabsList>
