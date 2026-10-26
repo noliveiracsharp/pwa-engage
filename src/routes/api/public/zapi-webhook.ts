@@ -94,6 +94,11 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
           return new Response("Erro ao registrar", { status: 500 });
         }
         const r = data as Recebido;
+        // Lead do SDR respondeu: encerra a sequência e marca como Qualificado (ignora se o banco não tiver a função).
+        if (!r.interno) {
+          const { error: eS } = await db.rpc("sdr_lead_respondeu" as never, { p_token: k, p_telefone: body.phone } as never);
+          if (eS && !/function|schema cache/i.test(eS.message)) console.error("zapi-webhook sdr", eS.message);
+        }
         // Foto do contato enviada pela Z-API (atualiza o cadastro; ignora se o banco não tiver a função).
         const raw = body as Record<string, unknown>;
         const foto = [raw["senderPhoto"], raw["photo"], raw["photoUrl"]].find((v) => typeof v === "string" && /^https?:\/\//.test(v)) as string | undefined;
