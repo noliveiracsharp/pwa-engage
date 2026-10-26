@@ -1,6 +1,9 @@
 import { useMemo, useState } from "react";
 import { RelatorioLista } from "@/components/relatorios/RelatorioLista";
-import { Ban, CheckCircle2, FileText, ImageIcon, Landmark, Package, Settings2, Trash2, Wand2 } from "lucide-react";
+import { Ban, CheckCircle2, ChevronDown, FileText, ImageIcon, Landmark, Package, Settings2, Trash2, Wand2 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { BarraAcoesLote, useAcoesComuns } from "@/components/data-table/AcoesLote";
 import { Button } from "@/components/ui/button";
 import { PrecificacaoDialog } from "@/components/itens/PrecificacaoDialog";
@@ -52,11 +55,45 @@ const STATUS_OPTIONS = [
 ];
 
 const TIPO_OPTIONS = [
-  { value: "todos", label: "Todos" },
   { value: "Produto", label: "Produto" },
   { value: "Serviço", label: "Serviço avulso" },
   { value: "Serviço Recorrente", label: "Serviço recorrente" },
 ];
+
+const SEM_CATEGORIA = "__sem_categoria__";
+
+function FilterMulti({ label, value, onChange, options }: { label: string; value: string[]; onChange: (v: string[]) => void; options: { value: string; label: string }[] }) {
+  const resumo = value.length === 0 || value.length === options.length ? "Todas" : options.filter((o) => value.includes(o.value)).map((o) => o.label).join(", ");
+  return (
+    <div>
+      <Label className="text-muted-foreground mb-1.5 block text-xs tracking-wide uppercase">{label}</Label>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button type="button" variant="outline" className="w-full justify-between font-normal">
+            <span className="truncate">{resumo}</span>
+            <ChevronDown className="h-4 w-4 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-56 p-2" align="start">
+          {options.map((o) => (
+            <label key={o.value} className="hover:bg-muted flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm">
+              <Checkbox
+                checked={value.includes(o.value)}
+                onCheckedChange={(c) => onChange(c ? [...value, o.value] : value.filter((x) => x !== o.value))}
+              />
+              {o.label}
+            </label>
+          ))}
+          {value.length > 0 && (
+            <Button type="button" variant="ghost" size="sm" className="mt-1 w-full" onClick={() => onChange([])}>
+              Limpar
+            </Button>
+          )}
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
 
 function ItensPage() {
   const perms = usePagePermissions("/itens");
@@ -78,7 +115,7 @@ function ItensPage() {
     return lote.atualizar(row, mud);
   };
   const [duplicando, setDuplicando] = useState(false);
-  const [f, setF] = useState({ busca: "", tipo: "todos", categoria: "todos", status: "todos" });
+  const [f, setF] = useState<{ busca: string; tipos: string[]; categoria: string; status: string }>({ busca: "", tipos: [], categoria: "todos", status: "todos" });
   const [precOpen, setPrecOpen] = useState(false);
   const [reajuste, setReajuste] = useState<{ itemId: string; nome: string; novo: NovoPreco } | null>(null);
   const [fiscalOpen, setFiscalOpen] = useState(false);
@@ -100,8 +137,9 @@ function ItensPage() {
             [pick(row, ["codigo"]), pick(row, ["descricao"]), pick(row, ["modelo"]), pick(row, ["tipo"]), pick(row, ["categoria"]), pick(marca ?? {}, ["descricao"])],
             f.busca,
           ) &&
-          (f.tipo === "todos" || String(pick(row, ["tipo"]) ?? "") === f.tipo) &&
-          (f.categoria === "todos" || String(row["categoria"] ?? "") === f.categoria) &&
+          (f.tipos.length === 0 || f.tipos.includes(String(pick(row, ["tipo"]) ?? ""))) &&
+          (f.categoria === "todos" ||
+            (f.categoria === SEM_CATEGORIA ? !String(row["categoria"] ?? "").trim() : String(row["categoria"] ?? "") === f.categoria)) &&
           (f.status === "todos" || (f.status === "ativo" ? row["status"] === true : row["status"] === false))
         );
       }),
@@ -149,7 +187,10 @@ function ItensPage() {
       fields: ["descricao"],
       render: (row) => (
         <span className="inline-flex flex-wrap items-center gap-2">
-          {String(pick(row, ["descricao"]) ?? "—")}
+          <span className="flex flex-col">
+            <span>{String(pick(row, ["descricao"]) ?? "—")}</span>
+            {pick(row, ["modelo"]) ? <span className="text-muted-foreground text-xs">Modelo: {String(pick(row, ["modelo"]))}</span> : null}
+          </span>
           {row["pendente_compras"] === true && (
             <span className="bg-warning/15 text-warning rounded-full px-2 py-0.5 text-[10px] font-semibold" title="Cadastrado em campo pelo técnico">Pendente de Compras</span>
           )}
@@ -275,19 +316,23 @@ function ItensPage() {
                 label="Buscar"
                 value={f.busca}
                 onChange={(v) => setF({ ...f, busca: v })}
-                placeholder="Código, descrição ou marca"
+                placeholder="Código, descrição, marca ou modelo"
               />
-              <FilterSelect
+              <FilterMulti
                 label="Natureza"
-                value={f.tipo}
-                onChange={(v) => setF({ ...f, tipo: v })}
+                value={f.tipos}
+                onChange={(v) => setF({ ...f, tipos: v })}
                 options={TIPO_OPTIONS}
               />
               <FilterSelect
                 label="Categoria"
                 value={f.categoria}
                 onChange={(v) => setF({ ...f, categoria: v })}
-                options={[{ value: "todos", label: "Todas" }, ...CATEGORIAS_ITENS.map((c) => ({ value: c, label: c }))]}
+                options={[
+                  { value: "todos", label: "Todas" },
+                  { value: SEM_CATEGORIA, label: "Sem categoria" },
+                  ...CATEGORIAS_ITENS.map((c) => ({ value: c, label: c })),
+                ]}
               />
               <FilterSelect
                 label="Status"
@@ -354,8 +399,8 @@ function ItensPage() {
           rows={filtered}
           filtros={[
             f.busca && `Busca: ${f.busca}`,
-            f.tipo !== "todos" && `Natureza: ${TIPO_OPTIONS.find((o) => o.value === f.tipo)?.label}`,
-            f.categoria !== "todos" && `Categoria: ${f.categoria}`,
+            f.tipos.length > 0 && `Natureza: ${TIPO_OPTIONS.filter((o) => f.tipos.includes(o.value)).map((o) => o.label).join(", ")}`,
+            f.categoria !== "todos" && `Categoria: ${f.categoria === SEM_CATEGORIA ? "Sem categoria" : f.categoria}`,
             f.status !== "todos" && `Status: ${f.status === "ativo" ? "Ativo" : "Inativo"}`,
           ].filter((x): x is string => Boolean(x))}
           kpis={[
