@@ -114,7 +114,7 @@ function CotacoesPage() {
       setNovoTitulo("");
       navigate({ to: "/cotacoes", search: (prev: Record<string, unknown>) => {
         const next = { ...prev };
-        delete next.nova;
+        delete next["nova"];
         return next;
       }, replace: true });
     }
