@@ -48,6 +48,7 @@ import { Route as AuthenticatedPlano_contasRouteImport } from './routes/_authent
 import { Route as AuthenticatedProjetosRouteImport } from './routes/_authenticated/projetos'
 import { Route as AuthenticatedReembolsosRouteImport } from './routes/_authenticated/reembolsos'
 import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authenticated/relatorios'
+import { Route as AuthenticatedSdrRouteImport } from './routes/_authenticated/sdr'
 import { Route as AuthenticatedSemAcessoRouteImport } from './routes/_authenticated/sem-acesso'
 import { Route as AuthenticatedUnid_medidaRouteImport } from './routes/_authenticated/unid_medida'
 import { Route as AuthenticatedUsuariosRouteImport } from './routes/_authenticated/usuarios'
@@ -279,6 +280,11 @@ const AuthenticatedRelatoriosRoute = AuthenticatedRelatoriosRouteImport.update({
   path: '/relatorios',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSdrRoute = AuthenticatedSdrRouteImport.update({
+  id: '/sdr',
+  path: '/sdr',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedSemAcessoRoute = AuthenticatedSemAcessoRouteImport.update({
   id: '/sem-acesso',
   path: '/sem-acesso',
@@ -485,6 +491,7 @@ export interface FileRoutesByFullPath {
   '/projetos': typeof AuthenticatedProjetosRoute
   '/reembolsos': typeof AuthenticatedReembolsosRoute
   '/relatorios': typeof AuthenticatedRelatoriosRoute
+  '/sdr': typeof AuthenticatedSdrRoute
   '/sem-acesso': typeof AuthenticatedSemAcessoRoute
   '/unid_medida': typeof AuthenticatedUnid_medidaRoute
   '/usuarios': typeof AuthenticatedUsuariosRoute
@@ -556,6 +563,7 @@ export interface FileRoutesByTo {
   '/projetos': typeof AuthenticatedProjetosRoute
   '/reembolsos': typeof AuthenticatedReembolsosRoute
   '/relatorios': typeof AuthenticatedRelatoriosRoute
+  '/sdr': typeof AuthenticatedSdrRoute
   '/sem-acesso': typeof AuthenticatedSemAcessoRoute
   '/unid_medida': typeof AuthenticatedUnid_medidaRoute
   '/usuarios': typeof AuthenticatedUsuariosRoute
@@ -629,6 +637,7 @@ export interface FileRoutesById {
   '/_authenticated/projetos': typeof AuthenticatedProjetosRoute
   '/_authenticated/reembolsos': typeof AuthenticatedReembolsosRoute
   '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRoute
+  '/_authenticated/sdr': typeof AuthenticatedSdrRoute
   '/_authenticated/sem-acesso': typeof AuthenticatedSemAcessoRoute
   '/_authenticated/unid_medida': typeof AuthenticatedUnid_medidaRoute
   '/_authenticated/usuarios': typeof AuthenticatedUsuariosRoute
@@ -702,6 +711,7 @@ export interface FileRouteTypes {
     | '/projetos'
     | '/reembolsos'
     | '/relatorios'
+    | '/sdr'
     | '/sem-acesso'
     | '/unid_medida'
     | '/usuarios'
@@ -773,6 +783,7 @@ export interface FileRouteTypes {
     | '/projetos'
     | '/reembolsos'
     | '/relatorios'
+    | '/sdr'
     | '/sem-acesso'
     | '/unid_medida'
     | '/usuarios'
@@ -845,6 +856,7 @@ export interface FileRouteTypes {
     | '/_authenticated/projetos'
     | '/_authenticated/reembolsos'
     | '/_authenticated/relatorios'
+    | '/_authenticated/sdr'
     | '/_authenticated/sem-acesso'
     | '/_authenticated/unid_medida'
     | '/_authenticated/usuarios'
@@ -1184,6 +1196,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRelatoriosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/sdr': {
+      id: '/_authenticated/sdr'
+      path: '/sdr'
+      fullPath: '/sdr'
+      preLoaderRoute: typeof AuthenticatedSdrRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/sem-acesso': {
       id: '/_authenticated/sem-acesso'
       path: '/sem-acesso'
@@ -1433,6 +1452,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedProjetosRoute: typeof AuthenticatedProjetosRoute
   AuthenticatedReembolsosRoute: typeof AuthenticatedReembolsosRoute
   AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRoute
+  AuthenticatedSdrRoute: typeof AuthenticatedSdrRoute
   AuthenticatedSemAcessoRoute: typeof AuthenticatedSemAcessoRoute
   AuthenticatedUnid_medidaRoute: typeof AuthenticatedUnid_medidaRoute
   AuthenticatedUsuariosRoute: typeof AuthenticatedUsuariosRoute
@@ -1478,6 +1498,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedProjetosRoute: AuthenticatedProjetosRoute,
   AuthenticatedReembolsosRoute: AuthenticatedReembolsosRoute,
   AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRoute,
+  AuthenticatedSdrRoute: AuthenticatedSdrRoute,
   AuthenticatedSemAcessoRoute: AuthenticatedSemAcessoRoute,
   AuthenticatedUnid_medidaRoute: AuthenticatedUnid_medidaRoute,
   AuthenticatedUsuariosRoute: AuthenticatedUsuariosRoute,
