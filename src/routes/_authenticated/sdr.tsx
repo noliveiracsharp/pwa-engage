@@ -266,7 +266,7 @@ function SdrPage() {
         </TabsContent>
 
         <TabsContent value="abordagem">
-          <AbordagemSdr fila={fila} empresaId={empresaId} podeEditar={perms.canUpdate} recarregar={recarregar} />
+          <AbordagemSdr fila={fila} empresaId={empresaId == null ? null : String(empresaId)} podeEditar={perms.canUpdate} recarregar={recarregar} />
         </TabsContent>
       </Tabs>
     </div>
