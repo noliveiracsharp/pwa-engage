@@ -61,6 +61,7 @@ import { Route as DocTokenRouteImport } from './routes/doc.$token'
 import { Route as FiscalTokenRouteImport } from './routes/fiscal.$token'
 import { Route as MinutaTokenRouteImport } from './routes/minuta.$token'
 import { Route as OsTokenRouteImport } from './routes/os.$token'
+import { Route as PedidoTokenRouteImport } from './routes/pedido.$token'
 import { Route as PropostaTokenRouteImport } from './routes/proposta.$token'
 import { Route as WidgetInstanciaIdRouteImport } from './routes/widget.$instanciaId'
 import { Route as AuthenticatedAdminClientesRouteImport } from './routes/_authenticated/admin.clientes'
@@ -344,6 +345,11 @@ const OsTokenRoute = OsTokenRouteImport.update({
   path: '/os/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PedidoTokenRoute = PedidoTokenRouteImport.update({
+  id: '/pedido/$token',
+  path: '/pedido/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PropostaTokenRoute = PropostaTokenRouteImport.update({
   id: '/proposta/$token',
   path: '/proposta/$token',
@@ -492,6 +498,7 @@ export interface FileRoutesByFullPath {
   '/fiscal/$token': typeof FiscalTokenRoute
   '/minuta/$token': typeof MinutaTokenRoute
   '/os/$token': typeof OsTokenRoute
+  '/pedido/$token': typeof PedidoTokenRoute
   '/proposta/$token': typeof PropostaTokenRoute
   '/widget/$instanciaId': typeof WidgetInstanciaIdRoute
   '/admin/clientes': typeof AuthenticatedAdminClientesRoute
@@ -562,6 +569,7 @@ export interface FileRoutesByTo {
   '/fiscal/$token': typeof FiscalTokenRoute
   '/minuta/$token': typeof MinutaTokenRoute
   '/os/$token': typeof OsTokenRoute
+  '/pedido/$token': typeof PedidoTokenRoute
   '/proposta/$token': typeof PropostaTokenRoute
   '/widget/$instanciaId': typeof WidgetInstanciaIdRoute
   '/admin/clientes': typeof AuthenticatedAdminClientesRoute
@@ -634,6 +642,7 @@ export interface FileRoutesById {
   '/fiscal/$token': typeof FiscalTokenRoute
   '/minuta/$token': typeof MinutaTokenRoute
   '/os/$token': typeof OsTokenRoute
+  '/pedido/$token': typeof PedidoTokenRoute
   '/proposta/$token': typeof PropostaTokenRoute
   '/widget/$instanciaId': typeof WidgetInstanciaIdRoute
   '/_authenticated/admin/clientes': typeof AuthenticatedAdminClientesRoute
@@ -706,6 +715,7 @@ export interface FileRouteTypes {
     | '/fiscal/$token'
     | '/minuta/$token'
     | '/os/$token'
+    | '/pedido/$token'
     | '/proposta/$token'
     | '/widget/$instanciaId'
     | '/admin/clientes'
@@ -776,6 +786,7 @@ export interface FileRouteTypes {
     | '/fiscal/$token'
     | '/minuta/$token'
     | '/os/$token'
+    | '/pedido/$token'
     | '/proposta/$token'
     | '/widget/$instanciaId'
     | '/admin/clientes'
@@ -847,6 +858,7 @@ export interface FileRouteTypes {
     | '/fiscal/$token'
     | '/minuta/$token'
     | '/os/$token'
+    | '/pedido/$token'
     | '/proposta/$token'
     | '/widget/$instanciaId'
     | '/_authenticated/admin/clientes'
@@ -887,6 +899,7 @@ export interface RootRouteChildren {
   FiscalTokenRoute: typeof FiscalTokenRoute
   MinutaTokenRoute: typeof MinutaTokenRoute
   OsTokenRoute: typeof OsTokenRoute
+  PedidoTokenRoute: typeof PedidoTokenRoute
   PropostaTokenRoute: typeof PropostaTokenRoute
   WidgetInstanciaIdRoute: typeof WidgetInstanciaIdRoute
   ApiPublicIconeRoute: typeof ApiPublicIconeRoute
@@ -1262,6 +1275,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OsTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/pedido/$token': {
+      id: '/pedido/$token'
+      path: '/pedido/$token'
+      fullPath: '/pedido/$token'
+      preLoaderRoute: typeof PedidoTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/proposta/$token': {
       id: '/proposta/$token'
       path: '/proposta/$token'
@@ -1500,6 +1520,7 @@ const rootRouteChildren: RootRouteChildren = {
   FiscalTokenRoute: FiscalTokenRoute,
   MinutaTokenRoute: MinutaTokenRoute,
   OsTokenRoute: OsTokenRoute,
+  PedidoTokenRoute: PedidoTokenRoute,
   PropostaTokenRoute: PropostaTokenRoute,
   WidgetInstanciaIdRoute: WidgetInstanciaIdRoute,
   ApiPublicIconeRoute: ApiPublicIconeRoute,
