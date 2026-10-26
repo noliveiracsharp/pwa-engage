@@ -45,6 +45,11 @@ const NAT_LABEL: Record<string, string> = { produto: "Produto", servico: "Servi�
 function ComissoesPage() {
   const perms = usePagePermissions("/comissoes");
   if (!perms.loading && !perms.canRead) return <p className="text-muted-foreground text-sm">Você não tem acesso a esta página.</p>;
+  return <ComissoesView perms={perms} />;
+}
+
+/** Tela de comissões; usada como aba do Financeiro com a permissão da seção. */
+export function ComissoesView({ perms }: { perms: { canRead: boolean; canCreate: boolean; canUpdate: boolean; canDelete: boolean } }) {
   return (
     <Tabs defaultValue="extrato" className="space-y-4">
       <TabsList>
