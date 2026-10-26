@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Loader2, Mail, MessageCircle, Play, Plus, Save, Trash2 } from "lucide-react";
+import { Loader2, Mail, MessageCircle, Play, Plus, Save, Sparkles, Trash2 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { gerarCadenciaIA } from "@/lib/marketing-consultor.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,7 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useTableRows } from "@/lib/crud";
 import type { Row } from "@/lib/row";
 import { dispararMensagem } from "@/lib/atendimentos-envio";
-import { confirmar } from "@/components/layout/DialogoGlobal";
+import { confirmar, perguntar } from "@/components/layout/DialogoGlobal";
 import { PASSOS_PADRAO, horarioComercial, passoDevido, preencherTexto, proximaData, temCanal, type Passo } from "@/lib/sdr-cadencia";
 
 const hojeSP = () => new Date(Date.now() - 3 * 3600000).toISOString().slice(0, 10);
@@ -27,11 +29,13 @@ export function AbordagemSdr({ fila, empresaId, podeEditar, recarregar }: Props)
   const [instId, setInstId] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [rodando, setRodando] = useState(false);
+  const [auto, setAuto] = useState(false);
+  const [gerando, setGerando] = useState(false);
 
   useEffect(() => {
     if (!cfg) return;
     const p = Array.isArray(cfg["passos"]) && (cfg["passos"] as Passo[]).length ? (cfg["passos"] as Passo[]) : PASSOS_PADRAO;
-    setPassos(p); setLimite(Number(cfg["limite_diario"] ?? 30)); setInstId(String(cfg["instancia_id"] ?? ""));
+    setPassos(p); setLimite(Number(cfg["limite_diario"] ?? 30)); setInstId(String(cfg["instancia_id"] ?? "")); setAuto(cfg["auto_ativo"] === true);
   }, [cfg]);
 
   const insts = useMemo(() => instancias
@@ -46,7 +50,7 @@ export function AbordagemSdr({ fila, empresaId, podeEditar, recarregar }: Props)
   async function salvar() {
     if (!empresaId) return;
     setSalvando(true);
-    const { error } = await supabase.from("sdr_cadencia_config" as never).upsert({ empresa_id: empresaId, passos, limite_diario: limite, instancia_id: instId || null, updated_at: new Date().toISOString() } as never, { onConflict: "empresa_id" } as never);
+    const { error } = await supabase.from("sdr_cadencia_config" as never).upsert({ empresa_id: empresaId, passos, limite_diario: limite, instancia_id: instId || null, auto_ativo: auto, updated_at: new Date().toISOString() } as never, { onConflict: "empresa_id" } as never);
     setSalvando(false);
     if (error) { toast.error("Não foi possível salvar. Confirme se o script da abordagem foi executado."); return; }
     toast.success("Sequência salva."); recarregar();
@@ -84,6 +88,21 @@ export function AbordagemSdr({ fila, empresaId, podeEditar, recarregar }: Props)
     toast.success(`${ok} enviado(s)${pulados ? ` · ${pulados} sem canal (passo pulado)` : ""}${falhas ? ` · ${falhas} falha(s)` : ""}.`);
   }
 
+  async function gerarIA() {
+    const negocio = await perguntar({ title: "Gerar mensagens com IA", description: "Descreva em poucas palavras o que sua empresa vende e para quem.", placeholder: "Ex.: monitoramento e câmeras para condomínios e indústrias" });
+    if (!negocio || String(negocio).trim().length < 3) return;
+    if (passos.some((p) => p.texto.trim()) && !(await confirmar({ title: "Substituir textos", description: "Os textos atuais dos passos serão trocados pelos sugeridos. Continuar?" }))) return;
+    setGerando(true);
+    const { data } = await supabase.auth.getSession();
+    const r = await gerarCadenciaIA({ data: { empresa: minhaEmpresa, negocio: String(negocio), canais: passos.map((p) => p.canal), dias: passos.map((p) => p.dia), token: data.session?.access_token ?? "" } });
+    setGerando(false);
+    if (r.erro) { toast.error(r.erro); return; }
+    setPassos((ps) => ps.map((p, i) => (r.passos[i] ? { ...p, texto: r.passos[i].texto, assunto: p.canal === "email" ? r.passos[i].assunto || p.assunto : p.assunto } : p)));
+    toast.success("Textos sugeridos. Revise e clique em Salvar sequência.");
+  }
+
+  const ultimo = cfg?.["ultimo_resultado"] as { ok?: number; falhas?: number; pulados?: number; em?: string } | null | undefined;
+
   const mudar = (i: number, p: Partial<Passo>) => setPassos((ps) => ps.map((x, j) => (j === i ? { ...x, ...p } : x)));
 
   return (
@@ -107,6 +126,13 @@ export function AbordagemSdr({ fila, empresaId, podeEditar, recarregar }: Props)
             <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
             <SelectContent>{insts.map((i) => <SelectItem key={String(i["id"])} value={String(i["id"])}>{String(i["nome"] ?? i["telefone"] ?? "WhatsApp")}</SelectItem>)}</SelectContent>
           </Select>
+        </div>
+        <div className="flex items-center justify-between gap-3 rounded-md border p-3 md:col-span-2">
+          <div>
+            <div className="font-medium">Envio automático diário</div>
+            <p className="text-xs text-muted-foreground">De segunda a sexta, às 9h, o sistema envia sozinho os passos do dia.{ultimo?.em ? ` Último: ${new Date(ultimo.em).toLocaleString("pt-BR")} — ${ultimo.ok ?? 0} enviado(s), ${ultimo.falhas ?? 0} falha(s).` : ""}</p>
+          </div>
+          <Switch checked={auto} onCheckedChange={setAuto} disabled={!podeEditar} aria-label="Envio automático diário" />
         </div>
         <div className="space-y-1.5">
           <Label>Limite de envios por dia</Label>
@@ -137,6 +163,7 @@ export function AbordagemSdr({ fila, empresaId, podeEditar, recarregar }: Props)
 
       {podeEditar && (
         <div className="sticky bottom-0 flex justify-end gap-2 border-t bg-background py-3">
+          <Button variant="outline" onClick={gerarIA} disabled={gerando}>{gerando ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />} Gerar mensagens com IA</Button>
           <Button variant="outline" onClick={() => setPassos((ps) => [...ps, { dia: (ps.at(-1)?.dia ?? 0) + 2, canal: "whatsapp", texto: "" }])}><Plus className="size-4" /> Adicionar passo</Button>
           <Button onClick={salvar} disabled={salvando}>{salvando ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />} Salvar sequência</Button>
         </div>
