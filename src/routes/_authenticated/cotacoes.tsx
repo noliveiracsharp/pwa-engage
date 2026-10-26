@@ -108,9 +108,9 @@ function CotacoesPage() {
   const [aprovando, setAprovando] = useState(false);
   const [f, setF] = useState({ busca: "", status: search.status ?? "todos", projeto: "" });
   useEffect(() => {
-    if (search.status) setF((x) => ({ ...x, status: search.status! }));
-    if (search.id) setSelId(search.id);
-    if (search.nova) {
+    if (search["status"]) setF((x) => ({ ...x, status: search["status"]! }));
+    if (search["id"]) setSelId(search["id"]);
+    if (search["nova"]) {
       setNovoTitulo("");
       navigate({ to: "/cotacoes", search: (prev: Record<string, unknown>) => {
         const next = { ...prev };
@@ -118,7 +118,7 @@ function CotacoesPage() {
         return next;
       }, replace: true });
     }
-  }, [search.status, search.id, search.nova]);
+  }, [search["status"], search["id"], search["nova"]]);
 
   const sel = cotacoes.find((c) => String(rowId(c)) === selId) ?? null;
   const laudoById = useMemo(() => new Map(laudos.map((l) => [String(rowId(l)), l])), [laudos]);
