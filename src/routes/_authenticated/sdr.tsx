@@ -17,6 +17,7 @@ import { useAudit } from "@/lib/audit";
 import { useTableRows } from "@/lib/crud";
 import { matchesAny } from "@/lib/input-masks";
 import type { Row } from "@/lib/row";
+import { perguntar } from "@/components/layout/DialogoGlobal";
 import { buscarLeads, enriquecerCnpj, type LeadEncontrado } from "@/lib/sdr-radar.functions";
 
 export const Route = createFileRoute("/_authenticated/sdr")({
@@ -70,19 +71,19 @@ function SdrPage() {
   if (!perms.loading && !perms.canRead) return <p className="p-6 text-muted-foreground">Você não tem acesso a esta página.</p>;
 
   async function buscar() {
-    if (segmento.trim().length < 2 || cidade.trim().length < 2) return toast.error("Informe o segmento e a cidade.");
+    if (segmento.trim().length < 2 || cidade.trim().length < 2) { toast.error("Informe o segmento e a cidade."); return; }
     setBuscando(true); setSel(new Set());
     const r = await buscarLeads({ data: { segmento, cidade, token: await token() } });
     setBuscando(false);
-    if (r.erro) return toast.error(r.erro);
+    if (r.erro) { toast.error(r.erro); return; }
     setAchados(r.leads);
     if (!r.leads.length) toast.info("Nenhuma empresa encontrada. Tente um termo mais simples (ex.: condomínio, clínica, indústria).");
   }
 
   async function enviarParaFila() {
-    if (!empresaId) return toast.error("Empresa não identificada.");
+    if (!empresaId) { toast.error("Empresa não identificada."); return; }
     const itens = achados.filter((l) => sel.has(l.ref) && !refsNaFila.has(l.ref));
-    if (!itens.length) return toast.info("Os selecionados já estão na fila.");
+    if (!itens.length) { toast.info("Os selecionados já estão na fila."); return; }
     setSalvando(true);
     const { error } = await supabase.from("sdr_leads" as never).insert(itens.map((l) => ({
       empresa_id: empresaId, nome: l.nome, segmento: l.segmento, telefone: l.telefone || null,
@@ -91,7 +92,7 @@ function SdrPage() {
       origem: "radar", origem_ref: l.ref, status: "novo",
     })) as never);
     setSalvando(false);
-    if (error) return toast.error("Não foi possível salvar. Confirme se o script do Radar de Leads já foi executado.");
+    if (error) { toast.error("Não foi possível salvar. Confirme se o script do Radar de Leads já foi executado."); return; }
     toast.success(`${itens.length} empresa(s) enviada(s) para a fila do SDR.`);
     setSel(new Set());
     recarregar();
@@ -99,19 +100,18 @@ function SdrPage() {
 
   async function atualizar(id: unknown, campos: Record<string, unknown>) {
     const { error } = await supabase.from("sdr_leads" as never).update({ ...campos, updated_at: new Date().toISOString() } as never).eq("id", id as never);
-    if (error) return toast.error("Não foi possível atualizar.");
+    if (error) { toast.error("Não foi possível atualizar."); return; }
     recarregar();
   }
 
   async function enriquecer(l: Row) {
     const atual = String(l["cnpj"] ?? "");
-    const { perguntar } = await import("@/components/layout/DialogoGlobal");
-    const v = await perguntar({ titulo: "Enriquecer pelo CNPJ", mensagem: `Informe o CNPJ de ${String(l["nome"])}`, valor: atual } as never);
+        const v = await perguntar({ titulo: "Enriquecer pelo CNPJ", mensagem: `Informe o CNPJ de ${String(l["nome"])}`, valor: atual } as never);
     const cnpj = soDigitos(String(v ?? ""));
     if (!cnpj) return;
-    if (cnpj.length !== 14) return toast.error("CNPJ deve ter 14 dígitos.");
+    if (cnpj.length !== 14) { toast.error("CNPJ deve ter 14 dígitos."); return; }
     const r = await enriquecerCnpj({ data: { cnpj, token: await token() } });
-    if (r.erro || !r.dados) return toast.error(r.erro ?? "Falha na consulta.");
+    if (r.erro || !r.dados) { toast.error(r.erro ?? "Falha na consulta."); return; }
     const d = r.dados;
     await atualizar(l["id"], {
       cnpj, razao_social: d.razao_social, atividade: d.atividade, socios: d.socios,
@@ -122,7 +122,7 @@ function SdrPage() {
   }
 
   const filaFiltrada = fila
-    .filter((l) => matchesAny(q, [l["nome"], l["segmento"], l["cidade"], l["cnpj"], l["razao_social"], l["email"], l["telefone"]]))
+    .filter((l) => matchesAny([l["nome"], l["segmento"], l["cidade"], l["cnpj"], l["razao_social"], l["email"], l["telefone"]], q))
     .sort((a, b) => String(b["created_at"] ?? "").localeCompare(String(a["created_at"] ?? "")));
   const todosSel = achados.length > 0 && achados.every((l) => sel.has(l.ref) || refsNaFila.has(l.ref));
 
