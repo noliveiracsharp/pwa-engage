@@ -97,7 +97,7 @@ function ItensPage() {
         const marca = marcaById.get(String(pick(row, ["itens_marcas_id"]) ?? ""));
         return (
           matchesAny(
-            [pick(row, ["codigo"]), pick(row, ["descricao"]), pick(row, ["tipo"]), pick(row, ["categoria"]), pick(marca ?? {}, ["descricao"])],
+            [pick(row, ["codigo"]), pick(row, ["descricao"]), pick(row, ["modelo"]), pick(row, ["tipo"]), pick(row, ["categoria"]), pick(marca ?? {}, ["descricao"])],
             f.busca,
           ) &&
           (f.tipo === "todos" || String(pick(row, ["tipo"]) ?? "") === f.tipo) &&

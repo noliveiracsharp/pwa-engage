@@ -22,11 +22,11 @@ import { pick, type Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
 import { formatPhoneDisplay } from "@/lib/input-masks";
 import { confirmar } from "@/components/layout/DialogoGlobal";
-import { QuickCreateDialog } from "@/components/itens/QuickCreateDialog";
+import { NovoItemCompleto } from "@/components/itens/NovoItemCompleto";
+import { nomeItemCompleto } from "@/lib/item-nome";
 import { useAuth } from "@/hooks/useAuth";
 import { useTableRows } from "@/lib/crud";
 import { novoCustoCotacao, ofertaAceitaNovoCusto, recalcLinhaCusto, vendaPreservandoMargem } from "@/lib/custo-cotacao";
-const ITEM_RAPIDO = [{ key: "descricao", label: "Descrição" }, { key: "codigo", label: "Código / referência" }];
 import { PainelAprovacaoCotacao, useConfigAprovacao } from "@/components/cotacoes/AprovacaoCompras";
 import { aprovadoresDe, podeGerarPedido, type SituacaoAprovacao } from "@/lib/aprovacao-compras";
 import { avisarAprovadoresWhatsapp } from "@/lib/cotacao-alertas";
@@ -132,9 +132,11 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
     [parceiros],
   );
 
+  const { data: marcasCot = [] } = useTableRows("itens_marcas");
+  const nomeCot = (i: Row | undefined) => nomeItemCompleto(i, String((marcasCot as Row[]).find((m) => String(rowId(m)) === String(i?.["itens_marcas_id"] ?? ""))?.["descricao"] ?? ""));
   const itemOpts = useMemo(
-    () => itens.map((i) => ({ value: String(rowId(i)), label: String(i["descricao"] ?? "Item"), hint: i["codigo"] ? String(i["codigo"]) : undefined, keywords: [String(i["codigo"] ?? "")] })),
-    [itens],
+    () => itens.map((i) => ({ value: String(rowId(i)), label: nomeCot(i) || "Item", hint: i["codigo"] ? String(i["codigo"]) : undefined, keywords: [String(i["codigo"] ?? ""), String(i["modelo"] ?? "")] })),
+    [itens, marcasCot], // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   const invalidar = () => {
@@ -725,9 +727,8 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
                 <Button variant="outline" onClick={() => setCriarItem(true)}><Plus className="mr-1 h-4 w-4" /> Novo item</Button>
               </div>
             )}
-            <QuickCreateDialog open={criarItem} onOpenChange={setCriarItem} title="Novo item" table="itens"
-              fields={ITEM_RAPIDO}
-              onCreated={(id) => { void qc.invalidateQueries({ queryKey: ["table", "itens"] }); void addItem(id); }} />
+            <NovoItemCompleto open={criarItem} onOpenChange={setCriarItem}
+              onCreated={(item) => { void addItem(String(rowId(item))); }} />
             <div className="overflow-x-auto rounded-lg border">
               <table className="w-full text-sm">
                 <thead className="bg-muted/50">
@@ -751,7 +752,7 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
                     return (
                       <tr key={String(it["id"])} className="border-t">
                         <td className="px-3 py-2">
-                          <div className="font-medium">{String(item?.["descricao"] ?? "Item")}</div>
+                          <div className="font-medium">{nomeCot(item) || "Item"}</div>
                           {item?.["codigo"] ? <div className="text-muted-foreground text-xs">{String(item["codigo"])}</div> : null}
                         </td>
                         <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{num(item?.["preco_custo"]) > 0 ? formatBRL(item?.["preco_custo"]) : "—"}</td>

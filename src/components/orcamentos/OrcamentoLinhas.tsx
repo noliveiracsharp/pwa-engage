@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import { SearchSelect, type SearchOption } from "@/components/data-table/SearchSelect";
 import { rowId } from "@/lib/crud";
-import { QuickItemDialog } from "./QuickItemDialog";
+import { NovoItemCompleto } from "@/components/itens/NovoItemCompleto";
 import { agruparPorBloco, calcLinha, formatBRL, formatPct, NATUREZAS, num, type Linha, type Natureza } from "@/lib/orcamentos";
 
 function NaturezaBadge({ n }: { n: Natureza }) {
@@ -657,11 +657,9 @@ export function OrcamentoLinhas({
           <Plus className="mr-1 h-4 w-4" /> Adicionar item geral (sem ambiente)
         </Button>
       )}
-      <QuickItemDialog
+      <NovoItemCompleto
         open={quickFor !== null}
         onOpenChange={(o) => !o && setQuickFor(null)}
-        itens={itens}
-        unidadeOptions={unidadeOptions}
         onCreated={(item) => quickFor && onSelectItem(quickFor, String(rowId(item)))}
       />
     </div>
