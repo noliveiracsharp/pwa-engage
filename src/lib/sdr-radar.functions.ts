@@ -39,7 +39,9 @@ export const buscarLeads = createServerFn({ method: "POST" })
       const r = await fetch(url, { headers: { "User-Agent": "Atende.ai Radar de Leads (contato@atende.ai)", "Accept-Language": "pt-BR" } });
       if (!r.ok) return { leads: [], erro: "Serviço de busca indisponível no momento. Tente de novo em instantes." };
       const lista = (await r.json()) as Array<Record<string, unknown>>;
+      const IGNORAR = new Set(["highway", "boundary", "place", "natural", "waterway", "railway", "route"]);
       const leads = lista
+        .filter((x) => !IGNORAR.has(String(x["category"] ?? "")))
         .map((x): LeadEncontrado => {
           const ad = (x["address"] ?? {}) as Record<string, string>;
           const ex = (x["extratags"] ?? {}) as Record<string, string>;
