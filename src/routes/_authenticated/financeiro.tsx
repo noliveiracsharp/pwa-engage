@@ -10,6 +10,7 @@ import { CalendarClock, CheckCircle2, ChevronDown, ChevronRight, Copy, CreditCar
 import { ImportarFaturaDialog } from "@/components/financeiro/ImportarFaturaDialog";
 import { ImportarContaDialog } from "@/components/financeiro/ImportarContaDialog";
 import { DdaInbox } from "@/components/financeiro/DdaInbox";
+import { ComissoesView } from "@/routes/_authenticated/comissoes";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Tags, Download } from "lucide-react";
 import { ReciboDialog } from "@/components/financeiro/ReciboDialog";
@@ -119,6 +120,7 @@ const SECOES_FIN = [
   { key: "bancos", label: "Contas Bancárias" },
   { key: "plano", label: "Plano de Contas" },
   { key: "centros", label: "Centros de Custo" },
+  { key: "comissoes", label: "Comissões" },
 ];
 
 function FinanceiroPage() {
@@ -152,6 +154,7 @@ function FinanceiroPage() {
       <TabsContent value="bancos" className="space-y-8"><ContasBancarias perms={p("bancos")} /><CartoesCredito perms={p("bancos")} /></TabsContent>
       <TabsContent value="plano">{aba === "plano" && <ApoioCrud {...planoContasConfig} permsOverride={p("plano")} />}</TabsContent>
       <TabsContent value="centros">{aba === "centros" && <ApoioCrud {...centroCustoConfig} permsOverride={p("centros")} />}</TabsContent>
+      <TabsContent value="comissoes">{aba === "comissoes" && <ComissoesView perms={p("comissoes")} />}</TabsContent>
     </Tabs>
   );
 }
