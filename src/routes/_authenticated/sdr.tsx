@@ -17,9 +17,10 @@ import { useAudit } from "@/lib/audit";
 import { useTableRows } from "@/lib/crud";
 import { matchesAny } from "@/lib/input-masks";
 import type { Row } from "@/lib/row";
-import { perguntar } from "@/components/layout/DialogoGlobal";
+import { confirmar, perguntar } from "@/components/layout/DialogoGlobal";
 import { Switch } from "@/components/ui/switch";
 import { AbordagemSdr } from "@/components/sdr/AbordagemSdr";
+import { ConsultorMarketing } from "@/components/sdr/ConsultorMarketing";
 import { buscarLeads, enriquecerCnpj, type LeadEncontrado } from "@/lib/sdr-radar.functions";
 
 export const Route = createFileRoute("/_authenticated/sdr")({
@@ -115,6 +116,14 @@ function SdrPage() {
     recarregar();
   }
 
+  async function converter(l: Row) {
+    if (!(await confirmar({ title: "Enviar ao CRM", description: `Criar o cliente e uma Oferta no Kanban para ${String(l["nome"])}? A abordagem automática deste lead será encerrada.` }))) return;
+    const { error } = await supabase.rpc("sdr_converter_lead" as never, { p_lead: l["id"] } as never);
+    if (error) { toast.error(/function|schema cache/i.test(error.message) ? "Rode o script de transbordo do SDR antes de usar." : "Não foi possível enviar ao CRM."); return; }
+    toast.success("Lead enviado ao CRM: cliente e Oferta criados no Kanban.");
+    recarregar();
+  }
+
   async function enriquecer(l: Row) {
     const atual = String(l["cnpj"] ?? "");
         const v = await perguntar({ title: "Enriquecer pelo CNPJ", description: `Informe o CNPJ de ${String(l["nome"])}`, defaultValue: atual, placeholder: "00.000.000/0000-00" });
@@ -152,6 +161,7 @@ function SdrPage() {
           <TabsTrigger value="radar">Descobrir empresas</TabsTrigger>
           <TabsTrigger value="fila">Fila do SDR ({fila.length})</TabsTrigger>
           <TabsTrigger value="abordagem">Abordagem automática</TabsTrigger>
+          <TabsTrigger value="marketing">Consultor de Marketing</TabsTrigger>
         </TabsList>
 
         <TabsContent value="radar" className="space-y-4">
@@ -252,7 +262,12 @@ function SdrPage() {
                         </Select>
                       </TableCell>
                       <TableCell>
-                        {perms.canUpdate && <Button size="sm" variant="outline" onClick={() => enriquecer(l)}>CNPJ</Button>}
+                        <div className="flex flex-wrap gap-1">
+                          {perms.canUpdate && <Button size="sm" variant="outline" onClick={() => enriquecer(l)}>CNPJ</Button>}
+                          {perms.canUpdate && (l["orcamento_id"]
+                            ? <Badge variant="secondary">No CRM</Badge>
+                            : <Button size="sm" onClick={() => converter(l)}>Enviar ao CRM</Button>)}
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -267,6 +282,10 @@ function SdrPage() {
 
         <TabsContent value="abordagem">
           <AbordagemSdr fila={fila} empresaId={empresaId == null ? null : String(empresaId)} podeEditar={perms.canUpdate} recarregar={recarregar} />
+        </TabsContent>
+
+        <TabsContent value="marketing">
+          <ConsultorMarketing empresa="" />
         </TabsContent>
       </Tabs>
     </div>
