@@ -106,7 +106,7 @@ function SdrPage() {
 
   async function enriquecer(l: Row) {
     const atual = String(l["cnpj"] ?? "");
-        const v = await perguntar({ titulo: "Enriquecer pelo CNPJ", mensagem: `Informe o CNPJ de ${String(l["nome"])}`, valor: atual } as never);
+        const v = await perguntar({ title: "Enriquecer pelo CNPJ", description: `Informe o CNPJ de ${String(l["nome"])}`, defaultValue: atual, placeholder: "00.000.000/0000-00" });
     const cnpj = soDigitos(String(v ?? ""));
     if (!cnpj) return;
     if (cnpj.length !== 14) { toast.error("CNPJ deve ter 14 dígitos."); return; }
