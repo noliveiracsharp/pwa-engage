@@ -39,9 +39,10 @@ export const Route = createFileRoute("/_authenticated/cotacoes")({
       { name: "robots", content: "noindex" },
     ],
   }),
-  validateSearch: (s: Record<string, unknown>): { id?: string; status?: string } => ({
+  validateSearch: (s: Record<string, unknown>): { id?: string; status?: string; nova?: string } => ({
     ...(typeof s["id"] === "string" ? { id: s["id"] } : {}),
     ...(typeof s["status"] === "string" ? { status: s["status"] } : {}),
+    ...(typeof s["nova"] === "string" ? { nova: s["nova"] } : {}),
   }),
   component: CotacoesPage,
 });
@@ -109,7 +110,15 @@ function CotacoesPage() {
   useEffect(() => {
     if (search.status) setF((x) => ({ ...x, status: search.status! }));
     if (search.id) setSelId(search.id);
-  }, [search.status, search.id]);
+    if (search.nova) {
+      setNovoTitulo("");
+      navigate({ to: "/cotacoes", search: (prev: Record<string, unknown>) => {
+        const next = { ...prev };
+        delete next.nova;
+        return next;
+      }, replace: true });
+    }
+  }, [search.status, search.id, search.nova]);
 
   const sel = cotacoes.find((c) => String(rowId(c)) === selId) ?? null;
   const laudoById = useMemo(() => new Map(laudos.map((l) => [String(rowId(l)), l])), [laudos]);
