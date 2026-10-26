@@ -300,6 +300,11 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
       setGerando(false);
     }
   };
+  const linkPedido = (p: Row) => {
+    if (!p["token_publico"]) return null;
+    const origem = /localhost|127\.0\.0\.1|id-preview--/.test(window.location.host) ? "https://pwa-engage.lovable.app" : window.location.origin;
+    return `${origem}/pedido/${String(p["token_publico"])}`;
+  };
   const enviarPedido = async (p: Row) => {
     const parc = parceiroById.get(String(p["fornecedor_id"]));
     const g = analise.porForn.get(String(p["fornecedor_id"]));
@@ -314,14 +319,25 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
       p["condicao_pagamento"] ? `Pagamento: ${String(p["condicao_pagamento"])}` : "",
       p["frete"] ? `Frete: ${String(p["frete"])}` : "",
       num(p["prazo_entrega_dias"]) > 0 ? `Prazo de entrega: ${num(p["prazo_entrega_dias"])} dias` : "",
+      linkPedido(p) ? `Ver pedido: ${linkPedido(p)}` : "",
     ].filter(Boolean).join("\n");
     const fone = String(pick(parc ?? {}, ["whatsapp", "celular", "telefone"]) ?? "").replace(/\D/g, "");
     const numero = fone && !fone.startsWith("55") ? `55${fone}` : fone;
     window.open(`https://wa.me/${numero}?text=${encodeURIComponent(texto)}`, "_blank", "noopener");
+    await marcarEnviado(p);
+  };
+  const marcarEnviado = async (p: Row) => {
     if (p["status"] === "rascunho") {
       await supabase.from("pedidos_compra").update({ status: "enviado", enviado_em: new Date().toISOString() } as never).eq("id", String(p["id"]));
       invalidar();
     }
+  };
+  const copiarLinkPedido = async (p: Row) => {
+    const url = linkPedido(p);
+    if (!url) return void toast.error("Link indisponível: rode o script atendeai-pedido-publico.sql no banco.");
+    await navigator.clipboard.writeText(url);
+    toast.success("Link do pedido copiado.");
+    await marcarEnviado(p);
   };
   const marcarRecebido = (p: Row) => setReceber(p);
 
@@ -879,6 +895,7 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
                         <span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", ped["status"] === "recebido" ? "bg-success/15 text-success" : ped["status"] === "enviado" ? "bg-primary/15 text-primary" : "bg-warning/15 text-warning")}>
                           {ped["status"] === "recebido" ? "Recebido" : ped["status"] === "enviado" ? "Enviado" : "Rascunho"}
                         </span>
+                        <Button size="sm" variant="outline" onClick={() => void copiarLinkPedido(ped)}><Link2 className="mr-1 h-4 w-4" />Copiar link</Button>
                         <Button size="sm" variant="outline" onClick={() => enviarPedido(ped)}><MessageCircle className="mr-1 h-4 w-4" />Enviar</Button>
                         {ped["status"] === "enviado" && canUpdate && <Button size="sm" variant="ghost" onClick={() => marcarRecebido(ped)}>Receber mercadoria</Button>}
                       </div>
