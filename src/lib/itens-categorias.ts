@@ -3,6 +3,7 @@ export const CATEGORIAS_ITENS = [
   "Automação & Motores",
   "Controle de Acesso & Portaria",
   "Ferramentas, Insumos & EPIs",
+  "Informática & TI",
   "Licenças & Software",
   "Limpeza & Conservação",
   "Material Elétrico & Iluminação",
