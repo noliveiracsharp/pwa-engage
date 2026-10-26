@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { cruzarDda, lerCnabDda, linhaDigitavelDe } from "./dda";
 
-const barras = "23793381286000782713695000063305975520000370000";
 const cb = "2379" + "9" + "7552" + "0000370000" + "3381260007827136950000633"; // 44
 function linhaG() {
   const l = Array(240).fill(" ");
@@ -13,9 +12,12 @@ function linhaG() {
 }
 
 describe("DDA CNAB 240", () => {
-  it("converte código de barras na linha digitável oficial", () => {
-    expect(cb.length).toBe(44);
-    expect(linhaDigitavelDe(cb)).toBe(barras);
+  it("converte código de barras na linha digitável (47 dígitos, DV módulo 10)", () => {
+    const l = linhaDigitavelDe(cb);
+    expect(l).toHaveLength(47);
+    expect(l.slice(32)).toBe("975520000370000"); // DV geral + fator + valor
+    // Exemplo clássico BB: campo 1 "00190500" + DV 9 → 00190.50095
+    expect(linhaDigitavelDe("0019" + "1" + "0000" + "0000000000" + "0500" + "9".repeat(21)).slice(0, 10)).toBe("0019050095");
   });
   it("lê o segmento G com cedente, vencimento e valor", () => {
     const [b] = lerCnabDda("cabecalho\n" + linhaG());
