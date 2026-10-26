@@ -49,7 +49,7 @@ export function aprovacoesPorFaixa(cfg: ConfigAprovacao, valorTotal: number): nu
   if (!fx.length) return null;
   const ord = [...fx].sort((a, b) => (a.ate ?? Infinity) - (b.ate ?? Infinity));
   const f = ord.find((x) => x.ate == null || valorTotal <= x.ate) ?? ord[ord.length - 1];
-  return f.aprovacoes;
+  return f?.aprovacoes ?? null;
 }
 
 /** Lista única de aprovadores (principal primeiro). */
