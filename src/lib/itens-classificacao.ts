@@ -9,6 +9,7 @@ export const REGRAS_CATEGORIA: Record<string, RegraCategoria> = {
   "Automação & Motores": { centro: "2.1", conta: "1.1.03" },
   "Controle de Acesso & Portaria": { centro: "2.1", conta: "1.1.03" },
   "Ferramentas, Insumos & EPIs": { centro: "3.2", conta: "1.1.03" },
+  "Informática & TI": { centro: "3.1", conta: "1.1.03" },
   "Licenças & Software": { centro: "1.1", conta: "1.1.01" },
   "Limpeza & Conservação": { centro: "3.2", conta: "1.1.03" },
   "Material Elétrico & Iluminação": { centro: "3.2", conta: "1.1.03" },

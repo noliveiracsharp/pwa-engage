@@ -22,6 +22,11 @@ export const NCM_FREQUENTES: Ncm[] = [
   { codigo: "85285200", descricao: "Monitores" },
   { codigo: "85365090", descricao: "Interruptores / Relés" },
   { codigo: "85078000", descricao: "Baterias / Nobreaks (acumuladores)" },
+  { codigo: "84715010", descricao: "Mini PC / Computadores de mesa" },
+  { codigo: "84713012", descricao: "Notebooks" },
+  { codigo: "85258929", descricao: "Webcams" },
+  { codigo: "84716052", descricao: "Mouses" },
+  { codigo: "84716053", descricao: "Teclados" },
 ];
 
 export function NcmBusca({ value, onChange }: { value: string; onChange: (v: string) => void }) {
