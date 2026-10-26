@@ -89,3 +89,80 @@ Monte ${TIPOS[data.tipo]}`;
       return { texto: "", erro: "Não foi possível gerar as sugestões agora." };
     }
   });
+
+/** IA: escreve os textos da sequência do SDR (e-mail + WhatsApp) para o que a empresa vende. */
+export const gerarCadenciaIA = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({
+    empresa: z.string().max(200),
+    negocio: z.string().min(3).max(2000),
+    publico: z.string().max(2000).optional(),
+    canais: z.array(z.enum(["email", "whatsapp"])).min(1).max(8),
+    dias: z.array(z.number().int().min(0).max(90)).min(1).max(8),
+    token: z.string().min(10).max(5000),
+  }).parse(d))
+  .handler(async ({ data }): Promise<{ passos: { assunto: string; texto: string }[]; erro?: string }> => {
+    const { createClient } = await import("@supabase/supabase-js");
+    const { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } = await import("@/integrations/supabase/client");
+    const db = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, { auth: { persistSession: false, autoRefreshToken: false }, global: { headers: { Authorization: `Bearer ${data.token}` } } });
+    const { data: u, error: ue } = await db.auth.getUser(data.token);
+    if (ue || !u.user) return { passos: [], erro: "Sessão expirada. Entre novamente." };
+    let a: Autorizacao = { permitido: true, origem: "plataforma" };
+    const { data: auth, error } = await db.rpc("ia_autorizar" as never, { _recurso: "controller" } as never);
+    if (!error && auth) a = auth as unknown as Autorizacao;
+    if (!a.permitido) return { passos: [], erro: a.motivo === "cota" ? `Limite de ${a.cota} análises de IA no mês atingido.` : "A IA está nos planos Pro e Enterprise ou com a chave própria da empresa." };
+
+    const lista = data.canais.map((c, i) => `Passo ${i + 1}: dia ${data.dias[i] ?? 0}, canal ${c === "email" ? "e-mail" : "WhatsApp"}`).join("\n");
+    const system = "Você é um SDR B2B sênior no Brasil. Escreva em português do Brasil, tom consultivo, curto e humano, sem promessas exageradas, sem inventar clientes, números ou prêmios. Respeite a LGPD. Responda somente com json válido.";
+    const prompt = `Minha empresa: ${data.empresa || "(não informada)"}
+O que vendemos: ${data.negocio}
+Público-alvo: ${data.publico || "empresas da região"}
+
+Escreva a sequência de prospecção abaixo. Use as variáveis {{empresa}}, {{segmento}}, {{cidade}} e {{minha_empresa}} onde fizer sentido.
+E-mails: até 90 palavras, com assunto de até 60 caracteres e um pedido claro de resposta. WhatsApp: até 45 palavras, sem assunto (assunto vazio).
+O primeiro passo apresenta e gera autoridade, os do meio fazem acompanhamento e o último é uma última chamada educada.
+${lista}
+
+Formato json: {"passos":[{"assunto":"...","texto":"..."}]} com exatamente ${data.canais.length} itens na mesma ordem.`;
+
+    const { streamText } = await import("ai");
+    try {
+      const { model, providerOptions } = await modeloIA(a);
+      if (!model) return { passos: [], erro: "Provedor de IA indisponível." };
+      const r = streamText({ model, maxRetries: 0, system, prompt, ...(providerOptions ? { providerOptions: providerOptions as never } : {}) });
+      const bruto = (await r.text).trim();
+      const m = bruto.match(/\{[\s\S]*\}/);
+      const j = m ? (JSON.parse(m[0]) as { passos?: { assunto?: unknown; texto?: unknown }[] }) : null;
+      const passos = (j?.passos ?? []).map((x) => ({ assunto: String(x.assunto ?? "").slice(0, 200), texto: String(x.texto ?? "").slice(0, 3000) })).filter((x) => x.texto);
+      return passos.length ? { passos } : { passos: [], erro: "A IA não retornou os textos." };
+    } catch (e) {
+      const status = (e as { statusCode?: number }).statusCode;
+      console.error("gerarCadenciaIA", e);
+      if (status === 402) return { passos: [], erro: "Créditos de IA esgotados. Tente novamente mais tarde." };
+      if (status === 429) return { passos: [], erro: "Muitas solicitações. Tente novamente em instantes." };
+      return { passos: [], erro: "Não foi possível gerar os textos agora." };
+    }
+  });
+
+async function modeloIA(a: Autorizacao) {
+  let model;
+  let providerOptions: Record<string, unknown> | undefined;
+  if (a.origem === "propria") {
+    const chave = a.chave ?? "";
+    if (a.provedor === "openai") {
+      const { createOpenAI } = await import("@ai-sdk/openai");
+      model = createOpenAI({ apiKey: chave }).responses(a.modelo || "gpt-5-mini");
+    } else {
+      const p = PROVEDORES[a.provedor ?? ""];
+      if (!p) return { model: null };
+      const { createOpenAICompatible } = await import("@ai-sdk/openai-compatible");
+      model = createOpenAICompatible({ name: a.provedor!, baseURL: p.baseURL, apiKey: chave })(a.modelo || p.modelo);
+    }
+  } else {
+    const chave = process.env["LOVABLE_API_KEY"];
+    if (!chave) return { model: null };
+    const { createOpenAI } = await import("@ai-sdk/openai");
+    model = createOpenAI({ baseURL: "https://ai.gateway.lovable.dev/v1", apiKey: chave, headers: { "Lovable-API-Key": chave, "X-Lovable-AIG-SDK": "vercel-ai-sdk" } }).responses("openai/gpt-6-astra");
+    providerOptions = { openai: { forceReasoning: true, reasoningEffort: "low", reasoningSummary: "auto", store: false, include: ["reasoning.encrypted_content"] } };
+  }
+  return { model, providerOptions };
+}
