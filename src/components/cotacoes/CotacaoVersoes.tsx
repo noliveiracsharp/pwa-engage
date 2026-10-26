@@ -5,7 +5,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
-import { perguntar } from "@/components/layout/DialogoGlobal";
+import { Textarea } from "@/components/ui/textarea";
+import { DialogFooter } from "@/components/ui/dialog";
 import { snapshotCotacao, compararCotacoes, type SnapCotacao } from "@/lib/cotacao-versoes";
 import { rotuloVersao } from "@/lib/oferta-versoes";
 import { formatQtd } from "@/lib/orcamentos";
@@ -20,6 +21,8 @@ export function CotacaoVersoes({ cotacao, itensCot, precos, itens, canUpdate, us
   const cid = String(cotacao["id"]);
   const [aberto, setAberto] = useState(false);
   const [sel, setSel] = useState<Row | null>(null);
+  const [pedirMotivo, setPedirMotivo] = useState(false);
+  const [motivo, setMotivo] = useState("");
   const q = useQuery({
     queryKey: ["cotacoes_versoes", cid],
     queryFn: async () => {
@@ -37,10 +40,13 @@ export function CotacaoVersoes({ cotacao, itensCot, precos, itens, canUpdate, us
   async function salvar() {
     if (q.data?.faltaScript) return void toast.error(SCRIPT);
     if (diff?.igual) return void toast.info("Nada mudou desde a última revisão.");
-    const motivo = await perguntar({ title: "Nova revisão da cotação", description: "Descreva o motivo (opcional):", placeholder: "Ex.: fornecedor pediu ajuste de quantidade", confirmText: "Salvar revisão" });
-    if (motivo === null) return;
+    setMotivo(""); setPedirMotivo(true);
+  }
+
+  async function gravar() {
+    setPedirMotivo(false);
     const versao = Number(ultima?.["versao"] ?? 0) + 1;
-    const { error } = await supabase.from("cotacoes_versoes" as never).insert({ cotacao_id: cid, empresa_id: cotacao["empresa_id"] ?? null, versao, snapshot: atual, motivo: String(motivo ?? "") || null, criado_por_nome: usuarioNome || null } as never);
+    const { error } = await supabase.from("cotacoes_versoes" as never).insert({ cotacao_id: cid, empresa_id: cotacao["empresa_id"] ?? null, versao, snapshot: atual, motivo: motivo.trim() || null, criado_por_nome: usuarioNome || null } as never);
     if (error) return void toast.error(error.message.includes("cotacoes_versoes") ? SCRIPT : error.message);
     await supabase.from("cotacoes").update({ versao } as never).eq("id", cid);
     toast.success(`${rotuloVersao(versao)} salva.`);
@@ -63,6 +69,18 @@ export function CotacaoVersoes({ cotacao, itensCot, precos, itens, canUpdate, us
         <Button variant="outline" size="sm" disabled={!versoes.length} onClick={() => setAberto(true)}><History className="mr-1 h-4 w-4" />Histórico ({versoes.length})</Button>
         {canUpdate && <Button size="sm" onClick={() => void salvar()}><Save className="mr-1 h-4 w-4" />Salvar revisão</Button>}
       </div>
+
+      <Dialog open={pedirMotivo} onOpenChange={setPedirMotivo}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Nova revisão da cotação</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">Descreva o motivo (opcional):</p>
+          <Textarea autoFocus value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="Ex.: fornecedor pediu ajuste de quantidade" />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPedirMotivo(false)}>Cancelar</Button>
+            <Button onClick={() => void gravar()}><Save className="mr-1 h-4 w-4" />Salvar revisão</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={aberto} onOpenChange={(o) => { setAberto(o); if (!o) setSel(null); }}>
         <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">

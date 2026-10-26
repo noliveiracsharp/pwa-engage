@@ -32,6 +32,12 @@ function paraConfig(r: Row | null): ConfigAprovacao | null {
     aprovadoresAdicionais: Array.isArray(ad) ? ad.map(String) : [],
     regra: (String(r["regra_quorum"] ?? "principal") as RegraQuorum),
     valorMinimo: Number(r["valor_minimo"] ?? 0) || 0,
+    limiteMensal: Number(r["limite_mensal"] ?? 0) || 0,
+    faixas: (() => {
+      let fx = r["faixas"];
+      if (typeof fx === "string") { try { fx = JSON.parse(fx); } catch { fx = []; } }
+      return Array.isArray(fx) ? (fx as Row[]).map((f) => ({ ate: f["ate"] == null || f["ate"] === "" ? null : Number(f["ate"]), aprovacoes: Number(f["aprovacoes"] ?? 1) || 1 })) : [];
+    })(),
   };
 }
 
@@ -81,6 +87,7 @@ export function ConfigAprovacaoDialog({ open, onOpenChange }: { open: boolean; o
       empresa_id: empresaId, ativo: v.ativo, aprovador_principal_id: v.aprovadorPrincipalId,
       aprovadores_adicionais: v.aprovadoresAdicionais.filter((a) => a !== v.aprovadorPrincipalId),
       regra_quorum: v.regra, valor_minimo: v.valorMinimo,
+      limite_mensal: v.limiteMensal ?? 0, faixas: (v.faixas ?? []).filter((f) => f.aprovacoes > 0),
     } as never, { onConflict: "empresa_id" });
     setSalvando(false);
     if (error) return void toast.error(faltaTabela(error.message) ? SQL_MSG : error.message);
@@ -125,10 +132,33 @@ export function ConfigAprovacaoDialog({ open, onOpenChange }: { open: boolean; o
                 <Label>Regra de aprovação</Label>
                 <SearchSelect value={v.regra} onChange={(x) => x && set({ regra: x as RegraQuorum })} options={REGRAS_QUORUM} />
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="wf-min">Exigir a partir de (R$)</Label>
-                <Input id="wf-min" type="number" min={0} step="0.01" value={v.valorMinimo} onChange={(e) => set({ valorMinimo: Number(e.target.value) || 0 })} />
-                <p className="text-xs text-muted-foreground">0 = toda cotação passa por aprovação.</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="wf-lim">Limite mensal sem aprovação (R$)</Label>
+                  <Input id="wf-lim" type="number" min={0} step="0.01" value={v.limiteMensal ?? 0} onChange={(e) => set({ limiteMensal: Number(e.target.value) || 0 })} />
+                  <p className="text-xs text-muted-foreground">Soma os pedidos de compra do mês. Passou do limite, precisa aprovar. 0 = sem limite.</p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="wf-min">Toda compra a partir de (R$)</Label>
+                  <Input id="wf-min" type="number" min={0} step="0.01" value={v.valorMinimo} onChange={(e) => set({ valorMinimo: Number(e.target.value) || 0 })} />
+                  <p className="text-xs text-muted-foreground">0 = não usa. Com os dois em 0, toda compra passa por aprovação.</p>
+                </div>
+              </div>
+              <div className="space-y-2 rounded-md border border-border p-3">
+                <div className="flex items-center justify-between">
+                  <Label>Alçadas por valor</Label>
+                  <Button type="button" size="sm" variant="outline" onClick={() => set({ faixas: [...(v.faixas ?? []), { ate: null, aprovacoes: (v.faixas?.length ?? 0) + 1 }] })}>Adicionar faixa</Button>
+                </div>
+                <p className="text-xs text-muted-foreground">Ex.: até 5.000 → 1 aprovação (principal); acima → 2. Deixe "até" vazio na última faixa. Sem faixas, vale a regra acima.</p>
+                {(v.faixas ?? []).map((f, i) => (
+                  <div key={i} className="flex items-end gap-2">
+                    <div className="flex-1 space-y-1"><Label className="text-xs">Até (R$)</Label>
+                      <Input type="number" min={0} step="0.01" placeholder="Acima disso" value={f.ate ?? ""} onChange={(e) => set({ faixas: (v.faixas ?? []).map((x, j) => j === i ? { ...x, ate: e.target.value === "" ? null : Number(e.target.value) } : x) })} /></div>
+                    <div className="w-32 space-y-1"><Label className="text-xs">Aprovações</Label>
+                      <Input type="number" min={1} step={1} value={f.aprovacoes} onChange={(e) => set({ faixas: (v.faixas ?? []).map((x, j) => j === i ? { ...x, aprovacoes: Math.max(1, Math.round(Number(e.target.value) || 1)) } : x) })} /></div>
+                    <Button type="button" size="icon" variant="ghost" aria-label="Remover faixa" onClick={() => set({ faixas: (v.faixas ?? []).filter((_, j) => j !== i) })}><X className="h-4 w-4" /></Button>
+                  </div>
+                ))}
               </div>
             </>
           )}
@@ -165,12 +195,21 @@ export function PainelAprovacaoCotacao({ cotacaoId, valorTotal, onSituacao, chil
     },
   });
   const votos: VotoAprovacao[] = votosRows.map((r) => ({ usuarioId: String(r["usuario_id"]), status: r["status"] === "rejeitado" ? "rejeitado" : "aprovado", justificativa: r["justificativa"] as string | null, em: String(r["created_at"] ?? "") }));
-  const sit = situacaoAprovacao(cfg, valorTotal, votos);
+  const { data: acumuladoMes = 0, isSuccess: acumOk } = useQuery({
+    queryKey: ["compras-workflow", "acumulado-mes", empresaId, cotacaoId],
+    enabled: empresaId != null && Boolean(cfg?.limiteMensal),
+    queryFn: async () => {
+      const ini = new Date(); ini.setDate(1); ini.setHours(0, 0, 0, 0);
+      const { data } = await supabase.from("pedidos_compra").select("total,cotacao_id,status").eq("empresa_id", empresaId as never).gte("created_at", ini.toISOString());
+      return ((data ?? []) as Row[]).filter((p) => String(p["cotacao_id"] ?? "") !== cotacaoId && !/cancel/i.test(String(p["status"] ?? ""))).reduce((s, p) => s + (Number(p["total"]) || 0), 0);
+    },
+  });
+  const sit = situacaoAprovacao(cfg, valorTotal, votos, acumuladoMes);
   // Só sincroniza o status depois de carregar a alçada e os votos (evita aprovar por engano).
   useEffect(() => {
-    if (cfgOk && votosOk && onSituacao) onSituacao(sit);
+    if (cfgOk && votosOk && (acumOk || !cfg?.limiteMensal) && onSituacao) onSituacao(sit);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cfgOk, votosOk, sit, valorTotal]);
+  }, [cfgOk, votosOk, acumOk, sit, valorTotal]);
   const uid = String(usuarioId ?? "");
   const lista = cfg ? aprovadoresDe(cfg) : [];
   const souAprovador = lista.includes(uid);

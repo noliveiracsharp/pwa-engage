@@ -1,3 +1,4 @@
+import { nomeItemCompleto } from "@/lib/item-nome";
 import { PessoaCampos } from "@/components/pessoas/PessoaCampos";
 import { OfertaTimeline } from "@/components/orcamentos/OfertaTimeline";
 import { ConsultorComercial } from "@/components/orcamentos/ConsultorComercial";
@@ -419,14 +420,14 @@ export function OrcamentoSheet({
         .filter((i) => i["status"] !== false || selecionados.has(String(rowId(i))))
         .map((i) => {
           const codigo = String(i["codigo"] ?? "");
-          const descricao = String(i["descricao"] ?? "—");
           const marca = marcaNome.get(String(i["itens_marcas_id"] ?? "")) ?? "";
+          const descricao = nomeItemCompleto(i, marca) || "—";
           const preco = formatBRL(num(i["preco_venda"]));
           return {
             value: String(rowId(i) ?? ""),
             label: codigo ? `${codigo} — ${descricao}` : descricao,
             hint: marca ? `${marca} • ${preco}` : preco,
-            keywords: [codigo, String(i["tipo"] ?? ""), marca].filter(Boolean),
+            keywords: [codigo, String(i["tipo"] ?? ""), marca, String(i["modelo"] ?? "")].filter(Boolean),
             images: Array.isArray(i["imagens"]) ? (i["imagens"] as unknown[]).map(String).filter(Boolean) : [],
           };
         })
