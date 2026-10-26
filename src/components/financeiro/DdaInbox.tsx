@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, FileUp, Link2, Loader2, Plus, XCircle } from "lucide-react";
+import { CheckCircle2, FileUp, Link2, Loader2, Plus, RefreshCw, XCircle } from "lucide-react";
+import { chamarBanco } from "@/lib/banco-api";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -66,6 +67,20 @@ export function DdaInbox({ titulos, perms }: { titulos: Row[]; perms: Perms }) {
     } finally { setLendo(false); }
   };
 
+  const [sinc, setSinc] = useState(false);
+  const sincronizar = async () => {
+    setSinc(true);
+    try {
+      const r = await chamarBanco<{ lidos: number; novos: number; vinculados: number; erros?: string[] }>("dda_sincronizar", {});
+      toast.success(`${r.lidos} boleto(s) no Inter · ${r.novos} novo(s) · ${r.vinculados} vinculado(s) automaticamente.`);
+      if (r.erros?.length) toast.warning(r.erros[0]);
+      await recarregar();
+    } catch (e) {
+      const msg = (e as Error).message ?? "";
+      toast.error(SEM_TABELA.test(msg) ? "Rode o script atendeai-dda.sql no SQL Editor antes de sincronizar." : msg);
+    } finally { setSinc(false); }
+  };
+
   const mudar = async (id: unknown, patch: Record<string, unknown>) => {
     const { error: e } = await supabase.from("financeiro_dda" as never).update(patch as never).eq("id", text(id));
     if (e) return void toast.error(e.message);
@@ -108,7 +123,12 @@ export function DdaInbox({ titulos, perms }: { titulos: Row[]; perms: Perms }) {
           ))}
         </div>
         {pode && (
-          <label className="ml-auto">
+          <Button size="sm" variant="outline" className="ml-auto" disabled={sinc} onClick={() => void sincronizar()}>
+            {sinc ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-1 h-4 w-4" />}Sincronizar com Inter
+          </Button>
+        )}
+        {pode && (
+          <label>
             <Button asChild size="sm" disabled={lendo}>
               <span className="cursor-pointer">{lendo ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <FileUp className="mr-1 h-4 w-4" />}Importar arquivo DDA</span>
             </Button>
@@ -117,7 +137,7 @@ export function DdaInbox({ titulos, perms }: { titulos: Row[]; perms: Perms }) {
           </label>
         )}
       </div>
-      <p className="text-muted-foreground text-sm">Baixe no internet banking o arquivo DDA (CNAB 240) com os boletos emitidos contra o CNPJ da empresa e importe aqui. O sistema reconhece o fornecedor e a conta a pagar automaticamente.</p>
+      <p className="text-muted-foreground text-sm">Os boletos emitidos contra o CNPJ da empresa chegam do Banco Inter automaticamente às 07:00 e 13:00. Use "Sincronizar com Inter" para buscar agora, ou importe o arquivo DDA (CNAB 240) de outro banco.</p>
 
       {semTabela ? (
         <p className="text-warning text-sm">Rode o script <strong>atendeai-dda.sql</strong> no SQL Editor para ativar o DDA.</p>
