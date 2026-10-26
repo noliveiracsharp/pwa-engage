@@ -27,6 +27,8 @@ type Props = {
   searchPlaceholder: string;
   /** Tabela recursiva: coluna do pai e rótulo do campo. */
   hierarchy?: { parentKey: string; label: string };
+  /** Permissões vindas da aba da tela pai (ex.: Financeiro → Plano de Contas). */
+  permsOverride?: { canRead: boolean; canCreate: boolean; canUpdate: boolean; canDelete: boolean } | undefined;
 };
 
 /** CRUD padrão das tabelas de apoio (unidade de medida, centro de custo, marcas). */
@@ -40,9 +42,11 @@ export function ApoioCrud({
   searchFields,
   searchPlaceholder,
   hierarchy,
+  permsOverride,
 }: Props) {
   const { data: rows = [], isLoading } = useTableRows(table);
-  const perms = usePagePermissions(path);
+  const permsRota = usePagePermissions(path);
+  const perms = permsOverride ? { ...permsOverride, loading: false } : permsRota;
   const save = useSaveRecord(table);
   const remove = useDeleteRecord(table);
   const { stamp, empresaId } = useAudit();

@@ -44,6 +44,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { UploadInfo } from "@/components/ui/upload-info";
 import { supabase } from "@/integrations/supabase/client";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
+import { useSecoes } from "@/hooks/useSecoes";
 import { useAuth } from "@/hooks/useAuth";
 import { useAudit } from "@/lib/audit";
 import { rowId, text, useTableRows } from "@/lib/crud";
@@ -109,40 +110,48 @@ export const Route = createFileRoute("/_authenticated/financeiro")({
 
 type Perms = { canCreate: boolean; canUpdate: boolean; canDelete: boolean };
 
+const SECOES_FIN = [
+  { key: "receber", label: "Contas a Receber" },
+  { key: "pagar", label: "Contas a Pagar" },
+  { key: "caixa", label: "Fluxo de Caixa" },
+  { key: "controller", label: "Controller" },
+  { key: "regua", label: "Cobrança automática" },
+  { key: "bancos", label: "Contas Bancárias" },
+  { key: "plano", label: "Plano de Contas" },
+  { key: "centros", label: "Centros de Custo" },
+];
+
 function FinanceiroPage() {
   const perms = usePagePermissions("/financeiro");
-  const [aba, setAba] = useState("receber");
+  const secoes = useSecoes("/financeiro", SECOES_FIN);
+  const visiveis = SECOES_FIN.filter((s) => secoes[s.key]?.canRead);
+  const [abaSel, setAba] = useState("receber");
+  const aba = visiveis.some((s) => s.key === abaSel) ? abaSel : (visiveis[0]?.key ?? "");
   const { data: titulos = [], isLoading } = useTableRows("financeiro_titulos");
-  if (!perms.loading && !perms.canRead) return <p className="text-muted-foreground text-sm">Você não tem acesso a esta página.</p>;
+  if (!perms.loading && (!perms.canRead || visiveis.length === 0)) return <p className="text-muted-foreground text-sm">Você não tem acesso a esta página.</p>;
+  const p = (k: string) => ({ ...(secoes[k] ?? perms) });
   return (
     <Tabs value={aba} onValueChange={setAba} className="min-w-0 space-y-4">
       <div className="min-w-0 overflow-x-auto">
       <TabsList className="w-max min-w-full justify-start">
-        <TabsTrigger value="receber">Contas a Receber</TabsTrigger>
-        <TabsTrigger value="pagar">Contas a Pagar</TabsTrigger>
-        <TabsTrigger value="caixa">Fluxo de Caixa</TabsTrigger>
-        <TabsTrigger value="controller">Controller</TabsTrigger>
-        <TabsTrigger value="regua">Cobrança automática</TabsTrigger>
-        <TabsTrigger value="bancos">Contas Bancárias</TabsTrigger>
-        <TabsTrigger value="plano">Plano de Contas</TabsTrigger>
-        <TabsTrigger value="centros">Centros de Custo</TabsTrigger>
+        {visiveis.map((s) => <TabsTrigger key={s.key} value={s.key}>{s.label}</TabsTrigger>)}
       </TabsList>
       </div>
       {["receber", "pagar", "caixa"].includes(aba) && <SaldosBancarios />}
-      <TabsContent value="receber"><Titulos tipo="receber" todos={titulos} loading={isLoading} perms={perms} /></TabsContent>
+      <TabsContent value="receber"><Titulos tipo="receber" todos={titulos} loading={isLoading} perms={p("receber")} /></TabsContent>
       <TabsContent value="pagar">
         <Tabs defaultValue="titulos" className="space-y-4">
           <TabsList><TabsTrigger value="titulos">Títulos a pagar</TabsTrigger><TabsTrigger value="dda">Inbox DDA</TabsTrigger></TabsList>
-          <TabsContent value="titulos"><Titulos tipo="pagar" todos={titulos} loading={isLoading} perms={perms} /></TabsContent>
-          <TabsContent value="dda"><DdaInbox titulos={titulos} perms={perms} /></TabsContent>
+          <TabsContent value="titulos"><Titulos tipo="pagar" todos={titulos} loading={isLoading} perms={p("pagar")} /></TabsContent>
+          <TabsContent value="dda"><DdaInbox titulos={titulos} perms={p("pagar")} /></TabsContent>
         </Tabs>
       </TabsContent>
       <TabsContent value="caixa"><Caixa titulos={titulos} /></TabsContent>
       <TabsContent value="controller"><ControllerPainel titulos={titulos} /></TabsContent>
-      <TabsContent value="regua"><ReguaCobranca canEdit={perms.canUpdate || perms.canCreate} /></TabsContent>
-      <TabsContent value="bancos" className="space-y-8"><ContasBancarias perms={perms} /><CartoesCredito perms={perms} /></TabsContent>
-      <TabsContent value="plano">{aba === "plano" && <ApoioCrud {...planoContasConfig} />}</TabsContent>
-      <TabsContent value="centros">{aba === "centros" && <ApoioCrud {...centroCustoConfig} />}</TabsContent>
+      <TabsContent value="regua"><ReguaCobranca canEdit={p("regua").canUpdate || p("regua").canCreate} /></TabsContent>
+      <TabsContent value="bancos" className="space-y-8"><ContasBancarias perms={p("bancos")} /><CartoesCredito perms={p("bancos")} /></TabsContent>
+      <TabsContent value="plano">{aba === "plano" && <ApoioCrud {...planoContasConfig} permsOverride={p("plano")} />}</TabsContent>
+      <TabsContent value="centros">{aba === "centros" && <ApoioCrud {...centroCustoConfig} permsOverride={p("centros")} />}</TabsContent>
     </Tabs>
   );
 }
