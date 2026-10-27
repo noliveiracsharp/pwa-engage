@@ -1,6 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { LogOut, Menu, Moon, RotateCw, Sun, User } from "lucide-react";
+import { Languages, LogOut, Menu, Moon, RotateCw, Sun, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -8,9 +8,15 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { IDIOMAS, useIdioma, type Idioma } from "@/lib/i18n";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/components/theme-provider";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,6 +38,7 @@ export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) 
   const { data: empresas = [] } = useTableRows("empresas", isMaster);
   const ativas = empresas.filter((e) => e["status"] !== false && e["ativo"] !== false);
   const { theme, toggleTheme } = useTheme();
+  const { t, idioma, setIdioma } = useIdioma();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [meusDados, setMeusDados] = useState(false);
@@ -140,10 +147,25 @@ export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) 
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={() => setMeusDados(true)}>
-              <User className="mr-2 h-4 w-4" /> Meus Dados
+              <User className="mr-2 h-4 w-4" /> {t("menu.meusDados")}
             </DropdownMenuItem>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <Languages className="mr-2 h-4 w-4" /> {t("menu.idioma")}
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                <DropdownMenuRadioGroup value={idioma} onValueChange={(v) => setIdioma(v as Idioma)}>
+                  {IDIOMAS.map((i) => (
+                    <DropdownMenuRadioItem key={i.id} value={i.id}>
+                      <span className="mr-2 w-6 text-xs font-semibold text-muted-foreground">{i.sigla}</span>
+                      {i.nome}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
             <DropdownMenuItem onSelect={handleSignOut}>
-              <LogOut className="mr-2 h-4 w-4" /> Sair
+              <LogOut className="mr-2 h-4 w-4" /> {t("acao.sair")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
