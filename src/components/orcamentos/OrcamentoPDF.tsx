@@ -39,7 +39,9 @@ export function OrcamentoPDF({
   unidades,
   marcas,
 }: Props) {
-  const [envio, setEnvio] = useState(false);
+  const [envio, setEnvioRaw] = useState(false);
+  const [canalEnvio, setCanalEnvio] = useState<"whatsapp" | "email">("whatsapp");
+  const setEnvio = (v: boolean) => setEnvioRaw(v);
   if (!orcamento) return null;
   const token = orcamento["token_publico"];
   const link = token ? linkProposta(token) : "";
@@ -77,10 +79,10 @@ export function OrcamentoPDF({
         <DialogHeader className="sticky top-0 z-20 flex-row items-center justify-between gap-3 space-y-0 border-b bg-background px-6 py-4 print:hidden">
           <DialogTitle>Visualizar oferta {numero}</DialogTitle>
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => setEnvio(true)}>
+            <Button variant="outline" onClick={() => { setCanalEnvio("whatsapp"); setEnvio(true); }}>
               <MessageCircle className="mr-2 h-4 w-4" /> WhatsApp
             </Button>
-            <Button variant="outline" onClick={() => setEnvio(true)}>
+            <Button variant="outline" onClick={() => { setCanalEnvio("email"); setEnvio(true); }}>
               <Mail className="mr-2 h-4 w-4" /> E-mail
             </Button>
             <Button onClick={imprimir}>
@@ -97,7 +99,7 @@ export function OrcamentoPDF({
 
         <OrcamentoDocumento id="orcamento-print" orcamento={orcamento} linhas={linhas} empresa={empresa} cliente={cliente} vendedor={vendedor} itens={itens} unidades={unidades} marcas={marcas} />
       </DialogContent>
-      <EnviarPropostaDialog open={envio} onOpenChange={setEnvio} orcamento={orcamento} empresa={empresa} cliente={cliente} link={link} antesDeEnviar={async () => true} />
+      <EnviarPropostaDialog open={envio} onOpenChange={setEnvio} orcamento={orcamento} empresa={empresa} cliente={cliente} link={link} antesDeEnviar={async () => true} canalInicial={canalEnvio} />
     </Dialog>
   );
 }

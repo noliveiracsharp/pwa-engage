@@ -150,7 +150,9 @@ export function PropostaDialog(props: Props) {
     toast.success("Link copiado");
   };
 
-  const whatsapp = () => setEnvioOpen(true);
+  const [canalEnvio, setCanalEnvio] = useState<"whatsapp" | "email">("whatsapp");
+  const whatsapp = () => { setCanalEnvio("whatsapp"); setEnvioOpen(true); };
+  const porEmail = () => { setCanalEnvio("email"); setEnvioOpen(true); };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -180,7 +182,7 @@ export function PropostaDialog(props: Props) {
                 <Button variant="outline" size="sm" onClick={whatsapp}>
                   <MessageCircle className="mr-1 h-4 w-4" /> WhatsApp
                 </Button>
-                <Button variant="outline" size="sm" onClick={whatsapp}>
+                <Button variant="outline" size="sm" onClick={porEmail}>
                   <Mail className="mr-1 h-4 w-4" /> E-mail
                 </Button>
                 <Button variant="outline" size="sm" onClick={async () => (await salvar(true)) && window.open(link, "_blank")}>
@@ -312,6 +314,7 @@ export function PropostaDialog(props: Props) {
           cliente={cliente}
           link={link}
           antesDeEnviar={() => salvar(true)}
+          canalInicial={canalEnvio}
         />
       )}
     </Dialog>
