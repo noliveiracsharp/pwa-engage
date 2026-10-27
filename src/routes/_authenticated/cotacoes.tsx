@@ -16,6 +16,7 @@ import { ModelosMensagemButton } from "@/components/layout/ModelosMensagem";
 import { supabase } from "@/integrations/supabase/client";
 import { useSaveOrcamento, type LinhaPayload } from "@/hooks/useSaveOrcamento";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
+import { useSecoes } from "@/hooks/useSecoes";
 import { rowId, useDeleteRecord, useTableRows } from "@/lib/crud";
 import { matchesAny } from "@/lib/input-masks";
 import { COTACAO_STATUS, cotacaoStatusMeta, proximoNumero } from "@/lib/laudos";
@@ -51,6 +52,7 @@ function CotacoesPage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const perms = usePagePermissions("/cotacoes");
+  const secoesCot = useSecoes("/cotacoes", [{ key: "workflow", label: "Workflow de aprovação" }]);
   const { data: cotacoes = [], isLoading } = useTableRows("cotacoes");
   const { data: itensCot = [] } = useTableRows("cotacoes_itens");
   const { data: fornCot = [] } = useTableRows("cotacoes_fornecedores");
@@ -254,7 +256,7 @@ function CotacoesPage() {
         {perms.canUpdate && (
           <>
             <ModelosMensagemButton empresaId={empresaId} />
-            <Button variant="outline" size="sm" onClick={() => setWfOpen(true)}><ShieldCheck className="mr-1 h-4 w-4" />Workflow de aprovação</Button>
+            {secoesCot["workflow"]?.canUpdate && <Button variant="outline" size="sm" onClick={() => setWfOpen(true)}><ShieldCheck className="mr-1 h-4 w-4" />Workflow de aprovação</Button>}
           </>
         )}
       </div>

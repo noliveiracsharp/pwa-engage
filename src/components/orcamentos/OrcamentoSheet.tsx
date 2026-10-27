@@ -40,6 +40,7 @@ import { SearchSelect, type SearchOption } from "@/components/data-table/SearchS
 import { OrcamentoLinhas } from "@/components/orcamentos/OrcamentoLinhas";
 import { OrcamentoTotais } from "@/components/orcamentos/OrcamentoTotais";
 import { OrcamentoComissoes } from "@/components/orcamentos/OrcamentoComissoes";
+import { PainelAprovacaoOferta, useEhAprovadorOferta } from "@/components/orcamentos/AprovacaoOfertas";
 import { useComissaoConfig } from "@/hooks/useComissaoConfig";
 import { calcMemoria } from "@/lib/comissoes";
 import {
@@ -507,6 +508,9 @@ export function OrcamentoSheet({
   const [totalComissoes, setTotalComissoes] = useState(0);
   const [aba, setAba] = useState<"oferta" | "crm" | "financeiro">("oferta");
   const verSecao = (k: string) => !secoes || Boolean(secoes[k]?.canRead);
+  const ehGestor = useEhAprovadorOferta();
+  // Custo, lucro e margem: só gestores (aprovadores/Master) ou quem tem a função "Estratégico".
+  const ocultarCusto = !ehGestor && !verSecao("estrategico");
   const roSecao = (k: string) => Boolean(readOnly) || Boolean(record && secoes && !secoes[k]?.canUpdate);
   const [versao, setVersao] = useState(1);
   useEffect(() => { setVersao(Number(record?.["versao_atual"] ?? 1) || 1); }, [record]);
@@ -877,6 +881,7 @@ export function OrcamentoSheet({
             onRemove={removeLinha}
             onItemSalvo={() => submit(true)}
             pagadorOptions={pagadorOptions}
+            ocultarCusto={ocultarCusto}
           />
 
           {/* -------------------------- totais ------------------------- */}
@@ -893,7 +898,21 @@ export function OrcamentoSheet({
             comissoes={totalComissoes}
             despesas={totalDespesas(h.despesas)}
             onChange={(patch) => patchHeader(patch)}
+            ocultarCusto={ocultarCusto}
           />
+
+          {record && recordId && (
+            <PainelAprovacaoOferta
+              orcamentoId={String(recordId)}
+              statusAtual={record["aprovacao_status"]}
+              dados={{
+                valor: totais.total_liquido,
+                margemPct: totais.margem_pct,
+                descontoPct: totais.total_itens > 0 ? (totais.desconto_valor / totais.total_itens) * 100 : 0,
+                montadaPor: String(record["created_by"] ?? record["usuario_id"] ?? "") || null,
+              }}
+            />
+          )}
           </div>
 
           <fieldset hidden={aba !== "financeiro" || !verSecao("financeiro")} disabled={roSecao("financeiro")} className="min-w-0 space-y-6">

@@ -19,3 +19,5 @@
 - Rateio de títulos: linhas em financeiro_titulos_itens geradas por src/lib/rateio.ts (puro, testado) via inserirTitulos({fontes}); o título continua único para bater com banco/conciliação.
 - SDR Radar de Leads: descoberta via OpenStreetMap (Nominatim) e enriquecimento por CNPJ (BrasilAPI) em src/lib/sdr-radar.functions.ts; leads ficam em sdr_leads por empresa_id — fontes gratuitas sem chave, trocáveis por Google Places depois.
 - Item categories are per-company rows in `itens_categorias` (default cost center, account, fiscal); `useCategoriasItens` falls back to the factory list in src/lib/itens-categorias.ts when a company has none, so new tenants work before onboarding.
+
+- Approval workflows (Ofertas and Cotações) follow the same pattern: per-company config table + immutable vote table; config buttons and strategic data are gated by child Funções (`/<tela>/workflow`, `/orcamentos/estrategico`) so access is managed per perfil.

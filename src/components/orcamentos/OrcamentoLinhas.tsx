@@ -54,6 +54,8 @@ type Props = {
   onItemSalvo?: () => void;
   /** Pagadores possíveis para cada item (faturamento misto). */
   pagadorOptions?: SearchOption[];
+  /** Esconde custo e lucro (dados estratégicos). */
+  ocultarCusto?: boolean;
 };
 
 /** Editor das linhas do orçamento: tabela compacta com edição por linha. */
@@ -70,6 +72,7 @@ export function OrcamentoLinhas({
   onRemove,
   onItemSalvo,
   pagadorOptions = [],
+  ocultarCusto = false,
 }: Props) {
   const pagadorNome = new Map(pagadorOptions.map((o) => [o.value, o.label]));
   const [quickFor, setQuickFor] = useState<string | null>(null);
@@ -378,7 +381,7 @@ export function OrcamentoLinhas({
                   </div>
 
                   <div className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 pl-7 text-xs">
-                    <span>
+                    {!ocultarCusto && <span>
                       Custo:{" "}
                       <strong className="text-foreground font-medium">
                         {formatBRL(c.custo_total)}
@@ -386,14 +389,14 @@ export function OrcamentoLinhas({
                       {l.preco_custo > 0 && (
                         <span className="ml-1">({formatBRL(l.preco_custo)}/un)</span>
                       )}
-                    </span>
+                    </span>}
                     <span>
                       Imposto ({formatPct(l.imposto_pct)}):{" "}
                       <strong className="text-foreground font-medium">
                         {formatBRL(c.imposto_valor)}
                       </strong>
                     </span>
-                    <span>
+                    {!ocultarCusto && <span>
                       Lucro:{" "}
                       <strong
                         className={cn(
@@ -406,8 +409,8 @@ export function OrcamentoLinhas({
                       <span className={cn(c.lucro < 0 ? "text-destructive" : "")}>
                         ({formatPct(c.margem_pct)})
                       </span>
-                    </span>
-                    {semCusto && (
+                    </span>}
+                    {semCusto && !ocultarCusto && (
                       <span className="text-warning-foreground bg-warning/40 rounded px-1.5">
                         Item sem custo cadastrado
                       </span>

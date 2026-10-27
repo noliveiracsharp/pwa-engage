@@ -43,10 +43,17 @@ import { ofertaTravada, situacaoAtivada } from "@/lib/oferta-ativacao";
 import { executarHandoff } from "@/lib/kanban-handoff";
 import { confirmar } from "@/components/layout/DialogoGlobal";
 import { ReguaOfertas } from "@/components/orcamentos/ReguaOfertas";
+import { ConfigAprovacaoOfertaDialog } from "@/components/orcamentos/AprovacaoOfertas";
+import { ofertaLiberada } from "@/lib/aprovacao-ofertas";
+import { ShieldCheck } from "lucide-react";
+
+const avisoBloqueio = () => toast.warning("Oferta aguardando aprovação do gestor. Abra a oferta para ver o andamento.");
 
 const SECOES_OFERTA = [
   { key: "crm", label: "CRM & Atendimento" },
   { key: "financeiro", label: "Financeiro & Comissões" },
+  { key: "estrategico", label: "Dados estratégicos (custo, lucro e margem)" },
+  { key: "workflow", label: "Workflow de aprovação" },
 ];
 
 export const Route = createFileRoute("/_authenticated/orcamentos")({
@@ -152,7 +159,9 @@ function OrcamentosPage() {
   const [pedidosOpen, setPedidosOpen] = useState(false);
   const [f, setF] = useState({ busca: "", situacao: "todos", vendedor: "todos", ano: "todos" });
   const [duplicarDe, setDuplicarDe] = useState<{ record: Row; linhas: Row[] } | null>(null);
-  const [ativar, setAtivar] = useState<Row | null>(null);
+  const [ativar, setAtivarRaw] = useState<Row | null>(null);
+  const setAtivar = (r: Row | null) => { if (r && !ofertaLiberada(r["aprovacao_status"])) { avisoBloqueio(); return; } setAtivarRaw(r); };
+  const [wfOpen, setWfOpen] = useState(false);
   const [reguaOpen, setReguaOpen] = useState(false);
   const [leadsOpen, setLeadsOpen] = useState(false);
 
@@ -452,10 +461,10 @@ function OrcamentosPage() {
       <DropdownMenuItem onClick={() => { setPreview(r); setPreviewOpen(true); }}>
         <FileText className="h-4 w-4" /> Visualizar PDF da proposta
       </DropdownMenuItem>
-      <DropdownMenuItem onClick={() => { setPreview(r); setPropostaOpen(true); }}>
+      <DropdownMenuItem onClick={() => { if (!ofertaLiberada(r["aprovacao_status"])) { avisoBloqueio(); return; } setPreview(r); setPropostaOpen(true); }}>
         <FileSignature className="h-4 w-4" /> Proposta digital e assinatura
       </DropdownMenuItem>
-      <DropdownMenuItem onClick={() => { setPreview(r); setMinutaOpen(true); }}>
+      <DropdownMenuItem onClick={() => { if (!ofertaLiberada(r["aprovacao_status"])) { avisoBloqueio(); return; } setPreview(r); setMinutaOpen(true); }}>
         <ScrollText className="h-4 w-4" /> Minuta de contrato
       </DropdownMenuItem>
       {perms.canCreate && (
@@ -502,7 +511,11 @@ function OrcamentosPage() {
       <div className="mb-3 flex justify-end gap-2">
         <Button variant="outline" onClick={() => setLeadsOpen(true)}><Inbox className="mr-2 h-4 w-4" />Captação de leads</Button>
         <Button variant="outline" onClick={() => setReguaOpen(true)}><MessageCircle className="mr-2 h-4 w-4" />Régua de acompanhamento</Button>
+        {secoes["workflow"]?.canUpdate && (
+          <Button variant="outline" onClick={() => setWfOpen(true)}><ShieldCheck className="mr-2 h-4 w-4" />Workflow de aprovação</Button>
+        )}
       </div>
+      <ConfigAprovacaoOfertaDialog open={wfOpen} onOpenChange={setWfOpen} />
       <ReguaOfertas open={reguaOpen} onOpenChange={setReguaOpen} canEdit={perms.canUpdate} situacoes={situacoes.map(s => s.value)} />
       <CaptacaoLeadsDialog open={leadsOpen} onOpenChange={setLeadsOpen} canEdit={perms.canUpdate} />
       <div className="mb-4 flex gap-3 overflow-x-auto pb-1">
@@ -739,7 +752,7 @@ function OrcamentosPage() {
       />
       <AtivacaoOfertaDialog
         open={!!ativar}
-        onOpenChange={(v) => !v && setAtivar(null)}
+        onOpenChange={(v) => !v && setAtivarRaw(null)}
         oferta={ativar ? (todos.find((t) => rowId(t) === rowId(ativar)) ?? ativar) : null}
         cliente={ativar ? nomeCliente(ativar) : ""}
         empresaId={String(ativar?.["empresa_id"] ?? empresaId ?? "")}
