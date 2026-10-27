@@ -141,7 +141,7 @@ export const sincronizarWebhooksZapi = createServerFn({ method: "POST" })
   .inputValidator((d) =>
     Credenciais.extend({
       url: z.string().url().max(1000),
-      eventos: z.array(z.enum(["update-webhook-received", "update-webhook-message-status", "update-webhook-disconnected", "update-webhook-connected"])).min(1).max(4),
+      eventos: z.array(z.enum(["update-webhook-received", "update-webhook-message-status", "update-webhook-disconnected", "update-webhook-connected", "update-webhook-chat-presence"])).min(1).max(5),
     }).parse(d),
   )
   .handler(async ({ data }): Promise<{ resultados: Array<{ evento: string; ok: boolean; message?: string }> }> => {

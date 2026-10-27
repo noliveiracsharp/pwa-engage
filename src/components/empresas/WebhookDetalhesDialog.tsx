@@ -8,11 +8,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { sincronizarWebhooksZapi } from "@/lib/zapi.functions";
 
 type Row = Record<string, unknown>;
-type Evento = "update-webhook-received" | "update-webhook-message-status" | "update-webhook-disconnected" | "update-webhook-connected";
+type Evento = "update-webhook-received" | "update-webhook-message-status" | "update-webhook-disconnected" | "update-webhook-connected" | "update-webhook-chat-presence";
 
 const EVENTOS: Array<{ id: Evento; nome: string; desc: string }> = [
   { id: "update-webhook-received", nome: "Ao receber mensagem", desc: "Cria o contato, abre o atendimento, grava a mensagem e aciona os fluxos." },
-  { id: "update-webhook-message-status", nome: "Status da mensagem", desc: "Avisos de enviado, entregue e lido. Hoje são recebidos e descartados com segurança." },
+  { id: "update-webhook-message-status", nome: "Status da mensagem", desc: "Mostra os tracinhos: ✓ enviado, ✓✓ entregue e ✓✓ azul quando o cliente lê." },
+  { id: "update-webhook-chat-presence", nome: "Digitando", desc: "Mostra quando o cliente está digitando ou gravando áudio." },
   { id: "update-webhook-connected", nome: "Ao conectar", desc: "Aviso de que o WhatsApp voltou a ficar online." },
   { id: "update-webhook-disconnected", nome: "Ao desconectar", desc: "Aviso de que o celular caiu ou foi desconectado." },
 ];
