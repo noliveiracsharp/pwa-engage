@@ -7,6 +7,8 @@ import { formatBRL, formatPct, type DescontoTipo, type Totais } from "@/lib/orca
 import { cn } from "@/lib/utils";
 
 type Props = {
+  /** Esconde a memória de cálculo (dados estratégicos). */
+  ocultarCusto?: boolean;
   totais: Totais;
   descontoTipo: DescontoTipo;
   desconto: string;
@@ -57,6 +59,7 @@ export function OrcamentoTotais({
   frete,
   valoresAdicionais,
   readOnly,
+  ocultarCusto = false,
   itensSemCusto,
   acrescimoJuros = 0,
   descontoAvista = 0,
@@ -171,7 +174,7 @@ export function OrcamentoTotais({
       </div>
 
       {/* ---------------- Memória de cálculo ---------------- */}
-      <div className="bg-muted/30 space-y-3 rounded-lg border border-dashed p-4">
+      {!ocultarCusto && <div className="bg-muted/30 space-y-3 rounded-lg border border-dashed p-4">
         <div className="flex items-center gap-2">
           <Calculator className="text-muted-foreground h-4 w-4" />
           <h3 className="text-sm font-semibold">Memória de cálculo</h3>
@@ -236,7 +239,7 @@ export function OrcamentoTotais({
             — o lucro pode estar superestimado.
           </p>
         )}
-      </div>
+      </div>}
     </div>
   );
 }
