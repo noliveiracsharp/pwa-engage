@@ -9,7 +9,6 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useComissaoConfig } from "@/hooks/useComissaoConfig";
-import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { useAudit } from "@/lib/audit";
 import { calcMemoria, NATUREZAS_COMISSAO, type LinhaComissao } from "@/lib/comissoes";
 import { formatBRL, formatPct } from "@/lib/orcamentos";
@@ -24,14 +23,15 @@ type Props = {
   usuarios: Row[];
   /** Soma só das comissões com beneficiário informado (para a memória de cálculo). */
   onTotalChange?: (total: number) => void;
+  /** Pode escolher beneficiários (permissão da aba Financeiro & Comissões da Oferta). */
+  podeEditar?: boolean;
 };
 
 const NONE = "__none__";
 /** Marca um papel do tipo fundo/reserva como ligado nesta oferta. */
 const FUNDO = "__fundo__";
 
-export function OrcamentoComissoes({ linhas, orcamentoId, vendedorId, usuarios, onTotalChange }: Props) {
-  const perms = usePagePermissions("/comissoes");
+export function OrcamentoComissoes({ linhas, orcamentoId, vendedorId, usuarios, onTotalChange, podeEditar = true }: Props) {
   const { parametros, papeis, disponivel } = useComissaoConfig();
   const { empresaId } = useAudit();
   const qc = useQueryClient();
@@ -72,7 +72,7 @@ export function OrcamentoComissoes({ linhas, orcamentoId, vendedorId, usuarios, 
     onTotalChange?.(totalInformado);
   }, [totalInformado, onTotalChange]);
 
-  if (perms.loading || !perms.canRead || !disponivel) return null;
+  if (!disponivel) return null;
 
   const papeisUsados = Array.from(new Map(memoria.flatMap((g) => g.comissoes).map((c) => [c.papel_id, c.nome])));
   const labelNat = (n: string) => NATUREZAS_COMISSAO.find((x) => x.value === n)?.label ?? n;
@@ -171,7 +171,7 @@ export function OrcamentoComissoes({ linhas, orcamentoId, vendedorId, usuarios, 
           <p className="text-muted-foreground text-sm">{tx("Nenhum papel de comissão cadastrado. Configure em Comissões › Configuração.")}</p>
         )}
 
-        {orcamentoId && papeisUsados.length > 0 && perms.canCreate && (
+        {orcamentoId && papeisUsados.length > 0 && podeEditar && (
           <div className="space-y-2 border-t pt-3">
             <p className="text-sm font-medium">{tx("Beneficiários da equipe")}</p>
             <div className="grid gap-2 sm:grid-cols-3">
