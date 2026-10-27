@@ -776,9 +776,9 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack }: { me: stri
         </div>
       </ScrollArea>
 
-      {respondendo && <div className="border-t border-border px-2 pt-2"><FaixaResposta citacao={respondendo} onCancelar={() => setRespondendo(null)} /></div>}
+      {respondendo && <div className="min-w-0 border-t border-border px-2 pt-2"><FaixaResposta citacao={respondendo} onCancelar={() => setRespondendo(null)} /></div>}
       <form
-        className="flex items-center gap-1 border-t border-border p-2"
+        className={cn("flex items-center gap-1 p-2", respondendo ? "pt-0" : "border-t border-border")}
         onSubmit={(e) => {
           e.preventDefault();
           void enviar();
