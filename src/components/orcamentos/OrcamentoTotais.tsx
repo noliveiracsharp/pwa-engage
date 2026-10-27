@@ -1,3 +1,4 @@
+import { tx } from "@/lib/i18n-termos";
 import { Calculator, TriangleAlert } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -78,8 +79,8 @@ export function OrcamentoTotais({
     <div className="grid gap-4 lg:grid-cols-2">
       {/* ---------------- Totais do orçamento ---------------- */}
       <div className="bg-card space-y-3 rounded-lg border p-4">
-        <h3 className="text-sm font-semibold">Totais</h3>
-        <Linha label="Total da implantação" value={formatBRL(totais.total_itens)} />
+        <h3 className="text-sm font-semibold">{tx("Totais")}</h3>
+        <Linha label={tx("Total da implantação")} value={formatBRL(totais.total_itens)} />
 
         <div className="space-y-1.5">
           <div className="flex items-center justify-between gap-3">
@@ -93,18 +94,18 @@ export function OrcamentoTotais({
               value={descontoTipo}
               onValueChange={(v) => v && onChange({ desconto_tipo: v as DescontoTipo })}
               disabled={Boolean(readOnly)}
-              aria-label="Tipo de desconto"
+              aria-label={tx("Tipo de desconto")}
             >
               <ToggleGroupItem
                 value="valor"
-                aria-label="Desconto em reais"
+                aria-label={tx("Desconto em reais")}
                 className="h-7 px-2.5 text-xs"
               >
                 R$
               </ToggleGroupItem>
               <ToggleGroupItem
                 value="percentual"
-                aria-label="Desconto em percentual"
+                aria-label={tx("Desconto em percentual")}
                 className="h-7 px-2.5 text-xs"
               >
                 %
@@ -134,7 +135,7 @@ export function OrcamentoTotais({
 
         <div className="space-y-1.5">
           <Label htmlFor="frete" className="text-muted-foreground text-sm font-normal">
-            Frete (R$)
+            {tx("Frete (R$)")}
           </Label>
           <Input
             id="frete"
@@ -150,7 +151,7 @@ export function OrcamentoTotais({
 
         <div className="space-y-1.5">
           <Label htmlFor="valores_adicionais" className="text-muted-foreground text-sm font-normal">
-            Valores adicionais (R$)
+            {tx("Valores adicionais (R$)")}
           </Label>
           <Input
             id="valores_adicionais"
@@ -166,7 +167,7 @@ export function OrcamentoTotais({
 
         <Separator />
         <div className="flex items-center justify-between gap-3">
-          <span className="font-semibold">Total líquido</span>
+          <span className="font-semibold">{tx("Total líquido")}</span>
           <span className="text-primary text-xl font-bold tabular-nums">
             {formatBRL(totais.total_liquido)}
           </span>
@@ -177,39 +178,39 @@ export function OrcamentoTotais({
       {!ocultarCusto && <div className="bg-muted/30 space-y-3 rounded-lg border border-dashed p-4">
         <div className="flex items-center gap-2">
           <Calculator className="text-muted-foreground h-4 w-4" />
-          <h3 className="text-sm font-semibold">Memória de cálculo</h3>
+          <h3 className="text-sm font-semibold">{tx("Memória de cálculo")}</h3>
           <span className="text-muted-foreground text-xs">(uso interno)</span>
         </div>
-        <Linha label="Custo dos itens" value={formatBRL(totais.total_custo)} />
-        <Linha label="Impostos" value={formatBRL(totais.total_imposto)} />
+        <Linha label={tx("Custo dos itens")} value={formatBRL(totais.total_custo)} />
+        <Linha label={tx("Impostos")} value={formatBRL(totais.total_imposto)} />
         <Linha
-          label="Lucro dos itens"
+          label={tx("Lucro dos itens")}
           value={`${formatBRL(totais.lucro_itens)} (${formatPct(
             totais.total_itens > 0 ? (totais.lucro_itens / totais.total_itens) * 100 : 0,
           )})`}
         />
-        <Linha label="Desconto concedido" value={`− ${formatBRL(totais.desconto_valor)}`} />
+        <Linha label={tx("Desconto concedido")} value={`− ${formatBRL(totais.desconto_valor)}`} />
         {comJuros && (
           <>
             <Separator />
             <Linha
-              label="Lucro à vista"
+              label={tx("Lucro à vista")}
               value={`${formatBRL(totais.total_lucro)} (${formatPct(totais.margem_pct)})`}
             />
             <Linha
-              label="Acréscimo do parcelamento (juros)"
+              label={tx("Acréscimo do parcelamento (juros)")}
               value={`+ ${formatBRL(acrescimoJuros)}`}
             />
           </>
         )}
         {descontoAvista >= 0.01 && (
-          <Linha label="Desconto à vista" value={`− ${formatBRL(descontoAvista)}`} />
+          <Linha label={tx("Desconto à vista")} value={`− ${formatBRL(descontoAvista)}`} />
         )}
         {comissoes >= 0.01 && (
-          <Linha label="Comissões previstas" value={`− ${formatBRL(comissoes)}`} />
+          <Linha label={tx("Comissões previstas")} value={`− ${formatBRL(comissoes)}`} />
         )}
         {despesas >= 0.01 && (
-          <Linha label="Despesas operacionais" value={`− ${formatBRL(despesas)}`} />
+          <Linha label={tx("Despesas operacionais")} value={`− ${formatBRL(despesas)}`} />
         )}
         <Separator />
         <Linha

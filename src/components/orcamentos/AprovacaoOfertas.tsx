@@ -1,3 +1,4 @@
+import { tx } from "@/lib/i18n-termos";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Clock, ShieldCheck, Star, X, XCircle } from "lucide-react";
@@ -79,7 +80,7 @@ export function ConfigAprovacaoOfertaDialog({ open, onOpenChange }: { open: bool
   const byId = new Map(usuarios.map((u) => [String(rowId(u)), u]));
 
   const salvar = async () => {
-    if (v.ativo && !v.aprovadorPrincipalId) return void toast.error("Escolha o aprovador principal.");
+    if (v.ativo && !v.aprovadorPrincipalId) return void toast.error(tx("Escolha o aprovador principal."));
     setSalvando(true);
     const { error } = await supabase.from("ofertas_workflow_config" as never).upsert({
       empresa_id: empresaId, ativo: v.ativo, aprovador_principal_id: v.aprovadorPrincipalId,
@@ -89,7 +90,7 @@ export function ConfigAprovacaoOfertaDialog({ open, onOpenChange }: { open: bool
     setSalvando(false);
     if (error) return void toast.error(faltaTabela(error.message) ? SQL_MSG : error.message);
     await qc.invalidateQueries({ queryKey: ["ofertas-workflow"] });
-    toast.success("Workflow de aprovação de ofertas salvo.");
+    toast.success(tx("Workflow de aprovação de ofertas salvo."));
     setCfg(null);
     onOpenChange(false);
   };
@@ -105,36 +106,36 @@ export function ConfigAprovacaoOfertaDialog({ open, onOpenChange }: { open: bool
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) setCfg(null); onOpenChange(o); }}>
       <DialogContent className="sm:max-w-lg">
-        <DialogHeader><DialogTitle>Workflow de aprovação de ofertas</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>{tx("Workflow de aprovação de ofertas")}</DialogTitle></DialogHeader>
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-3 rounded-md border border-border p-3">
             <div>
-              <p className="text-sm font-medium">Exigir aprovação de gestor</p>
-              <p className="text-xs text-muted-foreground">Ofertas montadas por aprovadores são aprovadas direto.</p>
+              <p className="text-sm font-medium">{tx("Exigir aprovação de gestor")}</p>
+              <p className="text-xs text-muted-foreground">{tx("Ofertas montadas por aprovadores são aprovadas direto.")}</p>
             </div>
             <Switch checked={v.ativo} onCheckedChange={(c) => set({ ativo: c })} />
           </div>
           {v.ativo && (
             <>
               <div className="space-y-1.5">
-                <Label>Aprovador principal (sempre aprova)</Label>
-                <SearchSelect value={v.aprovadorPrincipalId ?? ""} onChange={(x) => set({ aprovadorPrincipalId: x || null })} options={opts} placeholder="Selecione..." />
+                <Label>{tx("Aprovador principal (sempre aprova)")}</Label>
+                <SearchSelect value={v.aprovadorPrincipalId ?? ""} onChange={(x) => set({ aprovadorPrincipalId: x || null })} options={opts} placeholder={tx("Selecione...")} />
               </div>
               <div className="space-y-1.5">
-                <Label>Aprovadores adicionais (gestores)</Label>
+                <Label>{tx("Aprovadores adicionais (gestores)")}</Label>
                 <SearchSelect value="" onChange={(x) => x && set({ aprovadoresAdicionais: [...new Set([...v.aprovadoresAdicionais, x])] })}
-                  options={opts.filter((o) => o.value !== v.aprovadorPrincipalId && !v.aprovadoresAdicionais.includes(o.value))} placeholder="Adicionar aprovador..." />
+                  options={opts.filter((o) => o.value !== v.aprovadorPrincipalId && !v.aprovadoresAdicionais.includes(o.value))} placeholder={tx("Adicionar aprovador...")} />
                 <div className="flex flex-wrap gap-1.5">
                   {v.aprovadoresAdicionais.filter((a) => a !== v.aprovadorPrincipalId).map((a) => (
                     <span key={a} className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs text-secondary-foreground">
                       {nomeUsuario(byId.get(a))}
-                      <button type="button" aria-label="Remover" onClick={() => set({ aprovadoresAdicionais: v.aprovadoresAdicionais.filter((x) => x !== a) })}><X className="h-3 w-3" /></button>
+                      <button type="button" aria-label={tx("Remover")} onClick={() => set({ aprovadoresAdicionais: v.aprovadoresAdicionais.filter((x) => x !== a) })}><X className="h-3 w-3" /></button>
                     </span>
                   ))}
                 </div>
               </div>
               <div className="space-y-1.5">
-                <Label>Regra de aprovação</Label>
+                <Label>{tx("Regra de aprovação")}</Label>
                 <SearchSelect value={v.regra} onChange={(x) => x && set({ regra: x as RegraQuorum })} options={REGRAS_QUORUM} />
               </div>
               <div className="grid gap-3 sm:grid-cols-3">
@@ -142,13 +143,13 @@ export function ConfigAprovacaoOfertaDialog({ open, onOpenChange }: { open: bool
                 {num("wfo-mar", "Margem abaixo de (%)", v.margemMinima, (n) => set({ margemMinima: n }), "0 = não usa.")}
                 {num("wfo-des", "Desconto acima de (%)", v.descontoMaximo, (n) => set({ descontoMaximo: n }), "0 = não usa.")}
               </div>
-              <p className="text-xs text-muted-foreground">Com os três em 0, toda oferta de vendedor passa por aprovação.</p>
+              <p className="text-xs text-muted-foreground">{tx("Com os três em 0, toda oferta de vendedor passa por aprovação.")}</p>
             </>
           )}
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={() => void salvar()} disabled={salvando}>Salvar</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>{tx("Cancelar")}</Button>
+          <Button onClick={() => void salvar()} disabled={salvando}>{tx("Salvar")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -214,17 +215,17 @@ export function PainelAprovacaoOferta({ orcamentoId, dados, statusAtual }: { orc
   return (
     <section className="space-y-3 rounded-md border border-border p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="flex items-center gap-2 font-semibold"><ShieldCheck className="h-4 w-4 text-primary" />Aprovação da oferta</h3>
+        <h3 className="flex items-center gap-2 font-semibold"><ShieldCheck className="h-4 w-4 text-primary" />{tx("Aprovação da oferta")}</h3>
         <span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", ROTULO[sit].cls)}>{ROTULO[sit].t}</span>
       </div>
-      {sit !== "aprovada" && <p className="text-xs text-muted-foreground">Proposta, minuta e ativação ficam bloqueadas até a aprovação.</p>}
+      {sit !== "aprovada" && <p className="text-xs text-muted-foreground">{tx("Proposta, minuta e ativação ficam bloqueadas até a aprovação.")}</p>}
       <div className="space-y-1.5">
         {lista.map((a) => {
           const v = [...votos].reverse().find((x) => x.usuarioId === a);
           return (
             <div key={a} className="flex items-center gap-2 text-sm">
               {v?.status === "aprovado" ? <CheckCircle2 className="h-4 w-4 text-success" /> : v?.status === "rejeitado" ? <XCircle className="h-4 w-4 text-destructive" /> : <Clock className="h-4 w-4 text-muted-foreground" />}
-              <span className="flex-1">{nomeUsuario(byId.get(a))}{a === cfg?.aprovadorPrincipalId && <Star className="ml-1 inline h-3 w-3 text-warning" aria-label="Principal" />}</span>
+              <span className="flex-1">{nomeUsuario(byId.get(a))}{a === cfg?.aprovadorPrincipalId && <Star className="ml-1 inline h-3 w-3 text-warning" aria-label={tx("Principal")} />}</span>
               <span className="text-xs text-muted-foreground">{v?.em ? new Date(v.em).toLocaleString("pt-BR") : "Pendente"}</span>
             </div>
           );
@@ -235,8 +236,8 @@ export function PainelAprovacaoOferta({ orcamentoId, dados, statusAtual }: { orc
       ))}
       {souAprovador && (sit === "pendente" || sit === "rejeitada") && (
         <div className="flex gap-2">
-          <Button type="button" size="sm" onClick={() => void votar("aprovado")}><CheckCircle2 className="mr-1 h-4 w-4" />Aprovar</Button>
-          <Button type="button" size="sm" variant="outline" onClick={() => void votar("rejeitado")}><XCircle className="mr-1 h-4 w-4" />Rejeitar</Button>
+          <Button type="button" size="sm" onClick={() => void votar("aprovado")}><CheckCircle2 className="mr-1 h-4 w-4" />{tx("Aprovar")}</Button>
+          <Button type="button" size="sm" variant="outline" onClick={() => void votar("rejeitado")}><XCircle className="mr-1 h-4 w-4" />{tx("Rejeitar")}</Button>
         </div>
       )}
     </section>

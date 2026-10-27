@@ -1,3 +1,4 @@
+import { tx } from "@/lib/i18n-termos";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { etapasDoKanban, kanbanDoModuloOrcamentos } from "@/lib/orcamento-kanban";
@@ -47,7 +48,7 @@ import { ConfigAprovacaoOfertaDialog } from "@/components/orcamentos/AprovacaoOf
 import { ofertaLiberada } from "@/lib/aprovacao-ofertas";
 import { ShieldCheck } from "lucide-react";
 
-const avisoBloqueio = () => toast.warning("Oferta aguardando aprovação do gestor. Abra a oferta para ver o andamento.");
+const avisoBloqueio = () => toast.warning(tx("Oferta aguardando aprovação do gestor. Abra a oferta para ver o andamento."));
 
 const SECOES_OFERTA = [
   { key: "crm", label: "CRM & Atendimento" },
@@ -193,7 +194,7 @@ function OrcamentosPage() {
       linhas: todasLinhas.filter((l) => String(l["orcamento_id"] ?? "") === id),
     });
     setOpen(true);
-    toast.success("Oferta duplicada", {
+    toast.success(tx("Oferta duplicada"), {
       description: "Revise e clique em Salvar para gerar o novo número.",
     });
   };
@@ -317,7 +318,7 @@ function OrcamentosPage() {
               <Popover>
                 <PopoverTrigger asChild>
                   <button type="button" className="flex items-center gap-1 text-xs text-primary hover:underline">
-                    <Info className="h-3 w-3" /> Ver descrição
+                    <Info className="h-3 w-3" /> {tx("Ver descrição")}
                   </button>
                 </PopoverTrigger>
                 <PopoverContent align="start" className="max-h-72 w-80 overflow-auto whitespace-pre-wrap text-sm">
@@ -420,7 +421,7 @@ function OrcamentosPage() {
                 type="button"
                 className="inline-flex items-center gap-1 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 aria-label={`${situacaoMeta(r["situacao"]).label} — alterar situação`}
-                title="Alterar situação"
+                title={tx("Alterar situação")}
               >
                 <SituacaoBadge value={r["situacao"]} cor={corSituacao(r)} />
                 <ChevronDown className="text-muted-foreground h-3.5 w-3.5" />
@@ -459,25 +460,25 @@ function OrcamentosPage() {
   const rowMenu = (r: Row) => (
     <>
       <DropdownMenuItem onClick={() => { setPreview(r); setPreviewOpen(true); }}>
-        <FileText className="h-4 w-4" /> Visualizar PDF da proposta
+        <FileText className="h-4 w-4" /> {tx("Visualizar PDF da proposta")}
       </DropdownMenuItem>
       <DropdownMenuItem onClick={() => { if (!ofertaLiberada(r["aprovacao_status"])) { avisoBloqueio(); return; } setPreview(r); setPropostaOpen(true); }}>
-        <FileSignature className="h-4 w-4" /> Proposta digital e assinatura
+        <FileSignature className="h-4 w-4" /> {tx("Proposta digital e assinatura")}
       </DropdownMenuItem>
       <DropdownMenuItem onClick={() => { if (!ofertaLiberada(r["aprovacao_status"])) { avisoBloqueio(); return; } setPreview(r); setMinutaOpen(true); }}>
-        <ScrollText className="h-4 w-4" /> Minuta de contrato
+        <ScrollText className="h-4 w-4" /> {tx("Minuta de contrato")}
       </DropdownMenuItem>
       {perms.canCreate && (
         <>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => { setPreview(r); setPedidosOpen(true); }}>
-            <ShoppingCart className="h-4 w-4" /> Gerar pedidos de compra
+            <ShoppingCart className="h-4 w-4" /> {tx("Gerar pedidos de compra")}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => gerarContas(r)}>
-            <Wallet className="h-4 w-4" /> Gerar contas no Financeiro
+            <Wallet className="h-4 w-4" /> {tx("Gerar contas no Financeiro")}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => duplicar(r)}>
-            <Copy className="h-4 w-4" /> Duplicar oferta
+            <Copy className="h-4 w-4" /> {tx("Duplicar oferta")}
           </DropdownMenuItem>
         </>
       )}
@@ -485,7 +486,7 @@ function OrcamentosPage() {
   );
 
   if (!perms.loading && !perms.canRead) {
-    return <p className="text-muted-foreground text-sm">Você não tem acesso a esta página.</p>;
+    return <p className="text-muted-foreground text-sm">{tx("Você não tem acesso a esta página.")}</p>;
   }
 
   const baseCards = escopo.filter(
@@ -509,10 +510,10 @@ function OrcamentosPage() {
   return (
     <>
       <div className="mb-3 flex justify-end gap-2">
-        <Button variant="outline" onClick={() => setLeadsOpen(true)}><Inbox className="mr-2 h-4 w-4" />Captação de leads</Button>
-        <Button variant="outline" onClick={() => setReguaOpen(true)}><MessageCircle className="mr-2 h-4 w-4" />Régua de acompanhamento</Button>
+        <Button variant="outline" onClick={() => setLeadsOpen(true)}><Inbox className="mr-2 h-4 w-4" />{tx("Captação de leads")}</Button>
+        <Button variant="outline" onClick={() => setReguaOpen(true)}><MessageCircle className="mr-2 h-4 w-4" />{tx("Régua de acompanhamento")}</Button>
         {secoes["workflow"]?.canUpdate && (
-          <Button variant="outline" onClick={() => setWfOpen(true)}><ShieldCheck className="mr-2 h-4 w-4" />Workflow de aprovação</Button>
+          <Button variant="outline" onClick={() => setWfOpen(true)}><ShieldCheck className="mr-2 h-4 w-4" />{tx("Workflow de aprovação")}</Button>
         )}
       </div>
       <ConfigAprovacaoOfertaDialog open={wfOpen} onOpenChange={setWfOpen} />
@@ -548,7 +549,7 @@ function OrcamentosPage() {
         })}
       </div>
       <DataTable
-        title="Ofertas"
+        title={tx("Ofertas")}
         columns={columns}
         rows={rows}
         loading={isLoading}
@@ -574,7 +575,7 @@ function OrcamentosPage() {
           perms.canDelete
             ? (row) => {
                 if (ofertaTravada(row, etapasKanban)) {
-                  toast.error("Ofertas em Ativação ou ganhas não podem ser excluídas.", {
+                  toast.error(tx("Ofertas em Ativação ou ganhas não podem ser excluídas."), {
                     description: "Se a negociação foi cancelada, mude a situação para Desistência/Perdida.",
                   });
                   return;
@@ -612,7 +613,7 @@ function OrcamentosPage() {
               label="Buscar"
               value={f.busca}
               onChange={(v) => setF({ ...f, busca: v })}
-              placeholder="Número, cliente, vendedor ou descrição"
+              placeholder={tx("Número, cliente, vendedor ou descrição")}
             />
             <FilterSelect
               label="Situação"
@@ -635,7 +636,7 @@ function OrcamentosPage() {
               ]}
             />
             <FilterSelect
-              label="Ano"
+              label={tx("Ano")}
               value={f.ano}
               onChange={(v) => setF({ ...f, ano: v })}
               options={[

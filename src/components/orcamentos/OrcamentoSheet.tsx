@@ -1,3 +1,4 @@
+import { tx } from "@/lib/i18n-termos";
 import { nomeItemCompleto } from "@/lib/item-nome";
 import { PessoaCampos } from "@/components/pessoas/PessoaCampos";
 import { OfertaTimeline } from "@/components/orcamentos/OfertaTimeline";
@@ -574,29 +575,29 @@ export function OrcamentoSheet({
   const submit = (manterAberto = false) => {
     if (manterAberto && (!h.parceiro_id || !h.dt_orcamento || readOnly)) return;
     if (!h.parceiro_id) {
-      toast.error("Selecione o cliente da oferta.");
+      toast.error(tx("Selecione o cliente da oferta."));
       return;
     }
     if (!h.dt_orcamento) {
-      toast.error("Informe a data da oferta.");
+      toast.error(tx("Informe a data da oferta."));
       return;
     }
     if (h.validade_orcamento && h.validade_orcamento < h.dt_orcamento) {
-      toast.error("A validade não pode ser anterior à data da oferta.");
+      toast.error(tx("A validade não pode ser anterior à data da oferta."));
       return;
     }
     if (linhasValidas.length === 0) {
-      toast.error("Adicione pelo menos um item à oferta.");
+      toast.error(tx("Adicione pelo menos um item à oferta."));
       return;
     }
     const semQuantidade = linhasValidas.find((l) => num(l.quantidade) <= 0);
     if (semQuantidade) {
-      toast.error("Todas as linhas precisam de quantidade maior que zero.");
+      toast.error(tx("Todas as linhas precisam de quantidade maior que zero."));
       return;
     }
 
     if (negocioPerdido(h.situacao) && !h.motivo_perda) {
-      toast.error("Informe o motivo da perda.");
+      toast.error(tx("Informe o motivo da perda."));
       return;
     }
     const crm: Row = {};
@@ -767,7 +768,7 @@ export function OrcamentoSheet({
 
             <div className="min-w-0 space-y-1.5">
               <Label htmlFor="temperatura" className="block text-sm font-medium">
-                Temperatura
+                {tx("Temperatura")}
               </Label>
               <Select
                 value={h.temperatura || "nenhuma"}
@@ -776,7 +777,7 @@ export function OrcamentoSheet({
               >
                 <SelectTrigger id="temperatura"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="nenhuma">Sem temperatura</SelectItem>
+                  <SelectItem value="nenhuma">{tx("Sem temperatura")}</SelectItem>
                   {TEMPERATURAS.map((t) => (
                     <SelectItem key={t.value} value={t.value}>
                       <span className="flex items-center gap-2">
@@ -791,7 +792,7 @@ export function OrcamentoSheet({
 
             <div className="min-w-0 space-y-1.5">
               <Label htmlFor="dt_orcamento" className="block text-sm font-medium">
-                Data da oferta
+                {tx("Data da oferta")}
               </Label>
               <Input
                 id="dt_orcamento"
@@ -803,7 +804,7 @@ export function OrcamentoSheet({
 
             <div className="min-w-0 space-y-1.5">
               <Label htmlFor="validade_orcamento" className="block text-sm font-medium">
-                Validade
+                {tx("Validade")}
               </Label>
               <Input
                 id="validade_orcamento"
@@ -823,7 +824,7 @@ export function OrcamentoSheet({
                 value={h.parceiro_id}
                 onChange={(v) => patchHeader({ parceiro_id: v })}
                 options={clienteOptions}
-                placeholder="Selecione o cliente"
+                placeholder={tx("Selecione o cliente")}
                 searchPlaceholder="Nome, documento ou e-mail…"
                 emptyText="Nenhum cliente encontrado. Cadastre em Parceiros marcando “É Cliente?”."
                 disabled={Boolean(readOnly)}
@@ -840,10 +841,10 @@ export function OrcamentoSheet({
                 disabled={Boolean(readOnly)}
               >
                 <SelectTrigger id="usuario_id">
-                  <SelectValue placeholder="Selecione" />
+                  <SelectValue placeholder={tx("Selecione")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={NONE}>Não informado</SelectItem>
+                  <SelectItem value={NONE}>{tx("Não informado")}</SelectItem>
                   {vendedorOptions.map((o) => (
                     <SelectItem key={o.value} value={o.value}>
                       {o.label}
@@ -861,7 +862,7 @@ export function OrcamentoSheet({
                 id="descricao"
                 rows={2}
                 value={h.descricao}
-                placeholder="Objeto da oferta, condições de pagamento, prazo de entrega…"
+                placeholder={tx("Objeto da oferta, condições de pagamento, prazo de entrega…")}
                 onChange={(e) => patchHeader({ descricao: e.target.value })}
               />
             </div>
@@ -943,25 +944,25 @@ export function OrcamentoSheet({
           <fieldset hidden={aba !== "crm" || !verSecao("crm")} disabled={roSecao("crm")} className="min-w-0 space-y-6">
           <div className="grid gap-x-4 gap-y-5 sm:grid-cols-2">
             <div className="min-w-0 space-y-1.5">
-              <Label className="block text-sm font-medium">Origem do lead</Label>
+              <Label className="block text-sm font-medium">{tx("Origem do lead")}</Label>
               <SearchSelect
                 value={h.origem_lead}
                 onChange={(v) => patchHeader({ origem_lead: v })}
                 options={ORIGENS_LEAD.map((o) => ({ value: o, label: o }))}
-                placeholder="Selecione"
+                placeholder={tx("Selecione")}
                 searchPlaceholder="Pesquisar…"
                 disabled={Boolean(readOnly)}
               />
             </div>
             <div className="min-w-0 space-y-1.5">
-              <Label htmlFor="origem_lead_desc" className="block text-sm font-medium">Detalhes da origem</Label>
+              <Label htmlFor="origem_lead_desc" className="block text-sm font-medium">{tx("Detalhes da origem")}</Label>
               <Input id="origem_lead_desc" value={h.origem_lead_desc} disabled={Boolean(readOnly)}
-                placeholder="Ex.: Feira Predial Expo 2026, indicação do Dr. Marcelo"
+                placeholder={tx("Ex.: Feira Predial Expo 2026, indicação do Dr. Marcelo")}
                 onChange={(e) => patchHeader({ origem_lead_desc: e.target.value })} />
             </div>
 
             <div className="min-w-0 space-y-1.5 sm:col-span-2 rounded-md border border-border p-3">
-              <p className="text-sm font-medium">Próxima ação</p>
+              <p className="text-sm font-medium">{tx("Próxima ação")}</p>
               <div className="grid gap-2 sm:grid-cols-3">
                 <SearchSelect
                   value={h.proxima_acao_tipo}
@@ -972,25 +973,25 @@ export function OrcamentoSheet({
                   disabled={Boolean(readOnly)}
                 />
                 <Input type="datetime-local" value={h.proxima_acao_em} disabled={Boolean(readOnly)}
-                  onChange={(e) => patchHeader({ proxima_acao_em: e.target.value })} aria-label="Data e hora da próxima ação" />
-                <Input value={h.proxima_acao_obs} disabled={Boolean(readOnly)} placeholder="O que fazer"
+                  onChange={(e) => patchHeader({ proxima_acao_em: e.target.value })} aria-label={tx("Data e hora da próxima ação")} />
+                <Input value={h.proxima_acao_obs} disabled={Boolean(readOnly)} placeholder={tx("O que fazer")}
                   onChange={(e) => patchHeader({ proxima_acao_obs: e.target.value })} />
               </div>
             </div>
 
             {negocioPerdido(h.situacao) && (
               <div className="min-w-0 space-y-1.5 sm:col-span-2 rounded-md border border-destructive/40 p-3">
-                <p className="text-sm font-medium">Motivo da perda *</p>
+                <p className="text-sm font-medium">{tx("Motivo da perda *")}</p>
                 <div className="grid gap-2 sm:grid-cols-2">
                   <SearchSelect
                     value={h.motivo_perda}
                     onChange={(v) => patchHeader({ motivo_perda: v })}
                     options={MOTIVOS_PERDA.map((m) => ({ value: m, label: m }))}
-                    placeholder="Selecione o motivo"
+                    placeholder={tx("Selecione o motivo")}
                     searchPlaceholder="Pesquisar…"
                     disabled={Boolean(readOnly)}
                   />
-                  <Input value={h.motivo_perda_obs} disabled={Boolean(readOnly)} placeholder="Detalhes (ex.: concorrente)"
+                  <Input value={h.motivo_perda_obs} disabled={Boolean(readOnly)} placeholder={tx("Detalhes (ex.: concorrente)")}
                     onChange={(e) => patchHeader({ motivo_perda_obs: e.target.value })} />
                 </div>
               </div>
@@ -1028,7 +1029,7 @@ export function OrcamentoSheet({
               <OfertaTimeline orcamentoId={String(recordId)} empresaId={record["empresa_id"]} readOnly={Boolean(readOnly)} />
             </div>
           )}
-          {!record && <p className="text-sm text-muted-foreground">Salve a oferta para registrar a linha do tempo e usar o Consultor Comercial.</p>}
+          {!record && <p className="text-sm text-muted-foreground">{tx("Salve a oferta para registrar a linha do tempo e usar o Consultor Comercial.")}</p>}
           </fieldset>
 
           <div hidden={aba !== "oferta"} className="space-y-6">
@@ -1059,11 +1060,11 @@ export function OrcamentoSheet({
           {record && onPreview && (
             <Button variant="secondary" onClick={onPreview} className="mr-auto">
               <FileText className="mr-2 h-4 w-4" />
-              Visualizar / PDF
+              {tx("Visualizar / PDF")}
             </Button>
           )}
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancelar
+            {tx("Cancelar")}
           </Button>
           <Button onClick={() => submit()} disabled={saving || readOnly}>
             {saving ? "Salvando…" : "Salvar"}
