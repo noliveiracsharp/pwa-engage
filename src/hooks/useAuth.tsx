@@ -77,7 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       void supabase.auth.getSession().then(async ({ data }) => {
         if (data.session) {
           await supabase.auth.signOut();
-          window.location.replace("/login");
+          window.location.replace((await import("@/lib/marca-publica")).urlLogin("motivo=atualizacao"));
         }
       });
     }

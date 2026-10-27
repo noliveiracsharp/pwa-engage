@@ -44,7 +44,7 @@ function LoginPage() {
     const slug = slugDoHost(window.location.hostname) || qs.get("e") || slugLembrado();
     if (!slug) return;
     buscarMarca(slug).then((m) => {
-      if (!m) { lembrarSlug(null); return; }
+      if (!m) return; // falha temporária não apaga a empresa lembrada
       lembrarSlug(slug);
       setMarca(m);
       aplicarMarca(m);
@@ -99,7 +99,7 @@ function LoginPage() {
   return (
     <div className="flex h-dvh overflow-hidden bg-background">
       <div className="relative hidden h-full min-h-0 w-1/2 overflow-hidden lg:block">
-        <img src={loginHero} alt="Atendimento multicanal" width={1024} height={1536} className="absolute inset-0 h-full w-full object-cover" />
+        <img src={marca?.login_imagem || loginHero} alt="Atendimento multicanal" width={1024} height={1536} className="absolute inset-0 h-full w-full object-cover" />
         <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-primary/80 to-transparent p-10">
           <h2 className="text-3xl font-bold text-primary-foreground">{nomeMarca}</h2>
           <p className="mt-2 max-w-md text-primary-foreground/90">

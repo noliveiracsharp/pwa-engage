@@ -69,6 +69,7 @@ export const EMPRESA_FIELDS: EmpresaField[] = [
   { key: "telefone2", label: "Telefone 2", type: "tel" },
   { key: "logo", label: "Logo", type: "photo", full: true },
   { key: "logo_escuro", label: "Logo — modo escuro", type: "photo", full: true },
+  { key: "login_imagem", label: "Imagem da tela de login", type: "photo", full: true },
   { key: "titulo", label: "Título exibido", full: true },
   { key: "site_url", label: "URL / site da empresa", full: true, wl: true },
   { key: "slug", label: "Endereço exclusivo (atendeai.co/endereco) — minúsculas, números e hífen", full: true, wl: true },
@@ -852,6 +853,15 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
                   onChange={(url) => setValues((current) => ({ ...current, logo_escuro: url }))}
                 />
                 <p className="mt-2 text-xs text-muted-foreground">Sem logo escuro, o logo padrão é usado.</p>
+              </div>
+              <div className="rounded-lg border border-border bg-background p-3 text-foreground sm:col-span-2">
+                <p className="mb-2 text-sm font-medium">Imagem da tela de login (opcional)</p>
+                <PhotoUpload
+                  value={values["login_imagem"] ?? ""}
+                  alt="Imagem da tela de login"
+                  onChange={(url) => setValues((current) => ({ ...current, login_imagem: url }))}
+                />
+                <p className="mt-2 text-xs text-muted-foreground">Aparece ao lado do formulário de login no endereço exclusivo da empresa. Use uma imagem vertical (ex.: 1024×1536).</p>
               </div>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">

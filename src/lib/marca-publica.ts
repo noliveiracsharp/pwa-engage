@@ -2,7 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export type MarcaPublica = {
   nome?: string | null; titulo?: string | null; logo?: string | null; logo_escuro?: string | null;
-  favicon?: string | null; cor_primaria_claro?: string | null; cor_primaria_escuro?: string | null;
+  favicon?: string | null; login_imagem?: string | null; cor_primaria_claro?: string | null; cor_primaria_escuro?: string | null;
 };
 
 const CHAVE = "atendeai-slug";
@@ -34,6 +34,19 @@ export function slugLembrado() {
   try { return localStorage.getItem(CHAVE); } catch { return null; }
 }
 
+/** Endereço de login que preserva a empresa (white label) lembrada. */
+export function urlLogin(extra = "") {
+  const s = slugLembrado();
+  const qs = [s ? `e=${encodeURIComponent(s)}` : "", extra].filter(Boolean).join("&");
+  return qs ? `/login?${qs}` : "/login";
+}
+
+/** Pinta a barra de título do app instalado com a cor da marca. */
+export function aplicarCorJanela(cor?: string | null) {
+  if (!cor || !HEX.test(cor)) return;
+  document.querySelectorAll<HTMLMetaElement>("meta[name='theme-color']").forEach((m) => { m.content = cor; });
+}
+
 export async function buscarMarca(slug: string): Promise<MarcaPublica | null> {
   const { data, error } = await (supabase.rpc as any)("empresa_marca_publica", { p_slug: slug });
   if (error) return null;
@@ -61,6 +74,7 @@ export function aplicarMarca(m: MarcaPublica) {
     if (!el) { el = document.createElement("style"); el.id = "white-label-publico"; document.head.appendChild(el); }
     el.textContent = css;
   }
+  aplicarCorJanela(m.cor_primaria_claro);
   const icon = m.favicon || m.logo;
   if (icon) {
     const links = document.querySelectorAll<HTMLLinkElement>("link[rel~='icon']");

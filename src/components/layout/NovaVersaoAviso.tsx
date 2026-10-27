@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { urlLogin } from "@/lib/marca-publica";
 
 const SEGUNDOS = 30;
 const INTERVALO = 2 * 60 * 1000;
@@ -104,7 +105,7 @@ export function NovaVersaoAviso() {
       }
       await supabase.auth.signOut();
     } finally {
-      window.location.replace(`/login?motivo=atualizacao&_r=${Date.now()}`);
+      window.location.replace(urlLogin(`motivo=atualizacao&_r=${Date.now()}`));
     }
   }
 
