@@ -12,9 +12,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SearchSelect, type SearchOption } from "@/components/data-table/SearchSelect";
-import { rowId } from "@/lib/crud";
+import { rowId, useTableRows } from "@/lib/crud";
+import { Switch } from "@/components/ui/switch";
 import { NovoItemCompleto } from "@/components/itens/NovoItemCompleto";
-import { agruparPorBloco, calcLinha, formatBRL, formatPct, NATUREZAS, num, type Linha, type Natureza } from "@/lib/orcamentos";
+import { agruparPorBloco, calcLinha, formatBRL, formatPct, NATUREZAS, precoPorMarkup, num, type Linha, type Natureza } from "@/lib/orcamentos";
 
 function NaturezaBadge({ n }: { n: Natureza }) {
   const meta = NATUREZAS.find((x) => x.value === n)!;
@@ -75,6 +76,11 @@ export function OrcamentoLinhas({
   pagadorOptions = [],
   ocultarCusto = false,
 }: Props) {
+  const { data: parceirosTodos = [] } = useTableRows("parceiros");
+  const fornecedorOptions: SearchOption[] = parceirosTodos
+    .filter((p) => p["is_fornecedor"] === true && p["status"] !== false)
+    .map((p) => ({ value: String(rowId(p) ?? ""), label: String(p["razao_social"] ?? p["nome_fantasia"] ?? "—") }))
+    .sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
   const pagadorNome = new Map(pagadorOptions.map((o) => [o.value, o.label]));
   const [quickFor, setQuickFor] = useState<string | null>(null);
   const [abertas, setAbertas] = useState<Set<string>>(() => new Set());
@@ -287,6 +293,9 @@ export function OrcamentoLinhas({
                             </Button>
                           )}
                         </div>
+                      )}
+                      {l.natureza !== "produto" && !ocultarCusto && (
+                        <ServicoTerceiro linha={l} fornecedores={fornecedorOptions} readOnly={Boolean(readOnly)} onChange={(p) => onChange(l.key, p)} />
                       )}
                     </div>
                     <div className="flex shrink-0 gap-0.5">
@@ -666,6 +675,57 @@ export function OrcamentoLinhas({
         onOpenChange={(o) => !o && setQuickFor(null)}
         onCreated={(item) => quickFor && onSelectItem(quickFor, String(rowId(item)))}
       />
+    </div>
+  );
+}
+
+/** Serviço próprio x terceirizado: fornecedor, custo cobrado por ele e margem → preço de venda. */
+function ServicoTerceiro({ linha: l, fornecedores, readOnly, onChange }: {
+  linha: Linha; fornecedores: SearchOption[]; readOnly: boolean; onChange: (p: Partial<Linha>) => void;
+}) {
+  const vu = num(l.valor_unitario);
+  const margemAtual = vu > 0 ? Math.round(((vu - l.preco_custo - (vu * l.imposto_pct) / 100) / vu) * 10000) / 100 : 0;
+  const [margem, setMargem] = useState(String(margemAtual));
+  const recalcular = (custo: number, m: number) => {
+    const p = precoPorMarkup(custo, m, l.imposto_pct);
+    onChange(p !== null ? { preco_custo: custo, valor_unitario: String(p) } : { preco_custo: custo });
+  };
+  const terceiro = l.execucao === "terceiro";
+  return (
+    <div className="bg-muted/30 mt-2 space-y-2 rounded-md border p-2">
+      <div className="flex items-center gap-2">
+        <Switch id={`terc-${l.key}`} checked={terceiro} disabled={readOnly}
+          onCheckedChange={(v) => onChange({ execucao: v ? "terceiro" : "interno", ...(v ? {} : { fornecedor_id: "" }) })} />
+        <Label htmlFor={`terc-${l.key}`} className="text-xs font-medium">Serviço terceirizado (fornecedor executa)</Label>
+      </div>
+      {terceiro && (
+        <div className="grid gap-2 sm:grid-cols-3">
+          <div className="space-y-1 sm:col-span-3">
+            <Label className="text-xs">Fornecedor</Label>
+            <SearchSelect value={l.fornecedor_id} onChange={(v) => onChange({ fornecedor_id: v })} options={fornecedores}
+              placeholder="Selecione o fornecedor" searchPlaceholder="Nome ou CNPJ…" emptyText="Nenhum fornecedor encontrado." disabled={readOnly} />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor={`cf-${l.key}`} className="text-xs">Custo do fornecedor (R$/un)</Label>
+            <Input id={`cf-${l.key}`} type="number" inputMode="decimal" min={0} step="0.01" disabled={readOnly}
+              value={l.preco_custo || ""} onChange={(e) => recalcular(num(e.target.value), num(margem))} />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor={`mg-${l.key}`} className="text-xs">Margem de lucro (%)</Label>
+            <Input id={`mg-${l.key}`} type="number" inputMode="decimal" step="0.01" disabled={readOnly}
+              value={margem} onChange={(e) => { setMargem(e.target.value); recalcular(l.preco_custo, num(e.target.value)); }} />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Imposto (%)</Label>
+            <div className="bg-background flex h-10 items-center rounded-md border px-3 text-sm tabular-nums">{formatPct(l.imposto_pct)}</div>
+          </div>
+          <p className="text-muted-foreground text-xs sm:col-span-3">
+            Preço = custo ÷ (1 − margem − imposto). Use unidade UN/SV (avulso) ou MÊS (mensal). Ao ativar a Oferta, o contas a pagar sai no nome do fornecedor
+            {l.natureza === "recorrente" ? ", todo mês." : "."}
+            {!l.fornecedor_id && <strong className="text-destructive"> Escolha o fornecedor.</strong>}
+          </p>
+        </div>
+      )}
     </div>
   );
 }
