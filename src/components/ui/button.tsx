@@ -5,6 +5,30 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
+/** Nome padrão por ícone, usado quando um botão só com ícone não informou rótulo. */
+const DICAS_ICONE: Record<string, string> = {
+  Trash: "Excluir", Trash2: "Excluir", Pencil: "Editar", PencilLine: "Editar", SquarePen: "Editar", Edit: "Editar",
+  Eye: "Visualizar", EyeOff: "Ocultar", X: "Fechar", Plus: "Adicionar", Copy: "Duplicar", Download: "Baixar",
+  Upload: "Enviar arquivo", Printer: "Imprimir", RefreshCw: "Atualizar", RotateCw: "Atualizar", Search: "Buscar",
+  ChevronLeft: "Anterior", ChevronRight: "Próximo", ChevronUp: "Subir", ChevronDown: "Descer", ArrowUp: "Subir",
+  ArrowDown: "Descer", Settings: "Configurações", Settings2: "Configurações", Filter: "Filtrar", Send: "Enviar",
+  Save: "Salvar", Check: "Confirmar", MoreHorizontal: "Mais ações", MoreVertical: "Mais ações", Ellipsis: "Mais ações",
+  EllipsisVertical: "Mais ações", Bell: "Notificações", Share2: "Compartilhar", ExternalLink: "Abrir em nova aba",
+  Link: "Copiar link", Mail: "Enviar e-mail", FileText: "Documento", Paperclip: "Anexar", Info: "Informações",
+  Menu: "Abrir menu", Sun: "Tema claro", Moon: "Tema escuro", Bold: "Negrito", Italic: "Itálico",
+  Underline: "Sublinhado", List: "Lista", ListOrdered: "Lista numerada", Image: "Inserir imagem",
+};
+
+function dicaDoIcone(children: React.ReactNode): string | undefined {
+  for (const c of React.Children.toArray(children)) {
+    if (!React.isValidElement(c) || typeof c.type === "string") continue;
+    const t = c.type as { displayName?: string; render?: { displayName?: string } };
+    const nome = (t.displayName ?? t.render?.displayName ?? "").replace(/Icon$/, "");
+    if (DICAS_ICONE[nome]) return DICAS_ICONE[nome];
+  }
+  return undefined;
+}
+
 const buttonVariants = cva(
   "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
