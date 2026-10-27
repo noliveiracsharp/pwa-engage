@@ -11,6 +11,7 @@ import { useAudit } from "@/lib/audit";
 import { useTableRows } from "@/lib/crud";
 import { formatBRL } from "@/lib/orcamentos";
 import { apurarDre, type ApuracaoDre, type Natureza } from "@/lib/dre-gerencial";
+import { pontoEquilibrio } from "@/lib/precificacao";
 import { imprimirDre } from "@/components/relatorios/DreRelatorioPDF";
 import { cn } from "@/lib/utils";
 
@@ -60,6 +61,8 @@ function DreGerencialPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [titulos, itens, contas, f, empresaId],
   );
+  const eq = pontoEquilibrio(a.receitaLiquida, a.custos, a.despesas);
+  const meses = a.meses.length || 1;
   const nomeCentro = f.centro === "todos" ? "Todos" : String(centrosEmp.find((c) => String(c["id"]) === f.centro)?.["descricao"] ?? "—");
   const periodo = `${f.inicio.split("-").reverse().join("/")} a ${f.fim.split("-").reverse().join("/")}`;
   const filtros = `Regime: ${f.regime === "caixa" ? "Caixa" : "Competência"} • Centro de custo: ${nomeCentro}`;
@@ -88,11 +91,15 @@ function DreGerencialPage() {
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5 print:hidden">
         <Kpi t="Receita líquida" v={formatBRL(a.receitaLiquida)} />
-        <Kpi t="Lucro bruto" v={formatBRL(a.lucroBruto)} />
-        <Kpi t="Despesas operacionais" v={formatBRL(a.despesas)} />
+        <Kpi t="Margem de contribuição" v={formatBRL(eq.mc)} sub={`${pct(eq.mcPct)} da receita líquida`} />
+        <Kpi t="Despesas fixas" v={formatBRL(a.despesas)} />
+        <Kpi t="Ponto de equilíbrio" v={eq.pe === null ? "—" : formatBRL(eq.pe)} sub={eq.pe === null ? "Sem margem de contribuição" : `${meses} mês(es) no período`} />
         <Kpi t="Resultado líquido" v={formatBRL(a.resultadoLiquido)} sub={`Margem ${pct(a.margemLiquida)}`} destaque />
-        <Kpi t="Não classificado" v={formatBRL(a.naoClassificado.receber - a.naoClassificado.pagar)} sub={`${a.naoClassificado.quantidade} linhas sem conta`} />
       </div>
+      <p className="text-muted-foreground text-xs print:hidden">
+        Margem de contribuição = receita líquida − custos (contas de natureza Custo direto). Ponto de equilíbrio = despesas ÷ margem de contribuição %: o faturamento líquido mínimo para não ter prejuízo.
+        {a.naoClassificado.quantidade > 0 && ` Não classificado: ${formatBRL(a.naoClassificado.receber - a.naoClassificado.pagar)}.`}
+      </p>
 
       {a.naoClassificado.quantidade > 0 && (
         <p className="rounded-md border border-warning/40 bg-warning/10 p-3 text-sm text-foreground print:hidden">

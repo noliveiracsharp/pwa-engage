@@ -19,6 +19,7 @@ import { useCategoriasItens } from "@/lib/itens-categorias";
 import { classificarItem } from "@/lib/itens-classificacao";
 import { HistoricoCompras } from "@/components/itens/HistoricoCompras";
 import { NcmBusca } from "@/components/itens/NcmBusca";
+import { HoraTecnicaDialog } from "@/components/itens/HoraTecnicaDialog";
 
 const NONE = "__none__";
 
@@ -126,6 +127,7 @@ type Props = {
 export function ItemSheet({ open, onOpenChange, record, saving, readOnly, duplicando, canCreateApoio, onSave }: Props) {
   const [v, setV] = useState<Values>(EMPTY);
   const [quick, setQuick] = useState<null | "unidade" | "centro" | "marca">(null);
+  const [horaOpen, setHoraOpen] = useState(false);
   const [aba, setAba] = useState<"geral" | "fiscal" | "compras">("geral");
   useEffect(() => { if (open) setAba("geral"); }, [open]);
 
@@ -453,9 +455,16 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, duplic
             </div>
 
             <div className="min-w-0 space-y-1.5">
-              <Label htmlFor="preco_custo" className="block text-sm font-medium">
-                Preço de Custo (R$)
-              </Label>
+              <div className="flex items-center justify-between gap-2">
+                <Label htmlFor="preco_custo" className="block text-sm font-medium">
+                  Preço de Custo (R$)
+                </Label>
+                {v.tipo !== "Produto" && !readOnly && (
+                  <button type="button" className="text-primary text-xs underline" onClick={() => setHoraOpen(true)}>
+                    Calcular por hora técnica
+                  </button>
+                )}
+              </div>
               <Input
                 id="preco_custo"
                 type="number"
@@ -463,6 +472,7 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, duplic
                 value={v.preco_custo}
                 onChange={(e) => setPricing({ preco_custo: e.target.value })}
               />
+              <HoraTecnicaDialog open={horaOpen} onOpenChange={setHoraOpen} onAplicar={(c) => setPricing({ preco_custo: String(c) })} />
             </div>
 
             <div className="min-w-0 space-y-1.5">
