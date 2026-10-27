@@ -184,13 +184,18 @@ export function DataTable({
               )}
               {onReorder && <TableHead className="w-10" />}
               {columns.map((col) => (
-                <TableHead key={col.key} className={col.className}>
+                <TableHead
+                  key={col.key}
+                  className={col.className}
+                  aria-sort={col.sortable === false ? undefined : sort?.key === col.key ? (sort.dir === "asc" ? "ascending" : "descending") : "none"}
+                >
                   {col.sortable === false ? (
                     col.header
                   ) : (
                     <button
                       type="button"
-                      className="inline-flex items-center gap-1 font-medium hover:text-foreground"
+                      aria-label={typeof col.header === "string" ? `Ordenar por ${col.header}` : undefined}
+                      className="inline-flex items-center gap-1 rounded-sm font-medium hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       onClick={() =>
                         setSort((prev) =>
                           prev?.key === col.key
@@ -357,7 +362,7 @@ export function DataTable({
               setPage(1);
             }}
           >
-            <SelectTrigger className="h-8 w-24">
+            <SelectTrigger className="h-8 w-24" aria-label="Linhas por página">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -370,8 +375,8 @@ export function DataTable({
           </Select>
         </div>
         <div className="flex items-center gap-2">
-          <span>
-            {total === 0 ? 0 : (current - 1) * size + 1}–{Math.min(current * size, total)} de {total}
+          <span role="status" aria-live="polite">
+            {loading ? "Carregando…" : <>{total === 0 ? 0 : (current - 1) * size + 1}–{Math.min(current * size, total)} de {total}<span className="sr-only"> registros</span></>}
           </span>
           <Button variant="outline" size="sm" disabled={current <= 1} onClick={() => setPage(current - 1)}>
             Anterior

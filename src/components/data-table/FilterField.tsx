@@ -68,11 +68,12 @@ export function FilterInput({
   placeholder?: string;
 }) {
   useRegister(value, onChange);
+  const id = useId();
   return (
     <div>
-      <Label className="mb-1.5 block text-xs uppercase tracking-wide text-muted-foreground">{label}</Label>
+      <Label htmlFor={id} className="mb-1.5 block text-xs uppercase tracking-wide text-muted-foreground">{label}</Label>
       <div className="relative">
-        <Input value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} className={value ? "pr-8" : undefined} />
+        <Input id={id} type="search" aria-label={label} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} className={value ? "pr-8" : undefined} />
         {value && (
           <button
             type="button"
@@ -100,11 +101,12 @@ export function FilterSelect({
   options: Array<{ value: string; label: string }>;
 }): ReactNode {
   useRegister(value, onChange);
+  const id = useId();
   return (
     <div>
-      <Label className="mb-1.5 block text-xs uppercase tracking-wide text-muted-foreground">{label}</Label>
+      <Label htmlFor={id} className="mb-1.5 block text-xs uppercase tracking-wide text-muted-foreground">{label}</Label>
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger aria-label={label}>
+        <SelectTrigger id={id} aria-label={label}>
           <SelectValue placeholder="Todos" />
         </SelectTrigger>
         <SelectContent>
