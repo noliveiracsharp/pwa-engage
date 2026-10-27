@@ -169,6 +169,7 @@ export const INSTANCIAS: ChildConfig = {
       showIf: notChat,
     },
     { key: "icone", label: "Ícone", type: "icon" },
+    { key: "permitir_colaboradores", label: "Permitir atendimento de colaboradores", type: "boolean", showIf: notChat },
     { key: "status", label: "Status", type: "boolean" },
   ],
   sheet: true,
