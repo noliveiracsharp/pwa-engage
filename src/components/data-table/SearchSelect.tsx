@@ -45,9 +45,9 @@ export function SearchSelect({
   value,
   onChange,
   options: rawOptions,
-  placeholder = "Selecione",
-  searchPlaceholder = "Buscar…",
-  emptyText = "Nenhum resultado.",
+  placeholder,
+  searchPlaceholder,
+  emptyText,
   disabled,
   allowClear = true,
   className,
@@ -108,7 +108,7 @@ export function SearchSelect({
             {allowClear && selected && !disabled && (
               <span
                 role="button"
-                aria-label="Limpar seleção"
+                aria-label={tr("acao.limparSelecao")}
                 tabIndex={-1}
                 className="text-muted-foreground hover:text-foreground rounded-sm"
                 onClick={(e) => {
