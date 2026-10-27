@@ -1,3 +1,4 @@
+import { useIdioma, tr } from "@/lib/i18n";
 import { HistoricoButton } from "@/components/auditoria/HistoricoButton";
 import { DocumentosButton } from "@/components/documentos/DocumentosPainel";
 import type { EntidadeDoc } from "@/lib/documentos";
@@ -80,6 +81,7 @@ export function RecordSheet({
   auditTable,
   docs,
 }: Props) {
+  const { t } = useIdioma();
   const [values, setValues] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -165,7 +167,7 @@ export function RecordSheet({
             ) : field.type === "boolean" ? (
               <div className="flex h-10 items-center justify-between gap-3 rounded-md border bg-background px-3 py-2">
                 <span className="text-sm text-muted-foreground">
-                  {value === "true" ? "Ativo" : "Inativo"}
+                  {value === "true" ? t("status.ativo") : t("status.inativo")}
                 </span>
                 <Switch
                   id={key}
@@ -194,12 +196,12 @@ export function RecordSheet({
                 onChange={(e) => setValues((v) => ({ ...v, [key]: e.target.value }))}
               />
             ) : field.type === "select" && field.nullable ? (
-              <SearchSelect id={key} value={value} options={field.options ?? []} placeholder={field.placeholder ?? "Não informado"}
+              <SearchSelect id={key} value={value} options={field.options ?? []} placeholder={field.placeholder ?? t("msg.naoInformado")}
                 onChange={(v) => setValues((s) => ({ ...s, [key]: v }))} />
             ) : field.type === "select" ? (
               <Select value={value} onValueChange={(v) => setValues((s) => ({ ...s, [key]: v }))}>
                 <SelectTrigger id={key}>
-                  <SelectValue placeholder="Selecione" />
+                  <SelectValue placeholder={t("acao.selecione")} />
                 </SelectTrigger>
                 <SelectContent>
                   {(field.options ?? []).map((opt) => (
@@ -232,7 +234,7 @@ export function RecordSheet({
   const tabList = tabs ?? (extra && extraTabLabel ? [{ key: "extra", label: extraTabLabel, content: extra }] : null);
   const allTabs = tabList
     ? [
-        ...(hideDataTab ? [] : [{ key: "dados", label: dataTabLabel ?? "Dados", content: <fieldset disabled={readOnly} className="min-w-0 disabled:opacity-70">{photoBlock}{fieldsGrid}</fieldset> }]),
+        ...(hideDataTab ? [] : [{ key: "dados", label: dataTabLabel ?? t("form.dados"), content: <fieldset disabled={readOnly} className="min-w-0 disabled:opacity-70">{photoBlock}{fieldsGrid}</fieldset> }]),
         ...tabList,
       ]
     : null;
@@ -280,10 +282,10 @@ export function RecordSheet({
 
         <div className="bg-background flex shrink-0 justify-end gap-2 border-t px-6 py-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancelar
+            {t("acao.cancelar")}
           </Button>
           <Button onClick={submit} disabled={saving || readOnly}>
-            {saving ? "Salvando…" : "Salvar"}
+            {saving ? t("acao.salvando") : t("acao.salvar")}
           </Button>
         </div>
       </SheetContent>

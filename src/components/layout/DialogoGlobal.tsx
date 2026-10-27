@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useIdioma, tr } from "@/lib/i18n";
 import { AlertTriangle, Info } from "lucide-react";
 import {
   AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
@@ -67,7 +68,7 @@ export function DialogoGlobal() {
   if (!atual) return null;
   const { opts } = atual;
   const destructive = atual.kind === "confirm" && opts.destructive;
-  const titulo = opts.title ?? (atual.kind === "alert" ? "Aviso" : destructive ? "Confirmar exclusão" : "Confirmar");
+  const titulo = opts.title ?? (atual.kind === "alert" ? tr("msg.aviso") : destructive ? tr("msg.confirmarExclusao").replace("?", "") : tr("acao.confirmar"));
   const bloqueado = atual.kind === "prompt" && (atual.opts.required ?? true) && !texto.trim();
   const Icone = destructive ? AlertTriangle : Info;
 
@@ -85,14 +86,14 @@ export function DialogoGlobal() {
           : <Input autoFocus value={texto} placeholder={atual.opts.placeholder} onChange={(e) => setTexto(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter" && !bloqueado) fechar(true); }} />)}
         <AlertDialogFooter>
-          {atual.kind !== "alert" && <AlertDialogCancel>{opts.cancelText ?? "Cancelar"}</AlertDialogCancel>}
+          {atual.kind !== "alert" && <AlertDialogCancel>{opts.cancelText ?? tr("acao.cancelar")}</AlertDialogCancel>}
           {atual.kind === "confirm" && opts.extraText && (
             <Button className="bg-success text-success-foreground hover:bg-success/90" onClick={() => { opts.onExtra?.(); fechar(false); }}>
               {opts.extraText}
             </Button>
           )}
           <Button autoFocus={atual.kind !== "prompt"} disabled={bloqueado} variant={destructive ? "destructive" : "default"} onClick={() => fechar(true)}>
-            {opts.confirmText ?? (atual.kind === "alert" ? "Entendi" : destructive ? "Sim, continuar" : "Confirmar")}
+            {opts.confirmText ?? (atual.kind === "alert" ? tr("acao.entendi") : destructive ? tr("acao.simContinuar") : tr("acao.confirmar"))}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

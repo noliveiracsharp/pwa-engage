@@ -1,3 +1,6 @@
+import { useIdioma, tr } from "@/lib/i18n";
+import { rotuloMenu } from "@/lib/i18n-menu";
+import { useRouterState } from "@tanstack/react-router";
 import { FilterBar } from "./FilterField";
 import { useMemo, useState, type ReactNode } from "react";
 import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, ChevronsUpDown, Copy, Eye, GripVertical, MoreVertical, Pencil, Plus, Trash2 } from "lucide-react";
@@ -92,6 +95,8 @@ export function DataTable({
   selection,
   bulkBar,
 }: Props) {
+  const { t, idioma } = useIdioma();
+  const caminho = useRouterState({ select: (s) => s.location.pathname });
   const [sort, setSort] = useState<{ key: string; dir: "asc" | "desc" } | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(0);
@@ -149,10 +154,10 @@ export function DataTable({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-foreground">{title}</h1>
+        <h1 className="text-2xl font-bold text-foreground">{typeof title === "string" ? rotuloMenu(idioma, caminho, title) : title}</h1>
         {onAdd && (
           <Button onClick={onAdd}>
-            <Plus className="mr-1 h-4 w-4" /> Adicionar
+            <Plus className="mr-1 h-4 w-4" /> {t("acao.adicionar")}
           </Button>
         )}
       </div>
@@ -172,7 +177,7 @@ export function DataTable({
               {selection && (
                 <TableHead className="w-10">
                   <Checkbox
-                    aria-label="Selecionar página"
+                    aria-label={t("tabela.selecionarPagina")}
                     checked={pageRows.length > 0 && pageRows.every((r, i) => selection.selected.has(rowKey(r, i)))}
                     onCheckedChange={(v) => {
                       const n = new Set(selection.selected);
@@ -232,7 +237,7 @@ export function DataTable({
             {!loading && pageRows.length === 0 && (
               <TableRow>
                 <TableCell colSpan={colSpan} className="py-10 text-center text-muted-foreground">
-                  Nenhum registro encontrado.
+                  {t("tabela.nenhum")}
                 </TableCell>
               </TableRow>
             )}
@@ -256,7 +261,7 @@ export function DataTable({
                   {selection && (
                     <TableCell className="w-10">
                       <Checkbox
-                        aria-label="Selecionar registro"
+                        aria-label={t("tabela.selecionarRegistro")}
                         checked={selection.selected.has(rowKey(row, index))}
                         onCheckedChange={() => {
                           const k = rowKey(row, index);
@@ -311,7 +316,7 @@ export function DataTable({
                     {(rowMenu || onEdit || onDuplicate || onDelete) && (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" aria-label="Ações" title="Ações">
+                          <Button variant="ghost" size="icon" aria-label={t("acao.acoes")} title={t("acao.acoes")}>
                             <MoreVertical className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
@@ -321,7 +326,7 @@ export function DataTable({
                           {onEdit && rowActions?.(row).edit !== false && (
                             <DropdownMenuItem onClick={() => onEdit(row)}>
                               {editReadOnly ? <Eye className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
-                              {editReadOnly ? "Visualizar" : "Editar"}
+                              {editReadOnly ? t("acao.visualizar") : t("acao.editar")}
                             </DropdownMenuItem>
                           )}
                           {onDuplicate && (
@@ -334,11 +339,11 @@ export function DataTable({
                             <DropdownMenuItem
                               className="text-destructive focus:text-destructive"
                               onClick={async () => {
-                                if (skipDeleteConfirm || await confirmar("Deseja realmente excluir este registro?")) onDelete(row);
+                                if (skipDeleteConfirm || await confirmar(t("msg.excluirRegistro"))) onDelete(row);
                               }}
                             >
                               <Trash2 className="h-4 w-4" />
-                              Excluir
+                              {t("acao.excluir")}
                             </DropdownMenuItem>
                           )}
                         </DropdownMenuContent>
@@ -354,7 +359,7 @@ export function DataTable({
 
       <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
         <div className="flex items-center gap-2">
-          <span>Linhas por página</span>
+          <span>{t("tabela.linhasPorPagina")}</span>
           <Select
             value={String(pageSize)}
             onValueChange={(v) => {
@@ -368,7 +373,7 @@ export function DataTable({
             <SelectContent>
               {[10, 50, 100, 0].map((n) => (
                 <SelectItem key={n} value={String(n)}>
-                  {n || "Todos"}
+                  {n || t("filtro.todos")}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -376,10 +381,10 @@ export function DataTable({
         </div>
         <div className="flex items-center gap-2">
           <span role="status" aria-live="polite">
-            {loading ? "Carregando…" : <>{total === 0 ? 0 : (current - 1) * size + 1}–{Math.min(current * size, total)} de {total}<span className="sr-only"> registros</span></>}
+            {loading ? t("msg.carregando") : <>{total === 0 ? 0 : (current - 1) * size + 1}–{Math.min(current * size, total)} {t("tabela.de")} {total}<span className="sr-only"> registros</span></>}
           </span>
           <Button variant="outline" size="sm" disabled={current <= 1} onClick={() => setPage(current - 1)}>
-            Anterior
+            {t("tabela.anterior")}
           </Button>
           <Button
             variant="outline"
@@ -387,7 +392,7 @@ export function DataTable({
             disabled={current >= totalPages}
             onClick={() => setPage(current + 1)}
           >
-            Próxima
+            {t("tabela.proxima")}
           </Button>
         </div>
       </div>
