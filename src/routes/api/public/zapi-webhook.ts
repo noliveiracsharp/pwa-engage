@@ -37,6 +37,29 @@ type Recebido = {
   execucao: ({ id: string } & EstadoExec) | null;
 };
 
+/** Converte o status da Z-API para o usado nos balões. */
+export function statusDeZapi(s: string): "enviado" | "entregue" | "lido" | null {
+  const v = s.toUpperCase();
+  if (v === "READ" || v === "PLAYED" || v === "READ_BY_ME") return "lido";
+  if (v === "RECEIVED" || v === "DELIVERED" || v === "DELIVERY_ACK") return "entregue";
+  if (v === "SENT") return "enviado";
+  return null;
+}
+
+function clienteBanco() {
+  return createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false, storage: undefined },
+    global: {
+      fetch: (input, init) => {
+        const h = new Headers(init?.headers);
+        if (h.get("Authorization") === `Bearer ${SUPABASE_PUBLISHABLE_KEY}`) h.delete("Authorization");
+        h.set("apikey", SUPABASE_PUBLISHABLE_KEY);
+        return fetch(input, { ...init, headers: h });
+      },
+    },
+  });
+}
+
 const ok = (extra: Record<string, unknown> = {}) => Response.json({ ok: true, ...extra });
 
 export const Route = createFileRoute("/api/public/zapi-webhook")({
@@ -55,11 +78,45 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
         } catch {
           return new Response("Bad request", { status: 400 });
         }
-        // Só mensagens recebidas de contatos (ignora status, grupos e as enviadas por nós).
-        if (body.fromMe || body.isGroup || !body.phone) return ok({ ignorada: true });
-        // Ignora só avisos de status/entrega; qualquer outro "type" (chat, text, audio...) é mensagem.
         const tipoEvt = String(body.type ?? "").toLowerCase();
-        if (/status|delivery|presence|connected|disconnected/.test(tipoEvt)) return ok({ ignorada: true });
+        const raw0 = body as Record<string, unknown>;
+        const db = clienteBanco();
+
+        // Confirmação de entrega/leitura (✓ enviado, ✓✓ entregue, ✓✓ azul lido).
+        if (tipoEvt.includes("messagestatus") || (tipoEvt.includes("status") && Array.isArray(raw0["ids"]))) {
+          const st = statusDeZapi(String(raw0["status"] ?? ""));
+          const ids = (Array.isArray(raw0["ids"]) ? raw0["ids"] : [raw0["messageId"] ?? raw0["id"]])
+            .filter((v): v is string => typeof v === "string" && v.length > 0 && v.length <= 200)
+            .slice(0, 100);
+          if (!st || ids.length === 0) return ok({ ignorada: true });
+          const { error } = await db.rpc("zapi_webhook_status" as never, { p_token: k, p_ids: ids, p_status: st } as never);
+          if (error && !/function|schema cache/i.test(error.message)) {
+            console.error("zapi-webhook status", error.message);
+            return new Response("Erro ao registrar status", { status: 500 });
+          }
+          return ok({ status: st });
+        }
+
+        // Cliente digitando/gravando: avisa a tela do atendimento em tempo real.
+        if (tipoEvt.includes("presence")) {
+          if (!body.phone || body.isGroup) return ok({ ignorada: true });
+          const st = String(raw0["status"] ?? "").toLowerCase();
+          const { data: atId, error } = await db.rpc("zapi_webhook_presenca" as never, { p_token: k, p_telefone: body.phone } as never);
+          if (error) {
+            if (!/function|schema cache/i.test(error.message)) console.error("zapi-webhook presenca", error.message);
+            return ok({ ignorada: true });
+          }
+          if (atId) {
+            const canal = db.channel("chat_presence");
+            await canal.httpSend("presenca", { atendimento_id: String(atId), status: st }).catch((e: unknown) => console.error("zapi-webhook presenca envio", e));
+            void db.removeChannel(canal);
+          }
+          return ok({ presenca: st });
+        }
+
+        // Só mensagens recebidas de contatos (ignora grupos e as enviadas por nós).
+        if (body.fromMe || body.isGroup || !body.phone) return ok({ ignorada: true });
+        if (/delivery|connected|disconnected/.test(tipoEvt)) return ok({ ignorada: true });
 
         let texto = body.text?.message ?? "";
         let tipo = "texto";
@@ -68,18 +125,6 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
         else if (body.audio?.audioUrl) { tipo = "audio"; midia = body.audio.audioUrl; }
         else if (body.video?.videoUrl) { tipo = "video"; midia = body.video.videoUrl; texto = body.video.caption ?? ""; }
         else if (body.document?.documentUrl) { tipo = "documento"; midia = body.document.documentUrl; texto = body.document.fileName ?? ""; }
-
-        const db = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-          auth: { persistSession: false, autoRefreshToken: false, storage: undefined },
-          global: {
-            fetch: (input, init) => {
-              const h = new Headers(init?.headers);
-              if (h.get("Authorization") === `Bearer ${SUPABASE_PUBLISHABLE_KEY}`) h.delete("Authorization");
-              h.set("apikey", SUPABASE_PUBLISHABLE_KEY);
-              return fetch(input, { ...init, headers: h });
-            },
-          },
-        });
 
         // Linha exclusiva de notificações: respostas (ex.: auto-resposta de fornecedor) não abrem atendimento nem robô.
         const { data: fin } = await db.rpc("instancia_finalidade", { p_token: k });
@@ -169,8 +214,12 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
               const { data: m } = await acao("mensagem", { texto: a.texto });
               const mid = (m as { id?: string } | null)?.id;
               try {
-                await dispararMensagem({ instancia: r.instancia, mensagemId: mid, atendimentoId: r.atendimento_id, telefone: r.telefone, texto: a.texto });
+                const zid = await dispararMensagem({ instancia: r.instancia, mensagemId: mid, atendimentoId: r.atendimento_id, telefone: r.telefone, texto: a.texto });
                 if (mid) await acao("status_envio", { id: mid, status: "enviado" });
+                if (mid && typeof zid === "string") {
+                  const { error: eV } = await db.rpc("zapi_webhook_vincular" as never, { p_token: k, p_mensagem: mid, p_zapi: zid } as never);
+                  if (eV && !/function|schema cache/i.test(eV.message)) console.error("zapi-webhook vincular", eV.message);
+                }
               } catch (e) {
                 console.error("zapi-webhook envio", e);
                 if (mid) await acao("status_envio", { id: mid, status: "falha" });
