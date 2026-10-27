@@ -16,7 +16,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { IDIOMAS, useIdioma, type Idioma } from "@/lib/i18n";
+import { IDIOMAS, normalizarIdioma, useIdioma, type Idioma } from "@/lib/i18n";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/components/theme-provider";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,7 +24,7 @@ import { pick } from "@/lib/row";
 import { useTableRows, rowId } from "@/lib/crud";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Building2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { MeusDadosSheet } from "@/components/perfil/MeusDadosSheet";
 import { useEmpresaAtiva } from "@/hooks/useEmpresaAtiva";
 import { AvisosButton } from "@/components/layout/AvisosButton";
@@ -38,7 +38,16 @@ export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) 
   const { data: empresas = [] } = useTableRows("empresas", isMaster);
   const ativas = empresas.filter((e) => e["status"] !== false && e["ativo"] !== false);
   const { theme, toggleTheme } = useTheme();
-  const { t, idioma, setIdioma } = useIdioma();
+  const { t, idioma, setIdioma: aplicarIdioma } = useIdioma();
+  const idiomaPerfil = pick<string>(usuario, ["idioma"]);
+  useEffect(() => {
+    if (idiomaPerfil) aplicarIdioma(normalizarIdioma(idiomaPerfil));
+  }, [idiomaPerfil, aplicarIdioma]);
+  async function setIdioma(v: Idioma) {
+    aplicarIdioma(v);
+    const id = usuario ? rowId(usuario) : null;
+    if (id != null) await supabase.from("usuarios").update({ idioma: v } as never).eq("id", id as never);
+  }
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [meusDados, setMeusDados] = useState(false);
