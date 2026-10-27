@@ -300,7 +300,7 @@ function PainelCompras() {
 
 /* ---------------- Comercial ---------------- */
 function PainelComercial({ periodo }: { periodo: Periodo }) {
-  const { t, moeda } = useIdioma();
+  const { t } = useIdioma();
   const { usuarioId } = useAudit();
   const empresaId = useEscopo();
   const since = periodStart(periodo).toISOString();
@@ -332,8 +332,8 @@ function PainelComercial({ periodo }: { periodo: Periodo }) {
       </div>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <Kpi title={data?.temGanha === false ? t("dash.conversaoMarque") : t("dash.conversao")} value={`${data?.conv ?? 0}%`} icon={TrendingUp} />
-        <Kpi title={t("dash.ticket")} value={moeda(data?.ticket ?? 0)} icon={TrendingUp} />
-        <Kpi title={t("dash.comissoes")} value={moeda(data?.minhas ?? 0)} icon={HandCoins} tone="success" />
+        <Kpi title={t("dash.ticket")} value={formatBRL(data?.ticket ?? 0)} icon={TrendingUp} />
+        <Kpi title={t("dash.comissoes")} value={formatBRL(data?.minhas ?? 0)} icon={HandCoins} tone="success" />
       </div>
       {!!data?.semEtapa && <p className="text-xs text-muted-foreground">{t("dash.semEtapa", { n: data.semEtapa })}</p>}
     </Secao>
