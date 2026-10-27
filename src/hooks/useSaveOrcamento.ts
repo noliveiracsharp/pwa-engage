@@ -25,6 +25,8 @@ export type LinhaPayload = {
   natureza?: string;
   bloco?: string | null;
   faturar_para_id?: string | null;
+  execucao?: string;
+  fornecedor_id?: string | null;
 };
 
 /**
