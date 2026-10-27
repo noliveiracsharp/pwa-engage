@@ -1,3 +1,4 @@
+import { tx } from "@/lib/i18n-termos";
 import { useEffect, useState } from "react";
 import { CalendarClock, ReceiptText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -184,7 +185,7 @@ export function OrcamentoPagamento({ value, parcelas, totalLiquido, entradaValor
       <div className="bg-card space-y-3 rounded-lg border p-4">
         <div className="flex items-center gap-2 text-sm font-semibold">
           <ReceiptText className="text-muted-foreground h-4 w-4" />
-          Observações complementares da nota fiscal
+          {tx("Observações complementares da nota fiscal")}
         </div>
         <p className="text-muted-foreground text-xs leading-relaxed">
           Inclua informações relevantes para seu cliente. Elas aparecerão na nota fiscal, nos campos
@@ -195,7 +196,7 @@ export function OrcamentoPagamento({ value, parcelas, totalLiquido, entradaValor
           id="obs_nota_fiscal"
           rows={3}
           value={value.obs_nota_fiscal}
-          placeholder="Ex.: Serviço prestado conforme contrato nº 123/2026. Retenções aplicáveis…"
+          placeholder={tx("Ex.: Serviço prestado conforme contrato nº 123/2026. Retenções aplicáveis…")}
           onChange={(e) => onChange({ obs_nota_fiscal: e.target.value })}
         />
       </div>
@@ -204,7 +205,7 @@ export function OrcamentoPagamento({ value, parcelas, totalLiquido, entradaValor
       <div className="bg-card space-y-4 rounded-lg border p-4">
         <div className="flex items-center gap-2 text-sm font-semibold">
           <CalendarClock className="text-muted-foreground h-4 w-4" />
-          Condições de pagamento
+          {tx("Condições de pagamento")}
         </div>
 
         <div className="grid gap-x-4 gap-y-5 sm:grid-cols-2 lg:grid-cols-4">
@@ -218,10 +219,10 @@ export function OrcamentoPagamento({ value, parcelas, totalLiquido, entradaValor
               disabled={Boolean(readOnly)}
             >
               <SelectTrigger id="forma_pagamento">
-                <SelectValue placeholder="Selecione" />
+                <SelectValue placeholder={tx("Selecione")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={NONE}>Não informada</SelectItem>
+                <SelectItem value={NONE}>{tx("Não informada")}</SelectItem>
                 {FORMAS_PAGAMENTO.map((f) => (
                   <SelectItem key={f} value={f}>
                     {f}
@@ -247,7 +248,7 @@ export function OrcamentoPagamento({ value, parcelas, totalLiquido, entradaValor
           </div>)}
 
           {!avista && (<div className="min-w-0 space-y-1.5">
-            <Label className="block text-sm font-medium">Juros</Label>
+            <Label className="block text-sm font-medium">{tx("Juros")}</Label>
             <ToggleGroup
               type="single"
               variant="outline"
@@ -267,10 +268,10 @@ export function OrcamentoPagamento({ value, parcelas, totalLiquido, entradaValor
               disabled={Boolean(readOnly) || comodato}
             >
               <ToggleGroupItem value="sem" className="flex-1">
-                Sem juros
+                {tx("Sem juros")}
               </ToggleGroupItem>
               <ToggleGroupItem value="com" className="flex-1">
-                Com juros
+                {tx("Com juros")}
               </ToggleGroupItem>
             </ToggleGroup>
           </div>)}
@@ -290,7 +291,7 @@ export function OrcamentoPagamento({ value, parcelas, totalLiquido, entradaValor
           {!avista && qtdParcelas >= 2 && (
             <div className="min-w-0 space-y-1.5 sm:col-span-2">
               <Label htmlFor="entrada" className="block text-sm font-medium">
-                Entrada (1ª parcela)
+                {tx("Entrada (1ª parcela)")}
               </Label>
               <div className="flex gap-2">
                 <ToggleGroup
@@ -322,12 +323,12 @@ export function OrcamentoPagamento({ value, parcelas, totalLiquido, entradaValor
           {!avista && value.tem_juros && (
             <div className="min-w-0 space-y-1.5 sm:col-span-2">
               <Label htmlFor="coeficiente_juros" className="block text-sm font-medium">
-                Coeficiente da parcela
+                {tx("Coeficiente da parcela")}
               </Label>
               <Input
                 id="coeficiente_juros"
                 inputMode="decimal"
-                placeholder="Calculado automaticamente"
+                placeholder={tx("Calculado automaticamente")}
                 value={value.coeficiente_juros}
                 readOnly
                 disabled
@@ -344,7 +345,7 @@ export function OrcamentoPagamento({ value, parcelas, totalLiquido, entradaValor
           {!avista && value.tem_juros && cfg && parcelaFinal > 0 && (
             <div className="bg-muted/30 space-y-1 rounded-md border p-3 text-xs sm:col-span-2 lg:col-span-4">
               <p className="text-muted-foreground font-medium">
-                Memória de cálculo do parcelamento
+                {tx("Memória de cálculo do parcelamento")}
               </p>
               <p className="text-muted-foreground leading-relaxed">
                 Taxa {fmtPct(cfg.taxa_juros_mensal)}% a.m. · custo operacional{" "}
@@ -360,13 +361,13 @@ export function OrcamentoPagamento({ value, parcelas, totalLiquido, entradaValor
 
           <div className="min-w-0 space-y-1.5 sm:col-span-2 lg:col-span-4">
             <Label htmlFor="forma_pagamento_obs" className="block text-sm font-medium">
-              Observações do pagamento
+              {tx("Observações do pagamento")}
             </Label>
             <Textarea
               id="forma_pagamento_obs"
               rows={2}
               value={value.forma_pagamento_obs}
-              placeholder="Ex.: 50% na assinatura e 50% na entrega. Pix chave CNPJ…"
+              placeholder={tx("Ex.: 50% na assinatura e 50% na entrega. Pix chave CNPJ…")}
               onChange={(e) => onChange({ forma_pagamento_obs: e.target.value })}
             />
           </div>
@@ -378,7 +379,7 @@ export function OrcamentoPagamento({ value, parcelas, totalLiquido, entradaValor
             <table className="w-full text-sm">
               <thead className="bg-muted/50 text-muted-foreground">
                 <tr>
-                  <th className="px-3 py-2 text-left font-medium">Parcela</th>
+                  <th className="px-3 py-2 text-left font-medium">{tx("Parcela")}</th>
                   <th className="px-3 py-2 text-left font-medium">Vencimento</th>
                   <th className="px-3 py-2 text-right font-medium">Valor</th>
                 </tr>
@@ -433,7 +434,7 @@ export function OrcamentoPagamento({ value, parcelas, totalLiquido, entradaValor
               <tfoot>
                 <tr className="bg-muted/30 border-t font-semibold">
                   <td className="px-3 py-2" colSpan={2}>
-                    Total parcelado
+                    {tx("Total parcelado")}
                   </td>
                   <td className="px-3 py-2 text-right tabular-nums">{formatBRL(total)}</td>
                 </tr>
@@ -442,16 +443,16 @@ export function OrcamentoPagamento({ value, parcelas, totalLiquido, entradaValor
           </div>
         ) : (
           <p className="text-muted-foreground text-xs">
-            Informe a data da 1ª parcela e adicione itens para gerar o cronograma automaticamente.
+            {tx("Informe a data da 1ª parcela e adicione itens para gerar o cronograma automaticamente.")}
           </p>
         )}
 
         {!avista && parcelas.length >= 2 && !readOnly && (
           <div className="text-muted-foreground flex flex-wrap items-center gap-2 text-xs">
-            <span>Altere o valor ou a data de qualquer parcela: o saldo é rateado automaticamente nas demais.</span>
+            <span>{tx("Altere o valor ou a data de qualquer parcela: o saldo é rateado automaticamente nas demais.")}</span>
             {Object.keys(value.datas ?? {}).length > 0 && (
               <button type="button" className="text-primary underline underline-offset-2" onClick={() => onChange({ datas: {} })}>
-                Restaurar datas mensais
+                {tx("Restaurar datas mensais")}
               </button>
             )}
             {temFixas && (
@@ -460,7 +461,7 @@ export function OrcamentoPagamento({ value, parcelas, totalLiquido, entradaValor
                 className="text-primary underline underline-offset-2"
                 onClick={() => onChange({ fixas: {} })}
               >
-                Recalcular parcelas iguais
+                {tx("Recalcular parcelas iguais")}
               </button>
             )}
           </div>

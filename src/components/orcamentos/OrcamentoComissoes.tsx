@@ -1,3 +1,4 @@
+import { tx } from "@/lib/i18n-termos";
 import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, Calculator } from "lucide-react";
 import { toast } from "sonner";
@@ -136,12 +137,12 @@ export function OrcamentoComissoes({ linhas, orcamentoId, vendedorId, usuarios, 
     <Collapsible open={aberto} onOpenChange={setAberto} className="rounded-lg border">
       <CollapsibleTrigger className="flex w-full items-center gap-2 px-4 py-3 text-left font-semibold">
         <Calculator className="h-4 w-4" />
-        Memória de Cálculo &amp; Comissões
+        {tx("Memória de Cálculo & Comissões")}
         <ChevronDown className={cn("ml-auto h-4 w-4 transition-transform", aberto && "rotate-180")} />
       </CollapsibleTrigger>
       <CollapsibleContent className="space-y-4 px-4 pb-4">
         {memoria.length === 0 ? (
-          <p className="text-muted-foreground text-sm">Adicione itens para ver a memória de cálculo.</p>
+          <p className="text-muted-foreground text-sm">{tx("Adicione itens para ver a memória de cálculo.")}</p>
         ) : (
           <div className="grid gap-3 md:grid-cols-3">
             {memoria.map((g) => (
@@ -152,27 +153,27 @@ export function OrcamentoComissoes({ linhas, orcamentoId, vendedorId, usuarios, 
                     {g.natureza === "recorrente" ? "Mensal" : "Pontual"} · base {g.base === "bruto" ? "venda" : "líquido"}
                   </span>
                 </div>
-                <Linha label="Venda" valor={g.venda} />
-                <Linha label="Compra" valor={g.compra} neg />
-                <Linha label="Imposto" pct={g.imposto_pct} valor={g.imposto} neg />
-                <Linha label="Outros custos" pct={g.outros_pct} valor={g.outros} neg />
-                <Linha label="Líquido sem comissão" valor={g.liquido} forte />
+                <Linha label={tx("Venda")} valor={g.venda} />
+                <Linha label={tx("Compra")} valor={g.compra} neg />
+                <Linha label={tx("Imposto")} pct={g.imposto_pct} valor={g.imposto} neg />
+                <Linha label={tx("Outros custos")} pct={g.outros_pct} valor={g.outros} neg />
+                <Linha label={tx("Líquido sem comissão")} valor={g.liquido} forte />
                 {g.comissoes.map((c) => (
                   <Linha key={c.papel_id} label={c.nome} pct={c.pct} valor={c.valor} neg />
                 ))}
-                <Linha label="Resultado da empresa" valor={g.resultado} forte />
+                <Linha label={tx("Resultado da empresa")} valor={g.resultado} forte />
               </div>
             ))}
           </div>
         )}
 
         {papeis.length === 0 && (
-          <p className="text-muted-foreground text-sm">Nenhum papel de comissão cadastrado. Configure em Comissões › Configuração.</p>
+          <p className="text-muted-foreground text-sm">{tx("Nenhum papel de comissão cadastrado. Configure em Comissões › Configuração.")}</p>
         )}
 
         {orcamentoId && papeisUsados.length > 0 && perms.canCreate && (
           <div className="space-y-2 border-t pt-3">
-            <p className="text-sm font-medium">Beneficiários da equipe</p>
+            <p className="text-sm font-medium">{tx("Beneficiários da equipe")}</p>
             <div className="grid gap-2 sm:grid-cols-3">
               {pessoas.map(([id, nome]) => (
                 <div key={id} className="space-y-1">
@@ -184,7 +185,7 @@ export function OrcamentoComissoes({ linhas, orcamentoId, vendedorId, usuarios, 
                     }}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value={NONE}>Não informado</SelectItem>
+                      <SelectItem value={NONE}>{tx("Não informado")}</SelectItem>
                       {usuarios.map((u) => (
                         <SelectItem key={text(rowId(u))} value={text(rowId(u))}>{text(pick(u, ["nome", "email"]))}</SelectItem>
                       ))}
@@ -195,11 +196,11 @@ export function OrcamentoComissoes({ linhas, orcamentoId, vendedorId, usuarios, 
             </div>
             {fundos.length > 0 && (
               <>
-                <p className="pt-2 text-sm font-medium">Fundos &amp; reservas da empresa</p>
+                <p className="pt-2 text-sm font-medium">{tx("Fundos & reservas da empresa")}</p>
                 <div className="grid gap-2 sm:grid-cols-3">
                   {fundos.map(([id, nome]) => (
                     <label key={id} className="flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm">
-                      <span>{nome}{!papelPorId.get(id)?.conta_bancaria_id && <span className="block text-xs text-muted-foreground">Sem conta de aplicação definida</span>}</span>
+                      <span>{nome}{!papelPorId.get(id)?.conta_bancaria_id && <span className="block text-xs text-muted-foreground">{tx("Sem conta de aplicação definida")}</span>}</span>
                       <Switch checked={benefDe(id, nome) === FUNDO} onCheckedChange={(v) => {
                         const novo = { ...benef, [id]: v ? FUNDO : "" };
                         setBenef(novo);
@@ -218,7 +219,7 @@ export function OrcamentoComissoes({ linhas, orcamentoId, vendedorId, usuarios, 
             <p className="text-muted-foreground text-xs">Somente papéis com beneficiário informado (ou fundo ligado) geram comissão. Ao pagar um fundo, o aporte entra no Contas a Pagar na conta de aplicação. A escolha é salva automaticamente; "Registrar" recalcula as comissões não pagas.</p>
           </div>
         )}
-        {!orcamentoId && <p className="text-muted-foreground text-xs">Salve a oferta para registrar as comissões.</p>}
+        {!orcamentoId && <p className="text-muted-foreground text-xs">{tx("Salve a oferta para registrar as comissões.")}</p>}
       </CollapsibleContent>
     </Collapsible>
   );

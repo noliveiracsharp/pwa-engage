@@ -1,3 +1,4 @@
+import { tx } from "@/lib/i18n-termos";
 import { useEffect, useRef, useState } from "react";
 import { Check, ChevronUp, Eye, MapPin, Pencil, Plus, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -185,8 +186,8 @@ export function OrcamentoLinhas({
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8"
-                    aria-label="Remover item"
-                    title="Remover item"
+                    aria-label={tx("Remover item")}
+                    title={tx("Remover item")}
                     onClick={() => onRemove(l.key)}
                   >
                     <Trash2 className="text-destructive h-4 w-4" />
@@ -205,7 +206,7 @@ export function OrcamentoLinhas({
                     </span>
                     <div className="min-w-0 flex-1 space-y-1.5">
                       <Label htmlFor={`item-${l.key}`} className="block text-xs font-medium">
-                        Item (produto ou serviço)
+                        {tx("Item (produto ou serviço)")}
                       </Label>
                       <div className="flex gap-1.5">
                       <SearchSelect
@@ -214,13 +215,13 @@ export function OrcamentoLinhas({
                         value={l.item_id}
                         onChange={(id) => onSelectItem(l.key, id)}
                         options={itemOptions}
-                        placeholder="Selecione o item"
+                        placeholder={tx("Selecione o item")}
                         searchPlaceholder="Código ou descrição…"
                         emptyText="Nenhum item ativo encontrado."
                         disabled={Boolean(readOnly)}
                       />
                       {!readOnly && (
-                        <Button type="button" variant="outline" size="icon" className="shrink-0" aria-label="Cadastrar novo item" title="Cadastrar novo item" onClick={() => setQuickFor(l.key)}>
+                        <Button type="button" variant="outline" size="icon" className="shrink-0" aria-label={tx("Cadastrar novo item")} title={tx("Cadastrar novo item")} onClick={() => setQuickFor(l.key)}>
                           <Plus className="h-4 w-4" />
                         </Button>
                       )}
@@ -248,7 +249,7 @@ export function OrcamentoLinhas({
                         </Select>
                         {todosBlocos.length > 0 && (
                           <>
-                            <Label className="ml-2 text-xs font-medium">Ambiente</Label>
+                            <Label className="ml-2 text-xs font-medium">{tx("Ambiente")}</Label>
                             <Select
                               value={l.bloco.trim() || NONE}
                               onValueChange={(v) => onChange(l.key, { bloco: v === NONE ? "" : v })}
@@ -258,7 +259,7 @@ export function OrcamentoLinhas({
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value={NONE}>Itens gerais</SelectItem>
+                                <SelectItem value={NONE}>{tx("Itens gerais")}</SelectItem>
                                 {todosBlocos.map((b) => (
                                   <SelectItem key={b} value={b}>{b}</SelectItem>
                                 ))}
@@ -269,20 +270,20 @@ export function OrcamentoLinhas({
                       </div>
                       {pagadorOptions.length > 0 && (
                         <div className="flex flex-wrap items-center gap-2 pt-1">
-                          <Label className="text-xs font-medium">Faturar para</Label>
+                          <Label className="text-xs font-medium">{tx("Faturar para")}</Label>
                           <SearchSelect
                             className="w-72 max-w-full"
                             value={l.faturar_para_id}
                             onChange={(v) => onChange(l.key, { faturar_para_id: v })}
                             options={pagadorOptions}
-                            placeholder="Próprio cliente da Oferta"
+                            placeholder={tx("Próprio cliente da Oferta")}
                             searchPlaceholder="Nome ou CNPJ…"
                             emptyText="Nenhum parceiro encontrado."
                             disabled={Boolean(readOnly)}
                           />
                           {l.faturar_para_id && !readOnly && (
                             <Button type="button" variant="ghost" size="sm" className="h-7 text-xs" onClick={() => onChange(l.key, { faturar_para_id: "" })}>
-                              Usar o cliente
+                              {tx("Usar o cliente")}
                             </Button>
                           )}
                         </div>
@@ -295,8 +296,8 @@ export function OrcamentoLinhas({
                           variant="ghost"
                           size="icon"
                           className="mt-6 h-8 w-8"
-                          aria-label="Recolher item"
-                          title="Recolher"
+                          aria-label={tx("Recolher item")}
+                          title={tx("Recolher")}
                           onClick={() => toggleAberta(l.key)}
                         >
                           <ChevronUp className="h-4 w-4" />
@@ -308,8 +309,8 @@ export function OrcamentoLinhas({
                           variant="ghost"
                           size="icon"
                           className="mt-6 h-8 w-8"
-                          aria-label="Remover item"
-                          title="Remover item"
+                          aria-label={tx("Remover item")}
+                          title={tx("Remover item")}
                           onClick={() => onRemove(l.key)}
                         >
                           <Trash2 className="text-destructive h-4 w-4" />
@@ -321,12 +322,12 @@ export function OrcamentoLinhas({
                   <div className="grid grid-cols-2 gap-3 pl-7 sm:grid-cols-12">
                     <div className="col-span-2 space-y-1.5 sm:col-span-4">
                       <Label htmlFor={`detalhe-${l.key}`} className="block text-xs font-medium">
-                        Detalhe
+                        {tx("Detalhe")}
                       </Label>
                       <Input
                         id={`detalhe-${l.key}`}
                         value={l.detalhe}
-                        placeholder="Observação da linha"
+                        placeholder={tx("Observação da linha")}
                         onChange={(e) => onChange(l.key, { detalhe: e.target.value })}
                       />
                     </div>
@@ -353,14 +354,14 @@ export function OrcamentoLinhas({
                         value={l.unidade_medida_id}
                         onChange={(v) => onChange(l.key, { unidade_medida_id: v })}
                         options={unidadeOptions}
-                        placeholder="Unid."
+                        placeholder={tx("Unid.")}
                         searchPlaceholder="Pesquisar…"
                         disabled={Boolean(readOnly)}
                       />
                     </div>
                     <div className="space-y-1.5 sm:col-span-2">
                       <Label htmlFor={`vu-${l.key}`} className="block text-xs font-medium">
-                        Unitário (R$)
+                        {tx("Unitário (R$)")}
                       </Label>
                       <Input
                         id={`vu-${l.key}`}
@@ -373,7 +374,7 @@ export function OrcamentoLinhas({
                       />
                     </div>
                     <div className="space-y-1.5 sm:col-span-2">
-                      <Label className="block text-xs font-medium">Total da linha</Label>
+                      <Label className="block text-xs font-medium">{tx("Total da linha")}</Label>
                       <div className="bg-muted/50 flex h-10 items-center justify-end rounded-md border px-3 text-sm font-semibold tabular-nums">
                         {formatBRL(c.total_linha)}
                       </div>
@@ -412,7 +413,7 @@ export function OrcamentoLinhas({
                     </span>}
                     {semCusto && !ocultarCusto && (
                       <span className="text-warning-foreground bg-warning/40 rounded px-1.5">
-                        Item sem custo cadastrado
+                        {tx("Item sem custo cadastrado")}
                       </span>
                     )}
                   </div>
@@ -425,10 +426,10 @@ export function OrcamentoLinhas({
                         size="sm"
                         onClick={() => cancelar(l.key)}
                       >
-                        <X className="mr-1 h-4 w-4" /> Cancelar edição
+                        <X className="mr-1 h-4 w-4" /> {tx("Cancelar edição")}
                       </Button>
                       <Button type="button" size="sm" onClick={() => { toggleAberta(l.key); onItemSalvo?.(); }}>
-                        <Check className="mr-1 h-4 w-4" /> Salvar item
+                        <Check className="mr-1 h-4 w-4" /> {tx("Salvar item")}
                       </Button>
                     </div>
                   )}
@@ -459,7 +460,7 @@ export function OrcamentoLinhas({
                     </p>
                     {semCusto && (
                       <span className="text-warning-foreground bg-warning/40 mt-1 inline-block rounded px-1 text-[10px]">
-                        Item sem custo cadastrado
+                        {tx("Item sem custo cadastrado")}
                       </span>
                     )}
                   </div>
@@ -537,9 +538,9 @@ export function OrcamentoLinhas({
   const cabecalhoTabela = (
     <div className={cn("text-muted-foreground bg-muted/40 hidden border-b px-3 py-2 text-xs font-medium", GRID)}>
       <span>#</span>
-      <span>Item</span>
-      <span className="text-right">Qtd</span>
-      <span className="text-right">Unitário</span>
+      <span>{tx("Item")}</span>
+      <span className="text-right">{tx("Qtd")}</span>
+      <span className="text-right">{tx("Unitário")}</span>
       <span className="text-right">Total</span>
       <span className="text-right">Ações</span>
     </div>
@@ -571,10 +572,10 @@ export function OrcamentoLinhas({
           )}
           {!readOnly && bloco && !editandoNome && (
             <>
-              <Button type="button" variant="ghost" size="icon" className="h-7 w-7" title="Renomear ambiente" aria-label="Renomear ambiente" onClick={() => setRenomeando({ bloco, valor: bloco })}>
+              <Button type="button" variant="ghost" size="icon" className="h-7 w-7" title={tx("Renomear ambiente")} aria-label={tx("Renomear ambiente")} onClick={() => setRenomeando({ bloco, valor: bloco })}>
                 <Pencil className="h-3.5 w-3.5" />
               </Button>
-              <Button type="button" variant="ghost" size="icon" className="h-7 w-7" title="Excluir ambiente" aria-label="Excluir ambiente" onClick={() => excluirAmbiente(bloco, rows)}>
+              <Button type="button" variant="ghost" size="icon" className="h-7 w-7" title={tx("Excluir ambiente")} aria-label={tx("Excluir ambiente")} onClick={() => excluirAmbiente(bloco, rows)}>
                 <Trash2 className="text-destructive h-3.5 w-3.5" />
               </Button>
             </>
@@ -590,7 +591,7 @@ export function OrcamentoLinhas({
         )}
         {rows.length > 0 && cabecalhoTabela}
         {rows.length === 0 && (
-          <p className="text-muted-foreground p-4 text-center text-xs">Nenhum item neste ambiente ainda.</p>
+          <p className="text-muted-foreground p-4 text-center text-xs">{tx("Nenhum item neste ambiente ainda.")}</p>
         )}
         {[...rows.filter((l) => novas.current.has(l.key)), ...rows.filter((l) => !novas.current.has(l.key))].map((l) =>
           renderLinha(l, numero.get(l.key) ?? 0),
@@ -610,7 +611,7 @@ export function OrcamentoLinhas({
         </h3>
         {!readOnly && !criando && (
           <Button type="button" variant="outline" size="sm" onClick={() => setCriando(true)}>
-            <MapPin className="mr-1 h-4 w-4" /> Novo ambiente / bloco
+            <MapPin className="mr-1 h-4 w-4" /> {tx("Novo ambiente / bloco")}
           </Button>
         )}
       </div>
@@ -620,7 +621,7 @@ export function OrcamentoLinhas({
           <Input
             autoFocus
             className="h-9 max-w-sm flex-1"
-            placeholder="Nome do ambiente (ex.: Frente do condomínio)"
+            placeholder={tx("Nome do ambiente (ex.: Frente do condomínio)")}
             value={novoNome}
             onChange={(e) => setNovoNome(e.target.value)}
             onKeyDown={(e) => {
@@ -629,10 +630,10 @@ export function OrcamentoLinhas({
             }}
           />
           <Button type="button" size="sm" onClick={criarAmbiente} disabled={!novoNome.trim()}>
-            <Check className="mr-1 h-4 w-4" /> Criar
+            <Check className="mr-1 h-4 w-4" /> {tx("Criar")}
           </Button>
           <Button type="button" variant="ghost" size="sm" onClick={() => { setCriando(false); setNovoNome(""); }}>
-            Cancelar
+            {tx("Cancelar")}
           </Button>
         </div>
       )}
@@ -647,7 +648,7 @@ export function OrcamentoLinhas({
             </div>
             {!readOnly && (
               <Button type="button" variant="outline" className="w-full" onClick={() => onAdd("")}>
-                <Plus className="mr-1 h-4 w-4" /> Adicionar item geral
+                <Plus className="mr-1 h-4 w-4" /> {tx("Adicionar item geral")}
               </Button>
             )}
           </>
@@ -657,7 +658,7 @@ export function OrcamentoLinhas({
       )}
       {!readOnly && gerais.length === 0 && secoes.length > 0 && (
         <Button type="button" variant="ghost" size="sm" className="text-muted-foreground w-full" onClick={() => onAdd("")}>
-          <Plus className="mr-1 h-4 w-4" /> Adicionar item geral (sem ambiente)
+          <Plus className="mr-1 h-4 w-4" /> {tx("Adicionar item geral (sem ambiente)")}
         </Button>
       )}
       <NovoItemCompleto

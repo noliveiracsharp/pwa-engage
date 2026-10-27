@@ -1,3 +1,4 @@
+import { tx } from "@/lib/i18n-termos";
 import { HandCoins, Repeat } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -49,7 +50,7 @@ export function OrcamentoModalidade({
       <div className="bg-card space-y-4 rounded-lg border p-4">
         <div className="flex items-center gap-2 text-sm font-semibold">
           <HandCoins className="text-muted-foreground h-4 w-4" />
-          Implantação: condição comercial
+          {tx("Implantação: condição comercial")}
         </div>
         <ToggleGroup
           type="single"
@@ -73,7 +74,7 @@ export function OrcamentoModalidade({
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-3">
               <Label htmlFor="desconto_avista" className="text-sm">
-                Desconto à vista
+                {tx("Desconto à vista")}
               </Label>
               <ToggleGroup
                 type="single"
@@ -110,7 +111,7 @@ export function OrcamentoModalidade({
                 </>
               ) : (
                 <>
-                  Total à vista: <strong className="tabular-nums">{formatBRL(totalAvista)}</strong>
+                  {tx("Total à vista:")} <strong className="tabular-nums">{formatBRL(totalAvista)}</strong>
                 </>
               )}
             </div>
@@ -121,7 +122,7 @@ export function OrcamentoModalidade({
           <div className="space-y-3">
             <div className="space-y-1.5">
               <Label htmlFor="taxa_instalacao" className="text-sm">
-                Taxa de instalação (R$)
+                {tx("Taxa de instalação (R$)")}
               </Label>
               <Input
                 id="taxa_instalacao"
@@ -136,7 +137,7 @@ export function OrcamentoModalidade({
             <div className="flex items-start justify-between gap-3 rounded-md border p-3">
               <div className="space-y-0.5">
                 <Label htmlFor="taxa_isenta" className="text-sm">
-                  Isentar taxa de instalação
+                  {tx("Isentar taxa de instalação")}
                 </Label>
                 <p className="text-muted-foreground text-xs">
                   Isenção condicionada à vigência de {meses} meses; se cancelar antes, a taxa é cobrada
@@ -151,7 +152,7 @@ export function OrcamentoModalidade({
               />
             </div>
             <p className="text-muted-foreground text-xs">
-              Os equipamentos permanecem propriedade da empresa. O parcelamento segue a regra com juros.
+              {tx("Os equipamentos permanecem propriedade da empresa. O parcelamento segue a regra com juros.")}
             </p>
           </div>
         )}
@@ -160,16 +161,16 @@ export function OrcamentoModalidade({
       <div className="bg-card space-y-4 rounded-lg border p-4">
         <div className="flex items-center gap-2 text-sm font-semibold">
           <Repeat className="text-muted-foreground h-4 w-4" />
-          Serviços recorrentes mensais
+          {tx("Serviços recorrentes mensais")}
         </div>
         <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">Mensalidade total</span>
+          <span className="text-muted-foreground">{tx("Mensalidade total")}</span>
           <strong className="tabular-nums">{formatBRL(totalRecorrente)}/mês</strong>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label htmlFor="vigencia_meses" className="text-sm">
-              Vigência (meses)
+              {tx("Vigência (meses)")}
             </Label>
             <Input
               id="vigencia_meses"
@@ -183,7 +184,7 @@ export function OrcamentoModalidade({
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="reajuste_indice" className="text-sm">
-              Reajuste anual
+              {tx("Reajuste anual")}
             </Label>
             <Input
               id="reajuste_indice"
@@ -195,14 +196,14 @@ export function OrcamentoModalidade({
         </div>
         <div className="flex items-center justify-between gap-3 rounded-md border p-3">
           <div>
-            <Label htmlFor="prazo_indeterminado" className="text-sm">Contrato sem prazo de término</Label>
-            <p className="text-muted-foreground text-xs">O sistema mantém sempre os próximos 12 meses de mensalidade lançados.</p>
+            <Label htmlFor="prazo_indeterminado" className="text-sm">{tx("Contrato sem prazo de término")}</Label>
+            <p className="text-muted-foreground text-xs">{tx("O sistema mantém sempre os próximos 12 meses de mensalidade lançados.")}</p>
           </div>
           <Switch id="prazo_indeterminado" checked={value.prazo_indeterminado} disabled={Boolean(readOnly)} onCheckedChange={(x) => onChange({ prazo_indeterminado: x })} />
         </div>
         {totalRecorrente <= 0 && (
           <p className="text-muted-foreground text-xs">
-            Marque itens como “Serviço recorrente (mensal)” para compor a mensalidade.
+            {tx("Marque itens como “Serviço recorrente (mensal)” para compor a mensalidade.")}
           </p>
         )}
       </div>

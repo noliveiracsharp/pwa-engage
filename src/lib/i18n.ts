@@ -264,6 +264,8 @@ export function traduzir(idioma: Idioma, chave: ChaveTraducao, vars?: Record<str
   return txt;
 }
 
+export const idiomaAtual = () => atual;
+
 export function definirIdioma(id: Idioma) {
   atual = id;
   if (typeof window !== "undefined") {
