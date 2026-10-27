@@ -21,3 +21,5 @@
 - Item categories are per-company rows in `itens_categorias` (default cost center, account, fiscal); `useCategoriasItens` falls back to the factory list in src/lib/itens-categorias.ts when a company has none, so new tenants work before onboarding.
 
 - Approval workflows (Ofertas and Cotações) follow the same pattern: per-company config table + immutable vote table; config buttons and strategic data are gated by child Funções (`/<tela>/workflow`, `/orcamentos/estrategico`) so access is managed per perfil.
+
+- i18n: custom dependency-free engine in src/lib/i18n.ts (dictionaries + Intl formatters); add keys to all three dictionaries together — keeps bundle small and SSR-safe.
