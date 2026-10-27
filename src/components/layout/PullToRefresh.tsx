@@ -14,8 +14,10 @@ export function PullToRefresh({ children, className }: { children: ReactNode; cl
 
   return (
     <main
+      id="conteudo-principal"
+      tabIndex={-1}
       ref={ref}
-      className={className}
+      className={`${className ?? ""} focus:outline-none`}
       onTouchStart={(e) => {
         inicio.current = null;
         const main = ref.current;

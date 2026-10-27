@@ -108,8 +108,8 @@ function LoginPage() {
         </div>
       </div>
 
-      <div className="flex h-full min-h-0 w-full items-center justify-center overflow-y-auto p-6 lg:w-1/2">
-        <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-5">
+      <main id="conteudo-principal" tabIndex={-1} className="flex h-full min-h-0 w-full items-center justify-center overflow-y-auto p-6 focus:outline-none lg:w-1/2">
+        <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-5" aria-label="Entrar no sistema">
           <div className="space-y-1 text-center lg:text-left">
             {logoMarca && <img src={logoMarca} alt={nomeMarca} data-no-zoom className="mx-auto mb-4 h-14 w-auto object-contain lg:mx-0" />}
             <h1 className="text-2xl font-bold text-foreground">Bem-vindo de volta</h1>
@@ -148,14 +148,17 @@ function LoginPage() {
                 className="pr-10"
                 placeholder="••••••••"
               />
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon"
+                autoLock={false}
                 onClick={() => setShow((v) => !v)}
                 aria-label={show ? "Ocultar senha" : "Mostrar senha"}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                className="absolute right-0.5 top-1/2 h-8 w-8 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
-                {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
+                {show ? <EyeOff /> : <Eye />}
+              </Button>
             </div>
           </div>
 
