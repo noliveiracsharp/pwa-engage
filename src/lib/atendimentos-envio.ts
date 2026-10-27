@@ -32,10 +32,19 @@ type Envio = {
   midiaUrl?: string | undefined;
   tipo?: string | undefined;
   nomeArquivo?: string | undefined;
+  /** ID da mensagem no WhatsApp que está sendo respondida (citação nativa). */
+  responderA?: string | null | undefined;
 };
 
-/** Dispara a mensagem conforme o tipo_envio da instância. Retorna true se enviou. */
-export async function dispararMensagem(e: Envio): Promise<boolean> {
+/** ID da mensagem devolvido pela Z-API (usado para confirmações de entrega/leitura). */
+async function idZapi(r: Response): Promise<string | null> {
+  const j = (await r.json().catch(() => null)) as Record<string, unknown> | null;
+  const v = j?.["messageId"] ?? j?.["id"] ?? j?.["zaapId"];
+  return typeof v === "string" && v ? v : null;
+}
+
+/** Dispara a mensagem conforme o tipo_envio da instância. Retorna o ID da Z-API (ou true) se enviou. */
+export async function dispararMensagem(e: Envio): Promise<string | true> {
   const inst = e.instancia;
   if (!inst) throw new Error("Instância não encontrada.");
   // Chat do site: a mensagem já está gravada e o widget a lê do banco.
@@ -89,6 +98,10 @@ export async function dispararMensagem(e: Envio): Promise<boolean> {
       endpoint = `send-document/${ext}`; // a Z-API exige a extensão no caminho
       body = { phone, document: e.midiaUrl, fileName: e.nomeArquivo };
     }
+    if (e.responderA) body["messageId"] = e.responderA;
+  } else if (e.responderA) {
+    // Resposta citando: texto simples para manter a citação nativa no WhatsApp.
+    body = { phone, message: e.texto, messageId: e.responderA };
   } else {
     // Link vira botão "Acesse" (URL escondida); se o WhatsApp recusar botões, cai no texto com o link em linha própria.
     const { mensagem, url } = separarLink(e.texto);
@@ -97,7 +110,7 @@ export async function dispararMensagem(e: Envio): Promise<boolean> {
         method: "POST", headers,
         body: JSON.stringify({ phone, message: mensagem, buttonActions: [{ id: "1", type: "URL", url, label: "Acesse" }] }),
       }).catch(() => null);
-      if (rb?.ok) return true;
+      if (rb?.ok) return (await idZapi(rb)) ?? true;
       body = { phone, message: `${mensagem}\n\n${url}` };
     }
   }
@@ -106,11 +119,17 @@ export async function dispararMensagem(e: Envio): Promise<boolean> {
     const detalhe = await r.text().catch(() => "");
     throw new Error(`Z-API respondeu ${r.status}${detalhe ? `: ${detalhe.slice(0, 200)}` : ""}`);
   }
-  return true;
+  return (await idZapi(r)) ?? true;
 }
 
-/** Atualiza status_envio da mensagem (ignora se a coluna não existir). */
-export async function marcarEnvio(mensagemId: unknown, status: "enviado" | "falha") {
+/** Atualiza status_envio da mensagem e guarda o ID da Z-API para receber entregue/lido. */
+export async function marcarEnvio(mensagemId: unknown, status: "enviado" | "falha", idWhatsApp?: string | true | null) {
   if (mensagemId == null) return;
-  await supabase.from("atendimentos_mensagem").update({ status_envio: status } as never).eq("id", mensagemId as never);
+  const dados: Record<string, unknown> = { status_envio: status };
+  if (typeof idWhatsApp === "string") dados["message_id_zapi"] = idWhatsApp;
+  const { error } = await supabase.from("atendimentos_mensagem").update(dados as never).eq("id", mensagemId as never);
+  // Banco sem a coluna message_id_zapi: grava só o status.
+  if (error && "message_id_zapi" in dados) {
+    await supabase.from("atendimentos_mensagem").update({ status_envio: status } as never).eq("id", mensagemId as never);
+  }
 }
