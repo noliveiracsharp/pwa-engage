@@ -104,7 +104,7 @@ export function FilterSelect({
     <div>
       <Label className="mb-1.5 block text-xs uppercase tracking-wide text-muted-foreground">{label}</Label>
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger>
+        <SelectTrigger aria-label={label}>
           <SelectValue placeholder="Todos" />
         </SelectTrigger>
         <SelectContent>

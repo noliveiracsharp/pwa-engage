@@ -12,7 +12,8 @@ function contraste(hex: string) {
     return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
   });
   const lum = 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
-  return lum > 0.4 ? "oklch(0.15 0.03 255)" : "oklch(0.99 0.005 247)";
+  // Escolhe o texto com maior contraste (WCAG): branco vs. quase-preto.
+  return (lum + 0.05) / 0.06 > 1.05 / (lum + 0.05) ? "oklch(0.15 0.03 255)" : "oklch(0.99 0.005 247)";
 }
 
 function luminancia(hex: string) {
@@ -25,7 +26,7 @@ function luminancia(hex: string) {
 }
 
 /** No tema escuro, clareia cores de marca muito escuras (mistura com branco) até ficarem legíveis sobre fundo escuro. */
-export function clarearParaEscuro(hex: string, minLum = 0.25) {
+export function clarearParaEscuro(hex: string, minLum = 0.32) {
   if (!HEX.test(hex) || luminancia(hex) >= minLum) return hex;
   const n = parseInt(hex.slice(1), 16);
   const rgb = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
