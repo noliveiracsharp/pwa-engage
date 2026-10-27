@@ -18,6 +18,7 @@ import { COTACAO_STATUS } from "@/lib/laudos";
 import { pick, type Row } from "@/lib/row";
 import { etapasDoKanban, kanbanDoModulo, type EtapaKanban } from "@/lib/orcamento-kanban";
 import { ChecklistImplantacao } from "@/components/dashboard/ChecklistImplantacao";
+import { useIdioma, type ChaveTraducao } from "@/lib/i18n";
 
 const normTxt = (v: unknown) => String(v ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 type GrupoEtapa = EtapaKanban & { n: number; v: number };
@@ -143,6 +144,7 @@ function Secao({ title, icon: Icon, children }: { title: string; icon: typeof Us
 
 /* ---------------- Meu trabalho ---------------- */
 function MeuTrabalho() {
+  const { t, idioma } = useIdioma();
   const { usuarioId } = useAudit();
   const uid = String(usuarioId ?? "");
   const { data } = useQuery({
@@ -168,24 +170,24 @@ function MeuTrabalho() {
   const doDia = itens.filter((i) => i.fim && String(i.fim).slice(0, 10) === h).length;
 
   return (
-    <Secao title="Meu trabalho" icon={ClipboardList}>
+    <Secao title={t("dash.meuTrabalho")} icon={ClipboardList}>
       <div className="grid gap-4 sm:grid-cols-3">
-        <Kpi title="Pendentes comigo" value={itens.length} icon={ClipboardList} />
-        <Kpi title="Vencem hoje" value={doDia} icon={Bell} tone="warning" />
-        <Kpi title="Atrasadas" value={atrasadas} icon={AlertTriangle} tone="destructive" />
+        <Kpi title={t("dash.pendentesComigo")} value={itens.length} icon={ClipboardList} />
+        <Kpi title={t("dash.vencemHoje")} value={doDia} icon={Bell} tone="warning" />
+        <Kpi title={t("dash.atrasadas")} value={atrasadas} icon={AlertTriangle} tone="destructive" />
       </div>
       <div className="grid gap-4 xl:grid-cols-2">
         <Card>
-          <CardHeader><CardTitle className="text-base">Minhas tarefas e atividades</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base">{t("dash.minhasTarefas")}</CardTitle></CardHeader>
           <CardContent className="max-h-80 space-y-2 overflow-y-auto">
-            {itens.length === 0 && <p className="text-sm text-muted-foreground">Nada pendente com você. 🎉</p>}
+            {itens.length === 0 && <p className="text-sm text-muted-foreground">{t("dash.nadaPendente")}</p>}
             {itens.slice(0, 30).map((i, idx) => {
               const d = i.fim ? String(i.fim).slice(0, 10) : "";
               const tone = d && d < h ? "bg-destructive" : d === h ? "bg-warning" : "bg-success";
               return (
                 <Link key={idx} to="/projetos" className="flex items-center gap-3 rounded-md border border-border p-2 text-sm hover:bg-accent">
                   <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${tone}`} />
-                  <span className="min-w-0 flex-1 truncate"><span className="text-muted-foreground">{i.tipo}: </span>{i.nome}</span>
+                  <span className="min-w-0 flex-1 truncate"><span className="text-muted-foreground">{t(i.tipo === "Tarefa" ? "dash.tarefa" : "dash.atividade")}: </span>{i.nome}</span>
                   <span className="shrink-0 text-xs text-muted-foreground">{fmtData(i.fim)}</span>
                 </Link>
               );
@@ -193,13 +195,13 @@ function MeuTrabalho() {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader><CardTitle className="text-base">Atualizações para você</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base">{t("dash.atualizacoes")}</CardTitle></CardHeader>
           <CardContent className="max-h-80 space-y-2 overflow-y-auto">
-            {(data?.eventos ?? []).length === 0 && <p className="text-sm text-muted-foreground">Sem atualizações recentes.</p>}
+            {(data?.eventos ?? []).length === 0 && <p className="text-sm text-muted-foreground">{t("dash.semAtualizacoes")}</p>}
             {(data?.eventos ?? []).map((e) => (
               <div key={String(e["id"])} className="rounded-md border border-border p-2 text-sm">
                 <p className="text-foreground">{String(e["descricao"] ?? "")}</p>
-                <p className="text-xs text-muted-foreground">{new Date(String(e["created_at"])).toLocaleString("pt-BR")}</p>
+                <p className="text-xs text-muted-foreground">{new Date(String(e["created_at"])).toLocaleString(idioma)}</p>
               </div>
             ))}
           </CardContent>
@@ -211,6 +213,7 @@ function MeuTrabalho() {
 
 /* ---------------- Projetos ---------------- */
 function PainelProjetos() {
+  const { t } = useIdioma();
   const empresaId = useEscopo();
   const { data } = useQuery({
     queryKey: ["dashboard", "projetos", empresaId],
@@ -225,12 +228,12 @@ function PainelProjetos() {
     },
   });
   return (
-    <Secao title="Projetos" icon={FolderKanban}>
+    <Secao title={t("dash.projetos")} icon={FolderKanban}>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Kpi title="Projetos ativos" value={data?.ativos ?? 0} icon={FolderKanban} />
-        <Kpi title="Com prazo vencido" value={data?.atrasados ?? 0} icon={AlertTriangle} tone="destructive" />
-        <Kpi title="Entregas em 7 dias" value={data?.entregas ?? 0} icon={Bell} tone="warning" />
-        <Kpi title="Concluídos" value={data?.concluidos ?? 0} icon={CheckCircle2} tone="success" />
+        <Kpi title={t("dash.projetosAtivos")} value={data?.ativos ?? 0} icon={FolderKanban} />
+        <Kpi title={t("dash.prazoVencido")} value={data?.atrasados ?? 0} icon={AlertTriangle} tone="destructive" />
+        <Kpi title={t("dash.entregas7")} value={data?.entregas ?? 0} icon={Bell} tone="warning" />
+        <Kpi title={t("dash.concluidos")} value={data?.concluidos ?? 0} icon={CheckCircle2} tone="success" />
       </div>
     </Secao>
   );
@@ -238,6 +241,7 @@ function PainelProjetos() {
 
 /* ---------------- Compras ---------------- */
 function PainelCompras() {
+  const { t } = useIdioma();
   const empresaId = useEscopo();
   const { data } = useQuery({
     queryKey: ["dashboard", "cotacoes", empresaId],
@@ -271,20 +275,20 @@ function PainelCompras() {
   });
   const tone = { pendente: "primary", em_cotacao: "warning", cotado: "primary", aguardando_aprovacao: "warning", aprovado: "success", pedido_gerado: "success", reprovado: "destructive", cancelado: "destructive" } as const;
   return (
-    <Secao title="Compras e cotações" icon={ShoppingCart}>
+    <Secao title={t("dash.compras")} icon={ShoppingCart}>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {COTACAO_STATUS.map((s) => (
-          <Kpi key={s.value} title={s.label} value={data?.get(s.value) ?? 0} icon={ShoppingCart} tone={tone[s.value as keyof typeof tone]} />
+          <Kpi key={s.value} title={t(`cot.${s.value}` as ChaveTraducao) ?? s.label} value={data?.get(s.value) ?? 0} icon={ShoppingCart} tone={tone[s.value as keyof typeof tone]} />
         ))}
       </div>
       {minhas.length > 0 && (
         <div className="rounded-lg border border-warning/50 bg-warning/10 p-4">
-          <div className="mb-2 flex items-center gap-2 font-semibold text-foreground"><Bell className="h-4 w-4 text-warning" />Cotações aguardando minha aprovação ({minhas.length})</div>
+          <div className="mb-2 flex items-center gap-2 font-semibold text-foreground"><Bell className="h-4 w-4 text-warning" />{t("dash.cotacoesMinhas", { n: minhas.length })}</div>
           <ul className="space-y-1 text-sm">
             {minhas.slice(0, 8).map((c) => (
               <li key={String(c["id"])} className="flex items-center justify-between gap-2">
                 <span className="truncate">{String(c["numero"] ?? "")} · {String(c["titulo"] || c["projeto_nome"] || "")}</span>
-                <Link to="/cotacoes" search={{ id: String(c["id"]) } as never} className="shrink-0 text-primary hover:underline">Revisar</Link>
+                <Link to="/cotacoes" search={{ id: String(c["id"]) } as never} className="shrink-0 text-primary hover:underline">{t("dash.revisar")}</Link>
               </li>
             ))}
           </ul>
@@ -296,6 +300,7 @@ function PainelCompras() {
 
 /* ---------------- Comercial ---------------- */
 function PainelComercial({ periodo }: { periodo: Periodo }) {
+  const { t } = useIdioma();
   const { usuarioId } = useAudit();
   const empresaId = useEscopo();
   const since = periodStart(periodo).toISOString();
@@ -320,26 +325,27 @@ function PainelComercial({ periodo }: { periodo: Periodo }) {
     },
   });
   return (
-    <Secao title="Comercial — Ofertas" icon={TrendingUp}>
-      {data && !data.temKanban && <p className="text-sm text-muted-foreground">Vincule um Kanban à função Ofertas para ver as etapas aqui.</p>}
+    <Secao title={t("dash.comercial")} icon={TrendingUp}>
+      {data && !data.temKanban && <p className="text-sm text-muted-foreground">{t("dash.vincularOfertas")}</p>}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {(data?.grupos ?? []).map((g) => <KpiEtapa key={g.id} g={g} valor />)}
       </div>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <Kpi title={data?.temGanha === false ? "Taxa de conversão (marque a etapa ganha)" : "Taxa de conversão"} value={`${data?.conv ?? 0}%`} icon={TrendingUp} />
-        <Kpi title="Ticket médio ganho" value={formatBRL(data?.ticket ?? 0)} icon={TrendingUp} />
-        <Kpi title="Minhas comissões a receber" value={formatBRL(data?.minhas ?? 0)} icon={HandCoins} tone="success" />
+        <Kpi title={data?.temGanha === false ? t("dash.conversaoMarque") : t("dash.conversao")} value={`${data?.conv ?? 0}%`} icon={TrendingUp} />
+        <Kpi title={t("dash.ticket")} value={formatBRL(data?.ticket ?? 0)} icon={TrendingUp} />
+        <Kpi title={t("dash.comissoes")} value={formatBRL(data?.minhas ?? 0)} icon={HandCoins} tone="success" />
       </div>
-      {!!data?.semEtapa && <p className="text-xs text-muted-foreground">{data.semEtapa} oferta(s) sem etapa correspondente no Kanban.</p>}
+      {!!data?.semEtapa && <p className="text-xs text-muted-foreground">{t("dash.semEtapa", { n: data.semEtapa })}</p>}
     </Secao>
   );
 }
 
 /* ---------------- Atendimento ---------------- */
 function PainelAtendimento() {
+  const { t, idioma } = useIdioma();
   const empresaId = useEscopo();
   const { data } = useQuery({
-    queryKey: ["dashboard", "atendimentos", empresaId],
+    queryKey: ["dashboard", "atendimentos", empresaId, idioma],
     queryFn: async () => {
       const [kanbanId, pessoas, todos] = await Promise.all([
         kanbanDoModulo("atendimentos", "atendimento"),
@@ -351,21 +357,21 @@ function PainelAtendimento() {
       const rows = await rowsOf("atendimentos", empresaId, (q) => q.gte("created_at", periodStart("ano").toISOString()));
       const meses = new Map<string, number>();
       for (const r of rows) {
-        const m = new Date(String(r["created_at"])).toLocaleDateString("pt-BR", { month: "short", year: "2-digit" });
+        const m = new Date(String(r["created_at"])).toLocaleDateString(idioma, { month: "short", year: "2-digit" });
         meses.set(m, (meses.get(m) ?? 0) + 1);
       }
       return { grupos, temKanban: !!kanbanId, pessoas, porMes: [...meses].map(([label, total]) => ({ label, total })) };
     },
   });
   return (
-    <Secao title="Atendimento" icon={Headphones}>
-      {data && !data.temKanban && <p className="text-sm text-muted-foreground">Vincule um Kanban à função Atendimentos para ver as etapas aqui.</p>}
+    <Secao title={t("dash.atendimento")} icon={Headphones}>
+      {data && !data.temKanban && <p className="text-sm text-muted-foreground">{t("dash.vincularAtend")}</p>}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {(data?.grupos ?? []).map((g) => <KpiEtapa key={g.id} g={g} />)}
-        <Kpi title="Contatos" value={data?.pessoas ?? 0} icon={Users} />
+        <Kpi title={t("dash.contatos")} value={data?.pessoas ?? 0} icon={Users} />
       </div>
       <Card>
-        <CardHeader><CardTitle className="text-base">Atendimentos por mês</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-base">{t("dash.atendPorMes")}</CardTitle></CardHeader>
         <CardContent className="h-64">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data?.porMes ?? []}>
@@ -384,6 +390,7 @@ function PainelAtendimento() {
 
 function Dashboard() {
   const [periodo, setPeriodo] = useState<Periodo>("mes");
+  const { t } = useIdioma();
   const { usuario } = useAuth();
   const projetos = usePagePermissions("/projetos").canRead;
   const cotacoes = usePagePermissions("/cotacoes").canRead;
@@ -403,24 +410,24 @@ function Dashboard() {
     : unidade === "todas" ? [empresaId, ...filiais.map((f) => f["id"])] : unidade;
   const nome = String(usuario?.["nome"] ?? "").split(" ")[0];
   const hora = new Date().getHours();
-  const saud = hora < 12 ? "Bom dia" : hora < 18 ? "Boa tarde" : "Boa noite";
+  const saud = t(hora < 12 ? "dash.bomDia" : hora < 18 ? "dash.boaTarde" : "dash.boaNoite");
 
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-foreground">{saud}{nome ? `, ${nome}` : ""}</h1>
-          <p className="text-sm text-muted-foreground">Painéis das áreas que você acessa.</p>
+          <p className="text-sm text-muted-foreground">{t("dash.subtitulo")}</p>
         </div>
         <div className="flex flex-wrap gap-2">
         {filiais.length > 0 && (
           <Select value={unidade} onValueChange={setUnidade}>
-            <SelectTrigger className="w-60" aria-label="Unidade"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-60" aria-label={t("dash.unidade")}><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="todas">Consolidado (todas as unidades)</SelectItem>
-              <SelectItem value={String(empresaId)}>Apenas matriz</SelectItem>
+              <SelectItem value="todas">{t("dash.consolidado")}</SelectItem>
+              <SelectItem value={String(empresaId)}>{t("dash.matriz")}</SelectItem>
               {filiais.map((f) => (
-                <SelectItem key={String(f["id"])} value={String(f["id"])}>{String(pick(f, ["titulo", "nome"]) ?? "Filial")}</SelectItem>
+                <SelectItem key={String(f["id"])} value={String(f["id"])}>{String(pick(f, ["titulo", "nome"]) ?? t("dash.filial"))}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -429,8 +436,8 @@ function Dashboard() {
           <Select value={periodo} onValueChange={(v) => setPeriodo(v as Periodo)}>
             <SelectTrigger className="w-52"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="mes">Mês atual</SelectItem>
-              <SelectItem value="ano">Últimos 12 meses</SelectItem>
+              <SelectItem value="mes">{t("dash.mesAtual")}</SelectItem>
+              <SelectItem value="ano">{t("dash.ultimos12")}</SelectItem>
             </SelectContent>
           </Select>
         )}
