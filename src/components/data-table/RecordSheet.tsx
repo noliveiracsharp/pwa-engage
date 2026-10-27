@@ -1,3 +1,4 @@
+import { termo, termoNo } from "@/lib/i18n-termos";
 import { useIdioma, tr } from "@/lib/i18n";
 import { HistoricoButton } from "@/components/auditoria/HistoricoButton";
 import { DocumentosButton } from "@/components/documentos/DocumentosPainel";
@@ -81,7 +82,7 @@ export function RecordSheet({
   auditTable,
   docs,
 }: Props) {
-  const { t } = useIdioma();
+  const { t, idioma } = useIdioma();
   const [values, setValues] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -156,7 +157,7 @@ export function RecordSheet({
             className={`min-w-0 space-y-1.5 ${field.full || field.type === "tel" ? "sm:col-span-2" : ""}`}
           >
             <Label htmlFor={key} className="block text-sm font-medium">
-              {field.label}
+              {termo(idioma, field.label)}
             </Label>
             {field.type === "icon" ? (
               <IconPicker
@@ -206,7 +207,7 @@ export function RecordSheet({
                 <SelectContent>
                   {(field.options ?? []).map((opt) => (
                     <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
+                      {termo(idioma, opt.label)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -260,7 +261,7 @@ export function RecordSheet({
             <Tabs key={allTabs[0]!.key} defaultValue={allTabs[0]!.key} className="px-6">
               <TabsList className="h-auto w-full flex-wrap">
                 {allTabs.map((t) => (
-                  <TabsTrigger key={t.key} value={t.key} className="flex-1">{t.label}</TabsTrigger>
+                  <TabsTrigger key={t.key} value={t.key} className="flex-1">{termo(idioma, t.label)}</TabsTrigger>
                 ))}
               </TabsList>
               {allTabs.map((t) => (

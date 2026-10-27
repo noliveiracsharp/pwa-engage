@@ -1,3 +1,4 @@
+import { termo, termoNo } from "@/lib/i18n-termos";
 import { useIdioma, tr } from "@/lib/i18n";
 import { rotuloMenu } from "@/lib/i18n-menu";
 import { useRouterState } from "@tanstack/react-router";
@@ -195,11 +196,11 @@ export function DataTable({
                   aria-sort={col.sortable === false ? undefined : sort?.key === col.key ? (sort.dir === "asc" ? "ascending" : "descending") : "none"}
                 >
                   {col.sortable === false ? (
-                    col.header
+                    termoNo(idioma, col.header)
                   ) : (
                     <button
                       type="button"
-                      aria-label={typeof col.header === "string" ? `Ordenar por ${col.header}` : undefined}
+                      aria-label={typeof col.header === "string" ? t("tabela.ordenarPor", { campo: termo(idioma, col.header) }) : undefined}
                       className="inline-flex items-center gap-1 rounded-sm font-medium hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       onClick={() =>
                         setSort((prev) =>
@@ -209,7 +210,7 @@ export function DataTable({
                         )
                       }
                     >
-                      {col.header}
+                      {termoNo(idioma, col.header)}
                       {sort?.key === col.key ? (
                         sort.dir === "asc" ? (
                           <ArrowUp className="h-3.5 w-3.5" />
@@ -367,7 +368,7 @@ export function DataTable({
               setPage(1);
             }}
           >
-            <SelectTrigger className="h-8 w-24" aria-label="Linhas por página">
+            <SelectTrigger className="h-8 w-24" aria-label={t("tabela.linhasPorPagina")}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

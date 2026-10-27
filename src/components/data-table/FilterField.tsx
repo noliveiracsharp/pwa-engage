@@ -1,3 +1,5 @@
+import { termo, termoNo } from "@/lib/i18n-termos";
+import { useIdioma, tr } from "@/lib/i18n";
 import { createContext, useCallback, useContext, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { RotateCcw, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -69,6 +71,8 @@ export function FilterInput({
 }) {
   useRegister(value, onChange);
   const id = useId();
+  const { idioma } = useIdioma();
+  label = termo(idioma, label);
   return (
     <div>
       <Label htmlFor={id} className="mb-1.5 block text-xs uppercase tracking-wide text-muted-foreground">{label}</Label>
@@ -77,7 +81,7 @@ export function FilterInput({
         {value && (
           <button
             type="button"
-            aria-label="Limpar busca"
+            aria-label={tr("acao.limparSelecao")}
             onClick={() => onChange("")}
             className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground hover:text-foreground"
           >
@@ -102,17 +106,19 @@ export function FilterSelect({
 }): ReactNode {
   useRegister(value, onChange);
   const id = useId();
+  const { idioma } = useIdioma();
+  label = termo(idioma, label);
   return (
     <div>
       <Label htmlFor={id} className="mb-1.5 block text-xs uppercase tracking-wide text-muted-foreground">{label}</Label>
       <Select value={value} onValueChange={onChange}>
         <SelectTrigger id={id} aria-label={label}>
-          <SelectValue placeholder="Todos" />
+          <SelectValue placeholder={tr("filtro.todos")} />
         </SelectTrigger>
         <SelectContent>
           {options.map((opt) => (
             <SelectItem key={opt.value} value={opt.value}>
-              {opt.label}
+              {termo(idioma, opt.label)}
             </SelectItem>
           ))}
         </SelectContent>
