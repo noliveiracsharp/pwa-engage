@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { atualizarPerfilZapi } from "@/lib/zapi.functions";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -19,9 +20,9 @@ export function PerfilWhatsAppDialog({ instancia, onClose }: { instancia: Row | 
   const atualizar = useServerFn(atualizarPerfilZapi);
 
   useEffect(() => {
-    setNome(instancia ? text(pick(instancia, ["nome"])).slice(0, 25) : "");
-    setRecado("");
-    setFoto("");
+    setNome(instancia ? (text(pick(instancia, ["perfil_nome"])) || text(pick(instancia, ["nome"]))).slice(0, 25) : "");
+    setRecado(instancia ? text(pick(instancia, ["perfil_recado"])) : "");
+    setFoto(instancia ? text(pick(instancia, ["perfil_foto"])) : "");
   }, [instancia]);
 
   const salvar = async () => {
@@ -34,6 +35,19 @@ export function PerfilWhatsAppDialog({ instancia, onClose }: { instancia: Row | 
     const token = text(pick(instancia, ["token"])) || clientToken;
     setSalvando(true);
     try {
+      // A Z-API precisa baixar a foto: gera um link temporário mesmo que a pasta de fotos seja privada.
+      let fotoUrl = foto || undefined;
+      const caminho = foto.match(/\/storage\/v1\/object\/(?:public|sign)\/avatars\/([^?]+)/)?.[1];
+      if (caminho) {
+        const { data: s } = await supabase.storage.from("avatars").createSignedUrl(decodeURIComponent(caminho), 3600);
+        if (s?.signedUrl) fotoUrl = s.signedUrl;
+      }
+      // Guarda no cadastro da instância para a tela mostrar o que foi aplicado (ignora se o banco não tiver as colunas).
+      const id = pick(instancia, ["id"]);
+      if (id != null) {
+        const { error: eG } = await supabase.from("empresas_instancias").update({ perfil_nome: nome.trim() || null, perfil_recado: recado.trim() || null, perfil_foto: foto || null } as never).eq("id", id as never);
+        if (eG && !/perfil_/i.test(eG.message)) console.error(eG);
+      }
       const r = await atualizar({
         data: {
           instanceId: text(pick(instancia, ["instance_id"])),
@@ -41,7 +55,7 @@ export function PerfilWhatsAppDialog({ instancia, onClose }: { instancia: Row | 
           clientToken: clientToken || undefined,
           nome: nome.trim() || undefined,
           recado: recado.trim() || undefined,
-          fotoUrl: foto || undefined,
+          fotoUrl,
         },
       });
       if (r.ok) {

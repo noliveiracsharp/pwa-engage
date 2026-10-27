@@ -122,7 +122,12 @@ export const atualizarPerfilZapi = createServerFn({ method: "POST" })
       if (!valor) continue;
       try {
         const r = await fetch(`${base}/${rota}`, { method: "PUT", headers, body: JSON.stringify({ value: valor }) });
-        if (!r.ok) falhas.push(`${rotulo}: ${(await r.text()).slice(0, 120) || `HTTP ${r.status}`}`);
+        const corpo = await r.text();
+        let recusou = false;
+        try { recusou = (JSON.parse(corpo) as { value?: unknown }).value === false; } catch { /* resposta sem JSON */ }
+        if (!r.ok) falhas.push(`${rotulo}: ${corpo.slice(0, 120) || `HTTP ${r.status}`}`);
+        // A Z-API responde 200 com value=false quando o WhatsApp não aceita (ex.: nome em conta não Business).
+        else if (recusou) falhas.push(rotulo === "Nome" ? "Nome: o WhatsApp só permite trocar o nome em contas Business" : `${rotulo}: o WhatsApp não aceitou`);
       } catch (e) {
         falhas.push(`${rotulo}: ${e instanceof Error ? e.message : "falha de rede"}`);
       }
@@ -136,7 +141,7 @@ export const sincronizarWebhooksZapi = createServerFn({ method: "POST" })
   .inputValidator((d) =>
     Credenciais.extend({
       url: z.string().url().max(1000),
-      eventos: z.array(z.enum(["update-webhook-received", "update-webhook-message-status", "update-webhook-disconnected", "update-webhook-connected"])).min(1).max(4),
+      eventos: z.array(z.enum(["update-webhook-received", "update-webhook-message-status", "update-webhook-disconnected", "update-webhook-connected", "update-webhook-chat-presence"])).min(1).max(5),
     }).parse(d),
   )
   .handler(async ({ data }): Promise<{ resultados: Array<{ evento: string; ok: boolean; message?: string }> }> => {

@@ -10,8 +10,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-  ArrowLeft, Bot, Link2, Check, CheckCheck, FileText, Hand, Lock, MoreVertical, MoveRight, Paperclip, PanelRightClose, PanelRightOpen, Send, Smile, CheckCircle2, Loader2, Trash2, Users, Video, Phone, Wrench,
+  ArrowLeft, Bot, CornerUpLeft, Link2, Check, CheckCheck, FileText, Hand, Lock, MoreVertical, MoveRight, Paperclip, PanelRightClose, PanelRightOpen, Send, Smile, CheckCircle2, Loader2, Trash2, Users, Video, Phone, Wrench,
 } from "lucide-react";
+import { CitacaoNoBalao, FaixaResposta, lerCitacao, type Citacao } from "@/components/chat/Citacao";
 import { ChamadaFlutuante, duracao, linkConvite, novaSala, type Chamada } from "./ChamadaFlutuante";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
@@ -65,6 +66,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
   const { data: colsMsg } = useCols("atendimentos_mensagem");
   const { data: colsAt } = useCols("atendimentos");
   const [texto, setTexto] = useState("");
+  const [respondendo, setRespondendo] = useState<Citacao | null>(null);
   const [interna, setInterna] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [moverAberto, setMoverAberto] = useState(false);
@@ -193,8 +195,10 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
       direcao: "saida",
       usuario_id: usuarioId,
       empresa_id: empresaId,
+      ...(respondendo ? { citacao: respondendo } : {}),
       ...extra,
     };
+    const citada = respondendo;
     // Notas internas nunca vão para a Z-API: não levam instância.
     if (!interna) payload["instancia_id"] = pick(atendimento, A.instancia);
     if (!interna) payload["status_envio"] = "pendente";
@@ -206,6 +210,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
       return;
     }
     setTexto("");
+    setRespondendo(null);
     if (!interna) void desarmarSino(id, atendimento, colsAt).then(() => qc.invalidateQueries({ queryKey: ["table", "atendimentos"] }));
     // Handoff silencioso: humano respondeu numa conversa da IA.
     if (!interna && isIA(atendimento)) {
@@ -229,8 +234,8 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
           midiaUrl: extra["midia_url"] as string | undefined,
           tipo: extra["tipo"] as string | undefined,
           nomeArquivo: extra["nome_arquivo"] as string | undefined,
-        });
-        await marcarEnvio(mid, "enviado");
+          responderA: citada?.externo ?? null,
+        }).then((zid) => marcarEnvio(mid, "enviado", zid));
       } catch (e) {
         console.error(e);
         await marcarEnvio(mid, "falha");
@@ -270,8 +275,8 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
     if (error) { toast.error(error.message); return; }
     const mid = (salva as Row | null)?.["id"];
     try {
-      await dispararMensagem({ instancia, mensagemId: mid, atendimentoId: id, telefone: telefonePessoa(pessoa), texto: conteudo });
-      await marcarEnvio(mid, "enviado");
+      const zid = await dispararMensagem({ instancia, mensagemId: mid, atendimentoId: id, telefone: telefonePessoa(pessoa), texto: conteudo });
+      await marcarEnvio(mid, "enviado", zid);
       toast.success(ok);
     } catch (e) {
       await marcarEnvio(mid, "falha");
@@ -514,7 +519,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
         {linhaTempo.map((it) =>
           it.tipo === "ck"
             ? <ChecklistEventoCard key={`ck-${text(rowId(it.row))}`} c={it.row} />
-            : <Balao key={text(rowId(it.row))} m={it.row} autores={autores} />,
+            : <Balao key={text(rowId(it.row))} m={it.row} autores={autores} onResponder={(c) => setRespondendo(c)} />,
         )}
         <div ref={fimRef} />
       </div>
@@ -562,6 +567,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
             ))}
           </div>
         )}
+        {respondendo && <FaixaResposta citacao={respondendo} onCancelar={() => setRespondendo(null)} />}
         <div className={cn("flex items-end gap-2 rounded-lg p-1", interna && "bg-warning/15")}>
           <Popover>
             <PopoverTrigger asChild>
@@ -668,7 +674,7 @@ function VistoLeitura({ status }: { status: string }) {
   return null;
 }
 
-function Balao({ m, autores }: { m: Row; autores: Map<string, string> }) {
+function Balao({ m, autores, onResponder }: { m: Row; autores: Map<string, string>; onResponder: (c: Citacao) => void }) {
   const pNome = text(m["participante_grupo_nome"]);
   const pTel = text(m["participante_grupo_telefone"]);
   const participante = pNome && pTel ? `${pNome} · ${pTel}` : pNome || pTel;
@@ -711,8 +717,17 @@ function Balao({ m, autores }: { m: Row; autores: Map<string, string> }) {
     toast.success("Mensagem apagada para todos.");
   }
   const equipe = !cliente;
+  const citacao = lerCitacao(m["citacao"]);
+  const responder = () =>
+    onResponder({
+      id: text(mid),
+      autor: cliente ? text(m["nome_contato"]) || "Cliente" : interna ? "Nota interna" : autor || "Você",
+      texto: corpo || text(m["nome_arquivo"]) || tipo || "Mídia",
+      // Nota interna não existe no WhatsApp: sem citação nativa.
+      externo: interna ? null : text(cliente ? m["externo_id"] : m["message_id_zapi"]) || null,
+    });
   return (
-    <div className={cn("flex", cliente ? "justify-start" : "justify-end")}>
+    <div id={`msg-${text(mid)}`} className={cn("group/msg flex items-center gap-1 transition", cliente ? "justify-start" : "flex-row-reverse justify-start")}>
       <div
         onContextMenu={equipe ? (e) => { e.preventDefault(); setMenu(true); } : undefined}
         className={cn(
@@ -751,6 +766,7 @@ function Balao({ m, autores }: { m: Row; autores: Map<string, string> }) {
           </p>
         )}
         {!interna && autor && <p className="mb-0.5 text-xs font-semibold italic opacity-80">{autor}</p>}
+        {citacao && <CitacaoNoBalao citacao={citacao} claro={!interna && !cliente} />}
         {participante && <p className="mb-0.5 text-[11px] font-semibold text-primary">{participante}</p>}
 
         {url && tipo === "imagem" && (
@@ -771,6 +787,13 @@ function Balao({ m, autores }: { m: Row; autores: Map<string, string> }) {
           {!interna && !cliente && <VistoLeitura status={text(m["status_envio"]).toLowerCase()} />}
         </p>
       </div>
+      <Button
+        type="button" variant="ghost" size="icon" tooltip="Responder" aria-label="Responder"
+        className="h-7 w-7 shrink-0 opacity-60 transition sm:opacity-0 sm:group-hover/msg:opacity-100 focus-visible:opacity-100"
+        onClick={responder}
+      >
+        <CornerUpLeft className="h-3.5 w-3.5" />
+      </Button>
     </div>
   );
 }

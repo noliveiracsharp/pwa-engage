@@ -1,10 +1,11 @@
 import { comprimirImagem } from "@/lib/image-compress";
+import { CitacaoNoBalao, FaixaResposta, lerCitacao, type Citacao } from "@/components/chat/Citacao";
 import { UploadInfo } from "@/components/ui/upload-info";
 import { Linkify } from "@/components/ui/linkify";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Check, ArrowLeftRight, ArrowLeft, Maximize2, MessageSquare, Minimize2, Paperclip, Search, Send, Users, X, FileText, Loader2, Phone, Video, Mic, ClipboardList, Trash2 } from "lucide-react";
+import { Plus, Check, ArrowLeftRight, ArrowLeft, Maximize2, MessageSquare, Minimize2, Paperclip, Search, Send, Users, X, FileText, Loader2, Phone, Video, Mic, ClipboardList, Trash2, CornerUpLeft } from "lucide-react";
 import { confirmar } from "@/components/layout/DialogoGlobal";
 import { ChamadaFlutuante, duracao, novaSala, type Chamada } from "@/components/atendimentos/ChamadaFlutuante";
 
@@ -468,6 +469,7 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack }: { me: stri
   const nome = sel.tipo === "direto" ? String(pick(sel.outro, ["nome"], "Usuário")) : String(sel.canal["nome"] ?? "Grupo");
   const [canalId, setCanalId] = useState<string>(sel.tipo === "grupo" ? String(sel.canal["id"]) : "");
   const [texto, setTexto] = useState("");
+  const [respondendo, setRespondendo] = useState<Citacao | null>(null);
   const [enviando, setEnviando] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const { usuario } = useAuth();
@@ -528,17 +530,25 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack }: { me: stri
     const msg = texto.trim();
     if ((!msg && !anexo) || !canalId) return;
     setEnviando(true);
-    const { error } = await supabase.from(TABLE).insert({
+    const linha: Record<string, unknown> = {
       empresa_id: empresaId,
       canal_id: canalId,
       remetente_id: me,
       mensagem: msg || anexo?.nome || "",
       anexos: anexo ? [anexo] : [],
       lida_por: [me],
-    });
+    };
+    if (respondendo) linha["citacao"] = respondendo;
+    let { error } = await supabase.from(TABLE).insert(linha as never);
+    // Banco ainda sem a coluna "citacao": envia sem a citação.
+    if (error && respondendo && /citacao/i.test(error.message)) {
+      delete linha["citacao"];
+      ({ error } = await supabase.from(TABLE).insert(linha as never));
+    }
     setEnviando(false);
     if (error) { toast.error(error.message); return; }
     setTexto("");
+    setRespondendo(null);
     void qc.invalidateQueries({ queryKey: key });
   };
 
@@ -725,9 +735,10 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack }: { me: stri
             }
             const anexos = (Array.isArray(m["anexos"]) ? m["anexos"] : []) as Anexo[];
             return (
-              <div key={String(m["id"])} className={cn("group flex items-center gap-1", mine ? "flex-row-reverse" : "flex-row")}>
+              <div key={String(m["id"])} id={`msg-${String(m["id"])}`} className={cn("group flex items-center gap-1 transition", mine ? "flex-row-reverse" : "flex-row")}>
                 <div className={cn("max-w-[80%] rounded-2xl px-3 py-2 text-sm", mine ? "rounded-br-sm bg-primary text-primary-foreground" : "rounded-bl-sm bg-muted")}>
                   {!mine && sel.tipo === "grupo" && <p className="mb-0.5 text-xs font-semibold text-primary">{nomes.get(String(m["remetente_id"])) ?? "Usuário"}</p>}
+                  {(() => { const c = lerCitacao(m["citacao"]); return c ? <CitacaoNoBalao citacao={c} claro={mine} /> : null; })()}
                   {anexos.map((a, i) =>
                     a.tipo === "imagem" ? (
                       <a key={i} href={a.url} target="_blank" rel="noreferrer">
@@ -746,6 +757,13 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack }: { me: stri
                   {anexos.length === 0 && <p className="break-words whitespace-pre-wrap"><Linkify text={String(m["mensagem"] ?? "")} /></p>}
                   <p className={cn("mt-0.5 text-right text-[10px]", mine ? "text-primary-foreground/70" : "text-muted-foreground")}>{hora(m["criado_em"])}</p>
                 </div>
+                <Button
+                  type="button" variant="ghost" size="icon" tooltip="Responder" aria-label="Responder"
+                  className="h-7 w-7 shrink-0 opacity-60 transition sm:opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+                  onClick={() => setRespondendo({ id: String(m["id"]), autor, texto: txt || anexos[0]?.nome || "Anexo" })}
+                >
+                  <CornerUpLeft className="h-3.5 w-3.5" />
+                </Button>
                 {mine && (
                   <Button type="button" variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-destructive opacity-0 transition group-hover:opacity-100 focus:opacity-100" title="Apagar mensagem" aria-label="Apagar mensagem" onClick={() => void apagar(m, anexos)}>
                     <Trash2 className="h-3.5 w-3.5" />
@@ -758,6 +776,7 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack }: { me: stri
         </div>
       </ScrollArea>
 
+      {respondendo && <div className="border-t border-border px-2 pt-2"><FaixaResposta citacao={respondendo} onCancelar={() => setRespondendo(null)} /></div>}
       <form
         className="flex items-center gap-1 border-t border-border p-2"
         onSubmit={(e) => {
