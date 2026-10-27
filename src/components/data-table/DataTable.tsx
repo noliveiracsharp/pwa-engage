@@ -1,3 +1,6 @@
+import { useIdioma, tr } from "@/lib/i18n";
+import { rotuloMenu } from "@/lib/i18n-menu";
+import { useRouterState } from "@tanstack/react-router";
 import { FilterBar } from "./FilterField";
 import { useMemo, useState, type ReactNode } from "react";
 import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, ChevronsUpDown, Copy, Eye, GripVertical, MoreVertical, Pencil, Plus, Trash2 } from "lucide-react";
@@ -92,6 +95,8 @@ export function DataTable({
   selection,
   bulkBar,
 }: Props) {
+  const { t, idioma } = useIdioma();
+  const caminho = useRouterState({ select: (s) => s.location.pathname });
   const [sort, setSort] = useState<{ key: string; dir: "asc" | "desc" } | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(0);
@@ -149,7 +154,7 @@ export function DataTable({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-foreground">{title}</h1>
+        <h1 className="text-2xl font-bold text-foreground">{typeof title === "string" ? rotuloMenu(idioma, caminho, title) : title}</h1>
         {onAdd && (
           <Button onClick={onAdd}>
             <Plus className="mr-1 h-4 w-4" /> {t("acao.adicionar")}

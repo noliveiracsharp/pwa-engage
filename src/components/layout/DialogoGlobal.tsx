@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useIdioma, tr } from "@/lib/i18n";
 import { AlertTriangle, Info } from "lucide-react";
 import {
   AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,

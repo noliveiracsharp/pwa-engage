@@ -1,3 +1,4 @@
+import { useIdioma, tr } from "@/lib/i18n";
 import { HistoricoButton } from "@/components/auditoria/HistoricoButton";
 import { DocumentosButton } from "@/components/documentos/DocumentosPainel";
 import type { EntidadeDoc } from "@/lib/documentos";
@@ -80,6 +81,7 @@ export function RecordSheet({
   auditTable,
   docs,
 }: Props) {
+  const { t } = useIdioma();
   const [values, setValues] = useState<Record<string, string>>({});
 
   useEffect(() => {

@@ -1,3 +1,4 @@
+import { useIdioma, tr } from "@/lib/i18n";
 import { useState } from "react";
 import { Check, ChevronsUpDown, X, ZoomIn } from "lucide-react";
 import { ImagensCarrosselDialog } from "@/components/itens/ImagensCarrosselDialog";
@@ -52,6 +53,10 @@ export function SearchSelect({
   allowClear = true,
   className,
 }: Props) {
+  const { t } = useIdioma();
+  placeholder ??= t("acao.selecione");
+  searchPlaceholder ??= `${t("acao.buscar")}…`;
+  emptyText ??= t("msg.nenhumResultado");
   const [open, setOpen] = useState(false);
   const selected = rawOptions.find((o) => o.value === value);
   // Ordem alfabética, exceto listas hierárquicas (mantêm a árvore).
