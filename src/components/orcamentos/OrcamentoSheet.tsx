@@ -942,6 +942,7 @@ export function OrcamentoSheet({
             vendedorId={h.usuario_id || undefined}
             usuarios={vendedores}
             onTotalChange={setTotalComissoes}
+            podeEditar={!roSecao("financeiro")}
           />
           </fieldset>
 
