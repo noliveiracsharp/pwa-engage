@@ -69,6 +69,7 @@ export const EMPRESA_FIELDS: EmpresaField[] = [
   { key: "telefone2", label: "Telefone 2", type: "tel" },
   { key: "logo", label: "Logo", type: "photo", full: true },
   { key: "logo_escuro", label: "Logo — modo escuro", type: "photo", full: true },
+  { key: "login_imagem", label: "Imagem da tela de login", type: "photo", full: true },
   { key: "titulo", label: "Título exibido", full: true },
   { key: "site_url", label: "URL / site da empresa", full: true, wl: true },
   { key: "slug", label: "Endereço exclusivo (atendeai.co/endereco) — minúsculas, números e hífen", full: true, wl: true },
