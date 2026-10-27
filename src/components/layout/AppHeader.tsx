@@ -16,7 +16,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { IDIOMAS, useIdioma, type Idioma } from "@/lib/i18n";
+import { IDIOMAS, normalizarIdioma, useIdioma, type Idioma } from "@/lib/i18n";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/components/theme-provider";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,7 +24,7 @@ import { pick } from "@/lib/row";
 import { useTableRows, rowId } from "@/lib/crud";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Building2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { MeusDadosSheet } from "@/components/perfil/MeusDadosSheet";
 import { useEmpresaAtiva } from "@/hooks/useEmpresaAtiva";
 import { AvisosButton } from "@/components/layout/AvisosButton";
