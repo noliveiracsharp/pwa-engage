@@ -657,7 +657,7 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack }: { me: stri
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col animate-in fade-in slide-in-from-right-4">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden animate-in fade-in slide-in-from-right-4">
       <div className="flex items-center gap-2 border-b border-border px-2 py-2">
         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onBack} aria-label="Voltar">
           <ArrowLeft className="h-4 w-4" />
@@ -703,8 +703,8 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack }: { me: stri
       </Dialog>
       {chamada && createPortal(<ChamadaFlutuante chamada={chamada} nome={meuNome} titulo={`Chamada · ${nome}`} onEncerrar={() => void encerrar()} />, document.body)}
 
-      <ScrollArea className="min-h-0 flex-1">
-        <div className="space-y-2 p-3">
+      <ScrollArea className="min-h-0 min-w-0 flex-1 [&_[data-radix-scroll-area-viewport]>div]:!block [&_[data-radix-scroll-area-viewport]>div]:!min-w-0">
+        <div className="min-w-0 space-y-2 p-3">
           {!canalId && <Loader2 className="mx-auto my-8 h-5 w-5 animate-spin text-muted-foreground" />}
           {canalId && msgs.length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">Envie a primeira mensagem para {nome}.</p>}
           {msgs.map((m) => {
@@ -735,8 +735,8 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack }: { me: stri
             }
             const anexos = (Array.isArray(m["anexos"]) ? m["anexos"] : []) as Anexo[];
             return (
-              <div key={String(m["id"])} id={`msg-${String(m["id"])}`} className={cn("group flex items-center gap-1 transition", mine ? "flex-row-reverse" : "flex-row")}>
-                <div className={cn("max-w-[80%] rounded-2xl px-3 py-2 text-sm", mine ? "rounded-br-sm bg-primary text-primary-foreground" : "rounded-bl-sm bg-muted")}>
+              <div key={String(m["id"])} id={`msg-${String(m["id"])}`} className={cn("group flex min-w-0 items-center gap-1 transition", mine ? "flex-row-reverse" : "flex-row")}>
+                <div className={cn("min-w-0 max-w-[80%] overflow-hidden rounded-2xl px-3 py-2 text-sm [overflow-wrap:anywhere]", mine ? "rounded-br-sm bg-primary text-primary-foreground" : "rounded-bl-sm bg-muted")}>
                   {!mine && sel.tipo === "grupo" && <p className="mb-0.5 text-xs font-semibold text-primary">{nomes.get(String(m["remetente_id"])) ?? "Usuário"}</p>}
                   {(() => { const c = lerCitacao(m["citacao"]); return c ? <CitacaoNoBalao citacao={c} claro={mine} /> : null; })()}
                   {anexos.map((a, i) =>
@@ -778,7 +778,7 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack }: { me: stri
 
       {respondendo && <div className="min-w-0 border-t border-border px-2 pt-2"><FaixaResposta citacao={respondendo} onCancelar={() => setRespondendo(null)} /></div>}
       <form
-        className={cn("flex items-center gap-1 p-2", respondendo ? "pt-0" : "border-t border-border")}
+        className={cn("flex min-w-0 items-center gap-1 p-2", respondendo ? "pt-0" : "border-t border-border")}
         onSubmit={(e) => {
           e.preventDefault();
           void enviar();
@@ -803,7 +803,7 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack }: { me: stri
               <Paperclip className="h-4 w-4" />
             </Button>
             <UploadInfo perfil="chat" arquivos />
-            <Input value={texto} onChange={(e) => setTexto(e.target.value)} onPaste={colar} placeholder="Digite uma mensagem ou cole um print (Ctrl+V)..." className="flex-1" />
+            <Input value={texto} onChange={(e) => setTexto(e.target.value)} onPaste={colar} placeholder="Digite uma mensagem ou cole um print (Ctrl+V)..." className="min-w-0 flex-1" />
             {texto.trim() ? (
               <Button type="submit" size="icon" className="h-9 w-9 shrink-0" disabled={enviando || !canalId} aria-label="Enviar">
                 {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
