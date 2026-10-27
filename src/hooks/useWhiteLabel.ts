@@ -53,6 +53,7 @@ export function useWhiteLabel() {
     if (!css) { el?.remove(); return; }
     if (!el) { el = document.createElement("style"); el.id = id; document.head.appendChild(el); }
     el.textContent = css;
+    aplicarCorJanela(claro);
   }, [claro, escuro]);
 
   useEffect(() => {
