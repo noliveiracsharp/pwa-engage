@@ -38,6 +38,14 @@ export function EnviarPropostaDialog({ open, onOpenChange, orcamento, empresa, c
   const [enviando, setEnviando] = useState(false);
   const [canal, setCanal] = useState<"whatsapp" | "email">("whatsapp");
   const [email, setEmail] = useState("");
+  const [emails, setEmails] = useState<string[]>([]);
+  const alternarEmail = (e: string) => setEmails((l) => (l.includes(e) ? l.filter((x) => x !== e) : [...l, e]));
+  const addEmail = () => {
+    const e = email.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) { toast.error("Informe um e-mail válido."); return; }
+    setEmails((l) => (l.includes(e) ? l : [...l, e]));
+    setEmail("");
+  };
   const [assunto, setAssunto] = useState("");
   const [msgEmail, setMsgEmail] = useState("");
   const [contatoNome, setContatoNome] = useState("");
@@ -56,7 +64,7 @@ export function EnviarPropostaDialog({ open, onOpenChange, orcamento, empresa, c
 
   const escolher = (c: Row) => {
     setContatoNome(text(c["nome"]));
-    if (text(c["tipo"]) === "email") { setEmail(text(c["valor"])); setCanal("email"); }
+    if (text(c["tipo"]) === "email") { alternarEmail(text(c["valor"])); setCanal("email"); }
     else { setTelefone(text(c["valor"])); setCanal("whatsapp"); }
   };
 
@@ -65,9 +73,11 @@ export function EnviarPropostaDialog({ open, onOpenChange, orcamento, empresa, c
     const nome = text(pick(cliente ?? {}, ["nome_fantasia", "razao_social", "nome"]));
     const emp = text(pick(empresa ?? {}, ["nome_fantasia", "razao_social", "nome"]));
     setTelefone(text(pick(cliente ?? {}, ["whatsapp", "celular", "telefone"])));
-    setEmail(text(pick(cliente ?? {}, ["email"])));
+    const ePrinc = text(pick(cliente ?? {}, ["email"]));
+    setEmails(ePrinc ? [ePrinc] : []);
+    setEmail("");
     setContatoNome("");
-    setAssunto(`${emp ? `${emp} — ` : ""}Oferta ${text(orcamento["numero"])}${nome ? ` para ${nome}` : ""}`);
+    setAssunto(tituloOferta(orcamento, cliente));
     setMsgEmail(`Segue a sua Oferta ${text(orcamento["numero"])} no valor de ${valorProposta(orcamento)}. Clique no botão abaixo para conferir todos os detalhes, o contrato e assinar eletronicamente.`);
     if (mensagemInicial) return setMensagem(mensagemInicial);
     setMensagem(
@@ -130,12 +140,19 @@ export function EnviarPropostaDialog({ open, onOpenChange, orcamento, empresa, c
   };
 
   const enviarEmail = async () => {
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { toast.error("Informe um e-mail válido."); return; }
+    const pend = email.trim();
+    const lista = [...emails];
+    if (pend) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(pend)) { toast.error("Informe um e-mail válido."); return; }
+      if (!lista.includes(pend)) lista.push(pend);
+    }
+    if (!lista.length) { toast.error("Selecione ou adicione ao menos um e-mail."); return; }
     if (!(await antesDeEnviar())) return;
     setEnviando(true);
     try {
+     for (const para of lista) {
       const { data, error } = await supabase.functions.invoke("cobranca-regua", {
-        body: { acao: "proposta_email", orcamento_id: String(rowId(orcamento) ?? ""), para: email.trim(), assunto, mensagem: msgEmail, link, contato_nome: contatoNome },
+        body: { acao: "proposta_email", orcamento_id: String(rowId(orcamento) ?? ""), para, assunto, mensagem: msgEmail, link, contato_nome: contatoNome },
       });
       if (error) {
         let msg = error.message;
@@ -144,10 +161,11 @@ export function EnviarPropostaDialog({ open, onOpenChange, orcamento, empresa, c
         throw new Error(msg);
       }
       if ((data as { erro?: string })?.erro) throw new Error((data as { erro: string }).erro);
+     }
       const { error: acompanhamentoErro } = await supabase.rpc("oferta_marcar_envio", { p_id: String(rowId(orcamento) ?? "") });
       if (acompanhamentoErro) toast.warning("E-mail enviado, mas o acompanhamento não foi iniciado.");
-      await registrar(`Oferta enviada por e-mail para ${contatoNome ? `${contatoNome} <${email.trim()}>` : email.trim()}`, "email");
-      toast.success(`Oferta enviada para ${email.trim()}.`);
+      await registrar(`Oferta enviada por e-mail para ${lista.join(", ")}`, "email");
+      toast.success(`Oferta enviada para ${lista.length} e-mail(s).`);
       onOpenChange(false);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Falha ao enviar o e-mail.");
@@ -175,7 +193,7 @@ export function EnviarPropostaDialog({ open, onOpenChange, orcamento, empresa, c
             <div className="max-h-40 space-y-1 overflow-y-auto rounded-md border p-1">
               {contatos.map((c) => {
                 const ehEmail = text(c["tipo"]) === "email";
-                const ativo = ehEmail ? email === text(c["valor"]) && canal === "email" : telefone === text(c["valor"]) && canal === "whatsapp";
+                const ativo = ehEmail ? emails.includes(text(c["valor"])) : telefone === text(c["valor"]) && canal === "whatsapp";
                 return (
                   <button key={text(rowId(c))} type="button" onClick={() => escolher(c)}
                     className={`flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm hover:bg-muted ${ativo ? "bg-primary/10" : ""}`}>
@@ -232,8 +250,21 @@ export function EnviarPropostaDialog({ open, onOpenChange, orcamento, empresa, c
         ) : (
         <div className="space-y-3">
           <div className="space-y-1">
-            <Label>E-mail do destinatário</Label>
-            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="contato@cliente.com.br" />
+            <Label>Destinatários</Label>
+            {emails.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {emails.map((e) => (
+                  <span key={e} className="flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs">
+                    {e}
+                    <button type="button" aria-label={`Remover ${e}`} onClick={() => alternarEmail(e)} className="text-muted-foreground hover:text-destructive">×</button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <div className="flex gap-2">
+              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addEmail(); } }} placeholder="Adicionar outro e-mail" />
+              <Button type="button" variant="outline" onClick={addEmail}>Adicionar</Button>
+            </div>
           </div>
           <div className="space-y-1">
             <Label>Assunto</Label>
@@ -267,6 +298,13 @@ export function EnviarPropostaDialog({ open, onOpenChange, orcamento, empresa, c
       </DialogContent>
     </Dialog>
   );
+}
+
+/** Título padrão: "Oferta #yyyy-xxxx - Nome do cliente". */
+export function tituloOferta(o: Row | null | undefined, cliente: Row | undefined): string {
+  const n = text(o?.["numero"]);
+  const nome = text(pick(cliente ?? {}, ["nome_fantasia", "razao_social", "nome"]));
+  return `Oferta ${n ? (n.startsWith("#") ? n : `#${n}`) : ""}${nome ? ` - ${nome}` : ""}`.trim();
 }
 
 function valorProposta(o: Record<string, unknown>): string {

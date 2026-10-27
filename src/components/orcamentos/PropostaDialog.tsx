@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Copy, Eye, Link2, MessageCircle, Printer, Save, X } from "lucide-react";
+import { Copy, Eye, Link2, Mail, MessageCircle, Printer, Save, X } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -28,7 +28,7 @@ import {
 import type { Row } from "@/lib/row";
 import { PropostaDocumento } from "./PropostaDocumento";
 import { CapaEstiloEditor } from "./CapaEstiloEditor";
-import { EnviarPropostaDialog } from "./EnviarPropostaDialog";
+import { EnviarPropostaDialog, tituloOferta } from "./EnviarPropostaDialog";
 import { confirmar, perguntar } from "@/components/layout/DialogoGlobal";
 
 type Props = {
@@ -157,7 +157,7 @@ export function PropostaDialog(props: Props) {
       <DialogContent className="flex h-[94vh] w-[98vw] max-w-[1400px] flex-col gap-0 p-0">
         <DialogHeader className="flex-row flex-wrap items-center justify-between gap-3 space-y-0 border-b px-5 py-3">
           <div className="flex flex-wrap items-center gap-2">
-            <DialogTitle>Proposta digital {String(orcamento["numero"] ?? "")}</DialogTitle>
+            <DialogTitle>Oferta digital {String(orcamento["numero"] ?? "")}</DialogTitle>
             {orcamento["assinado_em"] ? (
               <Badge className="bg-success text-success-foreground">Assinada {dataHora(orcamento["assinado_em"])}</Badge>
             ) : orcamento["visualizado_em"] ? (
@@ -169,7 +169,7 @@ export function PropostaDialog(props: Props) {
             ) : null}
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => imprimirElemento("proposta-preview")}>
+            <Button variant="outline" size="sm" onClick={() => { const t = document.title; document.title = tituloOferta(orcamento, cliente); imprimirElemento("proposta-preview"); setTimeout(() => { document.title = t; }, 1500); }}>
               <Printer className="mr-1 h-4 w-4" /> PDF
             </Button>
             {token ? (
@@ -179,6 +179,9 @@ export function PropostaDialog(props: Props) {
                 </Button>
                 <Button variant="outline" size="sm" onClick={whatsapp}>
                   <MessageCircle className="mr-1 h-4 w-4" /> WhatsApp
+                </Button>
+                <Button variant="outline" size="sm" onClick={whatsapp}>
+                  <Mail className="mr-1 h-4 w-4" /> E-mail
                 </Button>
                 <Button variant="outline" size="sm" onClick={async () => (await salvar(true)) && window.open(link, "_blank")}>
                   <Link2 className="mr-1 h-4 w-4" /> Abrir

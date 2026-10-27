@@ -462,10 +462,10 @@ function OrcamentosPage() {
   const rowMenu = (r: Row) => (
     <>
       <DropdownMenuItem onClick={() => { setPreview(r); setPreviewOpen(true); }}>
-        <FileText className="h-4 w-4" /> {tx("Visualizar PDF da proposta")}
+        <FileText className="h-4 w-4" /> {tx("Visualizar PDF da oferta")}
       </DropdownMenuItem>
       <DropdownMenuItem onClick={() => { if (!ofertaLiberada(r["aprovacao_status"])) { avisoBloqueio(); return; } setPreview(r); setPropostaOpen(true); }}>
-        <FileSignature className="h-4 w-4" /> {tx("Proposta digital e assinatura")}
+        <FileSignature className="h-4 w-4" /> {tx("Oferta digital e assinatura")}
       </DropdownMenuItem>
       <DropdownMenuItem onClick={() => { if (!ofertaLiberada(r["aprovacao_status"])) { avisoBloqueio(); return; } setPreview(r); setMinutaOpen(true); }}>
         <ScrollText className="h-4 w-4" /> {tx("Minuta de contrato")}

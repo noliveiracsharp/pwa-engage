@@ -1,4 +1,7 @@
-import { Printer, X } from "lucide-react";
+import { useState } from "react";
+import { Mail, MessageCircle, Printer, X } from "lucide-react";
+import { EnviarPropostaDialog, tituloOferta } from "./EnviarPropostaDialog";
+import { linkProposta } from "@/lib/propostas";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -36,7 +39,10 @@ export function OrcamentoPDF({
   unidades,
   marcas,
 }: Props) {
+  const [envio, setEnvio] = useState(false);
   if (!orcamento) return null;
+  const token = orcamento["token_publico"];
+  const link = token ? linkProposta(token) : "";
 
   const numero = String(orcamento["numero"] ?? "") || "Oferta";
   const imprimir = () => {
@@ -48,7 +54,10 @@ export function OrcamentoPDF({
     host.appendChild(src.cloneNode(true));
     document.body.appendChild(host);
     document.documentElement.classList.add("orc-printing");
+    const tituloAnt = document.title;
+    document.title = tituloOferta(orcamento, cliente);
     const limpar = () => {
+      document.title = tituloAnt;
       document.documentElement.classList.remove("orc-printing");
       host.remove();
       window.removeEventListener("afterprint", limpar);
@@ -68,6 +77,12 @@ export function OrcamentoPDF({
         <DialogHeader className="sticky top-0 z-20 flex-row items-center justify-between gap-3 space-y-0 border-b bg-background px-6 py-4 print:hidden">
           <DialogTitle>Visualizar oferta {numero}</DialogTitle>
           <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => setEnvio(true)}>
+              <MessageCircle className="mr-2 h-4 w-4" /> WhatsApp
+            </Button>
+            <Button variant="outline" onClick={() => setEnvio(true)}>
+              <Mail className="mr-2 h-4 w-4" /> E-mail
+            </Button>
             <Button onClick={imprimir}>
               <Printer className="mr-2 h-4 w-4" />
               Imprimir / Salvar PDF
@@ -82,6 +97,7 @@ export function OrcamentoPDF({
 
         <OrcamentoDocumento id="orcamento-print" orcamento={orcamento} linhas={linhas} empresa={empresa} cliente={cliente} vendedor={vendedor} itens={itens} unidades={unidades} marcas={marcas} />
       </DialogContent>
+      <EnviarPropostaDialog open={envio} onOpenChange={setEnvio} orcamento={orcamento} empresa={empresa} cliente={cliente} link={link} antesDeEnviar={async () => true} />
     </Dialog>
   );
 }
