@@ -1,3 +1,4 @@
+import { useIdioma } from "@/lib/i18n";
 import { tx } from "@/lib/i18n-termos";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -95,6 +96,7 @@ function mesmaEmpresa(row: Row, empresaId: string | number | undefined) {
 }
 
 function OrcamentosPage() {
+  useIdioma();
   const perms = usePagePermissions("/orcamentos");
   const secoes = useSecoes("/orcamentos", SECOES_OFERTA);
   const { empresaId, usuarioId } = useAudit();

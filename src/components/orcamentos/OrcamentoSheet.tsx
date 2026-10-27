@@ -1,3 +1,4 @@
+import { useIdioma } from "@/lib/i18n";
 import { tx } from "@/lib/i18n-termos";
 import { nomeItemCompleto } from "@/lib/item-nome";
 import { PessoaCampos } from "@/components/pessoas/PessoaCampos";
@@ -280,6 +281,7 @@ export function OrcamentoSheet({
   onSave,
   duplicarDe,
 }: Props) {
+  useIdioma();
   const [h, setH] = useState<Header>(() => emptyHeader(vendedorPadraoId ?? ""));
   const [linhas, setLinhas] = useState<Linha[]>([]);
   const dirty = useRef(false);
