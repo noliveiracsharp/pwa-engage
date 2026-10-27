@@ -34,7 +34,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { rowId, useDeleteRecord, useTableRows } from "@/lib/crud";
 import { useAudit } from "@/lib/audit";
 import { matchesAny } from "@/lib/input-masks";
-import { daysUntil, formatBRL, formatDate, situacaoOf, SITUACOES, yearOf } from "@/lib/orcamentos";
+import { daysUntil, formatBRL, formatDate, situacaoMeta, situacaoOf, SITUACOES, yearOf } from "@/lib/orcamentos";
 import { pick, type Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
 import { iniciais } from "@/components/projetos/ResponsaveisPicker";
