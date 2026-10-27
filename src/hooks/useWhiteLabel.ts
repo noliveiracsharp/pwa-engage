@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useEmpresaAtiva } from "@/hooks/useEmpresaAtiva";
-import { aplicarManifesto, observarTitulo, slugLembrado } from "@/lib/marca-publica";
+import { aplicarCorJanela, aplicarManifesto, observarTitulo, slugLembrado } from "@/lib/marca-publica";
 
 const HEX = /^#([0-9a-f]{6})$/i;
 
