@@ -33,7 +33,7 @@ export function AvisosButton() {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative" aria-label="Avisos" title="Avisos">
+        <Button variant="ghost" size="icon" className="relative" aria-label={naoLidos > 0 ? `Avisos ${naoLidos > 99 ? "99+" : naoLidos} não lidos` : "Avisos"} title="Avisos">
           <Bell className="h-5 w-5" />
           {naoLidos > 0 && (
             <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold text-destructive-foreground">

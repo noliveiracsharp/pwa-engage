@@ -79,6 +79,7 @@ function SidebarEntry({
       <Link
         to={item.path as "/dashboard"}
         onClick={onNavigate}
+        aria-label={open ? undefined : item.label}
         className={cn(linkCls, isActive(item, pathname) && activeCls, !open && "justify-center px-0")}
         style={open && depth > 0 ? { paddingLeft: 12 + depth * 16 } : undefined}
       >

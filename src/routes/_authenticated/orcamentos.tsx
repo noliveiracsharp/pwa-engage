@@ -34,7 +34,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { rowId, useDeleteRecord, useTableRows } from "@/lib/crud";
 import { useAudit } from "@/lib/audit";
 import { matchesAny } from "@/lib/input-masks";
-import { daysUntil, formatBRL, formatDate, situacaoOf, SITUACOES, yearOf } from "@/lib/orcamentos";
+import { daysUntil, formatBRL, formatDate, situacaoMeta, situacaoOf, SITUACOES, yearOf } from "@/lib/orcamentos";
 import { pick, type Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
 import { iniciais } from "@/components/projetos/ResponsaveisPicker";
@@ -360,7 +360,7 @@ function OrcamentosPage() {
                   dias < 0
                     ? "text-destructive font-medium"
                     : dias <= 3
-                      ? "text-warning-foreground"
+                      ? "text-warning-foreground dark:text-warning"
                       : "text-muted-foreground",
                 )}
               >
@@ -419,7 +419,7 @@ function OrcamentosPage() {
               <button
                 type="button"
                 className="inline-flex items-center gap-1 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                aria-label="Alterar situação"
+                aria-label={`${situacaoMeta(r["situacao"]).label} — alterar situação`}
                 title="Alterar situação"
               >
                 <SituacaoBadge value={r["situacao"]} cor={corSituacao(r)} />
