@@ -25,12 +25,13 @@ type Props = {
   antesDeEnviar: () => Promise<boolean>;
   titulo?: string;
   mensagemInicial?: string;
+  canalInicial?: "whatsapp" | "email";
 };
 
 const brl = (v: unknown) => Number(v ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 /** Envio da proposta digital por WhatsApp (instância ou wa.me) ou e-mail, escolhendo entre os contatos do cliente. */
-export function EnviarPropostaDialog({ open, onOpenChange, orcamento, empresa, cliente, link, antesDeEnviar, titulo, mensagemInicial }: Props) {
+export function EnviarPropostaDialog({ open, onOpenChange, orcamento, empresa, cliente, link, antesDeEnviar, titulo, mensagemInicial, canalInicial = "whatsapp" }: Props) {
   const empresaId = text(orcamento["empresa_id"] ?? rowId(empresa ?? {}));
   const [telefone, setTelefone] = useState("");
   const [mensagem, setMensagem] = useState("");
@@ -77,6 +78,7 @@ export function EnviarPropostaDialog({ open, onOpenChange, orcamento, empresa, c
     setEmails(ePrinc ? [ePrinc] : []);
     setEmail("");
     setContatoNome("");
+    setCanal(canalInicial);
     setAssunto(tituloOferta(orcamento, cliente));
     setMsgEmail(`Segue a sua Oferta ${text(orcamento["numero"])} no valor de ${valorProposta(orcamento)}. Clique no botão abaixo para conferir todos os detalhes, o contrato e assinar eletronicamente.`);
     if (mensagemInicial) return setMensagem(mensagemInicial);
