@@ -22,3 +22,17 @@ describe("classificarItem", () => {
     expect(classificarItem(item, centros, contas, true)["centro_custo_id"]).toBe("c21");
   });
 });
+
+describe("classificarItem com categorias cadastradas", () => {
+  const cad = [{ descricao: "Energia Solar", centro_custo_id: "cX", plano_contas_id: "pX", cfop_padrao: "5405", csosn_cst: "500", origem: "1" }];
+  it("usa centro, conta e fiscal definidos na categoria da empresa", () => {
+    expect(classificarItem({ tipo: "Produto", categoria: "Energia Solar" }, centros, contas, false, cad)).toEqual({
+      centro_custo_id: "cX", plano_contas_id: "pX", cfop_padrao: "5405", csosn_cst: "500", origem: "1",
+    });
+  });
+  it("serviço não recebe dados fiscais de produto", () => {
+    expect(classificarItem({ tipo: "Serviço", categoria: "Energia Solar" }, centros, contas, false, cad)).toEqual({
+      centro_custo_id: "cX", plano_contas_id: "pX",
+    });
+  });
+});

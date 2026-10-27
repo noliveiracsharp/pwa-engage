@@ -18,6 +18,7 @@ import { DocumentInput } from "@/components/data-table/DocumentInput";
 import { findKey, pick, type Row } from "@/lib/row";
 import { rowId, text } from "@/lib/crud";
 import { isCompletePhone, isValidCpfCnpj } from "@/lib/input-masks";
+import { SearchSelect } from "@/components/data-table/SearchSelect";
 import { toast } from "sonner";
 
 export type Field = {
@@ -28,6 +29,8 @@ export type Field = {
   options?: Array<{ value: string; label: string }>;
   placeholder?: string;
   full?: boolean;
+  /** Valor vazio é gravado como null (ex.: chaves estrangeiras opcionais). */
+  nullable?: boolean;
 };
 
 type Props = {
@@ -116,6 +119,8 @@ export function RecordSheet({
       if (field.type === "boolean") {
         if (raw === "") continue;
         payload[key] = raw === "true";
+      } else if (raw === "" && field.nullable) {
+        payload[key] = null;
       } else {
         payload[key] = field.type === "number" || field.type === "rating" ? Number(raw || 0) : raw;
       }
@@ -188,6 +193,9 @@ export function RecordSheet({
                 placeholder={field.placeholder}
                 onChange={(e) => setValues((v) => ({ ...v, [key]: e.target.value }))}
               />
+            ) : field.type === "select" && field.nullable ? (
+              <SearchSelect id={key} value={value} options={field.options ?? []} placeholder={field.placeholder ?? "Não informado"}
+                onChange={(v) => setValues((s) => ({ ...s, [key]: v }))} />
             ) : field.type === "select" ? (
               <Select value={value} onValueChange={(v) => setValues((s) => ({ ...s, [key]: v }))}>
                 <SelectTrigger id={key}>

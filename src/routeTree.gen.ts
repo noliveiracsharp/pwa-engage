@@ -34,6 +34,7 @@ import { Route as AuthenticatedFluxosRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedFuncoesRouteImport } from './routes/_authenticated/funcoes'
 import { Route as AuthenticatedInstanciasRouteImport } from './routes/_authenticated/instancias'
 import { Route as AuthenticatedItensRouteImport } from './routes/_authenticated/itens'
+import { Route as AuthenticatedItens_categoriasRouteImport } from './routes/_authenticated/itens_categorias'
 import { Route as AuthenticatedKanbanRouteImport } from './routes/_authenticated/kanban'
 import { Route as AuthenticatedLaudosRouteImport } from './routes/_authenticated/laudos'
 import { Route as AuthenticatedManutencoesRouteImport } from './routes/_authenticated/manutencoes'
@@ -207,6 +208,12 @@ const AuthenticatedItensRoute = AuthenticatedItensRouteImport.update({
   path: '/itens',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedItens_categoriasRoute =
+  AuthenticatedItens_categoriasRouteImport.update({
+    id: '/itens_categorias',
+    path: '/itens_categorias',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedKanbanRoute = AuthenticatedKanbanRouteImport.update({
   id: '/kanban',
   path: '/kanban',
@@ -477,6 +484,7 @@ export interface FileRoutesByFullPath {
   '/funcoes': typeof AuthenticatedFuncoesRoute
   '/instancias': typeof AuthenticatedInstanciasRoute
   '/itens': typeof AuthenticatedItensRoute
+  '/itens_categorias': typeof AuthenticatedItens_categoriasRoute
   '/kanban': typeof AuthenticatedKanbanRoute
   '/laudos': typeof AuthenticatedLaudosRoute
   '/manutencoes': typeof AuthenticatedManutencoesRoute
@@ -549,6 +557,7 @@ export interface FileRoutesByTo {
   '/funcoes': typeof AuthenticatedFuncoesRoute
   '/instancias': typeof AuthenticatedInstanciasRoute
   '/itens': typeof AuthenticatedItensRoute
+  '/itens_categorias': typeof AuthenticatedItens_categoriasRoute
   '/kanban': typeof AuthenticatedKanbanRoute
   '/laudos': typeof AuthenticatedLaudosRoute
   '/manutencoes': typeof AuthenticatedManutencoesRoute
@@ -623,6 +632,7 @@ export interface FileRoutesById {
   '/_authenticated/funcoes': typeof AuthenticatedFuncoesRoute
   '/_authenticated/instancias': typeof AuthenticatedInstanciasRoute
   '/_authenticated/itens': typeof AuthenticatedItensRoute
+  '/_authenticated/itens_categorias': typeof AuthenticatedItens_categoriasRoute
   '/_authenticated/kanban': typeof AuthenticatedKanbanRoute
   '/_authenticated/laudos': typeof AuthenticatedLaudosRoute
   '/_authenticated/manutencoes': typeof AuthenticatedManutencoesRoute
@@ -697,6 +707,7 @@ export interface FileRouteTypes {
     | '/funcoes'
     | '/instancias'
     | '/itens'
+    | '/itens_categorias'
     | '/kanban'
     | '/laudos'
     | '/manutencoes'
@@ -769,6 +780,7 @@ export interface FileRouteTypes {
     | '/funcoes'
     | '/instancias'
     | '/itens'
+    | '/itens_categorias'
     | '/kanban'
     | '/laudos'
     | '/manutencoes'
@@ -842,6 +854,7 @@ export interface FileRouteTypes {
     | '/_authenticated/funcoes'
     | '/_authenticated/instancias'
     | '/_authenticated/itens'
+    | '/_authenticated/itens_categorias'
     | '/_authenticated/kanban'
     | '/_authenticated/laudos'
     | '/_authenticated/manutencoes'
@@ -1096,6 +1109,13 @@ declare module '@tanstack/react-router' {
       path: '/itens'
       fullPath: '/itens'
       preLoaderRoute: typeof AuthenticatedItensRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/itens_categorias': {
+      id: '/_authenticated/itens_categorias'
+      path: '/itens_categorias'
+      fullPath: '/itens_categorias'
+      preLoaderRoute: typeof AuthenticatedItens_categoriasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/kanban': {
@@ -1438,6 +1458,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedFuncoesRoute: typeof AuthenticatedFuncoesRoute
   AuthenticatedInstanciasRoute: typeof AuthenticatedInstanciasRoute
   AuthenticatedItensRoute: typeof AuthenticatedItensRoute
+  AuthenticatedItens_categoriasRoute: typeof AuthenticatedItens_categoriasRoute
   AuthenticatedKanbanRoute: typeof AuthenticatedKanbanRoute
   AuthenticatedLaudosRoute: typeof AuthenticatedLaudosRoute
   AuthenticatedManutencoesRoute: typeof AuthenticatedManutencoesRoute
@@ -1484,6 +1505,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedFuncoesRoute: AuthenticatedFuncoesRoute,
   AuthenticatedInstanciasRoute: AuthenticatedInstanciasRoute,
   AuthenticatedItensRoute: AuthenticatedItensRoute,
+  AuthenticatedItens_categoriasRoute: AuthenticatedItens_categoriasRoute,
   AuthenticatedKanbanRoute: AuthenticatedKanbanRoute,
   AuthenticatedLaudosRoute: AuthenticatedLaudosRoute,
   AuthenticatedManutencoesRoute: AuthenticatedManutencoesRoute,
