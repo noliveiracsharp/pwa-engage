@@ -1,12 +1,11 @@
 import { comprimirImagem } from "@/lib/image-compress";
 import { CitacaoNoBalao, FaixaResposta, lerCitacao, type Citacao } from "@/components/chat/Citacao";
-import { CornerUpLeft } from "lucide-react";
 import { UploadInfo } from "@/components/ui/upload-info";
 import { Linkify } from "@/components/ui/linkify";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Check, ArrowLeftRight, ArrowLeft, Maximize2, MessageSquare, Minimize2, Paperclip, Search, Send, Users, X, FileText, Loader2, Phone, Video, Mic, ClipboardList, Trash2 } from "lucide-react";
+import { Plus, Check, ArrowLeftRight, ArrowLeft, Maximize2, MessageSquare, Minimize2, Paperclip, Search, Send, Users, X, FileText, Loader2, Phone, Video, Mic, ClipboardList, Trash2, CornerUpLeft } from "lucide-react";
 import { confirmar } from "@/components/layout/DialogoGlobal";
 import { ChamadaFlutuante, duracao, novaSala, type Chamada } from "@/components/atendimentos/ChamadaFlutuante";
 
@@ -470,6 +469,7 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack }: { me: stri
   const nome = sel.tipo === "direto" ? String(pick(sel.outro, ["nome"], "Usuário")) : String(sel.canal["nome"] ?? "Grupo");
   const [canalId, setCanalId] = useState<string>(sel.tipo === "grupo" ? String(sel.canal["id"]) : "");
   const [texto, setTexto] = useState("");
+  const [respondendo, setRespondendo] = useState<Citacao | null>(null);
   const [enviando, setEnviando] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const { usuario } = useAuth();
