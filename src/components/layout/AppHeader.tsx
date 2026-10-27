@@ -38,7 +38,16 @@ export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) 
   const { data: empresas = [] } = useTableRows("empresas", isMaster);
   const ativas = empresas.filter((e) => e["status"] !== false && e["ativo"] !== false);
   const { theme, toggleTheme } = useTheme();
-  const { t, idioma, setIdioma } = useIdioma();
+  const { t, idioma, setIdioma: aplicarIdioma } = useIdioma();
+  const idiomaPerfil = pick<string>(usuario, ["idioma"]);
+  useEffect(() => {
+    if (idiomaPerfil) aplicarIdioma(normalizarIdioma(idiomaPerfil));
+  }, [idiomaPerfil, aplicarIdioma]);
+  async function setIdioma(v: Idioma) {
+    aplicarIdioma(v);
+    const id = usuario ? rowId(usuario) : null;
+    if (id != null) await supabase.from("usuarios").update({ idioma: v } as never).eq("id", id as never);
+  }
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [meusDados, setMeusDados] = useState(false);
