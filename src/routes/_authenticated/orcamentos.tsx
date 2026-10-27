@@ -160,7 +160,7 @@ function OrcamentosPage() {
   const [f, setF] = useState({ busca: "", situacao: "todos", vendedor: "todos", ano: "todos" });
   const [duplicarDe, setDuplicarDe] = useState<{ record: Row; linhas: Row[] } | null>(null);
   const [ativar, setAtivarRaw] = useState<Row | null>(null);
-  const setAtivar = (r: Row | null) => { if (r && !ofertaLiberada(r["aprovacao_status"])) return avisoBloqueio(); setAtivarRaw(r); };
+  const setAtivar = (r: Row | null) => { if (r && !ofertaLiberada(r["aprovacao_status"])) { avisoBloqueio(); return; } setAtivarRaw(r); };
   const [wfOpen, setWfOpen] = useState(false);
   const [reguaOpen, setReguaOpen] = useState(false);
   const [leadsOpen, setLeadsOpen] = useState(false);
@@ -461,10 +461,10 @@ function OrcamentosPage() {
       <DropdownMenuItem onClick={() => { setPreview(r); setPreviewOpen(true); }}>
         <FileText className="h-4 w-4" /> Visualizar PDF da proposta
       </DropdownMenuItem>
-      <DropdownMenuItem onClick={() => { if (!ofertaLiberada(r["aprovacao_status"])) return avisoBloqueio(); setPreview(r); setPropostaOpen(true); }}>
+      <DropdownMenuItem onClick={() => { if (!ofertaLiberada(r["aprovacao_status"])) { avisoBloqueio(); return; } setPreview(r); setPropostaOpen(true); }}>
         <FileSignature className="h-4 w-4" /> Proposta digital e assinatura
       </DropdownMenuItem>
-      <DropdownMenuItem onClick={() => { if (!ofertaLiberada(r["aprovacao_status"])) return avisoBloqueio(); setPreview(r); setMinutaOpen(true); }}>
+      <DropdownMenuItem onClick={() => { if (!ofertaLiberada(r["aprovacao_status"])) { avisoBloqueio(); return; } setPreview(r); setMinutaOpen(true); }}>
         <ScrollText className="h-4 w-4" /> Minuta de contrato
       </DropdownMenuItem>
       {perms.canCreate && (
