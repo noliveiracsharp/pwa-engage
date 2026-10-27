@@ -9,6 +9,8 @@ import { getIcon } from "./icon-map";
 import { ChatInterno } from "@/components/chat-interno/ChatInterno";
 import { VersaoSidebar } from "./NovidadesDialog";
 import { useEmpresaAtiva } from "@/hooks/useEmpresaAtiva";
+import { useIdioma } from "@/lib/i18n";
+import { rotuloMenu } from "@/lib/i18n-menu";
 
 type Props = {
   open: boolean;
@@ -36,6 +38,7 @@ export function AppSidebar({ open, onNavigate }: Props) {
   const { data: items = [], isLoading } = useMenu();
   const ativa = useEmpresaAtiva();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { t } = useIdioma();
 
   return (
     <TooltipProvider delayDuration={100}>
@@ -52,7 +55,7 @@ export function AppSidebar({ open, onNavigate }: Props) {
               : <span className="truncate text-base font-bold text-sidebar-foreground">{ativa.nome}</span>}
           </div>
         )}
-        {isLoading && <div className="px-3 py-2 text-xs text-muted-foreground">Carregando…</div>}
+        {isLoading && <div className="px-3 py-2 text-xs text-muted-foreground">{t("msg.carregando")}</div>}
         {items.map((item) => (
           <SidebarEntry key={item.id} item={item} open={open} pathname={pathname} onNavigate={onNavigate} depth={0} />
         ))}
@@ -68,6 +71,8 @@ export function AppSidebar({ open, onNavigate }: Props) {
 function SidebarEntry({
   item, open, pathname, onNavigate, depth,
 }: { item: MenuItem; open: boolean; pathname: string; onNavigate?: (() => void) | undefined; depth: number }) {
+  const { idioma } = useIdioma();
+  const rotulo = rotuloMenu(idioma, item.path, item.label);
   const Icon = getIcon(item.icon);
   const children = item.children ?? [];
   const childActive = hasActiveChild(item, pathname);
@@ -79,19 +84,19 @@ function SidebarEntry({
       <Link
         to={item.path as "/dashboard"}
         onClick={onNavigate}
-        aria-label={open ? undefined : item.label}
+        aria-label={open ? undefined : rotulo}
         className={cn(linkCls, isActive(item, pathname) && activeCls, !open && "justify-center px-0")}
         style={open && depth > 0 ? { paddingLeft: 12 + depth * 16 } : undefined}
       >
         <Icon className={cn("shrink-0", depth > 0 ? "h-4 w-4" : "h-5 w-5")} />
-        {open && <span className="truncate">{item.label}</span>}
+        {open && <span className="truncate">{rotulo}</span>}
       </Link>
     );
     if (open) return link;
     return (
       <Tooltip>
         <TooltipTrigger asChild>{link}</TooltipTrigger>
-        <TooltipContent side="right">{item.label}</TooltipContent>
+        <TooltipContent side="right">{rotulo}</TooltipContent>
       </Tooltip>
     );
   }
@@ -103,14 +108,14 @@ function SidebarEntry({
         <PopoverTrigger asChild>
           <button
             type="button"
-            title={item.label}
+            title={rotulo}
             className={cn(linkCls, "justify-center px-0", (childActive || isActive(item, pathname)) && activeCls)}
           >
             <Icon className="h-5 w-5 shrink-0" />
           </button>
         </PopoverTrigger>
         <PopoverContent side="right" align="start" className="w-56 p-1">
-          <div className="px-3 py-1.5 text-xs font-semibold text-muted-foreground">{item.label}</div>
+          <div className="px-3 py-1.5 text-xs font-semibold text-muted-foreground">{rotulo}</div>
 {item.path && (
           <Link
             to={item.path as "/dashboard"}
@@ -118,7 +123,7 @@ function SidebarEntry({
             className={cn(linkCls, "text-popover-foreground", isActive(item, pathname) && activeCls)}
           >
             <Icon className="h-4 w-4 shrink-0" />
-            <span className="truncate">{item.label}</span>
+            <span className="truncate">{rotulo}</span>
           </Link>
           )}
           {flatten(children).map((c) => {
@@ -131,7 +136,7 @@ function SidebarEntry({
                 className={cn(linkCls, "text-popover-foreground", isActive(c, pathname) && activeCls)}
               >
                 <CIcon className="h-4 w-4 shrink-0" />
-                <span className="truncate">{c.label}</span>
+                <span className="truncate">{rotuloMenu(idioma, c.path, c.label)}</span>
               </Link>
             );
           })}
@@ -152,7 +157,7 @@ function SidebarEntry({
           style={depth > 0 ? { paddingLeft: 12 + depth * 16 } : undefined}
         >
           <Icon className={cn("shrink-0", depth > 0 ? "h-4 w-4" : "h-5 w-5")} />
-          <span className="truncate">{item.label}</span>
+          <span className="truncate">{rotulo}</span>
         </Link>
         ) : (
           <button
@@ -162,12 +167,12 @@ function SidebarEntry({
             style={depth > 0 ? { paddingLeft: 12 + depth * 16 } : undefined}
           >
             <Icon className={cn("shrink-0", depth > 0 ? "h-4 w-4" : "h-5 w-5")} />
-            <span className="truncate">{item.label}</span>
+            <span className="truncate">{rotulo}</span>
           </button>
         )}
         <button
           type="button"
-          aria-label={expanded ? `Recolher ${item.label}` : `Expandir ${item.label}`}
+          aria-label={expanded ? `Recolher ${rotulo}` : `Expandir ${rotulo}`}
           aria-expanded={expanded}
           onClick={() => setExpanded((v) => !v)}
           className="rounded-md p-2 text-sidebar-foreground hover:bg-sidebar-accent"
