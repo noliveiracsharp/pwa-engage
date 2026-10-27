@@ -8,7 +8,8 @@ import { BarraAcoesLote, useAcoesComuns } from "@/components/data-table/AcoesLot
 import { Button } from "@/components/ui/button";
 import { PrecificacaoDialog } from "@/components/itens/PrecificacaoDialog";
 import { FiscalContadorDialog } from "@/components/itens/FiscalContadorDialog";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { Tags } from "lucide-react";
 import { DataTable, type Column } from "@/components/data-table/DataTable";
 import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
 import { StatusBadge } from "@/components/data-table/StatusBadge";
@@ -255,6 +256,9 @@ function ItensPage() {
             </Button>
             <Button variant="outline" size="sm" onClick={() => setPrecOpen(true)}>
               <Settings2 className="mr-2 h-4 w-4" /> Parâmetros de Precificação
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/itens_categorias"><Tags className="mr-2 h-4 w-4" /> Categorias</Link>
             </Button>
           </>
         )}
