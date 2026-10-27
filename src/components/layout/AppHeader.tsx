@@ -24,6 +24,8 @@ import { useEmpresaAtiva } from "@/hooks/useEmpresaAtiva";
 import { AvisosButton } from "@/components/layout/AvisosButton";
 import { CentralAjuda } from "@/components/ajuda/CentralAjuda";
 import { CriarRapido } from "@/components/layout/CriarRapido";
+import { BuscaFuncoes } from "@/components/layout/BuscaFuncoes";
+import { slugLembrado } from "@/lib/marca-publica";
 
 export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) {
   const { usuario, empresa, user, isMaster, empresaContextoId, setEmpresaContexto } = useAuth();
@@ -53,7 +55,8 @@ export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) 
     await queryClient.cancelQueries();
     queryClient.clear();
     await supabase.auth.signOut();
-    navigate({ to: "/login", replace: true });
+    const s = slugLembrado();
+    navigate({ to: "/login", search: (s ? { e: s } : {}) as never, replace: true });
   }
 
   return (
@@ -66,6 +69,7 @@ export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) 
       </div>
 
       <div className="flex shrink-0 items-center gap-1">
+        <BuscaFuncoes />
         <CriarRapido />
         {isMaster && (
           <Select
