@@ -15,7 +15,7 @@ import { buildTree } from "@/lib/hierarchy";
 import { useAudit } from "@/lib/audit";
 import { ImageGallery } from "@/components/itens/ImageGallery";
 import { padraoPorNatureza, usePrecificacao } from "@/components/itens/PrecificacaoDialog";
-import { CATEGORIAS_ITENS } from "@/lib/itens-categorias";
+import { useCategoriasItens } from "@/lib/itens-categorias";
 import { classificarItem } from "@/lib/itens-classificacao";
 import { HistoricoCompras } from "@/components/itens/HistoricoCompras";
 import { NcmBusca } from "@/components/itens/NcmBusca";
@@ -135,11 +135,12 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, duplic
   const contaOpts = useMemo(() => contas.filter((c) => c["status"] !== false && String(c["codigo"] ?? "").split(".").length === 3)
     .map((c) => ({ value: String(rowId(c)), label: `${text(c["codigo"])} ${text(c["descricao"])}` }))
     .sort((a, b) => a.label.localeCompare(b.label, "pt-BR")), [contas]);
+  const categoriasItens = useCategoriasItens();
   /** Ao escolher a categoria, preenche o que estiver vazio com o padrão fiscal/contábil. */
   const aplicarCategoria = (categoria: string) => setV((s) => {
     const refs = (rs: Row[]) => rs.filter((r) => r["status"] !== false).map((r) => ({ id: String(rowId(r)), codigo: String(r["codigo"] ?? "") }));
     const atual = { ...s, categoria, centro_custo_id: s.centro_custo_id === NONE ? "" : s.centro_custo_id };
-    return { ...s, categoria, ...classificarItem(atual, refs(centros), refs(contas)) };
+    return { ...s, categoria, ...classificarItem(atual, refs(centros), refs(contas), false, categoriasItens.cadastradas) };
   });
   const { data: marcas = [] } = useTableRows("itens_marcas");
   const { data: itens = [] } = useTableRows("itens");
@@ -439,7 +440,7 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, duplic
             <div className="min-w-0 space-y-1.5">
               <Label className="block text-sm font-medium">Categoria</Label>
               <SearchSelect value={v.categoria} disabled={readOnly} placeholder="Escolha a categoria"
-                options={CATEGORIAS_ITENS.map((c) => ({ value: c, label: c }))}
+                options={categoriasItens.nomes.map((c) => ({ value: c, label: c }))}
                 onChange={aplicarCategoria} />
               <p className="text-xs text-muted-foreground">Ao escolher, Centro de Custo, Conta Contábil e o fiscal vazios são preenchidos sozinhos.</p>
             </div>

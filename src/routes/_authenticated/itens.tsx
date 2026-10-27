@@ -21,7 +21,7 @@ import { matchesAny } from "@/lib/input-masks";
 import { useAudit } from "@/lib/audit";
 import { pick, type Row } from "@/lib/row";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
-import { CATEGORIAS_ITENS } from "@/lib/itens-categorias";
+import { useCategoriasItens } from "@/lib/itens-categorias";
 import { classificarItem } from "@/lib/itens-classificacao";
 
 export const Route = createFileRoute("/_authenticated/itens")({
@@ -109,8 +109,9 @@ function ItensPage() {
   const { data: centrosCC = [] } = useTableRows("centro_custo");
   const { data: contasPC = [] } = useTableRows("plano_contas");
   const refs = (rs: Row[]) => rs.filter((r) => r["status"] !== false).map((r) => ({ id: String(rowId(r)), codigo: String(r["codigo"] ?? "") }));
+  const categoriasItens = useCategoriasItens();
   const classificar = (sobrescrever: boolean) => async (row: Row) => {
-    const mud = classificarItem(row, refs(centrosCC), refs(contasPC), sobrescrever);
+    const mud = classificarItem(row, refs(centrosCC), refs(contasPC), sobrescrever, categoriasItens.cadastradas);
     if (!Object.keys(mud).length) return { ok: true, mensagem: row["categoria"] ? "Já classificado" : "Sem categoria" };
     return lote.atualizar(row, mud);
   };
@@ -331,7 +332,7 @@ function ItensPage() {
                 options={[
                   { value: "todos", label: "Todas" },
                   { value: SEM_CATEGORIA, label: "Sem categoria" },
-                  ...CATEGORIAS_ITENS.map((c) => ({ value: c, label: c })),
+                  ...categoriasItens.nomes.map((c) => ({ value: c, label: c })),
                 ]}
               />
               <FilterSelect
