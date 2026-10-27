@@ -11,6 +11,7 @@ import { useAudit } from "@/lib/audit";
 import { useTableRows } from "@/lib/crud";
 import { formatBRL } from "@/lib/orcamentos";
 import { apurarDre, type ApuracaoDre, type Natureza } from "@/lib/dre-gerencial";
+import { pontoEquilibrio } from "@/lib/precificacao";
 import { imprimirDre } from "@/components/relatorios/DreRelatorioPDF";
 import { cn } from "@/lib/utils";
 
@@ -60,6 +61,8 @@ function DreGerencialPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [titulos, itens, contas, f, empresaId],
   );
+  const eq = pontoEquilibrio(a.receitaLiquida, a.custos, a.despesas);
+  const meses = a.meses.length || 1;
   const nomeCentro = f.centro === "todos" ? "Todos" : String(centrosEmp.find((c) => String(c["id"]) === f.centro)?.["descricao"] ?? "—");
   const periodo = `${f.inicio.split("-").reverse().join("/")} a ${f.fim.split("-").reverse().join("/")}`;
   const filtros = `Regime: ${f.regime === "caixa" ? "Caixa" : "Competência"} • Centro de custo: ${nomeCentro}`;
