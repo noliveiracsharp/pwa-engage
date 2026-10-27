@@ -149,7 +149,20 @@ export type Linha = {
   bloco: string;
   /** Quem paga este item ("" = o próprio cliente da Oferta). */
   faturar_para_id: string;
+  /** Serviço executado pela equipe própria ou terceirizado (fornecedor). */
+  execucao: Execucao;
+  /** Fornecedor que executa o serviço terceirizado (gera o contas a pagar). */
+  fornecedor_id: string;
 };
+
+export type Execucao = "interno" | "terceiro";
+
+/** Mark-up divisor: preço = custo ÷ (1 − margem% − imposto%). Null quando inviável. */
+export function precoPorMarkup(custo: number, margemPct: number, impostoPct: number): number | null {
+  const d = 1 - margemPct / 100 - impostoPct / 100;
+  if (!(custo > 0) || d <= 0) return null;
+  return round2(custo / d);
+}
 
 /** Agrupa linhas por bloco na ordem em que aparecem; linhas sem bloco ficam no grupo "" (geral). */
 export function agruparPorBloco<T>(rows: T[], getBloco: (r: T) => string): Array<{ bloco: string; rows: T[] }> {
@@ -190,6 +203,8 @@ export function novaLinha(): Linha {
     natureza: "produto",
     bloco: "",
     faturar_para_id: "",
+    execucao: "interno",
+    fornecedor_id: "",
   };
 }
 
@@ -207,6 +222,8 @@ export function linhaFromRow(row: Row, itemTipo?: unknown): Linha {
     natureza: naturezaOf(row["natureza"], itemTipo),
     bloco: String(row["bloco"] ?? ""),
     faturar_para_id: String(row["faturar_para_id"] ?? ""),
+    execucao: row["execucao"] === "terceiro" ? "terceiro" : "interno",
+    fornecedor_id: String(row["fornecedor_id"] ?? ""),
   };
 }
 

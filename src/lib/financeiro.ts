@@ -190,9 +190,42 @@ export function titulosDaOferta(orc: Row, itens: Row[] = []): NovoTitulo[] {
       }
     }
   }
+  // Serviços terceirizados: contas a pagar direto ao fornecedor do item (avulso ou mensal).
+  const custoLinha = (l: Row) => num(l["custo_total"]) || num(l["preco_custo"]) * num(l["quantidade"]);
+  const terceiros = itens.filter((l) => l["execucao"] === "terceiro" && String(l["fornecedor_id"] ?? ""));
+  const custoTerceiros = round2(terceiros.reduce((s, l) => s + custoLinha(l), 0));
+  const somaPor = (rec: boolean) => {
+    const m = new Map<string, number>();
+    for (const l of terceiros) {
+      if ((String(l["natureza"] ?? "") === "recorrente") !== rec) continue;
+      const f = String(l["fornecedor_id"]);
+      m.set(f, round2((m.get(f) ?? 0) + custoLinha(l)));
+    }
+    return m;
+  };
+  const vencTerc = parcelas[0]?.vencimento || iso(orc["dt_orcamento"] ?? orc["created_at"]) || hojeISO();
+  for (const [f, v] of somaPor(false)) {
+    if (v <= 0) continue;
+    out.push({ tipo: "pagar", descricao: `Oferta ${numero} — Serviço terceirizado`, categoria: "Serviços de terceiros",
+      vencimento: vencTerc, valor: v, parceiro_id: f, origem_tipo: "oferta", origem_id: id, parcela_n: ++seqN });
+  }
+  const recTerc = somaPor(true);
+  if (recTerc.size) {
+    const semPrazo = orc["prazo_indeterminado"] === true;
+    const meses = semPrazo ? 12 : Math.max(1, Math.min(120, Math.floor(num(orc["vigencia_meses"])) || 12));
+    const base = iso(orc["dt_orcamento"] ?? orc["data"] ?? orc["created_at"]) || hojeISO();
+    const primeira = parcelas[0]?.vencimento ? addMonthsISO(parcelas[0].vencimento, 1) : addMonthsISO(base, 1);
+    for (let i = 0; i < meses; i++)
+      for (const [f, v] of recTerc) {
+        if (v <= 0) continue;
+        out.push({ tipo: "pagar", descricao: semPrazo ? `Oferta ${numero} — Terceirizado mensal ${i + 1}` : `Oferta ${numero} — Terceirizado mensal ${i + 1}/${meses}`,
+          categoria: "Serviços de terceiros", vencimento: addMonthsISO(primeira, i), valor: v, parceiro_id: f,
+          origem_tipo: "oferta", origem_id: id, parcela_n: ++seqN });
+      }
+  }
+  const custoBase = num(orc["total_custo"]) > 0 ? num(orc["total_custo"]) : round2(itens.reduce((s, l) => s + custoLinha(l), 0));
   const forn = cronogramaCompra({
-    custo: num(orc["total_custo"]) > 0 ? num(orc["total_custo"])
-      : round2(itens.reduce((s, l) => s + (num(l["custo_total"]) || num(l["preco_custo"]) * num(l["quantidade"])), 0)),
+    custo: round2(Math.max(0, custoBase - custoTerceiros)),
     condicao: condicaoCompraFromValue(orc["compra_condicao"]),
     parcelasCliente: parcelas,
     dataPadrao: iso(orc["dt_orcamento"] ?? orc["created_at"]) || hojeISO(),
