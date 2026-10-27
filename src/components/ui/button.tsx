@@ -3,6 +3,7 @@ import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const buttonVariants = cva(
   "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
@@ -36,12 +37,14 @@ export interface ButtonProps
   asChild?: boolean;
   /** Bloqueia novos cliques até a ação terminar (padrão: true). */
   autoLock?: boolean;
+  /** Dica exibida ao passar o mouse/focar. Botões só com ícone usam aria-label/title automaticamente; false desliga. */
+  tooltip?: string | false;
 }
 
 const LOCK_MS = 500;
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, autoLock = true, onClick, disabled, ...props }, ref) => {
+  ({ className, variant, size, asChild = false, autoLock = true, tooltip, onClick, disabled, ...props }, ref) => {
     const Comp = asChild ? Slot : "button";
     const lockRef = React.useRef(false);
     const [locked, setLocked] = React.useState(false);
@@ -88,7 +91,11 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       [onClick, autoLock],
     );
 
-    return (
+    const ariaLabel = (props as Record<string, unknown>)["aria-label"] as string | undefined;
+    const dica =
+      tooltip === false ? undefined : (tooltip ?? (size === "icon" ? ariaLabel || props.title : undefined));
+
+    const botao = (
       <Comp
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
@@ -96,7 +103,19 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         disabled={disabled || (autoLock && locked && !asChild) || undefined}
         aria-busy={locked || undefined}
         {...props}
+        aria-label={ariaLabel ?? (size === "icon" && typeof dica === "string" ? dica : undefined)}
+        title={dica ? undefined : props.title}
       />
+    );
+
+    if (!dica) return botao;
+    return (
+      <TooltipProvider delayDuration={250}>
+        <Tooltip>
+          <TooltipTrigger asChild>{botao}</TooltipTrigger>
+          <TooltipContent side="bottom">{dica}</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     );
   },
 );
