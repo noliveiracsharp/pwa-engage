@@ -162,16 +162,16 @@ function LoginPage() {
             </div>
           </div>
 
-          <Button type="submit" className="w-full" disabled={loading}>
+          <Button type="submit" className="w-full" disabled={loading} tooltip="Acessar o sistema com e-mail e senha">
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Entrar
           </Button>
 
-          <Button type="button" variant="link" className="w-full" onClick={handleReset}>
+          <Button type="button" variant="link" className="w-full" onClick={handleReset} tooltip="Enviar link de redefinição para o e-mail informado">
             Esqueci a senha
           </Button>
         </form>
-      </div>
+      </main>
     </div>
   );
 }
