@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { Check, ChevronUp, Eye, MapPin, Pencil, Plus, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { InputMoeda } from "@/components/ui/input-moeda";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -372,14 +373,10 @@ export function OrcamentoLinhas({
                       <Label htmlFor={`vu-${l.key}`} className="block text-xs font-medium">
                         {tx("Unitário (R$)")}
                       </Label>
-                      <Input
+                      <InputMoeda
                         id={`vu-${l.key}`}
-                        type="number"
-                        inputMode="decimal"
-                        min={0}
-                        step="0.01"
                         value={l.valor_unitario}
-                        onChange={(e) => onChange(l.key, { valor_unitario: e.target.value })}
+                        onChange={(val) => onChange(l.key, { valor_unitario: val })}
                       />
                     </div>
                     <div className="space-y-1.5 sm:col-span-2">
@@ -707,8 +704,8 @@ function ServicoTerceiro({ linha: l, fornecedores, readOnly, onChange }: {
           </div>
           <div className="space-y-1">
             <Label htmlFor={`cf-${l.key}`} className="text-xs">Custo do fornecedor (R$/un)</Label>
-            <Input id={`cf-${l.key}`} type="number" inputMode="decimal" min={0} step="0.01" disabled={readOnly}
-              value={l.preco_custo || ""} onChange={(e) => recalcular(num(e.target.value), num(margem))} />
+            <InputMoeda id={`cf-${l.key}`} disabled={readOnly}
+              value={l.preco_custo || 0} onChange={(val) => recalcular(num(val), num(margem))} />
           </div>
           <div className="space-y-1">
             <Label htmlFor={`mg-${l.key}`} className="text-xs">Margem de lucro (%)</Label>

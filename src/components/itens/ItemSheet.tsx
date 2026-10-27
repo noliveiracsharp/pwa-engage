@@ -3,6 +3,7 @@ import { Plus } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { InputMoeda } from "@/components/ui/input-moeda";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -465,12 +466,10 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, duplic
                   </button>
                 )}
               </div>
-              <Input
+              <InputMoeda
                 id="preco_custo"
-                type="number"
-                step="0.01"
                 value={v.preco_custo}
-                onChange={(e) => setPricing({ preco_custo: e.target.value })}
+                onChange={(val) => setPricing({ preco_custo: val })}
               />
               <HoraTecnicaDialog open={horaOpen} onOpenChange={setHoraOpen} onAplicar={(c) => setPricing({ preco_custo: String(c) })} />
             </div>
@@ -505,12 +504,10 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, duplic
               <Label htmlFor="preco_venda" className="block text-sm font-medium">
                 Preço de Venda (R$)
               </Label>
-              <Input
+              <InputMoeda
                 id="preco_venda"
-                type="number"
-                step="0.01"
                 value={v.preco_venda}
-                onChange={(e) => setVenda(e.target.value)}
+                onChange={(val) => setVenda(val)}
               />
             </div>
 
