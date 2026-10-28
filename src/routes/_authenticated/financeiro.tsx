@@ -88,7 +88,7 @@ import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartToo
 import { confirmar } from "@/components/layout/DialogoGlobal";
 import { OfertaConsultaSheet, VincularOfertaDialog, ofertaDoTitulo } from "@/components/financeiro/OfertaVinculo";
 import { camposFiscais, rotulosFiscais } from "@/lib/titulo-fiscal";
-import { RateioTitulo } from "@/components/financeiro/RateioTitulo";
+import { RateioTitulo, type RateioApi } from "@/components/financeiro/RateioTitulo";
 import { ItensChip, ItensTituloDialog, useItensPorTitulo } from "@/components/financeiro/ItensTituloResumo";
 import { ApoioCrud } from "@/components/itens/ApoioCrud";
 import { centroCustoConfig, planoContasConfig } from "@/components/itens/apoio-config";
@@ -1294,8 +1294,11 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
     } catch (e) { toast.error(erroFinanceiro(e)); } finally { setSalvando(false); }
   };
 
+  const rateioRef = useRef<RateioApi | null>(null);
   const salvar = async (alcance?: EscopoRecorrencia) => {
     const valor = itensModo ? totalItens : round2(num(v.valor));
+    const rateio = rateioRef.current;
+    if (rateio?.temLinhas && round2(rateio.soma) !== valor) return void toast.error(`A soma dos itens (${formatBRL(rateio.soma)}) não bate com o valor da conta (${formatBRL(valor)}). Ajuste os itens ou use "Ajustar valor da conta".`);
     if (!v.descricao.trim()) return void toast.error("Informe a descrição.");
     if (!v.parceiro_id) return void toast.error(`Escolha o ${papel}.`);
     if (valor <= 0) return void toast.error(itensModo ? "Informe o valor de pelo menos um item." : "Informe o valor.");
@@ -1430,6 +1433,7 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
         const { error } = await supabase.from("financeiro_titulos").insert(lote as never);
         if (error) throw error;
       }
+      if (registro && rateio?.temLinhas && rateio.pendente) await rateio.salvar();
       toast.success(previa.length > 1 ? `${previa.length} parcelas salvas.` : "Conta salva."); onSaved(); onClose();
     } catch (e) {
       toast.error(erroFinanceiro(e));
@@ -1536,7 +1540,8 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
               fields={camposCentro} onCreated={(id) => setV((s) => ({ ...s, centro_custo_id: id }))} />}
           </div>
           {registro && rowId(registro) && (
-            <RateioTitulo tituloId={text(rowId(registro))} empresaId={text(registro["empresa_id"])} valorTitulo={num(registro["valor"])} readOnly={readOnly} tipoTitulo={tipo}
+            <RateioTitulo tituloId={text(rowId(registro))} empresaId={text(registro["empresa_id"])} valorTitulo={round2(num(v.valor))} readOnly={readOnly} tipoTitulo={tipo} apiRef={rateioRef}
+              onAjustarValor={(s) => setV((x) => ({ ...x, valor: moedaDeNumero(s) }))}
               formaPagamento={v.forma_pagamento} contaBancariaId={v.conta_bancaria_id} />
           )}
           <div className="space-y-1"><Label>Forma de pagamento</Label>
