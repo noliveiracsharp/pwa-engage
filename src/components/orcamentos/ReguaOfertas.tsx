@@ -1,3 +1,4 @@
+import { TextoRico } from "@/components/ui/texto-rico";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Eye, Loader2, Play, Plus, ScanLine, Trash2 } from "lucide-react";
@@ -100,7 +101,7 @@ export function ReguaOfertas({ open, onOpenChange, canEdit, situacoes }: { open:
             <div className="flex flex-wrap gap-3 items-center"><Switch checked={e.ativo} onCheckedChange={ativo=>alterar(i,{ativo})}/><Select value={e.referencia} onValueChange={v=>alterar(i,{referencia:v as EtapaOferta["referencia"]})}><SelectTrigger className="w-48"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="envio">Após o envio</SelectItem><SelectItem value="validade">Em relação à validade</SelectItem></SelectContent></Select><Input type="number" aria-label="Dias da etapa" className="w-20" value={e.dias} onChange={v=>alterar(i,{dias:Number(v.target.value)})}/><span className="text-sm text-muted-foreground">dias</span><Button size="icon" variant="ghost" type="button" title="Excluir etapa" aria-label="Excluir etapa" className="ml-auto" onClick={()=>setCfg({...cfg,etapas:cfg.etapas.filter(x=>x.id!==e.id)})}><Trash2 className="h-4 w-4"/></Button></div>
             <div className="flex gap-4">{(["email","whatsapp"] as const).map(c=><label key={c} className="flex gap-2 items-center text-sm"><Switch checked={e.canais.includes(c)} onCheckedChange={v=>alterar(i,{canais:v?[...e.canais,c]:e.canais.filter(x=>x!==c)})}/>{c==='email'?'E-mail':'WhatsApp'}</label>)}</div>
             {e.canais.includes('whatsapp')&&<div className="space-y-1"><Label>Mensagem WhatsApp</Label><Textarea value={e.whatsapp} rows={3} onChange={v=>alterar(i,{whatsapp:v.target.value})}/></div>}
-            {e.canais.includes('email')&&<><div className="space-y-1"><Label>Assunto do e-mail</Label><Input value={e.assunto} onChange={v=>alterar(i,{assunto:v.target.value})}/></div><div className="space-y-1"><Label>Mensagem do e-mail</Label><Textarea value={e.mensagem} rows={3} onChange={v=>alterar(i,{mensagem:v.target.value})}/></div></>}
+            {e.canais.includes('email')&&<><div className="space-y-1"><Label>Assunto do e-mail</Label><Input value={e.assunto} onChange={v=>alterar(i,{assunto:v.target.value})}/></div><div className="space-y-1"><Label>Mensagem do e-mail</Label><TextoRico value={e.mensagem} minHeight={90} onChange={v=>alterar(i,{mensagem:v})}/></div></>}
             <Button type="button" variant="outline" size="sm" onClick={()=>mostrarPrevia(e)}><Eye className="h-4 w-4 mr-1"/>Prévia do e-mail</Button>
           </section>)}
         </fieldset>
