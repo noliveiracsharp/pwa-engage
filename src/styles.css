@@ -780,3 +780,11 @@ table img { cursor: zoom-in; }
 .dot-fornecedor { background: var(--mapa-fornecedor); }
 .dot-ambos { background: var(--mapa-ambos); }
 .dot-inativo { background: var(--mapa-inativo); }
+
+/* Oferta: evita saltos de página com grandes espaços em branco.
+   Blocos longos (parcelas, ambientes) podem quebrar; só linhas ficam inteiras. */
+.orc-bloco:has(.orc-parcelas), .orc-amb { break-inside: auto; page-break-inside: auto; }
+.orc-amb-head, .orc-grupo { break-after: avoid; page-break-after: avoid; }
+.orc-tabela tr, .orc-parcelas tr { break-inside: avoid; page-break-inside: avoid; }
+.orc-tabela thead, .orc-parcelas thead { display: table-header-group; }
+@media print { .orc-fechamento { display: block; } .orc-fechamento .orc-totais { margin-top: 12px; break-inside: avoid; } }

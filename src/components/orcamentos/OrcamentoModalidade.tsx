@@ -21,6 +21,8 @@ export type ModalidadeState = {
   /** Contrato sem prazo de término: mensalidades geradas continuamente. */
   prazo_indeterminado: boolean;
   reajuste_indice: string;
+  /** Data do primeiro faturamento das mensalidades (AAAA-MM-DD; vazio = mês seguinte à implantação). */
+  dt_primeiro_faturamento: string;
 };
 
 type Props = {
@@ -192,6 +194,19 @@ export function OrcamentoModalidade({
               placeholder="IPCA"
               onChange={(e) => onChange({ reajuste_indice: e.target.value })}
             />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="dt_primeiro_faturamento" className="text-sm">
+              {tx("Data do primeiro faturamento")}
+            </Label>
+            <Input
+              id="dt_primeiro_faturamento"
+              type="date"
+              value={value.dt_primeiro_faturamento}
+              disabled={Boolean(readOnly)}
+              onChange={(e) => onChange({ dt_primeiro_faturamento: e.target.value })}
+            />
+            <p className="text-muted-foreground text-xs">{tx("Vazio: mês seguinte à primeira parcela da implantação.")}</p>
           </div>
         </div>
         <div className="flex items-center justify-between gap-3 rounded-md border p-3">

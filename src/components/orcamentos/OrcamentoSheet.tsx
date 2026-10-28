@@ -171,6 +171,7 @@ const emptyHeader = (vendedorId: string): Header => {
     vigencia_meses: "36",
     prazo_indeterminado: false,
     reajuste_indice: "IPCA",
+    dt_primeiro_faturamento: "",
   };
 };
 
@@ -253,6 +254,7 @@ const headerFromRecord = (r: Row): Header => {
     vigencia_meses: String(num(r["vigencia_meses"]) || 36),
     prazo_indeterminado: r["prazo_indeterminado"] === true,
     reajuste_indice: String(r["reajuste_indice"] ?? "") || "IPCA",
+    dt_primeiro_faturamento: String(r["dt_primeiro_faturamento"] ?? "").slice(0, 10),
     ...paramsDe(r["parametros_parcelamento"]),
   };
 };
@@ -687,6 +689,7 @@ export function OrcamentoSheet({
       total_recorrente: totalRecorrente,
       vigencia_meses: Math.max(1, Math.floor(num(h.vigencia_meses) || 36)),
       reajuste_indice: h.reajuste_indice.trim() || "IPCA",
+      ...(h.dt_primeiro_faturamento || (record && "dt_primeiro_faturamento" in record) ? { dt_primeiro_faturamento: h.dt_primeiro_faturamento || null } : {}),
       // Só envia a coluna quando já existe no banco (registro carregado) ou quando foi ligada.
       ...(h.prazo_indeterminado || (record && "prazo_indeterminado" in record) ? { prazo_indeterminado: h.prazo_indeterminado } : {}),
     };
