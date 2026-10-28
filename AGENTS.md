@@ -23,3 +23,4 @@
 - Approval workflows (Ofertas and Cotações) follow the same pattern: per-company config table + immutable vote table; config buttons and strategic data are gated by child Funções (`/<tela>/workflow`, `/orcamentos/estrategico`) so access is managed per perfil.
 
 - i18n: custom dependency-free engine in src/lib/i18n.ts (dictionaries + Intl formatters); add keys to all three dictionaries together — keeps bundle small and SSR-safe.
+- Monetary inputs use the shared i18n currency formatter with BRL as the default; locale changes presentation only, never denomination, because stored prices are not converted. Explicit currency overrides must reflect the actual source currency.

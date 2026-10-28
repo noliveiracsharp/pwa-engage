@@ -298,11 +298,10 @@ export function useIdioma() {
   };
 }
 
-const MOEDA: Record<Idioma, string> = { "pt-BR": "BRL", "en-US": "USD", "es-ES": "EUR" };
-
-export function formatadores(idioma: Idioma, moeda?: string) {
+// Idioma define a apresentação, não a moeda dos valores armazenados.
+export function formatadores(idioma: Idioma, moeda = "BRL") {
   return {
-    moeda: (v: number) => new Intl.NumberFormat(idioma, { style: "currency", currency: moeda ?? MOEDA[idioma] }).format(v),
+    moeda: (v: number) => new Intl.NumberFormat(idioma, { style: "currency", currency: moeda }).format(v),
     numero: (v: number, casas = 2) => new Intl.NumberFormat(idioma, { minimumFractionDigits: casas, maximumFractionDigits: casas }).format(v),
     data: (d: Date | string) => new Intl.DateTimeFormat(idioma, { timeZone: "UTC" }).format(typeof d === "string" ? new Date(d) : d),
   };
