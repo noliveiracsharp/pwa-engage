@@ -27,6 +27,7 @@ export function MinutaDialog(props: Props) {
   const { open, onOpenChange, orcamento, cliente, empresa } = props;
   const [anexos, setAnexos] = useState<AnexoContrato[]>(ANEXOS_PADRAO);
   const [envio, setEnvio] = useState(false);
+  const { data: modelos } = useModelosContrato(String(orcamento?.["empresa_id"] ?? ""), open);
 
   useEffect(() => {
     if (!open || !orcamento) return;

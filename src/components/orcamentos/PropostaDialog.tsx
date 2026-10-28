@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useModelosContrato } from "@/lib/contrato-modelos";
 import { Copy, Eye, Link2, Mail, MessageCircle, Printer, Save, X } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
