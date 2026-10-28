@@ -2,11 +2,12 @@ import { useEffect, useState } from "react";
 import { Bell, Car, CheckCheck, FolderKanban, MessageCircle, Trash2, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { type Aviso, EVT_ABRIR_CHAT, limparAvisos, listarAvisos, marcarLido, marcarTodosLidos, onAvisos, removerAviso } from "@/lib/avisos";
+import { type Aviso, definirUsuarioAvisos, EVT_ABRIR_CHAT, limparAvisos, listarAvisos, marcarLido, marcarTodosLidos, onAvisos, removerAviso } from "@/lib/avisos";
 import { useAuth } from "@/hooks/useAuth";
 import { useAvisosFrota } from "@/hooks/useAvisosFrota";
 import { useAvisosProjetos } from "@/hooks/useAvisosProjetos";
 import { useAvisosLeads } from "@/hooks/useAvisosLeads";
+import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { confirmar } from "@/components/layout/DialogoGlobal";
 
 function Icone({ a }: { a: Aviso }) {
@@ -18,12 +19,15 @@ function Icone({ a }: { a: Aviso }) {
 
 export function AvisosButton() {
   const { usuario } = useAuth();
-  useAvisosFrota(!!usuario);
+  definirUsuarioAvisos(usuario?.["id"]);
+  // Manutenção da frota só para quem tem acesso à tela de Veículos.
+  const frota = usePagePermissions("/veiculos");
+  useAvisosFrota(!!usuario && frota.canRead);
   useAvisosProjetos(usuario?.["id"]);
   useAvisosLeads(usuario?.["id"]);
   const [avisos, setAvisos] = useState<Aviso[]>([]);
   const [open, setOpen] = useState(false);
-  useEffect(() => { setAvisos(listarAvisos()); return onAvisos(() => setAvisos(listarAvisos())); }, []);
+  useEffect(() => { setAvisos(listarAvisos()); return onAvisos(() => setAvisos(listarAvisos())); }, [usuario?.["id"]]);
   const naoLidos = avisos.filter((a) => !a.lido).length;
   const abrir = (a: Aviso) => {
     marcarLido(a.id);
