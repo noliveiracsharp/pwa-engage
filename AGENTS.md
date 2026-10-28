@@ -27,3 +27,5 @@
 - Offer editors initialize after item loading and reconcile saved rows only after awaited persistence succeeds; background cache refreshes must not overwrite drafts, and persisted rows must retain their editor keys to avoid reopening them as new items.
 
 - Company e-mail (SMTP) lives in empresas_email_config/empresas_email_segredos and is edited only in Empresas → E-mail; the cobranca-regua Edge Function resolves it per empresa for every send (including password recovery via action recuperar_senha), so no feature keeps its own SMTP copy.
+- E-mail sending channels live in empresas_email_canais (+ secrets table); front passes canal_id via SeletorCanalEmail and the Edge Function falls back finalidade → 'sistema' → empresas_email_config, so tenants without channels keep working.
+- Long e-mail texts use TextoRico (HTML); plain-text consumers (WhatsApp) stay Textarea because they cannot render formatting. E-mail HTML is sanitized by mensagemEmailHtml, mirrored in the Edge Function.
