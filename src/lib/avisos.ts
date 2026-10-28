@@ -14,24 +14,32 @@ export type Aviso = {
   chat?: { grupo?: string; usuario?: string };
 };
 
-const KEY = "atendeai-avisos";
-const DESCARTADOS_KEY = "atendeai-avisos-projetos-descartados";
 const EVT = "atendeai-avisos-mudou";
+// Avisos isolados por usuário logado: quem entra no mesmo aparelho não vê os avisos de outro.
+let dono = "anon";
+export function definirUsuarioAvisos(id: unknown) {
+  const novo = id == null || id === "" ? "anon" : String(id);
+  if (novo === dono) return;
+  dono = novo;
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(EVT));
+}
+const chaveUsuario = () => `atendeai-avisos:${dono}`;
+const chaveDescartados = () => `atendeai-avisos-projetos-descartados:${dono}`;
 export const EVT_ABRIR_CHAT = "atendeai-abrir-chat";
 const MAX = 300;
 
 export function listarAvisos(): Aviso[] {
   if (typeof window === "undefined") return [];
-  try { return JSON.parse(localStorage.getItem(KEY) ?? "[]") as Aviso[]; } catch { return []; }
+  try { return JSON.parse(localStorage.getItem(chaveUsuario()) ?? "[]") as Aviso[]; } catch { return []; }
 }
 function gravar(l: Aviso[]) {
-  localStorage.setItem(KEY, JSON.stringify(l.slice(0, MAX)));
+  localStorage.setItem(chaveUsuario(), JSON.stringify(l.slice(0, MAX)));
   window.dispatchEvent(new Event(EVT));
 }
 function projetosDescartados(): string[] {
   if (typeof window === "undefined") return [];
   try {
-    const chaves: unknown = JSON.parse(localStorage.getItem(DESCARTADOS_KEY) ?? "[]");
+    const chaves: unknown = JSON.parse(localStorage.getItem(chaveDescartados()) ?? "[]");
     return Array.isArray(chaves) ? chaves.filter((chave): chave is string => typeof chave === "string") : [];
   } catch { return []; }
 }
@@ -39,7 +47,7 @@ function descartarProjetos(avisos: Aviso[]) {
   const chaves = avisos.flatMap((a) => (a.chave?.startsWith("projeto:") || a.chave?.startsWith("lead:")) ? [a.chave] : []);
   if (chaves.length === 0) return;
   // Guarda apenas IDs, antes de apagar: o polling não pode recriar eventos descartados.
-  localStorage.setItem(DESCARTADOS_KEY, JSON.stringify([...new Set([...projetosDescartados(), ...chaves])]));
+  localStorage.setItem(chaveDescartados(), JSON.stringify([...new Set([...projetosDescartados(), ...chaves])]));
 }
 export function adicionarAviso(a: Omit<Aviso, "id" | "em" | "lido">) {
   const atuais = listarAvisos();
