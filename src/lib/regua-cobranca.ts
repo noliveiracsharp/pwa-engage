@@ -132,7 +132,7 @@ export function montarEmailCobrancaHtml(d: DadosEmailCobranca, oferta?: { mensag
 <td>${site ? `<a href="${escHtml(site)}" target="_blank" rel="noopener noreferrer" style="text-decoration:none">${marca}</a>` : marca}</td>
 <td align="right" style="font-size:11px;color:#71717a;line-height:1.4">${doc ? `CNPJ/CPF ${escHtml(doc)}<br>` : ""}${d.endereco ? `${escHtml(d.endereco)}<br>` : ""}${siteLink}</td></tr></table></td></tr>
 <tr><td style="padding:24px;color:#18181b;font-size:15px;line-height:1.5">
-<p>Olá, ${escHtml(d.cliente)}!</p><p>${escHtml(oferta?.mensagem ?? avisoEtapa(d.dias)).replace(/\n/g, "<br>")}</p>
+<p>Olá, ${escHtml(d.cliente)}!</p><div>${mensagemEmailHtml(oferta?.mensagem ?? avisoEtapa(d.dias))}</div>
 <table width="100%" style="background:#f4f4f5;border-left:4px solid ${cor};border-radius:8px;padding:12px;margin:16px 0">
 <tr><td>${oferta ? `${escHtml(oferta.titulo)}<br>` : ""}${escHtml(d.descricao)}</td></tr><tr><td style="font-size:22px;font-weight:bold">${brl(d.valor)}</td></tr><tr><td>${oferta ? "Validade" : "Vencimento"}: ${dataBR(d.vencimento)}</td></tr></table>
 <p style="text-align:center"><a href="${escHtml(d.link)}" style="background:${cor};color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold">${oferta?.botao ?? "Ver boleto, Pix e nota fiscal"}</a></p>
@@ -151,3 +151,17 @@ ${contatos ? `<br>Dúvidas sobre esta ${oferta ? "Oferta" : "fatura"}? ${contato
 
 /** Dados fictícios usados na prévia e no e-mail de teste. */
 export const EXEMPLO_EMAIL = { cliente: "Cliente Exemplo", dias: -5, descricao: "Mensalidade — exemplo", valor: 299.9, linhaDigitavel: "00190.00009 01234.567890 12345.678901 1 23450000029990" };
+
+/** Remove scripts, eventos e links perigosos do HTML vindo do editor de texto (espelhado no motor). */
+export function sanitizarHtmlEmail(html: string): string {
+  return html
+    .replace(/<(script|style|iframe|object|embed|form|input|button|link|meta)[\s\S]*?(<\/\1>|\/?>)/gi, "")
+    .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "")
+    .replace(/(href|src)\s*=\s*("|')\s*(javascript|data|vbscript):[^"']*\2/gi, '$1="#"');
+}
+
+/** Mensagem do e-mail: texto simples vira parágrafos; HTML do editor é limpo e mantido. */
+export function mensagemEmailHtml(m: string): string {
+  if (/<[a-z][\s\S]*>/i.test(m)) return sanitizarHtmlEmail(m);
+  return `<p>${escHtml(m).replace(/\n/g, "<br>")}</p>`;
+}
