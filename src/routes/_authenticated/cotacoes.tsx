@@ -57,7 +57,10 @@ function CotacoesPage() {
   const { data: itensCot = [] } = useTableRows("cotacoes_itens");
   const { data: fornCot = [] } = useTableRows("cotacoes_fornecedores");
   const { data: precos = [] } = useTableRows("cotacoes_precos");
-  const { data: laudos = [] } = useTableRows("laudos_tecnicos");
+  const { data: laudosBase = [] } = useTableRows("laudos_tecnicos");
+  const { data: ordens = [] } = useTableRows("manutencao_os");
+  // Origem da cotação: laudo técnico ou levantamento de uma OS de Manutenção (mesma forma: numero + parceiro_id).
+  const laudos = useMemo<Row[]>(() => [...laudosBase, ...ordens.map((o): Row => ({ ...o, __os: true }))], [laudosBase, ordens]);
   const { data: parceiros = [] } = useTableRows("parceiros");
   const { data: itens = [] } = useTableRows("itens");
   const { data: pedidos = [] } = useTableRows("pedidos_compra");
@@ -132,7 +135,7 @@ function CotacoesPage() {
     if (!sel) return;
     setAprovando(true);
     try {
-      const laudo = laudoById.get(String(sel["laudo_id"] ?? ""));
+      const laudo = laudoById.get(String(sel["laudo_id"] ?? sel["manutencao_os_id"] ?? ""));
       const linhas: LinhaPayload[] = deCot(itensCot, selId).map((it, i) => {
         const item = itemById.get(String(it["item_id"]));
         const qtd = num(it["quantidade"]);
@@ -165,7 +168,7 @@ function CotacoesPage() {
           situacao: "Em andamento",
           dt_orcamento: new Date().toISOString().slice(0, 10),
           parceiro_id: laudo?.["parceiro_id"] ?? null,
-          descricao: `Gerado da cotação ${sel["numero"] ?? ""}${laudo ? ` (laudo ${laudo["numero"] ?? ""})` : ""}`,
+          descricao: `Gerado da cotação ${sel["numero"] ?? ""}${laudo ? ` (${laudo["__os"] ? "OS" : "laudo"} ${laudo["numero"] ?? ""})` : ""}`,
           total_itens: totalItens,
           desconto_tipo: "valor",
           desconto: 0,
@@ -217,7 +220,7 @@ function CotacoesPage() {
     {
       key: "titulo", header: "Origem", fields: ["titulo"],
       render: (r) => {
-        const laudo = laudoById.get(String(r["laudo_id"] ?? ""));
+        const laudo = laudoById.get(String(r["laudo_id"] ?? r["manutencao_os_id"] ?? ""));
         const cliente = laudo ? parceiroById.get(String(laudo["parceiro_id"])) : undefined;
         return (
           <div className="max-w-72 truncate">
