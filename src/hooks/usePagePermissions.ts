@@ -147,6 +147,7 @@ export function subtabKind(tab: { id: string; descricao: string }): string {
   if (d.includes("instanc") || d.includes("canais")) return "instancias";
   if (d.includes("intelig") || d === "ia") return "ia";
   if (d.includes("document")) return "documentos";
+  if (d.includes("e-mail") || d === "email" || d.includes("smtp")) return "email";
   if (d.includes("etiquet")) return "etiquetas";
   if (d.includes("nota")) return "notas";
   if (d.includes("campo")) return "campos";

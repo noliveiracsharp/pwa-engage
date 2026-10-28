@@ -89,11 +89,13 @@ function LoginPage() {
       toast.error("Informe seu e-mail para redefinir a senha.");
       return;
     }
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+    const slug = slugDoHost(window.location.hostname) || new URLSearchParams(window.location.search).get("e") || slugLembrado();
+    const { data, error } = await supabase.functions.invoke("cobranca-regua", {
+      body: { acao: "recuperar_senha", email: email.trim(), redirect: `${window.location.origin}/reset-password`, slug: slug || undefined },
     });
-    if (error) toast.error("Erro ao enviar o e-mail", { description: error.message });
-    else toast.success("Enviamos um link de redefinição para o seu e-mail.");
+    const erro = error ? "Tente novamente em instantes." : (data as { erro?: string } | null)?.erro;
+    if (erro) toast.error("Erro ao enviar o e-mail", { description: erro });
+    else toast.success("Se o e-mail estiver cadastrado, enviamos um link para criar uma nova senha.");
   }
 
   return (
