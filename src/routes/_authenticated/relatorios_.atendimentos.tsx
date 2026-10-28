@@ -11,8 +11,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { RelatorioLista } from "@/components/relatorios/RelatorioLista";
-import { text, useTableRows } from "@/lib/crud";
-import { pick, rowId, type Row } from "@/lib/row";
+import { rowId, text, useTableRows } from "@/lib/crud";
+import { pick, type Row } from "@/lib/row";
 import { A, M, dataDe, isCliente, isEncerrado, nomeEtapa, nomePessoa, telefonePessoa } from "@/lib/atendimentos";
 import { hojeISO } from "@/lib/financeiro";
 import { notaDe } from "@/components/atendimentos/Pesquisa";
@@ -210,7 +210,7 @@ function ConversaDialog({ linha, usuNome, onClose }: { linha: Linha; usuNome: Ma
           {!isLoading && !data.length && <p className="text-center text-sm text-muted-foreground">Sem mensagens neste chamado.</p>}
           {data.map((m) => {
             const cli = isCliente(m);
-            const interna = pick(m, M.interna) === true;
+            const interna = (pick(m, M.interna) as unknown) === true;
             const midia = text(pick(m, M.midia));
             return (
               <div key={text(rowId(m))} className={`flex ${cli ? "justify-start" : "justify-end"}`}>
