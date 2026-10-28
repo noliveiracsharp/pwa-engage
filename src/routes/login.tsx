@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2, RefreshCw } from "lucide-react";
+import { gerarDesafio, respostaCorreta, type Desafio } from "@/lib/captcha";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +35,16 @@ function LoginPage() {
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
   const [atualizado, setAtualizado] = useState(false);
+  const [desafio, setDesafio] = useState<Desafio | null>(null);
+  const [captcha, setCaptcha] = useState("");
+  const novoDesafio = () => { setDesafio(gerarDesafio()); setCaptcha(""); };
+  useEffect(() => { novoDesafio(); }, []);
+  const captchaOk = () => {
+    if (desafio && respostaCorreta(desafio, captcha)) return true;
+    toast.error("Verificação incorreta", { description: "Resolva a conta para confirmar que você não é um robô." });
+    novoDesafio();
+    return false;
+  };
 
   const [marca, setMarca] = useState<MarcaPublica | null>(null);
   const { theme } = useTheme();
@@ -62,6 +73,7 @@ function LoginPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!captchaOk()) return;
     const atual = lerEstado(email);
     const resta = restanteMs(atual, Date.now());
     if (resta > 0) {
@@ -75,6 +87,7 @@ function LoginPage() {
       const novo = registrarFalha(atual, Date.now());
       salvarEstado(email, novo);
       const restantes = MAX_TENTATIVAS - novo.falhas;
+      novoDesafio();
       toast.error("Não foi possível entrar", {
         description: novo.bloqueadoAte ? "Muitas tentativas. Acesso bloqueado por 15 minutos." : `E-mail ou senha incorretos. ${restantes} tentativa(s) restante(s).`,
       });
@@ -89,6 +102,7 @@ function LoginPage() {
       toast.error("Informe seu e-mail para redefinir a senha.");
       return;
     }
+    if (!captchaOk()) return;
     const slug = slugDoHost(window.location.hostname) || new URLSearchParams(window.location.search).get("e") || slugLembrado();
     const { data, error } = await supabase.functions.invoke("cobranca-regua", {
       body: { acao: "recuperar_senha", email: email.trim(), redirect: `${window.location.origin}/reset-password`, slug: slug || undefined },
@@ -160,6 +174,17 @@ function LoginPage() {
                 className="absolute right-0.5 top-1/2 h-8 w-8 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
                 {show ? <EyeOff /> : <Eye />}
+              </Button>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="captcha">Verificação: quanto é {desafio ? `${desafio.a} + ${desafio.b}` : "…"}?</Label>
+            <div className="flex gap-2">
+              <Input id="captcha" inputMode="numeric" autoComplete="off" required value={captcha}
+                onChange={(e) => setCaptcha(e.target.value.replace(/\D/g, "").slice(0, 2))} placeholder="Resultado" />
+              <Button type="button" variant="outline" size="icon" autoLock={false} onClick={novoDesafio} aria-label="Trocar a conta">
+                <RefreshCw />
               </Button>
             </div>
           </div>

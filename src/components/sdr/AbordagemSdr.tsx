@@ -6,6 +6,7 @@ import { gerarCadenciaIA } from "@/lib/marketing-consultor.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SeletorCanalEmail } from "@/components/email/SeletorCanalEmail";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,6 +28,7 @@ export function AbordagemSdr({ fila, empresaId, podeEditar, recarregar }: Props)
   const [passos, setPassos] = useState<Passo[]>(PASSOS_PADRAO);
   const [limite, setLimite] = useState(30);
   const [instId, setInstId] = useState("");
+  const [canalEmail, setCanalEmail] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [rodando, setRodando] = useState(false);
   const [auto, setAuto] = useState(false);
@@ -71,7 +73,7 @@ export function AbordagemSdr({ fila, empresaId, podeEditar, recarregar }: Props)
       if (!temCanal(l, d.passo.canal)) { pulados++; await supabase.from("sdr_leads" as never).update(avancar as never).eq("id", l["id"] as never); continue; }
       try {
         if (d.passo.canal === "email") {
-          const { data, error } = await supabase.functions.invoke("cobranca-regua", { body: { acao: "sdr_email", lead_id: l["id"], assunto: preencherTexto(d.passo.assunto || "{{minha_empresa}}", vars), mensagem: texto } });
+          const { data, error } = await supabase.functions.invoke("cobranca-regua", { body: { acao: "sdr_email", lead_id: l["id"], assunto: preencherTexto(d.passo.assunto || "{{minha_empresa}}", vars), mensagem: texto, canal_id: canalEmail || undefined } });
           if (error || (data as { erro?: string })?.erro) throw new Error((data as { erro?: string })?.erro || "Motor de e-mail desatualizado (publique a versão 6).");
         } else {
           if (!inst) throw new Error("Nenhum WhatsApp conectado.");
@@ -127,6 +129,7 @@ export function AbordagemSdr({ fila, empresaId, podeEditar, recarregar }: Props)
             <SelectContent>{insts.map((i) => <SelectItem key={String(i["id"])} value={String(i["id"])}>{String(i["nome"] ?? i["telefone"] ?? "WhatsApp")}</SelectItem>)}</SelectContent>
           </Select>
         </div>
+        <SeletorCanalEmail empresaId={empresaId} finalidade="comercial" value={canalEmail} onChange={setCanalEmail} />
         <div className="flex items-center justify-between gap-3 rounded-md border p-3 md:col-span-2">
           <div>
             <div className="font-medium">Envio automático diário</div>

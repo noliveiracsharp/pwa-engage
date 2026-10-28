@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { EmpresaEmailCanais } from "./EmpresaEmailCanais";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type Cfg = {
@@ -76,7 +77,7 @@ export function EmpresaEmailPainel({ empresaId, readOnly }: { empresaId: string;
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        Este e-mail é usado em tudo que o sistema envia por esta empresa: redefinição de senha no login, Ofertas, cobranças e avisos.
+        E-mail geral da empresa: usado quando não houver um canal de disparo cadastrado abaixo para a área.
       </p>
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1 sm:col-span-2">
@@ -84,14 +85,14 @@ export function EmpresaEmailPainel({ empresaId, readOnly }: { empresaId: string;
           <Select value={cfg.email_modo} onValueChange={(v) => set("email_modo", v as Cfg["email_modo"])} disabled={readOnly}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="proprio">E-mail próprio da empresa (Google, Microsoft, outro)</SelectItem>
+              <SelectItem value="proprio">E-mail próprio da empresa (Hostinger, Amazon SES, Google, Microsoft…)</SelectItem>
               <SelectItem value="sistema">E-mail do sistema (módulo adicional)</SelectItem>
             </SelectContent>
           </Select>
         </div>
         {cfg.email_modo === "proprio" && (<>
           <div className="space-y-1"><Label>Servidor de saída</Label><Input disabled={readOnly} placeholder="smtp.gmail.com" value={cfg.smtp_host ?? ""} onChange={(e) => set("smtp_host", e.target.value)} /></div>
-          <div className="space-y-1"><Label>Porta</Label><Input disabled={readOnly} type="number" value={cfg.smtp_porta ?? 465} onChange={(e) => set("smtp_porta", Number(e.target.value))} /><p className="text-xs text-muted-foreground">Use 465 (a 587 é bloqueada pelo servidor).</p></div>
+          <div className="space-y-1"><Label>Porta</Label><Input disabled={readOnly} type="number" value={cfg.smtp_porta ?? 465} onChange={(e) => set("smtp_porta", Number(e.target.value))} /><p className="text-xs text-muted-foreground">Use 465. Hostinger: smtp.hostinger.com · Amazon SES: email-smtp.sa-east-1.amazonaws.com</p></div>
           <div className="space-y-1"><Label>Usuário</Label><Input disabled={readOnly} value={cfg.smtp_usuario ?? ""} onChange={(e) => set("smtp_usuario", e.target.value)} /></div>
           <div className="space-y-1"><Label>Senha {temSenha && <Badge variant="secondary" className="ml-1">cadastrada</Badge>}</Label><Input disabled={readOnly} type="password" autoComplete="new-password" placeholder={temSenha ? "•••••• (deixe em branco para manter)" : "Senha de app"} value={senha} onChange={(e) => setSenha(e.target.value)} /></div>
         </>)}
@@ -109,6 +110,7 @@ export function EmpresaEmailPainel({ empresaId, readOnly }: { empresaId: string;
           <Button type="button" onClick={salvar} disabled={salvando}>{salvando && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}Salvar e-mail</Button>
         </div>
       )}
+      <EmpresaEmailCanais empresaId={empresaId} readOnly={readOnly} />
     </div>
   );
 }
