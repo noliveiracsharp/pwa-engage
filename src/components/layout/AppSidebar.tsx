@@ -44,6 +44,7 @@ export function AppSidebar({ open, onNavigate }: Props) {
   const ativa = useEmpresaAtiva();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { t } = useIdioma();
+  todosPaths = flatten(items).map((i) => i.path).filter((p): p is string => !!p);
 
   return (
     <TooltipProvider delayDuration={100}>
