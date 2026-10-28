@@ -143,7 +143,7 @@ function AtendimentosPage() {
       .filter((a) => {
         const enc = isEncerrado(a, etapas);
         if (rapido === "encerrados") return enc;
-        if (rapido !== "todos" && enc) return false;
+        if (enc) return false; // Encerrados só aparecem na aba "Encerrados".
         if (rapido === "minhas") return !!usuarioId && text(pick(a, A.responsavel)) === usuarioId;
         if (rapido === "aguardando") return !isIA(a) && !text(pick(a, A.responsavel));
         if (rapido === "ia") return isIA(a);
