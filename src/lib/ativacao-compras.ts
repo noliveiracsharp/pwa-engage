@@ -25,7 +25,7 @@ export function vencedoresPorItem(itensCot: R[], precos: R[]): Map<string, Vence
   return out;
 }
 
-export type LinhaCompra = { chave: string; itemId: string; descricao: string; qtd: number; custo: number; fornecedorId: string; grupo?: string };
+export type LinhaCompra = { chave: string; itemId: string; descricao: string; qtd: number; custo: number; fornecedorId: string; grupo?: string | undefined };
 
 /** Agrupa as linhas por fornecedor: cada fornecedor recebe um pedido só com os itens dele. Linhas sem fornecedor ficam em "". */
 export function pedidosPorFornecedor(linhas: LinhaCompra[]): Map<string, { linhas: LinhaCompra[]; total: number }> {

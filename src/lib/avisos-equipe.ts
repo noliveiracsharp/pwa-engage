@@ -77,7 +77,7 @@ export function useAvisosEquipe(usuarioId: unknown) {
         const chave = `equipe:${String(a["id"])}`;
         entregues.push(String(a["id"]));
         if (existentes.has(chave)) continue;
-        adicionarAviso({ tipo: "equipe", chave, titulo: text(a["titulo"]), texto: text(a["texto"]), link: text(a["link"]) || undefined });
+        adicionarAviso({ tipo: "equipe", chave, titulo: text(a["titulo"]), texto: text(a["texto"]), ...(text(a["link"]) ? { link: text(a["link"]) } : {}) });
         toast.info(text(a["titulo"]));
       }
       if (entregues.length) await supabase.from(AVISOS_EQUIPE as never).update({ lido: true } as never).in("id", entregues as never);
