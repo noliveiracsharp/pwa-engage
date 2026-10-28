@@ -130,8 +130,8 @@ function PedidoIa({ onPronto }: { onPronto: (preset: Row) => void }) {
   const montar = useServerFn(montarRelatorioIa);
   const [pedido, setPedido] = useState("");
   const [carregando, setCarregando] = useState(false);
-  const gerar = async () => {
-    if (pedido.trim().length < 3) return toast.error("Descreva o relatório que você precisa.");
+  const gerar = async (): Promise<void> => {
+    if (pedido.trim().length < 3) { toast.error("Descreva o relatório que você precisa."); return; }
     setCarregando(true);
     try {
       const tabelas = [...new Set(funcoes.filter((f) => f["status"] !== false).map((f) => pick<string>(f, ["tabela_base"])).filter(Boolean) as string[])];
@@ -145,7 +145,7 @@ function PedidoIa({ onPronto }: { onPronto: (preset: Row) => void }) {
       );
       const { data: s } = await supabase.auth.getSession();
       const r = await montar({ data: { pedido: pedido.trim(), token: s.session?.access_token ?? "", catalogo } });
-      if (r.erro || !r.relatorio) return toast.error(r.erro ?? "Falha ao montar o relatório.");
+      if (r.erro || !r.relatorio) { toast.error(r.erro ?? "Falha ao montar o relatório."); return; }
       onPronto({
         nome: r.relatorio.nome,
         descricao: r.relatorio.descricao,
