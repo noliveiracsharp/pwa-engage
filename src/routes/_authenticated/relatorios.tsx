@@ -34,6 +34,39 @@ import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { labelAmigavel, normalizarColunas } from "@/lib/orcamento-kanban";
 import { pick, type Row } from "@/lib/row";
 import { confirmar } from "@/components/layout/DialogoGlobal";
+import { agregar, extrairGrafico, filtroGrafico, type GraficoConfig } from "@/lib/relatorio-grafico";
+import { Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+
+const CORES = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"];
+
+function GraficoRelatorio({ rows, g }: { rows: Row[]; g: GraficoConfig }) {
+  const { dados, series } = useMemo(() => agregar(rows, g), [rows, g]);
+  const nf = (v: unknown) => Number(v).toLocaleString("pt-BR", { maximumFractionDigits: 2 });
+  return (
+    <div className="rounded-lg border border-border bg-card p-4">
+      <ResponsiveContainer width="100%" height={g.tipo === "pizza" ? 360 : Math.max(260, dados.length * 34)}>
+        {g.tipo === "pizza" ? (
+          <PieChart>
+            <Pie data={dados} dataKey="_total" nameKey="nome" outerRadius={130} label={(e) => String(e.name)}>
+              {dados.map((_, i) => <Cell key={i} fill={CORES[i % CORES.length]} />)}
+            </Pie>
+            <Tooltip formatter={nf} />
+            <Legend />
+          </PieChart>
+        ) : (
+          <BarChart data={dados} layout="vertical" margin={{ left: 20, right: 20 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+            <XAxis type="number" tickFormatter={nf} stroke="var(--muted-foreground)" />
+            <YAxis type="category" dataKey="nome" width={220} stroke="var(--muted-foreground)" tick={{ fontSize: 12 }} />
+            <Tooltip formatter={nf} />
+            {series.length > 1 && <Legend />}
+            {series.map((s, i) => <Bar key={s} dataKey={s} name={labelAmigavel(s)} stackId="a" fill={CORES[i % CORES.length]} />)}
+          </BarChart>
+        )}
+      </ResponsiveContainer>
+    </div>
+  );
+}
 
 export const Route = createFileRoute("/_authenticated/relatorios")({
   staticData: { sitemap: false },
@@ -134,7 +167,10 @@ function PedidoIa({ onPronto }: { onPronto: (preset: Row) => void }) {
     if (pedido.trim().length < 3) { toast.error("Descreva o relatório que você precisa."); return; }
     setCarregando(true);
     try {
-      const tabelas = [...new Set(funcoes.filter((f) => f["status"] !== false).map((f) => pick<string>(f, ["tabela_base"])).filter(Boolean) as string[])];
+      const tabelas = [...new Set([
+        ...(funcoes.filter((f) => f["status"] !== false).map((f) => pick<string>(f, ["tabela_base"])).filter(Boolean) as string[]),
+        "orcamento_itens", "itens", "orcamentos",
+      ])];
       const catalogo: Record<string, string[]> = {};
       await Promise.all(
         tabelas.map(async (t) => {
@@ -150,8 +186,8 @@ function PedidoIa({ onPronto }: { onPronto: (preset: Row) => void }) {
         nome: r.relatorio.nome,
         descricao: r.relatorio.descricao,
         tabela_base: r.relatorio.tabela_base,
-        colunas_selecionadas: r.relatorio.colunas,
-        filtros: r.relatorio.filtros,
+        colunas_selecionadas: [...r.relatorio.colunas, ...(r.relatorio.relacoes ?? [])],
+        filtros: [...r.relatorio.filtros, ...(r.relatorio.grafico ? [filtroGrafico(r.relatorio.grafico)] : [])],
         visibilidade: "privado",
       });
     } finally {
@@ -313,7 +349,9 @@ function Builder({
   const inicial = parseJson<string[]>(base?.["colunas_selecionadas"], []);
   const [cols, setCols] = useState<string[]>(inicial.filter((c) => !c.includes("(")));
   const [joins, setJoins] = useState(inicial.filter((c) => c.includes("(")).join(", "));
-  const [filtros, setFiltros] = useState<Filtro[]>(parseJson<Filtro[]>(base?.["filtros"], []));
+  const ini = extrairGrafico(parseJson<Filtro[]>(base?.["filtros"], []));
+  const [filtros, setFiltros] = useState<Filtro[]>(ini.filtros);
+  const [grafico, setGrafico] = useState<GraficoConfig | null>(ini.grafico);
   const [publico, setPublico] = useState(String(base?.["visibilidade"] ?? "publico") !== "privado");
   // Só o dono altera a visibilidade de um relatório já salvo.
   const dono = !original || !original["usuario_id"] || String(original["usuario_id"]) === meuId;
@@ -344,7 +382,10 @@ function Builder({
         descricao: descricao.trim() || null,
         tabela_base: tabela,
         colunas_selecionadas: [...cols, ...joinList],
-        filtros: filtros.filter((f) => f.campo && f.operador),
+        filtros: [
+          ...filtros.filter((f) => f.campo && f.operador),
+          ...(grafico?.agrupar ? [filtroGrafico(grafico)] : []),
+        ],
         visibilidade: publico ? "publico" : "privado",
         ...(!original || !original["usuario_id"] ? { usuario_id: meuId || null } : {}),
       },
@@ -447,6 +488,40 @@ function Builder({
               Separe por vírgula. Formato: tabela(coluna1, coluna2).
             </p>
           </div>
+        </section>
+
+        <section className="space-y-3 rounded-lg border border-border bg-card p-4">
+          <div className="flex items-center gap-3">
+            <Switch id="rel-grafico" checked={Boolean(grafico)} disabled={readOnly}
+              onCheckedChange={(v) => setGrafico(v ? { tipo: "barras", agrupar: "", medida: "contagem" } : null)} />
+            <Label htmlFor="rel-grafico" className="font-semibold">Exibir gráfico</Label>
+          </div>
+          {grafico && (
+            <div className="grid gap-2 sm:grid-cols-4">
+              <div className="space-y-1">
+                <Label>Tipo</Label>
+                <Select value={grafico.tipo} onValueChange={(v) => setGrafico({ ...grafico, tipo: v as GraficoConfig["tipo"] })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="barras">Barras (ranking)</SelectItem>
+                    <SelectItem value="pizza">Pizza (proporção)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label>Agrupar por</Label>
+                <Input value={grafico.agrupar} placeholder="ex.: itens.nome" onChange={(e) => setGrafico({ ...grafico, agrupar: e.target.value })} />
+              </div>
+              <div className="space-y-1">
+                <Label>Separar por (opcional)</Label>
+                <Input value={grafico.separar ?? ""} placeholder="ex.: natureza" onChange={(e) => setGrafico({ ...grafico, separar: e.target.value || undefined })} />
+              </div>
+              <div className="space-y-1">
+                <Label>Medida</Label>
+                <Input value={grafico.medida} placeholder="contagem ou quantidade" onChange={(e) => setGrafico({ ...grafico, medida: e.target.value || "contagem" })} />
+              </div>
+            </div>
+          )}
         </section>
 
         <section className="space-y-3 rounded-lg border border-border bg-card p-4">
@@ -560,7 +635,7 @@ function fmt(v: unknown): string {
 function Viewer({ rel, onClose }: { rel: Row; onClose: () => void }) {
   const tabela = String(rel["tabela_base"] ?? "");
   const colsSel = parseJson<string[]>(rel["colunas_selecionadas"], []);
-  const filtros = parseJson<Filtro[]>(rel["filtros"], []);
+  const { grafico, filtros } = extrairGrafico(parseJson<Filtro[]>(rel["filtros"], []));
   const { data: colunas = [] } = useColunas(tabela);
   const dateCol = useMemo(() => {
     const datas = colunas.filter((c) => /date|timestamp/i.test(c.tipo));
@@ -670,6 +745,7 @@ function Viewer({ rel, onClose }: { rel: Row; onClose: () => void }) {
           · {data.length} registro(s)
         </p>
       </div>
+      {grafico && data.length > 0 && <GraficoRelatorio rows={data} g={grafico} />}
       <div className="overflow-x-auto rounded-lg border border-border bg-card">
         <Table>
           <TableHeader>
