@@ -400,6 +400,12 @@ function Builder({
             <Label>Descrição</Label>
             <Textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={2} />
           </div>
+          <div className="flex items-center gap-3 md:col-span-2">
+            <Switch id="rel-publico" checked={publico} onCheckedChange={setPublico} disabled={readOnly || !dono} />
+            <Label htmlFor="rel-publico">
+              {publico ? "Público — todos com acesso a Relatórios podem ver" : "Privado — somente você vê"}
+            </Label>
+          </div>
         </section>
 
         <section className="space-y-3 rounded-lg border border-border bg-card p-4">
