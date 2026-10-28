@@ -1,5 +1,6 @@
 import { useIdioma } from "@/lib/i18n";
 import { tx } from "@/lib/i18n-termos";
+import { BlindagemErro } from "@/components/layout/BlindagemErro";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { etapasDoKanban, kanbanDoModuloOrcamentos } from "@/lib/orcamento-kanban";
@@ -297,6 +298,8 @@ function OrcamentosPage() {
           <div className="text-muted-foreground text-xs">
             {qtdItensPorOrcamento.get(String(rowId(r) ?? "")) ?? 0}{" "}
             {qtdItensPorOrcamento.get(String(rowId(r) ?? "")) === 1 ? "item" : "itens"}
+            {" · "}
+            <span className="font-medium text-primary">Rev. {Math.max(1, Number(r["versao_atual"] ?? 1) || 1)} vigente</span>
           </div>
         </div>
       ),
@@ -702,6 +705,7 @@ function OrcamentosPage() {
         }}
       />
 
+      <BlindagemErro onFechar={() => { setPreviewOpen(false); setPedidosOpen(false); setMinutaOpen(false); setPropostaOpen(false); }}>
       <OrcamentoPDF
         open={previewOpen}
         onOpenChange={setPreviewOpen}
@@ -755,6 +759,7 @@ function OrcamentosPage() {
         unidades={unidades}
         marcas={marcas}
       />
+      </BlindagemErro>
       <AtivacaoOfertaDialog
         open={!!ativar}
         onOpenChange={(v) => !v && setAtivarRaw(null)}

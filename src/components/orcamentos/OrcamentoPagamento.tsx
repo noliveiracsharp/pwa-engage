@@ -94,6 +94,10 @@ export type PagamentoState = {
   fixas: Record<number, number>;
   /** Vencimentos alterados à mão (número da parcela → yyyy-mm-dd). */
   datas: Record<number, string>;
+  /** Parâmetros próprios desta oferta (vazio = usa o padrão da empresa). Taxa e markup em %. */
+  juros_oferta?: string;
+  custo_oferta?: string;
+  markup_oferta?: string;
 };
 
 type Props = {
@@ -149,10 +153,18 @@ export function OrcamentoPagamento({ value, parcelas, totalLiquido, entradaValor
   // Recalcula o coeficiente global sempre que o total líquido, a quantidade de
   // parcelas ou o toggle "Com juros" mudarem. Preenche e trava o campo quando
   // "Com juros"; limpa quando volta para "Sem juros" (divisão simples).
+  const preenchido = (s?: string) => (s ?? "").trim() !== "";
+  const configEfetiva: ConfigComercial | null = configComercial || preenchido(value.juros_oferta) || preenchido(value.custo_oferta) || preenchido(value.markup_oferta)
+    ? {
+        taxa_juros_mensal: preenchido(value.juros_oferta) ? num(value.juros_oferta) / 100 : (configComercial?.taxa_juros_mensal ?? 0),
+        custo_operacional_mensal: preenchido(value.custo_oferta) ? num(value.custo_oferta) : (configComercial?.custo_operacional_mensal ?? 0),
+        fator_markup: preenchido(value.markup_oferta) ? num(value.markup_oferta) / 100 : (configComercial?.fator_markup ?? 0),
+      }
+    : null;
   const { parcelaFinal, coeficienteGlobal } = calcularParcelamentoComJuros(
     totalLiquido - entradaValor,
     entradaValor > 0 ? qtdParcelas - 1 : qtdParcelas,
-    configComercial,
+    configEfetiva,
   );
   useEffect(() => {
     if (value.tem_juros) {
@@ -175,8 +187,8 @@ export function OrcamentoPagamento({ value, parcelas, totalLiquido, entradaValor
 
   // Configuração completa o suficiente para o cálculo (markup precisa ser > 0).
   const cfg =
-    configComercial && configComercial.fator_markup > 0 && configComercial.taxa_juros_mensal >= 0
-      ? configComercial
+    configEfetiva && configEfetiva.fator_markup > 0 && configEfetiva.taxa_juros_mensal >= 0
+      ? configEfetiva
       : null;
 
   return (
@@ -336,9 +348,34 @@ export function OrcamentoPagamento({ value, parcelas, totalLiquido, entradaValor
               />
               <p className="text-muted-foreground text-xs">
                 {cfg
-                  ? `Calculado com a taxa da empresa (${fmtPct(cfg.taxa_juros_mensal)}% a.m. pela Tabela Price), o custo operacional de ${formatBRL(cfg.custo_operacional_mensal)} e o markup de ${fmtPct(cfg.fator_markup)}%. Valor da parcela = total líquido × coeficiente.`
+                  ? `Calculado com taxa de ${fmtPct(cfg.taxa_juros_mensal)}% a.m. (Tabela Price), custo operacional de ${formatBRL(cfg.custo_operacional_mensal)} e markup de ${fmtPct(cfg.fator_markup)}%. Valor da parcela = total líquido × coeficiente.`
                   : "Cadastre taxa de juros, custo operacional e fator de markup nas configurações da empresa para calcular automaticamente."}
               </p>
+            </div>
+          )}
+
+          {!avista && value.tem_juros && (
+            <div className="grid gap-3 sm:col-span-2 lg:col-span-4 sm:grid-cols-3">
+              {([
+                ["juros_oferta", "Taxa de juros (% a.m.)", configComercial ? fmtPct(configComercial.taxa_juros_mensal) : ""],
+                ["custo_oferta", "Custo operacional (R$)", configComercial ? String(configComercial.custo_operacional_mensal).replace(".", ",") : ""],
+                ["markup_oferta", "Markup (%)", configComercial ? fmtPct(configComercial.fator_markup) : ""],
+              ] as const).map(([campo, rotulo, padrao]) => (
+                <div key={campo} className="min-w-0 space-y-1.5">
+                  <Label htmlFor={campo} className="block text-sm font-medium">{rotulo}</Label>
+                  <Input
+                    id={campo}
+                    inputMode="decimal"
+                    disabled={Boolean(readOnly)}
+                    value={value[campo] ?? ""}
+                    placeholder={padrao ? `Padrão: ${padrao}` : "Padrão da empresa"}
+                    onChange={(e) => onChange({ [campo]: e.target.value })}
+                  />
+                  <p className="text-muted-foreground text-xs">
+                    {(value[campo] ?? "").trim() ? "Valor desta oferta" : `Usando o padrão da empresa${padrao ? ` (${padrao})` : ""}`}
+                  </p>
+                </div>
+              ))}
             </div>
           )}
 

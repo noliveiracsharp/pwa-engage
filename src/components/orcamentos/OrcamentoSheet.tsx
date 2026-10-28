@@ -197,6 +197,21 @@ const entradaDoCronograma = (parcelas: Parcela[]) => {
   };
 };
 
+/** Taxa/custo/markup próprios da oferta (JSON); ausentes = padrão da empresa. */
+const paramsDe = (v: unknown) => {
+  let o: Record<string, unknown> = {};
+  try { o = (typeof v === "string" ? JSON.parse(v) : v) as Record<string, unknown> ?? {}; } catch { o = {}; }
+  const s = (x: unknown) => (x === null || x === undefined || x === "" ? "" : String(x).replace(".", ","));
+  return { juros_oferta: s(o?.["juros"]), custo_oferta: s(o?.["custo"]), markup_oferta: s(o?.["markup"]) };
+};
+const paramsPara = (h: { juros_oferta?: string; custo_oferta?: string; markup_oferta?: string }) => {
+  const o: Record<string, number> = {};
+  if ((h.juros_oferta ?? "").trim()) o["juros"] = num(h.juros_oferta);
+  if ((h.custo_oferta ?? "").trim()) o["custo"] = num(h.custo_oferta);
+  if ((h.markup_oferta ?? "").trim()) o["markup"] = num(h.markup_oferta);
+  return Object.keys(o).length ? o : null;
+};
+
 const headerFromRecord = (r: Row): Header => {
   const parcelas = parcelasFromValue(r["parcelas"]);
   const dt = toISODate(r["dt_orcamento"]) || todayISO();
@@ -238,6 +253,7 @@ const headerFromRecord = (r: Row): Header => {
     vigencia_meses: String(num(r["vigencia_meses"]) || 36),
     prazo_indeterminado: r["prazo_indeterminado"] === true,
     reajuste_indice: String(r["reajuste_indice"] ?? "") || "IPCA",
+    ...paramsDe(r["parametros_parcelamento"]),
   };
 };
 
@@ -667,6 +683,7 @@ export function OrcamentoSheet({
       total_avista: ehAvista ? avista.total : null,
       taxa_instalacao: ehComodato ? num(h.taxa_instalacao) : 0,
       taxa_instalacao_isenta: ehComodato && h.taxa_instalacao_isenta,
+      ...(paramsPara(h) || (record && record["parametros_parcelamento"] != null) ? { parametros_parcelamento: paramsPara(h) } : {}),
       total_recorrente: totalRecorrente,
       vigencia_meses: Math.max(1, Math.floor(num(h.vigencia_meses) || 36)),
       reajuste_indice: h.reajuste_indice.trim() || "IPCA",
