@@ -76,9 +76,12 @@ export function EmpresaEmailPainel({ empresaId, readOnly }: { empresaId: string;
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">
-        E-mail geral da empresa: usado quando não houver um canal de disparo cadastrado abaixo para a área.
-      </p>
+      <EmpresaEmailCanais empresaId={empresaId} readOnly={readOnly} />
+      <details className="group rounded-lg border border-border p-3">
+        <summary className="cursor-pointer select-none text-sm font-medium">
+          E-mail de contingência <span className="font-normal text-muted-foreground">— usado só se nenhum canal acima atender o envio</span>
+        </summary>
+        <div className="mt-4 space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1 sm:col-span-2">
           <Label>Como enviar</Label>
@@ -91,8 +94,8 @@ export function EmpresaEmailPainel({ empresaId, readOnly }: { empresaId: string;
           </Select>
         </div>
         {cfg.email_modo === "proprio" && (<>
-          <div className="space-y-1"><Label>Servidor de saída</Label><Input disabled={readOnly} placeholder="smtp.gmail.com" value={cfg.smtp_host ?? ""} onChange={(e) => set("smtp_host", e.target.value)} /></div>
-          <div className="space-y-1"><Label>Porta</Label><Input disabled={readOnly} type="number" value={cfg.smtp_porta ?? 465} onChange={(e) => set("smtp_porta", Number(e.target.value))} /><p className="text-xs text-muted-foreground">Use 465. Hostinger: smtp.hostinger.com · Amazon SES: email-smtp.sa-east-1.amazonaws.com</p></div>
+          <div className="space-y-1"><Label>Servidor de saída</Label><Input disabled={readOnly} placeholder="smtp.hostinger.com" value={cfg.smtp_host ?? ""} onChange={(e) => set("smtp_host", e.target.value)} /></div>
+          <div className="space-y-1"><Label>Porta</Label><Input disabled={readOnly} type="number" value={cfg.smtp_porta ?? 465} onChange={(e) => set("smtp_porta", Number(e.target.value))} /></div>
           <div className="space-y-1"><Label>Usuário</Label><Input disabled={readOnly} value={cfg.smtp_usuario ?? ""} onChange={(e) => set("smtp_usuario", e.target.value)} /></div>
           <div className="space-y-1"><Label>Senha {temSenha && <Badge variant="secondary" className="ml-1">cadastrada</Badge>}</Label><Input disabled={readOnly} type="password" autoComplete="new-password" placeholder={temSenha ? "•••••• (deixe em branco para manter)" : "Senha de app"} value={senha} onChange={(e) => setSenha(e.target.value)} /></div>
         </>)}
@@ -100,17 +103,13 @@ export function EmpresaEmailPainel({ empresaId, readOnly }: { empresaId: string;
         <div className="space-y-1"><Label>E-mail do remetente</Label><Input disabled={readOnly} type="email" value={cfg.remetente_email ?? ""} onChange={(e) => set("remetente_email", e.target.value)} /></div>
         <div className="space-y-1 sm:col-span-2"><Label>Responder para</Label><Input disabled={readOnly} type="email" value={cfg.responder_para ?? ""} onChange={(e) => set("responder_para", e.target.value)} /></div>
       </div>
-      <div className="flex flex-wrap items-end gap-2 rounded-lg border border-border p-3">
-        <div className="min-w-56 flex-1 space-y-1"><Label>Enviar teste para</Label><Input type="email" placeholder={cfg.responder_para || cfg.remetente_email || "seu@email.com"} value={paraTeste} onChange={(e) => setParaTeste(e.target.value)} /></div>
-        <Button type="button" variant="outline" onClick={testar} disabled={testando}>{testando ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Send className="mr-1 h-4 w-4" />}Enviar e-mail de teste</Button>
-        <span className="w-full text-xs text-muted-foreground">Salve antes de testar.</span>
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <Input className="max-w-xs" type="email" placeholder="Testar contingência para…" value={paraTeste} onChange={(e) => setParaTeste(e.target.value)} />
+        <Button type="button" variant="outline" onClick={testar} disabled={testando}>{testando ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Send className="mr-1 h-4 w-4" />}Testar</Button>
+        {!readOnly && <Button type="button" onClick={salvar} disabled={salvando}>{salvando && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}Salvar contingência</Button>}
       </div>
-      {!readOnly && (
-        <div className="flex justify-end">
-          <Button type="button" onClick={salvar} disabled={salvando}>{salvando && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}Salvar e-mail</Button>
         </div>
-      )}
-      <EmpresaEmailCanais empresaId={empresaId} readOnly={readOnly} />
+      </details>
     </div>
   );
 }
