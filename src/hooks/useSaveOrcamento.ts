@@ -82,7 +82,7 @@ export function useSaveOrcamento() {
       header,
       linhas,
       original,
-    }: SaveOrcamentoInput): Promise<{ id: string; numero: string }> => {
+    }: SaveOrcamentoInput): Promise<{ id: string; numero: string; linhas: Row[] }> => {
       header = await vincularKanban(header, original);
       let id: string;
       let numero = String(original?.["numero"] ?? "");
@@ -164,7 +164,13 @@ export function useSaveOrcamento() {
         if (error) throw error;
       }
 
-      return { id, numero };
+      const { data: gravadas, error: linhasErr } = await supabase
+        .from("orcamento_itens")
+        .select("*")
+        .eq("orcamento_id", id)
+        .order("ordem", { ascending: true });
+      if (linhasErr) throw linhasErr;
+      return { id, numero, linhas: (gravadas ?? []) as Row[] };
     },
     onSuccess: ({ numero }) => {
       queryClient.invalidateQueries({ queryKey: ["table", "orcamentos"] });

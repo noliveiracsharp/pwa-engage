@@ -134,7 +134,7 @@ export function OrcamentoLinhas({
   // Linhas recém-adicionadas abrem automaticamente em modo de edição.
   const keysRef = useRef<Set<string>>(new Set(linhas.map((l) => l.key)));
   useEffect(() => {
-    const novos = linhas.filter((l) => !keysRef.current.has(l.key));
+    const novos = linhas.filter((l) => !l.id && !keysRef.current.has(l.key));
     keysRef.current = new Set(linhas.map((l) => l.key));
     if (novos.length > 0) {
       for (const l of novos) {
