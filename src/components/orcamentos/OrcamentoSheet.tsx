@@ -912,7 +912,7 @@ export function OrcamentoSheet({
               <TextoRico
                 value={h.descricao}
                 minHeight={90}
-                disabled={readOnly}
+                disabled={!!readOnly}
                 placeholder={tx("Objeto da oferta, condições de pagamento, prazo de entrega…")}
                 onChange={(v) => patchHeader({ descricao: v })}
               />

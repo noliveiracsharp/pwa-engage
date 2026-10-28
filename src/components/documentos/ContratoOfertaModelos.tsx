@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { RotateCcw, Save } from "lucide-react";
+import { Eye, Printer, RotateCcw, Save } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { MinutaDocumento } from "@/components/orcamentos/MinutaDocumento";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,7 +11,7 @@ import { TextoRico } from "@/components/ui/texto-rico";
 import { confirmar } from "@/components/layout/DialogoGlobal";
 import { useAudit } from "@/lib/audit";
 import { salvarModeloContrato, useModelosContrato } from "@/lib/contrato-modelos";
-import { modeloPadraoContrato, SECOES_CONTRATO, TAGS, TAGS_CONTRATO, type SecaoContrato } from "@/lib/propostas";
+import { ANEXOS_PADRAO, imprimirElemento, modeloPadraoContrato, SECOES_CONTRATO, TAGS, TAGS_CONTRATO, type SecaoContrato } from "@/lib/propostas";
 
 /** Documentos → Contrato da Oferta: edita condições gerais e anexos A–D usados nas Ofertas. */
 export function ContratoOfertaModelos({ canEdit }: { canEdit: boolean }) {
@@ -20,6 +23,10 @@ export function ContratoOfertaModelos({ canEdit }: { canEdit: boolean }) {
   const [texto, setTexto] = useState("");
   const [salvando, setSalvando] = useState(false);
   const personalizado = !!modelos[secao];
+  const [previa, setPrevia] = useState(false);
+  const { empresa } = useAuth();
+  const orcExemplo = { numero: "#2026-0001", vigencia_meses: 36, reajuste_indice: "IPCA", total_liquido: 12990, forma_pagamento: "10x no boleto", modalidade: "comodato", dt_orcamento: new Date().toISOString().slice(0, 10) };
+  const clienteExemplo = { nome: "Cliente Exemplo Ltda", razao_social: "Cliente Exemplo Ltda", documento: "12345678000190" };
 
   useEffect(() => {
     if (!isFetched) return;
@@ -75,6 +82,9 @@ export function ContratoOfertaModelos({ canEdit }: { canEdit: boolean }) {
         <TextoRico value={texto} onChange={setTexto} minHeight={360} disabled={!canEdit} />
         {canEdit && (
           <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setPrevia(true)}>
+              <Eye className="mr-1 h-4 w-4" /> Visualizar prévia
+            </Button>
             <Button variant="outline" disabled={!personalizado || salvando} onClick={() => void restaurar()}>
               <RotateCcw className="mr-1 h-4 w-4" /> Restaurar padrão
             </Button>
@@ -84,6 +94,31 @@ export function ContratoOfertaModelos({ canEdit }: { canEdit: boolean }) {
           </div>
         )}
       </section>
+      <Dialog open={previa} onOpenChange={setPrevia}>
+        <DialogContent className="flex h-[94vh] w-[98vw] max-w-[1100px] flex-col gap-0 p-0">
+          <DialogHeader className="flex-row items-center justify-between gap-3 space-y-0 border-b px-5 py-3">
+            <DialogTitle>Prévia do contrato da Oferta</DialogTitle>
+            <Button variant="outline" size="sm" className="mr-8" onClick={() => imprimirElemento("contrato-previa")}>
+              <Printer className="mr-1 h-4 w-4" /> Imprimir / PDF
+            </Button>
+          </DialogHeader>
+          <div className="bg-muted flex-1 overflow-auto p-4">
+            {previa && (
+              <MinutaDocumento
+                id="contrato-previa"
+                orcamento={orcExemplo}
+                empresa={empresa}
+                cliente={clienteExemplo}
+                linhas={[]}
+                itens={[]}
+                anexos={ANEXOS_PADRAO}
+                modelos={{ ...modelos, [secao]: texto }}
+                carimbo="Prévia do modelo — dados de cliente e valores ilustrativos"
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
