@@ -63,7 +63,7 @@ export function LevantamentoTecnico({ os, cliente }: { os: Row; cliente: string 
 
   const enviar = async () => {
     const erro = podeEnviar(status, itens);
-    if (erro) return toast.error(erro);
+    if (erro) { toast.error(erro); return; }
     if (await gravar({ levantamento_status: "aguardando_aprovacao", levantamento_enviado_em: new Date().toISOString() }, { acao: "enviado" }))
       toast.success("Levantamento enviado para aprovação do gestor.");
   };
@@ -72,7 +72,7 @@ export function LevantamentoTecnico({ os, cliente }: { os: Row; cliente: string 
     if (d === "reprovado") obs = (await perguntar({ title: "Devolver ao técnico", description: "Observação do gestor (obrigatória).", required: true, multiline: true })) ?? "";
     else obs = (await perguntar({ title: "Aprovar levantamento", description: "Observação (opcional).", multiline: true })) ?? "";
     const erro = podeDecidir(status, d, obs);
-    if (erro) return d === "reprovado" && !obs.trim() ? undefined : toast.error(erro);
+    if (erro) { if (!(d === "reprovado" && !obs.trim())) toast.error(erro); return; }
     if (await gravar({ levantamento_status: d, levantamento_decidido_em: new Date().toISOString() }, { acao: d, obs: obs.trim() || null }))
       toast.success(d === "aprovado" ? "Levantamento aprovado. Cotação liberada." : "Levantamento devolvido ao técnico.");
   };
