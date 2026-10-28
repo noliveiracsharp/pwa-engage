@@ -144,7 +144,7 @@ export function EmpresaEmailCanais({ empresaId, readOnly }: { empresaId: string;
           <div className="min-w-56 flex-1 space-y-1"><Label>Enviar teste para</Label><Input type="email" placeholder="qualquer@email.com" value={paraTeste} onChange={(e) => setParaTeste(e.target.value)} /></div>
           <div className="min-w-48 space-y-1">
             <Label>Pelo canal</Label>
-            <Select value={canalTeste?.id} onValueChange={setCanalTesteId}>
+            <Select value={canalTeste?.id ?? ""} onValueChange={setCanalTesteId}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>{[...canais].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((c) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}</SelectContent>
             </Select>
