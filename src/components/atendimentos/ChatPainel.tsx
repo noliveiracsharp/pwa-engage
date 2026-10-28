@@ -353,6 +353,15 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
     });
   }
 
+  async function reabrir() {
+    const et = etapaHumano(etapas, text(pick(atendimento, A.kanban)));
+    if (!et) { setMoverAberto(true); return; }
+    await atualizarAtendimento(
+      { modo: "Humano", modo_atendimento: "Humano", usuario_responsavel_id: usuarioId, ...etapaPayload(rowId(et), etapas) },
+      "Atendimento reaberto no mesmo protocolo.",
+    );
+  }
+
   async function assumir() {
     const et = etapaHumano(etapas, text(pick(atendimento, A.kanban)));
     const ok = await atualizarAtendimento(
@@ -545,10 +554,15 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
         )}
         {encerrado ? (
           <div className="flex items-center justify-between gap-2 rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">
-            <span>Atendimento encerrado. Mova para outra etapa para reabrir a conversa.</span>
-            <Button size="sm" variant="outline" onClick={() => setMoverAberto(true)}>
-              <MoveRight className="mr-1 h-4 w-4" /> Reabrir
-            </Button>
+            <span>Atendimento encerrado. Você pode reabrir no mesmo protocolo.</span>
+            <div className="flex gap-2">
+              <Button size="sm" onClick={() => void reabrir()}>
+                <CheckCircle2 className="mr-1 h-4 w-4" /> Reabrir protocolo
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => setMoverAberto(true)}>
+                <MoveRight className="mr-1 h-4 w-4" /> Mover etapa
+              </Button>
+            </div>
           </div>
         ) : (
         <>
