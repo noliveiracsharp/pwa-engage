@@ -334,7 +334,7 @@ export function modeloPadraoContrato(secao: SecaoContrato): string {
  * (todos por padrão). Cada seção pode ser substituída pelo modelo da empresa.
  */
 export function gerarContratoModular(
-  c: Contexto & { linhas: Row[]; itens: Row[]; anexos?: AnexoContrato[]; reindexar?: boolean; modelos?: ModelosContrato | null },
+  c: Contexto & { linhas: Row[]; itens: Row[]; anexos?: AnexoContrato[]; reindexar?: boolean; modelos?: ModelosContrato | null | undefined },
 ): string {
   const o = c.orcamento;
   const anexos = c.anexos ?? ANEXOS_PADRAO;
