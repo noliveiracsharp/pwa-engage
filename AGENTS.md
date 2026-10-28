@@ -25,3 +25,5 @@
 - i18n: custom dependency-free engine in src/lib/i18n.ts (dictionaries + Intl formatters); add keys to all three dictionaries together — keeps bundle small and SSR-safe.
 - Monetary inputs use the shared i18n currency formatter with BRL as the default; locale changes presentation only, never denomination, because stored prices are not converted. Explicit currency overrides must reflect the actual source currency.
 - Offer editors initialize after item loading and reconcile saved rows only after awaited persistence succeeds; background cache refreshes must not overwrite drafts, and persisted rows must retain their editor keys to avoid reopening them as new items.
+
+- Company e-mail (SMTP) lives in empresas_email_config/empresas_email_segredos and is edited only in Empresas → E-mail; the cobranca-regua Edge Function resolves it per empresa for every send (including password recovery via action recuperar_senha), so no feature keeps its own SMTP copy.
