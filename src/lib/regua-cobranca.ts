@@ -155,7 +155,8 @@ export const EXEMPLO_EMAIL = { cliente: "Cliente Exemplo", dias: -5, descricao: 
 /** Remove scripts, eventos e links perigosos do HTML vindo do editor de texto (espelhado no motor). */
 export function sanitizarHtmlEmail(html: string): string {
   return html
-    .replace(/<(script|style|iframe|object|embed|form|input|button|link|meta)[\s\S]*?(<\/\1>|\/?>)/gi, "")
+    .replace(/<(script|style|iframe|object|embed|form)\b[\s\S]*?<\/\1\s*>/gi, "")
+    .replace(/<\/?(script|style|iframe|object|embed|form|input|button|link|meta)\b[^>]*>/gi, "")
     .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "")
     .replace(/(href|src)\s*=\s*("|')\s*(javascript|data|vbscript):[^"']*\2/gi, '$1="#"');
 }
