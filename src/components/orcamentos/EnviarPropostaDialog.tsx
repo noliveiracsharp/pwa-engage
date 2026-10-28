@@ -12,6 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { rowId, text } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
+import { SeletorCanalEmail } from "@/components/email/SeletorCanalEmail";
+import { TextoRico } from "@/components/ui/texto-rico";
 import { dispararMensagem, sanitizarTelefone } from "@/lib/atendimentos-envio";
 
 type Props = {
@@ -154,7 +156,7 @@ export function EnviarPropostaDialog({ open, onOpenChange, orcamento, empresa, c
     try {
      for (const para of lista) {
       const { data, error } = await supabase.functions.invoke("cobranca-regua", {
-        body: { acao: "proposta_email", orcamento_id: String(rowId(orcamento) ?? ""), para, assunto, mensagem: msgEmail, link, contato_nome: contatoNome },
+        body: { acao: "proposta_email", orcamento_id: String(rowId(orcamento) ?? ""), para, assunto, mensagem: msgEmail, link, contato_nome: contatoNome, canal_id: canalEmail || undefined },
       });
       if (error) {
         let msg = error.message;
@@ -268,13 +270,14 @@ export function EnviarPropostaDialog({ open, onOpenChange, orcamento, empresa, c
               <Button type="button" variant="outline" onClick={addEmail}>Adicionar</Button>
             </div>
           </div>
+          <SeletorCanalEmail empresaId={empresaId} finalidade="comercial" value={canalEmail} onChange={setCanalEmail} />
           <div className="space-y-1">
             <Label>Assunto</Label>
             <Input value={assunto} onChange={(e) => setAssunto(e.target.value)} />
           </div>
           <div className="space-y-1">
             <Label>Mensagem</Label>
-            <Textarea rows={6} value={msgEmail} onChange={(e) => setMsgEmail(e.target.value)} />
+            <TextoRico value={msgEmail} onChange={setMsgEmail} minHeight={140} />
             <p className="text-xs text-muted-foreground">O e-mail sai no padrão visual do sistema, com o logo da empresa, valor, validade e o botão para conferir e assinar.</p>
           </div>
         </div>

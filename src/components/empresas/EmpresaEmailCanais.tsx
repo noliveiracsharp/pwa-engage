@@ -75,7 +75,7 @@ export function EmpresaEmailCanais({ empresaId, readOnly }: { empresaId: string;
   };
 
   const excluir = async (c: CanalEmail) => {
-    if (!(await confirmar({ titulo: "Excluir canal", mensagem: `Excluir o canal "${c.nome}"?`, destrutivo: true } as never))) return;
+    if (!(await confirmar({ title: "Excluir canal", description: `Excluir o canal "${c.nome}"?`, destructive: true }))) return;
     const { error: e } = await supabase.from("empresas_email_canais" as never).delete().eq("id", c.id);
     if (e) return void toast.error("Não foi possível excluir.");
     void recarregar();
