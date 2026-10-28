@@ -101,16 +101,17 @@ export function OsDocumento({ id, os, empresa, cliente, tecnico }: Props) {
         <section className="orc-bloco"><h2>Observações do técnico</h2><div><p className="orc-texto">{txt(os["observacoes"])}</p></div></section>
       )}
 
-      <div className="orc-aceite">
-        <div>
-          {txt(os["assinatura_img"]) ? <img src={txt(os["assinatura_img"])} alt="Assinatura do cliente" data-no-zoom style={{ height: 70, margin: "0 auto" }} /> : <div className="orc-linha-assinatura" />}
-          <span>{txt(os["assinado_nome"]) || cliente}</span>
-          <small>
-            {os["assinado_em"] ? `Assinado eletronicamente em ${dt(os["assinado_em"])}${txt(os["assinado_documento"]) ? ` · ${formatCpfCnpj(txt(os["assinado_documento"]))}` : ""}` : "Responsável no local"}
-          </small>
+      {txt(os["assinatura_img"]) && (
+        <div className="orc-aceite">
+          <div>
+            <img src={txt(os["assinatura_img"])} alt="Assinatura do cliente" data-no-zoom style={{ height: 70, margin: "0 auto" }} />
+            <span>{txt(os["assinado_nome"]) || cliente}</span>
+            <small>
+              {os["assinado_em"] ? `Assinado eletronicamente em ${dt(os["assinado_em"])}${txt(os["assinado_documento"]) ? ` · ${formatCpfCnpj(txt(os["assinado_documento"]))}` : ""}` : "Responsável no local"}
+            </small>
+          </div>
         </div>
-        <div><div className="orc-linha-assinatura" /><span>{tecnico || empresaNome}</span><small>Técnico responsável</small></div>
-      </div>
+      )}
       <footer className="orc-rodape">{empresaNome} · Ordem de manutenção {numero}</footer>
     </div>
   );
