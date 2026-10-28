@@ -42,7 +42,7 @@ export function ContratoOfertaModelos({ canEdit }: { canEdit: boolean }) {
   }
 
   async function restaurar() {
-    if (!(await confirmar({ titulo: "Restaurar texto padrão?", descricao: "O texto personalizado desta seção será apagado." }))) return;
+    if (!(await confirmar({ title: "Restaurar texto padrão?", description: "O texto personalizado desta seção será apagado." }))) return;
     await gravar(null);
   }
 
