@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Download, Eye, Pencil, Plus, Trash2, X } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { ArrowLeft, Download, Eye, Loader2, Lock, Pencil, Plus, Sparkles, Trash2, Users, X } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { useAuth } from "@/hooks/useAuth";
+import { montarRelatorioIa } from "@/lib/relatorio-ia.functions";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -89,7 +93,7 @@ function useColunas(tabela: string) {
 
 function RelatoriosPage() {
   const perms = usePagePermissions("/relatorios");
-  const [view, setView] = useState<{ mode: "list" | "edit" | "view"; row: Row | null }>({
+  const [view, setView] = useState<{ mode: "list" | "edit" | "view"; row: Row | null; preset?: Row }>({
     mode: "list",
     row: null,
   });
@@ -97,6 +101,7 @@ function RelatoriosPage() {
     return (
       <Builder
         original={view.row}
+        preset={view.preset}
         readOnly={Boolean(view.row) && !perms.canUpdate}
         onClose={() => setView({ mode: "list", row: null })}
       />
@@ -107,28 +112,93 @@ function RelatoriosPage() {
     <Lista
       perms={perms}
       onNew={() => setView({ mode: "edit", row: null })}
+      onIa={(preset) => setView({ mode: "edit", row: null, preset })}
       onEdit={(r) => setView({ mode: "edit", row: r })}
       onView={(r) => setView({ mode: "view", row: r })}
     />
   );
 }
 
+/** Público para todos com acesso à tela; privado só para quem criou. Relatórios antigos (sem dono) são públicos. */
+export function relatorioVisivel(r: Row, usuarioId: string): boolean {
+  if (String(r["visibilidade"] ?? "publico") !== "privado") return true;
+  return String(r["usuario_id"] ?? "") === usuarioId;
+}
+
+function PedidoIa({ onPronto }: { onPronto: (preset: Row) => void }) {
+  const { data: funcoes = [] } = useTableRows("funcoes");
+  const montar = useServerFn(montarRelatorioIa);
+  const [pedido, setPedido] = useState("");
+  const [carregando, setCarregando] = useState(false);
+  const gerar = async () => {
+    if (pedido.trim().length < 3) return toast.error("Descreva o relatório que você precisa.");
+    setCarregando(true);
+    try {
+      const tabelas = [...new Set(funcoes.filter((f) => f["status"] !== false).map((f) => pick<string>(f, ["tabela_base"])).filter(Boolean) as string[])];
+      const catalogo: Record<string, string[]> = {};
+      await Promise.all(
+        tabelas.map(async (t) => {
+          const { data } = await supabase.rpc("listar_colunas_tabela" as never, { nome_tabela: t } as never);
+          const cols = normalizarColunas(data).map((c) => c.key);
+          if (cols.length) catalogo[t] = cols;
+        }),
+      );
+      const { data: s } = await supabase.auth.getSession();
+      const r = await montar({ data: { pedido: pedido.trim(), token: s.session?.access_token ?? "", catalogo } });
+      if (r.erro || !r.relatorio) return toast.error(r.erro ?? "Falha ao montar o relatório.");
+      onPronto({
+        nome: r.relatorio.nome,
+        descricao: r.relatorio.descricao,
+        tabela_base: r.relatorio.tabela_base,
+        colunas_selecionadas: r.relatorio.colunas,
+        filtros: r.relatorio.filtros,
+        visibilidade: "privado",
+      });
+    } finally {
+      setCarregando(false);
+    }
+  };
+  return (
+    <section className="space-y-2 rounded-lg border border-border bg-card p-4">
+      <Label htmlFor="pedido-ia" className="text-base font-semibold">O que você precisa?</Label>
+      <div className="flex gap-2">
+        <Textarea
+          id="pedido-ia"
+          rows={2}
+          value={pedido}
+          onChange={(e) => setPedido(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void gerar(); } }}
+          placeholder="Ex.: atendimentos encerrados sem avaliação na última semana"
+        />
+        <Button onClick={gerar} disabled={carregando} className="h-auto shrink-0 px-4" aria-label="Montar com IA" title="Montar com IA">
+          {carregando ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
+        </Button>
+      </div>
+      <p className="text-xs text-muted-foreground">A IA monta o relatório; você confere, ajusta e salva como público ou privado.</p>
+    </section>
+  );
+}
+
 function Lista({
   perms,
   onNew,
+  onIa,
   onEdit,
   onView,
 }: {
   perms: { canCreate: boolean; canUpdate: boolean; canDelete: boolean };
   onNew: () => void;
+  onIa: (preset: Row) => void;
   onEdit: (r: Row) => void;
   onView: (r: Row) => void;
 }) {
+  const { usuario } = useAuth();
+  const meuId = String(usuario?.["id"] ?? "");
   const { data = [], isLoading } = useTableRows("relatorios");
   const del = useDeleteRecord("relatorios");
   const [busca, setBusca] = useState("");
   const rows = data.filter((r) =>
-    matches(`${r["nome"] ?? ""} ${r["descricao"] ?? ""} ${r["tabela_base"] ?? ""}`, busca),
+    relatorioVisivel(r, meuId) && matches(`${r["nome"] ?? ""} ${r["descricao"] ?? ""} ${r["tabela_base"] ?? ""}`, busca),
   );
   return (
     <div className="space-y-4">
@@ -136,18 +206,20 @@ function Lista({
         <h1 className="text-2xl font-bold text-foreground">Relatórios</h1>
         <div className="flex flex-wrap gap-2">
           {perms.canCreate && (
-            <Button onClick={onNew}>
-              <Plus className="mr-1 h-4 w-4" /> Novo Relatório
+            <Button variant="outline" onClick={onNew}>
+              <Plus className="mr-1 h-4 w-4" /> Montar manualmente
             </Button>
           )}
         </div>
       </div>
+      {perms.canCreate && <PedidoIa onPronto={onIa} />}
       <Input
         placeholder="Pesquisar…"
         value={busca}
         onChange={(e) => setBusca(e.target.value)}
         className="max-w-sm"
       />
+
       <div className="overflow-x-auto rounded-lg border border-border bg-card">
         <Table>
           <TableHeader>
