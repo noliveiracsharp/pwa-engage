@@ -286,6 +286,11 @@ export function OrcamentoSheet({
   const [linhas, setLinhas] = useState<Linha[]>([]);
   const dirty = useRef(false);
   const initKey = useRef("");
+  // Foto do estado "limpo" (carregado ou recém-gravado) para comparar dados reais.
+  const baseline = useRef("");
+  useEffect(() => {
+    if (!dirty.current) baseline.current = fotoEstado(h, linhas);
+  }, [h, linhas]);
 
   const recordId = record ? String(rowId(record) ?? "") : "";
 
@@ -686,6 +691,9 @@ export function OrcamentoSheet({
     header["faturamento_misto"] = payloadLinhas.some((l) => l.faturar_para_id);
 
     onSave({ header, linhas: payloadLinhas, manterAberto });
+    // Gravado: o que está em tela passa a ser a referência "limpa".
+    dirty.current = false;
+    baseline.current = fotoEstado(h, linhas);
   };
 
   const numero = record ? String(record["numero"] ?? "") : "";
@@ -705,7 +713,7 @@ export function OrcamentoSheet({
                 itens={itens}
                 readOnly={Boolean(readOnly)}
                 assinada={Boolean(record["assinado_em"])}
-                sujo={() => dirty.current}
+                sujo={() => dirty.current && fotoEstado(h, linhas) !== baseline.current}
                 onRestaurar={restaurarVersao}
                 onNovaVersao={setVersao}
               />
