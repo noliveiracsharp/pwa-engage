@@ -16,6 +16,7 @@ import { pick, type Row } from "@/lib/row";
 import { A, M, dataDe, isCliente, isEncerrado, nomeEtapa, nomePessoa, telefonePessoa } from "@/lib/atendimentos";
 import { hojeISO } from "@/lib/financeiro";
 import { notaDe } from "@/components/atendimentos/Pesquisa";
+import { usePagePermissions } from "@/hooks/usePagePermissions";
 
 export const Route = createFileRoute("/_authenticated/relatorios_/atendimentos")({
   staticData: { sitemap: false },
@@ -41,6 +42,7 @@ const porNome = (a: { nome: string }, b: { nome: string }) => a.nome.localeCompa
 type Linha = { a: Row; id: string; protocolo: string; aberto: Date | null; ultima: Date | null; cliente: string; telefone: string; departamento: string; atendente: string; etapa: string; encerrado: boolean; nota: number };
 
 function RelatorioAtendimentos() {
+  const perms = usePagePermissions("/relatorios/atendimentos");
   const { data: atendimentos = [], isLoading } = useTableRows("atendimentos");
   const { data: pessoas = [] } = useTableRows("pessoas");
   const { data: usuarios = [] } = useTableRows("usuarios");
@@ -97,6 +99,8 @@ function RelatorioAtendimentos() {
     atd !== "todos" ? `Atendente: ${usuNome.get(atd)}` : "",
     sit !== "todos" ? (sit === "encerrados" ? "Encerrados" : "Em aberto") : "",
   ].filter(Boolean);
+
+  if (!perms.loading && !perms.canRead) return <p className="p-6 text-muted-foreground">Sem acesso.</p>;
 
   return (
     <div className="space-y-4 p-4 sm:p-6">
