@@ -4,7 +4,7 @@ export type GraficoConfig = {
   /** Campo (achatado, ex.: "itens.nome") que define as categorias. */
   agrupar: string;
   /** Campo opcional que separa séries (ex.: "natureza" → produto / serviço). */
-  separar?: string;
+  separar?: string | undefined;
   /** "contagem" ou nome de campo numérico para somar (ex.: "quantidade"). */
   medida: string;
   limite?: number;
