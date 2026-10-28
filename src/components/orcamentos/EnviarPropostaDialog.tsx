@@ -51,6 +51,7 @@ export function EnviarPropostaDialog({ open, onOpenChange, orcamento, empresa, c
   };
   const [assunto, setAssunto] = useState("");
   const [msgEmail, setMsgEmail] = useState("");
+  const [canalEmail, setCanalEmail] = useState("");
   const [contatoNome, setContatoNome] = useState("");
   const clienteId = text(rowId(cliente ?? {}));
 
