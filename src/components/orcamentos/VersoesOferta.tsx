@@ -12,6 +12,9 @@ import { confirmar } from "@/components/layout/DialogoGlobal";
 import { compararVersoes, rotuloVersao, type Snapshot } from "@/lib/oferta-versoes";
 import type { Row } from "@/lib/row";
 import { OrcamentoDocumento } from "./OrcamentoDocumento";
+import { rowId, useTableRows } from "@/lib/crud";
+import { pick } from "@/lib/row";
+import { useAuth } from "@/hooks/useAuth";
 
 const brl = (v: unknown) => Number(v ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -38,6 +41,14 @@ export function VersoesOferta({ orcamentoId, versaoAtual, atual, itens, readOnly
   const [motivo, setMotivo] = useState("");
   const [comparar, setComparar] = useState<Row | null>(null);
   const [ver, setVer] = useState<Row | null>(null);
+  const aberto = !!ver;
+  const { data: empresas = [] } = useTableRows("empresas", aberto);
+  const { data: parceiros = [] } = useTableRows("parceiros", aberto);
+  const { data: usuarios = [] } = useTableRows("usuarios", aberto);
+  const { data: unidades = [] } = useTableRows("unidade_medida", aberto);
+  const { data: marcas = [] } = useTableRows("itens_marcas", aberto);
+  const { empresa: empresaAuth } = useAuth();
+  const achar = (rows: Row[], id: unknown) => (id ? rows.find((r) => String(rowId(r) ?? "") === String(id)) : undefined);
   const key = ["orcamento_versoes", orcamentoId];
   const nomeItem = (id: string) => String(itens.find((i) => String(i["id"]) === id)?.["descricao"] ?? itens.find((i) => String(i["id"]) === id)?.["nome"] ?? "Item");
 
@@ -160,7 +171,10 @@ export function VersoesOferta({ orcamentoId, versaoAtual, atual, itens, readOnly
             const s = (ver["snapshot"] ?? {}) as Partial<Snapshot>;
             const orc = { ...(s.orcamento ?? {}), versao_atual: ver["versao"] } as Row;
             const linhas = ((s.itens ?? []) as Row[]).map((l, i) => ({ id: `snap-${i}`, ordem: i, ...l }));
-            return <OrcamentoDocumento orcamento={orc} linhas={linhas} empresa={empresa} cliente={cliente} vendedor={undefined} itens={itens} unidades={[]} marcas={[]} />;
+            const emp = achar(empresas, orc["empresa_id"]) ?? empresa ?? (empresaAuth as Row | null | undefined);
+            const cli = achar(parceiros, pick(orc, ["parceiro_id", "parceiros_id"])) ?? cliente;
+            const vend = achar(usuarios, pick(orc, ["usuario_id", "vendedor_id"]));
+            return <OrcamentoDocumento orcamento={orc} linhas={linhas} empresa={emp} cliente={cli} vendedor={vend} itens={itens} unidades={unidades} marcas={marcas} />;
           })()}
         </DialogContent>
       </Dialog>
