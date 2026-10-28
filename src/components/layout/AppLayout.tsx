@@ -21,8 +21,32 @@ export function AppLayout({ children }: { children: ReactNode }) {
   // No celular, qualquer navegação fecha o menu.
   useEffect(() => { if (isMobile) setOpen(false); }, [pathname, isMobile]);
 
+  // Impede que o layout fique "deslocado para cima" (header cortado) após
+  // foco em campos, modais ou impressão: a página nunca rola, só o conteúdo.
+  useEffect(() => {
+    const corrigir = () => {
+      if (window.scrollY !== 0) window.scrollTo(0, 0);
+      const raiz = document.getElementById("app-layout-raiz");
+      if (raiz && raiz.scrollTop !== 0) raiz.scrollTop = 0;
+    };
+    corrigir();
+    window.addEventListener("scroll", corrigir, { passive: true });
+    window.addEventListener("resize", corrigir);
+    window.addEventListener("afterprint", corrigir);
+    window.addEventListener("focus", corrigir);
+    const raiz = document.getElementById("app-layout-raiz");
+    raiz?.addEventListener("scroll", corrigir, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", corrigir);
+      window.removeEventListener("resize", corrigir);
+      window.removeEventListener("afterprint", corrigir);
+      window.removeEventListener("focus", corrigir);
+      raiz?.removeEventListener("scroll", corrigir);
+    };
+  }, [pathname]);
+
   return (
-    <div className="flex h-dvh w-full flex-col bg-background">
+    <div id="app-layout-raiz" className="fixed inset-0 flex w-full flex-col overflow-hidden bg-background">
       <AppHeader onToggleSidebar={() => setOpen((v) => !v)} />
       <BarraAprovacaoCotacao />
       <div className="relative flex min-h-0 flex-1">
