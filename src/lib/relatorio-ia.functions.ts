@@ -1,5 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { dicaDoModulo } from "@/lib/relatorio-modulos";
+import { ehTipoGrafico, type GraficoConfig } from "@/lib/relatorio-grafico";
 
 export type RelatorioIa = {
   nome: string;
@@ -8,7 +10,7 @@ export type RelatorioIa = {
   colunas: string[];
   relacoes?: string[];
   filtros: { campo: string; operador: string; valor: string }[];
-  grafico?: { tipo: "barras" | "pizza"; agrupar: string; separar?: string; medida: string } | null;
+  grafico?: GraficoConfig | null;
 };
 
 const SYSTEM =
@@ -17,16 +19,19 @@ const SYSTEM =
   "(operadores: eq, neq, gt, lt, ilike; datas no formato AAAA-MM-DD; para ilike use %texto%). " +
   "Pense no nível de detalhe certo: para perguntas sobre ITENS de ofertas (produtos/serviços mais oferecidos, quantidades), use a tabela orcamento_itens (colunas natureza = produto/servico, quantidade, valor_unitario, item_id, orcamento_id), não a tabela orcamentos. " +
   "Relações opcionais (joins) no formato tabela(coluna1,coluna2), ex.: itens(nome) a partir de orcamento_itens; no resultado o campo vira 'itens.nome'. " +
-  "Para rankings, 'mais/menos', totais por categoria ou quando o usuário pedir gráfico, preencha 'grafico': tipo 'barras' (ranking) ou 'pizza' (proporção), " +
+  "Filtros podem usar campos de uma relação no formato 'tabela.coluna' (ex.: projetos_status.descricao ilike %erro%) desde que a relação esteja em 'relacoes'. Para status/situação por nome, prefira ilike. " +
+  "Para rankings, totais, evolução ou quando o usuário pedir gráfico, preencha 'grafico' com tipo: 'barras' (ranking horizontal), 'colunas' (comparação vertical), 'pizza' ou 'rosca' (proporção), 'linha' ou 'area' (evolução no tempo). " +
+  "Para evolução no tempo use 'agrupar' = coluna de data e 'periodo' = 'dia'|'mes'|'ano'. Respeite o tipo de gráfico pedido pelo usuário. " +
   "'agrupar' = campo das categorias (pode ser 'tabela.coluna' de uma relação), 'separar' = campo opcional para séries (ex.: natureza para separar produto e serviço), " +
   "'medida' = 'contagem' ou o nome de uma coluna numérica para somar (ex.: quantidade). Inclua nas colunas os campos usados no gráfico. Caso contrário grafico = null. " +
-  "Responda SOMENTE um JSON válido, sem markdown: {\"nome\":string,\"descricao\":string,\"tabela_base\":string,\"colunas\":string[],\"relacoes\":string[],\"filtros\":[{\"campo\":string,\"operador\":string,\"valor\":string}],\"grafico\":{\"tipo\":string,\"agrupar\":string,\"separar\":string,\"medida\":string}|null}.";
+  "Responda SOMENTE um JSON válido, sem markdown: {\"nome\":string,\"descricao\":string,\"tabela_base\":string,\"colunas\":string[],\"relacoes\":string[],\"filtros\":[{\"campo\":string,\"operador\":string,\"valor\":string}],\"grafico\":{\"tipo\":string,\"agrupar\":string,\"separar\":string,\"medida\":string,\"periodo\":string|null}|null}.";
 
 /** IA transforma o pedido em texto na configuração de um relatório (tabela, colunas e filtros). */
 export const montarRelatorioIa = createServerFn({ method: "POST" })
   .inputValidator((d) =>
     z.object({
       pedido: z.string().min(3).max(2000),
+      modulo: z.string().max(40).optional(),
       token: z.string().min(10).max(5000),
       catalogo: z.record(z.string(), z.array(z.string()).max(300)),
     }).parse(d),
@@ -51,7 +56,9 @@ export const montarRelatorioIa = createServerFn({ method: "POST" })
     }
 
     const catalogo = Object.entries(data.catalogo).map(([t, c]) => `${t}: ${c.join(", ")}`).join("\n");
-    const prompt = `Hoje: ${new Date().toISOString().slice(0, 10)}\nCatálogo:\n${catalogo}\n\nPedido: ${data.pedido}`;
+    const mod = dicaDoModulo(data.modulo);
+    const contexto = mod ? `Módulo escolhido pelo usuário: ${mod.nome}. Use SOMENTE tabelas deste módulo. ${mod.dica}\n` : "";
+    const prompt = `Hoje: ${new Date().toISOString().slice(0, 10)}\n${contexto}Catálogo:\n${catalogo}\n\nPedido: ${data.pedido}`;
     try {
       const { streamText } = await import("ai");
       let r;
@@ -101,9 +108,16 @@ export const montarRelatorioIa = createServerFn({ method: "POST" })
         return Boolean(cs && m2![2]!.split(",").every((c) => cs.includes(c.trim())));
       });
       const g = j.grafico;
-      const grafico = g && g.agrupar && (g.tipo === "barras" || g.tipo === "pizza")
-        ? { tipo: g.tipo, agrupar: String(g.agrupar), ...(g.separar ? { separar: String(g.separar) } : {}), medida: String(g.medida || "contagem") }
+      const periodo = g && ["dia", "mes", "ano"].includes(String(g.periodo)) ? (g.periodo as GraficoConfig["periodo"]) : undefined;
+      const grafico: GraficoConfig | null = g && g.agrupar && ehTipoGrafico(g.tipo)
+        ? { tipo: g.tipo, agrupar: String(g.agrupar), ...(g.separar ? { separar: String(g.separar) } : {}), medida: String(g.medida || "contagem"), ...(periodo ? { periodo } : {}) }
         : null;
+      const relTabelas = new Map(relacoes.map((r) => { const m3 = /^(\w+)\(([\w,\s]+)\)$/.exec(String(r).trim())!; return [m3[1]!, m3[2]!.split(",").map((c) => c.trim())]; }));
+      const campoOk = (c: string) => {
+        if (ok.has(c)) return true;
+        const [t, col] = c.split(".");
+        return Boolean(t && col && relTabelas.get(t)?.includes(col));
+      };
       return {
         relatorio: {
           nome: String(j.nome ?? "Relatório").slice(0, 120),
@@ -112,7 +126,7 @@ export const montarRelatorioIa = createServerFn({ method: "POST" })
           colunas: (j.colunas ?? []).filter((c) => ok.has(c)),
           relacoes,
           grafico,
-          filtros: (j.filtros ?? []).filter((f) => ok.has(f.campo) && ["eq", "neq", "gt", "lt", "ilike"].includes(f.operador)),
+          filtros: (j.filtros ?? []).filter((f) => campoOk(String(f.campo)) && ["eq", "neq", "gt", "lt", "ilike"].includes(f.operador)),
         },
       };
     } catch (e) {

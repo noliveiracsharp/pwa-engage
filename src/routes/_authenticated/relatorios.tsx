@@ -34,25 +34,53 @@ import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { labelAmigavel, normalizarColunas } from "@/lib/orcamento-kanban";
 import { pick, type Row } from "@/lib/row";
 import { confirmar } from "@/components/layout/DialogoGlobal";
-import { agregar, extrairGrafico, filtroGrafico, type GraficoConfig } from "@/lib/relatorio-grafico";
-import { Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { agregar, aplicarFiltrosRelacao, extrairGrafico, filtroGrafico, TIPOS_GRAFICO, type GraficoConfig } from "@/lib/relatorio-grafico";
+import { MODULOS_RELATORIO, ordenarModulos, tabelasDoModulo } from "@/lib/relatorio-modulos";
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 const CORES = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"];
 
 function GraficoRelatorio({ rows, g }: { rows: Row[]; g: GraficoConfig }) {
   const { dados, series } = useMemo(() => agregar(rows, g), [rows, g]);
   const nf = (v: unknown) => Number(v).toLocaleString("pt-BR", { maximumFractionDigits: 2 });
+  const proporcao = g.tipo === "pizza" || g.tipo === "rosca";
+  const vertical = g.tipo === "barras";
+  const altura = proporcao ? 360 : vertical ? Math.max(260, dados.length * 34) : 340;
+  const eixos = (
+    <>
+      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+      <XAxis dataKey="nome" stroke="var(--muted-foreground)" tick={{ fontSize: 12 }} />
+      <YAxis tickFormatter={nf} stroke="var(--muted-foreground)" />
+      <Tooltip formatter={nf} />
+      {series.length > 1 && <Legend />}
+    </>
+  );
   return (
     <div className="rounded-lg border border-border bg-card p-4">
-      <ResponsiveContainer width="100%" height={g.tipo === "pizza" ? 360 : Math.max(260, dados.length * 34)}>
-        {g.tipo === "pizza" ? (
+      <ResponsiveContainer width="100%" height={altura}>
+        {proporcao ? (
           <PieChart>
-            <Pie data={dados} dataKey="_total" nameKey="nome" outerRadius={130} label={(e) => String(e.name)}>
+            <Pie data={dados} dataKey="_total" nameKey="nome" outerRadius={130} innerRadius={g.tipo === "rosca" ? 70 : 0} label={(e) => String(e.name)}>
               {dados.map((_, i) => <Cell key={i} fill={CORES[i % CORES.length]} />)}
             </Pie>
             <Tooltip formatter={nf} />
             <Legend />
           </PieChart>
+        ) : g.tipo === "linha" ? (
+          <LineChart data={dados} margin={{ left: 10, right: 20 }}>
+            {eixos}
+            {series.map((s, i) => <Line key={s} type="monotone" dataKey={s} name={labelAmigavel(s)} stroke={CORES[i % CORES.length]} strokeWidth={2} dot={false} />)}
+          </LineChart>
+        ) : g.tipo === "area" ? (
+          <AreaChart data={dados} margin={{ left: 10, right: 20 }}>
+            {eixos}
+            {series.map((s, i) => <Area key={s} type="monotone" dataKey={s} name={labelAmigavel(s)} stackId="a" stroke={CORES[i % CORES.length]} fill={CORES[i % CORES.length]} fillOpacity={0.35} />)}
+          </AreaChart>
+        ) : g.tipo === "colunas" ? (
+          <BarChart data={dados} margin={{ left: 10, right: 20 }}>
+            {eixos}
+            {series.map((s, i) => <Bar key={s} dataKey={s} name={labelAmigavel(s)} stackId="a" fill={CORES[i % CORES.length]} />)}
+          </BarChart>
         ) : (
           <BarChart data={dados} layout="vertical" margin={{ left: 20, right: 20 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
@@ -162,15 +190,16 @@ function PedidoIa({ onPronto }: { onPronto: (preset: Row) => void }) {
   const { data: funcoes = [] } = useTableRows("funcoes");
   const montar = useServerFn(montarRelatorioIa);
   const [pedido, setPedido] = useState("");
+  const [modulo, setModulo] = useState("todos");
   const [carregando, setCarregando] = useState(false);
   const gerar = async (): Promise<void> => {
     if (pedido.trim().length < 3) { toast.error("Descreva o relatório que você precisa."); return; }
     setCarregando(true);
     try {
-      const tabelas = [...new Set([
-        ...(funcoes.filter((f) => f["status"] !== false).map((f) => pick<string>(f, ["tabela_base"])).filter(Boolean) as string[]),
-        "orcamento_itens", "itens", "orcamentos",
-      ])];
+      const tabelas = tabelasDoModulo(
+        modulo === "todos" ? null : modulo,
+        funcoes.filter((f) => f["status"] !== false).map((f) => pick<string>(f, ["tabela_base"])).filter(Boolean) as string[],
+      );
       const catalogo: Record<string, string[]> = {};
       await Promise.all(
         tabelas.map(async (t) => {
@@ -180,7 +209,7 @@ function PedidoIa({ onPronto }: { onPronto: (preset: Row) => void }) {
         }),
       );
       const { data: s } = await supabase.auth.getSession();
-      const r = await montar({ data: { pedido: pedido.trim(), token: s.session?.access_token ?? "", catalogo } });
+      const r = await montar({ data: { pedido: pedido.trim(), modulo: modulo === "todos" ? undefined : modulo, token: s.session?.access_token ?? "", catalogo } });
       if (r.erro || !r.relatorio) { toast.error(r.erro ?? "Falha ao montar o relatório."); return; }
       onPronto({
         nome: r.relatorio.nome,
@@ -197,14 +226,21 @@ function PedidoIa({ onPronto }: { onPronto: (preset: Row) => void }) {
   return (
     <section className="space-y-2 rounded-lg border border-border bg-card p-4">
       <Label htmlFor="pedido-ia" className="text-base font-semibold">O que você precisa?</Label>
-      <div className="flex gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <Select value={modulo} onValueChange={setModulo}>
+          <SelectTrigger className="sm:w-56" aria-label="Módulo"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todos os módulos</SelectItem>
+            {ordenarModulos(MODULOS_RELATORIO).map((m) => <SelectItem key={m.id} value={m.id}>{m.nome}</SelectItem>)}
+          </SelectContent>
+        </Select>
         <Textarea
           id="pedido-ia"
           rows={2}
           value={pedido}
           onChange={(e) => setPedido(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void gerar(); } }}
-          placeholder="Ex.: atendimentos encerrados sem avaliação na última semana"
+          placeholder="Ex.: projetos com status Erro · faturamento por mês em gráfico de linhas · itens mais oferecidos em pizza"
         />
         <Button onClick={gerar} disabled={carregando} className="h-auto shrink-0 px-4" aria-label="Montar com IA" title="Montar com IA">
           {carregando ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
@@ -503,14 +539,22 @@ function Builder({
                 <Select value={grafico.tipo} onValueChange={(v) => setGrafico({ ...grafico, tipo: v as GraficoConfig["tipo"] })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="barras">Barras (ranking)</SelectItem>
-                    <SelectItem value="pizza">Pizza (proporção)</SelectItem>
+                    {TIPOS_GRAFICO.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1">
                 <Label>Agrupar por</Label>
                 <Input value={grafico.agrupar} placeholder="ex.: itens.nome" onChange={(e) => setGrafico({ ...grafico, agrupar: e.target.value })} />
+                <Select value={grafico.periodo ?? "nenhum"} onValueChange={(v) => setGrafico({ ...grafico, periodo: v === "nenhum" ? undefined : v as GraficoConfig["periodo"] })}>
+                  <SelectTrigger aria-label="Período"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ano">Data por ano</SelectItem>
+                    <SelectItem value="dia">Data por dia</SelectItem>
+                    <SelectItem value="mes">Data por mês</SelectItem>
+                    <SelectItem value="nenhum">Sem período</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1">
                 <Label>Separar por (opcional)</Label>
@@ -662,7 +706,7 @@ function Viewer({ rel, onClose }: { rel: Row; onClose: () => void }) {
         .from(tabela as never)
         .select(colsSel.length ? colsSel.join(",") : "*") as any; // eslint-disable-line @typescript-eslint/no-explicit-any
       for (const f of filtros) {
-        if (!f.campo) continue;
+        if (!f.campo || f.campo.includes(".")) continue;
         if (f.operador === "ilike") q = q.ilike(f.campo, `%${f.valor}%`);
         else if (["eq", "neq", "gt", "lt"].includes(f.operador))
           q = q[f.operador](f.campo, f.valor);
@@ -677,7 +721,7 @@ function Viewer({ rel, onClose }: { rel: Row; onClose: () => void }) {
         );
       const { data, error } = await q.limit(5000);
       if (error) throw error;
-      return ((data ?? []) as Row[]).map((r) => flatten(r));
+      return aplicarFiltrosRelacao(((data ?? []) as Row[]).map((r) => flatten(r)), filtros) as Row[];
     },
   });
 
