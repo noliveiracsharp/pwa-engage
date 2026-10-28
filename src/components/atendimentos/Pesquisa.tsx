@@ -18,6 +18,17 @@ import { dispararMensagem, marcarEnvio } from "@/lib/atendimentos-envio";
 export const TEXTO_PESQUISA =
   "O seu atendimento foi encerrado. Por favor, avalie o nosso suporte respondendo com uma nota de 1 a 5.";
 
+/** Mensagem de encerramento com protocolo e link do portal do cliente. */
+export function textoEncerramento(protocolo: unknown, telefone: string, origem: string): string {
+  const prot = text(protocolo);
+  const tel = telefone.replace(/\D/g, "");
+  const linhas = ["O seu atendimento foi encerrado."];
+  if (prot) linhas.push(`Protocolo: ${prot}`);
+  if (tel && origem) linhas.push(`Consulte seus protocolos em: ${origem}/portal?tel=${tel}`);
+  linhas.push("", "Sua avaliação é muito importante para melhorarmos nosso atendimento. Responda com uma nota de 1 a 5.");
+  return linhas.join("\n");
+}
+
 export function notaDe(a: Row | undefined): number {
   const n = Number(pick(a, ["nota"]) ?? 0);
   return Number.isFinite(n) ? Math.max(0, Math.min(5, Math.round(n))) : 0;
@@ -73,8 +84,9 @@ export function usePesquisaSatisfacao() {
       const { data } = await supabase.from("pessoas").select("*").eq("id", pesId as string).maybeSingle();
       pessoa = (data ?? undefined) as Row | undefined;
     }
+    const TEXTO = textoEncerramento(pick(p.atendimento, ["protocolo"]), telefonePessoa(pessoa), typeof window !== "undefined" ? window.location.origin : "");
     const payload: Row = {
-      atendimento_id: atId, mensagem: TEXTO_PESQUISA, conteudo: TEXTO_PESQUISA, texto: TEXTO_PESQUISA,
+      atendimento_id: atId, mensagem: TEXTO, conteudo: TEXTO, texto: TEXTO,
       tipo: "texto", msg_interna: false, from_me: true, direcao: "saida", remetente_tipo: "atendente",
       usuario_id: usuarioId, empresa_id: empresaId, instancia_id: instId, status_envio: "pendente",
     };
@@ -88,7 +100,7 @@ export function usePesquisaSatisfacao() {
     }
     const mid = (salva as Row | null)?.["id"];
     try {
-      await dispararMensagem({ instancia, mensagemId: mid, atendimentoId: atId, telefone: telefonePessoa(pessoa), texto: TEXTO_PESQUISA });
+      await dispararMensagem({ instancia, mensagemId: mid, atendimentoId: atId, telefone: telefonePessoa(pessoa), texto: TEXTO });
       await marcarEnvio(mid, "enviado");
       toast.success("Pesquisa de satisfação enviada.");
     } catch (e) {
