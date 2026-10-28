@@ -135,21 +135,6 @@ function Lista({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-foreground">Relatórios</h1>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" asChild>
-            <Link to="/relatorios/comercial">Painel Comercial</Link>
-          </Button>
-          <Button variant="outline" asChild>
-            <Link to="/relatorios/board">Painel do Board</Link>
-          </Button>
-          <Button variant="outline" asChild>
-            <Link to="/relatorios/kpis">Cockpit de KPIs</Link>
-          </Button>
-          <Button variant="outline" asChild>
-            <Link to="/relatorios/dre-gerencial">DRE Gerencial</Link>
-          </Button>
-          <Button variant="outline" asChild>
-            <Link to="/relatorios/atendimentos">Atendimentos</Link>
-          </Button>
           {perms.canCreate && (
             <Button onClick={onNew}>
               <Plus className="mr-1 h-4 w-4" /> Novo Relatório
