@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { DocumentosButton } from "@/components/documentos/DocumentosPainel";
 import { ContatosPainel } from "@/components/contatos/ContatosButton";
 import { IaConfigPainel } from "@/components/financeiro/IaConfigDialog";
+import { EmpresaEmailPainel } from "@/components/empresas/EmpresaEmailPainel";
 import { useAudit } from "@/lib/audit";
 import { rowId, useTableRows } from "@/lib/crud";
 import { TODOS_QUADROS } from "@/lib/etiquetas";
@@ -679,7 +680,8 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
   const todas = comSecoes ? sections! : DEFAULT_SECTIONS;
   const iaSecao = comSecoes ? todas.find((t) => t.kind === "ia") : { perms: readOnly ? { canCreate: false, canUpdate: false, canDelete: false } : FULL };
   const docSecao = comSecoes ? todas.find((t) => t.kind === "documentos") : { perms: FULL };
-  const baseTabs = todas.filter((t) => t.kind !== "ia" && t.kind !== "documentos");
+  const emailSecao = comSecoes ? todas.find((t) => t.kind === "email") : { perms: readOnly ? { canCreate: false, canUpdate: false, canDelete: false } : FULL };
+  const baseTabs = todas.filter((t) => t.kind !== "ia" && t.kind !== "documentos" && t.kind !== "email");
   const tabs = [...baseTabs.filter((t) => t.kind === "dados"), ...baseTabs.filter((t) => t.kind !== "dados")];
   // Com seções vindas de /funcoes, cada aba obedece à própria permissão.
   if (comSecoes) readOnly = false;
@@ -825,6 +827,7 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
                 <TabsTrigger key={t.key} value={t.key}>{t.label}</TabsTrigger>
               ))}
               {empresa && iaSecao && <TabsTrigger value="__ia">Inteligência Artificial</TabsTrigger>}
+              {empresa && emailSecao && rowId(empresa) !== undefined && <TabsTrigger value="__email">E-mail</TabsTrigger>}
             </TabsList>
             {empresa && docSecao && rowId(empresa) !== undefined && (
               <div className="ml-auto">
@@ -1013,6 +1016,11 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
               </TabsContent>
             ),
           )}
+          <TabsContent value="__email" className="mt-4">
+            {empresa && rowId(empresa) !== undefined && (
+              <EmpresaEmailPainel empresaId={text(rowId(empresa))} readOnly={!emailSecao?.perms.canUpdate} />
+            )}
+          </TabsContent>
           <TabsContent value="__ia" className="mt-4">
             {empresa && text(rowId(empresa)) === text(empresaAtivaId) ? (
               <IaConfigPainel readOnly={!iaSecao?.perms.canUpdate} />

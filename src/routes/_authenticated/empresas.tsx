@@ -56,6 +56,7 @@ function EmpresasPage() {
       { key: "notas", kind: "notas", label: "Notas rápidas" },
       { key: "ia", kind: "ia", label: "Inteligência Artificial" },
       { key: "documentos", kind: "documentos", label: "Documentos" },
+      { key: "email", kind: "email", label: "E-mail" },
     ];
     const paiPerms = { canRead: perms.canRead, canCreate: perms.canCreate, canUpdate: perms.canUpdate, canDelete: perms.canDelete };
     return secoesComPermissao(base, paiPerms, definidas, perms.subtabs.map((t) => ({ ...t, kind: subtabKind(t), label: t.descricao })));
