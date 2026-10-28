@@ -6,6 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { EnviarPropostaDialog } from "@/components/orcamentos/EnviarPropostaDialog";
 import { OsDocumento } from "./OsDocumento";
+import { LevantamentoTecnico } from "./LevantamentoTecnico";
 import { imprimirElemento } from "@/lib/propostas";
 import { useAuth } from "@/hooks/useAuth";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -308,6 +309,8 @@ export function ManutencaoSheet({ open, onOpenChange, record, inicial, onSaved }
               );
             })}
           </section>
+
+          {record && <LevantamentoTecnico os={record} cliente={nomeCliente(f.parceiro_id)} />}
 
           <div className="space-y-1.5"><Label>Observações do técnico</Label>
             <Textarea rows={3} value={f.observacoes} onChange={(e) => setF({ ...f, observacoes: e.target.value })} /></div>
