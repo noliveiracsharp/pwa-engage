@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { GitCompare, History, Plus, RotateCcw } from "lucide-react";
+import { Eye, GitCompare, History, Plus, RotateCcw } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { confirmar } from "@/components/layout/DialogoGlobal";
 import { compararVersoes, rotuloVersao, type Snapshot } from "@/lib/oferta-versoes";
 import type { Row } from "@/lib/row";
+import { OrcamentoDocumento } from "./OrcamentoDocumento";
 
 const brl = (v: unknown) => Number(v ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -26,14 +27,17 @@ type Props = {
   sujo: () => boolean;
   onRestaurar: (s: Snapshot) => void;
   onNovaVersao: (v: number) => void;
+  empresa?: Row | null;
+  cliente?: Row;
 };
 
 /** Badge da revisão atual + histórico com comparação e restauração. */
-export function VersoesOferta({ orcamentoId, versaoAtual, atual, itens, readOnly, assinada, sujo, onRestaurar, onNovaVersao }: Props) {
+export function VersoesOferta({ orcamentoId, versaoAtual, atual, itens, readOnly, assinada, sujo, onRestaurar, onNovaVersao, empresa, cliente }: Props) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [motivo, setMotivo] = useState("");
   const [comparar, setComparar] = useState<Row | null>(null);
+  const [ver, setVer] = useState<Row | null>(null);
   const key = ["orcamento_versoes", orcamentoId];
   const nomeItem = (id: string) => String(itens.find((i) => String(i["id"]) === id)?.["descricao"] ?? itens.find((i) => String(i["id"]) === id)?.["nome"] ?? "Item");
 
@@ -115,6 +119,7 @@ export function VersoesOferta({ orcamentoId, versaoAtual, atual, itens, readOnly
                   <span className="text-sm font-medium">{brl(v["total_liquido"])}{Number(v["total_recorrente"]) > 0 ? ` + ${brl(v["total_recorrente"])}/mês` : ""}</span>
                   <span className="text-xs text-muted-foreground">{String(v["qtd_itens"] ?? 0)} itens · margem {Number(v["margem_pct"] ?? 0).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%</span>
                   <div className="ml-auto flex gap-1">
+                    <Button size="sm" variant="ghost" onClick={() => setVer(v)}><Eye className="mr-1 h-4 w-4" /> Visualizar</Button>
                     <Button size="sm" variant="ghost" onClick={() => setComparar(comparar?.["id"] === v["id"] ? null : v)}><GitCompare className="mr-1 h-4 w-4" /> Comparar</Button>
                     {!readOnly && !assinada && <Button size="sm" variant="ghost" onClick={() => void restaurar(v)}><RotateCcw className="mr-1 h-4 w-4" /> Restaurar</Button>}
                   </div>
@@ -143,6 +148,20 @@ export function VersoesOferta({ orcamentoId, versaoAtual, atual, itens, readOnly
               </div>
             ))}
           </div>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={!!ver} onOpenChange={(o) => !o && setVer(null)}>
+        <DialogContent className="max-h-[92vh] w-[96vw] max-w-4xl overflow-y-auto p-0">
+          <DialogHeader className="border-b px-6 py-4">
+            <DialogTitle>{ver ? `${rotuloVersao(ver["versao"])} (congelada)` : ""}</DialogTitle>
+            <DialogDescription>Somente consulta — esta revisão não pode ser alterada.</DialogDescription>
+          </DialogHeader>
+          {ver && (() => {
+            const s = (ver["snapshot"] ?? {}) as Partial<Snapshot>;
+            const orc = { ...(s.orcamento ?? {}), versao_atual: ver["versao"] } as Row;
+            const linhas = ((s.itens ?? []) as Row[]).map((l, i) => ({ id: `snap-${i}`, ordem: i, ...l }));
+            return <OrcamentoDocumento orcamento={orc} linhas={linhas} empresa={empresa} cliente={cliente} vendedor={undefined} itens={itens} unidades={[]} marcas={[]} />;
+          })()}
         </DialogContent>
       </Dialog>
     </>
