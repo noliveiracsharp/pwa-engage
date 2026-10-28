@@ -96,7 +96,7 @@ export function ReguaCobranca({ canEdit }: { canEdit: boolean }) {
     const etapasOrd = [...etapas].sort((a, b) => a.dias - b.dias);
     const { error } = await supabase.from("cobranca_regua" as never).upsert({ ...resto, etapas: etapasOrd, empresa_id: empresaId, atualizado_em: new Date().toISOString() } as never);
     if (!error && (senha || token)) {
-      const r = await supabase.rpc("cobranca_salvar_segredos" as never, { p_smtp_senha: senha, p_fiscal_token: token } as never);
+      const r = await supabase.rpc("cobranca_salvar_segredos" as never, { p_smtp_senha: "", p_fiscal_token: token } as never);
       if (r.error) { setSalvando(false); toast.error("Configuração salva, mas a senha/token não foi gravada."); return; }
       setSegredos((s) => ({ tem_smtp: s.tem_smtp || !!senha, tem_fiscal: s.tem_fiscal || !!token })); setSenha(""); setToken("");
     }
@@ -113,8 +113,9 @@ export function ReguaCobranca({ canEdit }: { canEdit: boolean }) {
     setRodando(false);
   };
   const testarEmail = async () => {
-    const para = cfg.responder_para || cfg.remetente_email;
-    if (!para) return void toast.error("Preencha o e-mail do remetente ou de resposta para receber o teste.");
+    const { data: me } = await supabase.auth.getUser();
+    const para = me.user?.email ?? "";
+    if (!para) return void toast.error("Não encontramos o seu e-mail para receber o teste.");
     try { await chamar("testar_email", { para }); toast.success(`E-mail de teste enviado para ${para}.`); } catch (e) { toast.error((e as Error).message); }
   };
 
@@ -245,27 +246,10 @@ export function ReguaCobranca({ canEdit }: { canEdit: boolean }) {
 
       <TabsContent value="email" className="space-y-4">
         <Card>
-          <CardHeader><CardTitle className="text-base">Como enviar os e-mails</CardTitle></CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1 sm:col-span-2">
-              <Select value={cfg.email_modo} onValueChange={(v) => set("email_modo", v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="proprio">E-mail próprio da empresa (Google, Microsoft, outro)</SelectItem>
-                  <SelectItem value="sistema">E-mail do sistema (módulo adicional)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {cfg.email_modo === "proprio" && (<>
-              <div className="space-y-1"><Label>Servidor de saída</Label><Input placeholder="smtp.gmail.com" value={cfg.smtp_host ?? ""} onChange={(e) => set("smtp_host", e.target.value)} /></div>
-              <div className="space-y-1"><Label>Porta</Label><Input type="number" value={cfg.smtp_porta ?? 465} onChange={(e) => set("smtp_porta", Number(e.target.value))} /><p className="text-muted-foreground text-xs">Use 465 (a 587 é bloqueada pelo servidor).</p></div>
-              <div className="space-y-1"><Label>Usuário</Label><Input value={cfg.smtp_usuario ?? ""} onChange={(e) => set("smtp_usuario", e.target.value)} /></div>
-              <div className="space-y-1"><Label>Senha {segredos.tem_smtp && <Badge variant="secondary" className="ml-1">cadastrada</Badge>}</Label><Input type="password" placeholder={segredos.tem_smtp ? "•••••• (deixe em branco para manter)" : "Senha de app"} value={senha} onChange={(e) => setSenha(e.target.value)} /></div>
-            </>)}
-            <div className="space-y-1"><Label>Nome do remetente</Label><Input value={cfg.remetente_nome ?? ""} onChange={(e) => set("remetente_nome", e.target.value)} /></div>
-            <div className="space-y-1"><Label>E-mail do remetente</Label><Input type="email" value={cfg.remetente_email ?? ""} onChange={(e) => set("remetente_email", e.target.value)} /></div>
-            <div className="space-y-1 sm:col-span-2"><Label>Responder para</Label><Input type="email" value={cfg.responder_para ?? ""} onChange={(e) => set("responder_para", e.target.value)} /></div>
-            <div className="sm:col-span-2"><Button variant="outline" onClick={testarEmail}><Send className="mr-1 h-4 w-4" />Enviar e-mail de teste</Button><Button variant="outline" className="ml-2" onClick={() => setPrevia(true)}><Eye className="mr-1 h-4 w-4" />Visualizar modelo</Button><span className="text-muted-foreground ml-2 text-xs">Salve antes de testar. O teste usa dados de exemplo.</span>
+          <CardHeader><CardTitle className="text-base">E-mail de envio</CardTitle><CardDescription>O servidor de e-mail (SMTP) agora fica no cadastro da empresa.</CardDescription></CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <p>Para trocar o servidor, a senha ou o remetente, abra <b>Empresas</b>, edite a empresa e use a aba <b>E-mail</b>. A régua de cobrança, as Ofertas e a recuperação de senha usam essa mesma configuração.</p>
+            <div><Button variant="outline" onClick={testarEmail}><Send className="mr-1 h-4 w-4" />Enviar e-mail de teste</Button><Button variant="outline" className="ml-2" onClick={() => setPrevia(true)}><Eye className="mr-1 h-4 w-4" />Visualizar modelo</Button>
               <Dialog open={previa} onOpenChange={setPrevia}>
                 <DialogContent className="max-w-2xl">
                   <DialogHeader><DialogTitle>Prévia do e-mail de cobrança</DialogTitle></DialogHeader>
