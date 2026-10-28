@@ -16,7 +16,7 @@ import { calcularTarifa } from "@/lib/financeiro-tarifas";
 import { tarifaPorLinha } from "@/lib/rateio-tarifa";
 import type { Row } from "@/lib/row";
 
-type Linha = { id?: string; descricao: string; valor: string; centro_custo_id: string; plano_contas_id: string; item_id: string | null; origem_tipo: string; origem_id: string | null };
+type Linha = { id?: string; descricao: string; quantidade: string; unitario: string; valor: string; centro_custo_id: string; plano_contas_id: string; item_id: string | null; origem_tipo: string; origem_id: string | null };
 
 const valorNum = (v: string) => num(String(v).replace(/\./g, "").replace(",", "."));
 
@@ -29,7 +29,11 @@ function opcoesArvore(rows: Row[], pai: string) {
 }
 
 /** Itens / rateio do título por centro de custo e conta gerencial. Grava direto, independente do formulário. */
-export function RateioTitulo({ tituloId, empresaId, valorTitulo, readOnly, tipoTitulo = "receber", formaPagamento = "", contaBancariaId = "" }: { tituloId: string; empresaId: string; valorTitulo: number; readOnly: boolean; tipoTitulo?: string; formaPagamento?: string; contaBancariaId?: string }) {
+export type RateioApi = { temLinhas: boolean; soma: number; pendente: boolean; salvar: () => Promise<void> };
+const qtdNum = (v: string) => num(String(v).replace(",", ".")) || 0;
+const fmtQtd = (n: number) => String(Math.round(n * 1000) / 1000).replace(".", ",");
+
+export function RateioTitulo({ tituloId, empresaId, valorTitulo, readOnly, tipoTitulo = "receber", formaPagamento = "", contaBancariaId = "", apiRef, onAjustarValor }: { tituloId: string; empresaId: string; valorTitulo: number; readOnly: boolean; tipoTitulo?: string; formaPagamento?: string; contaBancariaId?: string; apiRef?: { current: RateioApi | null }; onAjustarValor?: (soma: number) => void }) {
   const { data: itens = [] } = useTableRows("itens");
   const { data: contasBanc = [] } = useTableRows("financeiro_contas_bancarias");
   const contaBanc = contasBanc.find((c) => text(rowId(c)) === contaBancariaId) ?? contasBanc.find((c) => c["padrao"]) ?? null;
@@ -60,15 +64,18 @@ export function RateioTitulo({ tituloId, empresaId, valorTitulo, readOnly, tipoT
 
   useEffect(() => {
     const rows = q.data?.rows ?? [];
-    setLinhas(rows.map((r) => ({ id: text(r["id"]), descricao: text(r["descricao"]), valor: moedaDeNumero(num(r["valor"])),
+    setLinhas(rows.map((r) => { const q = num(r["quantidade"]) || 1; return { id: text(r["id"]), descricao: text(r["descricao"]), quantidade: fmtQtd(q), unitario: moedaDeNumero(round2(num(r["valor"]) / q)), valor: moedaDeNumero(num(r["valor"])),
       centro_custo_id: text(r["centro_custo_id"]), plano_contas_id: text(r["plano_contas_id"]), item_id: (r["item_id"] as string) || null,
-      origem_tipo: text(r["origem_tipo"]) || "manual", origem_id: (r["origem_id"] as string) || null })));
-    setSalvo(JSON.stringify(rows.map((r) => [text(r["descricao"]), moedaDeNumero(num(r["valor"])), text(r["centro_custo_id"]), text(r["plano_contas_id"]), (r["item_id"] as string) || null])));
+      origem_tipo: text(r["origem_tipo"]) || "manual", origem_id: (r["origem_id"] as string) || null }; }));
+    setSalvo(JSON.stringify(rows.map((r) => [text(r["descricao"]), fmtQtd(num(r["quantidade"]) || 1), moedaDeNumero(num(r["valor"])), text(r["centro_custo_id"]), text(r["plano_contas_id"]), (r["item_id"] as string) || null])));
     if (rows.length) setAberto(true);
   }, [q.data]);
 
-  if (q.data && !q.data.ok) return null; // script do rateio ainda não rodado
   const dif = diferencaRateio(valorTitulo, linhas.map((l) => ({ valor: valorNum(l.valor) })));
+  const soma = round2(linhas.reduce((s, l) => s + valorNum(l.valor), 0));
+  const chaveAtual = JSON.stringify(linhas.map((l) => [l.descricao, l.quantidade, l.valor, l.centro_custo_id, l.plano_contas_id, l.item_id]));
+  if (apiRef) apiRef.current = q.data?.ok ? { temLinhas: linhas.length > 0, soma, pendente: chaveAtual !== salvo, salvar: () => gravar() } : null;
+  if (q.data && !q.data.ok) return null; // script do rateio ainda não rodado
   const tarifas = tarifaPorLinha(tarifaTitulo, linhas.map((l) => valorNum(l.valor)));
   const set = (i: number, p: Partial<Linha>) => setLinhas(linhas.map((l, k) => (k === i ? { ...l, ...p } : l)));
   /** Ao escolher um produto/serviço, herda descrição, centro de custo, conta e preço (respeitando o que falta fechar). */
@@ -77,9 +84,11 @@ export function RateioTitulo({ tituloId, empresaId, valorTitulo, readOnly, tipoT
     if (!it) return set(i, { item_id: null });
     const atual = linhas[i]!;
     const preco = num(it[tipoTitulo === "pagar" ? "preco_custo" : "preco_venda"]) || num(it["preco_venda"]);
-    const resto = round2(dif + valorNum(atual.valor));
-    const valor = atual.valor && valorNum(atual.valor) > 0 ? atual.valor : moedaDeNumero(preco > 0 ? preco : Math.max(resto, 0));
-    set(i, {
+    const qtd = qtdNum(atual.quantidade) || 1;
+    const resto = Math.max(round2(dif + valorNum(atual.valor)), 0);
+    const unit = preco > 0 ? preco : round2(resto / qtd);
+    const valor = moedaDeNumero(round2(unit * qtd));
+    set(i, { quantidade: fmtQtd(qtd), unitario: moedaDeNumero(unit),
       item_id: id, descricao: text(it["descricao"] ?? it["nome"]),
       centro_custo_id: text(it["centro_custo_id"]) || atual.centro_custo_id,
       plano_contas_id: text(it["plano_contas_id"]) || atual.plano_contas_id,
@@ -87,23 +96,28 @@ export function RateioTitulo({ tituloId, empresaId, valorTitulo, readOnly, tipoT
     });
   }
 
-  async function salvar() {
-    if (linhas.length && dif !== 0) { toast.error(`A soma das linhas precisa fechar com o título (diferença de ${formatBRL(dif)}).`); return; }
-    if (linhas.some((l) => !l.centro_custo_id)) { toast.error("Escolha o centro de custo de todas as linhas."); return; }
-    setSalvando(true);
-    try {
+  /** Grava as linhas no banco; lança erro (usado também pelo Salvar da conta). */
+  async function gravar() {
+    if (linhas.some((l) => !l.centro_custo_id)) throw new Error("Escolha o centro de custo de todos os itens.");
+    {
       const del = await supabase.from("financeiro_titulos_itens" as never).delete().eq("titulo_id", tituloId);
       if (del.error) throw del.error;
       if (linhas.length) {
         const { error } = await supabase.from("financeiro_titulos_itens" as never).insert(linhas.map((l) => ({
-          empresa_id: empresaId, titulo_id: tituloId, descricao: l.descricao.trim() || "Item", valor: round2(valorNum(l.valor)),
+          empresa_id: empresaId, titulo_id: tituloId, descricao: l.descricao.trim() || "Item", quantidade: qtdNum(l.quantidade) || 1, valor: round2(valorNum(l.valor)),
           centro_custo_id: l.centro_custo_id || null, plano_contas_id: l.plano_contas_id || null, item_id: l.item_id,
           origem_tipo: l.origem_tipo, origem_id: l.origem_id,
         })) as never);
         if (error) throw error;
       }
-      toast.success("Rateio salvo.");
       qc.invalidateQueries({ queryKey: chave });
+    }
+  }
+
+  async function salvar() {
+    if (linhas.length && dif !== 0) { toast.error(`A soma dos itens (${formatBRL(soma)}) não bate com o valor da conta (${formatBRL(valorTitulo)}).`); return; }
+    setSalvando(true);
+    try { await gravar(); toast.success("Itens salvos.");
     } catch (e) { toast.error(erroFinanceiro(e)); } finally { setSalvando(false); }
   }
 
@@ -111,12 +125,12 @@ export function RateioTitulo({ tituloId, empresaId, valorTitulo, readOnly, tipoT
     return readOnly ? null : (
       <Button type="button" variant="outline" size="sm" className="sm:col-span-2 justify-self-start" onClick={() => {
         setAberto(true);
-        if (!linhas.length) { setEditando(0); } if (!linhas.length) setLinhas([{ descricao: "", valor: moedaDeNumero(valorTitulo), centro_custo_id: "", plano_contas_id: "", item_id: null, origem_tipo: "manual", origem_id: null }]);
+        if (!linhas.length) { setEditando(0); } if (!linhas.length) setLinhas([{ descricao: "", quantidade: "1", unitario: moedaDeNumero(valorTitulo), valor: moedaDeNumero(valorTitulo), centro_custo_id: "", plano_contas_id: "", item_id: null, origem_tipo: "manual", origem_id: null }]);
       }}><Split className="mr-1 h-4 w-4" /> Detalhar itens / rateio por centro de custo</Button>
     );
   }
 
-  const nova = (): Linha => ({ descricao: "", valor: dif > 0 ? moedaDeNumero(dif) : "", centro_custo_id: "", plano_contas_id: "", item_id: null, origem_tipo: "manual", origem_id: null });
+  const nova = (): Linha => ({ descricao: "", quantidade: "1", unitario: dif > 0 ? moedaDeNumero(dif) : "", valor: dif > 0 ? moedaDeNumero(dif) : "", centro_custo_id: "", plano_contas_id: "", item_id: null, origem_tipo: "manual", origem_id: null });
   const nomeDe = (opts: { value: string; label: string }[], v: string) => opts.find((o) => o.value === v)?.label ?? "";
   const GRID = "sm:grid-cols-[2rem_1fr_4rem_7rem_7rem_5rem] sm:gap-3";
 
@@ -125,9 +139,12 @@ export function RateioTitulo({ tituloId, empresaId, valorTitulo, readOnly, tipoT
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="flex items-center gap-1.5 text-sm font-semibold"><Split className="h-4 w-4 text-primary" /> Itens / rateio <span className="text-muted-foreground font-normal">({linhas.length})</span></p>
         <span className={dif === 0 ? "text-muted-foreground text-xs" : "text-destructive text-xs font-medium"}>
-          {dif === 0 ? `Fechado em ${formatBRL(valorTitulo)}` : `Diferença: ${formatBRL(dif)}`}
+          {dif === 0 ? `Fechado em ${formatBRL(valorTitulo)}` : `Diferença: ${formatBRL(dif)} (itens ${formatBRL(soma)} × conta ${formatBRL(valorTitulo)})`}
         </span>
       </div>
+      {dif !== 0 && linhas.length > 0 && !readOnly && onAjustarValor && soma > 0 && (
+        <Button type="button" variant="outline" size="sm" onClick={() => onAjustarValor(soma)}>Ajustar valor da conta para a soma dos itens ({formatBRL(soma)})</Button>
+      )}
       <div className="overflow-hidden rounded-lg border">
         {!readOnly && (
           <div className="border-b p-2">
@@ -151,9 +168,14 @@ export function RateioTitulo({ tituloId, empresaId, valorTitulo, readOnly, tipoT
             return (
               <div key={l.id ?? `n${i}`} className="bg-primary/5 space-y-2 border-b p-3 last:border-b-0">
                 <SearchSelect value={l.item_id ?? ""} options={itemOpts} placeholder="Produto ou serviço do cadastro (preenche centro de custo e valor)" onChange={(x) => escolherItem(i, x)} />
-                <div className="grid gap-2 sm:grid-cols-[1fr_9rem]">
-                  <Input value={l.descricao} placeholder="Descrição do item" onChange={(e) => set(i, { descricao: e.target.value })} />
-                  <Input value={l.valor} inputMode="decimal" placeholder="Valor (R$)" onChange={(e) => set(i, { valor: mascaraMoeda(e.target.value) })} />
+                <Input value={l.descricao} placeholder="Descrição do item" onChange={(e) => set(i, { descricao: e.target.value })} />
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="space-y-1"><span className="text-muted-foreground text-xs">Quantidade</span>
+                    <Input value={l.quantidade} inputMode="decimal" onChange={(e) => { const qv = e.target.value.replace(/[^\d,]/g, ""); set(i, { quantidade: qv, valor: moedaDeNumero(round2(qtdNum(qv) * valorNum(l.unitario))) }); }} /></div>
+                  <div className="space-y-1"><span className="text-muted-foreground text-xs">Valor unitário (R$)</span>
+                    <Input value={l.unitario} inputMode="decimal" onChange={(e) => { const u = mascaraMoeda(e.target.value); set(i, { unitario: u, valor: moedaDeNumero(round2(qtdNum(l.quantidade) * valorNum(u))) }); }} /></div>
+                  <div className="space-y-1"><span className="text-muted-foreground text-xs">Total (R$)</span>
+                    <Input value={l.valor} inputMode="decimal" onChange={(e) => { const t = mascaraMoeda(e.target.value); const qq = qtdNum(l.quantidade) || 1; set(i, { valor: t, unitario: moedaDeNumero(round2(valorNum(t) / qq)) }); }} /></div>
                 </div>
                 <div className="grid gap-2 sm:grid-cols-2">
                   <SearchSelect value={l.centro_custo_id} options={centroOpts} placeholder="Centro de custo" onChange={(x) => set(i, { centro_custo_id: x })} />
@@ -168,7 +190,7 @@ export function RateioTitulo({ tituloId, empresaId, valorTitulo, readOnly, tipoT
                 )}
                 <div className="flex justify-end gap-2">
                   <Button type="button" variant="outline" size="sm" onClick={() => { setLinhas(linhas.filter((_, k) => k !== i)); setEditando(null); }}><Trash2 className="mr-1 h-4 w-4" /> Remover</Button>
-                  <Button type="button" size="sm" onClick={() => setEditando(null)}><Check className="mr-1 h-4 w-4" /> Salvar item</Button>
+                  <Button type="button" size="sm" onClick={() => setEditando(null)}><Check className="mr-1 h-4 w-4" /> Concluir item</Button>
                 </div>
               </div>
             );
@@ -188,8 +210,8 @@ export function RateioTitulo({ tituloId, empresaId, valorTitulo, readOnly, tipoT
                   <p className="text-muted-foreground text-xs tabular-nums">Baixa ({formaPagamento}): <span className="text-destructive">− {formatBRL(tarifas[i] ?? 0)}</span> · Final: <strong className="text-foreground">{formatBRL(round2(v - (tarifas[i] ?? 0)))}</strong></p>
                 )}
               </div>
-              <span className="hidden text-right text-sm tabular-nums sm:block">1</span>
-              <span className="hidden text-right text-sm tabular-nums sm:block">{formatBRL(v)}</span>
+              <span className="hidden text-right text-sm tabular-nums sm:block">{l.quantidade || "1"}</span>
+              <span className="hidden text-right text-sm tabular-nums sm:block">{formatBRL(valorNum(l.unitario))}</span>
               <span className="text-right text-sm font-semibold tabular-nums">{formatBRL(v)}</span>
               {!readOnly ? (
                 <div className="col-span-2 flex justify-end gap-1 sm:col-span-1">
@@ -201,7 +223,7 @@ export function RateioTitulo({ tituloId, empresaId, valorTitulo, readOnly, tipoT
           );
         })}
       </div>
-      {!readOnly && JSON.stringify(linhas.map((l) => [l.descricao, l.valor, l.centro_custo_id, l.plano_contas_id, l.item_id])) !== salvo && (
+      {!readOnly && chaveAtual !== salvo && (
         <div className="flex justify-end">
           <Button type="button" size="sm" disabled={salvando} onClick={salvar}>Salvar rateio</Button>
         </div>
