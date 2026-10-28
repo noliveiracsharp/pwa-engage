@@ -29,7 +29,6 @@ import { MeusDadosSheet } from "@/components/perfil/MeusDadosSheet";
 import { useEmpresaAtiva } from "@/hooks/useEmpresaAtiva";
 import { AvisosButton } from "@/components/layout/AvisosButton";
 import { CentralAjuda } from "@/components/ajuda/CentralAjuda";
-import { CriarRapido } from "@/components/layout/CriarRapido";
 import { BuscaFuncoes } from "@/components/layout/BuscaFuncoes";
 import { slugLembrado } from "@/lib/marca-publica";
 
@@ -86,7 +85,6 @@ export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) 
 
       <div className="flex shrink-0 items-center gap-1">
         <BuscaFuncoes />
-        <CriarRapido />
         {isMaster && (
           <Select
             value={empresaContextoId ?? String(empresa ? rowId(empresa) ?? "" : "")}

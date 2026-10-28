@@ -709,7 +709,7 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
       setValues((p) => ({
         ...p,
         nome: nomeProprio(d.razao_social || p["nome"] || ""),
-        titulo: nomeProprio(d.nome_fantasia || d.razao_social || p["titulo"] || ""),
+        titulo: p["titulo"] || nomeProprio(d.nome_fantasia || d.razao_social || ""),
         endereco: endereco || p["endereco"] || "",
         telefone1: tel(d.ddd_telefone_1) || p["telefone1"] || "",
         telefone2: tel(d.ddd_telefone_2) || p["telefone2"] || "",
@@ -809,7 +809,9 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
         payload[field.key] = raw;
       }
     }
-    for (const k of ["nome", "titulo"]) if (typeof payload[k] === "string") payload[k] = nomeProprio(payload[k]);
+    if (typeof payload["nome"] === "string") payload["nome"] = nomeProprio(payload["nome"]);
+    // Título exibido: respeita exatamente o que foi digitado (ex.: "ConectCon HUB").
+    if (typeof payload["titulo"] === "string") payload["titulo"] = payload["titulo"].trim();
     onSave(payload);
   };
 

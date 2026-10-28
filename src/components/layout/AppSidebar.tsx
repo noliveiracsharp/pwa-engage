@@ -21,13 +21,18 @@ const linkCls =
   "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground";
 const activeCls = "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary";
 
+// Caminhos de todos os itens do menu: só o mais específico que casa fica ativo.
+let todosPaths: string[] = [];
+
+function casa(path: string, pathname: string) {
+  return pathname === path || pathname.startsWith(path + "/");
+}
+
 function isActive(item: MenuItem, pathname: string): boolean {
   if (!item.path) return false;
-  return (
-    pathname === item.path ||
-    pathname.startsWith(item.path + "/") ||
-    (item.path === "/admin/planos" && pathname === "/admin/modulos")
-  );
+  if (item.path === "/admin/planos" && pathname === "/admin/modulos") return true;
+  if (!casa(item.path, pathname)) return false;
+  return !todosPaths.some((p) => p.length > item.path!.length && casa(p, pathname));
 }
 
 function hasActiveChild(item: MenuItem, pathname: string): boolean {
@@ -39,6 +44,7 @@ export function AppSidebar({ open, onNavigate }: Props) {
   const ativa = useEmpresaAtiva();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { t } = useIdioma();
+  todosPaths = flatten(items).map((i) => i.path).filter((p): p is string => !!p);
 
   return (
     <TooltipProvider delayDuration={100}>
