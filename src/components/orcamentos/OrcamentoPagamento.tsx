@@ -94,6 +94,10 @@ export type PagamentoState = {
   fixas: Record<number, number>;
   /** Vencimentos alterados à mão (número da parcela → yyyy-mm-dd). */
   datas: Record<number, string>;
+  /** Parâmetros próprios desta oferta (vazio = usa o padrão da empresa). Taxa e markup em %. */
+  juros_oferta?: string;
+  custo_oferta?: string;
+  markup_oferta?: string;
 };
 
 type Props = {
@@ -149,10 +153,18 @@ export function OrcamentoPagamento({ value, parcelas, totalLiquido, entradaValor
   // Recalcula o coeficiente global sempre que o total líquido, a quantidade de
   // parcelas ou o toggle "Com juros" mudarem. Preenche e trava o campo quando
   // "Com juros"; limpa quando volta para "Sem juros" (divisão simples).
+  const preenchido = (s?: string) => (s ?? "").trim() !== "";
+  const configEfetiva: ConfigComercial | null = configComercial || preenchido(value.juros_oferta) || preenchido(value.custo_oferta) || preenchido(value.markup_oferta)
+    ? {
+        taxa_juros_mensal: preenchido(value.juros_oferta) ? num(value.juros_oferta) / 100 : (configComercial?.taxa_juros_mensal ?? 0),
+        custo_operacional_mensal: preenchido(value.custo_oferta) ? num(value.custo_oferta) : (configComercial?.custo_operacional_mensal ?? 0),
+        fator_markup: preenchido(value.markup_oferta) ? num(value.markup_oferta) / 100 : (configComercial?.fator_markup ?? 0),
+      }
+    : null;
   const { parcelaFinal, coeficienteGlobal } = calcularParcelamentoComJuros(
     totalLiquido - entradaValor,
     entradaValor > 0 ? qtdParcelas - 1 : qtdParcelas,
-    configComercial,
+    configEfetiva,
   );
   useEffect(() => {
     if (value.tem_juros) {
