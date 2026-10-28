@@ -3,6 +3,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Loader2, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { modelosContratoPublico } from "@/lib/contrato-modelos";
+import type { ModelosContrato } from "@/lib/propostas";
 import { MinutaDocumento } from "@/components/orcamentos/MinutaDocumento";
 import { anexosDeParam, imprimirElemento } from "@/lib/propostas";
 import type { Row } from "@/lib/row";
@@ -32,6 +34,8 @@ function MinutaPublica() {
   const { a } = Route.useSearch();
   const [dados, setDados] = useState<Dados | null>(null);
   const [erro, setErro] = useState("");
+  const [modelos, setModelos] = useState<ModelosContrato>({});
+  useEffect(() => { void modelosContratoPublico(token).then(setModelos); }, [token]);
 
   useEffect(() => {
     (supabase.rpc as unknown as (f: string, x: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>)(
@@ -64,6 +68,7 @@ function MinutaPublica() {
           linhas={dados.itens ?? []}
           itens={dados.catalogo ?? []}
           anexos={anexosDeParam(a)}
+          modelos={modelos}
         />
       </div>
     </div>

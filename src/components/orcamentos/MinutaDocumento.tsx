@@ -1,4 +1,4 @@
-import { aplicarTags, gerarContratoModular, htmlSeguro, type AnexoContrato } from "@/lib/propostas";
+import { aplicarTags, gerarContratoModular, htmlSeguro, type AnexoContrato, type ModelosContrato } from "@/lib/propostas";
 import type { Row } from "@/lib/row";
 
 type Props = {
@@ -10,11 +10,12 @@ type Props = {
   linhas: Row[];
   itens: Row[];
   anexos: AnexoContrato[];
+  modelos?: ModelosContrato | null | undefined;
 };
 
 /** Minuta limpa (sem capa/escopo comercial): carimbo + condições gerais + anexos escolhidos, reindexados I, II… */
-export function MinutaDocumento({ id, anexos, ...c }: Props) {
-  const html = aplicarTags(gerarContratoModular({ ...c, anexos, reindexar: true }), c);
+export function MinutaDocumento({ id, anexos, modelos, ...c }: Props) {
+  const html = aplicarTags(gerarContratoModular({ ...c, anexos, modelos, reindexar: true }), c);
   return (
     <div id={id} className="prop-doc">
       <section className="prop-pagina">

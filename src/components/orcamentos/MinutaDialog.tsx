@@ -8,6 +8,7 @@ import { ANEXOS_CONTRATO, ANEXOS_PADRAO, blocosDe, imprimirElemento, linkMinuta,
 import { text } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
 import { MinutaDocumento } from "./MinutaDocumento";
+import { useModelosContrato } from "@/lib/contrato-modelos";
 import { EnviarPropostaDialog } from "./EnviarPropostaDialog";
 
 type Props = {
@@ -92,7 +93,7 @@ export function MinutaDialog(props: Props) {
           </aside>
           <div className="overflow-y-auto bg-muted/40 p-4 md:p-8">
             <div className="mx-auto max-w-[850px]">
-              <MinutaDocumento id="minuta-preview" {...props} empresa={empresa} orcamento={orcamento} anexos={anexos} />
+              <MinutaDocumento id="minuta-preview" {...props} empresa={empresa} orcamento={orcamento} anexos={anexos} modelos={modelos} />
             </div>
           </div>
         </div>
