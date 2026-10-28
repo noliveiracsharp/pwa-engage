@@ -32,6 +32,7 @@ const baseFields: Field[] = [
   { fields: ["descricao"], label: "Descrição", full: true },
   { fields: ["path"], label: "Caminho (rota)", placeholder: "/pessoas" },
   { fields: ["icone"], label: "Ícone", type: "icon" },
+  { fields: ["ordem"], label: "Ordem (posição no menu, dentro do grupo)", type: "number" },
   { fields: ["menu_ativo"], label: "Exibe no menu", type: "boolean" },
   { fields: ["status"], label: "Status", type: "boolean" },
 ];
@@ -51,12 +52,14 @@ function FuncoesPage() {
   const queryClient = useQueryClient();
   const reorder = useMutation({
     mutationFn: async (ordered: Row[]) => {
-      let n = 0;
+      // Numera dentro de cada grupo (raiz ou mesmo pai), assim subitens também mantêm a ordem.
+      const cont = new Map<string, number>();
       await Promise.all(
         ordered.map((row) => {
           const key = idColumn(row);
-          const isChild = !!pick(row, ["funcoes_pai_id"]);
-          const ordem = isChild ? null : ++n;
+          const grupo = String(pick(row, ["funcoes_pai_id"]) ?? "");
+          const ordem = (cont.get(grupo) ?? 0) + 1;
+          cont.set(grupo, ordem);
           return supabase
             .from("funcoes")
             .update({ ordem })
