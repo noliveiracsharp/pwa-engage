@@ -6,14 +6,21 @@ export type RelatorioIa = {
   descricao: string;
   tabela_base: string;
   colunas: string[];
+  relacoes?: string[];
   filtros: { campo: string; operador: string; valor: string }[];
+  grafico?: { tipo: "barras" | "pizza"; agrupar: string; separar?: string; medida: string } | null;
 };
 
 const SYSTEM =
   "Você monta relatórios de um ERP brasileiro. Recebe o pedido do usuário e o catálogo de tabelas com suas colunas. " +
   "Escolha UMA tabela base do catálogo, as colunas mais úteis (somente colunas existentes daquela tabela, no máximo 12) e filtros fixos opcionais " +
   "(operadores: eq, neq, gt, lt, ilike; datas no formato AAAA-MM-DD; para ilike use %texto%). " +
-  "Responda SOMENTE um JSON válido, sem markdown: {\"nome\":string,\"descricao\":string,\"tabela_base\":string,\"colunas\":string[],\"filtros\":[{\"campo\":string,\"operador\":string,\"valor\":string}]}.";
+  "Pense no nível de detalhe certo: para perguntas sobre ITENS de ofertas (produtos/serviços mais oferecidos, quantidades), use a tabela orcamento_itens (colunas natureza = produto/servico, quantidade, valor_unitario, item_id, orcamento_id), não a tabela orcamentos. " +
+  "Relações opcionais (joins) no formato tabela(coluna1,coluna2), ex.: itens(nome) a partir de orcamento_itens; no resultado o campo vira 'itens.nome'. " +
+  "Para rankings, 'mais/menos', totais por categoria ou quando o usuário pedir gráfico, preencha 'grafico': tipo 'barras' (ranking) ou 'pizza' (proporção), " +
+  "'agrupar' = campo das categorias (pode ser 'tabela.coluna' de uma relação), 'separar' = campo opcional para séries (ex.: natureza para separar produto e serviço), " +
+  "'medida' = 'contagem' ou o nome de uma coluna numérica para somar (ex.: quantidade). Inclua nas colunas os campos usados no gráfico. Caso contrário grafico = null. " +
+  "Responda SOMENTE um JSON válido, sem markdown: {\"nome\":string,\"descricao\":string,\"tabela_base\":string,\"colunas\":string[],\"relacoes\":string[],\"filtros\":[{\"campo\":string,\"operador\":string,\"valor\":string}],\"grafico\":{\"tipo\":string,\"agrupar\":string,\"separar\":string,\"medida\":string}|null}.";
 
 /** IA transforma o pedido em texto na configuração de um relatório (tabela, colunas e filtros). */
 export const montarRelatorioIa = createServerFn({ method: "POST" })
@@ -88,12 +95,23 @@ export const montarRelatorioIa = createServerFn({ method: "POST" })
       const cols = data.catalogo[j.tabela_base];
       if (!cols) return { erro: "A IA escolheu uma tabela que você não pode acessar. Reformule o pedido." };
       const ok = new Set(cols);
+      const relacoes = (j.relacoes ?? []).filter((r) => {
+        const m2 = /^(\w+)\(([\w,\s]+)\)$/.exec(String(r).trim());
+        const cs = m2 ? data.catalogo[m2[1]!] : undefined;
+        return Boolean(cs && m2![2]!.split(",").every((c) => cs.includes(c.trim())));
+      });
+      const g = j.grafico;
+      const grafico = g && g.agrupar && (g.tipo === "barras" || g.tipo === "pizza")
+        ? { tipo: g.tipo, agrupar: String(g.agrupar), ...(g.separar ? { separar: String(g.separar) } : {}), medida: String(g.medida || "contagem") }
+        : null;
       return {
         relatorio: {
           nome: String(j.nome ?? "Relatório").slice(0, 120),
           descricao: String(j.descricao ?? "").slice(0, 500),
           tabela_base: j.tabela_base,
           colunas: (j.colunas ?? []).filter((c) => ok.has(c)),
+          relacoes,
+          grafico,
           filtros: (j.filtros ?? []).filter((f) => ok.has(f.campo) && ["eq", "neq", "gt", "lt", "ilike"].includes(f.operador)),
         },
       };
