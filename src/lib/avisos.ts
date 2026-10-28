@@ -14,8 +14,16 @@ export type Aviso = {
   chat?: { grupo?: string; usuario?: string };
 };
 
-const KEY = "atendeai-avisos";
-const DESCARTADOS_KEY = "atendeai-avisos-projetos-descartados";
+// Avisos isolados por usuário logado: quem entra no mesmo aparelho não vê os avisos de outro.
+let dono = "anon";
+export function definirUsuarioAvisos(id: unknown) {
+  const novo = id == null || id === "" ? "anon" : String(id);
+  if (novo === dono) return;
+  dono = novo;
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(EVT));
+}
+const chaveUsuario = () => `atendeai-avisos:${dono}`;
+const chaveDescartados = () => `atendeai-avisos-projetos-descartados:${dono}`;
 const EVT = "atendeai-avisos-mudou";
 export const EVT_ABRIR_CHAT = "atendeai-abrir-chat";
 const MAX = 300;
