@@ -263,6 +263,12 @@ type Props = {
   secoes?: Record<string, SecaoPerms | undefined>;
 };
 
+// Ignora a chave visual das linhas e o rótulo da situação (sincronizado pelo Kanban).
+function fotoEstado(h: Header, linhas: Linha[]): string {
+  const { situacao: _s, ...resto } = h as Header & { situacao?: unknown };
+  return JSON.stringify([resto, linhas.map(({ key: _k, ...l }) => l)]);
+}
+
 export function OrcamentoSheet({
   open,
   onOpenChange,
