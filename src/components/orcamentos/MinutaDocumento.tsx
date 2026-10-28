@@ -37,7 +37,7 @@ export function MinutaDocumento({ id, anexos, modelos, carimbo, ...c }: Props) {
     <div id={id} className="prop-doc">
       <section className="prop-pagina">
         <div className="orc-doc">
-          <header className="orc-cabecalho">
+          <header className="orc-top">
             <div className="orc-emitente">
               {logo ? <img src={logo} alt={empresaNome} className="orc-logo" /> : null}
               <div>
