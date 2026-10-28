@@ -88,7 +88,7 @@ export function LevantamentoTecnico({ os, cliente }: { os: Row; cliente: string 
       if (error) throw error;
       const cid = (data as Row)["id"];
       const { error: e2 } = await supabase.from("cotacoes_itens").insert(
-        itens.filter((i) => i.item_id).map((i) => ({ cotacao_id: cid, item_id: i.item_id, quantidade: i.quantidade, observacao: i.observacao ?? null })) as never,
+        itens.filter((i) => i.item_id).map((i) => ({ cotacao_id: cid, item_id: i.item_id, quantidade: i.quantidade, observacao: i.observacao ?? null, ...(i.grupo?.trim() ? { grupo: i.grupo.trim() } : {}) })) as never,
       );
       if (e2) throw e2;
       setOcupado(false);
@@ -121,13 +121,15 @@ export function LevantamentoTecnico({ os, cliente }: { os: Row; cliente: string 
 
       <div className="space-y-2">
         {itens.map((it, i) => (
-          <div key={i} className="grid gap-2 sm:grid-cols-[1fr_110px_1fr_auto]">
+          <div key={i} className="grid gap-2 sm:grid-cols-[1fr_90px_150px_1fr_auto]">
             <SearchSelect value={it.item_id} disabled={!editavel} onChange={(v) => set(i, { item_id: v })} options={opcoes} placeholder="Item do cadastro" />
             <Input type="number" min={0} step="any" disabled={!editavel} value={it.quantidade} onChange={(e) => set(i, { quantidade: Number(e.target.value) || 0 })} aria-label="Quantidade" />
+            <Input disabled={!editavel} list="levantamento-grupos" placeholder="Grupo (ex.: Elétrico)" value={it.grupo ?? ""} onChange={(e) => set(i, { grupo: e.target.value })} aria-label="Grupo" />
             <Input disabled={!editavel} placeholder="Especificação / observação" value={it.observacao ?? ""} onChange={(e) => set(i, { observacao: e.target.value })} />
             {editavel && <Button type="button" size="icon" variant="ghost" aria-label="Remover" onClick={() => setItens((l) => l.filter((_, j) => j !== i))}><Trash2 className="h-4 w-4" /></Button>}
           </div>
         ))}
+        <datalist id="levantamento-grupos">{[...new Set(itens.map((x) => x.grupo?.trim()).filter(Boolean))].map((g) => <option key={g!} value={g!} />)}</datalist>
         {!itens.length && <p className="text-sm text-muted-foreground">Nenhum item levantado.</p>}
       </div>
 

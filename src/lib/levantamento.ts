@@ -1,7 +1,7 @@
 /** Regras puras do Levantamento Técnico da OS (Manutenção → aprovação do gestor → Cotação). */
 
 export type StatusLevantamento = "rascunho" | "aguardando_aprovacao" | "aprovado" | "reprovado" | "cotacao_gerada";
-export type ItemLevantamento = { item_id: string; quantidade: number; observacao?: string | null };
+export type ItemLevantamento = { item_id: string; quantidade: number; observacao?: string | null; /** Agrupa itens comprados juntos (ex.: "Material elétrico"). */ grupo?: string | null };
 export type EventoLevantamento = { em: string; usuario: string; acao: "enviado" | "aprovado" | "reprovado" | "cotacao"; obs?: string | null };
 
 export const STATUS_LEVANTAMENTO: Record<StatusLevantamento, { label: string; cls: string }> = {
