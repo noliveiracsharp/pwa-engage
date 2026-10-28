@@ -137,6 +137,11 @@ function ProjetosPage() {
     <div className="flex flex-col gap-4 md:flex-row md:items-start">
       <EspacosSidebar espacos={d.espacos} ativo={espacoId} perms={perms} onSelect={(id) => { setAba(null); ir(id); }} onMoverProjeto={moverEspaco} />
       <div className="min-w-0 flex-1 space-y-3">
+        {!espacoId && <FilaAguardando projetos={d.projetos} espacos={d.espacos} nomeCol={d.pc.nome} podeEditar={!!perms.canUpdate} onIniciar={async (pid, esp) => {
+          await moverEspaco(pid, esp);
+          await supabase.from("projetos").update({ aguardando_inicio: false } as never).eq("id", pid as never);
+          qc.invalidateQueries({ queryKey: ["table", "projetos"] });
+        }} onAbrir={(id) => setSelId(id)} />}
         {!espacoId && (
           <div className="flex rounded-md border border-border p-0.5 w-fit" role="tablist" aria-label="Visão geral">
             <Button size="sm" variant={abaAtual === "geral" ? "secondary" : "ghost"} onClick={() => setAba(null)}>Visão geral</Button>
@@ -164,6 +169,32 @@ function ProjetosPage() {
             : <Painel d={d} perms={perms} espacoId={espacoId} onOpen={(id) => setSelId(id)} />}
       </div>
     </div>
+  );
+}
+
+/** Projetos abertos na ativação da Oferta que aguardam a gestora escolher o espaço. */
+function FilaAguardando({ projetos, espacos, nomeCol, podeEditar, onIniciar, onAbrir }: {
+  projetos: Row[]; espacos: Row[]; nomeCol: string; podeEditar: boolean;
+  onIniciar: (projetoId: string, espacoId: string) => Promise<void>; onAbrir: (id: string) => void;
+}) {
+  const [destino, setDestino] = useState<Record<string, string>>({});
+  const fila = projetos.filter((p) => p["aguardando_inicio"] === true);
+  if (!fila.length) return null;
+  const opts = espacos.map((e) => ({ value: String(rowId(e)), label: String(e["nome"] ?? "Espaço") })).sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
+  return (
+    <section className="space-y-2 rounded-lg border border-warning/40 bg-warning/5 p-3">
+      <h2 className="text-sm font-semibold">Aguardando início ({fila.length})</h2>
+      {fila.map((p) => {
+        const id = String(rowId(p));
+        return (
+          <div key={id} className="grid items-center gap-2 sm:grid-cols-[1fr_16rem_auto]">
+            <button type="button" className="truncate text-left text-sm font-medium hover:underline" onClick={() => onAbrir(id)}>{String(p[nomeCol] ?? "Projeto")}</button>
+            {podeEditar && <SearchSelect value={destino[id] ?? ""} onChange={(v) => setDestino((s) => ({ ...s, [id]: v }))} options={opts} placeholder="Abrir no espaço" />}
+            {podeEditar && <Button size="sm" disabled={!destino[id]} onClick={() => void onIniciar(id, destino[id]!)}>Iniciar</Button>}
+          </div>
+        );
+      })}
+    </section>
   );
 }
 

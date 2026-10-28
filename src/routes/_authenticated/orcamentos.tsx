@@ -6,7 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { etapasDoKanban, kanbanDoModuloOrcamentos } from "@/lib/orcamento-kanban";
 import { corEtapa } from "@/lib/kanban-cores";
 import { createFileRoute } from "@tanstack/react-router";
-import { ChevronDown, Copy, FileSignature, FileText, Inbox, Info, MessageCircle, ScrollText, ShoppingCart, Thermometer, Trash2, Wallet } from "lucide-react";
+import { ChevronDown, Copy, FileSignature, FileText, Inbox, Info, MessageCircle, Rocket, ScrollText, ShoppingCart, Thermometer, Trash2, Wallet } from "lucide-react";
 import { CaptacaoLeadsDialog } from "@/components/orcamentos/CaptacaoLeadsDialog";
 import { BarraAcoesLote, useAcoesComuns } from "@/components/data-table/AcoesLote";
 import { TEMPERATURAS, temperaturaEfetiva } from "@/lib/temperatura";
@@ -476,6 +476,11 @@ function OrcamentosPage() {
       {perms.canCreate && (
         <>
           <DropdownMenuSeparator />
+          {ofertaTravada(r, etapasKanban) && (
+            <DropdownMenuItem onClick={() => setAtivar(r)}>
+              <Rocket className="h-4 w-4" /> {r["ativacao_concluida_em"] ? tx("Atividades de ativação") : tx("Atividades de ativação (pendente)")}
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem onClick={() => { setPreview(r); setPedidosOpen(true); }}>
             <ShoppingCart className="h-4 w-4" /> {tx("Gerar pedidos de compra")}
           </DropdownMenuItem>

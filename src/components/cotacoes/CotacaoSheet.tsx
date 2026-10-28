@@ -203,6 +203,15 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
     if (error) return void toast.error(error.message.includes("fornecedor_escolhido_id") ? "Rode o script atendeai-pedidos-compra.sql no banco." : error.message);
     invalidar();
   };
+  const gruposCot = [...new Set(itensCot.map((i) => String(i["grupo"] ?? "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, "pt-BR"));
+  const escolherGrupo = async (grupo: string, fid: string) => {
+    const ids = itensCot.filter((i) => String(i["grupo"] ?? "").trim() === grupo).map((i) => String(i["id"]));
+    if (!ids.length || !fid) return;
+    const { error } = await supabase.from("cotacoes_itens").update({ fornecedor_escolhido_id: fid } as never).in("id", ids);
+    if (error) return void toast.error(error.message);
+    toast.success(`Grupo "${grupo}" será comprado de ${nomeParc(parceiroById.get(fid))}.`);
+    invalidar();
+  };
   const usarCriterioEmTudo = async () => {
     const { error } = await supabase.from("cotacoes_itens").update({ fornecedor_escolhido_id: null } as never).eq("cotacao_id", cid);
     if (error) return void toast.error(error.message);
@@ -737,6 +746,19 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
               </div>
             </div>
             <p className="text-muted-foreground text-xs">Clique no círculo ao lado do preço para escolher de qual fornecedor comprar cada item.</p>
+            {editavel && gruposCot.length > 0 && (
+              <div className="space-y-2 rounded-md bg-muted/40 p-3">
+                <p className="text-xs font-medium">Vencedor por grupo — cada grupo pode ir para um fornecedor diferente</p>
+                {gruposCot.map((g) => (
+                  <div key={g} className="grid items-center gap-2 sm:grid-cols-[180px_1fr]">
+                    <span className="truncate text-sm">{g} <span className="text-muted-foreground text-xs">({itensCot.filter((i) => String(i["grupo"] ?? "") === g).length} itens)</span></span>
+                    <SearchSelect value="" placeholder="Comprar o grupo inteiro de…"
+                      options={fornCot.map((f) => ({ value: String(f["fornecedor_id"]), label: nomeParc(parceiroById.get(String(f["fornecedor_id"]))) }))}
+                      onChange={(fid) => void escolherGrupo(g, fid)} />
+                  </div>
+                ))}
+              </div>
+            )}
             {editavel && (
               <div className="flex gap-2">
                 <div className="flex-1"><SearchSelect value={novoItem} onChange={addItem} options={itemOpts} placeholder="Adicionar item à cotação" /></div>
@@ -770,6 +792,7 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
                         <td className="px-3 py-2">
                           <div className="font-medium">{nomeCot(item) || "Item"}</div>
                           {item?.["codigo"] ? <div className="text-muted-foreground text-xs">{String(item["codigo"])}</div> : null}
+                          {it["grupo"] ? <span className="mt-0.5 inline-block rounded bg-muted px-1.5 text-[10px] text-muted-foreground">{String(it["grupo"])}</span> : null}
                         </td>
                         <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{num(item?.["preco_custo"]) > 0 ? formatBRL(item?.["preco_custo"]) : "—"}</td>
                         <td className="px-2 py-1.5 text-right tabular-nums">
