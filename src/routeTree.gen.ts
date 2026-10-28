@@ -71,6 +71,7 @@ import { Route as AuthenticatedAdminModulosRouteImport } from './routes/_authent
 import { Route as AuthenticatedAdminPlanosRouteImport } from './routes/_authenticated/admin.planos'
 import { Route as AuthenticatedAdminVersoesRouteImport } from './routes/_authenticated/admin.versoes'
 import { Route as AuthenticatedProjetosTemplatesRouteImport } from './routes/_authenticated/projetos_.templates'
+import { Route as AuthenticatedRelatoriosAtendimentosRouteImport } from './routes/_authenticated/relatorios_.atendimentos'
 import { Route as AuthenticatedRelatoriosBoardRouteImport } from './routes/_authenticated/relatorios_.board'
 import { Route as AuthenticatedRelatoriosComercialRouteImport } from './routes/_authenticated/relatorios_.comercial'
 import { Route as AuthenticatedRelatoriosDreGerencialRouteImport } from './routes/_authenticated/relatorios_.dre-gerencial'
@@ -403,6 +404,12 @@ const AuthenticatedProjetosTemplatesRoute =
     path: '/projetos/templates',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedRelatoriosAtendimentosRoute =
+  AuthenticatedRelatoriosAtendimentosRouteImport.update({
+    id: '/relatorios_/atendimentos',
+    path: '/relatorios/atendimentos',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedRelatoriosBoardRoute =
   AuthenticatedRelatoriosBoardRouteImport.update({
     id: '/relatorios_/board',
@@ -521,6 +528,7 @@ export interface FileRoutesByFullPath {
   '/admin/planos': typeof AuthenticatedAdminPlanosRoute
   '/admin/versoes': typeof AuthenticatedAdminVersoesRoute
   '/projetos/templates': typeof AuthenticatedProjetosTemplatesRoute
+  '/relatorios/atendimentos': typeof AuthenticatedRelatoriosAtendimentosRoute
   '/relatorios/board': typeof AuthenticatedRelatoriosBoardRoute
   '/relatorios/comercial': typeof AuthenticatedRelatoriosComercialRoute
   '/relatorios/dre-gerencial': typeof AuthenticatedRelatoriosDreGerencialRoute
@@ -594,6 +602,7 @@ export interface FileRoutesByTo {
   '/admin/planos': typeof AuthenticatedAdminPlanosRoute
   '/admin/versoes': typeof AuthenticatedAdminVersoesRoute
   '/projetos/templates': typeof AuthenticatedProjetosTemplatesRoute
+  '/relatorios/atendimentos': typeof AuthenticatedRelatoriosAtendimentosRoute
   '/relatorios/board': typeof AuthenticatedRelatoriosBoardRoute
   '/relatorios/comercial': typeof AuthenticatedRelatoriosComercialRoute
   '/relatorios/dre-gerencial': typeof AuthenticatedRelatoriosDreGerencialRoute
@@ -669,6 +678,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/planos': typeof AuthenticatedAdminPlanosRoute
   '/_authenticated/admin/versoes': typeof AuthenticatedAdminVersoesRoute
   '/_authenticated/projetos_/templates': typeof AuthenticatedProjetosTemplatesRoute
+  '/_authenticated/relatorios_/atendimentos': typeof AuthenticatedRelatoriosAtendimentosRoute
   '/_authenticated/relatorios_/board': typeof AuthenticatedRelatoriosBoardRoute
   '/_authenticated/relatorios_/comercial': typeof AuthenticatedRelatoriosComercialRoute
   '/_authenticated/relatorios_/dre-gerencial': typeof AuthenticatedRelatoriosDreGerencialRoute
@@ -744,6 +754,7 @@ export interface FileRouteTypes {
     | '/admin/planos'
     | '/admin/versoes'
     | '/projetos/templates'
+    | '/relatorios/atendimentos'
     | '/relatorios/board'
     | '/relatorios/comercial'
     | '/relatorios/dre-gerencial'
@@ -817,6 +828,7 @@ export interface FileRouteTypes {
     | '/admin/planos'
     | '/admin/versoes'
     | '/projetos/templates'
+    | '/relatorios/atendimentos'
     | '/relatorios/board'
     | '/relatorios/comercial'
     | '/relatorios/dre-gerencial'
@@ -891,6 +903,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/planos'
     | '/_authenticated/admin/versoes'
     | '/_authenticated/projetos_/templates'
+    | '/_authenticated/relatorios_/atendimentos'
     | '/_authenticated/relatorios_/board'
     | '/_authenticated/relatorios_/comercial'
     | '/_authenticated/relatorios_/dre-gerencial'
@@ -1370,6 +1383,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjetosTemplatesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/relatorios_/atendimentos': {
+      id: '/_authenticated/relatorios_/atendimentos'
+      path: '/relatorios/atendimentos'
+      fullPath: '/relatorios/atendimentos'
+      preLoaderRoute: typeof AuthenticatedRelatoriosAtendimentosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/relatorios_/board': {
       id: '/_authenticated/relatorios_/board'
       path: '/relatorios/board'
@@ -1483,6 +1503,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminPlanosRoute: typeof AuthenticatedAdminPlanosRoute
   AuthenticatedAdminVersoesRoute: typeof AuthenticatedAdminVersoesRoute
   AuthenticatedProjetosTemplatesRoute: typeof AuthenticatedProjetosTemplatesRoute
+  AuthenticatedRelatoriosAtendimentosRoute: typeof AuthenticatedRelatoriosAtendimentosRoute
   AuthenticatedRelatoriosBoardRoute: typeof AuthenticatedRelatoriosBoardRoute
   AuthenticatedRelatoriosComercialRoute: typeof AuthenticatedRelatoriosComercialRoute
   AuthenticatedRelatoriosDreGerencialRoute: typeof AuthenticatedRelatoriosDreGerencialRoute
@@ -1530,6 +1551,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminPlanosRoute: AuthenticatedAdminPlanosRoute,
   AuthenticatedAdminVersoesRoute: AuthenticatedAdminVersoesRoute,
   AuthenticatedProjetosTemplatesRoute: AuthenticatedProjetosTemplatesRoute,
+  AuthenticatedRelatoriosAtendimentosRoute:
+    AuthenticatedRelatoriosAtendimentosRoute,
   AuthenticatedRelatoriosBoardRoute: AuthenticatedRelatoriosBoardRoute,
   AuthenticatedRelatoriosComercialRoute: AuthenticatedRelatoriosComercialRoute,
   AuthenticatedRelatoriosDreGerencialRoute:

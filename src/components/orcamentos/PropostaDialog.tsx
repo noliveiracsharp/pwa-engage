@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useModelosContrato } from "@/lib/contrato-modelos";
 import { Copy, Eye, Link2, Mail, MessageCircle, Printer, Save, X } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -55,9 +56,11 @@ export function PropostaDialog(props: Props) {
   const [salvando, setSalvando] = useState(false);
   const [envioOpen, setEnvioOpen] = useState(false);
   const empresaId = String(orcamento?.["empresa_id"] ?? rowId(empresa ?? {}) ?? "");
+  const { data: modelosContrato, isFetched: modelosProntos } = useModelosContrato(empresaId, open);
 
   useEffect(() => {
     if (!open || !orcamento) return;
+    if (empresaId && !modelosProntos) return;
     setBlocos(
       blocosDe(orcamento["blocos_selecionados"]).map((b) =>
         contratoPadraoPendente(b)
@@ -66,13 +69,13 @@ export function PropostaDialog(props: Props) {
               ativo: true,
               titulo: "Contrato de prestação de serviços e tecnologia",
               anexos: b.anexos ?? ANEXOS_PADRAO,
-              conteudo: gerarContratoModular({ ...props, orcamento, anexos: b.anexos ?? ANEXOS_PADRAO }),
+              conteudo: gerarContratoModular({ ...props, orcamento, anexos: b.anexos ?? ANEXOS_PADRAO, modelos: modelosContrato }),
             }
           : b,
       ),
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, orcamento]);
+  }, [open, orcamento, modelosProntos]);
 
   const templates = useQuery({
     queryKey: ["orcamentos_templates", empresaId],
@@ -238,7 +241,7 @@ export function PropostaDialog(props: Props) {
                                     );
                                     set(i, {
                                       anexos,
-                                      conteudo: gerarContratoModular({ ...props, orcamento, anexos }),
+                                      conteudo: gerarContratoModular({ ...props, orcamento, anexos, modelos: modelosContrato }),
                                     });
                                   }}
                                 />
@@ -264,7 +267,7 @@ export function PropostaDialog(props: Props) {
                               if (b.conteudo.trim() && !await confirmar("Substituir o texto atual pelo contrato gerado a partir da oferta?")) return;
                               set(i, {
                                 titulo: "Contrato de prestação de serviços e tecnologia",
-                                conteudo: gerarContratoModular({ ...props, orcamento, anexos: b.anexos ?? ANEXOS_PADRAO }),
+                                conteudo: gerarContratoModular({ ...props, orcamento, anexos: b.anexos ?? ANEXOS_PADRAO, modelos: modelosContrato }),
                               });
                             }}
                           >

@@ -131,13 +131,14 @@ export function usePesquisaSatisfacao() {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Encerrar atendimento</DialogTitle>
-          <DialogDescription>Deseja enviar a pesquisa de satisfação para o cliente?</DialogDescription>
+          <DialogDescription>O cliente receberá o protocolo, o link do portal e a pesquisa de satisfação.</DialogDescription>
         </DialogHeader>
-        <p className="rounded-md bg-muted p-3 text-sm text-muted-foreground">{TEXTO_PESQUISA}</p>
+        <p className="whitespace-pre-wrap rounded-md bg-muted p-3 text-sm text-muted-foreground">
+          {pedido ? textoEncerramento(pick(pedido.atendimento, ["protocolo"]), telefonePessoa(pedido.pessoa), typeof window !== "undefined" ? window.location.origin : "") : TEXTO_PESQUISA}
+        </p>
         <DialogFooter className="gap-2">
           <Button variant="ghost" disabled={ocupado} onClick={() => concluir(null)}>Cancelar</Button>
-          <Button variant="outline" disabled={ocupado} onClick={() => concluir(false)}>Apenas encerrar</Button>
-          <Button disabled={ocupado} onClick={() => concluir(true)}>Sim, enviar pesquisa</Button>
+          <Button disabled={ocupado} onClick={() => concluir(true)}>Encerrar e enviar</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
