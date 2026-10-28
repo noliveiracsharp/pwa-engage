@@ -253,7 +253,16 @@ export function DataTable({
                   onDragOver={canDrag ? (e) => { e.preventDefault(); setDropIndex(globalIndex); } : undefined}
                   onDrop={canDrag ? () => handleDrop(globalIndex) : undefined}
                   onDragEnd={canDrag ? () => { setDragIndex(null); setDropIndex(null); } : undefined}
+                  onClick={onEdit && rowActions?.(row).edit !== false ? (e) => {
+                    const alvo = e.target as HTMLElement;
+                    // Ignora cliques vindos de menus em portal e de controles dentro da linha.
+                    if (!e.currentTarget.contains(alvo)) return;
+                    if (alvo.closest("button,a,input,select,textarea,label,[role=checkbox],[role=menuitem],[role=combobox],[data-no-row-click]")) return;
+                    if (window.getSelection()?.toString()) return;
+                    onEdit(row);
+                  } : undefined}
                   className={cn(
+                    onEdit && rowActions?.(row).edit !== false && "cursor-pointer",
                     canDrag && "cursor-grab active:cursor-grabbing",
                     dragIndex === globalIndex && "opacity-50",
                     dropIndex === globalIndex && dragIndex !== null && dragIndex !== globalIndex && "border-t-2 border-primary",

@@ -10,7 +10,14 @@ import { type Row } from "@/lib/row";
 export function BarraAprovacaoCotacao() {
   const { empresaId, usuarioId } = useAudit();
   const qc = useQueryClient();
-  const [recolhida, setRecolhida] = useState(false);
+  const [recolhida, setRecolhidaState] = useState(false);
+  useEffect(() => {
+    try { setRecolhidaState(localStorage.getItem("barra-aprovacao-recolhida") === "1"); } catch { /* sem storage */ }
+  }, []);
+  const setRecolhida = (v: boolean) => {
+    setRecolhidaState(v);
+    try { localStorage.setItem("barra-aprovacao-recolhida", v ? "1" : "0"); } catch { /* sem storage */ }
+  };
   const [expandida, setExpandida] = useState(false);
   const chave = ["barra-aprovacao-cotacao", empresaId, usuarioId];
 
