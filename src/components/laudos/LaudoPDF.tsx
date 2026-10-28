@@ -143,10 +143,6 @@ export function LaudoPDF({ open, onOpenChange, laudo, linhas, fotos, empresa, cl
             <section className="orc-bloco"><h2>Parecer final</h2><div><p className="orc-texto">{txt(laudo["laudo_final"])}</p></div></section>
           )}
 
-          <div className="orc-aceite">
-            <div><div className="orc-linha-assinatura" /><span>{clienteNome}</span><small>Ciência do cliente</small></div>
-            <div><div className="orc-linha-assinatura" /><span>{txt(pick(tecnico ?? {}, ["nome"])) || empresaNome}</span><small>Responsável técnico</small></div>
-          </div>
           <footer className="orc-rodape">{empresaNome} · {objetivoLabel(laudo["objetivo"])} {numero}</footer>
         </div>
       </DialogContent>

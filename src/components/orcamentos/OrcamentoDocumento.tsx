@@ -391,20 +391,6 @@ export function OrcamentoDocumento({ id, orcamento, linhas, empresa, cliente, ve
             </Bloco>
           )}
 
-          {/* ------------------------- aceite -------------------------- */}
-          {!semAceite && (<div className="orc-aceite">
-            <div>
-              <div className="orc-linha-assinatura" />
-              <span>{clienteNome}</span>
-              <small>Aprovação do cliente</small>
-            </div>
-            <div>
-              <div className="orc-linha-assinatura" />
-              <span>{empresaNome}</span>
-              <small>{txt(pick(vendedor ?? {}, ["nome"])) || "Responsável comercial"}</small>
-            </div>
-          </div>)}
-
           <footer className="orc-rodape">
             {empresaNome} · Oferta {numero} · Válida até{" "}
             {formatDate(orcamento["validade_orcamento"])}
