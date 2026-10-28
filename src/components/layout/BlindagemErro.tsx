@@ -2,10 +2,10 @@ import { Component, type ReactNode } from "react";
 
 /** Isola falhas de um diálogo: mostra o erro sem derrubar a tela inteira. */
 export class BlindagemErro extends Component<{ children: ReactNode; onFechar?: () => void }, { erro: Error | null }> {
-  state = { erro: null as Error | null };
+  override state = { erro: null as Error | null };
   static getDerivedStateFromError(erro: Error) { return { erro }; }
-  componentDidCatch(erro: Error) { console.error("[BlindagemErro]", erro); }
-  render() {
+  override componentDidCatch(erro: Error) { console.error("[BlindagemErro]", erro); }
+  override render() {
     if (!this.state.erro) return this.props.children;
     return (
       <div className="fixed inset-0 z-[100] grid place-items-center bg-background/80 p-4">
