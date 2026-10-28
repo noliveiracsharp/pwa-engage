@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Loader2, Pencil, Plus, Send, Trash2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, Pencil, Plus, Send, Trash2 } from "lucide-react";
+
+type StatusTeste = { ok: boolean; msg?: string; em: string };
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
@@ -40,6 +42,16 @@ export function EmpresaEmailCanais({ empresaId, readOnly }: { empresaId: string;
   const [senha, setSenha] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [testando, setTestando] = useState<string | null>(null);
+  const [paraTeste, setParaTeste] = useState("");
+  const [canalTesteId, setCanalTesteId] = useState<string>("");
+  const chaveStatus = `email-canais-status:${empresaId}`;
+  const [status, setStatus] = useState<Record<string, StatusTeste>>({});
+  useEffect(() => { try { setStatus(JSON.parse(localStorage.getItem(chaveStatus) ?? "{}")); } catch { /* */ } }, [chaveStatus]);
+  const gravarStatus = (id: string, s: StatusTeste) => setStatus((atual) => {
+    const novo = { ...atual, [id]: s };
+    try { localStorage.setItem(chaveStatus, JSON.stringify(novo)); } catch { /* */ }
+    return novo;
+  });
 
   useEffect(() => {
     void supabase.from("empresas_email_canais" as never).select("id").limit(1).then(({ error: e }) => setSemScript(!!e));
@@ -81,16 +93,19 @@ export function EmpresaEmailCanais({ empresaId, readOnly }: { empresaId: string;
     void recarregar();
   };
 
-  const testar = async (c: CanalEmail) => {
-    const para = c.responder_para || c.remetente_email;
-    if (!para) return void toast.error("Informe o e-mail do remetente no canal.");
+  const testar = async (c: CanalEmail, destino?: string) => {
+    const para = destino || c.responder_para || c.remetente_email;
+    if (!para) return void toast.error("Informe para qual e-mail enviar o teste.");
     setTestando(c.id);
     const { data, error: e } = await supabase.functions.invoke("cobranca-regua", { body: { acao: "email_testar", empresa_id: empresaId, para, canal_id: c.id } });
     setTestando(null);
     const msg = await erroDaFuncao(e, data);
-    if (msg) return void toast.error(msg);
+    gravarStatus(c.id, msg ? { ok: false, msg, em: new Date().toISOString() } : { ok: true, em: new Date().toISOString() });
+    if (msg) return void toast.error(`${c.nome}: ${msg}`);
     toast.success(`Teste enviado de ${c.remetente_email || c.nome} para ${para}.`);
   };
+
+  const canalTeste = canais?.find((c) => c.id === canalTesteId) ?? canais?.find((c) => c.padrao) ?? canais?.[0];
 
   return (
     <div className="space-y-3 rounded-lg border border-border p-3">
@@ -101,20 +116,44 @@ export function EmpresaEmailCanais({ empresaId, readOnly }: { empresaId: string;
         </div>
         {!readOnly && <Button type="button" size="sm" onClick={() => { setForm({ ...NOVO }); setSenha(""); }}><Plus className="mr-1 h-4 w-4" />Novo canal</Button>}
       </div>
-      {!canais?.length && <p className="text-sm text-muted-foreground">Nenhum canal ainda — todos os envios usam o e-mail geral acima.</p>}
+      {!canais?.length && <p className="text-sm text-muted-foreground">Nenhum canal ainda — todos os envios usam o e-mail de contingência abaixo.</p>}
       <div className="divide-y divide-border">
-        {canais?.map((c) => (
+        {canais?.map((c) => {
+          const st = status[c.id];
+          const cor = st ? (st.ok ? "text-success" : "text-destructive") : "";
+          const dica = st ? `${st.ok ? "Último teste OK" : `Último teste falhou: ${st.msg}`} · ${new Date(st.em).toLocaleString("pt-BR")}` : "Enviar teste";
+          return (
           <div key={c.id} className="flex flex-wrap items-center gap-2 py-2">
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium">{c.nome} {c.padrao && <Badge className="ml-1">padrão</Badge>} {!c.ativo && <Badge variant="outline" className="ml-1">inativo</Badge>}</p>
               <p className="truncate text-xs text-muted-foreground">{c.remetente_email || c.smtp_usuario || "—"} · {c.finalidades.map((f) => FINALIDADES.find((x) => x.valor === f)?.rotulo ?? f).join(", ") || "sem finalidade"}{c.email_modo === "proprio" && !comSenha.includes(c.id) ? " · sem senha" : ""}</p>
+              {st && !st.ok && <p className="truncate text-xs text-destructive">{st.msg}</p>}
             </div>
-            <Button type="button" variant="ghost" size="icon" title="Enviar teste" onClick={() => testar(c)} disabled={testando === c.id}>{testando === c.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}</Button>
+            <Button type="button" variant="ghost" size="icon" title={dica} className={cor} onClick={() => testar(c)} disabled={testando === c.id}>
+              {testando === c.id ? <Loader2 className="h-4 w-4 animate-spin" /> : st ? (st.ok ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />) : <Send className="h-4 w-4" />}
+            </Button>
             {!readOnly && <Button type="button" variant="ghost" size="icon" title="Editar" onClick={() => { setForm({ ...c }); setSenha(""); }}><Pencil className="h-4 w-4" /></Button>}
             {!readOnly && <Button type="button" variant="ghost" size="icon" title="Excluir" onClick={() => excluir(c)}><Trash2 className="h-4 w-4" /></Button>}
           </div>
-        ))}
+          );
+        })}
       </div>
+
+      {!!canais?.length && (
+        <div className="flex flex-wrap items-end gap-2 rounded-lg border border-border bg-muted/30 p-3">
+          <div className="min-w-56 flex-1 space-y-1"><Label>Enviar teste para</Label><Input type="email" placeholder="qualquer@email.com" value={paraTeste} onChange={(e) => setParaTeste(e.target.value)} /></div>
+          <div className="min-w-48 space-y-1">
+            <Label>Pelo canal</Label>
+            <Select value={canalTeste?.id} onValueChange={setCanalTesteId}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>{[...canais].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((c) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+          <Button type="button" variant="outline" disabled={!canalTeste || testando === canalTeste.id} onClick={() => { if (!paraTeste) return void toast.error("Informe para qual e-mail enviar o teste."); if (canalTeste) void testar(canalTeste, paraTeste); }}>
+            {canalTeste && testando === canalTeste.id ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Send className="mr-1 h-4 w-4" />}Enviar teste
+          </Button>
+        </div>
+      )}
 
       <Dialog open={!!form} onOpenChange={(v) => !v && setForm(null)}>
         <DialogContent className="max-w-2xl">
