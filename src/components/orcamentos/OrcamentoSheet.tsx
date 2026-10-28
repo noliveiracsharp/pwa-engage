@@ -89,6 +89,7 @@ import { etapasDoKanban, kanbanDoModuloOrcamentos } from "@/lib/orcamento-kanban
 import { cn } from "@/lib/utils";
 import { corEtapa } from "@/lib/kanban-cores";
 import type { SecaoPerms } from "@/lib/secoes-permissao";
+import { confirmarSalvamento, reconciliarLinhasSalvas } from "@/lib/oferta-salvamento";
 
 const NONE = "__none__";
 /** Validade padrão de um novo orçamento (dias após a data). */
@@ -246,6 +247,7 @@ type Props = {
   record: Row | null;
   /** Linhas já gravadas em orcamento_itens para o registro em edição. */
   linhasRecord: Row[];
+  linhasLoading?: boolean;
   saving?: boolean;
   readOnly?: boolean;
   clientes: Row[];
@@ -256,7 +258,7 @@ type Props = {
   vendedorPadraoId?: string | undefined;
   /** Abre a pré-visualização/PDF do orçamento em edição. */
   onPreview?: (() => void) | undefined;
-  onSave: (input: { header: Row; linhas: LinhaPayload[]; manterAberto?: boolean }) => void;
+  onSave: (input: { header: Row; linhas: LinhaPayload[]; manterAberto?: boolean }) => Promise<Row[]>;
   /** Quando informado (e record = null), abre um novo rascunho copiando esta oferta. */
   duplicarDe?: { record: Row; linhas: Row[] } | null;
   /** Permissão por seção (Funções filhas de /orcamentos). Ausente = segue a tela. */
@@ -274,6 +276,7 @@ export function OrcamentoSheet({
   onOpenChange,
   record,
   linhasRecord,
+  linhasLoading = false,
   saving,
   readOnly,
   secoes,
@@ -307,6 +310,7 @@ export function OrcamentoSheet({
       initKey.current = "";
       return;
     }
+    if (record && linhasLoading) return;
     const key = record ? `r:${recordId}` : duplicarDe ? `dup:${String(rowId(duplicarDe.record) ?? "")}` : "novo";
     const paraLinha = (rows: Row[]) =>
       rows
@@ -347,11 +351,10 @@ export function OrcamentoSheet({
       }
       return;
     }
-    if (record && !dirty.current) {
-      setLinhas((atual) => (atual.length !== linhasDb.length ? linhasDb : atual));
-    }
+    // Após a abertura, só uma gravação confirmada pode substituir o formulário.
+    // Atualizações do cache podem ainda conter os itens anteriores à gravação.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, record, recordId, linhasRecord, vendedorPadraoId, duplicarDe]);
+  }, [open, record, recordId, linhasRecord, linhasLoading, vendedorPadraoId, duplicarDe]);
 
   const kanbanNomeIdRecord = record?.["kanban_nome_id"] ? String(record["kanban_nome_id"]) : null;
   const { data: etapas = [] } = useQuery({
@@ -585,7 +588,8 @@ export function OrcamentoSheet({
 
   /* ------------------------------ salvar ------------------------------ */
 
-  const submit = (manterAberto = false) => {
+  const submit = async (manterAberto = false) => {
+    if (saving || readOnly) return;
     if (manterAberto && (!h.parceiro_id || !h.dt_orcamento || readOnly)) return;
     if (!h.parceiro_id) {
       toast.error(tx("Selecione o cliente da oferta."));
@@ -696,10 +700,19 @@ export function OrcamentoSheet({
     });
     header["faturamento_misto"] = payloadLinhas.some((l) => l.faturar_para_id);
 
-    onSave({ header, linhas: payloadLinhas, manterAberto });
-    // Gravado: o que está em tela passa a ser a referência "limpa".
-    dirty.current = false;
-    baseline.current = fotoEstado(h, linhas);
+    try {
+      await confirmarSalvamento(
+        () => onSave({ header, linhas: payloadLinhas, manterAberto }),
+        (rows) => {
+          const gravadas = reconciliarLinhasSalvas(rows, linhasValidas);
+          setLinhas(gravadas);
+          dirty.current = false;
+          baseline.current = fotoEstado(h, gravadas);
+        },
+      );
+    } catch {
+      // O responsável pela gravação exibe o erro; o rascunho continua intacto.
+    }
   };
 
   const numero = record ? String(record["numero"] ?? "") : "";
@@ -733,7 +746,7 @@ export function OrcamentoSheet({
         </SheetHeader>
 
         <fieldset
-          disabled={Boolean(readOnly)}
+          disabled={Boolean(readOnly) || saving}
           className="min-w-0 space-y-6 px-6 disabled:opacity-70"
         >
           <div role="tablist" className="sticky top-0 z-10 -mx-6 flex gap-1 border-b border-border bg-background px-6 pt-2">

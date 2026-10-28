@@ -13,7 +13,7 @@ export function OfertaKanbanSheet({ oferta, onClose }: { oferta: Row | null; onC
   const perms = usePagePermissions("/orcamentos");
   const { empresaId, usuarioId } = useAudit();
   const { data: todos = [] } = useTableRows("orcamentos");
-  const { data: linhas = [] } = useTableRows("orcamento_itens");
+  const { data: linhas = [], isPending: linhasLoading } = useTableRows("orcamento_itens");
   const { data: parceiros = [] } = useTableRows("parceiros");
   const { data: usuarios = [] } = useTableRows("usuarios");
   const { data: itens = [] } = useTableRows("itens");
@@ -31,6 +31,7 @@ export function OfertaKanbanSheet({ oferta, onClose }: { oferta: Row | null; onC
       onOpenChange={(o) => !o && onClose()}
       record={record}
       linhasRecord={linhasRecord}
+      linhasLoading={linhasLoading}
       saving={save.isPending}
       readOnly={!perms.canUpdate}
       clientes={parceiros.filter((p) => mesma(p, empresaId) && p["is_cliente"] === true)}
@@ -39,9 +40,11 @@ export function OfertaKanbanSheet({ oferta, onClose }: { oferta: Row | null; onC
       unidades={unidades}
       marcas={marcas}
       vendedorPadraoId={usuarioId !== undefined ? String(usuarioId) : undefined}
-      onSave={({ header, linhas: l, manterAberto }) =>
-        save.mutate({ header, linhas: l, original: record }, { onSuccess: () => { if (!manterAberto) onClose(); } })
-      }
+      onSave={async ({ header, linhas: l, manterAberto }) => {
+        const resultado = await save.mutateAsync({ header, linhas: l, original: record });
+        if (!manterAberto) onClose();
+        return resultado.linhas;
+      }}
     />
   );
 }

@@ -102,7 +102,7 @@ function OrcamentosPage() {
   const { empresaId, usuarioId } = useAudit();
   const { empresa } = useAuth();
   const { data: todos = [], isLoading } = useTableRows("orcamentos");
-  const { data: todasLinhas = [] } = useTableRows("orcamento_itens");
+  const { data: todasLinhas = [], isPending: linhasLoading } = useTableRows("orcamento_itens");
   const { data: parceiros = [] } = useTableRows("parceiros");
   const { data: usuarios = [] } = useTableRows("usuarios");
   const { data: itens = [] } = useTableRows("itens");
@@ -655,6 +655,7 @@ function OrcamentosPage() {
         onOpenChange={setOpen}
         record={record}
         linhasRecord={linhasRecord}
+        linhasLoading={linhasLoading}
         saving={save.isPending}
         readOnly={record ? !perms.canUpdate : !perms.canCreate}
         secoes={secoes}
@@ -673,8 +674,8 @@ function OrcamentosPage() {
             : undefined
         }
         duplicarDe={duplicarDe}
-        onSave={({ header, linhas, manterAberto }) =>
-          save.mutate(
+        onSave={async ({ header, linhas, manterAberto }) => {
+          const resultado = await save.mutateAsync(
             { header, linhas, original: record },
             {
               onSuccess: ({ id }) => {
@@ -696,8 +697,9 @@ function OrcamentosPage() {
                 setDuplicarDe(null);
               },
             },
-          )
-        }
+          );
+          return resultado.linhas;
+        }}
       />
 
       <OrcamentoPDF

@@ -24,3 +24,4 @@
 
 - i18n: custom dependency-free engine in src/lib/i18n.ts (dictionaries + Intl formatters); add keys to all three dictionaries together — keeps bundle small and SSR-safe.
 - Monetary inputs use the shared i18n currency formatter with BRL as the default; locale changes presentation only, never denomination, because stored prices are not converted. Explicit currency overrides must reflect the actual source currency.
+- Offer editors initialize after item loading and reconcile saved rows only after awaited persistence succeeds; background cache refreshes must not overwrite drafts, and persisted rows must retain their editor keys to avoid reopening them as new items.
