@@ -247,7 +247,14 @@ function Lista({
             )}
             {rows.map((r) => (
               <TableRow key={String(rowId(r))}>
-                <TableCell className="font-medium">{String(r["nome"] ?? "")}</TableCell>
+                <TableCell className="font-medium">
+                  <span className="inline-flex items-center gap-1.5">
+                    {r["visibilidade"] === "privado"
+                      ? <Lock className="h-3.5 w-3.5 text-muted-foreground" aria-label="Privado" />
+                      : <Users className="h-3.5 w-3.5 text-muted-foreground" aria-label="Público" />}
+                    {String(r["nome"] ?? "")}
+                  </span>
+                </TableCell>
                 <TableCell className="text-muted-foreground">
                   {String(r["descricao"] ?? "")}
                 </TableCell>
@@ -285,23 +292,31 @@ function Lista({
 
 function Builder({
   original,
+  preset,
   readOnly,
   onClose,
 }: {
   original: Row | null;
+  preset?: Row | undefined;
   readOnly: boolean;
   onClose: () => void;
 }) {
+  const { usuario } = useAuth();
+  const meuId = String(usuario?.["id"] ?? "");
+  const base = original ?? preset ?? null;
   const { data: funcoes = [] } = useTableRows("funcoes");
   const save = useSaveRecord("relatorios");
   const { stamp } = useAudit();
-  const [nome, setNome] = useState(String(original?.["nome"] ?? ""));
-  const [descricao, setDescricao] = useState(String(original?.["descricao"] ?? ""));
-  const [tabela, setTabela] = useState(String(original?.["tabela_base"] ?? ""));
-  const inicial = parseJson<string[]>(original?.["colunas_selecionadas"], []);
+  const [nome, setNome] = useState(String(base?.["nome"] ?? ""));
+  const [descricao, setDescricao] = useState(String(base?.["descricao"] ?? ""));
+  const [tabela, setTabela] = useState(String(base?.["tabela_base"] ?? ""));
+  const inicial = parseJson<string[]>(base?.["colunas_selecionadas"], []);
   const [cols, setCols] = useState<string[]>(inicial.filter((c) => !c.includes("(")));
   const [joins, setJoins] = useState(inicial.filter((c) => c.includes("(")).join(", "));
-  const [filtros, setFiltros] = useState<Filtro[]>(parseJson<Filtro[]>(original?.["filtros"], []));
+  const [filtros, setFiltros] = useState<Filtro[]>(parseJson<Filtro[]>(base?.["filtros"], []));
+  const [publico, setPublico] = useState(String(base?.["visibilidade"] ?? "publico") !== "privado");
+  // Só o dono altera a visibilidade de um relatório já salvo.
+  const dono = !original || !original["usuario_id"] || String(original["usuario_id"]) === meuId;
   const { data: colunas = [], isFetching, error } = useColunas(tabela);
 
   const tabelas = useMemo(() => {
@@ -330,6 +345,8 @@ function Builder({
         tabela_base: tabela,
         colunas_selecionadas: [...cols, ...joinList],
         filtros: filtros.filter((f) => f.campo && f.operador),
+        visibilidade: publico ? "publico" : "privado",
+        ...(!original || !original["usuario_id"] ? { usuario_id: meuId || null } : {}),
       },
       !original,
     );
