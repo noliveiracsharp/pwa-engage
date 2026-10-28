@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { SearchSelect } from "@/components/data-table/SearchSelect";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -29,6 +28,18 @@ type Props = {
   cliente: string;
   empresaId: string;
 };
+
+function Bloco({ icon: Icon, titulo, id: bid, on, set, children }: { icon: typeof Rocket; titulo: string; id: string; on: boolean; set: (v: boolean) => void; children?: React.ReactNode }) {
+return (
+  <section className="space-y-3 rounded-lg border p-4">
+    <div className="flex items-center justify-between gap-3">
+      <Label htmlFor={bid} className="flex items-center gap-2 text-base font-semibold"><Icon className="h-4 w-4 text-primary" />{titulo}</Label>
+      <Switch id={bid} checked={on} onCheckedChange={set} />
+    </div>
+    {on && children}
+  </section>
+);
+}
 
 const FILA = "__fila__";
 const chaveResp = (emp: string) => `ativacao-responsaveis:${emp}`;
@@ -263,16 +274,6 @@ export function AtivacaoOfertaDialog({ open, onOpenChange, oferta, cliente, empr
     }
   }
 
-  const Bloco = ({ icon: Icon, titulo, id: bid, on, set, children }: { icon: typeof Rocket; titulo: string; id: string; on: boolean; set: (v: boolean) => void; children?: React.ReactNode }) => (
-    <section className="space-y-3 rounded-lg border p-4">
-      <div className="flex items-center justify-between gap-3">
-        <Label htmlFor={bid} className="flex items-center gap-2 text-base font-semibold"><Icon className="h-4 w-4 text-primary" />{titulo}</Label>
-        <Switch id={bid} checked={on} onCheckedChange={set} />
-      </div>
-      {on && children}
-    </section>
-  );
-
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="flex flex-col gap-0 p-0">
@@ -360,4 +361,3 @@ export function AtivacaoOfertaDialog({ open, onOpenChange, oferta, cliente, empr
   );
 }
 
-export { ToggleGroup, ToggleGroupItem };
