@@ -68,7 +68,7 @@ export function ContratoOfertaModelos({ canEdit }: { canEdit: boolean }) {
         </div>
         <p className="text-muted-foreground text-sm">
           Este texto entra no contrato da Oferta (oferta digital e minuta). Mantenha o título "Anexo X —" nos anexos para a numeração automática. Variáveis:{" "}
-          {[...TAGS_CONTRATO, ...TAGS.map((t) => (typeof t === "string" ? t : (t as { tag: string }).tag))].slice(0, 30).map((t) => (
+          {[...TAGS_CONTRATO, ...TAGS].map((t) => (
             <code key={t} className="bg-muted mr-1 rounded px-1 text-xs">{t}</code>
           ))}
         </p>
