@@ -60,7 +60,7 @@ function CotacoesPage() {
   const { data: laudosBase = [] } = useTableRows("laudos_tecnicos");
   const { data: ordens = [] } = useTableRows("manutencao_os");
   // Origem da cotação: laudo técnico ou levantamento de uma OS de Manutenção (mesma forma: numero + parceiro_id).
-  const laudos = useMemo(() => [...laudosBase, ...ordens.map((o) => ({ ...o, __os: true }))], [laudosBase, ordens]);
+  const laudos = useMemo<Row[]>(() => [...laudosBase, ...ordens.map((o): Row => ({ ...o, __os: true }))], [laudosBase, ordens]);
   const { data: parceiros = [] } = useTableRows("parceiros");
   const { data: itens = [] } = useTableRows("itens");
   const { data: pedidos = [] } = useTableRows("pedidos_compra");
