@@ -7,6 +7,7 @@
 - [ ] Ativar e consultar cadastros reais — depende de executar o SQL, atualizar cobranca-regua e publicar no banco próprio; sem sessão autenticada nesta execução.
 
 ## Ajuste atual
+- [ ] Corrigir salvamento dos itens da revisão da Oferta sem restaurar exclusões nem abrir todas as linhas.
 - [x] Inspecionar script e tela de Funções; entregar consulta somente leitura para diagnosticar ausência do DRE sem alterar permissões.
 - [x] Confirmar causa no diagnóstico: agrupador com caminho vazio e DRE sem pai; entregar SQL v2 somente para corrigir o vínculo, preservando permissões.
 - [ ] Validar DRE dentro de Relatórios no banco próprio — aguarda execução do SQL v2 e atualização da tela pelo usuário; acesso autenticado indisponível.
