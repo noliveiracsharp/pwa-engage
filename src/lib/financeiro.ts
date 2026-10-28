@@ -170,7 +170,8 @@ export function titulosDaOferta(orc: Row, itens: Row[] = []): NovoTitulo[] {
     // Sem prazo: lança os 12 primeiros meses; a rotina diária do banco mantém sempre 12 à frente.
     const meses = semPrazo ? 12 : Math.max(1, Math.min(120, Math.floor(num(orc["vigencia_meses"])) || 12));
     const base = iso(orc["dt_orcamento"] ?? orc["data"] ?? orc["created_at"]) || hojeISO();
-    const primeira = parcelas[0]?.vencimento ? addMonthsISO(parcelas[0].vencimento, 1) : addMonthsISO(base, 1);
+    const primeiraFat = iso(orc["dt_primeiro_faturamento"]);
+    const primeira = primeiraFat ? primeiraFat : parcelas[0]?.vencimento ? addMonthsISO(parcelas[0].vencimento, 1) : addMonthsISO(base, 1);
     const rateio = ratearPorPagador(mensal, pesosPorPagador(itens, chaveCliente, true), chaveCliente);
     for (let i = 0; i < meses; i++) {
       for (const [k, v] of rateio) {

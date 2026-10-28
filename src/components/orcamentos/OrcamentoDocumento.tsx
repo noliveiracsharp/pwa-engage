@@ -362,7 +362,7 @@ export function OrcamentoDocumento({ id, orcamento, linhas, empresa, cliente, ve
                   <span>{formatBRL(totalRecorrente)}/mês</span>
                 </div>
                 <div>
-                  <span>Vigência {vigencia} meses · reajuste anual pelo {reajuste}</span>
+                  <span>Vigência {vigencia} meses · reajuste anual pelo {reajuste}{txt(orcamento["dt_primeiro_faturamento"]) ? ` · 1º faturamento em ${formatDate(orcamento["dt_primeiro_faturamento"])}` : ""}</span>
                 </div>
               </div>
 
