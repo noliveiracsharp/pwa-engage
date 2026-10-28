@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAvisosFrota } from "@/hooks/useAvisosFrota";
 import { useAvisosProjetos } from "@/hooks/useAvisosProjetos";
 import { useAvisosLeads } from "@/hooks/useAvisosLeads";
+import { useAvisosAtivacao, useAvisosEquipe } from "@/lib/avisos-equipe";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { confirmar } from "@/components/layout/DialogoGlobal";
 
@@ -25,6 +26,8 @@ export function AvisosButton() {
   useAvisosFrota(!!usuario && frota.canRead);
   useAvisosProjetos(usuario?.["id"]);
   useAvisosLeads(usuario?.["id"]);
+  useAvisosEquipe(usuario?.["id"]);
+  useAvisosAtivacao(usuario?.["id"]);
   const [avisos, setAvisos] = useState<Aviso[]>([]);
   const [open, setOpen] = useState(false);
   useEffect(() => { setAvisos(listarAvisos()); return onAvisos(() => setAvisos(listarAvisos())); }, [usuario?.["id"]]);
