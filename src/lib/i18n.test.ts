@@ -17,4 +17,11 @@ describe("i18n", () => {
   it("moeda em reais no pt-BR", () => {
     expect(formatadores("pt-BR").moeda(1000).replace(/\s/g, " ")).toBe("R$ 1.000,00");
   });
+  it.each(["pt-BR", "en-US", "es-ES"] as const)("preserva 1000 reais ao apresentar em %s", (idioma) => {
+    const esperado = new Intl.NumberFormat(idioma, { style: "currency", currency: "BRL" }).format(1000);
+    expect(formatadores(idioma).moeda(1000)).toBe(esperado);
+  });
+  it("respeita moeda explicitamente informada independentemente do idioma", () => {
+    expect(formatadores("en-US", "EUR").moeda(1000)).toBe("€1,000.00");
+  });
 });
