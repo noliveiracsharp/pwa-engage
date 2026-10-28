@@ -203,6 +203,8 @@ const T: Record<string, [string, string]> = {
   "Venda": ["Sale", "Venta"],
   "Ver descrição": ["View description", "Ver descripción"],
   "Vigência (meses)": ["Term (months)", "Vigencia (meses)"],
+  "Data do primeiro faturamento": ["First billing date", "Fecha de la primera facturación"],
+  "Vazio: mês seguinte à primeira parcela da implantação.": ["Empty: month after the first setup installment.", "Vacío: mes siguiente a la primera cuota de implantación."],
   "Visualizar / PDF": ["View / PDF", "Ver / PDF"],
   "Visualizar PDF da oferta": ["View offer PDF", "Ver PDF de la oferta"],
   "Você não tem acesso a esta página.": ["You don't have access to this page.", "No tiene acceso a esta página."],
