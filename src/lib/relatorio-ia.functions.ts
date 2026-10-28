@@ -100,6 +100,7 @@ export const montarRelatorioIa = createServerFn({ method: "POST" })
     } catch (e) {
       const s = (e as { statusCode?: number }).statusCode;
       console.error("montarRelatorioIa", e);
+      if (a.origem === "propria" && (s === 401 || s === 403)) return { erro: "A chave de IA da empresa foi recusada. Confira em Empresas → Inteligência Artificial." };
       if (s === 402) return { erro: "Créditos de IA esgotados." };
       if (s === 429) return { erro: "Muitas solicitações. Tente em instantes." };
       return { erro: "Não foi possível montar o relatório agora." };
