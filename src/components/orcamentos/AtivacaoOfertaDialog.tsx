@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { FolderKanban, Package, Rocket, ShoppingCart, Wallet } from "lucide-react";
 import { toast } from "sonner";
@@ -29,7 +29,7 @@ type Props = {
   empresaId: string;
 };
 
-function Bloco({ icon: Icon, titulo, id: bid, on, set, children }: { icon: typeof Rocket; titulo: string; id: string; on: boolean; set: (v: boolean) => void; children?: React.ReactNode }) {
+function Bloco({ icon: Icon, titulo, id: bid, on, set, children }: { icon: typeof Rocket; titulo: string; id: string; on: boolean; set: (v: boolean) => void; children?: ReactNode }) {
 return (
   <section className="space-y-3 rounded-lg border p-4">
     <div className="flex items-center justify-between gap-3">
