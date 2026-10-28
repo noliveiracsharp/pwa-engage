@@ -2,6 +2,7 @@ import { rowId } from "@/lib/crud";
 import { formatCpfCnpj, formatPhoneDisplay } from "@/lib/input-masks";
 import { agruparPorBloco, formatBRL, formatDate, formatQtd, modalidadeLabel, modalidadeOf, naturezaOf, num, parcelasFromValue, situacaoOf } from "@/lib/orcamentos";
 import { pick, type Row } from "@/lib/row";
+import { ehHtml, htmlSeguro } from "@/lib/propostas";
 
 export type OrcamentoDocumentoProps = {
   id?: string;
@@ -241,7 +242,11 @@ export function OrcamentoDocumento({ id, orcamento, linhas, empresa, cliente, ve
 
           {txt(orcamento["descricao"]) && (
             <Bloco titulo="Objeto da oferta">
-              <p className="orc-texto">{txt(orcamento["descricao"])}</p>
+              {ehHtml(txt(orcamento["descricao"])) ? (
+                <div className="orc-texto prop-rich" dangerouslySetInnerHTML={{ __html: htmlSeguro(txt(orcamento["descricao"])) }} />
+              ) : (
+                <p className="orc-texto">{txt(orcamento["descricao"])}</p>
+              )}
             </Bloco>
           )}
 

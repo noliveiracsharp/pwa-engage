@@ -30,7 +30,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { TextoRico } from "@/components/ui/texto-rico";
 import {
   Select,
   SelectContent,
@@ -909,12 +909,12 @@ export function OrcamentoSheet({
               <Label htmlFor="descricao" className="block text-sm font-medium">
                 Descrição
               </Label>
-              <Textarea
-                id="descricao"
-                rows={2}
+              <TextoRico
                 value={h.descricao}
+                minHeight={90}
+                disabled={readOnly}
                 placeholder={tx("Objeto da oferta, condições de pagamento, prazo de entrega…")}
-                onChange={(e) => patchHeader({ descricao: e.target.value })}
+                onChange={(v) => patchHeader({ descricao: v })}
               />
             </div>
           </div>
