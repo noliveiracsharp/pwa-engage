@@ -14,6 +14,8 @@ import { CLASSIFICACOES, isInspecao, OBJETIVO_INSPECAO, OBJETIVOS, OBJETIVO_LEVA
 import { pick, type Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
 import { ItemRapidoDialog } from "@/components/laudos/ItemRapidoDialog";
+import { LaudoAprovacao } from "@/components/laudos/LaudoAprovacao";
+import { statusLevantamento } from "@/lib/levantamento";
 
 export type LaudoLinha = {
   key: string;
@@ -22,6 +24,7 @@ export type LaudoLinha = {
   quantidade: string;
   conforme: boolean;
   observacao: string;
+  grupo: string;
   fotos: string[];
 };
 
@@ -104,7 +107,7 @@ export function LaudoSheet({ open, onOpenChange, record, linhas, fotos, clientes
   const [gerais, setGerais] = useState<string[]>([]);
   const [edit, setEdit] = useState<LaudoLinha | null>(null);
   const [rapido, setRapido] = useState(false);
-  const vazio = (): LaudoLinha => ({ key: "", item_id: "", descricao_item: "", quantidade: "1", conforme: true, observacao: "", fotos: [] });
+  const vazio = (): LaudoLinha => ({ key: "", item_id: "", descricao_item: "", quantidade: "1", conforme: true, observacao: "", grupo: "", fotos: [] });
 
   useEffect(() => {
     if (!open) return;
@@ -128,6 +131,7 @@ export function LaudoSheet({ open, onOpenChange, record, linhas, fotos, clientes
           quantidade: String(l["quantidade"] ?? "1"),
           conforme: l["conforme"] !== false,
           observacao: String(l["observacao"] ?? ""),
+          grupo: String(l["grupo"] ?? ""),
           fotos: fotosDo.filter((f) => String(f["laudo_item_id"]) === String(l["id"])).map((f) => String(f["url_foto"])),
         })),
     );
@@ -136,6 +140,8 @@ export function LaudoSheet({ open, onOpenChange, record, linhas, fotos, clientes
   }, [open, record, linhas, fotos]);
 
   const inspecao = isInspecao(h.objetivo);
+  const stLev = statusLevantamento(record?.["levantamento_status"]);
+  const travado = !inspecao && !!record && stLev !== "rascunho" && stLev !== "reprovado";
   const clienteOpts = useMemo(
     () => clientes.map((c) => ({
       value: String(rowId(c) ?? ""),
@@ -240,7 +246,8 @@ export function LaudoSheet({ open, onOpenChange, record, linhas, fotos, clientes
                         <td className="text-muted-foreground px-4 py-3 tabular-nums">{i + 1}.</td>
                         <td className="max-w-0 px-2 py-3">
                           <div className="truncate font-semibold" title={l.descricao_item}>{cod ? `${cod} — ` : ""}{l.descricao_item}</div>
-                          {l.observacao && <div className="text-muted-foreground truncate text-xs">{l.observacao}</div>}
+                          {l.grupo && <span className="mr-1 rounded bg-primary/10 px-1.5 py-0.5 text-xs text-primary">{l.grupo}</span>}
+                          {l.observacao && <span className="text-muted-foreground truncate text-xs">{l.observacao}</span>}
                         </td>
                         <td className="px-2 py-3 text-right tabular-nums">
                           {inspecao ? (
@@ -255,10 +262,10 @@ export function LaudoSheet({ open, onOpenChange, record, linhas, fotos, clientes
                           {l.fotos.length ? <span className="inline-flex items-center gap-1"><Camera className="h-3.5 w-3.5" />{l.fotos.length}</span> : "—"}
                         </td>
                         <td className="px-4 py-2 text-right whitespace-nowrap">
-                          <Button type="button" variant="ghost" size="icon" aria-label="Editar item" onClick={() => setEdit({ ...l })}>
+                          <Button type="button" variant="ghost" size="icon" aria-label="Editar item" disabled={travado} onClick={() => setEdit({ ...l })}>
                             <Pencil className="h-4 w-4" />
                           </Button>
-                          <Button type="button" variant="ghost" size="icon" className="text-destructive" aria-label="Remover item" onClick={() => setLs((p) => p.filter((x) => x.key !== l.key))}>
+                          <Button type="button" variant="ghost" size="icon" className="text-destructive" aria-label="Remover item" disabled={travado} onClick={() => setLs((p) => p.filter((x) => x.key !== l.key))}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </td>
@@ -268,7 +275,7 @@ export function LaudoSheet({ open, onOpenChange, record, linhas, fotos, clientes
                 </tbody>
               </table>
             </div>
-            <Button type="button" variant="outline" className="w-full" onClick={() => setEdit({ ...vazio(), key: "" })}>
+            <Button type="button" variant="outline" className="w-full" disabled={travado} onClick={() => setEdit({ ...vazio(), key: "" })}>
               <Plus className="mr-2 h-4 w-4" /> Adicionar item
             </Button>
           </section>
@@ -279,6 +286,12 @@ export function LaudoSheet({ open, onOpenChange, record, linhas, fotos, clientes
             <Label className="block pt-1">Fotos gerais</Label>
             <FotoStrip fotos={gerais} onChange={setGerais} />
           </section>
+
+          {!inspecao && (record
+            ? <LaudoAprovacao laudo={record} temItens={linhas.length > 0} />
+            : <p className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">Salve o levantamento para liberar o envio para aprovação do gestor.</p>)}
+
+          {travado && <p className="rounded-md bg-warning/10 p-2 text-sm text-warning">Levantamento enviado para aprovação: os itens ficam bloqueados para edição.</p>}
 
           {h.objetivo === OBJETIVO_INSPECAO && (
             <section className="space-y-3">
@@ -303,7 +316,7 @@ export function LaudoSheet({ open, onOpenChange, record, linhas, fotos, clientes
 
         <div className="flex justify-end gap-2 border-t px-6 py-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={salvar} disabled={saving}>
+          <Button onClick={salvar} disabled={saving || travado}>
             {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Salvar
           </Button>
         </div>
@@ -359,9 +372,16 @@ export function LaudoSheet({ open, onOpenChange, record, linhas, fotos, clientes
                   </div>
                 </div>
               ) : (
-                <div className="space-y-1.5">
-                  <Label htmlFor="lq">Quantidade</Label>
-                  <Input id="lq" inputMode="decimal" value={edit.quantidade} onChange={(e) => setEdit({ ...edit, quantidade: e.target.value })} />
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="lq">Quantidade</Label>
+                    <Input id="lq" inputMode="decimal" value={edit.quantidade} onChange={(e) => setEdit({ ...edit, quantidade: e.target.value })} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="lg">Grupo de compra</Label>
+                    <Input id="lg" list="laudo-grupos" placeholder="Ex.: Material elétrico" value={edit.grupo} onChange={(e) => setEdit({ ...edit, grupo: e.target.value })} />
+                    <datalist id="laudo-grupos">{[...new Set(ls.map((x) => x.grupo.trim()).filter(Boolean))].sort().map((g) => <option key={g} value={g} />)}</datalist>
+                  </div>
                 </div>
               )}
               <div className="space-y-1.5">
