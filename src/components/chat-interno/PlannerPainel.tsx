@@ -159,6 +159,8 @@ export function PlannerPainel({ me, usuarios, onFechar }: { me: string; usuarios
   const [aberta, setAberta] = useState<string | null>(null);
   const { itens, concluir, planejar } = usePlannerItens(alvo, me);
   const proprio = alvo === me;
+  const mapaNomes = useMemo(() => new Map(usuarios.map((u) => [String(u["id"]), String(pick(u, ["nome"], "Usuário"))])), [usuarios]);
+  const nomeDe = (id: string) => (id === me ? "Você" : mapaNomes.get(id) ?? "Usuário");
   const ativos = itens.filter((i) => i.status === "aberta" || i.status === "concluida");
   const backlog = ordenar(ativos.filter((i) => !diaDoItem(i) && i.status !== "concluida"));
   const dias = DIAS.map((_, n) => somarDias(semana, n));
@@ -186,7 +188,7 @@ export function PlannerPainel({ me, usuarios, onFechar }: { me: string; usuarios
         <div className="space-y-1.5">
           {lista.map((i) => (
             <div key={i.id} draggable={proprio && i.origem === "tarefa"} onDragStart={() => setArrastando(i.id)} className={cn(proprio && i.origem === "tarefa" && "cursor-grab")}>
-              <ItemLinha i={i} editavel={proprio} onCheck={(f) => void concluir(i, f)} onAbrir={() => setAberta(i.id)} />
+              <ItemLinha i={i} nome={nomeDe} editavel={proprio} onCheck={(f) => void concluir(i, f)} onAbrir={() => setAberta(i.id)} />
             </div>
           ))}
         </div>
@@ -230,7 +232,7 @@ export function PlannerPainel({ me, usuarios, onFechar }: { me: string; usuarios
             <div className="space-y-1.5">
               {backlog.map((i) => (
                 <div key={i.id} draggable={proprio && i.origem === "tarefa"} onDragStart={() => setArrastando(i.id)}>
-                  <ItemLinha i={i} editavel={proprio} onCheck={(f) => void concluir(i, f)} onAbrir={() => setAberta(i.id)} />
+                  <ItemLinha i={i} nome={nomeDe} editavel={proprio} onCheck={(f) => void concluir(i, f)} onAbrir={() => setAberta(i.id)} />
                 </div>
               ))}
             </div>
