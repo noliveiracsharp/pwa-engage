@@ -783,7 +783,9 @@ table img { cursor: zoom-in; }
 
 /* Oferta: evita saltos de página com grandes espaços em branco.
    Blocos longos (parcelas, ambientes) podem quebrar; só linhas ficam inteiras. */
-.orc-bloco:has(.orc-parcelas), .orc-amb { break-inside: auto; page-break-inside: auto; }
+.orc-bloco:has(.orc-parcelas), .orc-bloco:has(.orc-texto), .orc-amb { break-inside: auto; page-break-inside: auto; }
+.orc-doc h2 { break-after: avoid; page-break-after: avoid; }
+.orc-texto p, .orc-texto li { orphans: 3; widows: 3; }
 .orc-amb-head, .orc-grupo { break-after: avoid; page-break-after: avoid; }
 .orc-tabela tr, .orc-parcelas tr { break-inside: avoid; page-break-inside: avoid; }
 .orc-tabela thead, .orc-parcelas thead { display: table-header-group; }
