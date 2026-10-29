@@ -117,20 +117,22 @@ export function formatarDocumento(v: unknown): string {
 }
 
 /** Layout oficial do e-mail de cobrança (espelhado na Edge Function cobranca-regua). */
+/** Quebra a detecção automática de telefone/endereço/e-mail (Gmail, iOS) com caracteres invisíveis. */
+const semLink = (h: string) => h.replace(/([-\/.@ ])/g, "$1&#8203;");
 export function montarEmailCobrancaHtml(d: DadosEmailCobranca, oferta?: { mensagem: string; titulo: string; botao: string; validade: boolean }): string {
   const cor = d.cor || "#2563eb";
   const doc = formatarDocumento(d.documento);
   const benef = `${escHtml(d.empresaNome)}${doc ? ` — CNPJ/CPF ${escHtml(doc)}` : ""}`;
   const site = urlSite(d.site);
   const siteLink = site ? `<a href="${escHtml(site)}" target="_blank" rel="noopener noreferrer" style="color:${cor}">${escHtml(site.replace(/^https?:\/\//, "").replace(/\/$/, ""))}</a>` : "";
-  const contatos = [d.telefone && `WhatsApp/Telefone: ${escHtml(d.telefone)}`, d.emailContato && `E-mail: ${escHtml(d.emailContato)}`, siteLink].filter(Boolean).join(" · ");
+  const contatos = [d.emailContato && `E-mail: <span style="color:#3f3f46">${semLink(escHtml(d.emailContato))}</span>`, site && `Website: <a href="${escHtml(site)}" target="_blank" rel="noopener noreferrer" style="color:${cor}">${escHtml(site.replace(/^https?:\/\//, "").replace(/\/$/, ""))}</a>`].filter(Boolean).join(" &nbsp;·&nbsp; ");
   const marca = d.logo ? `<img src="${escHtml(d.logo)}" height="44" alt="${escHtml(d.empresaNome)}" style="display:block;border:0">` : `<span style="font-size:20px;font-weight:bold;color:${cor}">${escHtml(d.empresaNome)}</span>`;
-  return `<!doctype html><html><body style="margin:0;background:#f4f4f5;font-family:Arial,sans-serif">
+  return `<!doctype html><html><head><meta name="format-detection" content="telephone=no,address=no,email=no,date=no"></head><body style="margin:0;background:#f4f4f5;font-family:Arial,sans-serif">
 <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:24px">
 <table width="560" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;max-width:100%;border-top:6px solid ${cor}">
 <tr><td style="padding:22px 24px 16px;border-bottom:1px solid #e4e4e7"><table width="100%" cellpadding="0" cellspacing="0"><tr>
 <td>${site ? `<a href="${escHtml(site)}" target="_blank" rel="noopener noreferrer" style="text-decoration:none">${marca}</a>` : marca}</td>
-<td align="right" style="font-size:11px;color:#71717a;line-height:1.4">${doc ? `CNPJ/CPF ${escHtml(doc)}<br>` : ""}${d.endereco ? `${escHtml(d.endereco)}<br>` : ""}${siteLink}</td></tr></table></td></tr>
+<td align="right" style="font-size:11px;color:#71717a;line-height:1.4">${doc ? `CNPJ ${semLink(escHtml(doc))}<br>` : ""}${d.endereco ? `${semLink(escHtml(d.endereco))}<br>` : ""}${siteLink}</td></tr></table></td></tr>
 <tr><td style="padding:24px;color:#18181b;font-size:15px;line-height:1.5">
 <p>Olá, ${escHtml(d.cliente)}!</p><div>${mensagemEmailHtml(oferta?.mensagem ?? avisoEtapa(d.dias))}</div>
 <table width="100%" style="background:#f4f4f5;border-left:4px solid ${cor};border-radius:8px;padding:12px;margin:16px 0">
@@ -143,9 +145,10 @@ ${oferta ? `<b>Dica de segurança:</b> confira se esta Oferta foi enviada por <b
 </td></tr>
 ${bannerEmailHtml(d.banner, cor)}
 <tr><td style="background:#fafafa;border-top:1px solid #e4e4e7;padding:16px 24px;font-size:11px;color:#71717a;line-height:1.5">
-<b style="color:#3f3f46">${benef}</b>${d.endereco ? `<br>${escHtml(d.endereco)}` : ""}
-${contatos ? `<br>Dúvidas sobre esta ${oferta ? "Oferta" : "fatura"}? ${contatos}` : ""}
-<br>Você recebe este e-mail porque ${oferta ? "solicitou uma Oferta de" : "possui serviços ativos com"} ${escHtml(d.empresaNome)}. Seus dados são tratados conforme a LGPD.
+<div style="font-size:12px;color:#3f3f46"><b>${escHtml(d.empresaNome)}</b>${doc ? ` &nbsp;·&nbsp; CNPJ ${semLink(escHtml(doc))}` : ""}</div>
+${d.endereco ? `<div style="margin-top:2px">${semLink(escHtml(d.endereco))}</div>` : ""}
+${contatos ? `<div style="margin-top:8px">Dúvidas sobre esta ${oferta ? "Oferta" : "fatura"}? ${contatos}</div>` : ""}
+<div style="margin-top:10px;color:#a1a1aa;font-size:10px">Você recebe este e-mail porque ${oferta ? "solicitou uma Oferta de" : "possui serviços ativos com"} ${escHtml(d.empresaNome)}. Seus dados são tratados conforme a LGPD.</div>
 </td></tr></table></td></tr></table>${d.pixel ? `<img src="${escHtml(d.pixel)}" width="1" height="1" alt="">` : ""}</body></html>`;
 }
 
