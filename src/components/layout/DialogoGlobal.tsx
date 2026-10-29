@@ -74,7 +74,14 @@ export function DialogoGlobal() {
 
   return (
     <AlertDialog open onOpenChange={(o) => { if (!o) fechar(false); }}>
-      <AlertDialogContent>
+      <AlertDialogContent
+        onOpenAutoFocus={(e) => {
+          if (atual.kind !== "prompt") return;
+          e.preventDefault();
+          const el = (e.currentTarget as HTMLElement | null)?.querySelector<HTMLElement>("textarea, input");
+          setTimeout(() => el?.focus(), 0);
+        }}
+      >
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2">
             <Icone className={destructive ? "h-5 w-5 text-destructive" : "h-5 w-5 text-primary"} />{titulo}
