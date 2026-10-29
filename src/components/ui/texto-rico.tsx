@@ -8,9 +8,18 @@ import { cn } from "@/lib/utils";
 const CORES = ["#0b2545", "#2563eb", "#0e7490", "#16a34a", "#d97706", "#dc2626", "#7c3aed", "#64748b"];
 const REALCES = ["#fef3c7", "#dcfce7", "#e0f2fe", "#fee2e2", "#ede9fe"];
 
-const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const esc = (s: string) => s.replace(/&(?![a-z]+;|#\d+;)/gi, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+/** Desfaz codificações em cascata antigas (&amp;amp;nbsp; → &nbsp;). */
+const limparEntidades = (s: string) => {
+  let r = s;
+  while (/&amp;(amp;|nbsp;|lt;|gt;|quot;|#\d+;)/.test(r)) r = r.replace(/&amp;(amp;|nbsp;|lt;|gt;|quot;|#\d+;)/g, "&$1");
+  return r;
+};
 /** Texto simples antigo vira HTML com quebras de linha; HTML é mantido. */
-export const textoParaHtml = (v: string) => (/<[a-z][\s\S]*>/i.test(v) ? v : esc(v).replace(/\n/g, "<br>"));
+export const textoParaHtml = (v: string) => {
+  const s = limparEntidades(v);
+  return /<[a-z][\s\S]*>|&[a-z]+;|&#\d+;/i.test(s) ? s : esc(s).replace(/\n/g, "<br>");
+};
 
 type Props = { value: string; onChange: (html: string) => void; minHeight?: number; disabled?: boolean; placeholder?: string; className?: string };
 
@@ -20,16 +29,22 @@ export function TextoRico({ value, onChange, minHeight = 120, disabled, placehol
   const ultimo = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!ref.current) return;
-    const html = textoParaHtml(value ?? "");
-    if (html !== ultimo.current && html !== ref.current.innerHTML) ref.current.innerHTML = html;
-    ultimo.current = html;
+    const el = ref.current;
+    if (!el) return;
+    const v = value ?? "";
+    // Valor que acabamos de emitir: não reescrever (evita salto do cursor e recodificação).
+    if (v === ultimo.current || (v === "" && ultimo.current === "<br>")) return;
+    if (document.activeElement === el && ultimo.current !== null) return;
+    const html = textoParaHtml(v);
+    if (html !== el.innerHTML) el.innerHTML = html;
+    ultimo.current = v;
   }, [value]);
 
   const emitir = () => {
-    const html = ref.current?.innerHTML ?? "";
+    const bruto = ref.current?.innerHTML ?? "";
+    const html = bruto === "<br>" ? "" : bruto;
     ultimo.current = html;
-    onChange(html === "<br>" ? "" : html);
+    onChange(html);
   };
   const cmd = (c: string, arg?: string) => {
     ref.current?.focus();
