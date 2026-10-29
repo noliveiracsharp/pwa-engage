@@ -69,9 +69,10 @@ export function ReajusteOfertasDialog({ open, onOpenChange, itemId, itemNome, no
     try {
       for (const g of alvo) {
         for (const o of g.ofertas) {
-          const { data: linhas, error } = await db.from("orcamento_itens").select("id,item_id,quantidade,valor_unitario,preco_custo,imposto_pct").eq("orcamento_id", o.id);
+          const { data: linhas, error } = await db.from("orcamento_itens").select("*").eq("orcamento_id", o.id);
           if (error) throw error;
-          const r = reajustarOferta(o, (linhas ?? []).map((l: any) => ({ ...l, id: String(l.id) })), itemId, novo, modo, g.travada);
+          // Serviço terceirizado mantém o custo negociado com o prestador: não é alvo do reajuste.
+          const r = reajustarOferta(o, (linhas ?? []).map((l: any) => ({ ...l, id: String(l.id), item_id: l.execucao === "terceiro" ? null : l.item_id })), itemId, novo, modo, g.travada);
           for (const l of r.linhas) {
             const { error: e } = await db.from("orcamento_itens").update(l.patch).eq("id", l.id);
             if (e) throw e;
