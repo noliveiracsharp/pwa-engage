@@ -248,7 +248,8 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
           const { data: todas } = await supabase.from("orcamento_itens").select("*").eq("orcamento_id", oid);
           let totalCusto = 0, totalLucro = 0;
           for (const l of (todas ?? []) as Row[]) {
-            if (String(l["item_id"] ?? "") === itemId) {
+            // Serviço terceirizado: custo negociado com o prestador nunca é sobrescrito pela cotação.
+            if (String(l["item_id"] ?? "") === itemId && l["execucao"] !== "terceiro") {
               const c = recalcLinhaCusto(l as never, novo);
               await supabase.from("orcamento_itens").update(c as never).eq("id", String(l["id"]));
               totalCusto += c.custo_total; totalLucro += c.lucro;
