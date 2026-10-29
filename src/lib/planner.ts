@@ -16,6 +16,12 @@ export type PlannerItem = {
   remarcacoes: number;
   /** Quantidade de comentários na linha do tempo. */
   comentarios?: number;
+  /** Quem criou/solicitou (tarefa direta). */
+  criadoPor?: string | null;
+  /** Responsável pela execução. */
+  responsavel?: string | null;
+  /** Nome do projeto de origem (tarefa de projeto). */
+  projetoNome?: string | null;
 };
 
 export const PRIORIDADES: { v: Prioridade; label: string; peso: number }[] = [
