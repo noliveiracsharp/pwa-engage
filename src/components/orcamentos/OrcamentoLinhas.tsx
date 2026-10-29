@@ -300,7 +300,7 @@ export function OrcamentoLinhas({
                       )}
                       <div className="mt-2 flex items-start gap-2 rounded-md border border-dashed p-2">
                         <Switch id={`inc-${l.key}`} checked={l.incluso} disabled={Boolean(readOnly)}
-                          onCheckedChange={(v) => onChange(l.key, v ? { incluso: true, valor_unitario: "0" } : { incluso: false })} />
+                          onCheckedChange={(v) => onChange(l.key, { incluso: v })} />
                         <Label htmlFor={`inc-${l.key}`} className="text-xs font-normal leading-snug">
                           <span className="font-medium">Incluso / apenas conferência</span> — aparece para o cliente sem valores; o custo continua contando e vai para compras e contas a pagar.
                         </Label>
@@ -383,7 +383,6 @@ export function OrcamentoLinhas({
                       <InputMoeda
                         id={`vu-${l.key}`}
                         value={l.valor_unitario}
-                        disabled={l.incluso}
                         onChange={(val) => onChange(l.key, { valor_unitario: val })}
                       />
                     </div>
