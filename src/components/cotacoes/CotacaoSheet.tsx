@@ -361,12 +361,16 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
     invalidar();
   };
 
-  const salvarTitulo = async (v: string) => {
+  const salvarTitulo = async (v: string, parceiroId?: string) => {
     const t = v.trim();
-    if (!t || t === String(cotacao["titulo"] ?? "")) return;
-    const { error } = await supabase.from("cotacoes").update({ titulo: t }).eq("id", cid);
+    if (!t) return;
+    let { error } = await supabase.from("cotacoes").update({ titulo: t, ...(parceiroId ? { parceiro_id: parceiroId } : {}) } as never).eq("id", cid);
+    if (error && parceiroId && /parceiro_id/.test(error.message)) {
+      toast.warning("Rode o script atendeai-cotacao-cliente.sql para vincular o cliente à Oferta.");
+      ({ error } = await supabase.from("cotacoes").update({ titulo: t }).eq("id", cid));
+    }
     if (error) return void toast.error(error.message);
-    toast.success("Título atualizado.");
+    toast.success("Cliente atualizado.");
     invalidar();
   };
   const salvarProjeto = async (v: string) => {
