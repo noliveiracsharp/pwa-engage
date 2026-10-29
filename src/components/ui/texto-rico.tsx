@@ -41,9 +41,10 @@ export function TextoRico({ value, onChange, minHeight = 120, disabled, placehol
   }, [value]);
 
   const emitir = () => {
-    const html = ref.current?.innerHTML ?? "";
+    const bruto = ref.current?.innerHTML ?? "";
+    const html = bruto === "<br>" ? "" : bruto;
     ultimo.current = html;
-    onChange(html === "<br>" ? "" : html);
+    onChange(html);
   };
   const cmd = (c: string, arg?: string) => {
     ref.current?.focus();
