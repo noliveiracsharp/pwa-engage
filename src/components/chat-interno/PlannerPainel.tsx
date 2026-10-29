@@ -37,16 +37,23 @@ function deTarefa(t: Row): PlannerItem {
     concluidoEm: t["concluido_em"] ? String(t["concluido_em"]) : null,
     remarcacoes: Number(t["remarcacoes"] ?? 0),
     comentarios: lerEventos(t["comentarios"]).filter((e) => e.tipo === "comentario").length,
+    criadoPor: t["criado_por"] ? String(t["criado_por"]) : null,
+    responsavel: t["responsavel_id"] ? String(t["responsavel_id"]) : null,
   };
 }
-function deProjeto(t: Row): PlannerItem {
+const projetoIdDe = (t: Row) => t["projeto_id"] ?? t["projetos_id"] ?? null;
+function deProjeto(t: Row, nomes: Map<string, string>): PlannerItem {
   const fim = t["dt_fim"] ? String(t["dt_fim"]).slice(0, 10) : null;
   const concl = String(t["situacao"]) === "Concluída";
+  const pid = projetoIdDe(t);
   return {
     id: String(t["id"]), origem: "projeto", titulo: String(t["nome"] ?? ""),
     prioridade: normalizarPrioridade(t["prioridade"]), estimativaMin: null,
     planejada: null, entrega: fim, status: concl ? "concluida" : "aberta",
     concluidoEm: concl ? String(t["updated_at"] ?? "") : null, remarcacoes: 0,
+    criadoPor: t["created_by"] ? String(t["created_by"]) : null,
+    responsavel: t["responsavel_id"] ? String(t["responsavel_id"]) : null,
+    projetoNome: pid ? nomes.get(String(pid)) ?? null : null,
   };
 }
 
@@ -60,11 +67,18 @@ export function usePlannerItens(usuarioId: string, autorId?: string) {
     queryFn: async () => {
       const [a, b] = await Promise.all([
         tb("tarefas_usuarios").select("*").eq("responsavel_id", usuarioId).limit(1000),
-        tb("projetos_tarefas").select("id,nome,prioridade,situacao,dt_fim,updated_at,responsavel_id,responsaveis")
+        tb("projetos_tarefas").select("*")
           .or(`responsavel_id.eq.${usuarioId},responsaveis.cs.{${usuarioId}}`).limit(1000),
       ]);
       if (a.error) throw a.error;
-      const proj = b.error ? [] : ((b.data ?? []) as Row[]).map(deProjeto);
+      const projRows = b.error ? [] : ((b.data ?? []) as Row[]);
+      const ids = [...new Set(projRows.map(projetoIdDe).filter(Boolean).map(String))];
+      const nomes = new Map<string, string>();
+      if (ids.length) {
+        const p = await tb("projetos").select("*").in("id", ids);
+        for (const r of ((p.data ?? []) as Row[])) nomes.set(String(r["id"]), String(pick(r, ["nome", "titulo", "descricao"], "Projeto")));
+      }
+      const proj = projRows.map((t) => deProjeto(t, nomes));
       return [...((a.data ?? []) as Row[]).map(deTarefa), ...proj];
     },
   });
@@ -91,9 +105,10 @@ export function usePlannerItens(usuarioId: string, autorId?: string) {
   return { itens: q.data ?? [], isLoading: q.isLoading, concluir, planejar };
 }
 
-export function ItemLinha({ i, onCheck, compacto, editavel = true, onAbrir }: { i: PlannerItem; onCheck: (feito: boolean) => void; compacto?: boolean; editavel?: boolean; onAbrir?: () => void }) {
+export function ItemLinha({ i, onCheck, compacto, editavel = true, onAbrir, nome }: { i: PlannerItem; onCheck: (feito: boolean) => void; compacto?: boolean; editavel?: boolean; onAbrir?: () => void; nome?: (id: string) => string }) {
   const feito = i.status === "concluida";
   const atraso = !feito && !!i.entrega && i.entrega < hoje();
+  const proprio = !!i.criadoPor && i.criadoPor === i.responsavel;
   return (
     <div className={cn("flex items-start gap-2 rounded-lg border border-border bg-card p-2 text-xs", feito && "opacity-60")}>
       <button type="button" disabled={!editavel} aria-label={feito ? "Reabrir" : "Concluir"} onClick={() => onCheck(!feito)} className="mt-0.5 shrink-0">
@@ -103,10 +118,22 @@ export function ItemLinha({ i, onCheck, compacto, editavel = true, onAbrir }: { 
         {onAbrir && i.origem === "tarefa"
           ? <button type="button" onClick={onAbrir} className={cn("text-left font-medium leading-tight hover:underline", feito && "line-through")}>{i.titulo}</button>
           : <p className={cn("font-medium leading-tight", feito && "line-through")}>{i.titulo}</p>}
+        {!compacto && nome && (i.criadoPor || i.responsavel) && (
+          <p className="mt-0.5 text-[10px] text-muted-foreground">
+            {proprio
+              ? <>Lembrete pessoal de <b className="text-foreground">{nome(i.criadoPor!)}</b></>
+              : <>
+                  {i.criadoPor && <>De: <b className="text-foreground">{nome(i.criadoPor)}</b></>}
+                  {i.criadoPor && i.responsavel && " → "}
+                  {i.responsavel && <>Para: <b className="text-foreground">{nome(i.responsavel)}</b></>}
+                </>}
+          </p>
+        )}
         {!compacto && (
           <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[10px] text-muted-foreground">
             <span className="inline-flex items-center gap-1"><span className={cn("h-1.5 w-1.5 rounded-full", COR_PRI[i.prioridade])} />{i.prioridade === "media" ? "Média" : i.prioridade === "alta" ? "Alta" : "Baixa"}</span>
-            {i.origem === "projeto" && <span>Projeto</span>}
+            {i.origem === "projeto" && <span className="rounded bg-primary/10 px-1 text-primary">📁 {i.projetoNome ? `Projeto: ${i.projetoNome}` : "Projeto"}</span>}
+            {i.origem === "tarefa" && <span className="rounded bg-muted px-1">Tarefa da equipe</span>}
             {i.estimativaMin ? <span>{horas(i.estimativaMin)}</span> : null}
             {i.entrega && <span className={cn(atraso && "font-semibold text-destructive")}>Prazo {dataBR(i.entrega)}</span>}
             {i.remarcacoes > 0 && <span>↻ {i.remarcacoes}</span>}
@@ -132,6 +159,8 @@ export function PlannerPainel({ me, usuarios, onFechar }: { me: string; usuarios
   const [aberta, setAberta] = useState<string | null>(null);
   const { itens, concluir, planejar } = usePlannerItens(alvo, me);
   const proprio = alvo === me;
+  const mapaNomes = useMemo(() => new Map(usuarios.map((u) => [String(u["id"]), String(pick(u, ["nome"], "Usuário"))])), [usuarios]);
+  const nomeDe = (id: string) => (id === me ? "Você" : mapaNomes.get(id) ?? "Usuário");
   const ativos = itens.filter((i) => i.status === "aberta" || i.status === "concluida");
   const backlog = ordenar(ativos.filter((i) => !diaDoItem(i) && i.status !== "concluida"));
   const dias = DIAS.map((_, n) => somarDias(semana, n));
@@ -159,7 +188,7 @@ export function PlannerPainel({ me, usuarios, onFechar }: { me: string; usuarios
         <div className="space-y-1.5">
           {lista.map((i) => (
             <div key={i.id} draggable={proprio && i.origem === "tarefa"} onDragStart={() => setArrastando(i.id)} className={cn(proprio && i.origem === "tarefa" && "cursor-grab")}>
-              <ItemLinha i={i} editavel={proprio} onCheck={(f) => void concluir(i, f)} onAbrir={() => setAberta(i.id)} />
+              <ItemLinha i={i} nome={nomeDe} editavel={proprio} onCheck={(f) => void concluir(i, f)} onAbrir={() => setAberta(i.id)} />
             </div>
           ))}
         </div>
@@ -203,7 +232,7 @@ export function PlannerPainel({ me, usuarios, onFechar }: { me: string; usuarios
             <div className="space-y-1.5">
               {backlog.map((i) => (
                 <div key={i.id} draggable={proprio && i.origem === "tarefa"} onDragStart={() => setArrastando(i.id)}>
-                  <ItemLinha i={i} editavel={proprio} onCheck={(f) => void concluir(i, f)} onAbrir={() => setAberta(i.id)} />
+                  <ItemLinha i={i} nome={nomeDe} editavel={proprio} onCheck={(f) => void concluir(i, f)} onAbrir={() => setAberta(i.id)} />
                 </div>
               ))}
             </div>

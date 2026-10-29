@@ -137,7 +137,7 @@ export function TarefasChat({ me, empresaId, usuarios, onAvisar }: {
           {lista.map((t) => <CardTarefa key={String(t["id"])} t={t} me={me} nome={nome} onAtualizar={atualizar} onApagar={apagarTarefa} />)}
           {aba === "minhas" && doDia.map((i) => (
             <div key={i.id} className="flex items-center gap-1">
-              <div className="min-w-0 flex-1"><ItemLinha i={i} onCheck={(f) => void planner.concluir(i, f)} onAbrir={() => setAberta(i.id)} /></div>
+              <div className="min-w-0 flex-1"><ItemLinha i={i} nome={(id) => nome(id)} onCheck={(f) => void planner.concluir(i, f)} onAbrir={() => setAberta(i.id)} /></div>
               {i.origem === "tarefa" && minhaCriacao.has(i.id) && (
                 <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0 text-destructive" title="Apagar tarefa" aria-label="Apagar tarefa" onClick={() => void apagarTarefa(i.id, minhaCriacao.get(i.id)!)}><Trash2 className="h-3.5 w-3.5" /></Button>
               )}
