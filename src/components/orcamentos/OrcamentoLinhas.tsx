@@ -298,6 +298,13 @@ export function OrcamentoLinhas({
                       {l.natureza !== "produto" && !ocultarCusto && (
                         <ServicoTerceiro linha={l} fornecedores={fornecedorOptions} readOnly={Boolean(readOnly)} onChange={(p) => onChange(l.key, p)} />
                       )}
+                      <div className="mt-2 flex items-start gap-2 rounded-md border border-dashed p-2">
+                        <Switch id={`inc-${l.key}`} checked={l.incluso} disabled={Boolean(readOnly)}
+                          onCheckedChange={(v) => onChange(l.key, v ? { incluso: true, valor_unitario: "0" } : { incluso: false })} />
+                        <Label htmlFor={`inc-${l.key}`} className="text-xs font-normal leading-snug">
+                          <span className="font-medium">Incluso / apenas conferência</span> — aparece para o cliente sem valores; o custo continua contando e vai para compras e contas a pagar.
+                        </Label>
+                      </div>
                     </div>
                     <div className="flex shrink-0 gap-0.5">
                       {!readOnly && (
@@ -376,6 +383,7 @@ export function OrcamentoLinhas({
                       <InputMoeda
                         id={`vu-${l.key}`}
                         value={l.valor_unitario}
+                        disabled={l.incluso}
                         onChange={(val) => onChange(l.key, { valor_unitario: val })}
                       />
                     </div>
@@ -451,7 +459,7 @@ export function OrcamentoLinhas({
                     {index + 1}.
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium break-words"><NaturezaBadge n={l.natureza} />{nomeItem || "—"}</p>
+                    <p className="text-sm font-medium break-words"><NaturezaBadge n={l.natureza} />{l.incluso && <span className="bg-muted text-muted-foreground mr-1 rounded px-1 text-[10px] font-medium">Incluso</span>}{nomeItem || "—"}</p>
                     {l.faturar_para_id && pagadorNome.has(l.faturar_para_id) && pagadorOptions.find((o) => o.value === l.faturar_para_id)?.hint !== "Cliente da Oferta" && (
                       <p className="text-muted-foreground text-xs">Faturado para: {pagadorNome.get(l.faturar_para_id)}</p>
                     )}
@@ -480,7 +488,7 @@ export function OrcamentoLinhas({
                 <div className={cn("hidden items-center px-3 py-2 sm:grid", GRID)}>
                   <span className="text-muted-foreground text-xs tabular-nums">{index + 1}.</span>
                   <div className="min-w-0">
-                    <p className="text-sm font-medium break-words" title={nomeItem}><NaturezaBadge n={l.natureza} />{nomeItem || "—"}</p>
+                    <p className="text-sm font-medium break-words" title={nomeItem}><NaturezaBadge n={l.natureza} />{l.incluso && <span className="bg-muted text-muted-foreground mr-1 rounded px-1 text-[10px] font-medium">Incluso</span>}{nomeItem || "—"}</p>
                     {l.faturar_para_id && pagadorNome.has(l.faturar_para_id) && pagadorOptions.find((o) => o.value === l.faturar_para_id)?.hint !== "Cliente da Oferta" && (
                       <p className="text-muted-foreground text-xs">Faturado para: {pagadorNome.get(l.faturar_para_id)}</p>
                     )}

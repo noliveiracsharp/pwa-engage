@@ -27,6 +27,7 @@ export type LinhaPayload = {
   faturar_para_id?: string | null;
   execucao?: string;
   fornecedor_id?: string | null;
+  incluso?: boolean;
 };
 
 /**

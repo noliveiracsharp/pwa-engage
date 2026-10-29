@@ -521,6 +521,11 @@ export function OrcamentoSheet({
       ),
     [calcs, linhasValidas],
   );
+  const recorrenteCalc = useMemo(() => {
+    const rec = calcs.filter((_, i) => linhasValidas[i]!.natureza === "recorrente");
+    const soma = (f: (c: (typeof rec)[number]) => number) => round2(rec.reduce((s, c) => s + f(c), 0));
+    return { receita: soma((c) => c.total_linha), custo: soma((c) => c.custo_total), imposto: soma((c) => c.imposto_valor), lucro: soma((c) => c.lucro) };
+  }, [calcs, linhasValidas]);
   const totais = useMemo(
     () =>
       calcTotais(calcsImplantacao, {
@@ -716,6 +721,7 @@ export function OrcamentoSheet({
         faturar_para_id: l.faturar_para_id && l.faturar_para_id !== h.parceiro_id ? l.faturar_para_id : null,
         execucao: l.natureza !== "produto" && l.execucao === "terceiro" ? "terceiro" : "interno",
         fornecedor_id: l.natureza !== "produto" && l.execucao === "terceiro" ? l.fornecedor_id || null : null,
+        incluso: l.incluso,
       };
     });
     header["faturamento_misto"] = payloadLinhas.some((l) => l.faturar_para_id);
@@ -949,6 +955,8 @@ export function OrcamentoSheet({
             descontoAvista={ehAvista ? avista.desconto_valor : 0}
             comissoes={totalComissoes}
             despesas={totalDespesas(h.despesas)}
+            recorrente={recorrenteCalc}
+            vigenciaMeses={Math.floor(num(h.vigencia_meses) || 36)}
             onChange={(patch) => patchHeader(patch)}
             ocultarCusto={ocultarCusto}
           />
@@ -983,6 +991,25 @@ export function OrcamentoSheet({
           />
 
           {/* ------------- memória de cálculo e comissões ------------- */}
+          <OrcamentoTotais
+            parte="memoria"
+            totais={totais}
+            descontoTipo={h.desconto_tipo}
+            desconto={h.desconto}
+            frete={h.frete}
+            valoresAdicionais={h.valores_adicionais}
+            readOnly={readOnly}
+            itensSemCusto={itensSemCusto}
+            acrescimoJuros={acrescimoJuros}
+            descontoAvista={ehAvista ? avista.desconto_valor : 0}
+            comissoes={totalComissoes}
+            despesas={totalDespesas(h.despesas)}
+            recorrente={recorrenteCalc}
+            vigenciaMeses={Math.floor(num(h.vigencia_meses) || 36)}
+            onChange={(patch) => patchHeader(patch)}
+            ocultarCusto={ocultarCusto}
+          />
+
           <OrcamentoComissoes
             linhas={linhasComissao}
             orcamentoId={record ? String(rowId(record) ?? "") || undefined : undefined}
