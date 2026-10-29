@@ -85,7 +85,7 @@ import { ParceiroSituacaoAlerta, problemaParceiro } from "@/components/financeir
 import { cn } from "@/lib/utils";
 import { Bar, CartesianGrid, ComposedChart, Line, XAxis, YAxis } from "recharts";
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
-import { confirmar } from "@/components/layout/DialogoGlobal";
+import { confirmar, perguntar } from "@/components/layout/DialogoGlobal";
 import { OfertaConsultaSheet, VincularOfertaDialog, ofertaDoTitulo } from "@/components/financeiro/OfertaVinculo";
 import { camposFiscais, rotulosFiscais } from "@/lib/titulo-fiscal";
 import { RateioTitulo, type RateioApi } from "@/components/financeiro/RateioTitulo";
