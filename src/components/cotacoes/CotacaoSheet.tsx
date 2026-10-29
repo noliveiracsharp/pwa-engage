@@ -634,7 +634,7 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
                   placeholder={String(cotacao["titulo"] ?? "") || "Escolha o cliente ou fornecedor"}
                   searchPlaceholder="Nome ou CPF/CNPJ…"
                   emptyText="Não encontrado. Use o + para cadastrar."
-                  onChange={(id) => { const o = parceirosOpts.find((x) => x.value === id); if (o) void salvarTitulo(o.label); }}
+                  onChange={(id) => { const o = parceirosOpts.find((x) => x.value === id); if (o) void salvarTitulo(o.label, o.value); }}
                 />
               </div>
               <Button type="button" variant="outline" size="icon" title="Cadastrar cliente ou fornecedor" aria-label="Cadastrar cliente ou fornecedor" onClick={() => setCadParc(true)}><Plus className="h-4 w-4" /></Button>
