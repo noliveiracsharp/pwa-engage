@@ -1464,7 +1464,6 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
 
   return (
     <>
-    <ParceiroSheet open={novoParc} onOpenChange={setNovoParc} record={null} parceiros={parceiros} readOnly={false} saving={salvandoParc} onSave={(vals) => void criarParceiro(vals)} />
     <Sheet open onOpenChange={(o) => !o && onClose()}>
       <SheetContent side="right" className="flex flex-col gap-0 p-0">
         <SheetHeader className="border-b p-4">
@@ -1761,6 +1760,7 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
           {!readOnly && <Button disabled={salvando} onClick={() => void salvar()}>{salvando ? "Salvando…" : "Salvar"}</Button>}
         </div>
+        <ParceiroSheet open={novoParc} onOpenChange={setNovoParc} record={null} parceiros={parceiros} readOnly={false} saving={salvandoParc} onSave={(vals) => void criarParceiro(vals)} />
       </SheetContent>
     </Sheet>
     <Dialog open={confirmarSerie} onOpenChange={(o) => !salvando && setConfirmarSerie(o)}>

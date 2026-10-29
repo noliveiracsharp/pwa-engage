@@ -93,6 +93,12 @@ export function useFormGuard(props: Handlers) {
         proteger(e);
       },
       onInteractOutside: (e: Parameters<NonNullable<Handlers["onInteractOutside"]>>[0]) => {
+        // Clique/foco em outro painel ou janela empilhada (ex.: "Novo parceiro" sobre a Cotação)
+        // não é "fora": não fecha nem rouba o foco do painel de baixo.
+        const alvo = e.target as HTMLElement | null;
+        const proprio = closeRef.current?.closest("[role=dialog],[role=alertdialog]");
+        const outra = alvo?.closest?.("[role=dialog],[role=alertdialog],[data-radix-popper-content-wrapper],[data-sonner-toaster]");
+        if (outra && outra !== proprio) { e.preventDefault(); return; }
         props.onInteractOutside?.(e);
         proteger(e);
       },
