@@ -142,7 +142,12 @@ function OrcamentosPage() {
   const qcOrc = useQueryClient();
   // Oferta gravada ao confirmar um item: recarrega e mantém o painel aberto com o registro atualizado.
   const manterAbertoCom = async (id: string) => {
-    await qcOrc.refetchQueries({ queryKey: ["table", "orcamentos"] });
+    // Aguarda também os itens: ao trocar para r:<id> o editor reinicializa a
+    // partir do cache de orcamento_itens, que precisa já conter as linhas salvas.
+    await Promise.all([
+      qcOrc.refetchQueries({ queryKey: ["table", "orcamentos"] }),
+      qcOrc.refetchQueries({ queryKey: ["table", "orcamento_itens"] }),
+    ]);
     for (const [, data] of qcOrc.getQueriesData<Row[]>({ queryKey: ["table", "orcamentos"] })) {
       const achado = Array.isArray(data) ? data.find((t) => String(rowId(t)) === id) : undefined;
       if (achado) { setRecord(achado); return; }
