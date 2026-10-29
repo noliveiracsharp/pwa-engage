@@ -63,7 +63,7 @@ export function ReguaCobranca({ canEdit }: { canEdit: boolean }) {
       ...EXEMPLO_EMAIL, empresaNome: empresaAtiva.nome ?? "", logo: empresaAtiva.logo, cor: empresaAtiva.claro ?? "",
       vencimento: new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10), link: "#",
       documento: s("cnpj_cpf"), endereco: s("endereco"), telefone: s("telefone1"),
-      emailContato: cfg?.responder_para || cfg?.remetente_email || null, site: empresaAtiva.site || null,
+      emailContato: cfg?.remetente_email || cfg?.responder_para || null, site: empresaAtiva.site || null,
       banner: escolherBanner(banners.data?.rows ?? [], "cobranca"),
     });
   }, [banners.data, empresaAtiva.nome, empresaAtiva.logo, empresaAtiva.claro, empresaAtiva.site, empresaRow, cfg?.responder_para, cfg?.remetente_email]);

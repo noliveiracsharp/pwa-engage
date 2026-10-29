@@ -85,7 +85,7 @@ import { ParceiroSituacaoAlerta, problemaParceiro } from "@/components/financeir
 import { cn } from "@/lib/utils";
 import { Bar, CartesianGrid, ComposedChart, Line, XAxis, YAxis } from "recharts";
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
-import { confirmar } from "@/components/layout/DialogoGlobal";
+import { confirmar, perguntar } from "@/components/layout/DialogoGlobal";
 import { OfertaConsultaSheet, VincularOfertaDialog, ofertaDoTitulo } from "@/components/financeiro/OfertaVinculo";
 import { camposFiscais, rotulosFiscais } from "@/lib/titulo-fiscal";
 import { RateioTitulo, type RateioApi } from "@/components/financeiro/RateioTitulo";
@@ -1233,6 +1233,28 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
     if (e2) throw e2;
     return irmas.map((t) => ({ ...t, origem_id: novoId }));
   };
+  // Divide um valor total entre as parcelas da série (ex.: R$ 2.230,00 em 5x R$ 446,00); a última absorve os centavos.
+  const dividirTotal = async () => {
+    if (!registro || serie.length < 2) return;
+    const resp = await perguntar({ title: "Dividir valor total", description: `Informe o valor TOTAL a ser dividido entre as ${serie.length} parcelas.`, defaultValue: num(registro["valor"]).toFixed(2).replace(".", ","), confirmText: "Dividir" });
+    if (resp == null) return;
+    const total = round2(Number(String(resp).replace(/\./g, "").replace(",", ".")));
+    if (!(total > 0)) return void toast.error("Valor total inválido.");
+    const n = serie.length;
+    const parte = Math.floor((total / n) * 100) / 100;
+    setSalvando(true);
+    try {
+      for (let i = 0; i < n; i++) {
+        const t = serie[i]!;
+        const valor = i === n - 1 ? round2(total - parte * (n - 1)) : parte;
+        const patch: Record<string, unknown> = { valor };
+        if (t["status"] === "pago") patch["valor_pago"] = valor;
+        const { error } = await supabase.from("financeiro_titulos").update(patch as never).eq("id", text(rowId(t)));
+        if (error) throw error;
+      }
+      toast.success(`Total de ${formatBRL(total)} dividido em ${n} parcelas.`); onSaved(); onClose();
+    } catch (e) { toast.error(erroFinanceiro(e)); } finally { setSalvando(false); }
+  };
   const aplicarTamanho = async () => {
     if (!registro) return;
     const total = Math.floor(num(novoTotal));
@@ -1464,6 +1486,7 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
                   <div className="space-y-1"><Label>Quantidade de parcelas/meses da série</Label>
                     <Input type="number" min={1} max={120} className="w-32" value={novoTotal} onChange={(e) => setNovoTotal(e.target.value)} /></div>
                   <Button type="button" variant="outline" disabled={salvando || !num(novoTotal)} onClick={() => void aplicarTamanho()}>Alterar quantidade</Button>
+                  <Button type="button" variant="outline" disabled={salvando || serie.length < 2} onClick={() => void dividirTotal()}>Dividir valor total entre as parcelas</Button>
                   <div className="space-y-1"><Label>Esta é a parcela nº</Label>
                     <Input type="number" min={1} max={Math.max(1, num(novoTotal))} className="w-24" value={posAtual} onChange={(e) => setPosAtual(e.target.value)} /></div>
                   <div className="space-y-1"><Label>Anteriores criadas como</Label>
