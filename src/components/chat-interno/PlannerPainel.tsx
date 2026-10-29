@@ -37,16 +37,23 @@ function deTarefa(t: Row): PlannerItem {
     concluidoEm: t["concluido_em"] ? String(t["concluido_em"]) : null,
     remarcacoes: Number(t["remarcacoes"] ?? 0),
     comentarios: lerEventos(t["comentarios"]).filter((e) => e.tipo === "comentario").length,
+    criadoPor: t["criado_por"] ? String(t["criado_por"]) : null,
+    responsavel: t["responsavel_id"] ? String(t["responsavel_id"]) : null,
   };
 }
-function deProjeto(t: Row): PlannerItem {
+const projetoIdDe = (t: Row) => t["projeto_id"] ?? t["projetos_id"] ?? null;
+function deProjeto(t: Row, nomes: Map<string, string>): PlannerItem {
   const fim = t["dt_fim"] ? String(t["dt_fim"]).slice(0, 10) : null;
   const concl = String(t["situacao"]) === "Concluída";
+  const pid = projetoIdDe(t);
   return {
     id: String(t["id"]), origem: "projeto", titulo: String(t["nome"] ?? ""),
     prioridade: normalizarPrioridade(t["prioridade"]), estimativaMin: null,
     planejada: null, entrega: fim, status: concl ? "concluida" : "aberta",
     concluidoEm: concl ? String(t["updated_at"] ?? "") : null, remarcacoes: 0,
+    criadoPor: t["created_by"] ? String(t["created_by"]) : null,
+    responsavel: t["responsavel_id"] ? String(t["responsavel_id"]) : null,
+    projetoNome: pid ? nomes.get(String(pid)) ?? null : null,
   };
 }
 
@@ -60,11 +67,18 @@ export function usePlannerItens(usuarioId: string, autorId?: string) {
     queryFn: async () => {
       const [a, b] = await Promise.all([
         tb("tarefas_usuarios").select("*").eq("responsavel_id", usuarioId).limit(1000),
-        tb("projetos_tarefas").select("id,nome,prioridade,situacao,dt_fim,updated_at,responsavel_id,responsaveis")
+        tb("projetos_tarefas").select("*")
           .or(`responsavel_id.eq.${usuarioId},responsaveis.cs.{${usuarioId}}`).limit(1000),
       ]);
       if (a.error) throw a.error;
-      const proj = b.error ? [] : ((b.data ?? []) as Row[]).map(deProjeto);
+      const projRows = b.error ? [] : ((b.data ?? []) as Row[]);
+      const ids = [...new Set(projRows.map(projetoIdDe).filter(Boolean).map(String))];
+      const nomes = new Map<string, string>();
+      if (ids.length) {
+        const p = await tb("projetos").select("*").in("id", ids);
+        for (const r of ((p.data ?? []) as Row[])) nomes.set(String(r["id"]), String(pick(r, ["nome", "titulo", "descricao"], "Projeto")));
+      }
+      const proj = projRows.map((t) => deProjeto(t, nomes));
       return [...((a.data ?? []) as Row[]).map(deTarefa), ...proj];
     },
   });
