@@ -3,7 +3,6 @@ import { Mail, MessageCircle, Printer, X } from "lucide-react";
 import { EnviarPropostaDialog, tituloOferta } from "./EnviarPropostaDialog";
 import { linkProposta } from "@/lib/propostas";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogClose,
