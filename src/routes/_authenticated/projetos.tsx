@@ -244,7 +244,7 @@ function ListaCorrida({ d, espacoId, onAbrir }: { d: D; espacoId: string | null;
       <div className="overflow-x-auto rounded-lg border border-border">
         <Table>
           <TableHeader>
-            <TableRow><TableHead>Status</TableHead><TableHead>Tipo</TableHead><TableHead>Projeto</TableHead><TableHead>Item</TableHead><TableHead>Responsável</TableHead><TableHead>Prazo</TableHead><TableHead className="text-right">Ação</TableHead></TableRow>
+            <TableRow><TableHead className="w-px whitespace-nowrap">Status</TableHead><TableHead className="w-px">Tipo</TableHead><TableHead className="w-px whitespace-nowrap">Projeto</TableHead><TableHead className="w-full">Item</TableHead><TableHead className="w-px whitespace-nowrap">Responsável</TableHead><TableHead className="w-px">Prazo</TableHead><TableHead className="text-right">Ação</TableHead></TableRow>
           </TableHeader>
           <TableBody>
             {linhas.length === 0 && <TableRow><TableCell colSpan={7} className="py-8 text-center text-muted-foreground">Nenhum item encontrado.</TableCell></TableRow>}
@@ -252,8 +252,8 @@ function ListaCorrida({ d, espacoId, onAbrir }: { d: D; espacoId: string | null;
               <TableRow key={l.id} className="cursor-pointer" onClick={() => onAbrir(l.id)}>
                 <TableCell><span className="inline-flex items-center gap-2 whitespace-nowrap text-sm"><span className="h-2.5 w-2.5 rounded-full bg-muted-foreground" style={l.cor ? { backgroundColor: l.cor } : undefined} />{l.sNome}</span></TableCell>
                 <TableCell><Badge className={tipoItemClass(l.tipo)}>{l.tipo}</Badge></TableCell>
-                <TableCell className="whitespace-nowrap text-sm">{l.projeto}</TableCell>
-                <TableCell className="max-w-md"><p className="font-medium text-foreground">{l.titulo}</p>{l.texto && <p className="line-clamp-2 text-xs text-muted-foreground">{l.texto}</p>}</TableCell>
+                <TableCell className="max-w-[14rem] truncate text-sm" title={l.projeto}>{l.projeto}</TableCell>
+                <TableCell className="min-w-[20rem]"><p className="font-medium text-foreground">{l.titulo}</p>{l.texto && <p className="line-clamp-2 text-xs text-muted-foreground">{l.texto}</p>}</TableCell>
                 <TableCell className="whitespace-nowrap text-sm">{l.resp || "—"}</TableCell>
                 <TableCell className="whitespace-nowrap text-sm">{fmtDate(l.prazo)}</TableCell>
                 <TableCell className="text-right"><Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); onAbrir(l.id); }}>Abrir item</Button></TableCell>
