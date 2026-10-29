@@ -107,6 +107,8 @@ export function LaudoSheet({ open, onOpenChange, record, linhas, fotos, clientes
   const [gerais, setGerais] = useState<string[]>([]);
   const [edit, setEdit] = useState<LaudoLinha | null>(null);
   const [rapido, setRapido] = useState(false);
+  const [novoGrupo, setNovoGrupo] = useState<string | null>(null);
+  const [gruposExtras, setGruposExtras] = useState<string[]>([]);
   const vazio = (): LaudoLinha => ({ key: "", item_id: "", descricao_item: "", quantidade: "1", conforme: true, observacao: "", grupo: "", fotos: [] });
 
   useEffect(() => {
@@ -159,6 +161,13 @@ export function LaudoSheet({ open, onOpenChange, record, linhas, fotos, clientes
     })),
     [itens],
   );
+  const gruposOpts = useMemo(() => {
+    const base = ["Automação", "CFTV / Segurança", "Controle de Acesso", "Infraestrutura / Alvenaria", "Material Elétrico", "Rede / TI"];
+    const todos = [...base, ...gruposExtras, ...ls.map((x) => x.grupo.trim()), edit?.grupo?.trim() ?? ""].filter(Boolean);
+    const unicos: string[] = [];
+    for (const g of todos) if (!unicos.some((u) => u.localeCompare(g, "pt-BR", { sensitivity: "base" }) === 0)) unicos.push(g);
+    return unicos.sort((a, b) => a.localeCompare(b, "pt-BR")).map((g) => ({ value: g, label: g }));
+  }, [gruposExtras, ls, edit?.grupo]);
 
   const confirmarEdit = () => {
     if (!edit) return undefined;
@@ -347,7 +356,8 @@ export function LaudoSheet({ open, onOpenChange, record, linhas, fotos, clientes
                     placeholder="Selecione o item"
                     onChange={(v) => {
                       const it = itens.find((x) => String(rowId(x)) === v);
-                      setEdit({ ...edit, item_id: v, descricao_item: v ? String(it?.["descricao"] ?? "Item") : "" });
+                      const cat = String(it?.["categoria"] ?? "").trim();
+                      setEdit({ ...edit, item_id: v, descricao_item: v ? String(it?.["descricao"] ?? "Item") : "", grupo: edit.grupo || cat });
                     }}
                   />
                 </div>
@@ -377,10 +387,31 @@ export function LaudoSheet({ open, onOpenChange, record, linhas, fotos, clientes
                     <Label htmlFor="lq">Quantidade</Label>
                     <Input id="lq" inputMode="decimal" value={edit.quantidade} onChange={(e) => setEdit({ ...edit, quantidade: e.target.value })} />
                   </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="lg">Grupo de compra</Label>
-                    <Input id="lg" list="laudo-grupos" placeholder="Ex.: Material elétrico" value={edit.grupo} onChange={(e) => setEdit({ ...edit, grupo: e.target.value })} />
-                    <datalist id="laudo-grupos">{[...new Set(ls.map((x) => x.grupo.trim()).filter(Boolean))].sort().map((g) => <option key={g} value={g} />)}</datalist>
+                  <div className="min-w-0 space-y-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <Label>Grupo de compra</Label>
+                      <Button type="button" variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => setNovoGrupo(novoGrupo === null ? "" : null)}>
+                        <Plus className="mr-1 h-3.5 w-3.5" /> Novo grupo
+                      </Button>
+                    </div>
+                    {novoGrupo !== null ? (
+                      <div className="flex gap-1">
+                        <Input autoFocus placeholder="Nome do grupo" value={novoGrupo} onChange={(e) => setNovoGrupo(e.target.value)} />
+                        <Button type="button" size="icon" onClick={() => {
+                          const g = novoGrupo.trim();
+                          if (!g) return;
+                          const existente = gruposOpts.find((o) => o.value.localeCompare(g, "pt-BR", { sensitivity: "base" }) === 0);
+                          const nome = existente?.value ?? g;
+                          setGruposExtras((p) => (p.includes(nome) ? p : [...p, nome]));
+                          setEdit({ ...edit, grupo: nome });
+                          setNovoGrupo(null);
+                        }}><Check className="h-4 w-4" /></Button>
+                      </div>
+                    ) : (
+                      <div className="min-w-0 [&_button]:max-w-full [&_button_span]:truncate">
+                        <SearchSelect value={edit.grupo} options={gruposOpts} placeholder="Selecione o grupo" onChange={(v) => setEdit({ ...edit, grupo: v })} />
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
