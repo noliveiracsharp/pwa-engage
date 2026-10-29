@@ -74,8 +74,10 @@ export function OrcamentoDocumento({ id, orcamento, linhas, empresa, cliente, ve
   );
   const natDe = (l: Row) =>
     naturezaOf(l["natureza"], itemById.get(String(pick(l, ["item_id"]) ?? ""))?.["tipo"]);
-  const linhasImpl = linhasOrdenadas.filter((l) => natDe(l) !== "recorrente");
-  const linhasRec = linhasOrdenadas.filter((l) => natDe(l) === "recorrente");
+  const linhasInclusas = linhasOrdenadas.filter((l) => l["incluso"] === true);
+  const linhasCobradas = linhasOrdenadas.filter((l) => l["incluso"] !== true);
+  const linhasImpl = linhasCobradas.filter((l) => natDe(l) !== "recorrente");
+  const linhasRec = linhasCobradas.filter((l) => natDe(l) === "recorrente");
   const modalidade = modalidadeOf(orcamento["modalidade"]);
   const descontoAvista = num(orcamento["desconto_avista_valor"]);
   const totalAvista = num(orcamento["total_avista"]) || totalLiquido - descontoAvista;
@@ -251,10 +253,50 @@ export function OrcamentoDocumento({ id, orcamento, linhas, empresa, cliente, ve
           )}
 
           {/* -------------------- 1. implantação -------------------- */}
-          {(linhasImpl.length > 0 || linhasRec.length === 0) && (
+          {(linhasImpl.length > 0 || (linhasRec.length === 0 && linhasInclusas.length === 0)) && (
             <>
               {linhasRec.length > 0 && <h3 className="orc-grupo">1. Implantação, equipamentos e instalação</h3>}
               {tabela(linhasImpl, false)}
+            </>
+          )}
+
+          {linhasInclusas.length > 0 && (
+            <>
+              <h3 className="orc-grupo">Relação de equipamentos e materiais inclusos (conferência)</h3>
+              <table className="orc-tabela">
+                <thead>
+                  <tr>
+                    <th className="orc-col-num">#</th>
+                    <th>Descrição</th>
+                    <th className="orc-right">Qtd.</th>
+                    <th>Un.</th>
+                    <th className="orc-right">Valor</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {linhasInclusas.map((l, i) => {
+                    const item = itemById.get(String(pick(l, ["item_id"]) ?? ""));
+                    const marca = marcaById.get(String(pick(item ?? {}, ["itens_marcas_id"]) ?? ""));
+                    const nomeMarca = txt(pick(marca ?? {}, ["descricao"]));
+                    const unidade = unidadeById.get(String(pick(l, ["unidade_medida_id"]) ?? ""));
+                    const descricao = txt(pick(item ?? {}, ["descricao"])) || txt(l["detalhe"]) || "Item";
+                    const detalhe = txt(l["detalhe"]);
+                    return (
+                      <tr key={String(rowId(l) ?? i)}>
+                        <td className="orc-col-num">{i + 1}</td>
+                        <td>
+                          <strong>{descricao}</strong>
+                          {nomeMarca && <div className="orc-detalhe">Marca: {nomeMarca}</div>}
+                          {detalhe && detalhe !== descricao && <div className="orc-detalhe">{detalhe}</div>}
+                        </td>
+                        <td className="orc-right">{formatQtd(l["quantidade"])}</td>
+                        <td>{txt(pick(unidade ?? {}, ["sigla", "descricao"])) || "—"}</td>
+                        <td className="orc-right">Incluso</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </>
           )}
 
