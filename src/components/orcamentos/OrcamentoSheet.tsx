@@ -123,6 +123,7 @@ type Header = {
   desconto: string;
   frete: string;
   valores_adicionais: string;
+  mostrar_valores_inclusos: boolean;
   despesas: DespesaOperacional[];
   compra: CondicaoCompra;
 } & PagamentoState &
@@ -150,6 +151,7 @@ const emptyHeader = (vendedorId: string): Header => {
     desconto: "",
     frete: "",
     valores_adicionais: "",
+    mostrar_valores_inclusos: false,
     despesas: [],
     compra: condicaoCompraPadrao(),
     obs_nota_fiscal: "",
@@ -236,6 +238,7 @@ const headerFromRecord = (r: Row): Header => {
     desconto: num(r["desconto"]) ? String(num(r["desconto"])) : "",
     frete: num(r["frete"]) ? String(num(r["frete"])) : "",
     valores_adicionais: num(r["valores_adicionais"]) ? String(num(r["valores_adicionais"])) : "",
+    mostrar_valores_inclusos: r["mostrar_valores_inclusos"] === true,
     despesas: despesasFromValue(r["despesas_operacionais"]),
     compra: condicaoCompraFromValue(r["compra_condicao"]),
     obs_nota_fiscal: String(pick(r, ["obs_nota_fiscal"]) ?? ""),
@@ -667,6 +670,9 @@ export function OrcamentoSheet({
       desconto_valor: totais.desconto_valor,
       frete: totais.frete,
       valores_adicionais: totais.valores_adicionais,
+      ...(h.mostrar_valores_inclusos || (record && "mostrar_valores_inclusos" in record)
+        ? { mostrar_valores_inclusos: h.mostrar_valores_inclusos }
+        : {}),
       total_liquido: totais.total_liquido,
       total_custo: totais.total_custo,
       total_imposto: totais.total_imposto,
@@ -949,6 +955,9 @@ export function OrcamentoSheet({
             desconto={h.desconto}
             frete={h.frete}
             valoresAdicionais={h.valores_adicionais}
+            temInclusos={linhas.some((l) => l.incluso)}
+            mostrarValoresInclusos={h.mostrar_valores_inclusos}
+            onMostrarValoresInclusos={(v) => patchHeader({ mostrar_valores_inclusos: v })}
             readOnly={readOnly}
             itensSemCusto={itensSemCusto}
             acrescimoJuros={acrescimoJuros}

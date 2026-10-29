@@ -16,8 +16,6 @@ export type OrcamentoDocumentoProps = {
   marcas: Row[];
   /** Oculta as linhas de assinatura manuais (usado na proposta digital). */
   semAceite?: boolean;
-  /** Mostra ao cliente o valor total da relação de itens inclusos (os unitários nunca aparecem). */
-  totalInclusos?: boolean;
 };
 
 const txt = (v: unknown) => {
@@ -51,7 +49,7 @@ function Bloco({ titulo, children }: { titulo: string; children: React.ReactNode
 }
 
 /** Folha comercial do orçamento (reutilizada no PDF clássico e na proposta digital). */
-export function OrcamentoDocumento({ id, orcamento, linhas, empresa, cliente, vendedor, itens, unidades, marcas, semAceite, totalInclusos }: OrcamentoDocumentoProps) {
+export function OrcamentoDocumento({ id, orcamento, linhas, empresa, cliente, vendedor, itens, unidades, marcas, semAceite }: OrcamentoDocumentoProps) {
   const itemById = new Map(itens.map((i) => [String(rowId(i) ?? ""), i]));
   const unidadeById = new Map(unidades.map((u) => [String(rowId(u) ?? ""), u]));
   const marcaById = new Map(marcas.map((m) => [String(rowId(m) ?? ""), m]));
@@ -59,11 +57,10 @@ export function OrcamentoDocumento({ id, orcamento, linhas, empresa, cliente, ve
   const numero = txt(orcamento["numero"]) || "Oferta";
   const situacao = situacaoOf(orcamento["situacao"]);
   const parcelas = parcelasFromValue(orcamento["parcelas"]);
-  const totalItens = num(orcamento["total_itens"]);
+  const mostrarInclusos = orcamento["mostrar_valores_inclusos"] === true;
   const descontoValor = num(orcamento["desconto_valor"]);
   const frete = num(orcamento["frete"]);
   const adicionais = num(orcamento["valores_adicionais"]);
-  const totalLiquido = num(orcamento["total_liquido"]);
 
   const empresaNome =
     txt(pick(empresa ?? {}, ["nome", "razao_social", "nome_fantasia", "titulo"])) ||
@@ -76,8 +73,15 @@ export function OrcamentoDocumento({ id, orcamento, linhas, empresa, cliente, ve
   );
   const natDe = (l: Row) =>
     naturezaOf(l["natureza"], itemById.get(String(pick(l, ["item_id"]) ?? ""))?.["tipo"]);
-  const linhasInclusas = linhasOrdenadas.filter((l) => l["incluso"] === true);
-  const linhasCobradas = linhasOrdenadas.filter((l) => l["incluso"] !== true);
+  // Com "mostrar valores", os inclusos viram itens normais; sem, ficam só na lista de conferência
+  // e saem do total exibido ao cliente (o total interno segue completo para compras/financeiro).
+  const linhasInclusas = mostrarInclusos ? [] : linhasOrdenadas.filter((l) => l["incluso"] === true);
+  const linhasCobradas = mostrarInclusos ? linhasOrdenadas : linhasOrdenadas.filter((l) => l["incluso"] !== true);
+  const valorInclusos = linhasInclusas
+    .filter((l) => natDe(l) !== "recorrente")
+    .reduce((s, l) => s + num(l["total_linha"]), 0);
+  const totalItens = Math.max(0, num(orcamento["total_itens"]) - valorInclusos);
+  const totalLiquido = Math.max(0, num(orcamento["total_liquido"]) - valorInclusos);
   const linhasImpl = linhasCobradas.filter((l) => natDe(l) !== "recorrente");
   const linhasRec = linhasCobradas.filter((l) => natDe(l) === "recorrente");
   const modalidade = modalidadeOf(orcamento["modalidade"]);
@@ -88,7 +92,7 @@ export function OrcamentoDocumento({ id, orcamento, linhas, empresa, cliente, ve
   const vigencia = num(orcamento["vigencia_meses"]) || 36;
   const reajuste = txt(orcamento["reajuste_indice"]) || "IPCA";
   const totalRecorrente =
-    num(orcamento["total_recorrente"]) || linhasRec.reduce((s, l) => s + num(l["total_linha"]), 0);
+    (mostrarInclusos ? 0 : num(orcamento["total_recorrente"]) - linhasOrdenadas.filter((l) => l["incluso"] === true && natDe(l) === "recorrente").reduce((s, l) => s + num(l["total_linha"]), 0)) || linhasRec.reduce((s, l) => s + num(l["total_linha"]), 0);
 
   const tabela = (rows: Row[], mensal: boolean) => {
     const grupos = agruparPorBloco(rows, (l) => String(l["bloco"] ?? ""));
@@ -298,14 +302,6 @@ export function OrcamentoDocumento({ id, orcamento, linhas, empresa, cliente, ve
                     );
                   })}
                 </tbody>
-                {totalInclusos && (
-                  <tfoot>
-                    <tr>
-                      <td colSpan={4} className="orc-right"><strong>Total dos itens inclusos</strong></td>
-                      <td className="orc-right"><strong>{formatBRL(linhasInclusas.reduce((s, l) => s + num(l["total_linha"]), 0))}</strong></td>
-                    </tr>
-                  </tfoot>
-                )}
               </table>
             </>
           )}

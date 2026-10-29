@@ -2,6 +2,7 @@ import { tx } from "@/lib/i18n-termos";
 import { Calculator, TriangleAlert } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { formatBRL, formatPct, type DescontoTipo, type Totais } from "@/lib/orcamentos";
@@ -30,6 +31,10 @@ type Props = {
   /** Itens recorrentes mensais (valores por mês). */
   recorrente?: { receita: number; custo: number; imposto: number; lucro: number };
   vigenciaMeses?: number;
+  /** Há itens marcados como incluso / apenas conferência. */
+  temInclusos?: boolean;
+  mostrarValoresInclusos?: boolean;
+  onMostrarValoresInclusos?: (v: boolean) => void;
   onChange: (patch: {
     desconto_tipo?: DescontoTipo;
     desconto?: string;
@@ -74,6 +79,9 @@ export function OrcamentoTotais({
   parte = "totais",
   recorrente = { receita: 0, custo: 0, imposto: 0, lucro: 0 },
   vigenciaMeses = 36,
+  temInclusos = false,
+  mostrarValoresInclusos = false,
+  onMostrarValoresInclusos,
   onChange,
 }: Props) {
   const temRec = recorrente.receita >= 0.01 || recorrente.custo >= 0.01;
@@ -179,6 +187,25 @@ export function OrcamentoTotais({
             onChange={(e) => onChange({ valores_adicionais: e.target.value })}
           />
         </div>
+
+        {temInclusos && onMostrarValoresInclusos && (
+          <div className="flex items-start justify-between gap-3 rounded-md border border-dashed p-3">
+            <div>
+              <Label htmlFor="mostrar_inclusos" className="text-sm font-medium">
+                Mostrar valores dos itens inclusos na proposta
+              </Label>
+              <p className="text-muted-foreground text-xs">
+                Desligado: o cliente vê "Incluso" e o total da proposta não soma esses itens. Os valores continuam valendo para compras e financeiro.
+              </p>
+            </div>
+            <Switch
+              id="mostrar_inclusos"
+              checked={mostrarValoresInclusos}
+              disabled={Boolean(readOnly)}
+              onCheckedChange={onMostrarValoresInclusos}
+            />
+          </div>
+        )}
 
         <Separator />
         <div className="flex items-center justify-between gap-3">

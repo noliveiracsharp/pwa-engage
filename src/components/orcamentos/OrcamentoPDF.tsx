@@ -43,7 +43,6 @@ export function OrcamentoPDF({
   const [envio, setEnvioRaw] = useState(false);
   const [canalEnvio, setCanalEnvio] = useState<"whatsapp" | "email">("whatsapp");
   const setEnvio = (v: boolean) => setEnvioRaw(v);
-  const [totalInclusos, setTotalInclusos] = useState(false);
   if (!orcamento) return null;
   const token = orcamento["token_publico"];
   const link = token ? linkProposta(token) : "";
@@ -81,12 +80,6 @@ export function OrcamentoPDF({
         <DialogHeader className="sticky top-0 z-20 flex-row items-center justify-between gap-3 space-y-0 border-b bg-background px-6 py-4 print:hidden">
           <DialogTitle>Visualizar oferta {numero}</DialogTitle>
           <div className="flex items-center gap-2">
-            {linhas.some((l) => l["incluso"] === true) && (
-              <label className="mr-2 flex items-center gap-2 text-sm">
-                <Switch checked={totalInclusos} onCheckedChange={setTotalInclusos} />
-                Mostrar total dos inclusos
-              </label>
-            )}
             <Button variant="outline" onClick={() => { setCanalEnvio("whatsapp"); setEnvio(true); }}>
               <MessageCircle className="mr-2 h-4 w-4" /> WhatsApp
             </Button>
@@ -105,7 +98,7 @@ export function OrcamentoPDF({
           </div>
         </DialogHeader>
 
-        <OrcamentoDocumento id="orcamento-print" orcamento={orcamento} linhas={linhas} empresa={empresa} cliente={cliente} vendedor={vendedor} itens={itens} unidades={unidades} marcas={marcas} totalInclusos={totalInclusos} />
+        <OrcamentoDocumento id="orcamento-print" orcamento={orcamento} linhas={linhas} empresa={empresa} cliente={cliente} vendedor={vendedor} itens={itens} unidades={unidades} marcas={marcas} />
       </DialogContent>
       <EnviarPropostaDialog open={envio} onOpenChange={setEnvio} orcamento={orcamento} empresa={empresa} cliente={cliente} link={link} antesDeEnviar={async () => true} canalInicial={canalEnvio} />
     </Dialog>
