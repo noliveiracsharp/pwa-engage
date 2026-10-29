@@ -105,9 +105,10 @@ export function usePlannerItens(usuarioId: string, autorId?: string) {
   return { itens: q.data ?? [], isLoading: q.isLoading, concluir, planejar };
 }
 
-export function ItemLinha({ i, onCheck, compacto, editavel = true, onAbrir }: { i: PlannerItem; onCheck: (feito: boolean) => void; compacto?: boolean; editavel?: boolean; onAbrir?: () => void }) {
+export function ItemLinha({ i, onCheck, compacto, editavel = true, onAbrir, nome }: { i: PlannerItem; onCheck: (feito: boolean) => void; compacto?: boolean; editavel?: boolean; onAbrir?: () => void; nome?: (id: string) => string }) {
   const feito = i.status === "concluida";
   const atraso = !feito && !!i.entrega && i.entrega < hoje();
+  const proprio = !!i.criadoPor && i.criadoPor === i.responsavel;
   return (
     <div className={cn("flex items-start gap-2 rounded-lg border border-border bg-card p-2 text-xs", feito && "opacity-60")}>
       <button type="button" disabled={!editavel} aria-label={feito ? "Reabrir" : "Concluir"} onClick={() => onCheck(!feito)} className="mt-0.5 shrink-0">
@@ -117,10 +118,22 @@ export function ItemLinha({ i, onCheck, compacto, editavel = true, onAbrir }: { 
         {onAbrir && i.origem === "tarefa"
           ? <button type="button" onClick={onAbrir} className={cn("text-left font-medium leading-tight hover:underline", feito && "line-through")}>{i.titulo}</button>
           : <p className={cn("font-medium leading-tight", feito && "line-through")}>{i.titulo}</p>}
+        {!compacto && nome && (i.criadoPor || i.responsavel) && (
+          <p className="mt-0.5 text-[10px] text-muted-foreground">
+            {proprio
+              ? <>Lembrete pessoal de <b className="text-foreground">{nome(i.criadoPor!)}</b></>
+              : <>
+                  {i.criadoPor && <>De: <b className="text-foreground">{nome(i.criadoPor)}</b></>}
+                  {i.criadoPor && i.responsavel && " → "}
+                  {i.responsavel && <>Para: <b className="text-foreground">{nome(i.responsavel)}</b></>}
+                </>}
+          </p>
+        )}
         {!compacto && (
           <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[10px] text-muted-foreground">
             <span className="inline-flex items-center gap-1"><span className={cn("h-1.5 w-1.5 rounded-full", COR_PRI[i.prioridade])} />{i.prioridade === "media" ? "Média" : i.prioridade === "alta" ? "Alta" : "Baixa"}</span>
-            {i.origem === "projeto" && <span>Projeto</span>}
+            {i.origem === "projeto" && <span className="rounded bg-primary/10 px-1 text-primary">📁 {i.projetoNome ? `Projeto: ${i.projetoNome}` : "Projeto"}</span>}
+            {i.origem === "tarefa" && <span className="rounded bg-muted px-1">Tarefa da equipe</span>}
             {i.estimativaMin ? <span>{horas(i.estimativaMin)}</span> : null}
             {i.entrega && <span className={cn(atraso && "font-semibold text-destructive")}>Prazo {dataBR(i.entrega)}</span>}
             {i.remarcacoes > 0 && <span>↻ {i.remarcacoes}</span>}
