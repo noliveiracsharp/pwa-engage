@@ -14,7 +14,8 @@ export function useSecoes(pagePath: string, base: Array<{ key: string; label: st
   const { data: funcoes = [] } = useTableRows("funcoes");
   const chave = base.map((b) => b.key).join(",");
   return useMemo(() => {
-    const pai = funcoes.find((x) => String(pick(x, ["path"]) ?? "") === pagePath && !pick(x, ["funcoes_pai_id"]));
+    const doPath = funcoes.filter((x) => String(pick(x, ["path"]) ?? "") === pagePath);
+    const pai = doPath.find((x) => !pick(x, ["funcoes_pai_id"])) ?? doPath[0];
     const paiId = pai ? String(rowId(pai) ?? "") : "";
     const keyDe = new Map<string, string>();
     for (const x of funcoes) {
