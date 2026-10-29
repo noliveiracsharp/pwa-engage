@@ -124,10 +124,10 @@ function ProjetosPage() {
   }, [projetoQ, projetoDaTarefa]);
   const setSelId = (id: string | null) => {
     setSelIdState(id);
-    if (!id && (projetoQ || tarefaQ)) navigate({ search: (p) => ({ ...p, projeto: undefined, tarefa: undefined }) });
+    if (!id && (projetoQ || tarefaQ)) navigate({ search: ({ projeto: _p, tarefa: _t, ...p }) => p });
   };
   const abrirTarefa = (id: string) => navigate({ search: (p) => ({ ...p, tarefa: id }) });
-  const fecharTarefa = () => navigate({ search: (p) => ({ ...p, tarefa: undefined }) });
+  const fecharTarefa = () => navigate({ search: ({ tarefa: _t, ...p }) => p });
   const sheetDireta = tarefaDireta ? (
     <TarefaSheet tarefa={tarefaDireta} isNew={false} projetoId={projetoDaTarefa} perms={perms}
       tarefasDoProjeto={d.tarefas.filter((t) => String(t[d.tc.projeto] ?? "") === projetoDaTarefa)}
