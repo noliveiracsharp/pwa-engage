@@ -23,6 +23,7 @@ import { CLASSIFICACOES, classificacaoMeta, isInspecao, objetivoLabel, OBJETIVOS
 import { formatDate } from "@/lib/orcamentos";
 import { pick, type Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
+import { STATUS_LEVANTAMENTO, statusLevantamento } from "@/lib/levantamento";
 
 export const Route = createFileRoute("/_authenticated/laudos")({
   staticData: { sitemap: false },
@@ -112,6 +113,7 @@ function LaudosPage() {
         quantidade: inspecao ? 1 : Number(l.quantidade.replace(",", ".")) || 1,
         conforme: inspecao ? l.conforme : true,
         observacao: l.observacao.trim() || null,
+        ...(l.grupo.trim() ? { grupo: l.grupo.trim() } : {}),
         ordem: i + 1,
       }));
       if (itensPayload.length) {
@@ -159,10 +161,11 @@ function LaudosPage() {
       if (error) throw error;
       const cid = (data as Row)["id"];
       const { error: e2 } = await supabase.from("cotacoes_itens").insert(
-        linhas.map((l) => ({ cotacao_id: cid, item_id: l["item_id"], quantidade: l["quantidade"], observacao: l["observacao"] ?? null })),
+        linhas.map((l) => ({ cotacao_id: cid, item_id: l["item_id"], quantidade: l["quantidade"], observacao: l["observacao"] ?? null, ...(l["grupo"] ? { grupo: l["grupo"] } : {}) })) as never,
       );
       if (e2) throw e2;
-      await supabase.from("laudos_tecnicos").update({ status: "Enviado p/ cotação" }).eq("id", String(rowId(r)));
+      const hist = Array.isArray(r["levantamento_historico"]) ? (r["levantamento_historico"] as unknown[]) : [];
+      await supabase.from("laudos_tecnicos").update({ status: "Enviado p/ cotação", levantamento_status: "cotacao_gerada", levantamento_historico: [...hist, { em: new Date().toISOString(), usuario: "Compras", acao: "cotacao", obs: `Cotação ${numero}` }] } as never).eq("id", String(rowId(r)));
       return numero;
     },
     onSuccess: (numero) => {
@@ -258,7 +261,12 @@ function LaudosPage() {
           {isInspecao(r["objetivo"]) && !ofertaPorLaudo.has(String(rowId(r))) && perms.canUpdate && (
             <Button size="icon" variant="ghost" aria-label="Enviar ao Comercial" title="Enviar ao Comercial (gerar Oferta)" disabled={gerarOferta.isPending} onClick={() => gerarOferta.mutate(String(rowId(r)))}><Handshake className="h-4 w-4" /></Button>
           )}
-          {!isInspecao(r["objetivo"]) && !cotadoPorLaudo.has(String(rowId(r))) && perms.canUpdate && (
+          {!isInspecao(r["objetivo"]) && (
+            <span className={cn("self-center rounded-full px-2 py-0.5 text-xs font-medium", STATUS_LEVANTAMENTO[statusLevantamento(r["levantamento_status"])].cls)}>
+              {STATUS_LEVANTAMENTO[statusLevantamento(r["levantamento_status"])].label}
+            </span>
+          )}
+          {!isInspecao(r["objetivo"]) && !cotadoPorLaudo.has(String(rowId(r))) && perms.canUpdate && statusLevantamento(r["levantamento_status"]) === "aprovado" && (
             <Button size="icon" variant="ghost" aria-label="Enviar para cotação" title="Enviar para cotação" disabled={enviarCotacao.isPending} onClick={() => enviarCotacao.mutate(r)}><Send className="h-4 w-4" /></Button>
           )}
         </div>
