@@ -16,6 +16,8 @@ export type OrcamentoDocumentoProps = {
   marcas: Row[];
   /** Oculta as linhas de assinatura manuais (usado na proposta digital). */
   semAceite?: boolean;
+  /** Mostra ao cliente o valor total da relação de itens inclusos (os unitários nunca aparecem). */
+  totalInclusos?: boolean;
 };
 
 const txt = (v: unknown) => {
@@ -49,7 +51,7 @@ function Bloco({ titulo, children }: { titulo: string; children: React.ReactNode
 }
 
 /** Folha comercial do orçamento (reutilizada no PDF clássico e na proposta digital). */
-export function OrcamentoDocumento({ id, orcamento, linhas, empresa, cliente, vendedor, itens, unidades, marcas, semAceite }: OrcamentoDocumentoProps) {
+export function OrcamentoDocumento({ id, orcamento, linhas, empresa, cliente, vendedor, itens, unidades, marcas, semAceite, totalInclusos }: OrcamentoDocumentoProps) {
   const itemById = new Map(itens.map((i) => [String(rowId(i) ?? ""), i]));
   const unidadeById = new Map(unidades.map((u) => [String(rowId(u) ?? ""), u]));
   const marcaById = new Map(marcas.map((m) => [String(rowId(m) ?? ""), m]));
@@ -296,6 +298,14 @@ export function OrcamentoDocumento({ id, orcamento, linhas, empresa, cliente, ve
                     );
                   })}
                 </tbody>
+                {totalInclusos && (
+                  <tfoot>
+                    <tr>
+                      <td colSpan={4} className="orc-right"><strong>Total dos itens inclusos</strong></td>
+                      <td className="orc-right"><strong>{formatBRL(linhasInclusas.reduce((s, l) => s + num(l["total_linha"]), 0))}</strong></td>
+                    </tr>
+                  </tfoot>
+                )}
               </table>
             </>
           )}
