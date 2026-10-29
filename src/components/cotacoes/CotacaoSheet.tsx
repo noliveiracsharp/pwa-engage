@@ -390,8 +390,8 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
     await qc.invalidateQueries({ queryKey: ["table", "parceiros"] });
     setCadParc(false);
     toast.success("Cadastro criado.");
-    const nome = String(pick(values, ["nome_fantasia", "razao_social"]) ?? "").trim();
-    if (data && nome) await salvarTitulo(nome);
+    const nome = String(pick(values, ["razao_social", "nome_fantasia"]) ?? "").trim();
+    if (data && nome) await salvarTitulo(nome, String((data as Row)["id"]));
   };
 
   const criarFornecedor = async () => {
