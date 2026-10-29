@@ -13,8 +13,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useTableRows, rowId, text } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
 import { ESPACOS } from "@/components/projetos/EspacosSidebar";
-import { titulosDaOferta, titulosDoPedido } from "@/lib/financeiro";
-import { contarTitulosDaOrigem, erroFinanceiro, fontesDaOferta, fontesDoPedido, inserirTitulos, itensDaOferta } from "@/lib/financeiro-db";
+import { titulosDaOferta } from "@/lib/financeiro";
+import { contarTitulosDaOrigem, erroFinanceiro, fontesDaOferta, inserirTitulos, itensDaOferta } from "@/lib/financeiro-db";
 import { documentoEstoqueOferta, movimentosEstoqueDaOferta, nomeProjetoDaOferta } from "@/lib/oferta-ativacao";
 import { aplicarFornecedorAoGrupo, pedidosPorFornecedor, vencedoresPorItem, type LinhaCompra } from "@/lib/ativacao-compras";
 import { notificarEquipe } from "@/lib/avisos-equipe";
@@ -242,19 +242,23 @@ export function AtivacaoOfertaDialog({ open, onOpenChange, oferta, cliente, empr
           texto: `Oferta ${numero} ativada para ${cliente || "o cliente"}. ${naFila ? "Está aguardando início na fila de Projetos." : "Já está no espaço escolhido."}` });
       }
 
-      // 3) Financeiro: receber da Oferta + pagar por pedido (sem duplicar o custo genérico de fornecedores).
+      // Cotações de origem: com pedidos gerados, o ciclo de Compras fecha em "Pedido gerado".
+      if (pedidosGerados.length) {
+        await supabase.from("cotacoes").update({ status: "pedido_gerado" } as never).eq("orcamento_id", id);
+        qc.invalidateQueries({ queryKey: ["table", "cotacoes"] });
+      }
+
+      // 3) Financeiro: só contas a receber. O pagar fica com Compras/Financeiro,
+      // pois o pagamento ao fornecedor pode ser boleto, PIX ou cartão de crédito (lançado na fatura do cartão).
       if (gerarFin) {
-        const ja = await contarTitulosDaOrigem([id], ["oferta", "despesa"]);
+        const ja = await contarTitulosDaOrigem([id], ["oferta"]);
         if (ja > 0) msgs.push(`financeiro já tinha ${ja} conta(s)`);
         else {
           const itensOf = await itensDaOferta(id);
-          const comPedidos = pedidosGerados.length > 0 || pedidosExistentes > 0;
-          const titulos = titulosDaOferta({ ...oferta, id }, itensOf).filter((t) => !(comPedidos && t.categoria === "Fornecedores"));
-          let n = await inserirTitulos(emp, titulos,
+          const titulos = titulosDaOferta({ ...oferta, id }, itensOf).filter((t) => t.tipo === "receber");
+          const n = await inserirTitulos(emp, titulos,
             { fontes: await fontesDaOferta(itensOf), clienteId: (oferta["parceiro_id"] ?? oferta["parceiros_id"] ?? null) as string | null });
-          for (const p of pedidosGerados)
-            n += await inserirTitulos(emp, titulosDoPedido({ pedidoId: p.pid, numero: p.numero, fornecedorId: p.fid, total: p.total, cronograma }), { fontes: await fontesDoPedido(p.pid) });
-          msgs.push(`${n} conta(s) no Financeiro`);
+          msgs.push(`${n} conta(s) a receber`);
           qc.invalidateQueries({ queryKey: ["table", "financeiro_titulos"] });
         }
       }
@@ -334,12 +338,12 @@ export function AtivacaoOfertaDialog({ open, onOpenChange, oferta, cliente, empr
             </div>
           </Bloco>
 
-          <Bloco icon={Wallet} titulo="Contas a receber e a pagar" id="at-fin" on={gerarFin} set={setGerarFin}>
+          <Bloco icon={Wallet} titulo="Contas a receber" id="at-fin" on={gerarFin} set={setGerarFin}>
             {oferta && (
               <ul className="text-muted-foreground list-disc space-y-1 pl-5 text-xs">
                 {Number(oferta["total_liquido"]) > 0 && <li>Receber — implantação: {formatBRL(oferta["total_liquido"])}, conforme o parcelamento da Oferta.</li>}
                 {Number(oferta["total_recorrente"]) > 0 && <li>Receber — mensalidades: {Math.max(1, Math.floor(Number(oferta["vigencia_meses"])) || 12)} × {formatBRL(oferta["total_recorrente"])}.</li>}
-                <li>Pagar — {gerarPedidos && pedidos.size ? "um lançamento por pedido de compra/fornecedor" : "custo de fornecedores da Oferta"}, terceirizados e despesas operacionais. Condição: {condTexto || "—"}.</li>
+                <li>Contas a pagar não são lançadas aqui: Compras lança ao pagar o fornecedor (boleto, PIX ou cartão de crédito na fatura).</li>
               </ul>
             )}
           </Bloco>

@@ -153,11 +153,9 @@ function LaudosPage() {
       const linhas = linhasDe(r).filter((l) => l["item_id"]);
       if (!linhas.length) throw new Error("O laudo não possui itens do cadastro para cotar.");
       const numero = await proximoNumero("cotacoes", "COT", r["empresa_id"] as string);
-      const { data, error } = await supabase
-        .from("cotacoes")
-        .insert({ empresa_id: r["empresa_id"], numero, laudo_id: rowId(r), titulo: `${r["numero"] ?? "Laudo"} · ${nomeCliente(r)}`, status: "pendente" })
-        .select("id")
-        .single();
+      const base = { empresa_id: r["empresa_id"], numero, laudo_id: rowId(r), titulo: nomeCliente(r), projeto_nome: `Laudo ${r["numero"] ?? ""}`.trim(), status: "pendente" };
+      let { data, error } = await supabase.from("cotacoes").insert({ ...base, parceiro_id: r["parceiro_id"] ?? null } as never).select("id").single();
+      if (error && /parceiro_id|projeto_nome/.test(error.message)) ({ data, error } = await supabase.from("cotacoes").insert({ empresa_id: base.empresa_id, numero, laudo_id: base.laudo_id, titulo: `${r["numero"] ?? "Laudo"} · ${nomeCliente(r)}`, status: "pendente" } as never).select("id").single());
       if (error) throw error;
       const cid = (data as Row)["id"];
       const { error: e2 } = await supabase.from("cotacoes_itens").insert(

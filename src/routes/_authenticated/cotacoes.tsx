@@ -167,7 +167,7 @@ function CotacoesPage() {
         header: {
           situacao: "Em andamento",
           dt_orcamento: new Date().toISOString().slice(0, 10),
-          parceiro_id: laudo?.["parceiro_id"] ?? null,
+          parceiro_id: sel["parceiro_id"] ?? laudo?.["parceiro_id"] ?? null,
           descricao: `Gerado da cotação ${sel["numero"] ?? ""}${laudo ? ` (${laudo["__os"] ? "OS" : "laudo"} ${laudo["numero"] ?? ""})` : ""}`,
           total_itens: totalItens,
           desconto_tipo: "valor",
@@ -221,7 +221,7 @@ function CotacoesPage() {
       key: "titulo", header: "Origem", fields: ["titulo"],
       render: (r) => {
         const laudo = laudoById.get(String(r["laudo_id"] ?? r["manutencao_os_id"] ?? ""));
-        const cliente = laudo ? parceiroById.get(String(laudo["parceiro_id"])) : undefined;
+        const cliente = parceiroById.get(String(r["parceiro_id"] ?? laudo?.["parceiro_id"] ?? ""));
         return (
           <div className="max-w-72 truncate">
             {String(r["titulo"] ?? "—")}

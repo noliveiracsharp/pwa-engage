@@ -361,12 +361,16 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
     invalidar();
   };
 
-  const salvarTitulo = async (v: string) => {
+  const salvarTitulo = async (v: string, parceiroId?: string) => {
     const t = v.trim();
-    if (!t || t === String(cotacao["titulo"] ?? "")) return;
-    const { error } = await supabase.from("cotacoes").update({ titulo: t }).eq("id", cid);
+    if (!t) return;
+    let { error } = await supabase.from("cotacoes").update({ titulo: t, ...(parceiroId ? { parceiro_id: parceiroId } : {}) } as never).eq("id", cid);
+    if (error && parceiroId && /parceiro_id/.test(error.message)) {
+      toast.warning("Rode o script atendeai-cotacao-cliente.sql para vincular o cliente à Oferta.");
+      ({ error } = await supabase.from("cotacoes").update({ titulo: t }).eq("id", cid));
+    }
     if (error) return void toast.error(error.message);
-    toast.success("Título atualizado.");
+    toast.success("Cliente atualizado.");
     invalidar();
   };
   const salvarProjeto = async (v: string) => {
@@ -386,8 +390,8 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
     await qc.invalidateQueries({ queryKey: ["table", "parceiros"] });
     setCadParc(false);
     toast.success("Cadastro criado.");
-    const nome = String(pick(values, ["nome_fantasia", "razao_social"]) ?? "").trim();
-    if (data && nome) await salvarTitulo(nome);
+    const nome = String(pick(values, ["razao_social", "nome_fantasia"]) ?? "").trim();
+    if (data && nome) await salvarTitulo(nome, String((data as Row)["id"]));
   };
 
   const criarFornecedor = async () => {
@@ -630,7 +634,7 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
                   placeholder={String(cotacao["titulo"] ?? "") || "Escolha o cliente ou fornecedor"}
                   searchPlaceholder="Nome ou CPF/CNPJ…"
                   emptyText="Não encontrado. Use o + para cadastrar."
-                  onChange={(id) => { const o = parceirosOpts.find((x) => x.value === id); if (o) void salvarTitulo(o.label); }}
+                  onChange={(id) => { const o = parceirosOpts.find((x) => x.value === id); if (o) void salvarTitulo(o.label, o.value); }}
                 />
               </div>
               <Button type="button" variant="outline" size="icon" title="Cadastrar cliente ou fornecedor" aria-label="Cadastrar cliente ou fornecedor" onClick={() => setCadParc(true)}><Plus className="h-4 w-4" /></Button>
