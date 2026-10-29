@@ -310,7 +310,14 @@ export function ManutencaoSheet({ open, onOpenChange, record, inicial, onSaved }
             })}
           </section>
 
-          {record && <LevantamentoTecnico os={record} cliente={nomeCliente(f.parceiro_id)} />}
+          {record
+            ? <LevantamentoTecnico os={record} cliente={nomeCliente(f.parceiro_id)} />
+            : (
+              <section className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+                <p className="font-medium text-foreground">Levantamento técnico</p>
+                Salve a OS uma vez para liberar a lista de itens com grupos, o envio para aprovação do gestor e a geração da cotação.
+              </section>
+            )}
 
           <div className="space-y-1.5"><Label>Observações do técnico</Label>
             <Textarea rows={3} value={f.observacoes} onChange={(e) => setF({ ...f, observacoes: e.target.value })} /></div>
