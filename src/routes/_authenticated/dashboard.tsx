@@ -185,7 +185,7 @@ function MeuTrabalho() {
               const d = i.fim ? String(i.fim).slice(0, 10) : "";
               const tone = d && d < h ? "bg-destructive" : d === h ? "bg-warning" : "bg-success";
               return (
-                <Link key={idx} to="/projetos" className="flex items-center gap-3 rounded-md border border-border p-2 text-sm hover:bg-accent">
+                <Link key={idx} to="/projetos" search={buscaItem(i.tipo === "Tarefa" ? pick(i.r, ["projeto_id", "projeto"]) : null, i.tipo === "Tarefa" ? i.r["id"] : i.r["tarefa_id"])} className="flex items-center gap-3 rounded-md border border-border p-2 text-sm hover:bg-accent">
                   <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${tone}`} />
                   <span className="min-w-0 flex-1 truncate"><span className="text-muted-foreground">{t(i.tipo === "Tarefa" ? "dash.tarefa" : "dash.atividade")}: </span>{i.nome}</span>
                   <span className="shrink-0 text-xs text-muted-foreground">{fmtData(i.fim)}</span>
@@ -199,16 +199,24 @@ function MeuTrabalho() {
           <CardContent className="max-h-80 space-y-2 overflow-y-auto">
             {(data?.eventos ?? []).length === 0 && <p className="text-sm text-muted-foreground">{t("dash.semAtualizacoes")}</p>}
             {(data?.eventos ?? []).map((e) => (
-              <div key={String(e["id"])} className="rounded-md border border-border p-2 text-sm">
+              <Link key={String(e["id"])} to="/projetos" search={buscaItem(e["projeto_id"], e["tarefa_id"])} className="block rounded-md border border-border p-2 text-sm hover:bg-accent">
                 <p className="text-foreground">{String(e["descricao"] ?? "")}</p>
                 <p className="text-xs text-muted-foreground">{new Date(String(e["created_at"])).toLocaleString(idioma)}</p>
-              </div>
+              </Link>
             ))}
           </CardContent>
         </Card>
       </div>
     </Secao>
   );
+}
+
+/** Parâmetros do link direto: abre o projeto e a tarefa em /projetos. */
+function buscaItem(projetoId: unknown, tarefaId: unknown): { projeto?: string; tarefa?: string } {
+  const s: { projeto?: string; tarefa?: string } = {};
+  if (projetoId) s.projeto = String(projetoId);
+  if (tarefaId) s.tarefa = String(tarefaId);
+  return s;
 }
 
 /* ---------------- Projetos ---------------- */
