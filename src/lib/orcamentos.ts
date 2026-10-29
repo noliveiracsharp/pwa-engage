@@ -153,6 +153,8 @@ export type Linha = {
   execucao: Execucao;
   /** Fornecedor que executa o serviço terceirizado (gera o contas a pagar). */
   fornecedor_id: string;
+  /** Item incluso / apenas conferência: aparece no PDF sem valores; o custo segue para compras. */
+  incluso: boolean;
 };
 
 export type Execucao = "interno" | "terceiro";
@@ -205,6 +207,7 @@ export function novaLinha(): Linha {
     faturar_para_id: "",
     execucao: "interno",
     fornecedor_id: "",
+    incluso: false,
   };
 }
 
@@ -224,6 +227,7 @@ export function linhaFromRow(row: Row, itemTipo?: unknown): Linha {
     faturar_para_id: String(row["faturar_para_id"] ?? ""),
     execucao: row["execucao"] === "terceiro" ? "terceiro" : "interno",
     fornecedor_id: String(row["fornecedor_id"] ?? ""),
+    incluso: row["incluso"] === true,
   };
 }
 

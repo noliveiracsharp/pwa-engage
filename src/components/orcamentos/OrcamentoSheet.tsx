@@ -716,6 +716,7 @@ export function OrcamentoSheet({
         faturar_para_id: l.faturar_para_id && l.faturar_para_id !== h.parceiro_id ? l.faturar_para_id : null,
         execucao: l.natureza !== "produto" && l.execucao === "terceiro" ? "terceiro" : "interno",
         fornecedor_id: l.natureza !== "produto" && l.execucao === "terceiro" ? l.fornecedor_id || null : null,
+        incluso: l.incluso,
       };
     });
     header["faturamento_misto"] = payloadLinhas.some((l) => l.faturar_para_id);
