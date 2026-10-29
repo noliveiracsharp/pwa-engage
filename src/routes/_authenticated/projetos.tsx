@@ -1,5 +1,5 @@
 import { IniciaisResponsaveis, ResponsaveisPicker, responsaveisDe } from "@/components/projetos/ResponsaveisPicker";
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, Pencil, Plus, Settings, Share2, Trash2, ListChecks, Download, List, Columns3, Printer } from "lucide-react";
@@ -42,7 +42,7 @@ import { useTableRows, rowId, idColumn, matches } from "@/lib/crud";
 import { SortableList, salvarOrdem, useSortableRow } from "@/lib/reorder";
 import { useAudit } from "@/lib/audit";
 import { usePagePermissions, type Perms } from "@/hooks/usePagePermissions";
-import { ATIVIDADES, atividadePct, periodo, C, doneValue, duplicarAtividade, duplicarTarefa, excluirTarefaComFilhos, filterPayload, fmtDate, isDone, nomePessoa, prioridadeClass, progressoCor, resolveCol, sincronizarTarefa, tarefaPct, useCols } from "@/lib/projetos";
+import { TIPOS_ITEM, tipoItemClass, ATIVIDADES, atividadePct, periodo, C, doneValue, duplicarAtividade, duplicarTarefa, excluirTarefaComFilhos, filterPayload, fmtDate, isDone, nomePessoa, prioridadeClass, progressoCor, resolveCol, sincronizarTarefa, tarefaPct, useCols } from "@/lib/projetos";
 import { AcoesTarefa } from "@/components/projetos/AcoesTarefa";
 import { LegendaCores } from "@/components/projetos/LegendaCores";
 import { ArrowDown, ArrowUp, Copy } from "lucide-react";
@@ -61,7 +61,11 @@ export const Route = createFileRoute("/_authenticated/projetos")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  validateSearch: (s: Record<string, unknown>): { espaco?: string } => (typeof s["espaco"] === "string" && s["espaco"] ? { espaco: s["espaco"] } : {}),
+  validateSearch: (s: Record<string, unknown>): { espaco?: string; projeto?: string; tarefa?: string } => {
+    const r: { espaco?: string; projeto?: string; tarefa?: string } = {};
+    for (const k of ["espaco", "projeto", "tarefa"] as const) if (typeof s[k] === "string" && s[k]) r[k] = s[k] as string;
+    return r;
+  },
   component: ProjetosPage,
 });
 
@@ -105,14 +109,32 @@ function useProjetoData() {
 function ProjetosPage() {
   const perms = usePagePermissions("/projetos");
   const d = useProjetoData();
-  const { espaco } = Route.useSearch();
+  const { espaco, projeto: projetoQ, tarefa: tarefaQ } = Route.useSearch();
   const navigate = useNavigate({ from: "/projetos" });
   const qc = useQueryClient();
   const espacoId = espaco && d.espacos.some((e) => String(rowId(e)) === espaco) ? espaco : null;
-  const [selId, setSelId] = useState<string | null>(null);
-  const [aba, setAba] = useState<"painel" | "tarefas" | "projetos" | null>(null);
+  const [selId, setSelIdState] = useState<string | null>(projetoQ ?? null);
+  const [aba, setAba] = useState<"painel" | "tarefas" | "projetos" | "lista" | null>(null);
+  // Link direto (aviso/WhatsApp/lista): abre o projeto da tarefa e a própria tarefa.
+  const tarefaDireta = tarefaQ ? d.tarefas.find((t) => String(rowId(t)) === tarefaQ) ?? null : null;
+  const projetoDaTarefa = tarefaDireta ? String(tarefaDireta[d.tc.projeto] ?? "") : "";
+  useEffect(() => {
+    if (projetoQ) setSelIdState(projetoQ);
+    else if (projetoDaTarefa) setSelIdState(projetoDaTarefa);
+  }, [projetoQ, projetoDaTarefa]);
+  const setSelId = (id: string | null) => {
+    setSelIdState(id);
+    if (!id && (projetoQ || tarefaQ)) navigate({ search: ({ projeto: _p, tarefa: _t, ...p }) => p });
+  };
+  const abrirTarefa = (id: string) => navigate({ search: (p) => ({ ...p, tarefa: id }) });
+  const fecharTarefa = () => navigate({ search: ({ tarefa: _t, ...p }) => p });
+  const sheetDireta = tarefaDireta ? (
+    <TarefaSheet tarefa={tarefaDireta} isNew={false} projetoId={projetoDaTarefa} perms={perms}
+      tarefasDoProjeto={d.tarefas.filter((t) => String(t[d.tc.projeto] ?? "") === projetoDaTarefa)}
+      onClose={fecharTarefa} />
+  ) : null;
   const sel = d.projetos.find((p) => String(rowId(p)) === selId);
-  if (sel) return <Detalhe projeto={sel} d={d} perms={perms} onBack={() => setSelId(null)} />;
+  if (sel) return <><Detalhe projeto={sel} d={d} perms={perms} onBack={() => setSelId(null)} />{sheetDireta}</>;
   const espAtual = espacoId ? d.espacos.find((e) => String(rowId(e)) === espacoId) : undefined;
   const ir = (id: string | null) => navigate({ search: id ? { espaco: id } : {} });
   async function moverEspaco(projetoId: string, destino: string) {
@@ -132,7 +154,7 @@ function ProjetosPage() {
   }
   // Lista abre as tarefas por status; Espaço, Pasta e Projeto abrem a visão geral.
   const raiz = !!espAtual && tipoEspaco(espAtual) !== "lista";
-  const abaAtual = !espacoId ? (aba === "projetos" ? "projetos" : "geral") : aba ?? (raiz ? "painel" : "tarefas");
+  const abaAtual = !espacoId ? (aba === "projetos" || aba === "lista" ? aba : "geral") : aba ?? (raiz ? "painel" : "tarefas");
   return (
     <div className="flex flex-col gap-4 md:flex-row md:items-start">
       <EspacosSidebar espacos={d.espacos} ativo={espacoId} perms={perms} onSelect={(id) => { setAba(null); ir(id); }} onMoverProjeto={moverEspaco} />
@@ -146,6 +168,7 @@ function ProjetosPage() {
           <div className="flex rounded-md border border-border p-0.5 w-fit" role="tablist" aria-label="Visão geral">
             <Button size="sm" variant={abaAtual === "geral" ? "secondary" : "ghost"} onClick={() => setAba(null)}>Visão geral</Button>
             <Button size="sm" variant={abaAtual === "projetos" ? "secondary" : "ghost"} onClick={() => setAba("projetos")}>Projetos</Button>
+            <Button size="sm" variant={abaAtual === "lista" ? "secondary" : "ghost"} onClick={() => setAba("lista")}>Lista corrida</Button>
           </div>
         )}
         {espacoId && (
@@ -155,10 +178,13 @@ function ProjetosPage() {
               {raiz && <Button size="sm" variant={abaAtual === "painel" ? "secondary" : "ghost"} onClick={() => setAba("painel")}>Visão geral</Button>}
               <Button size="sm" variant={abaAtual === "tarefas" ? "secondary" : "ghost"} onClick={() => setAba("tarefas")}>Tarefas</Button>
               <Button size="sm" variant={abaAtual === "projetos" ? "secondary" : "ghost"} onClick={() => setAba("projetos")}>Projetos</Button>
+              <Button size="sm" variant={abaAtual === "lista" ? "secondary" : "ghost"} onClick={() => setAba("lista")}>Lista corrida</Button>
             </div>
           </div>
         )}
-        {abaAtual === "geral"
+        {abaAtual === "lista"
+          ? <ListaCorrida d={d} espacoId={espacoId} onAbrir={abrirTarefa} />
+          : abaAtual === "geral"
           ? <DashboardGeral espacos={d.espacos} projetos={d.projetos} tarefas={d.tarefas} status={d.status} pc={d.pc} tc={d.tc} onAcessar={(id) => { setAba(null); ir(id); }} onAbrirProjeto={(id) => setSelId(id)} />
           : abaAtual === "painel" && espAtual
           ? <EspacoDashboard espaco={espAtual} espacos={d.espacos} projetos={d.projetos} tarefas={d.tarefas} status={d.status} pc={d.pc} tc={d.tc} onAcessar={ir} />
@@ -168,8 +194,74 @@ function ProjetosPage() {
                 projetoNome={d.pc.nome} tCols={d.tCols} perms={perms} />
             : <Painel d={d} perms={perms} espacoId={espacoId} onOpen={(id) => setSelId(id)} />}
       </div>
+      {sheetDireta}
     </div>
   );
+}
+
+/** Lista corrida: todos os itens (tarefas) ordenados por status, com tipo, projeto e link direto. */
+function ListaCorrida({ d, espacoId, onAbrir }: { d: D; espacoId: string | null; onAbrir: (tarefaId: string) => void }) {
+  const [busca, setBusca] = useState("");
+  const [tipo, setTipo] = useState<string>("todos");
+  const linhas = useMemo(() => {
+    const ids = espacoId ? espacoEDescendentes(d.espacos, espacoId) : null;
+    const projetos = new Map(d.projetos.map((p) => [String(rowId(p)), p]));
+    const status = new Map(d.status.map((s) => [String(rowId(s)), s]));
+    return d.tarefas.map((t) => {
+      const p = projetos.get(String(t[d.tc.projeto] ?? ""));
+      const esp = String(t["espaco_id"] ?? p?.["espaco_id"] ?? "");
+      const st = status.get(String(t["status_id"] ?? ""));
+      const pct = tarefaPct(t, d.tc.done);
+      const sNome = st ? String(st[d.sc.nome] ?? "") : pct >= 100 ? "Concluída" : pct > 0 ? "Em andamento" : "A fazer";
+      const rank = pct >= 100 || st?.["tipo"] === "concluido" ? 3 : st?.["tipo"] === "erro" ? 0 : pct > 0 || st?.["tipo"] === "progresso" ? 2 : 1;
+      return {
+        id: String(rowId(t)), esp, rank, ordem: Number(st?.[d.sc.ordem] ?? 0), sNome, cor: st ? String(st[d.sc.cor] ?? "") : "",
+        tipo: String(t["tipo"] ?? "") || "Melhoria", projeto: p ? String(p[d.pc.nome] ?? "") : "Sem projeto",
+        titulo: String(t[d.tc.nome] ?? ""), texto: String(t["descricao"] ?? "") === String(t[d.tc.nome] ?? "") ? "" : String(t["descricao"] ?? ""),
+        resp: nomeUsuario(d, t[d.tc.resp]), prazo: t[d.tc.fim],
+      };
+    }).filter((l) => (!ids || ids.has(l.esp)) && (tipo === "todos" || l.tipo === tipo) && matches(`${l.titulo} ${l.texto} ${l.projeto} ${l.sNome}`, busca))
+      .sort((a, b) => a.rank - b.rank || a.ordem - b.ordem || a.sNome.localeCompare(b.sNome, "pt-BR") || a.projeto.localeCompare(b.projeto, "pt-BR") || a.titulo.localeCompare(b.titulo, "pt-BR"));
+  }, [d, espacoId, busca, tipo]);
+  return (
+    <section className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <Input className="max-w-sm" placeholder="Buscar item, projeto ou status..." value={busca} onChange={(e) => setBusca(e.target.value)} />
+        <div className="flex rounded-md border border-border p-0.5" role="tablist" aria-label="Tipo do item">
+          {["todos", ...TIPOS_ITEM].map((t) => (
+            <Button key={t} size="sm" variant={tipo === t ? "secondary" : "ghost"} onClick={() => setTipo(t)}>{t === "todos" ? "Todos" : t}</Button>
+          ))}
+        </div>
+        <span className="ml-auto text-sm text-muted-foreground">{linhas.length} item(ns)</span>
+      </div>
+      <div className="overflow-x-auto rounded-lg border border-border">
+        <Table>
+          <TableHeader>
+            <TableRow><TableHead>Status</TableHead><TableHead>Tipo</TableHead><TableHead>Projeto</TableHead><TableHead>Item</TableHead><TableHead>Responsável</TableHead><TableHead>Prazo</TableHead><TableHead className="text-right">Ação</TableHead></TableRow>
+          </TableHeader>
+          <TableBody>
+            {linhas.length === 0 && <TableRow><TableCell colSpan={7} className="py-8 text-center text-muted-foreground">Nenhum item encontrado.</TableCell></TableRow>}
+            {linhas.map((l) => (
+              <TableRow key={l.id} className="cursor-pointer" onClick={() => onAbrir(l.id)}>
+                <TableCell><span className="inline-flex items-center gap-2 whitespace-nowrap text-sm"><span className="h-2.5 w-2.5 rounded-full bg-muted-foreground" style={l.cor ? { backgroundColor: l.cor } : undefined} />{l.sNome}</span></TableCell>
+                <TableCell><Badge className={tipoItemClass(l.tipo)}>{l.tipo}</Badge></TableCell>
+                <TableCell className="whitespace-nowrap text-sm">{l.projeto}</TableCell>
+                <TableCell className="max-w-md"><p className="font-medium text-foreground">{l.titulo}</p>{l.texto && <p className="line-clamp-2 text-xs text-muted-foreground">{l.texto}</p>}</TableCell>
+                <TableCell className="whitespace-nowrap text-sm">{l.resp || "—"}</TableCell>
+                <TableCell className="whitespace-nowrap text-sm">{fmtDate(l.prazo)}</TableCell>
+                <TableCell className="text-right"><Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); onAbrir(l.id); }}>Abrir item</Button></TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </section>
+  );
+}
+
+function nomeUsuario(d: D, id: unknown): string {
+  const u = id ? d.usuarios.find((x) => String(rowId(x)) === String(id)) : undefined;
+  return u ? String(u["nome"] ?? u["email"] ?? "") : "";
 }
 
 /** Projetos abertos na ativação da Oferta que aguardam a gestora escolher o espaço. */

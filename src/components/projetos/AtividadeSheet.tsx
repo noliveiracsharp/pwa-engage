@@ -68,7 +68,7 @@ export function AtividadeSheet({ atividade, isNew, tarefaId, projetoId, atividad
     }
     if (error) { toast.error(error.message); return; }
     void registrarEventoProjeto({
-      empresaId, autorId: usuarioId, autorNome: String(usuario?.["nome"] ?? ""), projetoId,
+      empresaId, autorId: usuarioId, autorNome: String(usuario?.["nome"] ?? ""), projetoId, tarefaId: tid,
       tipo: "atividade", acao: atividade ? "alterou" : "criou", titulo: String(base["nome"]), prazo: base["dt_fim"],
       responsaveis: resps, anteriores: Array.isArray(atividade?.["responsaveis"]) ? (atividade!["responsaveis"] as unknown[]).map(String) : [],
     });

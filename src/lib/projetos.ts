@@ -73,6 +73,15 @@ export const C = {
   },
 };
 
+/** Natureza do item de projeto (lista corrida). */
+export const TIPOS_ITEM = ["Correção", "Erro", "Melhoria"] as const;
+export function tipoItemClass(t: unknown): string {
+  const v = String(t ?? "").toLowerCase();
+  if (v.startsWith("erro")) return "bg-destructive text-destructive-foreground";
+  if (v.startsWith("corre")) return "bg-warning text-warning-foreground";
+  return "bg-primary text-primary-foreground";
+}
+
 export const PRIORIDADES = ["Urgente", "Alta", "Normal", "Baixa"] as const;
 
 export function prioridadeClass(p: unknown): string {

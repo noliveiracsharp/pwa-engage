@@ -17,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { useTableRows, rowId, idColumn } from "@/lib/crud";
 import { useAudit } from "@/lib/audit";
-import { C, PRIORIDADES, filterPayload, isDone, prioridadeClass, progressoCor, resolveCol, tarefaPct, useCols } from "@/lib/projetos";
+import { C, PRIORIDADES, TIPOS_ITEM, filterPayload, isDone, prioridadeClass, progressoCor, resolveCol, tarefaPct, useCols } from "@/lib/projetos";
 import type { Row } from "@/lib/row";
 import type { Perms } from "@/hooks/usePagePermissions";
 import { Switch } from "@/components/ui/switch";
@@ -65,18 +65,22 @@ export function TarefaSheet({ tarefa, tarefasDoProjeto, projetoId, perms, onClos
     };
     if (statusOpcoes) base["status_id"] = form["status_id"] || null;
     if (tCols?.includes("comentarios_publicos")) base["comentarios_publicos"] = form["comentarios_publicos"] === true;
+    if (tCols?.includes("tipo")) base["tipo"] = form["tipo"] || "Melhoria";
     if (tc.nome === tc.descricao) delete base[tc.descricao];
     let error;
+    let novoId: unknown = tarefa ? rowId(tarefa) : null;
     if (tarefa) {
       ({ error } = await supabase.from("projetos_tarefas").update(filterPayload(stamp(base, false), tCols)).eq(idColumn(tarefa), rowId(tarefa) as never));
     } else {
       base[tc.projeto] = projetoId || null;
       if (!projetoId && espacoId) base["espaco_id"] = espacoId;
-      ({ error } = await supabase.from("projetos_tarefas").insert(filterPayload(stamp({ ...base, ordem: tarefasDoProjeto.reduce((mx, t) => Math.max(mx, Number(t["ordem"] ?? -1) || 0), -1) + 1 }, true), tCols)));
+      let criado: unknown;
+      ({ data: criado, error } = await supabase.from("projetos_tarefas").insert(filterPayload(stamp({ ...base, ordem: tarefasDoProjeto.reduce((mx, t) => Math.max(mx, Number(t["ordem"] ?? -1) || 0), -1) + 1 }, true), tCols)).select("id").maybeSingle());
+      novoId = (criado as Row | null)?.["id"] ?? null;
     }
     if (error) { toast.error(error.message); return; }
     void registrarEventoProjeto({
-      empresaId, autorId: usuarioId, autorNome: String(usuario?.["nome"] ?? ""), projetoId: tarefa ? tarefa[tc.projeto] : projetoId,
+      empresaId, autorId: usuarioId, autorNome: String(usuario?.["nome"] ?? ""), projetoId: tarefa ? tarefa[tc.projeto] : projetoId, tarefaId: novoId,
       tipo: "tarefa", acao: tarefa ? "alterou" : "criou", titulo: String(form[tc.nome] ?? ""), prazo: form[tc.fim],
       responsaveis: resps, anteriores: tarefa ? responsaveisDe(tarefa, tc.resp) : [],
     });
@@ -120,6 +124,16 @@ export function TarefaSheet({ tarefa, tarefasDoProjeto, projetoId, perms, onClos
                 </Select>
               </div>
             )}
+            <div className="sm:col-span-2 space-y-1">
+              <Label>Tipo do item</Label>
+              <Select disabled={readOnly} value={String(form["tipo"] ?? "") || "Melhoria"} onValueChange={(v) => set("tipo", v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {TIPOS_ITEM.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              {tCols && tCols.length > 0 && !tCols.includes("tipo") && <p className="text-xs text-warning">Para gravar o tipo, rode o script atendeai-projetos-lista-corrida.sql.</p>}
+            </div>
             {tc.descricao !== tc.nome && (
               <div className="sm:col-span-2 space-y-1">
                 <Label>Descrição</Label>

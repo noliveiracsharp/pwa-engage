@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { adicionarAviso } from "@/lib/avisos";
+import { linkItemProjeto } from "@/lib/projetos-eventos";
 import type { Row } from "@/lib/row";
 
 const INTERVALO = 60 * 1000;
@@ -24,7 +25,7 @@ export function useAvisosProjetos(usuarioId: unknown) {
           chave: `projeto:${String(ev["id"])}`,
           titulo: acao === "atribuiu" ? `Nova ${String(ev["tipo"] ?? "atividade")} para você` : "Atualização em projeto",
           texto: String(ev["descricao"] ?? ""),
-          link: "/projetos",
+          link: linkItemProjeto(ev["projeto_id"], ev["tarefa_id"]),
         });
       }
     };
