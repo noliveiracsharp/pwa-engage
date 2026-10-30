@@ -4,6 +4,7 @@ import { nomeItemCompleto } from "@/lib/item-nome";
 import { PessoaCampos } from "@/components/pessoas/PessoaCampos";
 import { OfertaTimeline } from "@/components/orcamentos/OfertaTimeline";
 import { ConsultorComercial } from "@/components/orcamentos/ConsultorComercial";
+import { NovoParceiroRapido } from "@/components/parceiros/NovoParceiroRapido";
 import { VersoesOferta } from "@/components/orcamentos/VersoesOferta";
 import type { Snapshot } from "@/lib/oferta-versoes";
 import { TEMPERATURAS } from "@/lib/temperatura";
@@ -883,9 +884,12 @@ export function OrcamentoSheet({
             </div>
 
             <div className="min-w-0 space-y-1.5 sm:col-span-2 lg:col-span-3">
-              <Label htmlFor="parceiro_id" className="block text-sm font-medium">
-                Cliente
-              </Label>
+              <div className="flex items-center justify-between gap-2">
+                <Label htmlFor="parceiro_id" className="block text-sm font-medium">
+                  Cliente
+                </Label>
+                {!readOnly && <NovoParceiroRapido tipo="cliente" onCriado={(id) => patchHeader({ parceiro_id: id })} />}
+              </div>
               <SearchSelect
                 id="parceiro_id"
                 value={h.parceiro_id}

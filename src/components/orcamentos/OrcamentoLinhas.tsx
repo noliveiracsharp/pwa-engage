@@ -16,6 +16,7 @@ import { SearchSelect, type SearchOption } from "@/components/data-table/SearchS
 import { rowId, useTableRows } from "@/lib/crud";
 import { Switch } from "@/components/ui/switch";
 import { RichEditor } from "@/components/orcamentos/RichEditor";
+import { NovoParceiroRapido } from "@/components/parceiros/NovoParceiroRapido";
 import { NovoItemCompleto } from "@/components/itens/NovoItemCompleto";
 import { agruparPorBloco, calcLinha, formatBRL, formatPct, NATUREZAS, precoPorMarkup, num, type Linha, type Natureza } from "@/lib/orcamentos";
 
@@ -722,7 +723,10 @@ function ServicoTerceiro({ linha: l, fornecedores, readOnly, onChange }: {
       {terceiro && (
         <div className="grid gap-2 sm:grid-cols-3">
           <div className="space-y-1 sm:col-span-3">
-            <Label className="text-xs">Fornecedor</Label>
+            <div className="flex items-center justify-between gap-2">
+              <Label className="text-xs">Fornecedor</Label>
+              {!readOnly && <NovoParceiroRapido tipo="fornecedor" onCriado={(id) => onChange({ fornecedor_id: id })} />}
+            </div>
             <SearchSelect value={l.fornecedor_id} onChange={(v) => onChange({ fornecedor_id: v })} options={fornecedores}
               placeholder="Selecione o fornecedor" searchPlaceholder="Nome ou CNPJ…" emptyText="Nenhum fornecedor encontrado." disabled={readOnly} />
           </div>
