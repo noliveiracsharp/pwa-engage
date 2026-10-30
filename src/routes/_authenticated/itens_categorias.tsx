@@ -1,6 +1,5 @@
 import { useMemo } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft } from "lucide-react";
+import { createFileRoute } from "@tanstack/react-router";
 import { ApoioCrud } from "@/components/itens/ApoioCrud";
 import { Button } from "@/components/ui/button";
 import type { Column } from "@/components/data-table/DataTable";
