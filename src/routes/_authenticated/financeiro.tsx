@@ -18,6 +18,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ParceiroSheet } from "@/components/parceiros/ParceiroSheet";
 import { buildTree } from "@/lib/hierarchy";
+import { useCategoriasItens } from "@/lib/itens-categorias";
 import { QuickCreateDialog, type QuickField } from "@/components/itens/QuickCreateDialog";
 import { formatCpfCnpj } from "@/lib/input-masks";
 import { ContasBancarias } from "@/components/financeiro/ContasBancarias";
@@ -1064,6 +1065,7 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
     observacao: text(src?.["observacao"]),
     data_competencia: text(src?.["data_competencia"]).slice(0, 10) || hojeISO(),
     centro_custo_id: text(src?.["centro_custo_id"]),
+    plano_contas_id: text(src?.["plano_contas_id"]),
     codigo_referencia: text(src?.["codigo_referencia"]),
     conta_bancaria_id: text(src?.["conta_bancaria_id"]),
     forma_pagamento: text(src?.["forma_pagamento"]),
@@ -1078,6 +1080,19 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
     desvincular: false,
   });
   const { data: centros = [] } = useTableRows("centro_custo");
+  const { data: planoContas = [] } = useTableRows("plano_contas");
+  const { cadastradas: catsItens } = useCategoriasItens();
+  const planoOpts = useMemo(() => buildTree(planoContas.filter((c) => c["status"] !== false || text(rowId(c)) === v.plano_contas_id), "plano_contas_pai_id").map((n) => {
+    const parts = n.path.split(" > ");
+    return { value: text(rowId(n.row)), label: parts[parts.length - 1] ?? n.path, depth: n.depth, keywords: [n.path] };
+  }), [planoContas, v.plano_contas_id]);
+  /** Ao escolher a categoria, sugere centro de custo e conta gerencial padrão dela (sem apagar o que já foi escolhido). */
+  const escolherCategoria = (x: string) => {
+    const cat = catsItens.find((c) => c.descricao.trim().toLowerCase() === x.trim().toLowerCase());
+    setV((s) => ({ ...s, categoria: x,
+      centro_custo_id: s.centro_custo_id || cat?.centro_custo_id || "",
+      plano_contas_id: s.plano_contas_id || cat?.plano_contas_id || "" }));
+  };
   const { data: contas = [] } = useTableRows("financeiro_contas_bancarias");
   const { data: titulosCartao = [] } = useTableRows("financeiro_titulos");
   const centroOpts = useMemo(() => buildTree(centros.filter((c) => c["status"] !== false || text(rowId(c)) === v.centro_custo_id), "centro_custo_pai_id").map((n) => {
@@ -1277,7 +1292,7 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
         if (error) throw error;
       }
       if (plano.criar.length) {
-        const copia = ["tipo", "categoria", "parceiro_id", "observacao", "centro_custo_id", "codigo_referencia", "conta_bancaria_id", "forma_pagamento", "empresa_id", "origem_tipo", "origem_id"];
+        const copia = ["tipo", "categoria", "parceiro_id", "observacao", "centro_custo_id", "plano_contas_id", "codigo_referencia", "conta_bancaria_id", "forma_pagamento", "empresa_id", "origem_tipo", "origem_id"];
         const lote = plano.criar.map((c) => ({ ...Object.fromEntries(copia.map((k) => [k, modelo[k] ?? null])), ...c, data_competencia: c.vencimento, status: "aberto" }));
         const { error } = await supabase.from("financeiro_titulos").insert(lote as never);
         if (error) throw error;
@@ -1306,7 +1321,7 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
       }
       if (plano.criar.length) {
         const modelo = titulos[0]!;
-        const copia = ["tipo", "categoria", "parceiro_id", "observacao", "centro_custo_id", "codigo_referencia", "conta_bancaria_id", "forma_pagamento", "empresa_id", "origem_tipo", "origem_id"];
+        const copia = ["tipo", "categoria", "parceiro_id", "observacao", "centro_custo_id", "plano_contas_id", "codigo_referencia", "conta_bancaria_id", "forma_pagamento", "empresa_id", "origem_tipo", "origem_id"];
         const lote = plano.criar.map(({ anterior, ...c }) => ({ ...Object.fromEntries(copia.map((k) => [k, modelo[k] ?? null])), ...c, data_competencia: c.vencimento,
           ...(anterior && statusAntSerie === "pago" ? { status: "pago", pago_em: c.vencimento, valor_pago: c.valor } : { status: "aberto" }) }));
         const { error } = await supabase.from("financeiro_titulos").insert(lote as never);
@@ -1336,7 +1351,7 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
       const statusBase = v.status === "pago" ? (text(registro?.["status"]) === "pago" ? "pago" : "aberto") : v.status;
       const base = { tipo, descricao: v.descricao.trim(), categoria: v.categoria || (categorias.ativas[0] ?? ""), parceiro_id: v.parceiro_id || null,
         vencimento: v.vencimento, valor, observacao: v.observacao || null, status: statusBase,
-        data_competencia: v.data_competencia || null, centro_custo_id: v.centro_custo_id || null,
+        data_competencia: v.data_competencia || null, centro_custo_id: v.centro_custo_id || null, plano_contas_id: v.plano_contas_id || null,
         codigo_referencia: v.codigo_referencia.trim() || null, conta_bancaria_id: v.conta_bancaria_id || null,
         nsu: v.nsu.trim() || null, ...(v.forma_pagamento ? { forma_pagamento: v.forma_pagamento } : {}),
         ...(registro && text(registro["cartao_id"]) && v.data_compra ? { data_compra: v.data_compra } : {}),
@@ -1543,7 +1558,7 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
           {!readOnly && <ParceiroSituacaoAlerta key={v.parceiro_id} papel={papel} parceiro={parceiros.find((p) => text(rowId(p)) === v.parceiro_id)} />}
           <div className="space-y-1"><Label>Categoria</Label>
             <div className="flex gap-2">
-              <Select value={v.categoria} disabled={readOnly} onValueChange={(x) => setV({ ...v, categoria: x })}>
+              <Select value={v.categoria} disabled={readOnly} onValueChange={escolherCategoria}>
                 <SelectTrigger><SelectValue placeholder="Escolha a categoria" /></SelectTrigger>
                 <SelectContent>{[...new Set([...categorias.ativas, v.categoria].filter(Boolean))].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
               </Select>
@@ -1560,6 +1575,9 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
             </div>
             {novoCentro && <QuickCreateDialog open onOpenChange={(o) => !o && setNovoCentro(false)} title="Novo centro de custo" table="centro_custo"
               fields={camposCentro} onCreated={(id) => setV((s) => ({ ...s, centro_custo_id: id }))} />}
+          </div>
+          <div className="space-y-1 sm:col-span-2"><Label>Plano de contas (conta gerencial)</Label>
+            <SearchSelect value={v.plano_contas_id} disabled={readOnly} options={planoOpts} placeholder="Escolha a conta gerencial" emptyText="Não encontrado. Cadastre em Plano de Contas." onChange={(x) => setV({ ...v, plano_contas_id: x })} />
           </div>
           {registro && rowId(registro) && (
             <RateioTitulo tituloId={text(rowId(registro))} empresaId={text(registro["empresa_id"])} valorTitulo={round2(num(v.valor))} readOnly={readOnly} tipoTitulo={tipo} apiRef={rateioRef}
