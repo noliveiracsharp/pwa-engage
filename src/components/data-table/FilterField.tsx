@@ -47,7 +47,7 @@ export function FilterBar({ children, className }: { children: ReactNode; classN
   useLayoutEffect(() => {
     const el = grade.current;
     if (!el) return;
-    const n = [...el.children].filter((c) => !(c as HTMLElement).dataset.busca && !(c as HTMLElement).dataset.fixo).length;
+    const n = [...el.children].filter((c) => !(c as HTMLElement).dataset["busca"] && !(c as HTMLElement).dataset["fixo"]).length;
     setTemAvancado((t) => (t === n > 0 ? t : n > 0));
   });
 
