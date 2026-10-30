@@ -1,8 +1,10 @@
 import type React from "react";
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarClock, ChevronLeft, ChevronRight, CheckCircle2, Circle, Inbox, MessageSquare, Printer, Video, X } from "lucide-react";
-import { ReunioesPainel, linkReuniao, useReunioes } from "@/components/chat-interno/ReunioesPainel";
+import { CalendarClock, ChevronLeft, ChevronRight, CheckCircle2, Circle, Inbox, MessageSquare, Printer, Video, X, LogIn, Copy, Pencil, Ban } from "lucide-react";
+import { ReunioesPainel, linkReuniao, textoConvite, useReunioes, type Reuniao } from "@/components/chat-interno/ReunioesPainel";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { confirmar } from "@/components/layout/DialogoGlobal";
 import { TarefaDetalhe, registrarEvento } from "@/components/chat-interno/TarefaDetalhe";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -160,6 +162,15 @@ export function PlannerPainel({ me, empresaId, usuarios, onFechar, embutido, aco
   const [arrastando, setArrastando] = useState<string | null>(null);
   const [aberta, setAberta] = useState<string | null>(null);
   const [reunioesAberto, setReunioesAberto] = useState(false);
+  const [editarReuniao, setEditarReuniao] = useState<Reuniao | null>(null);
+  const qcReuniao = useQueryClient();
+  const cancelarReuniao = async (r: Reuniao) => {
+    if (!(await confirmar(`Cancelar a reunião "${r.titulo}"?`))) return;
+    const x = await tb("reunioes").update({ cancelada: true } as never).eq("id", r.id);
+    if (x.error) return void toast.error(x.error.message);
+    toast.success("Reunião cancelada.");
+    void qcReuniao.invalidateQueries({ queryKey: ["reunioes", empresaId] });
+  };
   const reunioes = useReunioes(empresaId).data ?? [];
   const { itens, concluir, planejar } = usePlannerItens(alvo, me);
   const proprio = alvo === me;
@@ -191,11 +202,21 @@ export function PlannerPainel({ me, empresaId, usuarios, onFechar, embutido, aco
         </div>
         <div className="space-y-1.5">
           {dia && reunioes.filter((r) => !r.cancelada && (r.criado_por === alvo || r.participantes.includes(alvo)) && new Date(r.inicio).toLocaleDateString("sv-SE") === dia).map((r) => (
-            <button key={r.id} type="button" onClick={() => window.open(`${linkReuniao(r)}${r.video ? "?" : "&"}org=${r.id}`, "_blank")}
-              className="flex w-full items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 p-2 text-left text-xs hover:bg-primary/20">
-              <Video className="h-3.5 w-3.5 shrink-0 text-primary" />
-              <span className="min-w-0 flex-1"><b className="block truncate">{r.titulo}</b>{new Date(r.inicio).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} · {r.duracao_min} min</span>
-            </button>
+            <DropdownMenu key={r.id}>
+              <DropdownMenuTrigger asChild>
+                <button type="button"
+                  className="flex w-full items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 p-2 text-left text-xs hover:bg-primary/20">
+                  <Video className="h-3.5 w-3.5 shrink-0 text-primary" />
+                  <span className="min-w-0 flex-1"><b className="block truncate">{r.titulo}</b>{new Date(r.inicio).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} · {r.duracao_min} min</span>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="z-[80]">
+                <DropdownMenuItem onClick={() => window.open(`${linkReuniao(r)}${r.video ? "?" : "&"}org=${r.id}`, "_blank")}><LogIn className="mr-2 h-4 w-4" /> Entrar</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => void navigator.clipboard.writeText(textoConvite(r)).then(() => toast.success("Convite copiado."))}><Copy className="mr-2 h-4 w-4" /> Copiar convite</DropdownMenuItem>
+                {r.criado_por === me && <DropdownMenuItem onClick={() => { setEditarReuniao(r); setReunioesAberto(true); }}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>}
+                {r.criado_por === me && <DropdownMenuItem className="text-destructive" onClick={() => void cancelarReuniao(r)}><Ban className="mr-2 h-4 w-4" /> Cancelar reunião</DropdownMenuItem>}
+              </DropdownMenuContent>
+            </DropdownMenu>
           ))}
           {lista.map((i) => (
             <div key={i.id} draggable={proprio && i.origem === "tarefa"} onDragStart={() => setArrastando(i.id)} className={cn(proprio && i.origem === "tarefa" && "cursor-grab")}>
@@ -229,7 +250,7 @@ export function PlannerPainel({ me, empresaId, usuarios, onFechar, embutido, aco
         {acoes}
         {!embutido && onFechar && <Button size="sm" variant="ghost" aria-label="Fechar planner" onClick={onFechar}><X className="h-5 w-5" /></Button>}
       </div>
-      {reunioesAberto && <ReunioesPainel me={me} empresaId={empresaId} usuarios={usuarios} onFechar={() => setReunioesAberto(false)} />}
+      {reunioesAberto && <ReunioesPainel key={editarReuniao?.id ?? "lista"} me={me} empresaId={empresaId} usuarios={usuarios} editar={editarReuniao} onFechar={() => { setReunioesAberto(false); setEditarReuniao(null); }} />}
       <TarefaDetalhe id={aberta} me={me} usuarios={usuarios} onFechar={() => setAberta(null)} />
 
       <div className="min-h-0 flex-1 overflow-auto p-4">

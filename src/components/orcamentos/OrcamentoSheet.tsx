@@ -4,6 +4,7 @@ import { nomeItemCompleto } from "@/lib/item-nome";
 import { PessoaCampos } from "@/components/pessoas/PessoaCampos";
 import { OfertaTimeline } from "@/components/orcamentos/OfertaTimeline";
 import { ConsultorComercial } from "@/components/orcamentos/ConsultorComercial";
+import { NovoParceiroRapido } from "@/components/parceiros/NovoParceiroRapido";
 import { VersoesOferta } from "@/components/orcamentos/VersoesOferta";
 import type { Snapshot } from "@/lib/oferta-versoes";
 import { TEMPERATURAS } from "@/lib/temperatura";
@@ -83,7 +84,7 @@ import {
   type Situacao,
 } from "@/lib/orcamentos";
 import { pick, type Row } from "@/lib/row";
-import { addMonthsISO } from "@/lib/orcamentos";
+import { addMonthsISO, seloEnvio } from "@/lib/orcamentos";
 import { useQuery } from "@tanstack/react-query";
 import { etapasDoKanban, kanbanDoModuloOrcamentos } from "@/lib/orcamento-kanban";
 import { cn } from "@/lib/utils";
@@ -728,6 +729,9 @@ export function OrcamentoSheet({
         execucao: l.natureza !== "produto" && l.execucao === "terceiro" ? "terceiro" : "interno",
         fornecedor_id: l.natureza !== "produto" && l.execucao === "terceiro" ? l.fornecedor_id || null : null,
         incluso: l.incluso,
+        // Colunas novas só vão quando usadas (gravação tolera script ainda não executado).
+        ...(c.desconto_linha > 0 || l.id ? { desconto_linha: c.desconto_linha } : {}),
+        ...(l.natureza === "recorrente" && l.dt_inicio_faturamento ? { dt_inicio_faturamento: l.dt_inicio_faturamento } : l.id ? { dt_inicio_faturamento: null } : {}),
       };
     });
     header["faturamento_misto"] = payloadLinhas.some((l) => l.faturar_para_id);
@@ -756,6 +760,7 @@ export function OrcamentoSheet({
           <SheetTitle className="flex flex-wrap items-center gap-2">
             {record ? `Oferta ${numero || ""}`.trim() : "Nova oferta"}
             {record && <SituacaoBadge value={etapaAtual?.descricao ?? h.situacao} cor={etapaAtual?.cor} />}
+            {seloEnvio(record) && <span className="rounded-full bg-success/15 px-2 py-0.5 text-xs font-medium text-success">{seloEnvio(record)}</span>}
             {record && recordId && (
               <VersoesOferta
                 orcamentoId={recordId}
@@ -879,9 +884,12 @@ export function OrcamentoSheet({
             </div>
 
             <div className="min-w-0 space-y-1.5 sm:col-span-2 lg:col-span-3">
-              <Label htmlFor="parceiro_id" className="block text-sm font-medium">
-                Cliente
-              </Label>
+              <div className="flex items-center justify-between gap-2">
+                <Label htmlFor="parceiro_id" className="block text-sm font-medium">
+                  Cliente
+                </Label>
+                {!readOnly && <NovoParceiroRapido tipo="cliente" onCriado={(id) => patchHeader({ parceiro_id: id })} />}
+              </div>
               <SearchSelect
                 id="parceiro_id"
                 value={h.parceiro_id}

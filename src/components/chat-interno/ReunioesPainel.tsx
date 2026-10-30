@@ -23,7 +23,7 @@ const novaSala = () => `atendeai-${Math.random().toString(36).slice(2, 8)}${Date
 export const linkReuniao = (r: Pick<Reuniao, "sala" | "video">) =>
   `${typeof window !== "undefined" ? window.location.origin : ""}/chamada/${r.sala}${r.video ? "" : "?audio=1"}`;
 const quando = (iso: string) => new Date(iso).toLocaleString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
-const textoConvite = (r: Reuniao) =>
+export const textoConvite = (r: Reuniao) =>
   `Olá! Você foi convidado(a) para a reunião *${r.titulo}* em ${quando(r.inicio)} (${r.duracao_min} min).${r.pauta ? `\n\nPauta: ${r.pauta}` : ""}\n\nEntre pelo link (sem instalar nada): ${linkReuniao(r)}`;
 
 export function useReunioes(empresaId: string) {
@@ -44,10 +44,10 @@ export function useReunioes(empresaId: string) {
   });
 }
 
-export function ReunioesPainel({ me, empresaId, usuarios, onFechar }: { me: string; empresaId: string; usuarios: Row[]; onFechar: () => void }) {
+export function ReunioesPainel({ me, empresaId, usuarios, onFechar, editar }: { me: string; empresaId: string; usuarios: Row[]; onFechar: () => void; editar?: Reuniao | null }) {
   const qc = useQueryClient();
   const q = useReunioes(empresaId);
-  const [form, setForm] = useState<Reuniao | null>(null);
+  const [form, setForm] = useState<Reuniao | null>(editar ?? null);
   const [busca, setBusca] = useState("");
   const [enviando, setEnviando] = useState(false);
   const nomes = useMemo(() => new Map(usuarios.map((u) => [String(u["id"]), String(pick(u, ["nome"], "Usuário"))])), [usuarios]);

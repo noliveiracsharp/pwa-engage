@@ -1,3 +1,4 @@
+import { textoDetalhe } from "@/lib/orcamentos";
 /** Regras puras do versionamento de Ofertas (revisões congeladas). */
 export type ItemSnap = { item_id?: string | null; detalhe?: string | null; quantidade?: number | string | null; valor_unitario?: number | string | null; total_linha?: number | string | null; natureza?: string | null };
 export type Snapshot = { orcamento: Record<string, unknown>; itens: ItemSnap[] };
@@ -6,7 +7,7 @@ export type DiffItem = { chave: string; nome: string; tipo: "adicionado" | "remo
 export type DiffCampo = { campo: string; rotulo: string; antes: number; depois: number; delta: number };
 
 const num = (v: unknown) => Number(v ?? 0) || 0;
-const chaveItem = (i: ItemSnap) => `${i.item_id ?? ""}|${String(i.detalhe ?? "").trim().toLowerCase()}`;
+const chaveItem = (i: ItemSnap) => `${i.item_id ?? ""}|${textoDetalhe(i.detalhe).toLowerCase()}`;
 
 export const CAMPOS_COMPARADOS: Array<[string, string]> = [
   ["total_itens", "Total dos itens"],
@@ -22,7 +23,7 @@ export const CAMPOS_COMPARADOS: Array<[string, string]> = [
 export function compararVersoes(antes: Snapshot, depois: Snapshot, nomeItem: (id: string) => string = (id) => id) {
   const mapA = new Map(antes.itens.map((i) => [chaveItem(i), i]));
   const mapD = new Map(depois.itens.map((i) => [chaveItem(i), i]));
-  const nome = (i: ItemSnap) => String(i.detalhe || (i.item_id ? nomeItem(String(i.item_id)) : "") || "Item");
+  const nome = (i: ItemSnap) => String(textoDetalhe(i.detalhe) || (i.item_id ? nomeItem(String(i.item_id)) : "") || "Item");
   const itens: DiffItem[] = [];
   for (const [k, d] of mapD) {
     const a = mapA.get(k);

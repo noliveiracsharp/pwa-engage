@@ -155,6 +155,10 @@ export type Linha = {
   fornecedor_id: string;
   /** Item incluso / apenas conferência: aparece no PDF sem valores; o custo segue para compras. */
   incluso: boolean;
+  /** Desconto em R$ aplicado só nesta linha. */
+  desconto_linha: string;
+  /** Início da cobrança deste item recorrente ("" = início geral da Oferta). */
+  dt_inicio_faturamento: string;
 };
 
 export type Execucao = "interno" | "terceiro";
@@ -187,6 +191,7 @@ export type LinhaCalc = {
   imposto_valor: number;
   lucro: number;
   margem_pct: number;
+  desconto_linha: number;
 };
 
 let seq = 0;
@@ -208,6 +213,8 @@ export function novaLinha(): Linha {
     execucao: "interno",
     fornecedor_id: "",
     incluso: false,
+    desconto_linha: "",
+    dt_inicio_faturamento: "",
   };
 }
 
@@ -228,6 +235,8 @@ export function linhaFromRow(row: Row, itemTipo?: unknown): Linha {
     execucao: row["execucao"] === "terceiro" ? "terceiro" : "interno",
     fornecedor_id: String(row["fornecedor_id"] ?? ""),
     incluso: row["incluso"] === true,
+    desconto_linha: num(row["desconto_linha"]) > 0 ? String(num(row["desconto_linha"])) : "",
+    dt_inicio_faturamento: row["dt_inicio_faturamento"] ? String(row["dt_inicio_faturamento"]).slice(0, 10) : "",
   };
 }
 
@@ -254,16 +263,18 @@ export function aplicarItem(linha: Linha, item: Row | undefined): Linha {
  *  lucro         = total_linha − custo_total − imposto_valor
  */
 export function calcLinha(
-  l: Pick<Linha, "quantidade" | "valor_unitario" | "preco_custo" | "imposto_pct">,
+  l: Pick<Linha, "quantidade" | "valor_unitario" | "preco_custo" | "imposto_pct"> & { desconto_linha?: string },
 ): LinhaCalc {
   const quantidade = round3(Math.max(0, num(l.quantidade)));
   const valor_unitario = round2(Math.max(0, num(l.valor_unitario)));
-  const total_linha = round2(quantidade * valor_unitario);
+  const bruto = round2(quantidade * valor_unitario);
+  const desconto_linha = Math.min(bruto, round2(Math.max(0, num(l.desconto_linha))));
+  const total_linha = round2(bruto - desconto_linha);
   const custo_total = round2(quantidade * Math.max(0, l.preco_custo));
   const imposto_valor = round2((total_linha * Math.max(0, l.imposto_pct)) / 100);
   const lucro = round2(total_linha - custo_total - imposto_valor);
   const margem_pct = total_linha > 0 ? round2((lucro / total_linha) * 100) : 0;
-  return { quantidade, valor_unitario, total_linha, custo_total, imposto_valor, lucro, margem_pct };
+  return { quantidade, valor_unitario, total_linha, custo_total, imposto_valor, lucro, margem_pct, desconto_linha };
 }
 
 /* ------------------------------------------------------------------ */
@@ -665,4 +676,24 @@ export function cronogramaCompra(opts: {
     return gerarParcelas({ total: custo, quantidade: num(c.parcelas) || 1, primeiraData: inicio, comJuros: false });
   }
   return [{ numero: 1, vencimento: inicio, valor: custo }];
+}
+
+/** Detalhe do item em texto puro (contrato, financeiro, nota fiscal, WhatsApp): o editor grava HTML. */
+export function textoDetalhe(v: unknown): string {
+  return String(v ?? "")
+    .replace(/<\/(p|div|li|h[1-6])>|<br\s*\/?>/gi, " ")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"')
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Texto do selo "Enviada ao cliente" (data/hora e canal do último envio), ou null se nunca enviada. */
+export function seloEnvio(o: Row | null | undefined): string | null {
+  const em = o?.["enviada_em"];
+  if (!em) return null;
+  const d = new Date(String(em));
+  if (isNaN(d.getTime())) return null;
+  const canal = o?.["enviada_canal"] === "email" ? "e-mail" : o?.["enviada_canal"] === "whatsapp" ? "WhatsApp" : "";
+  return `Enviada ${d.toLocaleDateString("pt-BR")} ${d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}${canal ? ` via ${canal}` : ""}`;
 }

@@ -77,6 +77,7 @@ import { Route as AuthenticatedRelatoriosBoardRouteImport } from './routes/_auth
 import { Route as AuthenticatedRelatoriosComercialRouteImport } from './routes/_authenticated/relatorios_.comercial'
 import { Route as AuthenticatedRelatoriosDreGerencialRouteImport } from './routes/_authenticated/relatorios_.dre-gerencial'
 import { Route as AuthenticatedRelatoriosDreOfertasRouteImport } from './routes/_authenticated/relatorios_.dre-ofertas'
+import { Route as AuthenticatedRelatoriosEnviosRouteImport } from './routes/_authenticated/relatorios_.envios'
 import { Route as AuthenticatedRelatoriosKpisRouteImport } from './routes/_authenticated/relatorios_.kpis'
 import { Route as ApiPublicIconeRouteImport } from './routes/api/public/icone'
 import { Route as ApiPublicLeadsRouteImport } from './routes/api/public/leads'
@@ -440,6 +441,12 @@ const AuthenticatedRelatoriosDreOfertasRoute =
     path: '/relatorios/dre-ofertas',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedRelatoriosEnviosRoute =
+  AuthenticatedRelatoriosEnviosRouteImport.update({
+    id: '/relatorios_/envios',
+    path: '/relatorios/envios',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedRelatoriosKpisRoute =
   AuthenticatedRelatoriosKpisRouteImport.update({
     id: '/relatorios_/kpis',
@@ -540,6 +547,7 @@ export interface FileRoutesByFullPath {
   '/relatorios/comercial': typeof AuthenticatedRelatoriosComercialRoute
   '/relatorios/dre-gerencial': typeof AuthenticatedRelatoriosDreGerencialRoute
   '/relatorios/dre-ofertas': typeof AuthenticatedRelatoriosDreOfertasRoute
+  '/relatorios/envios': typeof AuthenticatedRelatoriosEnviosRoute
   '/relatorios/kpis': typeof AuthenticatedRelatoriosKpisRoute
   '/api/public/icone': typeof ApiPublicIconeRoute
   '/api/public/leads': typeof ApiPublicLeadsRoute
@@ -615,6 +623,7 @@ export interface FileRoutesByTo {
   '/relatorios/comercial': typeof AuthenticatedRelatoriosComercialRoute
   '/relatorios/dre-gerencial': typeof AuthenticatedRelatoriosDreGerencialRoute
   '/relatorios/dre-ofertas': typeof AuthenticatedRelatoriosDreOfertasRoute
+  '/relatorios/envios': typeof AuthenticatedRelatoriosEnviosRoute
   '/relatorios/kpis': typeof AuthenticatedRelatoriosKpisRoute
   '/api/public/icone': typeof ApiPublicIconeRoute
   '/api/public/leads': typeof ApiPublicLeadsRoute
@@ -692,6 +701,7 @@ export interface FileRoutesById {
   '/_authenticated/relatorios_/comercial': typeof AuthenticatedRelatoriosComercialRoute
   '/_authenticated/relatorios_/dre-gerencial': typeof AuthenticatedRelatoriosDreGerencialRoute
   '/_authenticated/relatorios_/dre-ofertas': typeof AuthenticatedRelatoriosDreOfertasRoute
+  '/_authenticated/relatorios_/envios': typeof AuthenticatedRelatoriosEnviosRoute
   '/_authenticated/relatorios_/kpis': typeof AuthenticatedRelatoriosKpisRoute
   '/api/public/icone': typeof ApiPublicIconeRoute
   '/api/public/leads': typeof ApiPublicLeadsRoute
@@ -769,6 +779,7 @@ export interface FileRouteTypes {
     | '/relatorios/comercial'
     | '/relatorios/dre-gerencial'
     | '/relatorios/dre-ofertas'
+    | '/relatorios/envios'
     | '/relatorios/kpis'
     | '/api/public/icone'
     | '/api/public/leads'
@@ -844,6 +855,7 @@ export interface FileRouteTypes {
     | '/relatorios/comercial'
     | '/relatorios/dre-gerencial'
     | '/relatorios/dre-ofertas'
+    | '/relatorios/envios'
     | '/relatorios/kpis'
     | '/api/public/icone'
     | '/api/public/leads'
@@ -920,6 +932,7 @@ export interface FileRouteTypes {
     | '/_authenticated/relatorios_/comercial'
     | '/_authenticated/relatorios_/dre-gerencial'
     | '/_authenticated/relatorios_/dre-ofertas'
+    | '/_authenticated/relatorios_/envios'
     | '/_authenticated/relatorios_/kpis'
     | '/api/public/icone'
     | '/api/public/leads'
@@ -1437,6 +1450,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRelatoriosDreOfertasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/relatorios_/envios': {
+      id: '/_authenticated/relatorios_/envios'
+      path: '/relatorios/envios'
+      fullPath: '/relatorios/envios'
+      preLoaderRoute: typeof AuthenticatedRelatoriosEnviosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/relatorios_/kpis': {
       id: '/_authenticated/relatorios_/kpis'
       path: '/relatorios/kpis'
@@ -1528,6 +1548,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedRelatoriosComercialRoute: typeof AuthenticatedRelatoriosComercialRoute
   AuthenticatedRelatoriosDreGerencialRoute: typeof AuthenticatedRelatoriosDreGerencialRoute
   AuthenticatedRelatoriosDreOfertasRoute: typeof AuthenticatedRelatoriosDreOfertasRoute
+  AuthenticatedRelatoriosEnviosRoute: typeof AuthenticatedRelatoriosEnviosRoute
   AuthenticatedRelatoriosKpisRoute: typeof AuthenticatedRelatoriosKpisRoute
 }
 
@@ -1580,6 +1601,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
     AuthenticatedRelatoriosDreGerencialRoute,
   AuthenticatedRelatoriosDreOfertasRoute:
     AuthenticatedRelatoriosDreOfertasRoute,
+  AuthenticatedRelatoriosEnviosRoute: AuthenticatedRelatoriosEnviosRoute,
   AuthenticatedRelatoriosKpisRoute: AuthenticatedRelatoriosKpisRoute,
 }
 

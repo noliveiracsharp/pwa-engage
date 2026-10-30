@@ -130,8 +130,8 @@ export function useSaveRecord(table: string) {
         if (error) throw error;
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["table", table] });
+    onSuccess: async () => {
+      await atualizarVisoes(queryClient, table);
       toast.success("Registro salvo com sucesso.");
     },
     onError: (error: unknown) => {
@@ -166,4 +166,13 @@ export function useDeleteRecord(table: string) {
       toast.error(e?.message || "Não foi possível remover.");
     },
   });
+}
+
+/**
+ * Depois de gravar: recarrega a tabela e marca como desatualizados os painéis derivados
+ * (visão geral, dashboards, kanban, relatórios), que usam chaves próprias e não viam a mudança.
+ */
+export async function atualizarVisoes(qc: import("@tanstack/react-query").QueryClient, ...tabelas: string[]) {
+  await Promise.all(tabelas.map((t) => qc.invalidateQueries({ queryKey: ["table", t] })));
+  void qc.invalidateQueries({ predicate: (q) => q.queryKey[0] !== "table" });
 }

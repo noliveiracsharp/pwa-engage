@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { idColumn } from "@/lib/crud";
+import { atualizarVisoes, idColumn } from "@/lib/crud";
 import { useAudit } from "@/lib/audit";
 import { formatNumero, toISODate, yearOf } from "@/lib/orcamentos";
 import type { Row } from "@/lib/row";
@@ -28,6 +28,8 @@ export type LinhaPayload = {
   execucao?: string;
   fornecedor_id?: string | null;
   incluso?: boolean;
+  desconto_linha?: number;
+  dt_inicio_faturamento?: string | null;
 };
 
 /**
@@ -174,8 +176,7 @@ export function useSaveOrcamento() {
       return { id, numero, linhas: (gravadas ?? []) as Row[] };
     },
     onSuccess: ({ numero }) => {
-      queryClient.invalidateQueries({ queryKey: ["table", "orcamentos"] });
-      queryClient.invalidateQueries({ queryKey: ["table", "orcamento_itens"] });
+      void atualizarVisoes(queryClient, "orcamentos", "orcamento_itens");
       toast.success(
         numero ? `Oferta ${numero} salva com sucesso.` : "Oferta salva com sucesso.",
       );
@@ -201,7 +202,7 @@ export function useAlterarSituacao() {
       if (error) throw error;
     },
     onSuccess: (_d, { situacao }) => {
-      queryClient.invalidateQueries({ queryKey: ["table", "orcamentos"] });
+      void atualizarVisoes(queryClient, "orcamentos");
       toast.success(`Situação alterada para "${situacao}".`);
     },
     onError: (error: unknown) => {

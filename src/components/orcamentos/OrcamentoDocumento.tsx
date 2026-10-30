@@ -1,6 +1,6 @@
 import { rowId } from "@/lib/crud";
 import { formatCpfCnpj, formatPhoneDisplay } from "@/lib/input-masks";
-import { agruparPorBloco, formatBRL, formatDate, formatQtd, modalidadeLabel, modalidadeOf, naturezaOf, num, parcelasFromValue, situacaoOf } from "@/lib/orcamentos";
+import { textoDetalhe, agruparPorBloco, formatBRL, formatDate, formatQtd, modalidadeLabel, modalidadeOf, naturezaOf, num, parcelasFromValue, situacaoOf } from "@/lib/orcamentos";
 import { pick, type Row } from "@/lib/row";
 import { ehHtml, htmlSeguro } from "@/lib/propostas";
 
@@ -143,7 +143,7 @@ export function OrcamentoDocumento({ id, orcamento, linhas, empresa, cliente, ve
           const marca = marcaById.get(String(pick(item ?? {}, ["itens_marcas_id"]) ?? ""));
           const nomeMarca = txt(pick(marca ?? {}, ["descricao"]));
           const unidade = unidadeById.get(String(pick(l, ["unidade_medida_id"]) ?? ""));
-          const descricao = txt(pick(item ?? {}, ["descricao"])) || txt(l["detalhe"]) || "Item";
+          const descricao = txt(pick(item ?? {}, ["descricao"])) || textoDetalhe(l["detalhe"]) || "Item";
           const detalhe = txt(l["detalhe"]);
           return (
             <tr key={String(rowId(l) ?? i)}>
@@ -151,7 +151,7 @@ export function OrcamentoDocumento({ id, orcamento, linhas, empresa, cliente, ve
               <td>
                 <strong>{descricao}</strong>
                 {nomeMarca && <div className="orc-detalhe">Marca: {nomeMarca}</div>}
-                {detalhe && detalhe !== descricao && <div className="orc-detalhe">{detalhe}</div>}
+                {detalhe && textoDetalhe(detalhe) !== descricao && <div className="orc-detalhe prop-rich" dangerouslySetInnerHTML={{ __html: htmlSeguro(detalhe) }} />}
               </td>
               <td className="orc-right">{formatQtd(l["quantidade"])}</td>
               <td>{txt(pick(unidade ?? {}, ["sigla", "descricao"])) || "—"}</td>
@@ -285,7 +285,7 @@ export function OrcamentoDocumento({ id, orcamento, linhas, empresa, cliente, ve
                     const marca = marcaById.get(String(pick(item ?? {}, ["itens_marcas_id"]) ?? ""));
                     const nomeMarca = txt(pick(marca ?? {}, ["descricao"]));
                     const unidade = unidadeById.get(String(pick(l, ["unidade_medida_id"]) ?? ""));
-                    const descricao = txt(pick(item ?? {}, ["descricao"])) || txt(l["detalhe"]) || "Item";
+                    const descricao = txt(pick(item ?? {}, ["descricao"])) || textoDetalhe(l["detalhe"]) || "Item";
                     const detalhe = txt(l["detalhe"]);
                     return (
                       <tr key={String(rowId(l) ?? i)}>
@@ -293,7 +293,7 @@ export function OrcamentoDocumento({ id, orcamento, linhas, empresa, cliente, ve
                         <td>
                           <strong>{descricao}</strong>
                           {nomeMarca && <div className="orc-detalhe">Marca: {nomeMarca}</div>}
-                          {detalhe && detalhe !== descricao && <div className="orc-detalhe">{detalhe}</div>}
+                          {detalhe && textoDetalhe(detalhe) !== descricao && <div className="orc-detalhe prop-rich" dangerouslySetInnerHTML={{ __html: htmlSeguro(detalhe) }} />}
                         </td>
                         <td className="orc-right">{formatQtd(l["quantidade"])}</td>
                         <td>{txt(pick(unidade ?? {}, ["sigla", "descricao"])) || "—"}</td>
