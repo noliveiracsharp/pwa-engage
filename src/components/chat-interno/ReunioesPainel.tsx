@@ -34,8 +34,8 @@ export function useReunioes(empresaId: string) {
     queryKey: ["reunioes", empresaId],
     enabled: !!empresaId,
     queryFn: async () => {
-      const desde = new Date(Date.now() - 30 * 86400000).toISOString();
-      const { data, error } = await tb().select("*").eq("empresa_id", empresaId).gte("inicio", desde).order("inicio").limit(500);
+      const desde = new Date(Date.now() - 400 * 86400000).toISOString();
+      const { data, error } = await tb().select("*").eq("empresa_id", empresaId).gte("inicio", desde).order("inicio").limit(2000);
       if (error) throw error;
       return ((data ?? []) as Row[]).map((r) => ({
         ...(r as unknown as Reuniao),
