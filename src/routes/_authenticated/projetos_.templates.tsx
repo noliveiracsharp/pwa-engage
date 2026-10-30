@@ -71,7 +71,6 @@ function TemplatesPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
-        <Button asChild variant="ghost" size="icon" aria-label="Voltar"><Link to="/projetos"><ArrowLeft className="h-4 w-4" /></Link></Button>
         <h1 className="text-2xl font-bold text-foreground">Templates de Tarefas</h1>
       </div>
       <div className="flex flex-col gap-4 md:flex-row">
