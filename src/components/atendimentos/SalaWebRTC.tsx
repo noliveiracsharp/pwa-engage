@@ -22,7 +22,7 @@ function baixar(b: Blob, ext: string) {
 type Remoto = { id: string; nome: string; stream: MediaStream | null };
 type Sinal = { de: string; para: string; nome: string; tipo: "offer" | "answer" | "ice"; data: any };
 
-function VideoTile({ stream, nome, mudo, espelhar, mao, onFixar, fixado, onSilenciar, compacto }: { stream: MediaStream | null; nome: string; mudo?: boolean; espelhar?: boolean; mao?: boolean; onFixar?: () => void; fixado?: boolean; onSilenciar?: (() => void) | undefined; compacto?: boolean }) {
+function VideoTile({ stream, nome, mudo, espelhar, mao, onFixar, fixado, onSilenciar, compacto, telaLiberada, onLiberarTela }: { stream: MediaStream | null; nome: string; mudo?: boolean; espelhar?: boolean; mao?: boolean; onFixar?: () => void; fixado?: boolean; onSilenciar?: (() => void) | undefined; compacto?: boolean; telaLiberada?: boolean; onLiberarTela?: (() => void) | undefined }) {
   const ref = useRef<HTMLVideoElement>(null);
   useEffect(() => {
     if (ref.current && ref.current.srcObject !== stream) ref.current.srcObject = stream;
@@ -41,6 +41,7 @@ function VideoTile({ stream, nome, mudo, espelhar, mao, onFixar, fixado, onSilen
       <span className="absolute bottom-2 left-2 flex items-center gap-1 rounded bg-background/80 px-2 py-0.5 text-xs text-foreground">{mao && <Hand className="h-3 w-3 animate-pulse text-primary" />}{nome}</span>
       <div className="absolute right-1 top-1 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
         {onSilenciar && <Button size="icon" variant="secondary" className="h-7 w-7" onClick={onSilenciar} aria-label="Silenciar participante" title="Silenciar participante"><MicOff className="h-3.5 w-3.5" /></Button>}
+        {onLiberarTela && <Button size="icon" variant={telaLiberada ? "default" : "secondary"} className="h-7 w-7" onClick={onLiberarTela} aria-label={telaLiberada ? "Retirar compartilhamento de tela" : "Permitir compartilhar tela"} title={telaLiberada ? "Retirar compartilhamento de tela" : "Permitir compartilhar tela"}><MonitorUp className="h-3.5 w-3.5" /></Button>}
         {onFixar && <Button size="icon" variant={fixado ? "default" : "secondary"} className="h-7 w-7" onClick={onFixar} aria-label="Destacar" title={fixado ? "Remover destaque" : "Destacar"}><Maximize2 className="h-3.5 w-3.5" /></Button>}
       </div>
     </div>
@@ -75,6 +76,11 @@ export function SalaWebRTC({ sala, nome, video, onSair, onParticipante, classNam
   const meuIdRef = useRef("");
   const ctrlRef = useRef<((p: any) => void) | null>(null);
   const anfitriao = !!gravavel;
+  const anfitriaoRef = useRef(anfitriao);
+  anfitriaoRef.current = anfitriao;
+  // Reunião com organizador: só ele compartilha tela, e libera quem quiser.
+  const [telaBloqueada, setTelaBloqueada] = useState(false);
+  const [telaLiberados, setTelaLiberados] = useState<string[]>([]);
   const enviado = () => proc.current?.track ?? camTrack.current;
   const grav = useRef<{ video: MediaRecorder | null; audio: MediaRecorder; ctx: AudioContext; parar: () => void } | null>(null);
 
@@ -193,6 +199,12 @@ export function SalaWebRTC({ sala, nome, video, onSair, onParticipante, classNam
         setMic(false);
         setAviso("O organizador silenciou seu microfone. Clique no microfone para voltar a falar.");
         setTimeout(() => setAviso(null), 6000);
+      } else if (c.tipo === "tela-regra" && !anfitriaoRef.current) {
+        const pode = (c as { permitidos?: string[] }).permitidos?.includes(meuId) ?? false;
+        setTelaBloqueada((antes) => {
+          if (antes && pode) { setAviso("O organizador liberou você para compartilhar a tela."); setTimeout(() => setAviso(null), 5000); }
+          return !pode;
+        });
       } else if (c.tipo === "baixar-mao" && c.para === meuId) {
         setMaos((ms) => ms.filter((m) => m !== "eu"));
       }
@@ -348,6 +360,18 @@ export function SalaWebRTC({ sala, nome, video, onSair, onParticipante, classNam
     ctrlRef.current?.({ tipo: "baixar-mao", para: id });
   };
 
+  // Organizador reenvia a regra quando entra alguém ou muda a permissão.
+  useEffect(() => {
+    if (!anfitriao) return;
+    ctrlRef.current?.({ tipo: "tela-regra", permitidos: telaLiberados });
+  }, [anfitriao, telaLiberados, remotos.length]);
+  useEffect(() => {
+    if (telaBloqueada && tela) void alternarTela();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [telaBloqueada]);
+  const alternarLiberacaoTela = (id: string) =>
+    setTelaLiberados((l) => (l.includes(id) ? l.filter((x) => x !== id) : [...l, id]));
+
   const alternarTela = async () => {
     if (tela) {
       trocarVideo(enviado());
@@ -381,7 +405,9 @@ export function SalaWebRTC({ sala, nome, video, onSair, onParticipante, classNam
     <VideoTile key={t.id} stream={t.stream} nome={t.nome} mudo={t.local} espelhar={t.local && !tela && fundo.tipo === "nenhum"}
       mao={maos.includes(t.id)} compacto={!!compacto} fixado={fixado === t.id}
       onFixar={() => { setFixado(fixado === t.id ? null : t.id); setLayout(fixado === t.id ? "grade" : "destaque"); }}
-      onSilenciar={anfitriao && !t.local ? () => silenciar(t.id) : undefined} />
+      onSilenciar={anfitriao && !t.local ? () => silenciar(t.id) : undefined}
+      telaLiberada={telaLiberados.includes(t.id)}
+      onLiberarTela={anfitriao && !t.local ? () => alternarLiberacaoTela(t.id) : undefined} />
   );
   const principalId = fixado && tiles.some((t) => t.id === fixado) ? fixado : (tiles[0]?.id ?? "eu");
   const nomeDe = (id: string) => (id === "eu" ? "Você" : remotos.find((r) => r.id === id)?.nome || "Participante");
@@ -447,7 +473,8 @@ export function SalaWebRTC({ sala, nome, video, onSair, onParticipante, classNam
           </Button>
         )}
         {typeof navigator !== "undefined" && !!(navigator.mediaDevices as any)?.getDisplayMedia && (
-          <Button size="icon" variant={tela ? "default" : "secondary"} onClick={alternarTela} aria-label="Compartilhar tela">
+          <Button size="icon" variant={tela ? "default" : "secondary"} onClick={alternarTela} disabled={telaBloqueada && !tela}
+            aria-label="Compartilhar tela" title={telaBloqueada ? "Peça ao organizador para liberar o compartilhamento" : "Compartilhar tela"}>
             <MonitorUp className="h-4 w-4" />
           </Button>
         )}
