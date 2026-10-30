@@ -45,6 +45,7 @@ import { Route as AuthenticatedOrcamentosRouteImport } from './routes/_authentic
 import { Route as AuthenticatedParceirosRouteImport } from './routes/_authenticated/parceiros'
 import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated/perfil'
 import { Route as AuthenticatedPessoasRouteImport } from './routes/_authenticated/pessoas'
+import { Route as AuthenticatedPlannerRouteImport } from './routes/_authenticated/planner'
 import { Route as AuthenticatedPlano_contasRouteImport } from './routes/_authenticated/plano_contas'
 import { Route as AuthenticatedProjetosRouteImport } from './routes/_authenticated/projetos'
 import { Route as AuthenticatedReembolsosRouteImport } from './routes/_authenticated/reembolsos'
@@ -265,6 +266,11 @@ const AuthenticatedPerfilRoute = AuthenticatedPerfilRouteImport.update({
 const AuthenticatedPessoasRoute = AuthenticatedPessoasRouteImport.update({
   id: '/pessoas',
   path: '/pessoas',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedPlannerRoute = AuthenticatedPlannerRouteImport.update({
+  id: '/planner',
+  path: '/planner',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedPlano_contasRoute =
@@ -502,6 +508,7 @@ export interface FileRoutesByFullPath {
   '/parceiros': typeof AuthenticatedParceirosRoute
   '/perfil': typeof AuthenticatedPerfilRoute
   '/pessoas': typeof AuthenticatedPessoasRoute
+  '/planner': typeof AuthenticatedPlannerRoute
   '/plano_contas': typeof AuthenticatedPlano_contasRoute
   '/projetos': typeof AuthenticatedProjetosRoute
   '/reembolsos': typeof AuthenticatedReembolsosRoute
@@ -576,6 +583,7 @@ export interface FileRoutesByTo {
   '/parceiros': typeof AuthenticatedParceirosRoute
   '/perfil': typeof AuthenticatedPerfilRoute
   '/pessoas': typeof AuthenticatedPessoasRoute
+  '/planner': typeof AuthenticatedPlannerRoute
   '/plano_contas': typeof AuthenticatedPlano_contasRoute
   '/projetos': typeof AuthenticatedProjetosRoute
   '/reembolsos': typeof AuthenticatedReembolsosRoute
@@ -652,6 +660,7 @@ export interface FileRoutesById {
   '/_authenticated/parceiros': typeof AuthenticatedParceirosRoute
   '/_authenticated/perfil': typeof AuthenticatedPerfilRoute
   '/_authenticated/pessoas': typeof AuthenticatedPessoasRoute
+  '/_authenticated/planner': typeof AuthenticatedPlannerRoute
   '/_authenticated/plano_contas': typeof AuthenticatedPlano_contasRoute
   '/_authenticated/projetos': typeof AuthenticatedProjetosRoute
   '/_authenticated/reembolsos': typeof AuthenticatedReembolsosRoute
@@ -728,6 +737,7 @@ export interface FileRouteTypes {
     | '/parceiros'
     | '/perfil'
     | '/pessoas'
+    | '/planner'
     | '/plano_contas'
     | '/projetos'
     | '/reembolsos'
@@ -802,6 +812,7 @@ export interface FileRouteTypes {
     | '/parceiros'
     | '/perfil'
     | '/pessoas'
+    | '/planner'
     | '/plano_contas'
     | '/projetos'
     | '/reembolsos'
@@ -877,6 +888,7 @@ export interface FileRouteTypes {
     | '/_authenticated/parceiros'
     | '/_authenticated/perfil'
     | '/_authenticated/pessoas'
+    | '/_authenticated/planner'
     | '/_authenticated/plano_contas'
     | '/_authenticated/projetos'
     | '/_authenticated/reembolsos'
@@ -1201,6 +1213,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPessoasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/planner': {
+      id: '/_authenticated/planner'
+      path: '/planner'
+      fullPath: '/planner'
+      preLoaderRoute: typeof AuthenticatedPlannerRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/plano_contas': {
       id: '/_authenticated/plano_contas'
       path: '/plano_contas'
@@ -1489,6 +1508,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedParceirosRoute: typeof AuthenticatedParceirosRoute
   AuthenticatedPerfilRoute: typeof AuthenticatedPerfilRoute
   AuthenticatedPessoasRoute: typeof AuthenticatedPessoasRoute
+  AuthenticatedPlannerRoute: typeof AuthenticatedPlannerRoute
   AuthenticatedPlano_contasRoute: typeof AuthenticatedPlano_contasRoute
   AuthenticatedProjetosRoute: typeof AuthenticatedProjetosRoute
   AuthenticatedReembolsosRoute: typeof AuthenticatedReembolsosRoute
@@ -1537,6 +1557,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedParceirosRoute: AuthenticatedParceirosRoute,
   AuthenticatedPerfilRoute: AuthenticatedPerfilRoute,
   AuthenticatedPessoasRoute: AuthenticatedPessoasRoute,
+  AuthenticatedPlannerRoute: AuthenticatedPlannerRoute,
   AuthenticatedPlano_contasRoute: AuthenticatedPlano_contasRoute,
   AuthenticatedProjetosRoute: AuthenticatedProjetosRoute,
   AuthenticatedReembolsosRoute: AuthenticatedReembolsosRoute,
