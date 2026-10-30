@@ -254,16 +254,18 @@ export function aplicarItem(linha: Linha, item: Row | undefined): Linha {
  *  lucro         = total_linha − custo_total − imposto_valor
  */
 export function calcLinha(
-  l: Pick<Linha, "quantidade" | "valor_unitario" | "preco_custo" | "imposto_pct">,
+  l: Pick<Linha, "quantidade" | "valor_unitario" | "preco_custo" | "imposto_pct"> & { desconto_linha?: string },
 ): LinhaCalc {
   const quantidade = round3(Math.max(0, num(l.quantidade)));
   const valor_unitario = round2(Math.max(0, num(l.valor_unitario)));
-  const total_linha = round2(quantidade * valor_unitario);
+  const bruto = round2(quantidade * valor_unitario);
+  const desconto_linha = Math.min(bruto, round2(Math.max(0, num(l.desconto_linha))));
+  const total_linha = round2(bruto - desconto_linha);
   const custo_total = round2(quantidade * Math.max(0, l.preco_custo));
   const imposto_valor = round2((total_linha * Math.max(0, l.imposto_pct)) / 100);
   const lucro = round2(total_linha - custo_total - imposto_valor);
   const margem_pct = total_linha > 0 ? round2((lucro / total_linha) * 100) : 0;
-  return { quantidade, valor_unitario, total_linha, custo_total, imposto_valor, lucro, margem_pct };
+  return { quantidade, valor_unitario, total_linha, custo_total, imposto_valor, lucro, margem_pct, desconto_linha };
 }
 
 /* ------------------------------------------------------------------ */

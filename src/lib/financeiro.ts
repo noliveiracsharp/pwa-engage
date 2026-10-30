@@ -172,15 +172,33 @@ export function titulosDaOferta(orc: Row, itens: Row[] = []): NovoTitulo[] {
     const base = iso(orc["dt_orcamento"] ?? orc["data"] ?? orc["created_at"]) || hojeISO();
     const primeiraFat = iso(orc["dt_primeiro_faturamento"]);
     const primeira = primeiraFat ? primeiraFat : parcelas[0]?.vencimento ? addMonthsISO(parcelas[0].vencimento, 1) : addMonthsISO(base, 1);
-    const rateio = ratearPorPagador(mensal, pesosPorPagador(itens, chaveCliente, true), chaveCliente);
+    // Cada item recorrente pode ter o próprio início de cobrança; sem data, usa o início geral.
+    const recs = itens.filter((it) => String(it["natureza"] ?? "") === "recorrente");
+    const inicioDe = (it: Row) => iso(it["dt_inicio_faturamento"]) || primeira;
+    const grupos = new Map<string, Row[]>();
+    for (const it of recs) grupos.set(inicioDe(it), [...(grupos.get(inicioDe(it)) ?? []), it]);
+    const somaRec = recs.reduce((s, it) => s + Math.max(0, num(it["total_linha"])), 0);
+    const series: Array<{ inicio: string; rateio: Map<string, number> }> =
+      grupos.size > 1 && somaRec > 0
+        ? (() => {
+            const lista = [...grupos.entries()];
+            let resto = mensal;
+            return lista.map(([inicio, its], gi) => {
+              const parte = gi === lista.length - 1 ? round2(resto)
+                : round2((mensal * its.reduce((s, it) => s + Math.max(0, num(it["total_linha"])), 0)) / somaRec);
+              resto = round2(resto - parte);
+              return { inicio, rateio: ratearPorPagador(parte, pesosPorPagador(its, chaveCliente, true), chaveCliente) };
+            });
+          })()
+        : [{ inicio: grupos.size === 1 ? [...grupos.keys()][0]! : primeira, rateio: ratearPorPagador(mensal, pesosPorPagador(itens, chaveCliente, true), chaveCliente) }];
     for (let i = 0; i < meses; i++) {
-      for (const [k, v] of rateio) {
+      for (const s of series) for (const [k, v] of s.rateio) {
         if (v <= 0) continue;
         out.push({
           tipo: "receber",
           descricao: semPrazo ? `Oferta ${numero} — Mensalidade ${i + 1}` : `Oferta ${numero} — Mensalidade ${i + 1}/${meses}`,
           categoria: "Mensalidade de contrato",
-          vencimento: addMonthsISO(primeira, i),
+          vencimento: addMonthsISO(s.inicio, i),
           valor: v,
           parceiro_id: pagadorDe(k),
           origem_tipo: "oferta",
