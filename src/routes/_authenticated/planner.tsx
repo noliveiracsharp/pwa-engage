@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus } from "lucide-react";
+import { Inbox, Plus, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { pick, type Row } from "@/lib/row";
@@ -31,6 +31,17 @@ function PlannerPagina() {
   const empresaId = String(pick(usuario, ["empresa_id", "id_empresa"]) ?? "");
   const qc = useQueryClient();
   const [criando, setCriando] = useState(false);
+  const [aceites, setAceites] = useState(false);
+  const { data: pendentes = 0 } = useQuery({
+    queryKey: ["tarefas-usuarios", me, "pendentes"],
+    enabled: !!me,
+    refetchInterval: 30000,
+    queryFn: async () => {
+      const { count } = await (supabase.from("tarefas_usuarios" as never) as unknown as ReturnType<typeof supabase.from>)
+        .select("id", { count: "exact", head: true }).eq("responsavel_id", me).eq("status", "aguardando");
+      return count ?? 0;
+    },
+  });
 
   const { data: usuarios = [] } = useQuery({
     queryKey: ["chat-interno-usuarios", empresaId],
@@ -49,12 +60,27 @@ function PlannerPagina() {
 
   if (!me) return null;
   return (
-    <div className="grid gap-4 p-4 lg:grid-cols-[360px_1fr]">
-      <div className="flex h-[calc(100vh-7rem)] flex-col overflow-hidden rounded-xl border border-border bg-card">
-        <TarefasChat me={me} empresaId={empresaId} usuarios={usuarios} onAvisar={avisar} />
-      </div>
+    <div className="p-4">
       <PlannerPainel embutido me={me} empresaId={empresaId} usuarios={usuarios}
-        acoes={<Button size="sm" onClick={() => setCriando(true)}><Plus className="mr-1 h-4 w-4" /> Nova tarefa</Button>} />
+        acoes={<>
+          <Button size="sm" variant={pendentes ? "default" : "outline"} onClick={() => setAceites(true)}>
+            <Inbox className="mr-1 h-4 w-4" /> Aguardando aceite{pendentes ? ` (${pendentes})` : ""}
+          </Button>
+          <Button size="sm" onClick={() => setCriando(true)}><Plus className="mr-1 h-4 w-4" /> Nova tarefa</Button>
+        </>} />
+      {aceites && (
+        <div className="fixed inset-0 z-[80] flex justify-end bg-foreground/30" onClick={() => setAceites(false)}>
+          <div className="flex h-full w-full flex-col overflow-hidden bg-background md:w-[60%]" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-border p-3">
+              <h2 className="font-semibold">Tarefas e delegações</h2>
+              <Button size="icon" variant="ghost" aria-label="Fechar" onClick={() => setAceites(false)}><X className="h-5 w-5" /></Button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-hidden">
+              <TarefasChat me={me} empresaId={empresaId} usuarios={usuarios} onAvisar={avisar} />
+            </div>
+          </div>
+        </div>
+      )}
       {criando && (
         <div className="fixed inset-0 z-[80] flex justify-end bg-foreground/30" onClick={() => setCriando(false)}>
           <div className="h-full w-full overflow-y-auto bg-background md:w-[60%]" onClick={(e) => e.stopPropagation()}>
