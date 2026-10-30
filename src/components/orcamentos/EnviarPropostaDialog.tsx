@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { instanciaParaAvisos, ordenarParaAvisos } from "@/lib/instancia-finalidade";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Mail, MessageCircle, Send, User } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -35,6 +35,7 @@ const brl = (v: unknown) => Number(v ?? 0).toLocaleString("pt-BR", { style: "cur
 /** Envio da proposta digital por WhatsApp (instância ou wa.me) ou e-mail, escolhendo entre os contatos do cliente. */
 export function EnviarPropostaDialog({ open, onOpenChange, orcamento, empresa, cliente, link, antesDeEnviar, titulo, mensagemInicial, canalInicial = "whatsapp" }: Props) {
   const empresaId = text(orcamento["empresa_id"] ?? rowId(empresa ?? {}));
+  const qc = useQueryClient();
   const [telefone, setTelefone] = useState("");
   const [mensagem, setMensagem] = useState("");
   const [instId, setInstId] = useState("");
@@ -142,6 +143,14 @@ export function EnviarPropostaDialog({ open, onOpenChange, orcamento, empresa, c
     await supabase.from("orcamento_interacoes" as never).insert({
       orcamento_id: String(rowId(orcamento) ?? ""), tipo, descricao, empresa_id: empresaId || null,
     } as never);
+    // Selo "Enviada ao cliente": ignora se o script das colunas ainda não foi rodado.
+    const id = String(rowId(orcamento) ?? "");
+    if (id) {
+      const agora = new Date().toISOString();
+      const r = await supabase.from("orcamentos" as never).update({ enviada_em: agora, enviada_canal: tipo } as never).eq("id", id);
+      if (!r.error) { orcamento["enviada_em"] = agora; orcamento["enviada_canal"] = tipo; }
+      void qc.invalidateQueries({ queryKey: ["table", "orcamentos"] });
+    }
   };
 
   const enviarEmail = async () => {
