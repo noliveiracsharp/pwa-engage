@@ -83,7 +83,7 @@ import {
   type Situacao,
 } from "@/lib/orcamentos";
 import { pick, type Row } from "@/lib/row";
-import { addMonthsISO } from "@/lib/orcamentos";
+import { addMonthsISO, seloEnvio } from "@/lib/orcamentos";
 import { useQuery } from "@tanstack/react-query";
 import { etapasDoKanban, kanbanDoModuloOrcamentos } from "@/lib/orcamento-kanban";
 import { cn } from "@/lib/utils";
