@@ -243,7 +243,7 @@ function DespesaSheet({ registro, cartoes, lanc, readOnly, onClose, onSaved }: {
       if (/image\/hei[cf]/i.test(recebido.type) || /\.hei[cf]$/i.test(recebido.name)) {
         const heic2any = (await import("heic2any")).default;
         const out = await heic2any({ blob: recebido, toType: "image/jpeg", quality: 0.9 });
-        const blob = Array.isArray(out) ? out[0] : out;
+        const blob = (Array.isArray(out) ? out[0] : out) ?? recebido;
         original = new File([blob], recebido.name.replace(/\.[^.]+$/, "") + ".jpg", { type: "image/jpeg" });
       }
       const pdf = original.type === "application/pdf";
