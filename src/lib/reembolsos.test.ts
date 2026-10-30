@@ -21,3 +21,13 @@ describe("reembolsos", () => {
     expect(resumoDespesas(L).reembolsar).toBe(40);
   });
 });
+
+import { diasPagamento, proximaDataPagamento } from "./reembolsos";
+describe("política de pagamento de reembolso", () => {
+  it("lê dias da empresa", () => expect(diasPagamento("25, 10,10 x 40")).toEqual([10, 25]));
+  it("vai para o próximo dia de pagamento do mês", () => expect(proximaDataPagamento("2026-11-03", [10, 25])).toBe("2026-11-10"));
+  it("passa para o mês seguinte após o último dia", () => expect(proximaDataPagamento("2026-10-30", [10, 25])).toBe("2026-11-10"));
+  it("respeita o prazo de corte", () => expect(proximaDataPagamento("2026-11-08", [10, 25], 3)).toBe("2026-11-25"));
+  it("fim de semana vai para segunda", () => expect(proximaDataPagamento("2026-11-01", [7])).toBe("2026-11-09"));
+  it("sem política paga na própria data", () => expect(proximaDataPagamento("2026-10-30", [])).toBe("2026-10-30"));
+});
