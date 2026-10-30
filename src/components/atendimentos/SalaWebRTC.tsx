@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Mic, MicOff, MonitorUp, PhoneOff, Video, VideoOff } from "lucide-react";
+import { Circle, Mic, MicOff, MonitorUp, PhoneOff, Square, Video, VideoOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -7,6 +7,14 @@ import { cn } from "@/lib/utils";
 const ICE: RTCConfiguration = {
   iceServers: [{ urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] }],
 };
+
+function baixar(b: Blob, ext: string) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(b);
+  a.download = `chamada-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-")}.${ext}`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+}
 
 type Remoto = { id: string; nome: string; stream: MediaStream | null };
 type Sinal = { de: string; para: string; nome: string; tipo: "offer" | "answer" | "ice"; data: any };
@@ -282,12 +290,13 @@ export function SalaWebRTC({ sala, nome, video, onSair, onParticipante, classNam
   return (
     <div className={cn("flex h-full min-h-0 flex-col bg-background", className)}>
       {erro && <p className="bg-destructive/10 px-3 py-2 text-xs text-destructive">{erro}</p>}
-      <div className={cn("grid min-h-0 flex-1 gap-2 p-2", total === 1 ? "grid-cols-1" : total <= 4 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-2 sm:grid-cols-3")}>
+      <div ref={gradeRef} className={cn("grid min-h-0 flex-1 gap-2 p-2", total === 1 ? "grid-cols-1" : total <= 4 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-2 sm:grid-cols-3")}>
         {remotos.map((r) => (
           <VideoTile key={r.id} stream={r.stream} nome={r.nome || "Participante"} />
         ))}
         <VideoTile stream={local} nome={`${nome} (você)`} mudo espelhar={!tela} />
       </div>
+      {gravando && <p className="flex items-center justify-center gap-1 bg-destructive/10 py-1 text-xs font-medium text-destructive"><span className="h-2 w-2 animate-pulse rounded-full bg-destructive" /> Gravando esta chamada</p>}
       {remotos.length === 0 && <p className="pb-1 text-center text-xs text-muted-foreground">Aguardando outros participantes entrarem…</p>}
       <div className="flex items-center justify-center gap-2 border-t border-border p-2">
         <Button size="icon" variant={mic ? "secondary" : "destructive"} onClick={alternarMic} aria-label="Microfone">
@@ -301,7 +310,12 @@ export function SalaWebRTC({ sala, nome, video, onSair, onParticipante, classNam
             <MonitorUp className="h-4 w-4" />
           </Button>
         )}
-        <Button variant="destructive" onClick={onSair}>
+        {gravavel && typeof MediaRecorder !== "undefined" && (
+          <Button variant={gravando ? "destructive" : "secondary"} onClick={gravando ? pararGravacao : iniciarGravacao} aria-label={gravando ? "Parar gravação" : "Gravar chamada"}>
+            {gravando ? <><Square className="mr-1 h-4 w-4" /> Parar gravação</> : <><Circle className="mr-1 h-4 w-4 fill-current text-destructive" /> Gravar</>}
+          </Button>
+        )}
+        <Button variant="destructive" onClick={() => { pararGravacao(); onSair(); }}>
           <PhoneOff className="mr-1 h-4 w-4" /> Sair
         </Button>
       </div>
