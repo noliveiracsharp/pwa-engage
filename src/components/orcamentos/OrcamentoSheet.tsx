@@ -759,6 +759,7 @@ export function OrcamentoSheet({
           <SheetTitle className="flex flex-wrap items-center gap-2">
             {record ? `Oferta ${numero || ""}`.trim() : "Nova oferta"}
             {record && <SituacaoBadge value={etapaAtual?.descricao ?? h.situacao} cor={etapaAtual?.cor} />}
+            {seloEnvio(record) && <span className="rounded-full bg-success/15 px-2 py-0.5 text-xs font-medium text-success">{seloEnvio(record)}</span>}
             {record && recordId && (
               <VersoesOferta
                 orcamentoId={recordId}

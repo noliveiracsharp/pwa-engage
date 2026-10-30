@@ -306,6 +306,7 @@ function OrcamentosPage() {
             {" · "}
             <span className="font-medium text-primary">Rev. {Math.max(1, Number(r["versao_atual"] ?? 1) || 1)} vigente</span>
           </div>
+          {seloEnvio(r) && <div className="mt-0.5 text-xs font-medium text-success">{seloEnvio(r)}</div>}
         </div>
       ),
     },

@@ -687,3 +687,13 @@ export function textoDetalhe(v: unknown): string {
     .replace(/\s+/g, " ")
     .trim();
 }
+
+/** Texto do selo "Enviada ao cliente" (data/hora e canal do último envio), ou null se nunca enviada. */
+export function seloEnvio(o: Row | null | undefined): string | null {
+  const em = o?.["enviada_em"];
+  if (!em) return null;
+  const d = new Date(String(em));
+  if (isNaN(d.getTime())) return null;
+  const canal = o?.["enviada_canal"] === "email" ? "e-mail" : o?.["enviada_canal"] === "whatsapp" ? "WhatsApp" : "";
+  return `Enviada ${d.toLocaleDateString("pt-BR")} ${d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}${canal ? ` via ${canal}` : ""}`;
+}
