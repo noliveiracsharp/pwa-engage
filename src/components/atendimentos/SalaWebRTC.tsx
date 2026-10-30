@@ -33,18 +33,92 @@ function VideoTile({ stream, nome, mudo, espelhar }: { stream: MediaStream | nul
 }
 
 /** Sala de chamada nativa (WebRTC em malha, sinalização por canal em tempo real). */
-export function SalaWebRTC({ sala, nome, video, onSair, onParticipante, className }: { sala: string; nome: string; video: boolean; onSair: () => void; onParticipante?: ((nome: string) => void) | undefined; className?: string }) {
+export function SalaWebRTC({ sala, nome, video, onSair, onParticipante, className, gravavel, onGravacao }: { sala: string; nome: string; video: boolean; onSair: () => void; onParticipante?: ((nome: string) => void) | undefined; className?: string; gravavel?: boolean; onGravacao?: ((audio: Blob) => void) | undefined }) {
   const [local, setLocal] = useState<MediaStream | null>(null);
   const [remotos, setRemotos] = useState<Remoto[]>([]);
   const [mic, setMic] = useState(true);
   const [cam, setCam] = useState(video);
   const [tela, setTela] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [gravando, setGravando] = useState(false);
   const peers = useRef(new Map<string, RTCPeerConnection>());
   const localRef = useRef<MediaStream | null>(null);
   const camTrack = useRef<MediaStreamTrack | null>(null);
   const partRef = useRef(onParticipante);
   partRef.current = onParticipante;
+  const gravRef = useRef(onGravacao);
+  gravRef.current = onGravacao;
+  const gradeRef = useRef<HTMLDivElement>(null);
+  const remotosRef = useRef<Remoto[]>([]);
+  remotosRef.current = remotos;
+  const grav = useRef<{ video: MediaRecorder | null; audio: MediaRecorder; ctx: AudioContext; parar: () => void } | null>(null);
+
+  const iniciarGravacao = () => {
+    try {
+      const ctx = new AudioContext();
+      const destino = ctx.createMediaStreamDestination();
+      const ligados = new Set<string>();
+      const ligar = (s: MediaStream | null, chave: string) => {
+        if (!s || ligados.has(chave) || !s.getAudioTracks().length) return;
+        ligados.add(chave);
+        ctx.createMediaStreamSource(s).connect(destino);
+      };
+      ligar(localRef.current, "local");
+      remotosRef.current.forEach((r) => ligar(r.stream, r.id));
+      const tAudio = setInterval(() => remotosRef.current.forEach((r) => ligar(r.stream, r.id)), 1000);
+
+      let videoRec: MediaRecorder | null = null;
+      let tDesenho: ReturnType<typeof setInterval> | null = null;
+      const pedacos: Blob[] = [];
+      if (video) {
+        const canvas = document.createElement("canvas");
+        canvas.width = 1280; canvas.height = 720;
+        const g = canvas.getContext("2d")!;
+        tDesenho = setInterval(() => {
+          const vids = Array.from(gradeRef.current?.querySelectorAll("video") ?? []);
+          g.fillStyle = "#111"; g.fillRect(0, 0, 1280, 720);
+          const n = Math.max(1, vids.length), cols = Math.ceil(Math.sqrt(n)), rows = Math.ceil(n / cols);
+          const w = 1280 / cols, h = 720 / rows;
+          vids.forEach((v, i) => { try { g.drawImage(v, (i % cols) * w, Math.floor(i / cols) * h, w, h); } catch { /* sem quadro */ } });
+        }, 66);
+        const misto = new MediaStream([...canvas.captureStream(15).getVideoTracks(), ...destino.stream.getAudioTracks()]);
+        videoRec = new MediaRecorder(misto);
+        videoRec.ondataavailable = (e) => e.data.size && pedacos.push(e.data);
+        videoRec.onstop = () => baixar(new Blob(pedacos, { type: videoRec!.mimeType || "video/webm" }), "webm");
+        videoRec.start(1000);
+      }
+      const partesAudio: Blob[] = [];
+      const audioRec = new MediaRecorder(destino.stream, { audioBitsPerSecond: 32000 });
+      audioRec.ondataavailable = (e) => e.data.size && partesAudio.push(e.data);
+      audioRec.onstop = () => {
+        const b = new Blob(partesAudio, { type: audioRec.mimeType || "audio/webm" });
+        if (!video) baixar(b, "webm");
+        if (b.size) gravRef.current?.(b);
+        void ctx.close();
+      };
+      audioRec.start(1000);
+      grav.current = {
+        video: videoRec, audio: audioRec, ctx,
+        parar: () => { clearInterval(tAudio); if (tDesenho) clearInterval(tDesenho); },
+      };
+      setGravando(true);
+    } catch {
+      setErro("Este navegador não permite gravar a chamada.");
+    }
+  };
+
+  const pararGravacao = () => {
+    const g = grav.current;
+    if (!g) return;
+    grav.current = null;
+    g.parar();
+    if (g.video?.state !== "inactive") g.video?.stop();
+    if (g.audio.state !== "inactive") g.audio.stop();
+    setGravando(false);
+  };
+  const pararRef = useRef(pararGravacao);
+  pararRef.current = pararGravacao;
+  useEffect(() => () => pararRef.current(), []);
 
   useEffect(() => {
     let ativo = true;
