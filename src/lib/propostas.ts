@@ -1,6 +1,5 @@
-import { textoDetalhe } from "@/lib/orcamentos";
 import DOMPurify from "dompurify";
-import { formatBRL, formatDate, modalidadeLabel, modalidadeOf, naturezaOf, num } from "@/lib/orcamentos";
+import { formatBRL, formatDate, modalidadeLabel, modalidadeOf, naturezaOf, num, textoDetalhe } from "@/lib/orcamentos";
 import { pick, type Row } from "@/lib/row";
 
 export type BlocoTipo = "CAPA" | "APRESENTACAO" | "ORCAMENTO" | "FECHAMENTO" | "CONTRATO";

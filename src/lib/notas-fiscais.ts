@@ -1,5 +1,4 @@
-import { textoDetalhe } from "@/lib/orcamentos";
-import { num, round2 } from "@/lib/orcamentos";
+import { num, round2, textoDetalhe } from "@/lib/orcamentos";
 import type { Row } from "@/lib/row";
 
 export type TipoNota = "nfe" | "nfse";
