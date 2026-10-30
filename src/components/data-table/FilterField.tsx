@@ -116,12 +116,14 @@ export function FilterInput({
   onChange: (value: string) => void;
   placeholder?: string;
 }) {
-  useRegister(value, onChange);
-  const id = useId();
+  const busca = ehBusca(label);
   const { idioma } = useIdioma();
-  label = termo(idioma, label);
+  const rotulo = termo(idioma, label);
+  useRegister(value, onChange, { busca, chip: `${rotulo}: ${value}` });
+  const id = useId();
+  label = rotulo;
   return (
-    <div>
+    <div data-busca={busca ? "1" : undefined}>
       <Label htmlFor={id} className="mb-1.5 block text-xs uppercase tracking-wide text-muted-foreground">{label}</Label>
       <div className="relative">
         <Input id={id} type="search" aria-label={label} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} className={value ? "pr-8" : undefined} />
@@ -151,10 +153,12 @@ export function FilterSelect({
   onChange: (value: string) => void;
   options: Array<{ value: string; label: string }>;
 }): ReactNode {
-  useRegister(value, onChange);
-  const id = useId();
   const { idioma } = useIdioma();
-  label = termo(idioma, label);
+  const rotulo = termo(idioma, label);
+  const opt = options.find((o) => o.value === value);
+  useRegister(value, onChange, { chip: `${rotulo}: ${opt ? termo(idioma, opt.label) : value}` });
+  const id = useId();
+  label = rotulo;
   return (
     <div>
       <Label htmlFor={id} className="mb-1.5 block text-xs uppercase tracking-wide text-muted-foreground">{label}</Label>
