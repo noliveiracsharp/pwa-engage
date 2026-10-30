@@ -126,9 +126,9 @@ function RelatorioEnvios() {
   const conta = (s: Status) => lista.filter((e) => e.status === s).length;
   const rastreados = lista.filter((e) => e.status !== "sem_rastreio").length;
   const taxa = rastreados ? Math.round((conta("lido") / rastreados) * 100) : 0;
-  const kpis = [
+  const kpis: { label: string; valor: number; sub?: string }[] = [
     { label: "Envios", valor: lista.length },
-    { label: "Lidos / abertos", valor: conta("lido"), sub: rastreados ? `${taxa}% dos rastreados` : undefined },
+    { label: "Lidos / abertos", valor: conta("lido"), ...(rastreados ? { sub: `${taxa}% dos rastreados` } : {}) },
     { label: "Entregues (não lidos)", valor: conta("entregue") },
     { label: "Falhas", valor: conta("falhou") },
   ];

@@ -163,12 +163,13 @@ export function PlannerPainel({ me, empresaId, usuarios, onFechar, embutido, aco
   const [aberta, setAberta] = useState<string | null>(null);
   const [reunioesAberto, setReunioesAberto] = useState(false);
   const [editarReuniao, setEditarReuniao] = useState<Reuniao | null>(null);
+  const qcReuniao = useQueryClient();
   const cancelarReuniao = async (r: Reuniao) => {
     if (!(await confirmar(`Cancelar a reunião "${r.titulo}"?`))) return;
     const x = await tb("reunioes").update({ cancelada: true } as never).eq("id", r.id);
     if (x.error) return void toast.error(x.error.message);
     toast.success("Reunião cancelada.");
-    void qc.invalidateQueries({ queryKey: ["reunioes", empresaId] });
+    void qcReuniao.invalidateQueries({ queryKey: ["reunioes", empresaId] });
   };
   const reunioes = useReunioes(empresaId).data ?? [];
   const { itens, concluir, planejar } = usePlannerItens(alvo, me);
