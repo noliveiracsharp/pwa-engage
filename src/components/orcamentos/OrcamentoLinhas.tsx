@@ -15,8 +15,21 @@ import {
 import { SearchSelect, type SearchOption } from "@/components/data-table/SearchSelect";
 import { rowId, useTableRows } from "@/lib/crud";
 import { Switch } from "@/components/ui/switch";
+import { RichEditor } from "@/components/orcamentos/RichEditor";
 import { NovoItemCompleto } from "@/components/itens/NovoItemCompleto";
 import { agruparPorBloco, calcLinha, formatBRL, formatPct, NATUREZAS, precoPorMarkup, num, type Linha, type Natureza } from "@/lib/orcamentos";
+
+/** Remove sujeira do editor (parágrafos vazios, estilos colados de Word/sites) mantendo a formatação básica. */
+function limparHtmlDetalhe(html: string) {
+  const h = html
+    .replace(/<!--[\s\S]*?-->/g, "")
+    .replace(/\s(class|lang|dir)="(?!prop-)[^"]*"/gi, "")
+    .replace(/<(span|font)>\s*<\/\1>/gi, "")
+    .replace(/(<p>(\s|&nbsp;|<br\s*\/?>)*<\/p>\s*)+$/gi, "")
+    .trim();
+  return textoDoHtml(h) ? h : "";
+}
+const textoDoHtml = (v: string) => v.replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
 
 function NaturezaBadge({ n }: { n: Natureza }) {
   const meta = NATUREZAS.find((x) => x.value === n)!;
@@ -336,18 +349,11 @@ export function OrcamentoLinhas({
                     </div>
                   </div>
 
+                  <div className="space-y-1.5 pl-7">
+                    <Label className="block text-xs font-medium">{tx("Detalhe")}</Label>
+                    <RichEditor value={l.detalhe} minHeight={90} onChange={(html) => onChange(l.key, { detalhe: limparHtmlDetalhe(html) })} />
+                  </div>
                   <div className="grid grid-cols-2 gap-3 pl-7 sm:grid-cols-12">
-                    <div className="col-span-2 space-y-1.5 sm:col-span-4">
-                      <Label htmlFor={`detalhe-${l.key}`} className="block text-xs font-medium">
-                        {tx("Detalhe")}
-                      </Label>
-                      <Input
-                        id={`detalhe-${l.key}`}
-                        value={l.detalhe}
-                        placeholder={tx("Observação da linha")}
-                        onChange={(e) => onChange(l.key, { detalhe: e.target.value })}
-                      />
-                    </div>
                     <div className="space-y-1.5 sm:col-span-2">
                       <Label htmlFor={`qtd-${l.key}`} className="block text-xs font-medium">
                         Quantidade
@@ -386,6 +392,17 @@ export function OrcamentoLinhas({
                         onChange={(val) => onChange(l.key, { valor_unitario: val })}
                       />
                     </div>
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <Label htmlFor={`desc-${l.key}`} className="block text-xs font-medium">Desconto (R$)</Label>
+                      <InputMoeda id={`desc-${l.key}`} value={l.desconto_linha} onChange={(val) => onChange(l.key, { desconto_linha: val })} />
+                    </div>
+                    {l.natureza === "recorrente" && (
+                      <div className="space-y-1.5 sm:col-span-2">
+                        <Label htmlFor={`ini-${l.key}`} className="block text-xs font-medium">Início da cobrança</Label>
+                        <Input id={`ini-${l.key}`} type="date" value={l.dt_inicio_faturamento} title="Vazio = início geral da Oferta"
+                          onChange={(e) => onChange(l.key, { dt_inicio_faturamento: e.target.value })} />
+                      </div>
+                    )}
                     <div className="space-y-1.5 sm:col-span-2">
                       <Label className="block text-xs font-medium">{tx("Total da linha")}</Label>
                       <div className="bg-muted/50 flex h-10 items-center justify-end rounded-md border px-3 text-sm font-semibold tabular-nums">
@@ -466,7 +483,7 @@ export function OrcamentoLinhas({
                       <p className="text-muted-foreground truncate text-xs">Marca: {nomeMarca}</p>
                     )}
                     {l.detalhe && (
-                      <p className="text-muted-foreground truncate text-xs">{l.detalhe}</p>
+                      <p className="text-muted-foreground truncate text-xs">{textoDoHtml(l.detalhe)}</p>
                     )}
                     <p className="text-muted-foreground text-xs">
                       {formatQtd(l.quantidade)} {unidadeLabel} × {formatBRL(num(l.valor_unitario))}
@@ -495,7 +512,7 @@ export function OrcamentoLinhas({
                       <p className="text-muted-foreground truncate text-xs">Marca: {nomeMarca}</p>
                     )}
                     {l.detalhe && (
-                      <p className="text-muted-foreground truncate text-xs">{l.detalhe}</p>
+                      <p className="text-muted-foreground truncate text-xs">{textoDoHtml(l.detalhe)}</p>
                     )}
                   </div>
                   <span className="text-right text-sm tabular-nums">
