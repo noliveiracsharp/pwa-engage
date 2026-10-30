@@ -1,3 +1,4 @@
+import { textoDetalhe } from "@/lib/orcamentos";
 import { num, round2 } from "@/lib/orcamentos";
 import type { Row } from "@/lib/row";
 
@@ -41,7 +42,7 @@ export function notasDaOferta(orc: Row, linhas: Row[], catalogo: Map<string, Row
     const g = grupos.get(chave) ?? { tipo, parceiro_id: pagador, valor: 0, itens: [] };
     g.itens.push({
       item_id: (l["item_id"] as string) ?? null,
-      descricao: String(l["detalhe"] || cat?.["descricao"] || "Item"),
+      descricao: String(textoDetalhe(l["detalhe"]) || cat?.["descricao"] || "Item"),
       quantidade: qtd, valor_unitario: unit, total,
       ncm: String(cat?.["ncm"] ?? "") || undefined,
       cfop: String(cat?.["cfop_padrao"] ?? "") || undefined,

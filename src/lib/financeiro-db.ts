@@ -1,3 +1,4 @@
+import { textoDetalhe } from "@/lib/orcamentos";
 import { supabase } from "@/integrations/supabase/client";
 import type { NovoTitulo, OrigemTitulo } from "@/lib/financeiro";
 import type { Row } from "@/lib/row";
@@ -78,7 +79,7 @@ export async function fontesDaOferta(itens: Row[]): Promise<FonteRateio[]> {
   return itens.map((i) => {
     const c = cls.get(String(i["item_id"] ?? ""));
     return {
-      item_id: (i["item_id"] as string) || null, descricao: String(i["detalhe"] ?? "") || c?.nome || "Item",
+      item_id: (i["item_id"] as string) || null, descricao: textoDetalhe(i["detalhe"]) || c?.nome || "Item",
       quantidade: Number(i["quantidade"] ?? 1) || 1, peso: Number(i["total_linha"] ?? 0) || 0,
       centro_custo_id: (i["centro_custo_id"] as string) || c?.centro || null, plano_contas_id: c?.conta ?? null,
       recorrente: String(i["natureza"] ?? "") === "recorrente", produto: String(i["natureza"] ?? "") === "produto", pagador: (i["faturar_para_id"] as string) || null,

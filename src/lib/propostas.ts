@@ -1,3 +1,4 @@
+import { textoDetalhe } from "@/lib/orcamentos";
 import DOMPurify from "dompurify";
 import { formatBRL, formatDate, modalidadeLabel, modalidadeOf, naturezaOf, num } from "@/lib/orcamentos";
 import { pick, type Row } from "@/lib/row";
@@ -341,7 +342,7 @@ export function gerarContratoModular(
   const itemById = new Map(c.itens.map((i) => [String(i["id"] ?? ""), i]));
   const nomeItem = (l: Row) => {
     const it = itemById.get(String(l["item_id"] ?? ""));
-    return [txt(it?.["descricao"]), txt(l["detalhe"])].filter(Boolean).join(" — ") || "Item";
+    return [txt(it?.["descricao"]), textoDetalhe(l["detalhe"])].filter(Boolean).join(" — ") || "Item";
   };
   const nat = (l: Row) => naturezaOf(l["natureza"], itemById.get(String(l["item_id"] ?? ""))?.["tipo"]);
   const recorrentes = c.linhas.filter((l) => nat(l) === "recorrente");

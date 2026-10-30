@@ -677,3 +677,13 @@ export function cronogramaCompra(opts: {
   }
   return [{ numero: 1, vencimento: inicio, valor: custo }];
 }
+
+/** Detalhe do item em texto puro (contrato, financeiro, nota fiscal, WhatsApp): o editor grava HTML. */
+export function textoDetalhe(v: unknown): string {
+  return String(v ?? "")
+    .replace(/<\/(p|div|li|h[1-6])>|<br\s*\/?>/gi, " ")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"')
+    .replace(/\s+/g, " ")
+    .trim();
+}
