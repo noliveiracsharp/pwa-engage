@@ -223,7 +223,7 @@ function CardTarefa({ t, me, nome, onAtualizar, onApagar }: {
 }
 
 export function NovaTarefa({ me, empresaId, usuarios, onCancel, onSaved, responsavelInicial, dataInicial }: {
-  me: string; empresaId: string; usuarios: Row[]; onCancel: () => void; responsavelInicial?: string; dataInicial?: string;
+  me: string; empresaId: string; usuarios: Row[]; onCancel: () => void; responsavelInicial?: string; dataInicial?: string | undefined;
   onSaved: (responsavel: string, titulo: string) => Promise<void>;
 }) {
   const [titulo, setTitulo] = useState("");
