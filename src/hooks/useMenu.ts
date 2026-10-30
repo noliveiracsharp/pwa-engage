@@ -62,9 +62,6 @@ export function useMenu() {
   const perfilId = usuario ? pick<string | number>(usuario, ["perfil_id", "id_perfil"]) : undefined;
 
   const { data: funcoes, dataUpdatedAt: funcoesAt } = useTableRows("funcoes");
-  const submenuIds = new Set(
-    (funcoes ?? []).filter((f) => f["menu_ativo"] === false).map((f) => String(f["id"])),
-  );
 
   // Tempo real global (useRealtimeRefresh) já invalida ["table","funcoes"] e ["table","menu"].
   const query = useQuery({
@@ -75,13 +72,14 @@ export function useMenu() {
       // Master: todas as funções ativas que são menu, ignorando planos/módulos/menu.
       if (isMaster) {
         const all = (funcoes ?? [])
-          .filter((f) => asBool(f["status"]) && f["menu_ativo"] !== false)
+          .filter((f) => asBool(f["status"]))
           .map((f, i) => ({
             id: String(pick(f, ["id"], `menu-${i}`)),
             label: String(pick(f, ["descricao", "nome"], "Menu")),
             path: String(pick(f, ["path"], "")),
             icon: String(pick(f, ["icone", "icon"], "circle")),
             order: Number(pick(f, ["ordem_hierarquia", "ordem"], i + 1)),
+            ...(pick(f, ["funcoes_pai_id"]) ? { parentId: String(pick(f, ["funcoes_pai_id"])) } : {}),
           }))
           .sort((a, b) => a.order - b.order);
         return all.length > 0 ? all : FALLBACK;
@@ -94,12 +92,8 @@ export function useMenu() {
       if (error || !data || data.length === 0) return DASHBOARD_ONLY;
 
       // Menu lateral: somente funcao_status = true e menu_ativo = true (da view, com fallback na tabela funcoes).
-      const rows = (data as Row[]).filter((row) => {
-        const menuAtivo = pick(row, ["menu_ativo", "funcao_menu_ativo"]);
-        const idFn = String(pick(row, ["funcao_id", "funcoes_id"]) ?? "");
-        const isMenu = menuAtivo !== undefined ? asBool(menuAtivo) : !submenuIds.has(idFn);
-        return asBool(row["can_read"]) && asBool(row["funcao_status"]) && isMenu;
-      });
+      // Todas as funções liberadas; filhas viram abas e levam o módulo raiz ao menu.
+      const rows = (data as Row[]).filter((row) => asBool(row["can_read"]) && asBool(row["funcao_status"]));
 
       const items = rows.map(normalize).sort((a, b) => a.order - b.order);
 
@@ -115,42 +109,57 @@ export function useMenu() {
       return unique.length > 0 ? unique : DASHBOARD_ONLY;
     },
   });
-  // Itens com menu_ativo = false são abas dentro da página pai, não aparecem no menu lateral.
-  const flat = query.data?.filter((item) => !submenuIds.has(item.id));
-  const data = flat ? buildMenuTree(flat, funcoes ?? []) : flat;
+  const data = query.data ? buildFlatMenu(query.data, funcoes ?? []) : query.data;
   return { ...query, data };
 }
 
-/** Funções com funcoes_pai_id e menu ativo viram submenu (drilldown) do pai. */
-function buildMenuTree(items: (MenuItem & { parentId?: string })[], funcoes: Row[]): MenuItem[] {
-  const parentOf = new Map<string, string>();
-  for (const f of funcoes) {
-    const pai = pick(f, ["funcoes_pai_id"]);
-    if (pai) parentOf.set(String(f["id"]), String(pai));
+/**
+ * Menu lateral 100% plano: só módulos raiz, sempre clicáveis.
+ * Funções filhas nunca aparecem no menu — são abas da tela do módulo raiz.
+ * Ter acesso a uma aba já exibe o módulo raiz (sem itens soltos/duplicados).
+ */
+export function buildFlatMenu(items: (MenuItem & { parentId?: string })[], funcoes: Row[]): MenuItem[] {
+  const byId = new Map(funcoes.map((f) => [String(f["id"]), f]));
+  const paiDe = (id: string, fallback?: string) => String(pick(byId.get(id) ?? {}, ["funcoes_pai_id"]) ?? fallback ?? "");
+  const raizDe = (id: string, fallback?: string): string => {
+    let atual = id;
+    let pai = paiDe(atual, fallback);
+    const vistos = new Set<string>([atual]);
+    while (pai && !vistos.has(pai) && (byId.has(pai) || pai === fallback)) {
+      vistos.add(pai);
+      atual = pai;
+      pai = paiDe(atual);
+    }
+    return atual;
+  };
+  const porRaiz = new Map<string, MenuItem & { primeiroFilho?: string }>();
+  const ordenados = [...items].sort((a, b) => a.order - b.order);
+  for (const item of ordenados) {
+    const raizId = raizDe(item.id, item.parentId);
+    const ehRaiz = raizId === item.id;
+    const f = byId.get(raizId);
+    // Raiz desativada ou oculta pelo cliente: o módulo inteiro some.
+    if (!ehRaiz && f && (f["status"] === false || f["menu_ativo"] === false)) continue;
+    if (ehRaiz && f && f["menu_ativo"] === false) continue;
+    const atual = porRaiz.get(raizId);
+    if (ehRaiz) {
+      porRaiz.set(raizId, { ...(atual ?? {}), id: item.id, label: item.label, path: item.path || atual?.path || "", icon: item.icon, order: item.order, primeiroFilho: atual?.primeiroFilho });
+      continue;
+    }
+    if (atual) { if (!atual.primeiroFilho && item.path) atual.primeiroFilho = item.path; continue; }
+    porRaiz.set(raizId, {
+      id: raizId,
+      label: String(pick(f ?? {}, ["descricao", "nome"], item.label)),
+      path: String(pick(f ?? {}, ["path"], "") ?? ""),
+      icon: String(pick(f ?? {}, ["icone", "icon"], item.icon)),
+      order: Number(pick(f ?? {}, ["ordem"], item.order)),
+      primeiroFilho: item.path || undefined,
+    });
   }
-  // O pai informado pela própria view de permissões tem prioridade.
-  for (const i of items) if (i.parentId) parentOf.set(i.id, i.parentId);
-  const byId = new Map(items.map((i) => {
-    const { parentId: _p, ...rest } = i;
-    return [i.id, { ...rest, children: [] as MenuItem[] }];
-  }));
-  const roots: MenuItem[] = [];
-  for (const item of byId.values()) {
-    const pai = parentOf.get(item.id);
-    const parent = pai && pai !== item.id ? byId.get(pai) : undefined;
-    if (parent) parent.children!.push(item);
-    else roots.push(item);
-  }
-  const clean = (list: MenuItem[]): MenuItem[] =>
-    list
-      .sort((a, b) => a.order - b.order)
-      .map((i) => ({ ...i, children: i.children?.length ? clean(i.children) : undefined }));
-  // Agrupador sem rota e sem subitens visíveis não tem ação: some do menu.
-  const semAcao = (list: MenuItem[]): MenuItem[] =>
-    list
-      .filter((i) => i.path || i.children?.length)
-      .map((i) => ({ ...i, children: i.children ? semAcao(i.children) : undefined }));
-  return semAcao(clean(roots));
+  return [...porRaiz.values()]
+    .map(({ primeiroFilho, ...m }) => ({ ...m, path: m.path || primeiroFilho || "", children: undefined }))
+    .filter((m) => m.path)
+    .sort((a, b) => a.order - b.order);
 }
 
 /** Abas da página pai: funções filhas com menu_ativo = false que o perfil pode ler. */
@@ -161,7 +170,7 @@ export function useSubmenuAbas(pathPai: string) {
   const pai = funcoes.find((f) => String(f["path"] ?? "") === pathPai);
   const paiId = pai ? String(pai["id"]) : "";
   const filhas = funcoes
-    .filter((f) => paiId && String(f["funcoes_pai_id"] ?? "") === paiId && f["menu_ativo"] === false && asBool(f["status"]))
+    .filter((f) => paiId && String(f["funcoes_pai_id"] ?? "") === paiId && asBool(f["status"]))
     .sort((a, b) => Number(pick(a, ["ordem_hierarquia", "ordem"]) ?? 0) - Number(pick(b, ["ordem_hierarquia", "ordem"]) ?? 0));
 
   const { data: leitura } = useQuery({

@@ -45,7 +45,7 @@ function EmpresasPage() {
     const paiId = pai ? String(rowId(pai) ?? "") : "";
     const definidas = new Set(
       funcoes
-        .filter((x) => paiId && String(pick(x, ["funcoes_pai_id"]) ?? "") === paiId && x["menu_ativo"] === false && x["status"] !== false)
+        .filter((x) => paiId && String(pick(x, ["funcoes_pai_id"]) ?? "") === paiId && x["status"] !== false)
         .map((x) => subtabKind({ id: String(rowId(x) ?? ""), descricao: String(x["descricao"] ?? "") })),
     );
     const base = [

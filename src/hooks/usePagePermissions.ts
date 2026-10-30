@@ -83,11 +83,8 @@ export function usePagePermissions(path: string) {
           pick(funcById.get(id) ?? {}, ["funcoes_pai_id"]) ??
           "",
       );
-    const isSubmenu = (id: string, r?: Row) => {
-      const v = r ? pick(r, ["menu_ativo", "funcao_menu_ativo"]) : undefined;
-      if (v !== undefined) return !asBool(v);
-      return funcById.get(id)?.["menu_ativo"] === false;
-    };
+    // Menu plano: toda função filha é aba da tela pai.
+    const isSubmenu = (_id: string, _r?: Row) => true;
 
     let subtabs: SubTab[];
     if (!unrestricted && viewRows) {
@@ -119,7 +116,6 @@ export function usePagePermissions(path: string) {
           (f) =>
             pageId !== "" &&
             String(pick(f, ["funcoes_pai_id"]) ?? "") === pageId &&
-            f["menu_ativo"] === false &&
             f["status"] !== false,
         )
         .sort(
@@ -130,7 +126,7 @@ export function usePagePermissions(path: string) {
         .map((f) => ({ id: String(rowId(f) ?? ""), descricao: String(f["descricao"] ?? ""), ...ALL }));
     }
 
-    return { ...page, loading: isLoading, subtabs, hasSubtabDefinitions: funcoes.some((f) => pageId && String(pick(f, ["funcoes_pai_id"]) ?? "") === pageId && f["menu_ativo"] === false) };
+    return { ...page, loading: isLoading, subtabs, hasSubtabDefinitions: funcoes.some((f) => pageId && String(pick(f, ["funcoes_pai_id"]) ?? "") === pageId) };
   }, [viewRows, funcoes, path, isLoading]);
 }
 
