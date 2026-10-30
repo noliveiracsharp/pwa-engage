@@ -259,6 +259,7 @@ export function SalaWebRTC({ sala, nome, video, onSair, onParticipante, classNam
       ativo = false;
       peers.current.forEach((pc) => pc.close());
       peers.current.clear();
+      proc.current?.parar(); proc.current = null;
       localRef.current?.getTracks().forEach((t) => t.stop());
       supabase.removeChannel(canal);
     };
