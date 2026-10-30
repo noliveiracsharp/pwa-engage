@@ -128,8 +128,15 @@ function ProjetosPage() {
   };
   const abrirTarefa = (id: string) => navigate({ search: (p) => ({ ...p, tarefa: id }) });
   const fecharTarefa = () => navigate({ search: ({ tarefa: _t, ...p }) => p });
+  const espTarefa = tarefaDireta
+    ? String(tarefaDireta["espaco_id"] ?? d.projetos.find((p) => String(rowId(p)) === projetoDaTarefa)?.["espaco_id"] ?? "") || null
+    : null;
+  const statusTarefa = tarefaDireta
+    ? [...statusDoEspaco(d, espTarefa)].sort((a, b) => Number(a[d.sc.ordem] ?? 0) - Number(b[d.sc.ordem] ?? 0))
+    : [];
   const sheetDireta = tarefaDireta ? (
-    <TarefaSheet tarefa={tarefaDireta} isNew={false} projetoId={projetoDaTarefa} perms={perms}
+    <TarefaSheet tarefa={tarefaDireta} isNew={false} projetoId={projetoDaTarefa} perms={perms} espacoId={espTarefa}
+      statusId={String(tarefaDireta["status_id"] ?? "") || undefined} statusOpcoes={statusTarefa} statusNomeCol={d.sc.nome}
       tarefasDoProjeto={d.tarefas.filter((t) => String(t[d.tc.projeto] ?? "") === projetoDaTarefa)}
       onClose={fecharTarefa} />
   ) : null;
