@@ -1,7 +1,9 @@
 /** Fundo virtual da câmera (desfoque ou imagem) via segmentação de pessoa no navegador. Só usar no cliente. */
 export type ModoFundo = { tipo: "nenhum" } | { tipo: "desfoque" } | { tipo: "imagem"; url: string };
 
-const VER = "0.10.22";
+// Deve ser a MESMA versão instalada de @mediapipe/tasks-vision (JS e WASM incompatíveis quebram o fundo).
+const VER = "1.2.0";
+const MODELO = "https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite";
 let segP: Promise<any> | null = null;
 
 async function segmentador() {
@@ -9,15 +11,14 @@ async function segmentador() {
     segP = (async () => {
       const { FilesetResolver, ImageSegmenter } = await import("@mediapipe/tasks-vision");
       const fs = await FilesetResolver.forVisionTasks(`https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${VER}/wasm`);
-      return ImageSegmenter.createFromOptions(fs, {
-        baseOptions: {
-          modelAssetPath: "https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite",
-          delegate: "GPU",
-        },
-        runningMode: "VIDEO",
-        outputCategoryMask: false,
-        outputConfidenceMasks: true,
-      });
+      const criar = (delegate: "GPU" | "CPU") =>
+        ImageSegmenter.createFromOptions(fs, {
+          baseOptions: { modelAssetPath: MODELO, delegate },
+          runningMode: "VIDEO",
+          outputCategoryMask: false,
+          outputConfidenceMasks: true,
+        });
+      try { return await criar("GPU"); } catch { return await criar("CPU"); }
     })().catch((e) => { segP = null; throw e; });
   }
   return segP;
