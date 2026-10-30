@@ -236,16 +236,24 @@ function DespesaSheet({ registro, cartoes, lanc, readOnly, onClose, onSaved }: {
 
   const previaComprovante = useUrlAssinada(v.comprovante);
 
-  const enviar = async (original: File) => {
+  const enviar = async (recebido: File) => {
     setLendo(true);
     try {
+      let original = recebido;
+      if (/image\/hei[cf]/i.test(recebido.type) || /\.hei[cf]$/i.test(recebido.name)) {
+        const heic2any = (await import("heic2any")).default;
+        const out = await heic2any({ blob: recebido, toType: "image/jpeg", quality: 0.9 });
+        const blob = Array.isArray(out) ? out[0] : out;
+        original = new File([blob], recebido.name.replace(/\.[^.]+$/, "") + ".jpg", { type: "image/jpeg" });
+      }
       const pdf = original.type === "application/pdf";
       const file = pdf ? original : await comprimirImagem(original, "laudo");
       const ref = await enviarPrivado(file, "reembolsos");
       const url = await urlAssinada(ref);
       setV((s) => ({ ...s, comprovante: ref }));
       toast.info("Lendo o comprovante…");
-      const r = await ler({ data: { url, pdf } });
+      const { data: s } = await supabase.auth.getSession();
+      const r = await ler({ data: { url, pdf, token: s.session?.access_token } });
       if (r.erro) return void toast.warning(r.erro);
       setV((s) => ({
         ...s,
