@@ -10,9 +10,6 @@ import { toast } from "sonner";
 import { DataTable, type Column } from "@/components/data-table/DataTable";
 import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
 import { CotacaoSheet } from "@/components/cotacoes/CotacaoSheet";
-import { ConfigAprovacaoDialog } from "@/components/cotacoes/AprovacaoCompras";
-import { ShieldCheck } from "lucide-react";
-import { ModelosMensagemButton } from "@/components/layout/ModelosMensagem";
 import { supabase } from "@/integrations/supabase/client";
 import { useSaveOrcamento, type LinhaPayload } from "@/hooks/useSaveOrcamento";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
@@ -52,7 +49,6 @@ function CotacoesPage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const perms = usePagePermissions("/cotacoes");
-  const secoesCot = useSecoes("/cotacoes", [{ key: "workflow", label: "Workflow de aprovação" }]);
   const { data: cotacoes = [], isLoading } = useTableRows("cotacoes");
   const { data: itensCot = [] } = useTableRows("cotacoes_itens");
   const { data: fornCot = [] } = useTableRows("cotacoes_fornecedores");
@@ -68,7 +64,6 @@ function CotacoesPage() {
   const saveOrc = useSaveOrcamento();
   const { empresaId } = useAudit();
 
-  const [wfOpen, setWfOpen] = useState(false);
   const [novoTitulo, setNovoTitulo] = useState<string | null>(null);
   const [criando, setCriando] = useState(false);
   const novaCotacao = () => setNovoTitulo("");

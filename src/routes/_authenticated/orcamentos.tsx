@@ -6,8 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { etapasDoKanban, kanbanDoModuloOrcamentos } from "@/lib/orcamento-kanban";
 import { corEtapa } from "@/lib/kanban-cores";
 import { createFileRoute } from "@tanstack/react-router";
-import { ChevronDown, Copy, FileSignature, FileText, Inbox, Info, MessageCircle, Rocket, ScrollText, ShoppingCart, Thermometer, Trash2, Wallet } from "lucide-react";
-import { CaptacaoLeadsDialog } from "@/components/orcamentos/CaptacaoLeadsDialog";
+import { ChevronDown, Copy, FileSignature, FileText, Info, Rocket, ScrollText, ShoppingCart, Thermometer, Trash2, Wallet } from "lucide-react";
 import { BarraAcoesLote, useAcoesComuns } from "@/components/data-table/AcoesLote";
 import { TEMPERATURAS, temperaturaEfetiva } from "@/lib/temperatura";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -45,10 +44,7 @@ import { AtivacaoOfertaDialog } from "@/components/orcamentos/AtivacaoOfertaDial
 import { ofertaTravada, situacaoAtivada } from "@/lib/oferta-ativacao";
 import { executarHandoff } from "@/lib/kanban-handoff";
 import { confirmar } from "@/components/layout/DialogoGlobal";
-import { ReguaOfertas } from "@/components/orcamentos/ReguaOfertas";
-import { ConfigAprovacaoOfertaDialog } from "@/components/orcamentos/AprovacaoOfertas";
 import { ofertaLiberada } from "@/lib/aprovacao-ofertas";
-import { ShieldCheck } from "lucide-react";
 
 const avisoBloqueio = () => toast.warning(tx("Oferta aguardando aprovação do gestor. Abra a oferta para ver o andamento."));
 
@@ -170,9 +166,6 @@ function OrcamentosPage() {
   const [duplicarDe, setDuplicarDe] = useState<{ record: Row; linhas: Row[] } | null>(null);
   const [ativar, setAtivarRaw] = useState<Row | null>(null);
   const setAtivar = (r: Row | null) => { if (r && !ofertaLiberada(r["aprovacao_status"])) { avisoBloqueio(); return; } setAtivarRaw(r); };
-  const [wfOpen, setWfOpen] = useState(false);
-  const [reguaOpen, setReguaOpen] = useState(false);
-  const [leadsOpen, setLeadsOpen] = useState(false);
 
   const gerarContas = async (r: Row) => {
     const id = String(rowId(r) ?? "");
