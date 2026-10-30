@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, CheckCircle2, Circle, Inbox, MessageSquare, Printer, X } from "lucide-react";
+import { CalendarClock, ChevronLeft, ChevronRight, CheckCircle2, Circle, Inbox, MessageSquare, Printer, Video, X } from "lucide-react";
+import { ReunioesPainel, linkReuniao, useReunioes } from "@/components/chat-interno/ReunioesPainel";
 import { TarefaDetalhe, registrarEvento } from "@/components/chat-interno/TarefaDetalhe";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -146,7 +147,7 @@ export function ItemLinha({ i, onCheck, compacto, editavel = true, onAbrir, nome
 }
 
 /** Planner completo em tela cheia: backlog + semana + performance + relatório. */
-export function PlannerPainel({ me, usuarios, onFechar }: { me: string; usuarios: Row[]; onFechar: () => void }) {
+export function PlannerPainel({ me, empresaId, usuarios, onFechar }: { me: string; empresaId: string; usuarios: Row[]; onFechar: () => void }) {
   const { isMaster, usuario } = useAuth();
   const permUsuarios = usePagePermissions("/usuarios");
   const gestor = isMaster || permUsuarios.canUpdate;
@@ -157,6 +158,8 @@ export function PlannerPainel({ me, usuarios, onFechar }: { me: string; usuarios
   const [ate, setAte] = useState(hoje());
   const [arrastando, setArrastando] = useState<string | null>(null);
   const [aberta, setAberta] = useState<string | null>(null);
+  const [reunioesAberto, setReunioesAberto] = useState(false);
+  const reunioes = useReunioes(empresaId).data ?? [];
   const { itens, concluir, planejar } = usePlannerItens(alvo, me);
   const proprio = alvo === me;
   const mapaNomes = useMemo(() => new Map(usuarios.map((u) => [String(u["id"]), String(pick(u, ["nome"], "Usuário"))])), [usuarios]);
@@ -186,6 +189,13 @@ export function PlannerPainel({ me, usuarios, onFechar }: { me: string; usuarios
           <span className="text-muted-foreground">{lista.filter((i) => i.status === "concluida").length}/{lista.length}{min ? ` • ${horas(min)}` : ""}</span>
         </div>
         <div className="space-y-1.5">
+          {dia && reunioes.filter((r) => !r.cancelada && (r.criado_por === alvo || r.participantes.includes(alvo)) && new Date(r.inicio).toLocaleDateString("sv-SE") === dia).map((r) => (
+            <button key={r.id} type="button" onClick={() => window.open(`${linkReuniao(r)}${r.video ? "?" : "&"}org=${r.id}`, "_blank")}
+              className="flex w-full items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 p-2 text-left text-xs hover:bg-primary/20">
+              <Video className="h-3.5 w-3.5 shrink-0 text-primary" />
+              <span className="min-w-0 flex-1"><b className="block truncate">{r.titulo}</b>{new Date(r.inicio).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} · {r.duracao_min} min</span>
+            </button>
+          ))}
           {lista.map((i) => (
             <div key={i.id} draggable={proprio && i.origem === "tarefa"} onDragStart={() => setArrastando(i.id)} className={cn(proprio && i.origem === "tarefa" && "cursor-grab")}>
               <ItemLinha i={i} nome={nomeDe} editavel={proprio} onCheck={(f) => void concluir(i, f)} onAbrir={() => setAberta(i.id)} />
@@ -214,8 +224,10 @@ export function PlannerPainel({ me, usuarios, onFechar }: { me: string; usuarios
             Trazer {atrasadas.length} pendência(s) para hoje
           </Button>
         )}
+        <Button size="sm" variant="outline" onClick={() => setReunioesAberto(true)}><CalendarClock className="mr-1 h-4 w-4" /> Reuniões</Button>
         <Button size="sm" variant="ghost" aria-label="Fechar planner" onClick={onFechar}><X className="h-5 w-5" /></Button>
       </div>
+      {reunioesAberto && <ReunioesPainel me={me} empresaId={empresaId} usuarios={usuarios} onFechar={() => setReunioesAberto(false)} />}
       <TarefaDetalhe id={aberta} me={me} usuarios={usuarios} onFechar={() => setAberta(null)} />
 
       <div className="min-h-0 flex-1 overflow-auto p-4">

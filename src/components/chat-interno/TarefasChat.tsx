@@ -122,7 +122,7 @@ export function TarefasChat({ me, empresaId, usuarios, onAvisar }: {
         <Button size="icon" variant="outline" className="h-8 w-8" aria-label="Expandir planner" title="Expandir planner" onClick={() => setExpandido(true)}><Maximize2 className="h-4 w-4" /></Button>
       </div>
       <TarefaDetalhe id={aberta} me={me} usuarios={usuarios} onFechar={() => setAberta(null)} onAvisar={onAvisar} />
-      {expandido && <PlannerPainel me={me} usuarios={usuarios} onFechar={() => setExpandido(false)} />}
+      {expandido && <PlannerPainel me={me} empresaId={empresaId} usuarios={usuarios} onFechar={() => setExpandido(false)} />}
       {aba === "minhas" && (
         <div className="flex gap-1 px-4 pb-2 text-[11px]">
           {([["hoje", "Hoje"], ["proximos", "Próximos"], ["backlog", "Backlog"], ["concluidas", "Concluídas"]] as const).map(([v, l]) => (

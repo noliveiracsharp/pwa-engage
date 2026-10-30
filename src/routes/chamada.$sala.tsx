@@ -4,6 +4,8 @@ import { Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SalaWebRTC } from "@/components/atendimentos/SalaWebRTC";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 export const Route = createFileRoute("/chamada/$sala")({
   staticData: { sitemap: false },
@@ -27,9 +29,18 @@ function ChamadaPublica() {
   const [nome, setNome] = useState("");
   const [entrou, setEntrou] = useState(false);
   const [saiu, setSaiu] = useState(false);
+  const { usuario } = useAuth();
+  const [org, setOrg] = useState(false);
   useEffect(() => {
-    setAudio(new URLSearchParams(window.location.search).get("audio") === "1");
-  }, []);
+    const qs = new URLSearchParams(window.location.search);
+    setAudio(qs.get("audio") === "1");
+    const rid = qs.get("org");
+    const uid = usuario?.["id"] ? String(usuario["id"]) : "";
+    if (usuario?.["nome"]) setNome((n) => n || String(usuario["nome"]));
+    if (!rid || !uid) return;
+    void (supabase.from("reunioes" as never) as any).select("criado_por,sala").eq("id", rid).maybeSingle()
+      .then(({ data }: { data: { criado_por: string; sala: string } | null }) => setOrg(!!data && data.sala === sala && String(data.criado_por) === uid));
+  }, [usuario, sala]);
   const valida = /^atendeai-[a-z0-9]+$/.test(sala);
 
   if (!valida) {
@@ -40,7 +51,7 @@ function ChamadaPublica() {
   }
   if (entrou) {
     return (
-      <div className="h-[100dvh]"><SalaWebRTC sala={sala} nome={nome || "Cliente"} video={!audio} onSair={() => { setEntrou(false); setSaiu(true); }} /></div>
+      <div className="h-[100dvh]"><SalaWebRTC sala={sala} nome={nome || "Cliente"} video={!audio} gravavel={org} onSair={() => { setEntrou(false); setSaiu(true); }} /></div>
     );
   }
   return (
