@@ -38,19 +38,21 @@ export function SubmenuTabs({ children }: { children: ReactNode }) {
   };
 
   return (
-    <Tabs value={ativa} onValueChange={trocar} className="space-y-4">
-      <TabsList className="h-auto w-full flex-wrap">
-        {!semPrincipal && (
-          <TabsTrigger value={PAGINA} className="flex-1">
-            {String(pick(pai ?? {}, ["descricao", "nome"]) ?? "Principal")}
-          </TabsTrigger>
-        )}
-        {abas.map((a) => (
-          <TabsTrigger key={a.id} value={a.path} className="flex-1">
-            {a.label}
-          </TabsTrigger>
-        ))}
-      </TabsList>
+    <Tabs value={ativa} onValueChange={trocar} className="min-w-0 space-y-4">
+      <div className="min-w-0 overflow-x-auto">
+        <TabsList className="h-9 w-max justify-start">
+          {!semPrincipal && (
+            <TabsTrigger value={PAGINA} className="px-3 text-sm">
+              {String(pick(pai ?? {}, ["descricao", "nome"]) ?? "Principal")}
+            </TabsTrigger>
+          )}
+          {abas.map((a) => (
+            <TabsTrigger key={a.id} value={a.path} className="px-3 text-sm">
+              {a.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </div>
       {!semPrincipal && <TabsContent value={PAGINA}>{children}</TabsContent>}
       {abas.map((a) => {
         const C = SUBMENU_REGISTRY[a.path]!;
