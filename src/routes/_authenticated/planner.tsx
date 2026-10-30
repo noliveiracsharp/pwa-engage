@@ -30,7 +30,7 @@ function PlannerPagina() {
   const me = String(pick(usuario, ["id"]) ?? "");
   const empresaId = String(pick(usuario, ["empresa_id", "id_empresa"]) ?? "");
   const qc = useQueryClient();
-  const [criando, setCriando] = useState(false);
+  const [criando, setCriando] = useState<string | false>(false);
   const [aceites, setAceites] = useState(false);
   const { data: pendentes = 0 } = useQuery({
     queryKey: ["tarefas-usuarios", me, "pendentes"],
@@ -61,12 +61,12 @@ function PlannerPagina() {
   if (!me) return null;
   return (
     <div className="p-4">
-      <PlannerPainel embutido me={me} empresaId={empresaId} usuarios={usuarios}
+      <PlannerPainel embutido onNovaTarefa={(d) => setCriando(d)} me={me} empresaId={empresaId} usuarios={usuarios}
         acoes={<>
           <Button size="sm" variant={pendentes ? "default" : "outline"} onClick={() => setAceites(true)}>
             <Inbox className="mr-1 h-4 w-4" /> Aguardando aceite{pendentes ? ` (${pendentes})` : ""}
           </Button>
-          <Button size="sm" onClick={() => setCriando(true)}><Plus className="mr-1 h-4 w-4" /> Nova tarefa</Button>
+          <Button size="sm" onClick={() => setCriando("")}><Plus className="mr-1 h-4 w-4" /> Nova tarefa</Button>
         </>} />
       {aceites && (
         <div className="fixed inset-0 z-[80] flex justify-end bg-foreground/30" onClick={() => setAceites(false)}>
@@ -81,10 +81,10 @@ function PlannerPagina() {
           </div>
         </div>
       )}
-      {criando && (
+      {criando !== false && (
         <div className="fixed inset-0 z-[80] flex justify-end bg-foreground/30" onClick={() => setCriando(false)}>
           <div className="h-full w-full overflow-y-auto bg-background md:w-[60%]" onClick={(e) => e.stopPropagation()}>
-            <NovaTarefa me={me} empresaId={empresaId} usuarios={usuarios} onCancel={() => setCriando(false)} onSaved={async (resp, titulo) => {
+            <NovaTarefa dataInicial={criando || undefined} me={me} empresaId={empresaId} usuarios={usuarios} onCancel={() => setCriando(false)} onSaved={async (resp, titulo) => {
               setCriando(false);
               void qc.invalidateQueries({ queryKey: ["tarefas-usuarios", me] });
               void qc.invalidateQueries({ queryKey: ["planner", me] });
