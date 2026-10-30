@@ -23,7 +23,6 @@ export const presencial = (r: Pick<Reuniao, "modalidade">) => r.modalidade === "
 export const novaReuniao = (me: string, inicio: Date, duracao = 60): Reuniao => ({ id: "", titulo: "", pauta: "", inicio: inicio.toISOString(), duracao_min: duracao, sala: novaSala(), video: true, criado_por: me, participantes: [], convidados: [], cancelada: false, modalidade: "online", local: "" });
 
 function novaSala() { return `atendeai-${Math.random().toString(36).slice(2, 8)}${Date.now().toString(36)}`; }
-const _novaSalaAntiga = () => `atendeai-${Math.random().toString(36).slice(2, 8)}${Date.now().toString(36)}`;
 export const linkReuniao = (r: Pick<Reuniao, "sala" | "video">) =>
   `${typeof window !== "undefined" ? window.location.origin : ""}/chamada/${r.sala}${r.video ? "" : "?audio=1"}`;
 const quando = (iso: string) => new Date(iso).toLocaleString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
