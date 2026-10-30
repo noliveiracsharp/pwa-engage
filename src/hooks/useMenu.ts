@@ -3,6 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { pick, type Row } from "@/lib/row";
 import { useAuth } from "@/hooks/useAuth";
 import { useTableRows } from "@/lib/crud";
+import { SUBMENU_REGISTRY } from "@/lib/submenu-registry";
+
+// Só caminhos que são telas de verdade podem substituir a rota de um módulo sem rota (evita 404).
+const ROTAS_TELA = new Set(Object.keys(SUBMENU_REGISTRY).filter((p) => !/^\/(orcamentos|cotacoes)\//.test(p)));
 
 export type MenuItem = {
   id: string;
@@ -139,21 +143,20 @@ export function buildFlatMenu(items: (MenuItem & { parentId?: string })[], funco
     const ehRaiz = raizId === item.id;
     const f = byId.get(raizId);
     // Raiz desativada ou oculta pelo cliente: o módulo inteiro some.
-    if (!ehRaiz && f && (f["status"] === false || f["menu_ativo"] === false)) continue;
-    if (ehRaiz && f && f["menu_ativo"] === false) continue;
+    if (!ehRaiz && f && f["status"] === false) continue;
     const atual = porRaiz.get(raizId);
     if (ehRaiz) {
       porRaiz.set(raizId, { ...(atual ?? {}), id: item.id, label: item.label, path: item.path || atual?.path || "", icon: item.icon, order: item.order, primeiroFilho: atual?.primeiroFilho });
       continue;
     }
-    if (atual) { if (!atual.primeiroFilho && item.path) atual.primeiroFilho = item.path; continue; }
+    if (atual) { if (!atual.primeiroFilho && item.path && ROTAS_TELA.has(item.path)) atual.primeiroFilho = item.path; continue; }
     porRaiz.set(raizId, {
       id: raizId,
       label: String(pick(f ?? {}, ["descricao", "nome"], item.label)),
       path: String(pick(f ?? {}, ["path"], "") ?? ""),
       icon: String(pick(f ?? {}, ["icone", "icon"], item.icon)),
       order: Number(pick(f ?? {}, ["ordem"], item.order)),
-      primeiroFilho: item.path || undefined,
+      primeiroFilho: item.path && ROTAS_TELA.has(item.path) ? item.path : undefined,
     });
   }
   return [...porRaiz.values()]

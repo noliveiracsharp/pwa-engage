@@ -256,14 +256,7 @@ function CotacoesPage() {
     <>
       <div className="mb-3 flex flex-wrap justify-end gap-2">
         <Button variant="outline" size="sm" className="mr-auto" onClick={() => navigate({ to: "/kanban" })}><KanbanSquare className="mr-1 h-4 w-4" />Ver no Kanban</Button>
-        {perms.canUpdate && (
-          <>
-            <ModelosMensagemButton empresaId={empresaId} />
-            {secoesCot["workflow"]?.canUpdate && <Button variant="outline" size="sm" onClick={() => setWfOpen(true)}><ShieldCheck className="mr-1 h-4 w-4" />Workflow de aprovação</Button>}
-          </>
-        )}
       </div>
-      <ConfigAprovacaoDialog open={wfOpen} onOpenChange={setWfOpen} />
       <DataTable
         title="Cotações de Compras"
         columns={columns}

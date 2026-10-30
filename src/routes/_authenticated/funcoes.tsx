@@ -33,7 +33,6 @@ const baseFields: Field[] = [
   { fields: ["path"], label: "Caminho (rota)", placeholder: "/pessoas" },
   { fields: ["icone"], label: "Ícone", type: "icon" },
   { fields: ["ordem"], label: "Ordem (posição no menu, dentro do grupo)", type: "number" },
-  { fields: ["menu_ativo"], label: "Exibe no menu lateral (só módulos principais; itens filhos viram abas da tela pai)", type: "boolean" },
   { fields: ["status"], label: "Status", type: "boolean" },
 ];
 
@@ -78,7 +77,7 @@ function FuncoesPage() {
   });
   const [open, setOpen] = useState(false);
   const [record, setRecord] = useState<Row | null>(null);
-  const [f, setF] = useState({ busca: "", menu: "todos", status: "todos" });
+  const [f, setF] = useState({ busca: "", status: "todos" });
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(() => new Set());
 
   const hierarchy = useMemo(() => {
@@ -99,7 +98,6 @@ function FuncoesPage() {
     const matches = ordered.filter(
       (row) =>
         matchesAny([pick(row, ["descricao"]), pick(row, ["path"]), pick(row, ["icone"])], f.busca) &&
-        (f.menu === "todos" || (f.menu === "ativo" ? row["menu_ativo"] === true : row["menu_ativo"] === false)) &&
         (f.status === "todos" || (f.status === "ativo" ? row["status"] === true : row["status"] === false)),
     );
     const included = new Set(matches.map((row) => String(rowId(row) ?? "")));
@@ -116,7 +114,7 @@ function FuncoesPage() {
     const depthById = new Map<string, number>();
     const visible: Row[] = [];
     const visited = new Set<string>();
-    const hasActiveFilter = f.busca.trim() !== "" || f.menu !== "todos" || f.status !== "todos";
+    const hasActiveFilter = f.busca.trim() !== "" || f.status !== "todos";
     const append = (row: Row, depth: number, ancestors: Set<string>) => {
       const id = String(rowId(row) ?? "");
       if (!id || visited.has(id) || ancestors.has(id) || !included.has(id)) return;
@@ -166,12 +164,6 @@ function FuncoesPage() {
   const columns: Column[] = [
     { key: "descricao", header: "Descrição", fields: ["descricao"] },
     { key: "path", header: "Caminho", fields: ["path"] },
-    {
-      key: "menu",
-      header: "Menu ativo",
-      fields: ["menu_ativo"],
-      render: (row) => <StatusBadge value={row["menu_ativo"]} />,
-    },
     {
       key: "status",
       header: "Status",
@@ -224,12 +216,6 @@ function FuncoesPage() {
               value={f.busca}
               onChange={(v) => setF({ ...f, busca: v })}
               placeholder="Descrição ou caminho"
-            />
-            <FilterSelect
-              label="Menu ativo"
-              value={f.menu}
-              onChange={(v) => setF({ ...f, menu: v })}
-              options={BOOL_OPTIONS}
             />
             <FilterSelect
               label="Status"

@@ -525,16 +525,6 @@ function OrcamentosPage() {
 
   return (
     <>
-      <div className="mb-3 flex justify-end gap-2">
-        <Button variant="outline" onClick={() => setLeadsOpen(true)}><Inbox className="mr-2 h-4 w-4" />{tx("Captação de leads")}</Button>
-        <Button variant="outline" onClick={() => setReguaOpen(true)}><MessageCircle className="mr-2 h-4 w-4" />{tx("Régua de acompanhamento")}</Button>
-        {secoes["workflow"]?.canUpdate && (
-          <Button variant="outline" onClick={() => setWfOpen(true)}><ShieldCheck className="mr-2 h-4 w-4" />{tx("Workflow de aprovação")}</Button>
-        )}
-      </div>
-      <ConfigAprovacaoOfertaDialog open={wfOpen} onOpenChange={setWfOpen} />
-      <ReguaOfertas open={reguaOpen} onOpenChange={setReguaOpen} canEdit={perms.canUpdate} situacoes={situacoes.map(s => s.value)} />
-      <CaptacaoLeadsDialog open={leadsOpen} onOpenChange={setLeadsOpen} canEdit={perms.canUpdate} />
       <div className="mb-4 flex gap-3 overflow-x-auto pb-1">
         {cards.map((c) => {
           const ativo = f.situacao === c.value;

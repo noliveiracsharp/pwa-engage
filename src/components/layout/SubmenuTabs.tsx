@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useState, type ReactNode } from "react";
+import { createContext, Suspense, useContext, useEffect, useState, type ReactNode } from "react";
 import { useLocation } from "@tanstack/react-router";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSubmenuAbas } from "@/hooks/useMenu";
@@ -8,6 +8,19 @@ import { SUBMENU_REGISTRY } from "@/lib/submenu-registry";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 
 const PAGINA = "__pagina__";
+
+/** Telas que já têm abas próprias recebem as abas filhas na mesma barra (sem duas fileiras). */
+const ABAS_EMBUTIDAS = new Set(["/financeiro"]);
+type AbaFilha = { id: string; path: string; label: string };
+const AbasFilhasCtx = createContext<AbaFilha[]>([]);
+export const useAbasFilhas = () => useContext(AbasFilhasCtx);
+
+/** Conteúdo de uma aba filha (componente registrado), com carregamento. */
+export function ConteudoAbaFilha({ path }: { path: string }) {
+  const C = SUBMENU_REGISTRY[path];
+  if (!C) return null;
+  return <Suspense fallback={<p className="text-muted-foreground text-sm">Carregando…</p>}><C /></Suspense>;
+}
 
 /** Abas da página atual: funções filhas ocultas do menu, liberadas ao perfil (mesma view do menu lateral). */
 export function SubmenuTabs({ children }: { children: ReactNode }) {
@@ -26,6 +39,7 @@ export function SubmenuTabs({ children }: { children: ReactNode }) {
   }, [pathname]);
 
   if (abas.length === 0) return <>{children}</>;
+  if (ABAS_EMBUTIDAS.has(pathname)) return <AbasFilhasCtx.Provider value={abas}>{children}</AbasFilhasCtx.Provider>;
   const padrao = semPrincipal ? abas[0]!.path : PAGINA;
   const ativa = abas.some((a) => a.path === aba) ? aba : aba === PAGINA && !semPrincipal ? PAGINA : padrao;
 
