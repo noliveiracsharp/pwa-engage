@@ -47,6 +47,7 @@ import { UploadInfo } from "@/components/ui/upload-info";
 import { supabase } from "@/integrations/supabase/client";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { useSecoes } from "@/hooks/useSecoes";
+import { ConteudoAbaFilha, useAbasFilhas } from "@/components/layout/SubmenuTabs";
 import { useAuth } from "@/hooks/useAuth";
 import { useAudit } from "@/lib/audit";
 import { rowId, text, useTableRows } from "@/lib/crud";
@@ -127,7 +128,8 @@ const SECOES_FIN = [
 function FinanceiroPage() {
   const perms = usePagePermissions("/financeiro");
   const secoes = useSecoes("/financeiro", SECOES_FIN);
-  const visiveis = SECOES_FIN.filter((s) => secoes[s.key]?.canRead);
+  const filhas = useAbasFilhas();
+  const visiveis = [...SECOES_FIN.filter((s) => secoes[s.key]?.canRead), ...filhas.map((a) => ({ key: a.path, label: a.label }))];
   const [abaSel, setAba] = useState("receber");
   const aba = visiveis.some((s) => s.key === abaSel) ? abaSel : (visiveis[0]?.key ?? "");
   const { data: titulos = [], isLoading } = useTableRows("financeiro_titulos");
@@ -156,6 +158,7 @@ function FinanceiroPage() {
       <TabsContent value="plano">{aba === "plano" && <ApoioCrud {...planoContasConfig} permsOverride={p("plano")} />}</TabsContent>
       <TabsContent value="centros">{aba === "centros" && <ApoioCrud {...centroCustoConfig} permsOverride={p("centros")} />}</TabsContent>
       <TabsContent value="comissoes">{aba === "comissoes" && <ComissoesView perms={p("comissoes")} />}</TabsContent>
+      {filhas.map((a) => <TabsContent key={a.id} value={a.path}>{aba === a.path && <ConteudoAbaFilha path={a.path} />}</TabsContent>)}
     </Tabs>
   );
 }

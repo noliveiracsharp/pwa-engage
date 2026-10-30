@@ -56,4 +56,9 @@ export const SUBMENU_REGISTRY: Record<string, LazyExoticComponent<ComponentType>
   "/relatorios/dre-ofertas": fromRoute(() => import("@/routes/_authenticated/relatorios_.dre-ofertas")),
   "/relatorios/envios": fromRoute(() => import("@/routes/_authenticated/relatorios_.envios")),
   "/relatorios/kpis": fromRoute(() => import("@/routes/_authenticated/relatorios_.kpis")),
+  "/orcamentos/captacao": lazy(() => import("@/components/layout/AbasConfiguracao").then((m) => ({ default: m.AbaCaptacaoLeads }))),
+  "/orcamentos/regua": lazy(() => import("@/components/layout/AbasConfiguracao").then((m) => ({ default: m.AbaReguaOfertas }))),
+  "/orcamentos/workflow": lazy(() => import("@/components/layout/AbasConfiguracao").then((m) => ({ default: m.AbaWorkflowOfertas }))),
+  "/cotacoes/workflow": lazy(() => import("@/components/layout/AbasConfiguracao").then((m) => ({ default: m.AbaWorkflowCompras }))),
+  "/cotacoes/textos-whatsapp": lazy(() => import("@/components/layout/AbasConfiguracao").then((m) => ({ default: m.AbaTextosWhatsapp }))),
 };

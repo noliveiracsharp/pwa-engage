@@ -6,8 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { etapasDoKanban, kanbanDoModuloOrcamentos } from "@/lib/orcamento-kanban";
 import { corEtapa } from "@/lib/kanban-cores";
 import { createFileRoute } from "@tanstack/react-router";
-import { ChevronDown, Copy, FileSignature, FileText, Inbox, Info, MessageCircle, Rocket, ScrollText, ShoppingCart, Thermometer, Trash2, Wallet } from "lucide-react";
-import { CaptacaoLeadsDialog } from "@/components/orcamentos/CaptacaoLeadsDialog";
+import { ChevronDown, Copy, FileSignature, FileText, Info, Rocket, ScrollText, ShoppingCart, Thermometer, Trash2, Wallet } from "lucide-react";
 import { BarraAcoesLote, useAcoesComuns } from "@/components/data-table/AcoesLote";
 import { TEMPERATURAS, temperaturaEfetiva } from "@/lib/temperatura";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -45,10 +44,7 @@ import { AtivacaoOfertaDialog } from "@/components/orcamentos/AtivacaoOfertaDial
 import { ofertaTravada, situacaoAtivada } from "@/lib/oferta-ativacao";
 import { executarHandoff } from "@/lib/kanban-handoff";
 import { confirmar } from "@/components/layout/DialogoGlobal";
-import { ReguaOfertas } from "@/components/orcamentos/ReguaOfertas";
-import { ConfigAprovacaoOfertaDialog } from "@/components/orcamentos/AprovacaoOfertas";
 import { ofertaLiberada } from "@/lib/aprovacao-ofertas";
-import { ShieldCheck } from "lucide-react";
 
 const avisoBloqueio = () => toast.warning(tx("Oferta aguardando aprovação do gestor. Abra a oferta para ver o andamento."));
 
@@ -170,9 +166,6 @@ function OrcamentosPage() {
   const [duplicarDe, setDuplicarDe] = useState<{ record: Row; linhas: Row[] } | null>(null);
   const [ativar, setAtivarRaw] = useState<Row | null>(null);
   const setAtivar = (r: Row | null) => { if (r && !ofertaLiberada(r["aprovacao_status"])) { avisoBloqueio(); return; } setAtivarRaw(r); };
-  const [wfOpen, setWfOpen] = useState(false);
-  const [reguaOpen, setReguaOpen] = useState(false);
-  const [leadsOpen, setLeadsOpen] = useState(false);
 
   const gerarContas = async (r: Row) => {
     const id = String(rowId(r) ?? "");
@@ -525,16 +518,6 @@ function OrcamentosPage() {
 
   return (
     <>
-      <div className="mb-3 flex justify-end gap-2">
-        <Button variant="outline" onClick={() => setLeadsOpen(true)}><Inbox className="mr-2 h-4 w-4" />{tx("Captação de leads")}</Button>
-        <Button variant="outline" onClick={() => setReguaOpen(true)}><MessageCircle className="mr-2 h-4 w-4" />{tx("Régua de acompanhamento")}</Button>
-        {secoes["workflow"]?.canUpdate && (
-          <Button variant="outline" onClick={() => setWfOpen(true)}><ShieldCheck className="mr-2 h-4 w-4" />{tx("Workflow de aprovação")}</Button>
-        )}
-      </div>
-      <ConfigAprovacaoOfertaDialog open={wfOpen} onOpenChange={setWfOpen} />
-      <ReguaOfertas open={reguaOpen} onOpenChange={setReguaOpen} canEdit={perms.canUpdate} situacoes={situacoes.map(s => s.value)} />
-      <CaptacaoLeadsDialog open={leadsOpen} onOpenChange={setLeadsOpen} canEdit={perms.canUpdate} />
       <div className="mb-4 flex gap-3 overflow-x-auto pb-1">
         {cards.map((c) => {
           const ativo = f.situacao === c.value;
