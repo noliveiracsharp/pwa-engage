@@ -28,6 +28,8 @@ export type LinhaPayload = {
   execucao?: string;
   fornecedor_id?: string | null;
   incluso?: boolean;
+  desconto_linha?: number;
+  dt_inicio_faturamento?: string | null;
 };
 
 /**

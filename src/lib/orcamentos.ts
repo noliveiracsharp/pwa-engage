@@ -155,6 +155,10 @@ export type Linha = {
   fornecedor_id: string;
   /** Item incluso / apenas conferência: aparece no PDF sem valores; o custo segue para compras. */
   incluso: boolean;
+  /** Desconto em R$ aplicado só nesta linha. */
+  desconto_linha: string;
+  /** Início da cobrança deste item recorrente ("" = início geral da Oferta). */
+  dt_inicio_faturamento: string;
 };
 
 export type Execucao = "interno" | "terceiro";
@@ -187,6 +191,7 @@ export type LinhaCalc = {
   imposto_valor: number;
   lucro: number;
   margem_pct: number;
+  desconto_linha: number;
 };
 
 let seq = 0;
@@ -208,6 +213,8 @@ export function novaLinha(): Linha {
     execucao: "interno",
     fornecedor_id: "",
     incluso: false,
+    desconto_linha: "",
+    dt_inicio_faturamento: "",
   };
 }
 
@@ -228,6 +235,8 @@ export function linhaFromRow(row: Row, itemTipo?: unknown): Linha {
     execucao: row["execucao"] === "terceiro" ? "terceiro" : "interno",
     fornecedor_id: String(row["fornecedor_id"] ?? ""),
     incluso: row["incluso"] === true,
+    desconto_linha: num(row["desconto_linha"]) > 0 ? String(num(row["desconto_linha"])) : "",
+    dt_inicio_faturamento: row["dt_inicio_faturamento"] ? String(row["dt_inicio_faturamento"]).slice(0, 10) : "",
   };
 }
 

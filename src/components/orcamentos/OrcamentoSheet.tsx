@@ -728,6 +728,9 @@ export function OrcamentoSheet({
         execucao: l.natureza !== "produto" && l.execucao === "terceiro" ? "terceiro" : "interno",
         fornecedor_id: l.natureza !== "produto" && l.execucao === "terceiro" ? l.fornecedor_id || null : null,
         incluso: l.incluso,
+        // Colunas novas só vão quando usadas (gravação tolera script ainda não executado).
+        ...(c.desconto_linha > 0 || l.id ? { desconto_linha: c.desconto_linha } : {}),
+        ...(l.natureza === "recorrente" && l.dt_inicio_faturamento ? { dt_inicio_faturamento: l.dt_inicio_faturamento } : l.id ? { dt_inicio_faturamento: null } : {}),
       };
     });
     header["faturamento_misto"] = payloadLinhas.some((l) => l.faturar_para_id);
