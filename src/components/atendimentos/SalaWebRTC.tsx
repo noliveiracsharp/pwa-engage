@@ -379,7 +379,7 @@ export function SalaWebRTC({ sala, nome, video, onSair, onParticipante, classNam
   ];
   const tileDe = (t: (typeof tiles)[number], compacto?: boolean) => (
     <VideoTile key={t.id} stream={t.stream} nome={t.nome} mudo={t.local} espelhar={t.local && !tela && fundo.tipo === "nenhum"}
-      mao={maos.includes(t.id)} compacto={compacto} fixado={fixado === t.id}
+      mao={maos.includes(t.id)} compacto={!!compacto} fixado={fixado === t.id}
       onFixar={() => { setFixado(fixado === t.id ? null : t.id); setLayout(fixado === t.id ? "grade" : "destaque"); }}
       onSilenciar={anfitriao && !t.local ? () => silenciar(t.id) : undefined} />
   );
