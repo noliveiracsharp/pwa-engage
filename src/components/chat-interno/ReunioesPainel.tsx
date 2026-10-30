@@ -76,7 +76,7 @@ export function ReunioesPainel({ me, empresaId, usuarios, onFechar, editar }: { 
     };
     if (presencial(form) && !form.local?.trim()) return void toast.error("Informe o endereço da reunião presencial.");
     const r = form.id ? await tb().update(dados as never).eq("id", form.id) : await tb().insert(dados as never);
-    if (r.error) return void toast.error(/reunioes|modalidade|local/.test(r.error.message) ? "Rode o script atendeai-planner-agenda.sql no banco." : "Rode o script atendeai-reunioes.sql no banco." : r.error.message);
+    if (r.error) return void toast.error(/reunioes|modalidade|local/.test(r.error.message) ? "Rode o script atendeai-planner-agenda.sql no banco." : r.error.message);
     toast.success("Reunião salva.");
     setForm(null);
     void recarregar();
