@@ -33,7 +33,7 @@ const baseFields: Field[] = [
   { fields: ["path"], label: "Caminho (rota)", placeholder: "/pessoas" },
   { fields: ["icone"], label: "Ícone", type: "icon" },
   { fields: ["ordem"], label: "Ordem (posição no menu, dentro do grupo)", type: "number" },
-  { fields: ["menu_ativo"], label: "Exibe no menu", type: "boolean" },
+  { fields: ["menu_ativo"], label: "Exibe no menu lateral (só módulos principais; itens filhos viram abas da tela pai)", type: "boolean" },
   { fields: ["status"], label: "Status", type: "boolean" },
 ];
 
