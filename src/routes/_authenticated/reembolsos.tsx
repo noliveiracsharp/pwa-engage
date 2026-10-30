@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Check, CreditCard, Loader2, Paperclip, ScanText, X } from "lucide-react";
+import { CalendarClock, Check, CreditCard, Loader2, Paperclip, ScanText, X } from "lucide-react";
 import { toast } from "sonner";
 import { DataTable, type Column } from "@/components/data-table/DataTable";
 import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -26,7 +27,7 @@ import { comprimirImagem } from "@/lib/image-compress";
 import { erroFinanceiro } from "@/lib/financeiro-db";
 import { hojeISO } from "@/lib/financeiro";
 import { lerComprovante } from "@/lib/reembolsos.functions";
-import { CATEGORIAS_DESPESA, STATUS_DESPESA, disponivelCartao, resumoDespesas, usoCartaoMes, type StatusDespesa } from "@/lib/reembolsos";
+import { CATEGORIAS_DESPESA, STATUS_DESPESA, diasPagamento, disponivelCartao, proximaDataPagamento, resumoDespesas, usoCartaoMes, type StatusDespesa } from "@/lib/reembolsos";
 import type { Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
 import { perguntar } from "@/components/layout/DialogoGlobal";
@@ -50,6 +51,15 @@ export const Route = createFileRoute("/_authenticated/reembolsos")({
 type Perms = { canCreate: boolean; canUpdate: boolean; canDelete: boolean };
 const mesAtual = () => hojeISO().slice(0, 7);
 const nomeUsuario = (u: Row | undefined) => (u ? text(u["nome"] || u["email"]) : "");
+
+/** Política de pagamento da empresa (dias do mês + prazo de corte). Sem cadastro: paga na data da aprovação. */
+function usePolitica() {
+  const { empresaId } = useAudit();
+  const { data = [] } = useTableRows("despesas_politica");
+  const p = data.find((r) => text(r["empresa_id"]) === text(empresaId)) ?? data[0];
+  return { row: p, dias: diasPagamento(p?.["dias_pagamento"]), corte: Math.max(0, Math.round(num(p?.["dias_corte"]))) };
+}
+const textoDias = (dias: number[]) => dias.length ? `dia${dias.length > 1 ? "s" : ""} ${dias.join(", ").replace(/, (\d+)$/, " e $1")}` : "";
 
 function ReembolsosPage() {
   const perms = usePagePermissions("/reembolsos");
@@ -91,7 +101,14 @@ function Despesas({ lanc, cartoes, usuarios, loading, perms }: { lanc: Row[]; ca
     qc.invalidateQueries({ queryKey: ["table", "financeiro_titulos"] });
   };
 
-  const aprovar = async (l: Row) => {
+  const politica = usePolitica();
+  const [aprovando, setAprovando] = useState<{ l: Row; venc: string } | null>(null);
+  const [politicaAberta, setPoliticaAberta] = useState(false);
+  const pedirAprovacao = (l: Row) => {
+    if (l["modalidade"] !== "reembolso") return void aprovar(l, hojeISO());
+    setAprovando({ l, venc: proximaDataPagamento(hojeISO(), politica.dias, politica.corte) });
+  };
+  const aprovar = async (l: Row, vencimento: string) => {
     const id = text(rowId(l));
     let tituloId: string | null = null;
     if (l["modalidade"] === "reembolso") {
@@ -99,7 +116,7 @@ function Despesas({ lanc, cartoes, usuarios, loading, perms }: { lanc: Row[]; ca
       const { data, error } = await supabase.from("financeiro_titulos").insert({
         empresa_id: l["empresa_id"] ?? empresaId, tipo: "pagar", categoria: "Reembolsos",
         descricao: `Reembolso — ${colab} — ${text(l["estabelecimento"]) || CATEGORIAS_DESPESA[text(l["categoria"])] || "Despesa"}`,
-        vencimento: hojeISO(), valor: round2(num(l["valor"])), origem_tipo: "reembolso", origem_id: id, parcela_n: 1,
+        vencimento, valor: round2(num(l["valor"])), origem_tipo: "reembolso", origem_id: id, parcela_n: 1,
         comprovante: l["comprovante"] ?? null,
       } as never).select("id").single();
       if (error) return void toast.error(erroFinanceiro(error));
@@ -109,8 +126,8 @@ function Despesas({ lanc, cartoes, usuarios, loading, perms }: { lanc: Row[]; ca
       status: "aprovado", motivo: null, aprovado_por: usuarioId ?? null, aprovado_em: new Date().toISOString(), titulo_id: tituloId,
     } as never).eq("id", id);
     if (error) return void toast.error(erroFinanceiro(error));
-    toast.success(tituloId ? "Aprovado. Reembolso lançado em Contas a Pagar." : "Despesa do cartão aprovada.");
-    invalidar();
+    toast.success(tituloId ? `Aprovado. Reembolso lançado em Contas a Pagar para ${formatDate(vencimento)}.` : "Despesa do cartão aprovada.");
+    setAprovando(null); invalidar();
   };
   const reprovar = async (l: Row) => {
     const motivo = await perguntar({ title: "Reprovar despesa", description: "Informe o motivo da reprovação.", multiline: true, confirmText: "Reprovar", destructive: true });
@@ -153,7 +170,7 @@ function Despesas({ lanc, cartoes, usuarios, loading, perms }: { lanc: Row[]; ca
         {l["comprovante"] ? <Button variant="ghost" size="icon" asChild title="Comprovante"><button type="button" onClick={() => abrirArquivo(text(l["comprovante"])).catch((e) => toast.error(e.message))}><Paperclip className="h-4 w-4" /></button></Button> : null}
         {gestor && l["status"] === "pendente" && (
           <>
-            <Button variant="ghost" size="icon" title="Aprovar" aria-label="Aprovar" onClick={() => aprovar(l)}><Check className="text-success h-4 w-4" /></Button>
+            <Button variant="ghost" size="icon" title="Aprovar" aria-label="Aprovar" onClick={() => pedirAprovacao(l)}><Check className="text-success h-4 w-4" /></Button>
             <Button variant="ghost" size="icon" title="Reprovar" aria-label="Reprovar" onClick={() => reprovar(l)}><X className="text-destructive h-4 w-4" /></Button>
           </>
         )}
@@ -179,6 +196,13 @@ function Despesas({ lanc, cartoes, usuarios, loading, perms }: { lanc: Row[]; ca
           </button>
         ))}
       </div>
+      {gestor && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3 text-sm">
+          <span className="flex items-center gap-2"><CalendarClock className="text-primary h-4 w-4" />
+            {politica.dias.length ? `Reembolsos são pagos no ${textoDias(politica.dias)} de cada mês${politica.corte ? ` (lançar até ${politica.corte} dia(s) antes)` : ""}.` : "Nenhum dia de pagamento definido: o reembolso vence na data da aprovação."}</span>
+          <Button size="sm" variant="outline" onClick={() => setPoliticaAberta(true)}>Dias de pagamento</Button>
+        </div>
+      )}
       <DataTable
         title="Despesas e prestação de contas"
         columns={columns}
@@ -206,6 +230,28 @@ function Despesas({ lanc, cartoes, usuarios, loading, perms }: { lanc: Row[]; ca
           readOnly={!!editar && (editar["status"] !== "pendente" || (!gestor && text(editar["usuario_id"]) !== text(usuarioId)))}
           onClose={() => setEditar(undefined)} onSaved={invalidar} />
       )}
+      {aprovando && (
+        <Dialog open onOpenChange={(o) => !o && setAprovando(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Aprovar reembolso</DialogTitle>
+              <DialogDescription>
+                {nomeUsuario(userById.get(text(aprovando.l["usuario_id"]))) || "Colaborador"} — {formatBRL(aprovando.l["valor"])}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-1">
+              <Label>Data de pagamento (vencimento em Contas a Pagar)</Label>
+              <Input type="date" value={aprovando.venc} onChange={(e) => setAprovando({ ...aprovando, venc: e.target.value })} />
+              <p className="text-muted-foreground text-xs">{politica.dias.length ? `Sugerida pela política da empresa (${textoDias(politica.dias)}). Você pode antecipar ou adiar.` : "Sem dias de pagamento definidos. Escolha a data."}</p>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setAprovando(null)}>Cancelar</Button>
+              <Button disabled={!aprovando.venc} onClick={() => aprovar(aprovando.l, aprovando.venc)}>Aprovar e lançar</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+      {politicaAberta && <PoliticaDialog atual={politica} onClose={() => setPoliticaAberta(false)} />}
     </div>
   );
 }
@@ -235,6 +281,8 @@ function DespesaSheet({ registro, cartoes, lanc, readOnly, onClose, onSaved }: {
   const disponivel = cartaoSel ? disponivelCartao(cartaoSel["limite_mensal"], usado) : 0;
 
   const previaComprovante = useUrlAssinada(v.comprovante);
+  const politica = usePolitica();
+  const previsao = proximaDataPagamento(hojeISO(), politica.dias, politica.corte);
 
   const enviar = async (recebido: File) => {
     setLendo(true);
@@ -273,12 +321,11 @@ function DespesaSheet({ registro, cartoes, lanc, readOnly, onClose, onSaved }: {
     const valor = round2(num(v.valor));
     if (valor <= 0) return void toast.error("Informe o valor.");
     if (v.cartao && !v.cartao_id) return void toast.error("Escolha o cartão usado.");
-    if (!v.comprovante) return void toast.error("Anexe a foto do comprovante.");
     setSalvando(true);
     const base = {
       data: v.data, estabelecimento: v.estabelecimento.trim() || null, cnpj: v.cnpj.replace(/\D/g, "").slice(0, 14) || null,
       categoria: v.categoria, valor, modalidade: v.cartao ? "cartao" : "reembolso", cartao_id: v.cartao ? v.cartao_id : null,
-      comprovante: v.comprovante, observacao: v.observacao.trim() || null,
+      comprovante: v.comprovante || null, observacao: v.observacao.trim() || null,
     };
     const { error } = registro
       ? await supabase.from("despesas_lancamentos").update(base as never).eq("id", text(rowId(registro)))
@@ -293,11 +340,11 @@ function DespesaSheet({ registro, cartoes, lanc, readOnly, onClose, onSaved }: {
       <SheetContent side="right" className="flex flex-col gap-0 p-0">
         <SheetHeader className="border-b p-4">
           <SheetTitle>{registro ? "Despesa" : "Nova despesa"}</SheetTitle>
-          <SheetDescription>Envie a foto do cupom ou recibo: o valor, a data e o estabelecimento são preenchidos sozinhos.</SheetDescription>
+          <SheetDescription>Envie a foto do cupom ou recibo para preencher sozinho, ou digite os dados se não tiver comprovante.</SheetDescription>
         </SheetHeader>
         <div className="grid flex-1 content-start gap-4 overflow-y-auto p-4 sm:grid-cols-2">
           <div className="space-y-2 sm:col-span-2">
-            <div className="flex items-center gap-1"><Label>Comprovante *</Label><UploadInfo perfil="laudo" arquivos /></div>
+            <div className="flex items-center gap-1"><Label>Comprovante (opcional)</Label><UploadInfo perfil="laudo" arquivos /></div>
             <input ref={inputRef} type="file" accept="image/*,application/pdf" capture="environment" className="hidden"
               onChange={(e) => { const fl = e.target.files?.[0]; e.target.value = ""; if (fl) void enviar(fl); }} />
             <div className="flex flex-wrap items-center gap-3">
@@ -310,6 +357,7 @@ function DespesaSheet({ registro, cartoes, lanc, readOnly, onClose, onSaved }: {
               {v.comprovante && (/\.pdf$/i.test(v.comprovante)
                 ? <button type="button" onClick={() => abrirArquivo(v.comprovante).catch((e) => toast.error(e.message))} className="text-primary text-sm underline">Abrir PDF</button>
                 : <img src={previaComprovante} alt="Comprovante" data-zoom className="h-24 rounded border object-cover" />)}
+              {v.comprovante && !readOnly && <Button type="button" variant="ghost" size="sm" onClick={() => setV({ ...v, comprovante: "" })}><X className="mr-1 h-4 w-4" />Remover</Button>}
             </div>
           </div>
           <div className="space-y-1"><Label>Valor (R$) *</Label>
@@ -343,7 +391,14 @@ function DespesaSheet({ registro, cartoes, lanc, readOnly, onClose, onSaved }: {
               )}
             </div>
           )}
-          {!v.cartao && <p className="text-muted-foreground text-xs sm:col-span-2">Reembolso: ao ser aprovado, o valor entra em Contas a Pagar em seu nome.</p>}
+          {!v.cartao && (
+            <div className="bg-muted/50 flex items-start gap-2 rounded-md border p-3 text-sm sm:col-span-2">
+              <CalendarClock className="text-primary mt-0.5 h-4 w-4 shrink-0" />
+              <span>{politica.dias.length
+                ? <>Previsão de pagamento: <b>{formatDate(previsao)}</b>. A empresa paga reembolsos no {textoDias(politica.dias)} de cada mês, depois da aprovação.</>
+                : <>Ao ser aprovado, o valor entra em Contas a Pagar em seu nome, na data definida pelo aprovador.</>}</span>
+            </div>
+          )}
           <div className="space-y-1 sm:col-span-2"><Label>Observação (cliente, projeto, OS, veículo…)</Label>
             <Textarea value={v.observacao} disabled={readOnly} onChange={(e) => setV({ ...v, observacao: e.target.value })} /></div>
           {registro?.["motivo"] ? <p className="text-destructive text-sm sm:col-span-2">Motivo da reprovação: {text(registro["motivo"])}</p> : null}
@@ -354,6 +409,49 @@ function DespesaSheet({ registro, cartoes, lanc, readOnly, onClose, onSaved }: {
         </div>
       </SheetContent>
     </Sheet>
+  );
+}
+
+function PoliticaDialog({ atual, onClose }: { atual: ReturnType<typeof usePolitica>; onClose: () => void }) {
+  const qc = useQueryClient();
+  const { empresaId } = useAudit();
+  const [dias, setDias] = useState(atual.dias.join(", "));
+  const [corte, setCorte] = useState(String(atual.corte));
+  const [salvando, setSalvando] = useState(false);
+  const lista = diasPagamento(dias);
+  const salvar = async () => {
+    setSalvando(true);
+    const { error } = await supabase.from("despesas_politica").upsert(
+      { empresa_id: atual.row?.["empresa_id"] ?? empresaId, dias_pagamento: lista, dias_corte: Math.max(0, Math.round(num(corte))) } as never,
+      { onConflict: "empresa_id" });
+    setSalvando(false);
+    if (error) return void toast.error(/relation|does not exist|schema cache/i.test(error.message) ? "Rode o script atendeai-reembolsos-pagamento.sql no SQL Editor." : erroFinanceiro(error));
+    toast.success("Dias de pagamento salvos.");
+    qc.invalidateQueries({ queryKey: ["table", "despesas_politica"] });
+    onClose();
+  };
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Dias de pagamento de reembolsos</DialogTitle>
+          <DialogDescription>Quem lança o reembolso vê a previsão, e o aprovador recebe a data já sugerida.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="space-y-1"><Label>Dias do mês</Label>
+            <Input value={dias} onChange={(e) => setDias(e.target.value)} placeholder="Ex.: 10, 25" />
+            <p className="text-muted-foreground text-xs">Separe por vírgula. Sábado e domingo passam para a segunda-feira. Deixe vazio para pagar na data da aprovação.</p></div>
+          <div className="space-y-1"><Label>Prazo de corte (dias antes)</Label>
+            <Input type="number" min={0} value={corte} onChange={(e) => setCorte(e.target.value)} />
+            <p className="text-muted-foreground text-xs">Despesa lançada depois do corte fica para o próximo dia de pagamento.</p></div>
+          {lista.length > 0 && <p className="text-sm">Exemplo: lançado hoje, paga em <b>{formatDate(proximaDataPagamento(hojeISO(), lista, num(corte)))}</b>.</p>}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button onClick={salvar} disabled={salvando}>Salvar</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

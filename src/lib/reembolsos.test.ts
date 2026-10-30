@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { disponivelCartao, resumoDespesas, usoCartaoMes } from "./reembolsos";
+import { diasPagamento, disponivelCartao, proximaDataPagamento, resumoDespesas, usoCartaoMes } from "./reembolsos";
 
 const L = [
   { modalidade: "cartao", cartao_id: "c1", data: "2026-10-03", valor: 100, status: "aprovado" },
@@ -22,7 +22,6 @@ describe("reembolsos", () => {
   });
 });
 
-import { diasPagamento, proximaDataPagamento } from "./reembolsos";
 describe("política de pagamento de reembolso", () => {
   it("lê dias da empresa", () => expect(diasPagamento("25, 10,10 x 40")).toEqual([10, 25]));
   it("vai para o próximo dia de pagamento do mês", () => expect(proximaDataPagamento("2026-11-03", [10, 25])).toBe("2026-11-10"));
