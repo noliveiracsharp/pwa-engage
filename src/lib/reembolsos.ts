@@ -52,3 +52,35 @@ export function resumoDespesas(lancamentos: Row[]) {
   }
   return out;
 }
+
+const isoLocal = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+/** Lê "10, 25" (ou array) em dias válidos 1-31, ordenados e sem repetição. */
+export function diasPagamento(v: unknown): number[] {
+  const arr = Array.isArray(v) ? v : String(v ?? "").split(/[^\d]+/);
+  return [...new Set(arr.map(Number).filter((d) => Number.isInteger(d) && d >= 1 && d <= 31))].sort((a, b) => a - b);
+}
+
+/**
+ * Próxima data de pagamento de reembolso conforme a política da empresa.
+ * A despesa precisa ser lançada pelo menos `corte` dias antes do dia de pagamento;
+ * sábado/domingo passam para a segunda-feira. Sem dias configurados, retorna a própria base.
+ */
+export function proximaDataPagamento(baseISO: string, dias: number[], corte = 0): string {
+  const [y, m, d] = baseISO.slice(0, 10).split("-").map(Number);
+  const base = new Date(y!, m! - 1, d!);
+  if (!dias.length) return isoLocal(base);
+  const limite = new Date(base); limite.setDate(limite.getDate() + Math.max(0, corte));
+  for (let i = 0; i < 24; i++) {
+    const ano = base.getFullYear(), mes = base.getMonth() + i;
+    const ultimo = new Date(ano, mes + 1, 0).getDate();
+    for (const dia of dias) {
+      const alvo = new Date(ano, mes, Math.min(dia, ultimo));
+      if (alvo < limite) continue;
+      while (alvo.getDay() === 0 || alvo.getDay() === 6) alvo.setDate(alvo.getDate() + 1);
+      return isoLocal(alvo);
+    }
+  }
+  return isoLocal(base);
+}
