@@ -90,6 +90,19 @@ export async function getAllowedPaths(userId: string, email?: string): Promise<s
     const paths = rows.map((row) =>
       String(pick(row, ["path", "funcao_path", "rota", "url"], "/dashboard")),
     );
+    // Menu plano: quem pode ler uma aba pode abrir a tela do módulo raiz que a contém.
+    const { data: fns } = await supabase.from("funcoes").select("id, path, funcoes_pai_id");
+    const fnById = new Map(((fns ?? []) as Row[]).map((f) => [String(f["id"]), f]));
+    for (const row of rows) {
+      let pai = String(pick(row, ["funcao_pai_id", "funcoes_pai_id"]) ?? pick(fnById.get(String(pick(row, ["funcao_id", "funcoes_id"]) ?? "")) ?? {}, ["funcoes_pai_id"]) ?? "");
+      const vistos = new Set<string>();
+      while (pai && fnById.has(pai) && !vistos.has(pai)) {
+        vistos.add(pai);
+        const p = String(fnById.get(pai)!["path"] ?? "");
+        if (p) paths.push(p);
+        pai = String(fnById.get(pai)!["funcoes_pai_id"] ?? "");
+      }
+    }
     return [...new Set([...paths, ...ALWAYS_ALLOWED])];
   } catch {
     // Falha temporária (rede/token renovando): não rebaixa o usuário; o banco continua protegendo os dados.

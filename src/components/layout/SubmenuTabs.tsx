@@ -5,6 +5,7 @@ import { useSubmenuAbas } from "@/hooks/useMenu";
 import { useTableRows } from "@/lib/crud";
 import { pick } from "@/lib/row";
 import { SUBMENU_REGISTRY } from "@/lib/submenu-registry";
+import { usePagePermissions } from "@/hooks/usePagePermissions";
 
 const PAGINA = "__pagina__";
 
@@ -15,6 +16,9 @@ export function SubmenuTabs({ children }: { children: ReactNode }) {
   const { data: funcoes = [] } = useTableRows("funcoes");
   const pai = funcoes.find((f) => String(f["path"] ?? "") === pathname);
   const [aba, setAba] = useState<string>(PAGINA);
+  // Perfil sem leitura na tela principal (só em alguma aba): esconde a aba principal.
+  const permsPai = usePagePermissions(pathname);
+  const semPrincipal = !permsPai.loading && !permsPai.canRead && abas.length > 0;
 
   useEffect(() => {
     const q = new URLSearchParams(window.location.search).get("aba");
@@ -22,7 +26,8 @@ export function SubmenuTabs({ children }: { children: ReactNode }) {
   }, [pathname]);
 
   if (abas.length === 0) return <>{children}</>;
-  const ativa = aba === PAGINA || abas.some((a) => a.path === aba) ? aba : PAGINA;
+  const padrao = semPrincipal ? abas[0]!.path : PAGINA;
+  const ativa = abas.some((a) => a.path === aba) ? aba : aba === PAGINA && !semPrincipal ? PAGINA : padrao;
 
   const trocar = (v: string) => {
     setAba(v);
@@ -35,16 +40,18 @@ export function SubmenuTabs({ children }: { children: ReactNode }) {
   return (
     <Tabs value={ativa} onValueChange={trocar} className="space-y-4">
       <TabsList className="h-auto w-full flex-wrap">
-        <TabsTrigger value={PAGINA} className="flex-1">
-          {String(pick(pai ?? {}, ["descricao", "nome"]) ?? "Principal")}
-        </TabsTrigger>
+        {!semPrincipal && (
+          <TabsTrigger value={PAGINA} className="flex-1">
+            {String(pick(pai ?? {}, ["descricao", "nome"]) ?? "Principal")}
+          </TabsTrigger>
+        )}
         {abas.map((a) => (
           <TabsTrigger key={a.id} value={a.path} className="flex-1">
             {a.label}
           </TabsTrigger>
         ))}
       </TabsList>
-      <TabsContent value={PAGINA}>{children}</TabsContent>
+      {!semPrincipal && <TabsContent value={PAGINA}>{children}</TabsContent>}
       {abas.map((a) => {
         const C = SUBMENU_REGISTRY[a.path]!;
         return (
