@@ -222,17 +222,17 @@ function CardTarefa({ t, me, nome, onAtualizar, onApagar }: {
   );
 }
 
-export function NovaTarefa({ me, empresaId, usuarios, onCancel, onSaved, responsavelInicial }: {
-  me: string; empresaId: string; usuarios: Row[]; onCancel: () => void; responsavelInicial?: string;
+export function NovaTarefa({ me, empresaId, usuarios, onCancel, onSaved, responsavelInicial, dataInicial }: {
+  me: string; empresaId: string; usuarios: Row[]; onCancel: () => void; responsavelInicial?: string; dataInicial?: string | undefined;
   onSaved: (responsavel: string, titulo: string) => Promise<void>;
 }) {
   const [titulo, setTitulo] = useState("");
   const [descricao, setDescricao] = useState("");
   const [resp, setResp] = useState(responsavelInicial ?? me);
-  const [entrega, setEntrega] = useState("");
+  const [entrega, setEntrega] = useState(dataInicial ?? "");
   const [prioridade, setPrioridade] = useState<Prioridade>("media");
   const [estimativa, setEstimativa] = useState("");
-  const [planejada, setPlanejada] = useState(hoje());
+  const [planejada, setPlanejada] = useState(dataInicial ?? hoje());
   const [anexos, setAnexos] = useState<Anexo[]>([]);
   const [enviando, setEnviando] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);

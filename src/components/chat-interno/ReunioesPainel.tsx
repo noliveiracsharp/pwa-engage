@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarClock, Copy, Mail, MessageCircle, Plus, Trash2, Video, X } from "lucide-react";
+import { CalendarClock, MapPin, Copy, Mail, MessageCircle, Plus, Trash2, Video, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { pick, type Row } from "@/lib/row";
@@ -17,22 +17,25 @@ type Convidado = { nome: string; email: string; telefone: string };
 export type Reuniao = {
   id: string; titulo: string; pauta: string; inicio: string; duracao_min: number; sala: string; video: boolean;
   criado_por: string; participantes: string[]; convidados: Convidado[]; cancelada: boolean;
+  modalidade?: "online" | "presencial"; local?: string | null;
 };
+export const presencial = (r: Pick<Reuniao, "modalidade">) => r.modalidade === "presencial";
+export const novaReuniao = (me: string, inicio: Date, duracao = 60): Reuniao => ({ id: "", titulo: "", pauta: "", inicio: inicio.toISOString(), duracao_min: duracao, sala: novaSala(), video: true, criado_por: me, participantes: [], convidados: [], cancelada: false, modalidade: "online", local: "" });
 
-const novaSala = () => `atendeai-${Math.random().toString(36).slice(2, 8)}${Date.now().toString(36)}`;
+function novaSala() { return `atendeai-${Math.random().toString(36).slice(2, 8)}${Date.now().toString(36)}`; }
 export const linkReuniao = (r: Pick<Reuniao, "sala" | "video">) =>
   `${typeof window !== "undefined" ? window.location.origin : ""}/chamada/${r.sala}${r.video ? "" : "?audio=1"}`;
 const quando = (iso: string) => new Date(iso).toLocaleString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 export const textoConvite = (r: Reuniao) =>
-  `Olá! Você foi convidado(a) para a reunião *${r.titulo}* em ${quando(r.inicio)} (${r.duracao_min} min).${r.pauta ? `\n\nPauta: ${r.pauta}` : ""}\n\nEntre pelo link (sem instalar nada): ${linkReuniao(r)}`;
+  `Olá! Você foi convidado(a) para a reunião *${r.titulo}* em ${quando(r.inicio)} (${r.duracao_min} min).${r.pauta ? `\n\nPauta: ${r.pauta}` : ""}\n\n${presencial(r) ? `Local: ${r.local || "a definir"}` : `Entre pelo link (sem instalar nada): ${linkReuniao(r)}`}`;
 
 export function useReunioes(empresaId: string) {
   return useQuery({
     queryKey: ["reunioes", empresaId],
     enabled: !!empresaId,
     queryFn: async () => {
-      const desde = new Date(Date.now() - 30 * 86400000).toISOString();
-      const { data, error } = await tb().select("*").eq("empresa_id", empresaId).gte("inicio", desde).order("inicio").limit(500);
+      const desde = new Date(Date.now() - 400 * 86400000).toISOString();
+      const { data, error } = await tb().select("*").eq("empresa_id", empresaId).gte("inicio", desde).order("inicio").limit(2000);
       if (error) throw error;
       return ((data ?? []) as Row[]).map((r) => ({
         ...(r as unknown as Reuniao),
@@ -59,7 +62,7 @@ export function ReunioesPainel({ me, empresaId, usuarios, onFechar, editar }: { 
 
   const abrirNova = () => {
     const d = new Date(Date.now() + 3600000); d.setMinutes(0, 0, 0);
-    setForm({ id: "", titulo: "", pauta: "", inicio: d.toISOString(), duracao_min: 60, sala: novaSala(), video: true, criado_por: me, participantes: [], convidados: [], cancelada: false });
+    setForm(novaReuniao(me, d));
   };
 
   const salvar = async () => {
@@ -69,9 +72,11 @@ export function ReunioesPainel({ me, empresaId, usuarios, onFechar, editar }: { 
       empresa_id: empresaId, criado_por: form.criado_por, titulo: form.titulo.trim(), pauta: form.pauta || null, inicio: form.inicio,
       duracao_min: form.duracao_min, sala: form.sala, video: form.video, participantes: form.participantes,
       convidados: form.convidados.filter((c) => c.nome || c.email || c.telefone),
+      modalidade: form.modalidade ?? "online", local: presencial(form) ? (form.local || null) : null,
     };
+    if (presencial(form) && !form.local?.trim()) return void toast.error("Informe o endereço da reunião presencial.");
     const r = form.id ? await tb().update(dados as never).eq("id", form.id) : await tb().insert(dados as never);
-    if (r.error) return void toast.error(r.error.message.includes("reunioes") ? "Rode o script atendeai-reunioes.sql no banco." : r.error.message);
+    if (r.error) return void toast.error(/reunioes|modalidade|local/.test(r.error.message) ? "Rode o script atendeai-planner-agenda.sql no banco." : r.error.message);
     toast.success("Reunião salva.");
     setForm(null);
     void recarregar();
@@ -123,7 +128,24 @@ export function ReunioesPainel({ me, empresaId, usuarios, onFechar, editar }: { 
                 <div><Label>Duração (min)</Label><Input type="number" min={5} step={5} value={form.duracao_min} onChange={(e) => set("duracao_min", Math.max(5, Number(e.target.value) || 60))} /></div>
               </div>
               <div><Label>Pauta</Label><Textarea rows={3} value={form.pauta ?? ""} onChange={(e) => set("pauta", e.target.value)} /></div>
-              <div className="flex items-center gap-2"><Switch checked={form.video} onCheckedChange={(v) => set("video", v)} /><Label>Reunião com vídeo</Label></div>
+              <div>
+                <Label>Tipo de reunião</Label>
+                <div className="mt-1 flex gap-2">
+                  {(["online", "presencial"] as const).map((m) => (
+                    <Button key={m} type="button" size="sm" variant={(form.modalidade ?? "online") === m ? "default" : "outline"} onClick={() => set("modalidade", m)}>
+                      {m === "online" ? <><Video className="mr-1 h-4 w-4" /> Online</> : <><MapPin className="mr-1 h-4 w-4" /> Presencial</>}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              {presencial(form) ? (
+                <div><Label>Endereço / local</Label><Input value={form.local ?? ""} onChange={(e) => set("local", e.target.value)} placeholder="Rua, número, sala, cidade" /></div>
+              ) : (
+                <>
+                  <div className="flex items-center gap-2"><Switch checked={form.video} onCheckedChange={(v) => set("video", v)} /><Label>Reunião com vídeo</Label></div>
+                  <div><Label>Link da sala</Label><div className="flex gap-2"><Input readOnly value={linkReuniao(form)} /><Button type="button" size="icon" variant="outline" aria-label="Copiar link" onClick={() => void navigator.clipboard.writeText(linkReuniao(form)).then(() => toast.success("Link copiado."))}><Copy className="h-4 w-4" /></Button></div></div>
+                </>
+              )}
               <div>
                 <Label>Participantes da equipe</Label>
                 <Input className="mb-2" placeholder="Pesquisar pessoa…" value={busca} onChange={(e) => setBusca(e.target.value)} />
@@ -172,12 +194,12 @@ export function ReunioesPainel({ me, empresaId, usuarios, onFechar, editar }: { 
                   <div className="flex flex-wrap items-start gap-2">
                     <div className="mr-auto min-w-0">
                       <p className="font-medium">{r.titulo}</p>
-                      <p className="text-xs text-muted-foreground">{quando(r.inicio)} · {r.duracao_min} min · {r.video ? "Vídeo" : "Áudio"} · Organizador: {org ? "Você" : nomes.get(r.criado_por) ?? "Usuário"}</p>
+                      <p className="text-xs text-muted-foreground">{quando(r.inicio)} · {r.duracao_min} min · {presencial(r) ? `Presencial: ${r.local ?? ""}` : r.video ? "Vídeo" : "Áudio"} · Organizador: {org ? "Você" : nomes.get(r.criado_por) ?? "Usuário"}</p>
                       <p className="text-xs text-muted-foreground">
                         {[...r.participantes.map((id) => (id === me ? "Você" : nomes.get(id) ?? "Usuário")), ...r.convidados.map((c) => c.nome || c.email || c.telefone)].join(", ") || "Sem participantes"}
                       </p>
                     </div>
-                    <Button size="sm" onClick={() => entrar(r)}><Video className="mr-1 h-4 w-4" /> Entrar</Button>
+                    {!presencial(r) && <Button size="sm" onClick={() => entrar(r)}><Video className="mr-1 h-4 w-4" /> Entrar</Button>}
                   </div>
                   <div className="mt-2 flex flex-wrap gap-1">
                     <Button size="sm" variant="outline" onClick={() => void copiar(r)}><Copy className="mr-1 h-3.5 w-3.5" /> Copiar convite</Button>

@@ -2,7 +2,8 @@ import type React from "react";
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarClock, ChevronLeft, ChevronRight, CheckCircle2, Circle, Inbox, MessageSquare, Printer, Video, X, LogIn, Copy, Pencil, Ban } from "lucide-react";
-import { ReunioesPainel, linkReuniao, textoConvite, useReunioes, type Reuniao } from "@/components/chat-interno/ReunioesPainel";
+import { ReunioesPainel, linkReuniao, novaReuniao, textoConvite, useReunioes, type Reuniao } from "@/components/chat-interno/ReunioesPainel";
+import { CalendarioPlanner } from "@/components/chat-interno/CalendarioPlanner";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { confirmar } from "@/components/layout/DialogoGlobal";
 import { TarefaDetalhe, registrarEvento } from "@/components/chat-interno/TarefaDetalhe";
@@ -150,7 +151,7 @@ export function ItemLinha({ i, onCheck, compacto, editavel = true, onAbrir, nome
 }
 
 /** Planner completo em tela cheia: backlog + semana + performance + relatório. */
-export function PlannerPainel({ me, empresaId, usuarios, onFechar, embutido, acoes }: { me: string; empresaId: string; usuarios: Row[]; onFechar?: () => void; embutido?: boolean; acoes?: React.ReactNode }) {
+export function PlannerPainel({ me, empresaId, usuarios, onFechar, embutido, acoes, onNovaTarefa }: { me: string; empresaId: string; usuarios: Row[]; onFechar?: () => void; embutido?: boolean; acoes?: React.ReactNode; onNovaTarefa?: (dia: string) => void }) {
   const { isMaster, usuario } = useAuth();
   const permUsuarios = usePagePermissions("/usuarios");
   const gestor = isMaster || permUsuarios.canUpdate;
@@ -162,6 +163,7 @@ export function PlannerPainel({ me, empresaId, usuarios, onFechar, embutido, aco
   const [arrastando, setArrastando] = useState<string | null>(null);
   const [aberta, setAberta] = useState<string | null>(null);
   const [reunioesAberto, setReunioesAberto] = useState(false);
+  const [modo, setModo] = useState<"agenda" | "quadro">("agenda");
   const [editarReuniao, setEditarReuniao] = useState<Reuniao | null>(null);
   const qcReuniao = useQueryClient();
   const cancelarReuniao = async (r: Reuniao) => {
@@ -250,10 +252,32 @@ export function PlannerPainel({ me, empresaId, usuarios, onFechar, embutido, aco
         {acoes}
         {!embutido && onFechar && <Button size="sm" variant="ghost" aria-label="Fechar planner" onClick={onFechar}><X className="h-5 w-5" /></Button>}
       </div>
-      {reunioesAberto && <ReunioesPainel key={editarReuniao?.id ?? "lista"} me={me} empresaId={empresaId} usuarios={usuarios} editar={editarReuniao} onFechar={() => { setReunioesAberto(false); setEditarReuniao(null); }} />}
+      {reunioesAberto && <ReunioesPainel key={editarReuniao ? editarReuniao.id || editarReuniao.sala : "lista"} me={me} empresaId={empresaId} usuarios={usuarios} editar={editarReuniao} onFechar={() => { setReunioesAberto(false); setEditarReuniao(null); }} />}
       <TarefaDetalhe id={aberta} me={me} usuarios={usuarios} onFechar={() => setAberta(null)} />
 
       <div className="min-h-0 flex-1 overflow-auto p-4">
+        <div className="mb-3 flex gap-1">
+          <Button size="sm" variant={modo === "agenda" ? "default" : "outline"} onClick={() => setModo("agenda")}>Agenda</Button>
+          <Button size="sm" variant={modo === "quadro" ? "default" : "outline"} onClick={() => setModo("quadro")}>Quadro semanal (arrastar)</Button>
+        </div>
+        {modo === "agenda" ? (
+          <CalendarioPlanner me={me} proprio={proprio}
+            reunioes={reunioes.filter((r) => !r.cancelada && (r.criado_por === alvo || r.participantes.includes(alvo)))}
+            itens={ativos}
+            onAbrirTarefa={setAberta}
+            onConcluir={(i, f) => void concluir(i, f)}
+            onEditarReuniao={(r) => { setEditarReuniao(r); setReunioesAberto(true); }}
+            onCancelarReuniao={(r) => void cancelarReuniao(r)}
+            onCriar={(n) => {
+              if (n.tipo === "tarefa") {
+                const dia = n.inicio.toLocaleDateString("sv-SE");
+                if (onNovaTarefa) onNovaTarefa(dia); else toast.info("Abra o Planner pelo menu para criar tarefas.");
+                return;
+              }
+              setEditarReuniao({ ...novaReuniao(me, n.inicio), titulo: n.titulo, modalidade: n.tipo });
+              setReunioesAberto(true);
+            }} />
+        ) : (<>
         <div className="mb-3 flex items-center gap-2">
           <Button size="icon" variant="outline" aria-label="Semana anterior" onClick={() => setSemana(somarDias(semana, -7))}><ChevronLeft className="h-4 w-4" /></Button>
           <Button size="sm" variant="outline" onClick={() => setSemana(inicioSemana(hoje()))}>Esta semana</Button>
@@ -274,6 +298,7 @@ export function PlannerPainel({ me, empresaId, usuarios, onFechar, embutido, aco
           </div>
           {dias.map((d, n) => coluna(`${DIAS[n]} ${d.slice(8, 10)}/${d.slice(5, 7)}`, d, ordenar(ativos.filter((i) => diaDoItem(i) === d))))}
         </div>
+        </>)}
 
         <section className="mt-6 rounded-xl border border-border p-4">
           <div className="mb-3 flex flex-wrap items-end gap-3">
