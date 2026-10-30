@@ -132,7 +132,7 @@ export function buildFlatMenu(items: (MenuItem & { parentId?: string })[], funco
     }
     return atual;
   };
-  const porRaiz = new Map<string, MenuItem & { primeiroFilho?: string }>();
+  const porRaiz = new Map<string, MenuItem & { primeiroFilho?: string | undefined }>();
   const ordenados = [...items].sort((a, b) => a.order - b.order);
   for (const item of ordenados) {
     const raizId = raizDe(item.id, item.parentId);
