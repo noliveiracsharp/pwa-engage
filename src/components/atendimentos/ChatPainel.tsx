@@ -40,6 +40,7 @@ import { dispararMensagem, marcarEnvio } from "@/lib/atendimentos-envio";
 import { GravadorAudio } from "./GravadorAudio";
 import { SinoBotao, SinoTarja, desarmarSino } from "./SinoAtendimento";
 import { TranscricaoAudio } from "./TranscricaoAudio";
+import { transcreverChamada } from "@/lib/chamada-transcricao.functions";
 import { ProtocoloBadge } from "./ProtocoloBadge";
 import { ManutencaoSheet } from "@/components/manutencoes/ManutencaoSheet";
 import { AvaliacaoSelo, usePesquisaSatisfacao } from "./Pesquisa";
@@ -74,6 +75,22 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
   const participantesRef = useRef<Set<string>>(new Set());
   const [fimChamada, setFimChamada] = useState<{ c: Chamada; fim: number; participantes: string[] } | null>(null);
   const [anotacoes, setAnotacoes] = useState("");
+  const [transcrevendo, setTranscrevendo] = useState(false);
+  async function transcreverGravacao(audio: Blob) {
+    setTranscrevendo(true);
+    try {
+      const buf = new Uint8Array(await audio.arrayBuffer());
+      let bin = "";
+      for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
+      const r = await transcreverChamada({ data: { audio: btoa(bin), tipo: audio.type, participantes: [...participantesRef.current].join(", ") } });
+      if (r.erro || !r.texto) toast.error(r.erro ?? "Não foi possível transcrever a chamada.");
+      else setAnotacoes((a) => (a.trim() ? `${a.trim()}\n\n` : "") + r.texto);
+    } catch {
+      toast.error("Não foi possível transcrever a chamada.");
+    } finally {
+      setTranscrevendo(false);
+    }
+  }
   const pesquisa = usePesquisaSatisfacao();
   const perms = usePagePermissions("/atendimentos");
   const [excluirAberto, setExcluirAberto] = useState(false);
@@ -451,6 +468,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
             titulo={`Chamada com ${nome}`}
             onEncerrar={encerrarChamada}
             onParticipante={(n) => participantesRef.current.add(n)}
+            onGravacao={(a) => void transcreverGravacao(a)}
           />
         )}
         {!encerrado && (
@@ -649,12 +667,13 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
               </p>
               <div className="space-y-1">
                 <Label htmlFor="anot-chamada">Anotações da chamada</Label>
-                <Textarea id="anot-chamada" rows={5} value={anotacoes} onChange={(e) => setAnotacoes(e.target.value)} placeholder="Resuma o que foi tratado, combinados e pendências…" autoFocus />
+                {transcrevendo && <p className="flex items-center gap-1 text-xs text-muted-foreground"><Loader2 className="h-3 w-3 animate-spin" /> Transcrevendo e resumindo a gravação com IA…</p>}
+                <Textarea id="anot-chamada" rows={transcrevendo ? 5 : 10} value={anotacoes} onChange={(e) => setAnotacoes(e.target.value)} placeholder="Resuma o que foi tratado, combinados e pendências…" autoFocus />
               </div>
             </div>
           )}
           <DialogFooter>
-            <Button onClick={() => void salvarRegistroChamada()}>Salvar no histórico</Button>
+            <Button disabled={transcrevendo} onClick={() => void salvarRegistroChamada()}>Salvar no histórico</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
