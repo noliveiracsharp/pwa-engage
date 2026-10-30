@@ -53,6 +53,31 @@ const mesAtual = () => hojeISO().slice(0, 7);
 const nomeUsuario = (u: Row | undefined) => (u ? text(u["nome"] || u["email"]) : "");
 
 /** Política de pagamento da empresa (dias do mês + prazo de corte). Sem cadastro: paga na data da aprovação. */
+/** Mostra o comprovante (imagem ou PDF) num modal, sem abrir outra aba. */
+function ComprovanteModal({ refArq, onClose }: { refArq: string; onClose: () => void }) {
+  const url = useUrlAssinada(refArq);
+  const pdf = /\.pdf($|\?)/i.test(refArq);
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-4xl">
+        <DialogHeader>
+          <DialogTitle>Comprovante</DialogTitle>
+          <DialogDescription>Arquivo enviado com a despesa.</DialogDescription>
+        </DialogHeader>
+        <div className="bg-muted/40 flex max-h-[75vh] min-h-64 items-center justify-center overflow-auto rounded-md">
+          {!url ? <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
+            : pdf ? <iframe src={url} title="Comprovante" className="h-[75vh] w-full rounded-md" />
+            : <img src={url} alt="Comprovante" className="max-h-[75vh] w-auto object-contain" />}
+        </div>
+        <DialogFooter>
+          {url && <Button variant="outline" asChild><a href={url} target="_blank" rel="noopener noreferrer" download>Baixar</a></Button>}
+          <Button onClick={onClose}>Fechar</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function usePolitica() {
   const { empresaId } = useAudit();
   const { data = [] } = useTableRows("despesas_politica");
@@ -86,6 +111,7 @@ function Despesas({ lanc, cartoes, usuarios, loading, perms }: { lanc: Row[]; ca
   const cartaoById = useMemo(() => new Map(cartoes.map((c) => [text(rowId(c)), c])), [cartoes]);
   const [f, setF] = useState({ busca: "", status: "todos", modalidade: "todos", mes: mesAtual() });
   const [editar, setEditar] = useState<Row | null | undefined>(undefined);
+  const [verComp, setVerComp] = useState<string | null>(null);
   const gestor = perms.canUpdate;
 
   const visiveis = useMemo(() => (gestor ? lanc : lanc.filter((l) => text(l["usuario_id"]) === text(usuarioId))), [lanc, gestor, usuarioId]);
@@ -167,7 +193,7 @@ function Despesas({ lanc, cartoes, usuarios, loading, perms }: { lanc: Row[]; ca
     } },
     { key: "acoes", header: "", fields: [], render: (l) => (
       <div className="flex justify-end gap-1">
-        {l["comprovante"] ? <Button variant="ghost" size="icon" asChild title="Comprovante"><button type="button" onClick={() => abrirArquivo(text(l["comprovante"])).catch((e) => toast.error(e.message))}><Paperclip className="h-4 w-4" /></button></Button> : null}
+        {l["comprovante"] ? <Button variant="ghost" size="icon" title="Ver comprovante" aria-label="Ver comprovante" onClick={() => setVerComp(text(l["comprovante"]))}><Paperclip className="h-4 w-4" /></Button> : null}
         {gestor && l["status"] === "pendente" && (
           <>
             <Button variant="ghost" size="icon" title="Aprovar" aria-label="Aprovar" onClick={() => pedirAprovacao(l)}><Check className="text-success h-4 w-4" /></Button>
@@ -187,6 +213,7 @@ function Despesas({ lanc, cartoes, usuarios, loading, perms }: { lanc: Row[]; ca
 
   return (
     <div className="space-y-4">
+      {verComp && <ComprovanteModal refArq={verComp} onClose={() => setVerComp(null)} />}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {cards.map((c) => (
           <button key={c.label} type="button" onClick={() => setF((s) => ({ ...s, status: s.status === c.st ? "todos" : c.st }))}
