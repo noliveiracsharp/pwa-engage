@@ -40,7 +40,7 @@ async function meusCanais(me: string) {
 }
 
 /** Localiza (ou cria) o canal direto entre dois usuários. */
-async function canalDireto(me: string, outroId: string, empresaId: string) {
+export async function canalDireto(me: string, outroId: string, empresaId: string) {
   const mine = await meusCanais(me);
   if (mine.length) {
     const { data } = await supabase.from("chat_interno_participantes").select("canal_id").eq("usuario_id", outroId).in("canal_id", mine);

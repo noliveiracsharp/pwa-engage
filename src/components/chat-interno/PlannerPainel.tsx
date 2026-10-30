@@ -1,3 +1,4 @@
+import type React from "react";
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarClock, ChevronLeft, ChevronRight, CheckCircle2, Circle, Inbox, MessageSquare, Printer, Video, X } from "lucide-react";
@@ -147,7 +148,7 @@ export function ItemLinha({ i, onCheck, compacto, editavel = true, onAbrir, nome
 }
 
 /** Planner completo em tela cheia: backlog + semana + performance + relatório. */
-export function PlannerPainel({ me, empresaId, usuarios, onFechar }: { me: string; empresaId: string; usuarios: Row[]; onFechar: () => void }) {
+export function PlannerPainel({ me, empresaId, usuarios, onFechar, embutido, acoes }: { me: string; empresaId: string; usuarios: Row[]; onFechar?: () => void; embutido?: boolean; acoes?: React.ReactNode }) {
   const { isMaster, usuario } = useAuth();
   const permUsuarios = usePagePermissions("/usuarios");
   const gestor = isMaster || permUsuarios.canUpdate;
@@ -207,7 +208,7 @@ export function PlannerPainel({ me, empresaId, usuarios, onFechar }: { me: strin
   };
 
   return (
-    <div className="fixed inset-0 z-[70] flex flex-col bg-background">
+    <div className={cn("flex flex-col bg-background", embutido ? "min-h-full rounded-xl border border-border" : "fixed inset-0 z-[70]")}>
       <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-3">
         <h2 className="mr-auto text-lg font-semibold">Planner — {nomeAlvo}</h2>
         {gestor && (
@@ -225,7 +226,8 @@ export function PlannerPainel({ me, empresaId, usuarios, onFechar }: { me: strin
           </Button>
         )}
         <Button size="sm" variant="outline" onClick={() => setReunioesAberto(true)}><CalendarClock className="mr-1 h-4 w-4" /> Reuniões</Button>
-        <Button size="sm" variant="ghost" aria-label="Fechar planner" onClick={onFechar}><X className="h-5 w-5" /></Button>
+        {acoes}
+        {!embutido && onFechar && <Button size="sm" variant="ghost" aria-label="Fechar planner" onClick={onFechar}><X className="h-5 w-5" /></Button>}
       </div>
       {reunioesAberto && <ReunioesPainel me={me} empresaId={empresaId} usuarios={usuarios} onFechar={() => setReunioesAberto(false)} />}
       <TarefaDetalhe id={aberta} me={me} usuarios={usuarios} onFechar={() => setAberta(null)} />
