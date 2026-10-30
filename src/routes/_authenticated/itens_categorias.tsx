@@ -1,6 +1,5 @@
 import { useMemo } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft } from "lucide-react";
+import { createFileRoute } from "@tanstack/react-router";
 import { ApoioCrud } from "@/components/itens/ApoioCrud";
 import { Button } from "@/components/ui/button";
 import type { Column } from "@/components/data-table/DataTable";
@@ -61,9 +60,6 @@ function CategoriasItensPage() {
 
   return (
     <div className="space-y-3">
-      <Button variant="ghost" size="sm" asChild>
-        <Link to="/itens"><ArrowLeft className="mr-2 h-4 w-4" /> Produtos e Serviços</Link>
-      </Button>
       <p className="text-muted-foreground text-sm">
         Ao escolher a categoria no cadastro de um item, o sistema preenche sozinho o Centro de Custo, a Conta Gerencial e os dados fiscais definidos aqui.
       </p>

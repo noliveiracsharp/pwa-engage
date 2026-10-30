@@ -101,7 +101,7 @@ export function ReunioesPainel({ me, empresaId, usuarios, onFechar, editar }: { 
     const { data, error } = await supabase.functions.invoke("cobranca-regua", { body: { acao: "reuniao_convite", reuniao_id: r.id, para, link: linkReuniao(r) } });
     setEnviando(false);
     const erro = (data as { erro?: string } | null)?.erro;
-    if (error || erro) return void toast.error(erro ?? "Atualize a função de e-mail (cobranca-regua v11).");
+    if (error || erro) return void toast.error(erro ?? "Atualize a função de e-mail (cobranca-regua v12).");
     toast.success(`Convite enviado para ${para.length} e-mail(s).`);
   };
   const entrar = (r: Reuniao) => window.open(`${linkReuniao(r)}${r.video ? "?" : "&"}org=${r.id}`, "_blank");

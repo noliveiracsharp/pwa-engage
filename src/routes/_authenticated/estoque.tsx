@@ -198,11 +198,12 @@ function EstoquePage() {
   return (
     <Tabs defaultValue="saldos" className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <TabsList className="h-auto flex-1 flex-wrap">
-          <TabsTrigger value="saldos" className="flex-1">Saldos</TabsTrigger>
-          <TabsTrigger value="kardex" className="flex-1">Movimentações (Kardex)</TabsTrigger>
-          <TabsTrigger value="locais" className="flex-1">Locais de Estoque</TabsTrigger>
+        <TabsList className="h-auto w-fit flex-wrap">
+          <TabsTrigger value="saldos">Saldos</TabsTrigger>
+          <TabsTrigger value="kardex">Movimentações (Kardex)</TabsTrigger>
+          <TabsTrigger value="locais">Locais de Estoque</TabsTrigger>
         </TabsList>
+        <span className="flex-1" />
         {perms.canCreate && (
           <Button onClick={() => setMovOpen(true)}>
             <Plus className="mr-2 h-4 w-4" /> Nova movimentação
