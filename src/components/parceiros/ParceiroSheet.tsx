@@ -87,6 +87,7 @@ type Socio = { nome: string; qualificacao: string; pais: string; faixa_etaria?: 
 type Form = Record<TextKey, string> & {
   is_cliente: boolean;
   is_fornecedor: boolean;
+  is_condominio: boolean;
   tipo_pessoa: "Física" | "Jurídica";
   status: boolean;
   opcao_pelo_simples: boolean;
@@ -109,6 +110,7 @@ function toForm(r: Row | null): Form {
   f.data_inicio_atividade = f.data_inicio_atividade.slice(0, 10);
   f.is_cliente = r ? r["is_cliente"] === true : true;
   f.is_fornecedor = r?.["is_fornecedor"] === true;
+  f.is_condominio = r?.["is_condominio"] === true;
   f.tipo_pessoa = r?.["tipo_pessoa"] === "Física" ? "Física" : "Jurídica";
   f.status = r ? r["status"] !== false : true;
   f.opcao_pelo_simples = r?.["opcao_pelo_simples"] === true;
@@ -265,6 +267,7 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly: roTela, sa
     const values: Row = {
       is_cliente: f.is_cliente,
       is_fornecedor: f.is_fornecedor,
+      is_condominio: f.is_condominio,
       tipo_pessoa: f.tipo_pessoa,
       status: f.status,
       opcao_pelo_simples: f.opcao_pelo_simples,
@@ -332,8 +335,8 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly: roTela, sa
           </div>
           <fieldset disabled={readOnly} className="min-h-0 flex-1 overflow-y-auto px-6 pb-6">
             <TabsContent value="gerais" className="mt-0 space-y-6">
-              <div className="grid gap-3 sm:grid-cols-2">
-                {([["is_cliente", "É Cliente?"], ["is_fornecedor", "É Fornecedor?"]] as const).map(([k, l]) => (
+              <div className="grid gap-3 sm:grid-cols-3">
+                {([["is_cliente", "É Cliente?"], ["is_fornecedor", "É Fornecedor?"], ["is_condominio", "É Condomínio?"]] as const).map(([k, l]) => (
                   <label key={k} className="border-primary/30 bg-primary/5 flex cursor-pointer items-center justify-between rounded-lg border px-4 py-3">
                     <span className="font-medium">{l}</span>
                     <Switch checked={f[k]} disabled={readOnly} onCheckedChange={(v) => set(k, v)} />

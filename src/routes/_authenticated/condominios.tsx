@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { ApoioCrud } from "@/components/itens/ApoioCrud";
-import type { Column } from "@/components/data-table/DataTable";
 import type { Field } from "@/components/data-table/RecordSheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { rowId, useTableRows } from "@/lib/crud";
@@ -27,7 +26,7 @@ const ord = (a: { label: string }, b: { label: string }) => a.label.localeCompar
 const opts = (rows: Row[], label: (r: Row) => string) =>
   rows.map((r) => ({ value: String(rowId(r)), label: label(r) })).sort(ord);
 const lista = (pares: Array<[string, string]>) => pares.map(([value, label]) => ({ value, label })).sort(ord);
-const nomeDe = (map: Map<string, string>, k: string): Column["render"] => (row) => map.get(String(pick(row, [k]) ?? "")) ?? "—";
+const nomeDe = (map: Map<string, string>, k: string) => (row: Row) => map.get(String(pick(row, [k]) ?? "")) ?? "—";
 
 function CondominiosPagina() {
   const perms = usePagePermissions("/condominios");
