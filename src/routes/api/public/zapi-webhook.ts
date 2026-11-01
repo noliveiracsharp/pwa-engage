@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ehRespostaAutomatica } from "@/lib/instancia-finalidade";
 import { extrairTagAcesso } from "@/lib/qr-direto";
+import { detectarComando, mensagemComando } from "@/lib/comandos-fluxo";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/integrations/supabase/client";
@@ -160,6 +161,33 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
 
         const acao = (nome: string, dados: Record<string, unknown>) =>
           db.rpc("fluxo_webhook_acao", { p_token: k, p_atendimento: r.atendimento_id, p_acao: nome, p_dados: dados });
+
+        // Comandos globais (#atendente, #sair; #inicio reinicia abaixo): valem em qualquer etapa.
+        const cfgCmd = (r.fluxo.nos ?? []).find((n) => (n.data?.tipo ?? n.type) === "gatilho")?.data ?? {};
+        const comando = tipo === "texto" ? detectarComando(texto, cfgCmd) : null;
+        if (comando === "atendente" || comando === "sair") {
+          const txt = mensagemComando(comando, cfgCmd);
+          const { data: m } = await acao("mensagem", { texto: txt });
+          const mid = (m as { id?: string } | null)?.id;
+          try {
+            await dispararMensagem({ instancia: r.instancia, mensagemId: mid, atendimentoId: r.atendimento_id, telefone: r.telefone, texto: txt });
+            if (mid) await acao("status_envio", { id: mid, status: "enviado" });
+          } catch (e) {
+            console.error("zapi-webhook comando", e);
+            if (mid) await acao("status_envio", { id: mid, status: "falha" });
+          }
+          if (comando === "atendente") {
+            const etapa = String(cfgCmd["atendente_etapa_id"] ?? "");
+            if (etapa) await acao("etapa", { etapa_id: etapa });
+            await acao("modo", { modo: "Humano" });
+          } else {
+            await acao("encerrar", {});
+          }
+          await acao("execucao", { id: r.execucao?.id ?? null, fluxo_id: r.fluxo.id, no_atual: null, status: comando === "atendente" ? "transbordo" : "finalizado", variaveis: r.execucao?.variaveis ?? {} });
+          return ok({ comando });
+        }
+        if (comando === "inicio" && r.execucao) r.execucao = { ...r.execucao, no_atual: null, status: "ativo" };
+
 
         // Atalho "#kanban" (QR Code de acesso): pula o robô e entra direto no Kanban da tag.
         const tag = !r.execucao && tipo === "texto" ? extrairTagAcesso(texto) : null;

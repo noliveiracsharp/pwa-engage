@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { COMANDOS_PADRAO, MENSAGENS_PADRAO } from "@/lib/comandos-fluxo";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
@@ -582,6 +583,37 @@ function Propriedades({ no, atualizar, quadros, etapas, campos, fluxos }: {
           {d["gatilho"] === "palavra_chave" && (
             <Campo label="Palavras-chave" ajuda="Separe por vírgula"><Input value={s("palavras")} onChange={(e) => atualizar({ palavras: e.target.value })} /></Campo>
           )}
+          <div className="mt-2 space-y-3 rounded-md border p-3">
+            <p className="text-sm font-medium">Comandos do cliente (valem em qualquer etapa)</p>
+            <p className="text-xs text-muted-foreground">
+              Já ativos: #{COMANDOS_PADRAO.inicio.join(", #")} (volta ao início) · #{COMANDOS_PADRAO.atendente.join(", #")} (atendente) · #{COMANDOS_PADRAO.sair.join(", #")} (encerra).
+            </p>
+            <Campo label="Palavras extras para voltar ao início" ajuda="Opcional, separe por vírgula. Ex.: 0, home"><Input value={s("cmd_inicio")} onChange={(e) => atualizar({ cmd_inicio: e.target.value })} /></Campo>
+            <Campo label="Palavras extras para falar com atendente" ajuda="Opcional. Ex.: 9, urgente"><Input value={s("cmd_atendente")} onChange={(e) => atualizar({ cmd_atendente: e.target.value })} /></Campo>
+            <Campo label="Mensagem ao transferir"><Textarea rows={2} placeholder={MENSAGENS_PADRAO.atendente} value={s("msg_atendente")} onChange={(e) => atualizar({ msg_atendente: e.target.value })} /></Campo>
+            <Campo label="Fila do atendente (quadro)" ajuda="Vazio: continua no quadro atual">
+              <Select value={s("atendente_quadro_id")} onValueChange={(v) => atualizar({ atendente_quadro_id: v, atendente_etapa_id: "" })}>
+                <SelectTrigger><SelectValue placeholder="Quadro atual" /></SelectTrigger>
+                <SelectContent>
+                  {quadros.map((q) => <SelectItem key={String(q["id"])} value={String(q["id"])}>{pick<string>(q, ["nome", "descricao", "titulo"])}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </Campo>
+            {s("atendente_quadro_id") && (
+              <Campo label="Etapa da fila">
+                <Select value={s("atendente_etapa_id")} onValueChange={(v) => atualizar({ atendente_etapa_id: v })}>
+                  <SelectTrigger><SelectValue placeholder="Escolha a etapa" /></SelectTrigger>
+                  <SelectContent>
+                    {etapas.filter((e) => String(pick(e, ["kanban_nome_id", "kanban_id"]) ?? "") === s("atendente_quadro_id"))
+                      .sort((a, b) => Number(a["ordem"] ?? 0) - Number(b["ordem"] ?? 0))
+                      .map((e) => <SelectItem key={String(e["id"])} value={String(e["id"])}>{pick<string>(e, ["descricao", "nome", "titulo"])}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </Campo>
+            )}
+            <Campo label="Palavras extras para encerrar" ajuda="Opcional"><Input value={s("cmd_sair")} onChange={(e) => atualizar({ cmd_sair: e.target.value })} /></Campo>
+            <Campo label="Mensagem ao encerrar"><Textarea rows={2} placeholder={MENSAGENS_PADRAO.sair} value={s("msg_sair")} onChange={(e) => atualizar({ msg_sair: e.target.value })} /></Campo>
+          </div>
         </>
       );
     case "http":
