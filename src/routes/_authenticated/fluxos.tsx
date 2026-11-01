@@ -452,7 +452,7 @@ function FluxosPage() {
             )}
           </div>
           <SimuladorFluxo
-        open={testando} onOpenChange={setTestando}
+        open={testando} onOpenChange={setTestando} onSelecionar={setSelId}
         nos={nodes as unknown as import("@/lib/fluxos-motor").NoFluxo[]}
         conexoes={edges.map((e) => ({ source: e.source, target: e.target, sourceHandle: e.sourceHandle ?? null }))}
         onTrilha={(visitados, atual, extra) => { setTrilhaTeste({ visitados, atual, erro: extra?.erro ?? null }); if (extra?.entradas) setEntradasTeste(extra.entradas); }}
