@@ -34,6 +34,8 @@ type Envio = {
   nomeArquivo?: string | undefined;
   /** ID da mensagem no WhatsApp que está sendo respondida (citação nativa). */
   responderA?: string | null | undefined;
+  /** Lista interativa do WhatsApp (send-option-list); se recusada, vai como texto numerado. */
+  lista?: { titulo: string; botao: string; opcoes: string[] } | undefined;
 };
 
 /** ID da mensagem devolvido pela Z-API (usado para confirmações de entrega/leitura). */
@@ -99,6 +101,19 @@ export async function dispararMensagem(e: Envio): Promise<string | true> {
       body = { phone, document: e.midiaUrl, fileName: e.nomeArquivo };
     }
     if (e.responderA) body["messageId"] = e.responderA;
+  } else if (e.lista?.opcoes.length) {
+    const rl = await fetch(`${base}/send-option-list`, {
+      method: "POST", headers,
+      body: JSON.stringify({
+        phone, message: e.texto || e.lista.titulo,
+        optionList: {
+          title: e.lista.titulo, buttonLabel: e.lista.botao,
+          options: e.lista.opcoes.slice(0, 10).map((o, i) => ({ id: String(i + 1), title: o.slice(0, 24), description: o.length > 24 ? o.slice(24, 96) : "" })),
+        },
+      }),
+    }).catch(() => null);
+    if (rl?.ok) return (await idZapi(rl)) ?? true;
+    body = { phone, message: [e.texto, ...e.lista.opcoes.map((o, i) => `${i + 1}. ${o}`)].filter(Boolean).join("\n") };
   } else if (e.responderA) {
     // Resposta citando: texto simples para manter a citação nativa no WhatsApp.
     body = { phone, message: e.texto, messageId: e.responderA };

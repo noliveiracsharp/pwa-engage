@@ -9,7 +9,7 @@ export type ConexaoFluxo = { source: string; target: string; sourceHandle?: stri
 export type EstadoExec = { no_atual: string | null; status: "ativo" | "aguardando" | "finalizado" | "transbordo"; variaveis: Record<string, string> };
 
 export type Acao =
-  | { tipo: "mensagem"; texto: string; midiaUrl?: string; midiaTipo?: "imagem" | "video" | "documento"; nomeArquivo?: string }
+  | { tipo: "mensagem"; texto: string; midiaUrl?: string; midiaTipo?: "imagem" | "video" | "documento"; nomeArquivo?: string; lista?: { titulo: string; botao: string; opcoes: string[] } }
   | { tipo: "etapa"; etapa_id: string; prioridade?: string | undefined }
   | { tipo: "modo"; modo: "Humano" | "IA" }
   | { tipo: "campo"; chave: string; valor: string }
@@ -45,7 +45,8 @@ export function lerCaminho(vars: Record<string, string>, caminho: string): unkno
 export const paraTexto = (v: unknown) => (v == null ? "" : typeof v === "object" ? JSON.stringify(v) : String(v));
 
 export function interpolar(texto: string, vars: Record<string, string>) {
-  return texto.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_, k: string) => paraTexto(lerCaminho(vars, k)));
+  // "\\n" literal (vindo de JSON/JavaScript) vira quebra de linha real no WhatsApp.
+  return texto.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_, k: string) => paraTexto(lerCaminho(vars, k))).replace(/\\r\\n|\\n/g, "\n");
 }
 
 /** Próximo bloco ligado à saída `handle` de `de`. */
@@ -56,6 +57,11 @@ export function proximoNoId(conexoes: ConexaoFluxo[], de: string, handle: string
 export function textoMenu(d: DadosNo) {
   const ops = opcoesMenu(d["opcoes"]).map((o, i) => `${i + 1}. ${o}`);
   return [str(d["texto"]), ...ops].filter(Boolean).join("\n");
+}
+
+/** Opções do menu com variáveis resolvidas (permite lista vinda de {{variavel}}). */
+export function menuInterpolado(d: DadosNo, vars: Record<string, string>): DadosNo {
+  return { ...d, opcoes: interpolar(str(d["opcoes"]), vars) };
 }
 
 /** Qual opção do menu o cliente escolheu: número ("2", "2.") ou o texto da opção. */
@@ -126,6 +132,7 @@ export function executarFluxo(p: {
       return { ...fim("ativo", esperando.id), externo: { no: esperando } };
     }
     if (tipoDe(esperando) === "menu") {
+      const d = menuInterpolado(esperando.data, vars);
       const i = escolhaMenu(d, p.texto);
       if (i < 0) {
         atual = proximo(esperando.id, "invalida");
@@ -165,9 +172,14 @@ export function executarFluxo(p: {
         atual = proximo(atual.id);
         break;
       }
-      case "menu":
-        acoes.push({ tipo: "mensagem", texto: interpolar(textoMenu(d), vars) });
+      case "menu": {
+        const dm = menuInterpolado(d, vars);
+        const ops = opcoesMenu(dm["opcoes"]);
+        if (str(d["formato"]) === "lista" && ops.length) {
+          acoes.push({ tipo: "mensagem", texto: interpolar(str(d["texto"]), vars), lista: { titulo: interpolar(str(d["lista_titulo"]) || "Opções", vars), botao: interpolar(str(d["lista_botao"]) || "Ver opções", vars), opcoes: ops } });
+        } else acoes.push({ tipo: "mensagem", texto: interpolar(textoMenu(dm), vars) });
         return fim("aguardando", atual.id);
+      }
       case "pergunta":
         acoes.push({ tipo: "mensagem", texto: interpolar(str(d["texto"]), vars) });
         return fim("aguardando", atual.id);

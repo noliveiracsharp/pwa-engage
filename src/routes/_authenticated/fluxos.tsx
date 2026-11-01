@@ -583,7 +583,27 @@ function Propriedades({ no, atualizar, quadros, etapas, campos, fluxos }: {
     case "transbordo": case "encerrar":
       return texto("Mensagem", "texto", "Use {{nome}} para inserir variáveis");
     case "menu":
-      return <>{texto("Mensagem")}{texto("Opções", "opcoes", "Uma opção por linha — cada uma vira uma saída do bloco")}</>;
+      return (
+        <>
+          <Campo label="Formato no WhatsApp" ajuda="Lista abre um botão com as opções para tocar. Se o WhatsApp recusar, vai como texto numerado.">
+            <Select value={s("formato") || "texto"} onValueChange={(v) => atualizar({ formato: v })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="lista">Lista interativa (botão)</SelectItem>
+                <SelectItem value="texto">Texto numerado (normal)</SelectItem>
+              </SelectContent>
+            </Select>
+          </Campo>
+          {s("formato") === "lista" && (
+            <div className="grid grid-cols-2 gap-3">
+              <Campo label="Título da lista"><Input value={s("lista_titulo")} placeholder="Opções" onChange={(e) => atualizar({ lista_titulo: e.target.value })} /></Campo>
+              <Campo label="Texto do botão"><Input value={s("lista_botao")} placeholder="Ver opções" maxLength={20} onChange={(e) => atualizar({ lista_botao: e.target.value })} /></Campo>
+            </div>
+          )}
+          {texto("Mensagem")}
+          {texto("Opções", "opcoes", "Uma opção por linha — cada uma vira uma saída. Pode usar {{variavel}} com várias linhas (máx. 10 na lista).")}
+        </>
+      );
     case "pergunta":
       return (
         <>
