@@ -210,11 +210,11 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
         for (const a of acoes) {
           try {
             if (a.tipo === "mensagem") {
-              if (!a.texto.trim()) continue;
-              const { data: m } = await acao("mensagem", { texto: a.texto });
+              if (!a.texto.trim() && !a.midiaUrl) continue;
+              const { data: m } = await acao("mensagem", { texto: a.texto || a.nomeArquivo || a.midiaTipo || "", ...(a.midiaUrl ? { midia_url: a.midiaUrl, tipo: a.midiaTipo } : {}) });
               const mid = (m as { id?: string } | null)?.id;
               try {
-                const zid = await dispararMensagem({ instancia: r.instancia, mensagemId: mid, atendimentoId: r.atendimento_id, telefone: r.telefone, texto: a.texto });
+                const zid = await dispararMensagem({ instancia: r.instancia, mensagemId: mid, atendimentoId: r.atendimento_id, telefone: r.telefone, texto: a.texto, midiaUrl: a.midiaUrl, tipo: a.midiaTipo, nomeArquivo: a.nomeArquivo });
                 if (mid) await acao("status_envio", { id: mid, status: "enviado" });
                 if (mid && typeof zid === "string") {
                   const { error: eV } = await db.rpc("zapi_webhook_vincular" as never, { p_token: k, p_mensagem: mid, p_zapi: zid } as never);
