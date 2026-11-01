@@ -3,6 +3,7 @@ import { FileText, RotateCcw, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { TextoWhatsapp } from "@/components/ui/texto-whatsapp";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { executarFluxo, proximoNoId, type Acao, type ConexaoFluxo, type EstadoExec, type NoFluxo } from "@/lib/fluxos-motor";
 import { executarCodigo, executarHttp } from "@/lib/fluxos-externo";
@@ -98,7 +99,7 @@ export function SimuladorFluxo({ open, onOpenChange, nos, conexoes, onTrilha }: 
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange} modal={false}>
-      <SheetContent side="right" className="flex w-full flex-col sm:max-w-md" onInteractOutside={(e) => e.preventDefault()}>
+      <SheetContent side="right" data-no-guard className="flex w-full flex-col sm:max-w-md" onInteractOutside={(e) => e.preventDefault()}>
         <SheetHeader>
           <SheetTitle>Testar fluxo</SheetTitle>
           <SheetDescription>Converse como se fosse o cliente. Nada é enviado de verdade.</SheetDescription>
@@ -125,7 +126,7 @@ export function SimuladorFluxo({ open, onOpenChange, nos, conexoes, onTrilha }: 
                   {b.midiaUrl && b.midiaTipo === "imagem" && <img src={b.midiaUrl} alt="" className="mb-1 max-h-48 rounded" />}
                   {b.midiaUrl && b.midiaTipo === "video" && <video src={b.midiaUrl} controls className="mb-1 max-h-48 rounded" />}
                   {b.midiaUrl && b.midiaTipo === "documento" && <a href={b.midiaUrl} target="_blank" rel="noreferrer" className="mb-1 flex items-center gap-1 underline"><FileText className="size-4" /> Arquivo</a>}
-                  {b.texto}
+                  <TextoWhatsapp text={b.texto} />
                 </div>
               ))}
               <div ref={fimRef} />
