@@ -5,6 +5,7 @@ export type TipoNo =
   | "menu"
   | "pergunta"
   | "condicao"
+  | "switch"
   | "horario"
   | "atraso"
   | "kanban"
@@ -27,6 +28,7 @@ export const CATALOGO: { tipo: TipoNo; nome: string; categoria: CategoriaNo; des
   { tipo: "menu", nome: "Menu de opções", categoria: "Mensagens", descricao: "1 - Comercial, 2 - Suporte…" },
   { tipo: "pergunta", nome: "Pergunta", categoria: "Mensagens", descricao: "Aguarda resposta e guarda em variável" },
   { tipo: "condicao", nome: "Condição", categoria: "Lógica", descricao: "Se / Senão" },
+  { tipo: "switch", nome: "Switch (vários caminhos)", categoria: "Lógica", descricao: "Um caminho para cada valor + Padrão" },
   { tipo: "horario", nome: "Horário de atendimento", categoria: "Lógica", descricao: "Aberto / Fechado" },
   { tipo: "subfluxo", nome: "Executar outro fluxo", categoria: "Lógica", descricao: "Continua a conversa em outro fluxo" },
   { tipo: "codigo", nome: "Executar JavaScript", categoria: "Lógica", descricao: "Transforma dados e listas com código" },
@@ -58,6 +60,9 @@ export const opcoesMenu = (texto: unknown): string[] =>
     .map((s) => s.trim())
     .filter(Boolean);
 
+/** Casos do Switch: um por linha. */
+export const casosSwitch = opcoesMenu;
+
 /** Saídas (alças) de cada bloco. */
 export function saidasDoNo(tipo: TipoNo, dados: DadosNo): { id: string; rotulo: string }[] {
   switch (tipo) {
@@ -68,6 +73,8 @@ export function saidasDoNo(tipo: TipoNo, dados: DadosNo): { id: string; rotulo: 
       ];
     case "condicao":
       return [{ id: "sim", rotulo: "Sim" }, { id: "nao", rotulo: "Não" }];
+    case "switch":
+      return [...casosSwitch(dados["casos"]).map((c, i) => ({ id: `caso-${i}`, rotulo: c })), { id: "padrao", rotulo: "Padrão" }];
     case "horario":
       return [{ id: "aberto", rotulo: "Aberto" }, { id: "fechado", rotulo: "Fechado" }];
     case "ia":

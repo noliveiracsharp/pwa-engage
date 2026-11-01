@@ -2,7 +2,7 @@
  * Motor de execução dos fluxos (função pura): recebe o grafo salvo pelo construtor,
  * o estado atual da conversa e o texto do cliente; devolve as ações a executar e o novo estado.
  */
-import { opcoesMenu, type DadosNo, type TipoNo } from "@/lib/fluxos";
+import { casosSwitch, opcoesMenu, type DadosNo, type TipoNo } from "@/lib/fluxos";
 
 export type NoFluxo = { id: string; type?: string; data: DadosNo & { tipo?: TipoNo } };
 export type ConexaoFluxo = { source: string; target: string; sourceHandle?: string | null };
