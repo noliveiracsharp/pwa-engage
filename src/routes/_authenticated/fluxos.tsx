@@ -10,7 +10,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import {
   Bot, Clock, GitBranch, Hourglass, KanbanSquare, ListOrdered, MessageSquare,
-  MessageCircleQuestion, PhoneForwarded, Plus, Save, Trash2, UserPlus, Workflow, Zap, PenLine, CircleStop, Globe, Code2, X, FlaskConical, Upload,
+  MessageCircleQuestion, PhoneForwarded, Plus, Save, Trash2, UserPlus, Workflow, Zap, PenLine, CircleStop, Globe, Code2, X, FlaskConical, Upload, Copy, Play,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -45,6 +45,7 @@ const VARS_CONTATO: VariavelDef[] = [
   { chave: "protocolo", descricao: "Protocolo do atendimento" },
   { chave: "ultima_mensagem", descricao: "Última mensagem do cliente" },
 ];
+const DuplicarCtx = createContext<(id: string) => void>(() => {});
 const VarsCtx = createContext<{ vars: VariavelDef[]; empresaId: string | null }>({ vars: VARS_CONTATO, empresaId: null });
 
 /** Variáveis que os blocos do fluxo criam (perguntas, HTTP, JavaScript). */
@@ -107,6 +108,7 @@ type FluxoNode = Node<NoData>;
 
 function BlocoNo({ id, data, selected }: NodeProps<FluxoNode>) {
   const { deleteElements } = useReactFlow();
+  const duplicar = useContext(DuplicarCtx);
   const cat = CATALOGO.find((c) => c.tipo === data.tipo)!.categoria;
   const Icone = ICONES[data.tipo];
   const saidas = saidasDoNo(data.tipo, data);
@@ -118,6 +120,17 @@ function BlocoNo({ id, data, selected }: NodeProps<FluxoNode>) {
           <Icone className="size-3.5" />
         </span>
         <span className="min-w-0 flex-1 truncate text-sm font-medium">{data.titulo || nomeTipo(data.tipo)}</span>
+        {data.tipo !== "gatilho" && (
+          <button
+            type="button"
+            aria-label="Duplicar bloco"
+            title="Duplicar bloco"
+            className="nodrag flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+            onClick={(e) => { e.stopPropagation(); duplicar(id); }}
+          >
+            <Copy className="size-3.5" />
+          </button>
+        )}
         {data.tipo !== "gatilho" && (
           <button
             type="button"
@@ -319,6 +332,17 @@ function FluxosPage() {
   const sel = nodes.find((n) => n.id === selId);
   const atualizarSel = (patch: DadosNo) =>
     setNodes((ns) => ns.map((n) => (n.id === selId ? { ...n, data: comResumo({ ...n.data, ...patch } as NoData) } : n)));
+  const duplicarNo = useCallback((id: string) => {
+    const novoId = `copia-${Date.now().toString(36)}`;
+    setNodes((ns) => {
+      const o = ns.find((n) => n.id === id);
+      if (!o || o.data.tipo === "gatilho") return ns;
+      const data = JSON.parse(JSON.stringify(o.data)) as NoData;
+      if (data.titulo) data.titulo = `${String(data.titulo)} (cópia)`;
+      return [...ns.map((n) => ({ ...n, selected: false })), { id: novoId, type: "bloco", position: { x: o.position.x + 40, y: o.position.y + 60 }, data, selected: true }];
+    });
+    toast.success("Bloco duplicado");
+  }, [setNodes]);
   const removerSel = () => {
     if (!sel || sel.data.tipo === "gatilho") return;
     setNodes((ns) => ns.filter((n) => n.id !== selId));
@@ -402,8 +426,10 @@ function FluxosPage() {
               </div>
             ))}
           </aside>
-          <div className="relative min-w-0 flex-1 overflow-hidden rounded-lg border bg-muted/30" onDragOver={(e) => e.preventDefault()} onDrop={onDrop}>
+          <div className="flex min-w-0 flex-1 flex-col gap-2">
+          <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden rounded-lg border bg-muted/30" onDragOver={(e) => e.preventDefault()} onDrop={onDrop}>
             {fluxo ? (
+              <DuplicarCtx.Provider value={duplicarNo}>
               <ReactFlow
                 nodes={nosVisiveis} edges={edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes}
                 defaultEdgeOptions={{ type: "ligacao" }}
@@ -416,6 +442,7 @@ function FluxosPage() {
                 <Controls />
                 <MiniMap pannable zoomable className="!bg-card" />
               </ReactFlow>
+              </DuplicarCtx.Provider>
             ) : (
               <div className="flex h-full flex-col items-center justify-center gap-3 text-sm text-muted-foreground">
                 <Workflow className="size-10" />
@@ -424,17 +451,18 @@ function FluxosPage() {
               </div>
             )}
           </div>
-        </div>
-      )}
-
-      <SimuladorFluxo
+          <SimuladorFluxo
         open={testando} onOpenChange={setTestando}
         nos={nodes as unknown as import("@/lib/fluxos-motor").NoFluxo[]}
         conexoes={edges.map((e) => ({ source: e.source, target: e.target, sourceHandle: e.sourceHandle ?? null }))}
         onTrilha={(visitados, atual, extra) => { setTrilhaTeste({ visitados, atual, erro: extra?.erro ?? null }); if (extra?.entradas) setEntradasTeste(extra.entradas); }}
       />
-      <Sheet open={!!sel} onOpenChange={(o) => !o && setSelId(null)}>
-        <SheetContent side="right" className={cn("flex flex-col", "sm:max-w-[min(1400px,95vw)] lg:w-[95vw]")} data-no-guard>
+          </div>
+        </div>
+      )}
+
+      <Sheet open={!!sel} onOpenChange={(o) => !o && setSelId(null)} modal={false}>
+        <SheetContent side="right" semFundo onInteractOutside={(e) => e.preventDefault()} className={cn("flex flex-col shadow-2xl", "sm:max-w-[min(1400px,95vw)] lg:w-[70vw]")} data-no-guard>
           {sel && (
             <>
               <SheetHeader>
@@ -452,8 +480,14 @@ function FluxosPage() {
                 {sel.data.tipo === "http" && <TesteHttp d={sel.data as Record<string, unknown>} variavel={String(sel.data["variavel"] || "resposta")} />}
               </div>
               <SheetFooter className="flex-row justify-between border-t">
-                <Button variant="ghost" onClick={removerSel} disabled={sel.data.tipo === "gatilho"}><Trash2 className="size-4" /> Excluir bloco</Button>
-                <Button onClick={() => setSelId(null)}>Concluir</Button>
+                <div className="flex gap-1">
+                  <Button variant="ghost" onClick={removerSel} disabled={sel.data.tipo === "gatilho"}><Trash2 className="size-4" /> Excluir bloco</Button>
+                  <Button variant="ghost" onClick={() => duplicarNo(sel.id)} disabled={sel.data.tipo === "gatilho"}><Copy className="size-4" /> Duplicar</Button>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setTestando(true)}><Play className="size-4" /> Testar até aqui</Button>
+                  <Button onClick={() => setSelId(null)}>Concluir</Button>
+                </div>
               </SheetFooter>
             </>
           )}
