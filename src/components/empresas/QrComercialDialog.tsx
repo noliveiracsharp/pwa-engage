@@ -7,9 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { text } from "@/lib/crud";
+import { text, useTableRows } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
-import { useTableRows } from "@/hooks/useTableRows";
 import { linkAcessoKanban, tagDoKanban } from "@/lib/qr-direto";
 
 /** QR Code de acesso: abre o WhatsApp com "#kanban" e a conversa pula o robô direto para o Kanban escolhido. */
