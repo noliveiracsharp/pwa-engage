@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { TextoWhatsapp } from "@/components/ui/texto-whatsapp";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { executarFluxo, proximoNoId, type Acao, type ConexaoFluxo, type EstadoExec, type NoFluxo } from "@/lib/fluxos-motor";
+import { detectarComando, mensagemComando, COMANDOS_PADRAO, MENSAGENS_PADRAO } from "@/lib/comandos-fluxo";
 import { executarCodigo, executarHttp } from "@/lib/fluxos-externo";
 import { nomeTipo, type TipoNo } from "@/lib/fluxos";
 import { cn } from "@/lib/utils";
@@ -52,14 +53,28 @@ export function SimuladorFluxo({ open, onOpenChange, nos, conexoes, onTrilha, on
   const enviar = async () => {
     const msg = texto.trim();
     if (!msg || rodando) return;
-    if (estado && (estado.status === "finalizado" || estado.status === "transbordo")) {
-      setBaloes((b) => [...b, { de: "sistema", texto: "O fluxo já terminou. Clique em Reiniciar para testar de novo." }]);
+    const cfgCmd = nos.find((n) => (n.data.tipo ?? n.type) === "gatilho")?.data ?? {};
+    const comando = detectarComando(msg, cfgCmd);
+    if (comando === "atendente" || comando === "sair") {
+      setTexto("");
+      setBaloes((b) => [...b, { de: "cliente", texto: msg }, { de: "robo", texto: mensagemComando(comando, cfgCmd) },
+        { de: "sistema", texto: comando === "atendente" ? "Comando global: transferiria para um atendente" : "Comando global: encerraria o atendimento" }]);
+      setEstado((e) => ({ no_atual: null, status: comando === "atendente" ? "transbordo" : "finalizado", variaveis: e?.variaveis ?? {} }));
+      return;
+    }
+    const reinicio = comando === "inicio";
+    if (!reinicio && estado && (estado.status === "finalizado" || estado.status === "transbordo")) {
+      setBaloes((b) => [...b, { de: "sistema", texto: "O fluxo já terminou. Clique em Reiniciar ou envie #inicio." }]);
       return;
     }
     setRodando(true);
     setTexto("");
     const novos: Balao[] = [{ de: "cliente", texto: msg }];
-    const ini: EstadoExec = estado ?? { no_atual: null, status: "ativo", variaveis: { protocolo: "2026-000123", nome: "Cliente Teste", telefone: "5511999999999" } };
+    if (reinicio) novos.push({ de: "sistema", texto: "Comando global: voltando ao início do fluxo" });
+    const base = { protocolo: "2026-000123", nome: "Cliente Teste", telefone: "5511999999999" };
+    const ini: EstadoExec = reinicio
+      ? { no_atual: null, status: "ativo", variaveis: { ...base, ...(estado?.variaveis ?? {}) } }
+      : estado ?? { no_atual: null, status: "ativo", variaveis: base };
     const ent: Record<string, Record<string, string>> = { ...entradas };
     let erro: { id: string; msg: string } | null = null;
     const marcar = (ids: string[] | undefined, v: Record<string, string>) => { for (const id of ids ?? []) ent[id] = { ...v, ultima_mensagem: msg }; };
