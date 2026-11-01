@@ -102,7 +102,7 @@ export function KanbanConfigDialog({
   const qc = useQueryClient();
   const kanbanId = kanban ? String(kanban["id"]) : "";
   const [tab, setTab] = useState("dados");
-  const [form, setForm] = useState({ nome: "", descricao: "", status: true, totais: false, temperatura: false });
+  const [form, setForm] = useState({ nome: "", descricao: "", status: true, totais: false, temperatura: false, entrada: false });
   const [novaEtapa, setNovaEtapa] = useState("");
   const [editId, setEditId] = useState<string | null>(null);
   const [editDesc, setEditDesc] = useState("");
@@ -130,6 +130,7 @@ export function KanbanConfigDialog({
       status: kanban ? String(kanban["status"] ?? "true") !== "false" : true,
       totais: [true, "true", "t", 1].includes(kanban?.["exibir_totais"] as never),
       temperatura: [true, "true", "t", 1].includes(kanban?.["habilitar_temperatura"] as never),
+      entrada: [true, "true", "t", 1].includes(kanban?.["quadro_entrada"] as never),
     });
     setEditId(null);
     setNovaEtapa("");
@@ -206,6 +207,7 @@ export function KanbanConfigDialog({
       // Só envia os parâmetros quando ligados ou já existentes, para não quebrar bancos sem o script.
       if (form.totais || (kanban && "exibir_totais" in kanban)) payload["exibir_totais"] = form.totais;
       if (form.temperatura || (kanban && "habilitar_temperatura" in kanban)) payload["habilitar_temperatura"] = form.temperatura;
+      if (form.entrada || (kanban && "quadro_entrada" in kanban)) payload["quadro_entrada"] = form.entrada;
       if (kanbanId) {
         const { error } = await supabase.from("kanban_nome").update(payload).eq("id", kanbanId);
         if (error) throw error;
@@ -478,6 +480,10 @@ export function KanbanConfigDialog({
             <label className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 text-sm">
               <span>Habilitar temperatura dos cards<span className="block text-xs text-muted-foreground">Pinta o card conforme Frio, Morno ou Quente definido na Oferta.</span></span>
               <Switch checked={form.temperatura} onCheckedChange={(v) => setForm({ ...form, temperatura: v })} />
+            </label>
+            <label className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 text-sm">
+              <span>Quadro de entrada das conversas<span className="block text-xs text-muted-foreground">Novas mensagens do WhatsApp (sem atalho #) começam neste quadro. Ligue em apenas um.</span></span>
+              <Switch checked={form.entrada} onCheckedChange={(v) => setForm({ ...form, entrada: v })} />
             </label>
             {transfer && (
               <div className="space-y-3 rounded-md border border-destructive/50 p-3">

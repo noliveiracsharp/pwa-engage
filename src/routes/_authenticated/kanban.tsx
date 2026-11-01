@@ -163,9 +163,12 @@ function KanbanPage() {
   const cardsByEtapa = useMemo(() => {
     const map = new Map<string, Row[]>();
     // Cada quadro mostra só a entidade da função vinculada (padrão: atendimentos).
-    if (!quadroOfertas && !quadroCotacoes) for (const a of atendimentos) {
+    // Quadros de Oferta/Cotação também mostram as conversas (leads do WhatsApp) que estão em suas etapas.
+    const etapasDoQuadro = new Set(boardEtapas.map((e) => String(e["id"])));
+    for (const a of atendimentos) {
       const etapaId = String(pick(a, ["kanban_etapa_id", "etapa_id", "id_etapa"]) ?? "");
       if (!etapaId) continue;
+      if ((quadroOfertas || quadroCotacoes) && !etapasDoQuadro.has(etapaId)) continue;
       const list = map.get(etapaId) ?? [];
       list.push(a);
       map.set(etapaId, list);
