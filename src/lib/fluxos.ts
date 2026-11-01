@@ -112,7 +112,11 @@ export function resumoNo(tipo: TipoNo, d: DadosNo, nomes: { etapa?: string | und
     case "subfluxo": return nomes.fluxo ? `→ ${nomes.fluxo}` : "Escolha o fluxo";
     case "gatilho":
       return d["gatilho"] === "palavra_chave" ? `Palavra-chave: ${d["palavras"] ?? "—"}` : d["gatilho"] === "novo_contato" ? "Novo contato" : "Mensagem recebida";
-    case "mensagem": case "menu": case "pergunta": case "transbordo": case "encerrar":
+    case "mensagem": {
+      const m = { imagem: "🖼️ Imagem", video: "🎬 Vídeo", documento: "📄 Documento" }[String(d["midia_tipo"] ?? "")];
+      return [m && d["midia_url"] ? m : "", String(d["texto"] ?? "")].filter(Boolean).join(" · ");
+    }
+    case "menu": case "pergunta": case "transbordo": case "encerrar":
       return String(d["texto"] ?? "");
     case "condicao": return `${d["variavel"] || "?"} ${d["operador"] ?? ""} ${d["valor"] ?? ""}`;
     case "horario": return `${d["inicio"]}–${d["fim"]} (${d["dias"]})`;
