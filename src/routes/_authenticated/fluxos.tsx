@@ -130,6 +130,7 @@ function BlocoNo({ id, data, selected }: NodeProps<FluxoNode>) {
           </button>
         )}
       </div>
+      {data["erroTeste"] ? <p className="border-b bg-destructive/10 px-3 py-1.5 text-xs font-medium text-destructive">⚠ {String(data["erroTeste"])}</p> : null}
       {data.resumo ? <p className="line-clamp-3 whitespace-pre-line px-3 py-2 text-xs text-muted-foreground">{data.resumo}</p> : null}
       {saidas.length === 1 && saidas[0]!.rotulo === "" ? (
         <Handle type="source" position={Position.Right} id={saidas[0]!.id} className="!size-3 !bg-primary" />
@@ -334,6 +335,7 @@ function FluxosPage() {
     const vis = new Set(trilhaTeste.visitados);
     return nodes.map((n) => ({
       ...n,
+      ...(n.id === trilhaTeste.erro?.id ? { data: { ...n.data, erroTeste: trilhaTeste.erro.msg } } : {}),
       className: n.id === trilhaTeste.erro?.id ? "rounded-lg ring-4 ring-destructive animate-pulse" : n.id === trilhaTeste.atual ? "rounded-lg ring-4 ring-warning animate-pulse" : vis.has(n.id) ? "rounded-lg ring-2 ring-success" : "opacity-60",
     }));
   }, [nodes, trilhaTeste]);
