@@ -27,6 +27,7 @@ import { pick, type Row } from "@/lib/row";
 import { corEtapa } from "@/lib/kanban-cores";
 import { IaPropriedades } from "@/components/fluxos/IaPropriedades";
 import { SimuladorFluxo } from "@/components/fluxos/SimuladorFluxo";
+import { TesteHttp } from "@/components/fluxos/TesteHttp";
 import {
   CATALOGO, dadosPadrao, nomeTipo, resumoNo, saidasDoNo, temEntrada,
   type CategoriaNo, type DadosNo, type TipoNo,
@@ -429,18 +430,21 @@ function FluxosPage() {
         onTrilha={(visitados, atual) => setTrilhaTeste({ visitados, atual })}
       />
       <Sheet open={!!sel} onOpenChange={(o) => !o && setSelId(null)}>
-        <SheetContent side="right" className="flex flex-col" data-no-guard>
+        <SheetContent side="right" className={cn("flex flex-col", sel?.data.tipo === "http" && "sm:max-w-[min(1400px,95vw)] lg:w-[95vw]")} data-no-guard>
           {sel && (
             <>
               <SheetHeader>
                 <SheetTitle>{nomeTipo(sel.data.tipo)}</SheetTitle>
                 <SheetDescription>{CATALOGO.find((c) => c.tipo === sel.data.tipo)?.descricao}</SheetDescription>
               </SheetHeader>
-              <div className="flex-1 space-y-4 overflow-y-auto px-4">
-                <Campo label="Título do bloco">
-                  <Input value={String(sel.data.titulo ?? "")} placeholder={nomeTipo(sel.data.tipo)} onChange={(e) => atualizarSel({ titulo: e.target.value })} />
-                </Campo>
-                <VarsCtx.Provider value={{ vars: variaveisDoFluxo(nodes as FluxoNode[]), empresaId }}><Propriedades no={sel} atualizar={atualizarSel} quadros={quadros} etapas={etapas} campos={campos} fluxos={fluxos.filter((f) => String(f["id"]) !== fluxoId)} /></VarsCtx.Provider>
+              <div className={cn("flex-1 overflow-y-auto px-4", sel.data.tipo === "http" && "grid gap-4 lg:grid-cols-2")}>
+                <div className="space-y-4">
+                  <Campo label="Título do bloco">
+                    <Input value={String(sel.data.titulo ?? "")} placeholder={nomeTipo(sel.data.tipo)} onChange={(e) => atualizarSel({ titulo: e.target.value })} />
+                  </Campo>
+                  <VarsCtx.Provider value={{ vars: variaveisDoFluxo(nodes as FluxoNode[]), empresaId }}><Propriedades no={sel} atualizar={atualizarSel} quadros={quadros} etapas={etapas} campos={campos} fluxos={fluxos.filter((f) => String(f["id"]) !== fluxoId)} /></VarsCtx.Provider>
+                </div>
+                {sel.data.tipo === "http" && <TesteHttp d={sel.data as Record<string, unknown>} variavel={String(sel.data["variavel"] || "resposta")} />}
               </div>
               <SheetFooter className="flex-row justify-between border-t">
                 <Button variant="ghost" onClick={removerSel} disabled={sel.data.tipo === "gatilho"}><Trash2 className="size-4" /> Excluir bloco</Button>
