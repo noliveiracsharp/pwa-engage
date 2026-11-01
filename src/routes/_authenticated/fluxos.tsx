@@ -61,9 +61,9 @@ function variaveisDoFluxo(nos: FluxoNode[]): VariavelDef[] {
 }
 
 /** Campo com autocomplete `{{` usando as variáveis do fluxo aberto. */
-function CampoFluxo({ value, onChange, linha, rows, mono }: { value: string; onChange: (v: string) => void; linha?: boolean; rows?: number; mono?: boolean }) {
+function CampoFluxo({ value, onChange, linha, rows, mono, className }: { value: string; onChange: (v: string) => void; linha?: boolean; rows?: number; mono?: boolean; className?: string }) {
   const { vars, empresaId } = useContext(VarsCtx);
-  return <CampoVariaveis value={value} onChange={onChange} variaveis={vars} empresaId={empresaId ?? undefined} linha={!!linha} rows={rows ?? 4} campoClassName={mono ? "font-mono text-xs" : ""} />;
+  return <CampoVariaveis className={className} value={value} onChange={onChange} variaveis={vars} empresaId={empresaId ?? undefined} linha={!!linha} rows={rows ?? 4} campoClassName={mono ? "font-mono text-xs" : ""} />;
 }
 
 export const Route = createFileRoute("/_authenticated/fluxos")({
@@ -429,7 +429,7 @@ function FluxosPage() {
         onTrilha={(visitados, atual) => setTrilhaTeste({ visitados, atual })}
       />
       <Sheet open={!!sel} onOpenChange={(o) => !o && setSelId(null)}>
-        <SheetContent side="right" className="flex flex-col">
+        <SheetContent side="right" className="flex flex-col" data-no-guard>
           {sel && (
             <>
               <SheetHeader>
@@ -495,7 +495,7 @@ function MidiaMensagem({ d, atualizar }: { d: DadosNo; atualizar: (p: DadosNo) =
         <>
           <Campo label="Arquivo" ajuda="Envie o arquivo ou cole um endereço público. Aceita variáveis, ex.: {{foto}}. Vídeos até 16 MB.">
             <div className="flex gap-2">
-              <CampoFluxo linha mono value={url} onChange={(v) => atualizar({ midia_url: v })} />
+              <CampoFluxo className="min-w-0 flex-1" linha mono value={url} onChange={(v) => atualizar({ midia_url: v })} />
               <Button type="button" variant="outline" size="icon" disabled={subindo} asChild>
                 <label aria-label="Enviar arquivo" className="cursor-pointer">
                   <Upload className="size-4" />
