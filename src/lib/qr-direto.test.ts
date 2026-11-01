@@ -1,14 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { ehDiretoComercial, linkDiretoComercial } from "./qr-direto";
+import { extrairTagAcesso, linkAcessoKanban, tagDoKanban } from "./qr-direto";
 
-describe("QR direto para o Comercial", () => {
-  it("reconhece a marca e ignora mensagens comuns", () => {
-    expect(ehDiretoComercial("Olá [#COMERCIAL]")).toBe(true);
-    expect(ehDiretoComercial("quero falar com o comercial")).toBe(false);
+describe("Atalho #kanban", () => {
+  it("reconhece #tag solta ou entre colchetes", () => {
+    expect(extrairTagAcesso("#comercial")).toBe("comercial");
+    expect(extrairTagAcesso("Olá [#OFERTA]")).toBe("oferta");
+    expect(extrairTagAcesso("quero falar com o comercial")).toBeNull();
   });
-  it("gera link wa.me só com dígitos e a marca no texto", () => {
-    const l = linkDiretoComercial("+55 (11) 99999-0000", "Oi");
+  it("normaliza acentos e espaços", () => {
+    expect(tagDoKanban("Suporte Técnico")).toBe("suportetecnico");
+  });
+  it("gera link wa.me com a tag do Kanban", () => {
+    const l = linkAcessoKanban("+55 (11) 99999-0000", "Oi", "Oferta");
     expect(l.startsWith("https://wa.me/5511999990000?text=")).toBe(true);
-    expect(ehDiretoComercial(decodeURIComponent(l.split("text=")[1]!))).toBe(true);
+    expect(extrairTagAcesso(decodeURIComponent(l.split("text=")[1]!))).toBe("oferta");
   });
 });

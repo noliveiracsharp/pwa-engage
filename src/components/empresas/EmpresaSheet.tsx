@@ -467,8 +467,8 @@ export function ChildTable({ config, empresa, perms = FULL }: { config: ChildCon
                       <Button variant="outline" size="sm" className="h-9" onClick={() => setPerfilInst(row)} title="Nome, recado e foto do WhatsApp">
                         <UserCog className="mr-1 h-4 w-4" /> Perfil
                       </Button>
-                      <Button variant="outline" size="sm" className="h-9" onClick={() => setQrComercial(row)} title="QR Code que pula o robô e vai direto ao Comercial">
-                        <QrCode className="mr-1 h-4 w-4" /> QR Comercial
+                      <Button variant="outline" size="sm" className="h-9" onClick={() => setQrComercial(row)} title="QR Code que pula o robô e vai direto ao Kanban escolhido">
+                        <QrCode className="mr-1 h-4 w-4" /> QR Code de acesso
                       </Button>
                       <Button variant="outline" size="icon" className="h-9 w-9" aria-label="Reiniciar instância" title="Reiniciar instância" onClick={() => void reiniciar(row)}>
                         <RotateCcw className="h-4 w-4" />
