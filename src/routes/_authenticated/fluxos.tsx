@@ -11,6 +11,7 @@ import "@xyflow/react/dist/style.css";
 import {
   Bot, Clock, GitBranch, Hourglass, KanbanSquare, ListOrdered, MessageSquare,
   MessageCircleQuestion, PhoneForwarded, Plus, Save, Trash2, UserPlus, Workflow, Zap, PenLine, CircleStop, Globe, Code2, X, FlaskConical, Upload, Copy, Play,
+  Split,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -91,7 +92,7 @@ export const Route = createFileRoute("/_authenticated/fluxos")({
 
 const ICONES: Record<TipoNo, typeof Zap> = {
   gatilho: Zap, mensagem: MessageSquare, menu: ListOrdered, pergunta: MessageCircleQuestion,
-  condicao: GitBranch, horario: Clock, atraso: Hourglass, kanban: KanbanSquare, atribuir: UserPlus,
+  condicao: GitBranch, switch: Split, horario: Clock, atraso: Hourglass, kanban: KanbanSquare, atribuir: UserPlus,
   campo: PenLine, ia: Bot, transbordo: PhoneForwarded, encerrar: CircleStop, subfluxo: Workflow, http: Globe, codigo: Code2,
 };
 const COR_CATEGORIA: Record<CategoriaNo, string> = {
