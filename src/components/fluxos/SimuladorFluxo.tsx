@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { TextoWhatsapp } from "@/components/ui/texto-whatsapp";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { executarFluxo, proximoNoId, type Acao, type ConexaoFluxo, type EstadoExec, type NoFluxo } from "@/lib/fluxos-motor";
-import { detectarComando, mensagemComando, COMANDOS_PADRAO, MENSAGENS_PADRAO } from "@/lib/comandos-fluxo";
+import { detectarComando, mensagemComando } from "@/lib/comandos-fluxo";
 import { executarCodigo, executarHttp } from "@/lib/fluxos-externo";
 import { nomeTipo, type TipoNo } from "@/lib/fluxos";
 import { cn } from "@/lib/utils";
