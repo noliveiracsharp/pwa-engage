@@ -107,3 +107,19 @@ describe("bloco de IA", () => {
     expect(htmlParaTexto("<script>x()</script><h1>Suporte</h1><p>Horário: 8h&nbsp;às 18h</p>")).toBe("Suporte\nHorário: 8h às 18h");
   });
 });
+
+describe("mídia e trilha no bloco mensagem", () => {
+  it("envia vídeo com legenda e registra a trilha", () => {
+    const r = executarFluxo({
+      nos: [
+        { id: "g", data: { tipo: "gatilho" } },
+        { id: "m", data: { tipo: "mensagem", texto: "Protocolo {{protocolo}}", midia_tipo: "video", midia_url: "https://x.com/v.mp4" } },
+      ],
+      conexoes: [{ source: "g", target: "m" }],
+      estado: { no_atual: null, status: "ativo", variaveis: { protocolo: "123" } },
+      texto: "oi",
+    });
+    expect(r.acoes[0]).toEqual({ tipo: "mensagem", texto: "Protocolo 123", midiaUrl: "https://x.com/v.mp4", midiaTipo: "video" });
+    expect(r.trilha).toEqual(["m"]);
+  });
+});
