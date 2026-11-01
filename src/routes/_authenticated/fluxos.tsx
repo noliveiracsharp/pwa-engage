@@ -11,6 +11,7 @@ import "@xyflow/react/dist/style.css";
 import {
   Bot, Clock, GitBranch, Hourglass, KanbanSquare, ListOrdered, MessageSquare,
   MessageCircleQuestion, PhoneForwarded, Plus, Save, Trash2, UserPlus, Workflow, Zap, PenLine, CircleStop, Globe, Code2, X, FlaskConical, Upload, Copy, Play,
+  Split,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -91,7 +92,7 @@ export const Route = createFileRoute("/_authenticated/fluxos")({
 
 const ICONES: Record<TipoNo, typeof Zap> = {
   gatilho: Zap, mensagem: MessageSquare, menu: ListOrdered, pergunta: MessageCircleQuestion,
-  condicao: GitBranch, horario: Clock, atraso: Hourglass, kanban: KanbanSquare, atribuir: UserPlus,
+  condicao: GitBranch, switch: Split, horario: Clock, atraso: Hourglass, kanban: KanbanSquare, atribuir: UserPlus,
   campo: PenLine, ia: Bot, transbordo: PhoneForwarded, encerrar: CircleStop, subfluxo: Workflow, http: Globe, codigo: Code2,
 };
 const COR_CATEGORIA: Record<CategoriaNo, string> = {
@@ -693,12 +694,42 @@ function Propriedades({ no, atualizar, quadros, etapas, campos, fluxos }: {
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="igual">É igual a</SelectItem>
+                <SelectItem value="diferente">É diferente de</SelectItem>
                 <SelectItem value="contem">Contém</SelectItem>
+                <SelectItem value="nao_contem">Não contém</SelectItem>
+                <SelectItem value="maior">Maior que (número)</SelectItem>
+                <SelectItem value="maior_igual">Maior ou igual a (número)</SelectItem>
+                <SelectItem value="menor">Menor que (número)</SelectItem>
+                <SelectItem value="menor_igual">Menor ou igual a (número)</SelectItem>
                 <SelectItem value="vazio">Está vazio</SelectItem>
+                <SelectItem value="preenchido">Está preenchido</SelectItem>
               </SelectContent>
             </Select>
           </Campo>
           <Campo label="Valor"><CampoFluxo linha value={s("valor")} onChange={(v) => atualizar({ valor: v })} /></Campo>
+          <p className="text-xs text-muted-foreground">Se a regra for verdadeira segue pela saída <b>Sim</b>; senão (else) pela saída <b>Não</b>.</p>
+        </>
+      );
+    case "switch":
+      return (
+        <>
+          <Campo label="Variável" ajuda="Ex.: opcao, resposta.status"><Input value={s("variavel")} onChange={(e) => atualizar({ variavel: e.target.value })} /></Campo>
+          <Campo label="Comparação">
+            <Select value={s("operador") || "igual"} onValueChange={(v) => atualizar({ operador: v })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="igual">É igual a</SelectItem>
+                <SelectItem value="contem">Contém</SelectItem>
+                <SelectItem value="maior">Maior que (número)</SelectItem>
+                <SelectItem value="maior_igual">Maior ou igual a (número)</SelectItem>
+                <SelectItem value="menor">Menor que (número)</SelectItem>
+                <SelectItem value="menor_igual">Menor ou igual a (número)</SelectItem>
+              </SelectContent>
+            </Select>
+          </Campo>
+          <Campo label="Casos (um por linha)" ajuda="Cada linha vira uma saída no bloco. O primeiro caso verdadeiro vence; nenhum → saída Padrão.">
+            <Textarea rows={5} value={s("casos")} onChange={(e) => atualizar({ casos: e.target.value })} />
+          </Campo>
         </>
       );
     case "horario":
@@ -772,11 +803,20 @@ function Propriedades({ no, atualizar, quadros, etapas, campos, fluxos }: {
     case "campo":
       return (
         <>
+          <Campo label="Grupo de campos" ajuda="Filtra os campos pelo modelo (ex.: do Kanban Oferta). O valor fica gravado no contato da conversa.">
+            <Select value={s("template") || "todos"} onValueChange={(v) => atualizar({ template: v, chave: "" })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos</SelectItem>
+                {[...new Set(campos.map((c) => String(c["template"] ?? "geral")))].sort().map((t) => <SelectItem key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </Campo>
           <Campo label="Campo personalizado">
             <Select value={s("chave")} onValueChange={(v) => atualizar({ chave: v })}>
               <SelectTrigger><SelectValue placeholder="Escolha o campo" /></SelectTrigger>
               <SelectContent>
-                {campos.map((c) => <SelectItem key={String(c["id"])} value={String(c["chave"])}>{String(c["label"] || c["chave"])}</SelectItem>)}
+                {campos.filter((c) => !s("template") || s("template") === "todos" || String(c["template"] ?? "geral") === s("template")).sort((a, b) => String(a["label"] || a["chave"]).localeCompare(String(b["label"] || b["chave"]))).map((c) => <SelectItem key={String(c["id"])} value={String(c["chave"])}>{String(c["label"] || c["chave"])}</SelectItem>)}
               </SelectContent>
             </Select>
           </Campo>

@@ -5,6 +5,7 @@ export type TipoNo =
   | "menu"
   | "pergunta"
   | "condicao"
+  | "switch"
   | "horario"
   | "atraso"
   | "kanban"
@@ -27,6 +28,7 @@ export const CATALOGO: { tipo: TipoNo; nome: string; categoria: CategoriaNo; des
   { tipo: "menu", nome: "Menu de opções", categoria: "Mensagens", descricao: "1 - Comercial, 2 - Suporte…" },
   { tipo: "pergunta", nome: "Pergunta", categoria: "Mensagens", descricao: "Aguarda resposta e guarda em variável" },
   { tipo: "condicao", nome: "Condição", categoria: "Lógica", descricao: "Se / Senão" },
+  { tipo: "switch", nome: "Switch (vários caminhos)", categoria: "Lógica", descricao: "Um caminho para cada valor + Padrão" },
   { tipo: "horario", nome: "Horário de atendimento", categoria: "Lógica", descricao: "Aberto / Fechado" },
   { tipo: "subfluxo", nome: "Executar outro fluxo", categoria: "Lógica", descricao: "Continua a conversa em outro fluxo" },
   { tipo: "codigo", nome: "Executar JavaScript", categoria: "Lógica", descricao: "Transforma dados e listas com código" },
@@ -58,6 +60,9 @@ export const opcoesMenu = (texto: unknown): string[] =>
     .map((s) => s.trim())
     .filter(Boolean);
 
+/** Casos do Switch: um por linha. */
+export const casosSwitch = opcoesMenu;
+
 /** Saídas (alças) de cada bloco. */
 export function saidasDoNo(tipo: TipoNo, dados: DadosNo): { id: string; rotulo: string }[] {
   switch (tipo) {
@@ -68,6 +73,8 @@ export function saidasDoNo(tipo: TipoNo, dados: DadosNo): { id: string; rotulo: 
       ];
     case "condicao":
       return [{ id: "sim", rotulo: "Sim" }, { id: "nao", rotulo: "Não" }];
+    case "switch":
+      return [...casosSwitch(dados["casos"]).map((c, i) => ({ id: `caso-${i}`, rotulo: c })), { id: "padrao", rotulo: "Padrão" }];
     case "horario":
       return [{ id: "aberto", rotulo: "Aberto" }, { id: "fechado", rotulo: "Fechado" }];
     case "ia":
@@ -94,6 +101,7 @@ export function dadosPadrao(tipo: TipoNo): DadosNo {
     case "menu": return { texto: "Como podemos ajudar?", opcoes: "Falar com Comercial\nFalar com Suporte" };
     case "pergunta": return { texto: "Qual é o seu nome?", variavel: "nome" };
     case "condicao": return { variavel: "", operador: "igual", valor: "" };
+    case "switch": return { variavel: "opcao", operador: "igual", casos: "Comercial\nSuporte" };
     case "horario": return { inicio: "08:00", fim: "18:00", dias: "seg,ter,qua,qui,sex" };
     case "atraso": return { segundos: 3 };
     case "atribuir": return { modo: "roleta" };
@@ -119,11 +127,12 @@ export function resumoNo(tipo: TipoNo, d: DadosNo, nomes: { etapa?: string | und
     case "menu": case "pergunta": case "transbordo": case "encerrar":
       return String(d["texto"] ?? "");
     case "condicao": return `${d["variavel"] || "?"} ${d["operador"] ?? ""} ${d["valor"] ?? ""}`;
+    case "switch": return `${d["variavel"] || "?"} → ${casosSwitch(d["casos"]).join(" | ") || "sem casos"}`;
     case "horario": return `${d["inicio"]}–${d["fim"]} (${d["dias"]})`;
     case "atraso": return `${d["segundos"] ?? 0}s`;
     case "kanban": return nomes.quadro ? `${nomes.quadro} → ${nomes.etapa ?? "?"}` : "Escolha o quadro";
     case "atribuir": return d["modo"] === "roleta" ? "Roleta entre atendentes" : "Fila do departamento";
-    case "campo": return `${d["chave"] || "?"} = ${d["valor"] ?? ""}`;
+    case "campo": return `${d["template"] && d["template"] !== "todos" ? `[${d["template"]}] ` : ""}${d["chave"] || "?"} = ${d["valor"] ?? ""}`;
     case "http": return `${d["metodo"] ?? "GET"} ${d["url"] ?? ""} → {{${d["variavel"] || "resposta"}}}`;
     case "codigo": return String(d["codigo"] ?? "").split("\n").find((l) => l.trim() && !l.trim().startsWith("//")) ?? "Código";
     case "ia": return `${MODELOS_IA.find((m) => m.id === d["modelo"])?.nome.split(" (")[0] ?? "IA"} · ${String(d["instrucoes"] ?? "")}`;
