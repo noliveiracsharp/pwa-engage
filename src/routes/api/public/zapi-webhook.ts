@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ehRespostaAutomatica } from "@/lib/instancia-finalidade";
-import { ehDiretoComercial } from "@/lib/qr-direto";
+import { extrairTagAcesso } from "@/lib/qr-direto";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/integrations/supabase/client";
@@ -161,10 +161,15 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
         const acao = (nome: string, dados: Record<string, unknown>) =>
           db.rpc("fluxo_webhook_acao", { p_token: k, p_atendimento: r.atendimento_id, p_acao: nome, p_dados: dados });
 
-        // QR Code "direto para o Comercial": pula o robô e entrega a conversa para a equipe.
-        if (!r.execucao && ehDiretoComercial(texto)) {
-          await acao("modo", { modo: "Humano" });
-          return ok({ robo: false, motivo: "direto_comercial" });
+        // Atalho "#kanban" (QR Code de acesso): pula o robô e entra direto no Kanban da tag.
+        const tag = !r.execucao && tipo === "texto" ? extrairTagAcesso(texto) : null;
+        if (tag) {
+          const { data: etapaId } = await db.rpc("fluxo_webhook_rota", { p_token: k, p_tag: tag });
+          if (etapaId) {
+            await acao("etapa", { etapa_id: etapaId });
+            await acao("modo", { modo: "Humano" });
+            return ok({ robo: false, motivo: "atalho_kanban", tag });
+          }
         }
 
         const textoMotor = tipo === "texto" ? texto : texto || tipo;
