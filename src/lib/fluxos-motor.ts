@@ -46,7 +46,7 @@ export const paraTexto = (v: unknown) => (v == null ? "" : typeof v === "object"
 
 export function interpolar(texto: string, vars: Record<string, string>) {
   // "\\n" literal (vindo de JSON/JavaScript) vira quebra de linha real no WhatsApp.
-  return texto.replace(/\\r\\n|\\n/g, "\n").replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_, k: string) => paraTexto(lerCaminho(vars, k)));
+  return texto.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_, k: string) => paraTexto(lerCaminho(vars, k))).replace(/\\r\\n|\\n/g, "\n");
 }
 
 /** Próximo bloco ligado à saída `handle` de `de`. */
@@ -180,8 +180,6 @@ export function executarFluxo(p: {
         } else acoes.push({ tipo: "mensagem", texto: interpolar(textoMenu(dm), vars) });
         return fim("aguardando", atual.id);
       }
-      case "menu_x":
-        return fim("aguardando", atual.id);
       case "pergunta":
         acoes.push({ tipo: "mensagem", texto: interpolar(str(d["texto"]), vars) });
         return fim("aguardando", atual.id);
