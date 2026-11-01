@@ -219,6 +219,7 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
         for (const a of acoes) {
           try {
             if (a.tipo === "mensagem") {
+              if (!a.texto.trim() && a.lista?.opcoes?.length) a.texto = a.lista.titulo || "Escolha uma opção:";
               if (!a.texto.trim() && !a.midiaUrl) continue;
               const { data: m } = await acao("mensagem", { texto: (a.lista ? [a.texto, ...a.lista.opcoes.map((o, i) => `${i + 1}. ${o}`)].filter(Boolean).join("\n") : a.texto) || a.nomeArquivo || a.midiaTipo || "", ...(a.midiaUrl ? { midia_url: a.midiaUrl, tipo: a.midiaTipo } : {}) });
               const mid = (m as { id?: string } | null)?.id;
