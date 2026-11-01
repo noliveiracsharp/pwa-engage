@@ -53,7 +53,10 @@ const sheetVariants = cva(
 interface SheetContentProps
   extends
     React.ComponentPropsWithoutRef<typeof SheetPrimitive.Content>,
-    VariantProps<typeof sheetVariants> {}
+    VariantProps<typeof sheetVariants> {
+  /** Sem fundo escurecido: o conteúdo atrás continua visível. */
+  semFundo?: boolean;
+}
 
 const PANEL_W_KEY = "atendeai:panel-width";
 const PANEL_MIN = 40;
@@ -71,7 +74,7 @@ function lerLargura(): number | null {
 const SheetContent = React.forwardRef<
   React.ElementRef<typeof SheetPrimitive.Content>,
   SheetContentProps
->(({ side = "right", className, children, style, ...props }, ref) => {
+>(({ side = "right", className, children, style, semFundo, ...props }, ref) => {
   const lateral = side === "right" || side === "left";
   const [largura, setLargura] = React.useState<number | null>(null);
   const [arrastando, setArrastando] = React.useState(false);
@@ -119,7 +122,7 @@ const SheetContent = React.forwardRef<
 
   return (
     <SheetPortal>
-      <SheetOverlay />
+      {!semFundo && <SheetOverlay />}
       <SheetPrimitive.Content
         ref={ref}
         data-panel-side={side}

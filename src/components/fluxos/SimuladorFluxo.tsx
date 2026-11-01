@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { FileText, RotateCcw, Send } from "lucide-react";
+import { FileText, RotateCcw, Send, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { TextoWhatsapp } from "@/components/ui/texto-whatsapp";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { executarFluxo, proximoNoId, type Acao, type ConexaoFluxo, type EstadoExec, type NoFluxo } from "@/lib/fluxos-motor";
@@ -14,9 +13,10 @@ type Balao = { de: "cliente" | "robo" | "sistema"; texto: string; midiaUrl?: str
 export type PassoTrilha = { id: string; titulo: string };
 
 /** Testa o fluxo no navegador: nada é enviado ao WhatsApp nem gravado no banco. */
-export function SimuladorFluxo({ open, onOpenChange, nos, conexoes, onTrilha }: {
+export function SimuladorFluxo({ open, onOpenChange, nos, conexoes, onTrilha, onSelecionar }: {
   open: boolean; onOpenChange: (v: boolean) => void;
   nos: NoFluxo[]; conexoes: ConexaoFluxo[];
+  onSelecionar?: (id: string) => void;
   onTrilha: (visitados: string[], atual: string | null, extra?: { erro?: { id: string; msg: string } | null; entradas?: Record<string, Record<string, string>> }) => void;
 }) {
   const [entradas, setEntradas] = useState<Record<string, Record<string, string>>>({});
@@ -110,46 +110,64 @@ export function SimuladorFluxo({ open, onOpenChange, nos, conexoes, onTrilha }: 
   const vars = Object.entries(estado?.variaveis ?? {});
   const statusTxt: Record<EstadoExec["status"], string> = { ativo: "Em execução", aguardando: "Aguardando resposta", finalizado: "Finalizado", transbordo: "Com atendente" };
 
+  if (!open) return null;
   return (
-    <Sheet open={open} onOpenChange={onOpenChange} modal={false}>
-      <SheetContent side="right" data-no-guard className="flex w-full flex-col sm:max-w-md" onInteractOutside={(e) => e.preventDefault()}>
-        <SheetHeader>
-          <SheetTitle>Testar fluxo</SheetTitle>
-          <SheetDescription>Converse como se fosse o cliente. Nada é enviado de verdade.</SheetDescription>
-        </SheetHeader>
-        <div className="flex items-center justify-between px-4 text-xs text-muted-foreground">
-          <span>
-            {estado ? statusTxt[estado.status] : "Envie uma mensagem para começar"}
-            {estado?.status === "aguardando" && estado.no_atual ? ` · em "${nomeNo(estado.no_atual)}"` : ""}
-          </span>
+    <section aria-label="Testar fluxo" className="flex h-80 shrink-0 flex-col overflow-hidden rounded-lg border bg-card shadow-sm">
+      <header className="flex items-center gap-2 border-b px-3 py-1.5 text-sm">
+        <span className="font-medium">Testar fluxo</span>
+        <span className="truncate text-xs text-muted-foreground">
+          · {estado ? statusTxt[estado.status] : "Converse como o cliente — nada é enviado de verdade"}
+          {estado?.status === "aguardando" && estado.no_atual ? ` em "${nomeNo(estado.no_atual)}"` : ""}
+        </span>
+        <div className="ml-auto flex gap-1">
           <Button variant="ghost" size="sm" onClick={reiniciar}><RotateCcw className="size-3.5" /> Reiniciar</Button>
+          <Button variant="ghost" size="icon" className="size-8" aria-label="Fechar teste" onClick={() => onOpenChange(false)}><X className="size-4" /></Button>
         </div>
-        <Tabs defaultValue="chat" className="flex min-h-0 flex-1 flex-col px-4">
+      </header>
+      <div className="grid min-h-0 flex-1 md:grid-cols-[minmax(280px,2fr)_3fr]">
+        <div className="flex min-h-0 flex-col gap-2 border-r p-2">
+          <div className="min-h-0 flex-1 space-y-2 overflow-y-auto rounded-md bg-muted/30 p-2">
+            {baloes.length === 0 && <p className="text-center text-xs text-muted-foreground">Digite uma mensagem abaixo para iniciar.</p>}
+            {baloes.map((b, i) => b.de === "sistema" ? (
+              <p key={i} className="text-center text-[11px] text-muted-foreground">— {b.texto} —</p>
+            ) : (
+              <div key={i} className={cn("max-w-[85%] whitespace-pre-wrap rounded-lg px-3 py-2 text-sm shadow-sm", b.de === "cliente" ? "ml-auto bg-primary text-primary-foreground" : "bg-card")}>
+                {b.midiaUrl && b.midiaTipo === "imagem" && <img src={b.midiaUrl} alt="" className="mb-1 max-h-48 rounded" />}
+                {b.midiaUrl && b.midiaTipo === "video" && <video src={b.midiaUrl} controls className="mb-1 max-h-48 rounded" />}
+                {b.midiaUrl && b.midiaTipo === "documento" && <a href={b.midiaUrl} target="_blank" rel="noreferrer" className="mb-1 flex items-center gap-1 underline"><FileText className="size-4" /> Arquivo</a>}
+                <TextoWhatsapp text={b.texto} />
+              </div>
+            ))}
+            <div ref={fimRef} />
+          </div>
+          <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); void enviar(); }}>
+            <Input value={texto} onChange={(e) => setTexto(e.target.value)} placeholder="Digite como o cliente…" disabled={rodando} autoFocus />
+            <Button type="submit" size="icon" disabled={rodando || !texto.trim()} aria-label="Enviar"><Send className="size-4" /></Button>
+          </form>
+        </div>
+        <Tabs defaultValue="etapas" className="flex min-h-0 flex-col p-2">
           <TabsList className="w-fit">
-            <TabsTrigger value="chat">Conversa</TabsTrigger>
-            <TabsTrigger value="dados">Dados ({vars.length})</TabsTrigger>
             <TabsTrigger value="etapas">Etapas ({trilha.length})</TabsTrigger>
+            <TabsTrigger value="dados">Dados ({vars.length})</TabsTrigger>
           </TabsList>
-          <TabsContent value="chat" className="flex min-h-0 flex-1 flex-col gap-2">
-            <div className="min-h-0 flex-1 space-y-2 overflow-y-auto rounded-md border bg-muted/30 p-3">
-              {baloes.map((b, i) => b.de === "sistema" ? (
-                <p key={i} className="text-center text-[11px] text-muted-foreground">— {b.texto} —</p>
-              ) : (
-                <div key={i} className={cn("max-w-[85%] whitespace-pre-wrap rounded-lg px-3 py-2 text-sm shadow-sm", b.de === "cliente" ? "ml-auto bg-primary text-primary-foreground" : "bg-card")}>
-                  {b.midiaUrl && b.midiaTipo === "imagem" && <img src={b.midiaUrl} alt="" className="mb-1 max-h-48 rounded" />}
-                  {b.midiaUrl && b.midiaTipo === "video" && <video src={b.midiaUrl} controls className="mb-1 max-h-48 rounded" />}
-                  {b.midiaUrl && b.midiaTipo === "documento" && <a href={b.midiaUrl} target="_blank" rel="noreferrer" className="mb-1 flex items-center gap-1 underline"><FileText className="size-4" /> Arquivo</a>}
-                  <TextoWhatsapp text={b.texto} />
-                </div>
-              ))}
-              <div ref={fimRef} />
-            </div>
-            <form className="flex gap-2 pb-4" onSubmit={(e) => { e.preventDefault(); void enviar(); }}>
-              <Input value={texto} onChange={(e) => setTexto(e.target.value)} placeholder="Digite como o cliente…" disabled={rodando} />
-              <Button type="submit" size="icon" disabled={rodando || !texto.trim()} aria-label="Enviar"><Send className="size-4" /></Button>
-            </form>
+          <TabsContent value="etapas" className="min-h-0 flex-1 overflow-y-auto">
+            {trilha.length === 0 ? <p className="text-sm text-muted-foreground">Os blocos percorridos aparecem aqui. Clique em um para ver o que chegou nele.</p> : (
+              <ol className="space-y-1 text-sm">
+                {trilha.map((t, i) => {
+                  const falhou = erroNo?.id === t.id && i === trilha.length - 1 - [...trilha].reverse().findIndex((x) => x.id === t.id);
+                  return (
+                    <li key={i}>
+                      <button type="button" onClick={() => onSelecionar?.(t.id)} className={cn("w-full rounded border px-2 py-1 text-left hover:bg-accent", falhou && "border-destructive bg-destructive/10 text-destructive")}>
+                        <span className="text-muted-foreground">{i + 1}.</span> {t.titulo}
+                        {falhou && <span className="block text-xs">⚠ {erroNo!.msg}</span>}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ol>
+            )}
           </TabsContent>
-          <TabsContent value="dados" className="min-h-0 flex-1 overflow-y-auto pb-4">
+          <TabsContent value="dados" className="min-h-0 flex-1 overflow-y-auto">
             {vars.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum dado ainda.</p> : (
               <table className="w-full text-xs">
                 <tbody>
@@ -163,21 +181,8 @@ export function SimuladorFluxo({ open, onOpenChange, nos, conexoes, onTrilha }: 
               </table>
             )}
           </TabsContent>
-          <TabsContent value="etapas" className="min-h-0 flex-1 overflow-y-auto pb-4">
-            <ol className="space-y-1 text-sm">
-              {trilha.map((t, i) => {
-                const falhou = erroNo?.id === t.id && i === trilha.length - 1 - [...trilha].reverse().findIndex((x) => x.id === t.id);
-                return (
-                  <li key={i} className={cn("rounded border px-2 py-1", falhou && "border-destructive bg-destructive/10 text-destructive")}>
-                    <span className="text-muted-foreground">{i + 1}.</span> {t.titulo}
-                    {falhou && <p className="text-xs">⚠ {erroNo!.msg}</p>}
-                  </li>
-                );
-              })}
-            </ol>
-          </TabsContent>
         </Tabs>
-      </SheetContent>
-    </Sheet>
+      </div>
+    </section>
   );
 }
