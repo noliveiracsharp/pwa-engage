@@ -90,16 +90,29 @@ export function dentroHorario(d: DadosNo, agora: Date) {
   return atual >= ini && atual <= fim;
 }
 
-function avaliarCondicao(d: DadosNo, vars: Record<string, string>) {
-  const v = norm(paraTexto(lerCaminho(vars, str(d["variavel"]))));
-  const alvo = norm(str(d["valor"]));
-  switch (str(d["operador"])) {
+const numero = (s: string) => Number(s.replace(/\s/g, "").replace(/\.(?=\d{3}(\D|$))/g, "").replace(",", "."));
+
+/** Compara um valor com o alvo; números aceitam vírgula decimal (pt-BR). */
+export function comparar(bruto: string, operador: string, alvoBruto: string) {
+  const v = norm(bruto);
+  const alvo = norm(alvoBruto);
+  const nums = () => { const a = numero(bruto), b = numero(alvoBruto); return Number.isFinite(a) && Number.isFinite(b) && bruto.trim() !== "" ? [a, b] as const : null; };
+  switch (operador) {
     case "diferente": return v !== alvo;
     case "contem": return v.includes(alvo);
+    case "nao_contem": return !v.includes(alvo);
     case "vazio": return v === "";
     case "preenchido": return v !== "";
+    case "maior": { const n = nums(); return !!n && n[0] > n[1]; }
+    case "maior_igual": { const n = nums(); return !!n && n[0] >= n[1]; }
+    case "menor": { const n = nums(); return !!n && n[0] < n[1]; }
+    case "menor_igual": { const n = nums(); return !!n && n[0] <= n[1]; }
     default: return v === alvo;
   }
+}
+
+function avaliarCondicao(d: DadosNo, vars: Record<string, string>) {
+  return comparar(paraTexto(lerCaminho(vars, str(d["variavel"]))), str(d["operador"]), interpolar(str(d["valor"]), vars));
 }
 
 export function executarFluxo(p: {
@@ -186,6 +199,12 @@ export function executarFluxo(p: {
       case "condicao":
         atual = proximo(atual.id, avaliarCondicao(d, vars) ? "sim" : "nao");
         break;
+      case "switch": {
+        const v = paraTexto(lerCaminho(vars, str(d["variavel"])));
+        const i = casosSwitch(d["casos"]).findIndex((c) => comparar(v, str(d["operador"]) || "igual", interpolar(c, vars)));
+        atual = proximo(atual.id, i >= 0 ? `caso-${i}` : "padrao");
+        break;
+      }
       case "horario":
         atual = proximo(atual.id, dentroHorario(d, agora) ? "aberto" : "fechado");
         break;
