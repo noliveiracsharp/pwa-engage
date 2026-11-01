@@ -119,6 +119,9 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
         if (/delivery|connected|disconnected/.test(tipoEvt)) return ok({ ignorada: true });
 
         let texto = body.text?.message ?? "";
+        // Resposta da lista interativa: o id da linha é o número da opção.
+        const lr = (body as Record<string, unknown>)["listResponseMessage"] as { selectedRowId?: string; title?: string } | undefined;
+        if (lr?.selectedRowId) texto = String(lr.selectedRowId);
         let tipo = "texto";
         let midia: string | null = null;
         if (body.image?.imageUrl) { tipo = "imagem"; midia = body.image.imageUrl; texto = body.image.caption ?? ""; }
@@ -211,10 +214,10 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
           try {
             if (a.tipo === "mensagem") {
               if (!a.texto.trim() && !a.midiaUrl) continue;
-              const { data: m } = await acao("mensagem", { texto: a.texto || a.nomeArquivo || a.midiaTipo || "", ...(a.midiaUrl ? { midia_url: a.midiaUrl, tipo: a.midiaTipo } : {}) });
+              const { data: m } = await acao("mensagem", { texto: (a.lista ? [a.texto, ...a.lista.opcoes.map((o, i) => `${i + 1}. ${o}`)].filter(Boolean).join("\n") : a.texto) || a.nomeArquivo || a.midiaTipo || "", ...(a.midiaUrl ? { midia_url: a.midiaUrl, tipo: a.midiaTipo } : {}) });
               const mid = (m as { id?: string } | null)?.id;
               try {
-                const zid = await dispararMensagem({ instancia: r.instancia, mensagemId: mid, atendimentoId: r.atendimento_id, telefone: r.telefone, texto: a.texto, midiaUrl: a.midiaUrl, tipo: a.midiaTipo, nomeArquivo: a.nomeArquivo });
+                const zid = await dispararMensagem({ instancia: r.instancia, mensagemId: mid, atendimentoId: r.atendimento_id, telefone: r.telefone, texto: a.texto, midiaUrl: a.midiaUrl, tipo: a.midiaTipo, nomeArquivo: a.nomeArquivo, lista: a.lista });
                 if (mid) await acao("status_envio", { id: mid, status: "enviado" });
                 if (mid && typeof zid === "string") {
                   const { error: eV } = await db.rpc("zapi_webhook_vincular" as never, { p_token: k, p_mensagem: mid, p_zapi: zid } as never);
