@@ -129,11 +129,11 @@ function FinanceiroPage() {
   const perms = usePagePermissions("/financeiro");
   const secoes = useSecoes("/financeiro", SECOES_FIN);
   const filhas = useAbasFilhas();
-  const visiveis = [...SECOES_FIN.filter((s) => secoes[s.key]?.canRead), ...filhas.map((a) => ({ key: a.path, label: a.label }))];
-  const [abaSel, setAba] = useState("receber");
+  // Sem leitura no Financeiro, mostra só as abas filhas liberadas (ex.: Reembolsos).
+  const visiveis = [...(perms.canRead ? SECOES_FIN.filter((s) => secoes[s.key]?.canRead) : []), ...filhas.map((a) => ({ key: a.path, label: a.label }))];
+  const [abaSel, setAba] = useState<string>("receber");
   const aba = visiveis.some((s) => s.key === abaSel) ? abaSel : (visiveis[0]?.key ?? "");
-  const { data: titulos = [], isLoading } = useTableRows("financeiro_titulos");
-  if (!perms.loading && (!perms.canRead || visiveis.length === 0)) return <p className="text-muted-foreground text-sm">Você não tem acesso a esta página.</p>;
+  if (!perms.loading && visiveis.length === 0) return <p className="text-muted-foreground text-sm">Você não tem acesso a esta página.</p>;
   const p = (k: string) => ({ ...(secoes[k] ?? perms) });
   return (
     <Tabs value={aba} onValueChange={setAba} className="min-w-0 space-y-4">
