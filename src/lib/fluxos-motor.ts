@@ -9,7 +9,7 @@ export type ConexaoFluxo = { source: string; target: string; sourceHandle?: stri
 export type EstadoExec = { no_atual: string | null; status: "ativo" | "aguardando" | "finalizado" | "transbordo"; variaveis: Record<string, string> };
 
 export type Acao =
-  | { tipo: "mensagem"; texto: string }
+  | { tipo: "mensagem"; texto: string; midiaUrl?: string; midiaTipo?: "imagem" | "video" | "documento"; nomeArquivo?: string }
   | { tipo: "etapa"; etapa_id: string; prioridade?: string | undefined }
   | { tipo: "modo"; modo: "Humano" | "IA" }
   | { tipo: "campo"; chave: string; valor: string }
@@ -102,7 +102,7 @@ export function executarFluxo(p: {
   estado: EstadoExec | null;
   texto: string;
   agora?: Date;
-}): { acoes: Acao[]; estado: EstadoExec; subfluxo?: string; externo?: { no: NoFluxo } } {
+}): { acoes: Acao[]; estado: EstadoExec; subfluxo?: string; externo?: { no: NoFluxo }; trilha?: string[] } {
   const agora = p.agora ?? new Date();
   const acoes: Acao[] = [];
   const vars: Record<string, string> = { ...(p.estado?.variaveis ?? {}), ultima_mensagem: p.texto };
@@ -112,13 +112,15 @@ export function executarFluxo(p: {
       ?? (handle ? undefined : p.conexoes.find((e) => e.source === de));
     return c ? porId.get(c.target) : undefined;
   };
-  const fim = (status: EstadoExec["status"], no: string | null = null) => ({ acoes, estado: { no_atual: no, status, variaveis: vars } });
+  const trilha: string[] = [];
+  const fim = (status: EstadoExec["status"], no: string | null = null) => ({ acoes, trilha, estado: { no_atual: no, status, variaveis: vars } });
 
   let atual: NoFluxo | undefined;
   if (p.estado?.status === "aguardando" && p.estado.no_atual) {
     const esperando = porId.get(p.estado.no_atual);
     if (!esperando) return fim("finalizado");
     const d = esperando.data;
+    trilha.push(esperando.id);
     if (tipoDe(esperando) === "ia") {
       // Conversa contínua com a IA: cada nova mensagem volta ao bloco.
       return { ...fim("ativo", esperando.id), externo: { no: esperando } };
@@ -151,11 +153,18 @@ export function executarFluxo(p: {
 
   for (let passos = 0; atual && passos < 60; passos++) {
     const d = atual.data;
+    trilha.push(atual.id);
     switch (tipoDe(atual)) {
-      case "mensagem":
-        acoes.push({ tipo: "mensagem", texto: interpolar(str(d["texto"]), vars) });
+      case "mensagem": {
+        const midiaUrl = interpolar(str(d["midia_url"]), vars).trim();
+        const mt = str(d["midia_tipo"]);
+        acoes.push({
+          tipo: "mensagem", texto: interpolar(str(d["texto"]), vars),
+          ...(midiaUrl && (mt === "imagem" || mt === "video" || mt === "documento") ? { midiaUrl, midiaTipo: mt, ...(str(d["midia_nome"]) ? { nomeArquivo: str(d["midia_nome"]) } : {}) } : {}),
+        });
         atual = proximo(atual.id);
         break;
+      }
       case "menu":
         acoes.push({ tipo: "mensagem", texto: interpolar(textoMenu(d), vars) });
         return fim("aguardando", atual.id);

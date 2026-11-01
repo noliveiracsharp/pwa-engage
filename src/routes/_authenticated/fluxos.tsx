@@ -10,7 +10,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import {
   Bot, Clock, GitBranch, Hourglass, KanbanSquare, ListOrdered, MessageSquare,
-  MessageCircleQuestion, PhoneForwarded, Plus, Save, Trash2, UserPlus, Workflow, Zap, PenLine, CircleStop, Globe, Code2, X,
+  MessageCircleQuestion, PhoneForwarded, Plus, Save, Trash2, UserPlus, Workflow, Zap, PenLine, CircleStop, Globe, Code2, X, FlaskConical, Upload,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,6 +26,7 @@ import { cn } from "@/lib/utils";
 import { pick, type Row } from "@/lib/row";
 import { corEtapa } from "@/lib/kanban-cores";
 import { IaPropriedades } from "@/components/fluxos/IaPropriedades";
+import { SimuladorFluxo } from "@/components/fluxos/SimuladorFluxo";
 import {
   CATALOGO, dadosPadrao, nomeTipo, resumoNo, saidasDoNo, temEntrada,
   type CategoriaNo, type DadosNo, type TipoNo,
@@ -323,6 +324,16 @@ function FluxosPage() {
   };
 
   const categorias = useMemo(() => Array.from(new Set(CATALOGO.map((c) => c.categoria))), []);
+  const [testando, setTestando] = useState(false);
+  const [trilhaTeste, setTrilhaTeste] = useState<{ visitados: string[]; atual: string | null }>({ visitados: [], atual: null });
+  const nosVisiveis = useMemo(() => {
+    if (!trilhaTeste.visitados.length && !trilhaTeste.atual) return nodes;
+    const vis = new Set(trilhaTeste.visitados);
+    return nodes.map((n) => ({
+      ...n,
+      className: n.id === trilhaTeste.atual ? "rounded-lg ring-4 ring-warning animate-pulse" : vis.has(n.id) ? "rounded-lg ring-2 ring-success" : "opacity-60",
+    }));
+  }, [nodes, trilhaTeste]);
 
   return (
     <div className="flex h-[calc(100dvh-8rem)] min-h-[520px] flex-col gap-3">
@@ -349,6 +360,7 @@ function FluxosPage() {
             </Select>
             <label className="flex items-center gap-2 text-sm"><Switch checked={ativo} onCheckedChange={setAtivo} /> Ativo</label>
             <div className="ml-auto flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => setTestando(true)}><FlaskConical className="size-4" /> Testar fluxo</Button>
               <Button variant="ghost" size="sm" onClick={excluirFluxo}><Trash2 className="size-4" /></Button>
               <Button size="sm" onClick={salvar} disabled={salvando}><Save className="size-4" /> {salvando ? "Salvando…" : "Salvar"}</Button>
             </div>
@@ -388,7 +400,7 @@ function FluxosPage() {
           <div className="relative min-w-0 flex-1 overflow-hidden rounded-lg border bg-muted/30" onDragOver={(e) => e.preventDefault()} onDrop={onDrop}>
             {fluxo ? (
               <ReactFlow
-                nodes={nodes} edges={edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes}
+                nodes={nosVisiveis} edges={edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes}
                 defaultEdgeOptions={{ type: "ligacao" }}
                 onBeforeDelete={async ({ nodes: ns, edges: es }) => ({ nodes: ns.filter((n) => (n.data as NoData).tipo !== "gatilho"), edges: es })}
                 onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect}
@@ -410,6 +422,12 @@ function FluxosPage() {
         </div>
       )}
 
+      <SimuladorFluxo
+        open={testando} onOpenChange={setTestando}
+        nos={nodes as unknown as import("@/lib/fluxos-motor").NoFluxo[]}
+        conexoes={edges.map((e) => ({ source: e.source, target: e.target, sourceHandle: e.sourceHandle ?? null }))}
+        onTrilha={(visitados, atual) => setTrilhaTeste({ visitados, atual })}
+      />
       <Sheet open={!!sel} onOpenChange={(o) => !o && setSelId(null)}>
         <SheetContent side="right" className="flex flex-col">
           {sel && (
@@ -443,6 +461,56 @@ function Campo({ label, children, ajuda }: { label: string; children: React.Reac
       {children}
       {ajuda && <p className="text-xs text-muted-foreground">{ajuda}</p>}
     </div>
+  );
+}
+
+function MidiaMensagem({ d, atualizar }: { d: DadosNo; atualizar: (p: DadosNo) => void }) {
+  const { empresaId } = useContext(VarsCtx);
+  const [subindo, setSubindo] = useState(false);
+  const tipo = String(d["midia_tipo"] || "nenhuma");
+  const url = String(d["midia_url"] ?? "");
+  const subir = async (file: File) => {
+    setSubindo(true);
+    const path = `${empresaId ?? "geral"}/fluxos/${Date.now()}-${file.name.replace(/[^\w.-]/g, "_")}`;
+    const up = await supabase.storage.from("chat_media").upload(path, file, file.type ? { contentType: file.type } : undefined);
+    setSubindo(false);
+    if (up.error) return void toast.error(`Não foi possível enviar o arquivo: ${up.error.message}`);
+    const t = file.type.startsWith("image/") ? "imagem" : file.type.startsWith("video/") ? "video" : "documento";
+    atualizar({ midia_url: supabase.storage.from("chat_media").getPublicUrl(path).data.publicUrl, midia_tipo: t, midia_nome: file.name });
+  };
+  return (
+    <>
+      <Campo label="Anexar mídia">
+        <Select value={tipo} onValueChange={(v) => atualizar(v === "nenhuma" ? { midia_tipo: "", midia_url: "", midia_nome: "" } : { midia_tipo: v })}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="nenhuma">Nenhuma (só texto)</SelectItem>
+            <SelectItem value="documento">Documento / PDF</SelectItem>
+            <SelectItem value="imagem">Imagem</SelectItem>
+            <SelectItem value="video">Vídeo</SelectItem>
+          </SelectContent>
+        </Select>
+      </Campo>
+      {tipo !== "nenhuma" && (
+        <>
+          <Campo label="Arquivo" ajuda="Envie o arquivo ou cole um endereço público. Aceita variáveis, ex.: {{foto}}. Vídeos até 16 MB.">
+            <div className="flex gap-2">
+              <CampoFluxo linha mono value={url} onChange={(v) => atualizar({ midia_url: v })} />
+              <Button type="button" variant="outline" size="icon" disabled={subindo} asChild>
+                <label aria-label="Enviar arquivo" className="cursor-pointer">
+                  <Upload className="size-4" />
+                  <input type="file" className="hidden" accept={tipo === "imagem" ? "image/*" : tipo === "video" ? "video/*" : undefined}
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) void subir(f); e.target.value = ""; }} />
+                </label>
+              </Button>
+            </div>
+          </Campo>
+          {subindo && <p className="text-xs text-muted-foreground">Enviando arquivo…</p>}
+          {url.startsWith("http") && tipo === "imagem" && <img src={url} alt="" className="max-h-40 rounded border" />}
+          {url.startsWith("http") && tipo === "video" && <video src={url} controls className="max-h-40 rounded border" />}
+        </>
+      )}
+    </>
   );
 }
 
@@ -506,7 +574,9 @@ function Propriedades({ no, atualizar, quadros, etapas, campos, fluxos }: {
           <Textarea rows={16} spellCheck={false} className="font-mono text-xs" value={s("codigo")} onChange={(e) => atualizar({ codigo: e.target.value })} />
         </Campo>
       );
-    case "mensagem": case "transbordo": case "encerrar":
+    case "mensagem":
+      return <>{texto("Mensagem", "texto", "Use {{nome}} ou {{protocolo}} para inserir variáveis. Com mídia, vira a legenda.")}<MidiaMensagem d={d} atualizar={atualizar} /></>;
+    case "transbordo": case "encerrar":
       return texto("Mensagem", "texto", "Use {{nome}} para inserir variáveis");
     case "menu":
       return <>{texto("Mensagem")}{texto("Opções", "opcoes", "Uma opção por linha — cada uma vira uma saída do bloco")}</>;
