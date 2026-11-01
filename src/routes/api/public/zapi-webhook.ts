@@ -169,9 +169,15 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
 
         const textoMotor = tipo === "texto" ? texto : texto || tipo;
         let fluxoAtual = r.fluxo;
+        // Dados do contato sempre disponíveis no fluxo: {{telefone}}, {{nome}}, {{protocolo}}.
+        const contato = {
+          protocolo: r.protocolo ?? "",
+          telefone: String(r.telefone || body.phone || "").replace(/\D/g, ""),
+          nome: body.senderName || body.chatName || "",
+        };
         const estadoIni = r.execucao
-          ? { ...r.execucao, variaveis: { ...(r.execucao.variaveis ?? {}), protocolo: r.protocolo ?? "" } }
-          : { no_atual: null, status: "ativo" as const, variaveis: { protocolo: r.protocolo ?? "" } };
+          ? { ...r.execucao, variaveis: { ...contato, ...(r.execucao.variaveis ?? {}), protocolo: contato.protocolo, telefone: contato.telefone } }
+          : { no_atual: null, status: "ativo" as const, variaveis: contato };
         let res = executarFluxo({ nos: fluxoAtual.nos ?? [], conexoes: fluxoAtual.conexoes ?? [], estado: estadoIni, texto: textoMotor });
         const acoes = [...res.acoes];
         // Blocos externos (HTTP/JavaScript) e "Executar outro fluxo" (limite evita laço).
