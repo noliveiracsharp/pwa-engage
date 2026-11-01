@@ -28,6 +28,7 @@ import { corEtapa } from "@/lib/kanban-cores";
 import { IaPropriedades } from "@/components/fluxos/IaPropriedades";
 import { SimuladorFluxo } from "@/components/fluxos/SimuladorFluxo";
 import { TesteHttp } from "@/components/fluxos/TesteHttp";
+import { PainelEntrada } from "@/components/fluxos/PainelEntrada";
 import {
   CATALOGO, dadosPadrao, nomeTipo, resumoNo, saidasDoNo, temEntrada,
   type CategoriaNo, type DadosNo, type TipoNo,
@@ -129,6 +130,7 @@ function BlocoNo({ id, data, selected }: NodeProps<FluxoNode>) {
           </button>
         )}
       </div>
+      {data["erroTeste"] ? <p className="border-b bg-destructive/10 px-3 py-1.5 text-xs font-medium text-destructive">⚠ {String(data["erroTeste"])}</p> : null}
       {data.resumo ? <p className="line-clamp-3 whitespace-pre-line px-3 py-2 text-xs text-muted-foreground">{data.resumo}</p> : null}
       {saidas.length === 1 && saidas[0]!.rotulo === "" ? (
         <Handle type="source" position={Position.Right} id={saidas[0]!.id} className="!size-3 !bg-primary" />
@@ -326,13 +328,15 @@ function FluxosPage() {
 
   const categorias = useMemo(() => Array.from(new Set(CATALOGO.map((c) => c.categoria))), []);
   const [testando, setTestando] = useState(false);
-  const [trilhaTeste, setTrilhaTeste] = useState<{ visitados: string[]; atual: string | null }>({ visitados: [], atual: null });
+  const [trilhaTeste, setTrilhaTeste] = useState<{ visitados: string[]; atual: string | null; erro?: { id: string; msg: string } | null }>({ visitados: [], atual: null });
+  const [entradasTeste, setEntradasTeste] = useState<Record<string, Record<string, string>>>({});
   const nosVisiveis = useMemo(() => {
-    if (!trilhaTeste.visitados.length && !trilhaTeste.atual) return nodes;
+    if (!trilhaTeste.visitados.length && !trilhaTeste.atual && !trilhaTeste.erro) return nodes;
     const vis = new Set(trilhaTeste.visitados);
     return nodes.map((n) => ({
       ...n,
-      className: n.id === trilhaTeste.atual ? "rounded-lg ring-4 ring-warning animate-pulse" : vis.has(n.id) ? "rounded-lg ring-2 ring-success" : "opacity-60",
+      ...(n.id === trilhaTeste.erro?.id ? { data: { ...n.data, erroTeste: trilhaTeste.erro.msg } } : {}),
+      className: n.id === trilhaTeste.erro?.id ? "rounded-lg ring-4 ring-destructive animate-pulse" : n.id === trilhaTeste.atual ? "rounded-lg ring-4 ring-warning animate-pulse" : vis.has(n.id) ? "rounded-lg ring-2 ring-success" : "opacity-60",
     }));
   }, [nodes, trilhaTeste]);
 
@@ -427,17 +431,18 @@ function FluxosPage() {
         open={testando} onOpenChange={setTestando}
         nos={nodes as unknown as import("@/lib/fluxos-motor").NoFluxo[]}
         conexoes={edges.map((e) => ({ source: e.source, target: e.target, sourceHandle: e.sourceHandle ?? null }))}
-        onTrilha={(visitados, atual) => setTrilhaTeste({ visitados, atual })}
+        onTrilha={(visitados, atual, extra) => { setTrilhaTeste({ visitados, atual, erro: extra?.erro ?? null }); if (extra?.entradas) setEntradasTeste(extra.entradas); }}
       />
       <Sheet open={!!sel} onOpenChange={(o) => !o && setSelId(null)}>
-        <SheetContent side="right" className={cn("flex flex-col", sel?.data.tipo === "http" && "sm:max-w-[min(1400px,95vw)] lg:w-[95vw]")} data-no-guard>
+        <SheetContent side="right" className={cn("flex flex-col", "sm:max-w-[min(1400px,95vw)] lg:w-[95vw]")} data-no-guard>
           {sel && (
             <>
               <SheetHeader>
                 <SheetTitle>{nomeTipo(sel.data.tipo)}</SheetTitle>
                 <SheetDescription>{CATALOGO.find((c) => c.tipo === sel.data.tipo)?.descricao}</SheetDescription>
               </SheetHeader>
-              <div className={cn("flex-1 overflow-y-auto px-4", sel.data.tipo === "http" && "grid gap-4 lg:grid-cols-2")}>
+              <div className={cn("grid flex-1 gap-4 overflow-y-auto px-4", sel.data.tipo === "http" ? "lg:grid-cols-[1fr_1.2fr_1.2fr]" : "lg:grid-cols-[1fr_1.4fr]")}>
+                {sel.data.tipo !== "gatilho" && <div className="min-h-[300px] lg:max-h-[calc(100dvh-12rem)]"><PainelEntrada vars={entradasTeste[sel.id]} /></div>}
                 <div className="space-y-4">
                   <Campo label="Título do bloco">
                     <Input value={String(sel.data.titulo ?? "")} placeholder={nomeTipo(sel.data.tipo)} onChange={(e) => atualizarSel({ titulo: e.target.value })} />

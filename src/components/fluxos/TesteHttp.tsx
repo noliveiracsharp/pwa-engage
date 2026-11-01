@@ -13,7 +13,7 @@ type Resultado = { ok: boolean; status: number; ms: number; corpo: string; erro:
 const NOMES: Record<number, string> = { 200: "OK", 201: "Criado", 204: "Sem conteúdo", 400: "Requisição inválida", 401: "Não autorizado", 403: "Proibido", 404: "Não encontrado", 405: "Método não permitido", 422: "Dados inválidos", 429: "Muitas requisições", 500: "Erro no servidor", 502: "Gateway inválido", 503: "Indisponível" };
 
 /** Achata o JSON em caminhos {{var.a.0.b}} para a tabela. */
-function achatar(v: unknown, base: string, out: { caminho: string; valor: string }[], limite = 300) {
+export function achatar(v: unknown, base: string, out: { caminho: string; valor: string }[], limite = 300) {
   if (out.length >= limite) return;
   if (v && typeof v === "object") {
     const ents = Array.isArray(v) ? v.map((x, i) => [String(i), x] as const) : Object.entries(v);
@@ -24,7 +24,7 @@ function achatar(v: unknown, base: string, out: { caminho: string; valor: string
 
 function tipoDe(v: unknown) { return v === null ? "null" : Array.isArray(v) ? "lista" : typeof v === "object" ? "objeto" : typeof v === "number" ? "número" : typeof v === "boolean" ? "booleano" : "texto"; }
 
-function Schema({ v, nome, nivel = 0 }: { v: unknown; nome: string; nivel?: number }) {
+export function Schema({ v, nome, nivel = 0 }: { v: unknown; nome: string; nivel?: number }) {
   const t = tipoDe(v);
   const filhos: [string, unknown][] = Array.isArray(v) ? (v.length ? [["[item]", v[0]]] : []) : v && typeof v === "object" ? Object.entries(v) : [];
   return (

@@ -17,13 +17,15 @@ export type PassoTrilha = { id: string; titulo: string };
 export function SimuladorFluxo({ open, onOpenChange, nos, conexoes, onTrilha }: {
   open: boolean; onOpenChange: (v: boolean) => void;
   nos: NoFluxo[]; conexoes: ConexaoFluxo[];
-  onTrilha: (visitados: string[], atual: string | null) => void;
+  onTrilha: (visitados: string[], atual: string | null, extra?: { erro?: { id: string; msg: string } | null; entradas?: Record<string, Record<string, string>> }) => void;
 }) {
+  const [entradas, setEntradas] = useState<Record<string, Record<string, string>>>({});
   const [baloes, setBaloes] = useState<Balao[]>([]);
   const [estado, setEstado] = useState<EstadoExec | null>(null);
   const [trilha, setTrilha] = useState<PassoTrilha[]>([]);
   const [texto, setTexto] = useState("");
   const [rodando, setRodando] = useState(false);
+  const [erroNo, setErroNo] = useState<{ id: string; msg: string } | null>(null);
   const fimRef = useRef<HTMLDivElement>(null);
   const nomeNo = (id: string) => {
     const n = nos.find((x) => x.id === id);
@@ -31,7 +33,7 @@ export function SimuladorFluxo({ open, onOpenChange, nos, conexoes, onTrilha }: 
   };
 
   const reiniciar = () => {
-    setBaloes([]); setEstado(null); setTrilha([]); setTexto(""); onTrilha([], null);
+    setBaloes([]); setEstado(null); setTrilha([]); setTexto(""); setEntradas({}); setErroNo(null); onTrilha([], null, { erro: null, entradas: {} });
   };
   useEffect(() => { if (!open) onTrilha([], null); }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { fimRef.current?.scrollIntoView({ block: "end" }); }, [baloes]);
@@ -58,18 +60,25 @@ export function SimuladorFluxo({ open, onOpenChange, nos, conexoes, onTrilha }: 
     setTexto("");
     const novos: Balao[] = [{ de: "cliente", texto: msg }];
     const ini: EstadoExec = estado ?? { no_atual: null, status: "ativo", variaveis: { protocolo: "2026-000123", nome: "Cliente Teste", telefone: "5511999999999" } };
+    const ent: Record<string, Record<string, string>> = { ...entradas };
+    let erro: { id: string; msg: string } | null = null;
+    const marcar = (ids: string[] | undefined, v: Record<string, string>) => { for (const id of ids ?? []) ent[id] = { ...v, ultima_mensagem: msg }; };
     let res = executarFluxo({ nos, conexoes, estado: ini, texto: msg });
+    marcar(res.trilha, ini.variaveis);
     const visitados = [...trilha.map((t) => t.id), ...(res.trilha ?? [])];
     aplicar(res.acoes, novos);
     for (let passos = 0; res.externo && passos < 20; passos++) {
       const no = res.externo.no;
       const tipo = (no.data.tipo ?? no.type) as TipoNo;
       let saida: string; let vars = res.estado.variaveis;
+      ent[no.id] = { ...vars };
       if (tipo === "http") {
         const r = await executarHttp(no.data, vars); saida = r.saida; vars = r.variaveis;
+        if (r.saida === "falha") erro = { id: no.id, msg: r.erro ?? `HTTP ${vars[`${String(no.data["variavel"] || "resposta")}_status`] ?? ""}` };
         if (r.erro) novos.push({ de: "sistema", texto: `API falhou: ${r.erro} (no teste, o navegador pode bloquear APIs que funcionam no servidor)` });
       } else if (tipo === "codigo") {
         const r = executarCodigo(no.data, vars); saida = r.saida; vars = r.variaveis;
+        if (r.erro) erro = { id: no.id, msg: `JavaScript: ${r.erro}` };
         if (r.erro) novos.push({ de: "sistema", texto: `Erro no JavaScript: ${r.erro}` });
       } else {
         novos.push({ de: "robo", texto: "(Resposta da IA — no teste não é gerada)" });
@@ -78,10 +87,12 @@ export function SimuladorFluxo({ open, onOpenChange, nos, conexoes, onTrilha }: 
       const prox = proximoNoId(conexoes, no.id, saida);
       if (!prox) {
         const continua = tipo === "ia";
+        if (!continua && saida !== "sucesso") { erro ??= { id: no.id, msg: `Saída "${saida}" sem ligação` }; novos.push({ de: "sistema", texto: `Fluxo parou em "${nomeNo(no.id)}": saída "${saida}" não está ligada` }); }
         res = { acoes: [], estado: { no_atual: continua ? no.id : null, status: continua ? "aguardando" : "finalizado", variaveis: vars } };
         break;
       }
       res = executarFluxo({ nos, conexoes, estado: { no_atual: prox, status: "ativo", variaveis: vars }, texto: msg });
+      marcar(res.trilha, vars);
       visitados.push(...(res.trilha ?? []));
       aplicar(res.acoes, novos);
     }
@@ -90,7 +101,9 @@ export function SimuladorFluxo({ open, onOpenChange, nos, conexoes, onTrilha }: 
     setBaloes((b) => [...b, ...novos]);
     setEstado(res.estado);
     setTrilha(visitados.map((id) => ({ id, titulo: nomeNo(id) })));
-    onTrilha(visitados, res.estado.status === "aguardando" ? res.estado.no_atual : null);
+    setEntradas(ent);
+    setErroNo(erro);
+    onTrilha(visitados, res.estado.status === "aguardando" ? res.estado.no_atual : null, { erro, entradas: ent });
     setRodando(false);
   };
 
@@ -152,7 +165,15 @@ export function SimuladorFluxo({ open, onOpenChange, nos, conexoes, onTrilha }: 
           </TabsContent>
           <TabsContent value="etapas" className="min-h-0 flex-1 overflow-y-auto pb-4">
             <ol className="space-y-1 text-sm">
-              {trilha.map((t, i) => <li key={i} className="rounded border px-2 py-1"><span className="text-muted-foreground">{i + 1}.</span> {t.titulo}</li>)}
+              {trilha.map((t, i) => {
+                const falhou = erroNo?.id === t.id && i === trilha.length - 1 - [...trilha].reverse().findIndex((x) => x.id === t.id);
+                return (
+                  <li key={i} className={cn("rounded border px-2 py-1", falhou && "border-destructive bg-destructive/10 text-destructive")}>
+                    <span className="text-muted-foreground">{i + 1}.</span> {t.titulo}
+                    {falhou && <p className="text-xs">⚠ {erroNo!.msg}</p>}
+                  </li>
+                );
+              })}
             </ol>
           </TabsContent>
         </Tabs>
