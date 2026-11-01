@@ -38,7 +38,7 @@ export function SimuladorFluxo({ open, onOpenChange, nos, conexoes, onTrilha }: 
 
   const aplicar = (acoes: Acao[], novos: Balao[]) => {
     for (const a of acoes) {
-      if (a.tipo === "mensagem") novos.push({ de: "robo", texto: a.texto, midiaUrl: a.midiaUrl, midiaTipo: a.midiaTipo });
+      if (a.tipo === "mensagem") novos.push({ de: "robo", texto: a.lista ? [a.texto, `📋 ${a.lista.botao}`, ...a.lista.opcoes.map((o, i) => `${i + 1}. ${o}`)].filter(Boolean).join("\n") : a.texto, midiaUrl: a.midiaUrl, midiaTipo: a.midiaTipo });
       else if (a.tipo === "atraso") novos.push({ de: "sistema", texto: `Aguardaria ${a.segundos}s` });
       else if (a.tipo === "etapa") novos.push({ de: "sistema", texto: "Moveria o card no Kanban" });
       else if (a.tipo === "modo") novos.push({ de: "sistema", texto: a.modo === "Humano" ? "Transferiria para um atendente" : "Robô assume a conversa" });
