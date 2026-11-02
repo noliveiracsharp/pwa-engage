@@ -278,7 +278,7 @@ export function titulosDaOferta(orc: Row, itens: Row[] = [], opcoes: OpcoesFinan
       diaFechamento: prodCfg.diaFechamento ?? 1, diaVencimento: prodCfg.diaVencimento ?? 10 });
     ps.forEach((p, i) => out.push({ tipo: "pagar", descricao: ps.length > 1 ? `Oferta ${numero} — Produtos (${i + 1}/${ps.length})` : `Oferta ${numero} — Produtos`,
       categoria: "Fornecedores", vencimento: p.vencimento, valor: p.valor, parceiro_id: null, origem_tipo: "oferta", origem_id: id, parcela_n: i + 1,
-      cartao_id: prodCfg.cartaoId, forma_pagamento: "Cartão de crédito", data_compra: dataCompra }));
+      cartao_id: prodCfg.cartaoId ?? null, forma_pagamento: "Cartão de crédito", data_compra: dataCompra }));
   }
   const forn = prodCfg && prodCfg.modo !== "fornecedor" ? [] : cronogramaCompra({
     custo: custoProdutos,
