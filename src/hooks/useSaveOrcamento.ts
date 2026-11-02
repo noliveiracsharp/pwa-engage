@@ -6,6 +6,7 @@ import { useAudit } from "@/lib/audit";
 import { formatNumero, toISODate, yearOf } from "@/lib/orcamentos";
 import type { Row } from "@/lib/row";
 import { vincularKanban } from "@/lib/orcamento-kanban";
+import { TIPO_MODELO_PADRAO, totaisDasLinhas } from "@/lib/orcamento-totais-auto";
 
 export type LinhaPayload = {
   id?: string | undefined;
@@ -87,6 +88,19 @@ export function useSaveOrcamento() {
       original,
     }: SaveOrcamentoInput): Promise<{ id: string; numero: string; linhas: Row[] }> => {
       header = await vincularKanban(header, original);
+      if (header["total_liquido"] === undefined && linhas.length) header = { ...totaisDasLinhas(linhas), ...header };
+      if (!original && header["blocos_selecionados"] === undefined && header["empresa_id"]) {
+        const { data: padrao } = await supabase
+          .from("orcamentos_templates" as never)
+          .select("conteudo")
+          .eq("empresa_id", String(header["empresa_id"]))
+          .eq("tipo", TIPO_MODELO_PADRAO)
+          .limit(1);
+        const raw = (padrao as Row[] | null)?.[0]?.["conteudo"];
+        if (raw) {
+          try { header = { ...header, blocos_selecionados: JSON.parse(String(raw)) }; } catch { /* modelo inválido: ignora */ }
+        }
+      }
       let id: string;
       let numero = String(original?.["numero"] ?? "");
 
