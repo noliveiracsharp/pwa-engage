@@ -136,7 +136,7 @@ type Props = {
   /** Permissão por seção (Funções filhas de /parceiros). Ausente = segue a tela. */
   secoes?: Record<string, SecaoPerms | undefined>;
   /** Valores pré-preenchidos para um cadastro novo (ex.: nome/telefone vindos do WhatsApp). */
-  inicial?: Row;
+  inicial?: Row | undefined;
 };
 
 export function ParceiroSheet({ open, onOpenChange, record, readOnly: roTela, saving, onSave, parceiros = [], secoes, inicial }: Props) {
