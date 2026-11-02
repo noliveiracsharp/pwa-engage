@@ -20,6 +20,7 @@ import { linkProposta } from "@/lib/propostas";
 import { dispararMensagem, marcarEnvio } from "@/lib/atendimentos-envio";
 import { A, telefonePessoa } from "@/lib/atendimentos";
 import { linhaOfertaDoItem, mensagemOfertaChat } from "@/lib/comercial-chat";
+import { NovoParceiroRapido } from "@/components/parceiros/NovoParceiroRapido";
 
 type Props = { atendimento: Row; pessoa: Row | undefined; instancia: Row | undefined; usuarios: Row[]; orcamentos: Row[] };
 
@@ -35,8 +36,23 @@ export function ComercialChat({ atendimento, pessoa, instancia, usuarios, orcame
   const { data: colsMsg } = useCols("atendimentos_mensagem");
   const salvarOferta = useSaveOrcamento();
   const atId = text(rowId(atendimento));
-  const parceiroId = text(pessoa?.["parceiro_id"]);
+  const [parceiroLocal, setParceiroLocal] = useState("");
+  const parceiroId = parceiroLocal || text(pessoa?.["parceiro_id"]);
   const nomeCliente = String(pick(pessoa, ["nome", "nome_completo"]) ?? "cliente");
+  const { data: parceiros = [] } = useTableRows("parceiros");
+  const clienteOpts = useMemo(() => parceiros
+    .filter((p) => p["is_cliente"] !== false && p["status"] !== false)
+    .map((p) => ({ value: text(rowId(p)), label: String(pick(p, ["razao_social", "nome_fantasia"]) ?? "—") }))
+    .sort((a, b) => a.label.localeCompare(b.label, "pt-BR")), [parceiros]);
+
+  async function vincularCliente(id: string) {
+    if (!id || !pessoa) return;
+    const { error } = await supabase.from("pessoas").update({ parceiro_id: id } as never).eq("id", String(rowId(pessoa)));
+    if (error) return void toast.error(error.message);
+    setParceiroLocal(id);
+    void qc.invalidateQueries({ queryKey: ["table", "pessoas"] });
+    toast.success("Contato vinculado ao cliente.");
+  }
 
   const [aberto, setAberto] = useState(false);
   const [salvando, setSalvando] = useState(false);
@@ -167,7 +183,15 @@ export function ComercialChat({ atendimento, pessoa, instancia, usuarios, orcame
             {f.comCusto && (
               <div className="space-y-1"><Label>Item da taxa (catálogo)</Label><SearchSelect value={f.itemId} onChange={(v) => setF({ ...f, itemId: v })} options={itemOpts} placeholder="Ex.: Taxa de vistoria" /></div>
             )}
-            {!parceiroId && <p className="text-xs text-destructive">Este contato ainda não está ligado a um cliente.</p>}
+            {!parceiroId && (
+              <div className="space-y-2 rounded-md border border-destructive/40 p-3">
+                <p className="text-xs text-destructive">Este contato ainda não está ligado a um cliente. Selecione um existente ou cadastre.</p>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1"><SearchSelect value="" onChange={(v) => void vincularCliente(v)} options={clienteOpts} placeholder="Buscar cliente" /></div>
+                  <NovoParceiroRapido tipo="cliente" onCriado={(id) => void vincularCliente(id)} inicial={{ razao_social: nomeCliente, telefone: telefonePessoa(pessoa) }} />
+                </div>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" disabled={salvando} onClick={() => setAberto(false)}>Cancelar</Button>
