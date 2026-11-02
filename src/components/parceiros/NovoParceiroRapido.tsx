@@ -10,7 +10,8 @@ import type { Row } from "@/lib/row";
 import { ParceiroSheet } from "@/components/parceiros/ParceiroSheet";
 
 /** Botão "+ Novo" que abre o cadastro completo de parceiro e devolve o id criado. */
-export function NovoParceiroRapido({ tipo, onCriado, disabled }: {
+export function NovoParceiroRapido({ tipo, onCriado, disabled, inicial }: {
+  inicial?: Row;
   tipo: "cliente" | "fornecedor";
   onCriado: (id: string) => void;
   disabled?: boolean;
@@ -39,7 +40,7 @@ export function NovoParceiroRapido({ tipo, onCriado, disabled }: {
         <Plus className="mr-1 h-3.5 w-3.5" /> {tipo === "cliente" ? "Novo cliente" : "Novo fornecedor"}
       </Button>
       {aberto && (
-        <ParceiroSheet open={aberto} onOpenChange={setAberto} record={null} parceiros={parceiros} readOnly={false} saving={salvando} onSave={(v) => void salvar(v)} />
+        <ParceiroSheet open={aberto} onOpenChange={setAberto} record={null} parceiros={parceiros} readOnly={false} saving={salvando} onSave={(v) => void salvar(v)} inicial={inicial} />
       )}
     </>
   );

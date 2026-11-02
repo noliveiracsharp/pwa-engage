@@ -135,16 +135,18 @@ type Props = {
   parceiros?: Row[];
   /** Permissão por seção (Funções filhas de /parceiros). Ausente = segue a tela. */
   secoes?: Record<string, SecaoPerms | undefined>;
+  /** Valores pré-preenchidos para um cadastro novo (ex.: nome/telefone vindos do WhatsApp). */
+  inicial?: Row;
 };
 
-export function ParceiroSheet({ open, onOpenChange, record, readOnly: roTela, saving, onSave, parceiros = [], secoes }: Props) {
+export function ParceiroSheet({ open, onOpenChange, record, readOnly: roTela, saving, onSave, parceiros = [], secoes, inicial }: Props) {
   const ver = (k: string) => !secoes || Boolean(secoes[k]?.canRead);
   const readOnly = roTela || Boolean(record && secoes && !secoes["dados"]?.canUpdate);
   const [f, setF] = useState<Form>(() => toForm(record));
   const [tab, setTab] = useState("gerais");
   const [cepLoading, setCepLoading] = useState(false);
   const [cnpjLoading, setCnpjLoading] = useState(false);
-  useEffect(() => { if (open) { setF(toForm(record)); setTab("gerais"); } }, [open, record]);
+  useEffect(() => { if (open) { setF(record ? toForm(record) : { ...toForm(null), ...(inicial ? Object.fromEntries(Object.entries(toForm(inicial)).filter(([, v]) => v !== "" && v != null)) : {}) }); setTab("gerais"); } }, [open, record]);
 
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setF((p) => ({ ...p, [k]: v }));
   const pf = f.tipo_pessoa === "Física";
@@ -312,7 +314,7 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly: roTela, sa
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-2xl">
+      <SheetContent className="z-[60] flex w-full flex-col gap-0 p-0 sm:max-w-2xl">
         <SheetHeader className="px-6 pt-6 pb-4">
           <SheetTitle className="pr-8">{record ? "Editar parceiro" : "Novo parceiro"}</SheetTitle>
           <SheetDescription>Clientes e fornecedores usados no financeiro e faturamento.</SheetDescription>
