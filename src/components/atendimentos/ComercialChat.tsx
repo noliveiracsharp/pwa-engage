@@ -236,6 +236,43 @@ export function ComercialChat({ atendimento, pessoa, instancia, usuarios, orcame
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <Dialog open={ofAberta} onOpenChange={(o) => !salvando && setOfAberta(o)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Criar Oferta para {nomeCliente}</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            {!parceiroId && (
+              <div className="space-y-2 rounded-md border border-destructive/40 p-3">
+                <p className="text-xs text-destructive">Este contato ainda não está ligado a um cliente. Selecione um existente ou cadastre.</p>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1"><SearchSelect value="" onChange={(v) => void vincularCliente(v)} options={clienteOpts} placeholder="Buscar cliente" /></div>
+                  <NovoParceiroRapido tipo="cliente" onCriado={(id) => void vincularCliente(id)} inicial={{ razao_social: nomeCliente, telefone: telefonePessoa(pessoa) }} />
+                </div>
+              </div>
+            )}
+            <div className="space-y-1"><Label>Descrição</Label><Input value={of.descricao} onChange={(e) => setOf({ ...of, descricao: e.target.value })} placeholder="Ex.: Instalação de câmeras" /></div>
+            <div className="space-y-1">
+              <Label>Adicionar item do catálogo</Label>
+              <SearchSelect value="" onChange={(v) => v && setOf({ ...of, itens: [...of.itens, { itemId: v, qtd: 1 }] })} options={itemOpts} placeholder="Buscar produto ou serviço" />
+            </div>
+            {of.itens.map((l, idx) => {
+              const it = itens.find((i) => text(rowId(i)) === l.itemId);
+              return (
+                <div key={idx} className="flex items-center gap-2 text-sm">
+                  <span className="flex-1 truncate">{String(it?.["descricao"] ?? "Item")}</span>
+                  <Input type="number" min={1} className="w-20" value={l.qtd} onChange={(e) => setOf({ ...of, itens: of.itens.map((x, j) => (j === idx ? { ...x, qtd: Number(e.target.value) || 1 } : x)) })} />
+                  <Button size="sm" variant="ghost" onClick={() => setOf({ ...of, itens: of.itens.filter((_, j) => j !== idx) })}>Remover</Button>
+                </div>
+              );
+            })}
+            <p className="text-right text-sm font-semibold">Total: {brl(totalOf)}</p>
+            <p className="text-xs text-muted-foreground">Descontos, parcelas e contrato podem ser ajustados depois na tela de Ofertas.</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" disabled={salvando} onClick={() => setOfAberta(false)}>Cancelar</Button>
+            <Button disabled={salvando} onClick={() => void criarOferta()}>{salvando && <Loader2 className="mr-1 h-4 w-4 animate-spin" />} Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }
