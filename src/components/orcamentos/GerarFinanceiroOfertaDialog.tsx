@@ -5,11 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { SearchSelect } from "@/components/data-table/SearchSelect";
-import { useTableRows } from "@/lib/crud";
+import { useTableRows, rowId } from "@/lib/crud";
 import { hojeISO, type OpcoesFinanceiroOferta } from "@/lib/financeiro";
-import { num, round2 } from "@/lib/orcamentos";
-import { formatBRL } from "@/lib/format";
-import { rowId, type Row } from "@/lib/row";
+import { formatBRL, num, round2 } from "@/lib/orcamentos";
+import type { Row } from "@/lib/row";
 
 type Props = {
   open: boolean;

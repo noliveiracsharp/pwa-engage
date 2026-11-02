@@ -26,7 +26,8 @@ import { OrcamentoSheet } from "@/components/orcamentos/OrcamentoSheet";
 import { OrcamentoPDF } from "@/components/orcamentos/OrcamentoPDF";
 import { PropostaDialog } from "@/components/orcamentos/PropostaDialog";
 import { MinutaDialog } from "@/components/orcamentos/MinutaDialog";
-import { titulosDaOferta } from "@/lib/financeiro";
+import { titulosDaOferta, type OpcoesFinanceiroOferta } from "@/lib/financeiro";
+import { GerarFinanceiroOfertaDialog } from "@/components/orcamentos/GerarFinanceiroOfertaDialog";
 import { apagarAbertosDaOrigem, contarTitulosDaOrigem, erroFinanceiro, fontesDaOferta, inserirTitulos, itensDaOferta } from "@/lib/financeiro-db";
 import { GerarPedidosDialog } from "@/components/orcamentos/GerarPedidosDialog";
 import { SituacaoBadge } from "@/components/orcamentos/SituacaoBadge";
@@ -168,23 +169,33 @@ function OrcamentosPage() {
   const [ativar, setAtivarRaw] = useState<Row | null>(null);
   const setAtivar = (r: Row | null) => { if (r && !ofertaLiberada(r["aprovacao_status"])) { avisoBloqueio(); return; } setAtivarRaw(r); };
 
+  const [finOferta, setFinOferta] = useState<{ oferta: Row; itens: Row[] } | null>(null);
   const gerarContas = async (r: Row) => {
     const id = String(rowId(r) ?? "");
     const tipos = ["oferta", "despesa"] as const;
     try {
       const ja = await contarTitulosDaOrigem([id], [...tipos]);
-      if (ja > 0) {
-        if (!await confirmar(`Esta oferta já gerou ${ja} conta(s). Regerar apenas as que estão em aberto?`)) return;
-        await apagarAbertosDaOrigem([id], [...tipos]);
-      } else if (!await confirmar("Lançar no Financeiro as parcelas do cliente (a receber), as parcelas do fornecedor/produtos e as despesas operacionais (a pagar)?\n\nSe você também gerar Pedidos de Compra desta oferta, apague as parcelas de produtos para não pagar em dobro.")) return;
+      if (ja > 0 && !await confirmar(`Esta oferta já gerou ${ja} conta(s). Regerar apenas as que estão em aberto?`)) return;
       const atual = todos.find((t) => rowId(t) === rowId(r)) ?? r;
-      const itensOf = await itensDaOferta(id);
-      const n = await inserirTitulos(String(atual["empresa_id"] ?? empresaId ?? ""), titulosDaOferta({ ...atual, id }, itensOf),
-        { fontes: await fontesDaOferta(itensOf), clienteId: (atual["parceiro_id"] ?? atual["parceiros_id"] ?? null) as string | null });
+      setFinOferta({ oferta: { ...atual, id, __regerar: ja > 0 }, itens: await itensDaOferta(id) });
+    } catch (e) {
+      toast.error(erroFinanceiro(e));
+    }
+  };
+  const confirmarFinanceiro = async (opcoes: OpcoesFinanceiroOferta) => {
+    if (!finOferta) return;
+    const { oferta: atual, itens: itensOf } = finOferta;
+    const id = String(atual["id"]);
+    try {
+      if (atual["__regerar"]) await apagarAbertosDaOrigem([id], ["oferta", "despesa"]);
+      const { __regerar: _r, ...orc } = atual;
+      const n = await inserirTitulos(String(orc["empresa_id"] ?? empresaId ?? ""), titulosDaOferta(orc, itensOf, opcoes),
+        { fontes: await fontesDaOferta(itensOf), clienteId: (orc["parceiro_id"] ?? orc["parceiros_id"] ?? null) as string | null });
       toast.success(n ? `${n} conta(s) lançada(s) no Financeiro.` : "Nada a lançar nesta oferta.");
       qcOrc.invalidateQueries({ queryKey: ["table", "financeiro_titulos"] });
     } catch (e) {
       toast.error(erroFinanceiro(e));
+      throw e;
     }
   };
 
@@ -759,6 +770,14 @@ function OrcamentosPage() {
         marcas={marcas}
       />
       </BlindagemErro>
+      <GerarFinanceiroOfertaDialog
+        open={!!finOferta}
+        onOpenChange={(v) => !v && setFinOferta(null)}
+        oferta={finOferta?.oferta ?? null}
+        itens={finOferta?.itens ?? []}
+        empresaId={String(finOferta?.oferta["empresa_id"] ?? empresaId ?? "")}
+        onConfirmar={confirmarFinanceiro}
+      />
       <AtivacaoOfertaDialog
         open={!!ativar}
         onOpenChange={(v) => !v && setAtivarRaw(null)}
