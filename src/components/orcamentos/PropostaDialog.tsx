@@ -153,6 +153,18 @@ export function PropostaDialog(props: Props) {
     toast.success("Link copiado");
   };
 
+  const definirPadrao = async () => {
+    if (!empresaId) return;
+    const ok = await confirmar({ title: "Definir como padrão", description: "Toda nova Oferta desta empresa nascerá com estes blocos, textos e aparência. Continuar?" });
+    if (!ok) return;
+    await supabase.from("orcamentos_templates" as never).delete().eq("empresa_id", empresaId).eq("tipo", TIPO_MODELO_PADRAO);
+    const { error } = await supabase.from("orcamentos_templates" as never).insert({
+      empresa_id: empresaId, nome: "Padrão da empresa", tipo: TIPO_MODELO_PADRAO, conteudo: JSON.stringify(blocos),
+    } as never);
+    if (error) return void toast.error("Erro ao definir padrão", { description: error.message });
+    toast.success("Modelo padrão da empresa salvo. Novas Ofertas já usarão esta configuração.");
+  };
+
   const [canalEnvio, setCanalEnvio] = useState<"whatsapp" | "email">("whatsapp");
   const whatsapp = () => { setCanalEnvio("whatsapp"); setEnvioOpen(true); };
   const porEmail = () => { setCanalEnvio("email"); setEnvioOpen(true); };
@@ -195,6 +207,9 @@ export function PropostaDialog(props: Props) {
             ) : (
               <span className="text-muted-foreground text-xs">Execute o script da proposta no banco para gerar o link.</span>
             )}
+            <Button variant="outline" size="sm" onClick={() => void definirPadrao()} disabled={salvando}>
+              Definir como padrão da empresa
+            </Button>
             <Button size="sm" className="mr-8" onClick={() => salvar()} disabled={salvando}>
               <Save className="mr-1 h-4 w-4" /> Salvar
             </Button>
