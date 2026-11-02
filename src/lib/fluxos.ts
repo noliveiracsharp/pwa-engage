@@ -67,6 +67,7 @@ export const casosSwitch = opcoesMenu;
 export function saidasDoNo(tipo: TipoNo, dados: DadosNo): { id: string; rotulo: string }[] {
   switch (tipo) {
     case "menu":
+      if (String(dados["lista_origem"] ?? "").trim()) return [{ id: "selecionado", rotulo: "Item escolhido" }, { id: "invalida", rotulo: "Opção inválida" }];
       return [
         ...opcoesMenu(dados["opcoes"]).map((o, i) => ({ id: `op-${i}`, rotulo: `${i + 1}. ${o}` })),
         { id: "invalida", rotulo: "Opção inválida" },

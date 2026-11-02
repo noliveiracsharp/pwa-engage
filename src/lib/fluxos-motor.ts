@@ -54,6 +54,13 @@ export function proximoNoId(conexoes: ConexaoFluxo[], de: string, handle: string
   return conexoes.find((e) => e.source === de && (e.sourceHandle ?? "saida") === handle)?.target ?? null;
 }
 
+export type Anexo = { url: string; tipo: "imagem" | "video" | "documento"; nome?: string };
+/** Anexos adicionais do bloco Mensagem (enviados em sequência após a mensagem principal). */
+export function anexosExtras(v: unknown): Anexo[] {
+  if (!Array.isArray(v)) return [];
+  return v.filter((a): a is Anexo => !!a && typeof a === "object" && typeof (a as Anexo).url === "string" && ["imagem", "video", "documento"].includes((a as Anexo).tipo));
+}
+
 export function textoMenu(d: DadosNo) {
   const ops = opcoesMenu(d["opcoes"]).map((o, i) => `${i + 1}. ${o}`);
   return [str(d["texto"]), ...ops].filter(Boolean).join("\n");
@@ -61,7 +68,21 @@ export function textoMenu(d: DadosNo) {
 
 /** Opções do menu com variáveis resolvidas (permite lista vinda de {{variavel}}). */
 export function menuInterpolado(d: DadosNo, vars: Record<string, string>): DadosNo {
+  if (str(d["lista_origem"]).trim()) return { ...d, opcoes: itensListaMenu(d, vars).map((x) => x.rotulo).join("\n") };
   return { ...d, opcoes: interpolar(str(d["opcoes"]), vars) };
+}
+
+/** Lista dinâmica: cada item do array vira uma opção; o rótulo é o que o cliente vê, o item inteiro fica guardado. */
+export function itensListaMenu(d: DadosNo, vars: Record<string, string>): { rotulo: string; item: unknown }[] {
+  const arr = lerCaminho(vars, str(d["lista_origem"]).trim().replace(/^\{\{\s*|\s*\}\}$/g, ""));
+  if (!Array.isArray(arr)) return [];
+  const modelo = str(d["lista_rotulo"]).trim();
+  return arr.slice(0, 50).map((item) => {
+    const campos: Record<string, string> = { ...vars, item: paraTexto(item) };
+    if (item && typeof item === "object") for (const [k, v] of Object.entries(item)) campos[k] = paraTexto(v);
+    const rotulo = modelo ? interpolar(modelo, campos) : typeof item === "object" ? paraTexto((item as Record<string, unknown>)["nome"] ?? item) : paraTexto(item);
+    return { rotulo: rotulo.replace(/\s+/g, " ").trim(), item };
+  }).filter((x) => x.rotulo);
 }
 
 /** Qual opção do menu o cliente escolheu: número ("2", "2.") ou o texto da opção. */
@@ -155,7 +176,11 @@ export function executarFluxo(p: {
         }
       } else {
         vars["opcao"] = opcoesMenu(d["opcoes"])[i] ?? "";
-        atual = proximo(esperando.id, `op-${i}`);
+        if (str(d["lista_origem"]).trim()) {
+          const it = itensListaMenu(d, vars)[i];
+          vars[str(d["guardar_em"]).trim() || "item_escolhido"] = paraTexto(it?.item);
+          atual = proximo(esperando.id, "selecionado");
+        } else atual = proximo(esperando.id, `op-${i}`);
       }
     } else {
       const variavel = str(d["variavel"]);
@@ -182,6 +207,10 @@ export function executarFluxo(p: {
           tipo: "mensagem", texto: interpolar(str(d["texto"]), vars),
           ...(midiaUrl && (mt === "imagem" || mt === "video" || mt === "documento") ? { midiaUrl, midiaTipo: mt, ...(str(d["midia_nome"]) ? { nomeArquivo: str(d["midia_nome"]) } : {}) } : {}),
         });
+        for (const a of anexosExtras(d["anexos"])) {
+          const u = interpolar(a.url, vars).trim();
+          if (u) acoes.push({ tipo: "mensagem", texto: "", midiaUrl: u, midiaTipo: a.tipo, ...(a.nome ? { nomeArquivo: a.nome } : {}) });
+        }
         atual = proximo(atual.id);
         break;
       }

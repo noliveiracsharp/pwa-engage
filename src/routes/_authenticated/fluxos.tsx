@@ -11,7 +11,7 @@ import "@xyflow/react/dist/style.css";
 import {
   Bot, Clock, GitBranch, Hourglass, KanbanSquare, ListOrdered, MessageSquare,
   MessageCircleQuestion, PhoneForwarded, Plus, Save, Trash2, UserPlus, Workflow, Zap, PenLine, CircleStop, Globe, Code2, X, FlaskConical, Upload, Copy, Play,
-  Split,
+  Split, FileText,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -509,24 +509,60 @@ function Campo({ label, children, ajuda }: { label: string; children: React.Reac
   );
 }
 
+type AnexoEd = { url: string; tipo: "imagem" | "video" | "documento"; nome?: string };
+const tipoDoArquivo = (f: File): AnexoEd["tipo"] => (f.type.startsWith("image/") ? "imagem" : f.type.startsWith("video/") ? "video" : "documento");
+
+function PreviewAnexo({ a, remover }: { a: AnexoEd; remover: () => void }) {
+  return (
+    <div className="relative inline-block">
+      {a.url.startsWith("http") && a.tipo === "imagem" ? <img src={a.url} alt="" className="h-28 rounded border object-cover" />
+        : a.url.startsWith("http") && a.tipo === "video" ? <video src={a.url} className="h-28 rounded border" />
+        : <div className="flex h-28 w-32 flex-col items-center justify-center gap-1 rounded border p-2 text-center text-xs text-muted-foreground"><FileText className="size-6" /><span className="line-clamp-2 break-all">{a.nome || a.url || "Arquivo"}</span></div>}
+      <Button type="button" variant="destructive" size="icon" aria-label="Remover arquivo" className="absolute -right-2 -top-2 size-6 rounded-full" onClick={remover}>
+        <X className="size-3.5" />
+      </Button>
+    </div>
+  );
+}
+
 function MidiaMensagem({ d, atualizar }: { d: DadosNo; atualizar: (p: DadosNo) => void }) {
   const { empresaId } = useContext(VarsCtx);
   const [subindo, setSubindo] = useState(false);
   const tipo = String(d["midia_tipo"] || "nenhuma");
   const url = String(d["midia_url"] ?? "");
-  const subir = async (file: File) => {
-    setSubindo(true);
+  const extras: AnexoEd[] = Array.isArray(d["anexos"]) ? (d["anexos"] as AnexoEd[]) : [];
+  const enviar = async (file: File) => {
     const path = `${empresaId ?? "geral"}/fluxos/${Date.now()}-${file.name.replace(/[^\w.-]/g, "_")}`;
     const up = await supabase.storage.from("chat_media").upload(path, file, file.type ? { contentType: file.type } : undefined);
+    if (up.error) { toast.error(`Não foi possível enviar ${file.name}: ${up.error.message}`); return null; }
+    return { url: supabase.storage.from("chat_media").getPublicUrl(path).data.publicUrl, tipo: tipoDoArquivo(file), nome: file.name } as AnexoEd;
+  };
+  const subir = async (file: File) => {
+    setSubindo(true);
+    const a = await enviar(file);
     setSubindo(false);
-    if (up.error) return void toast.error(`Não foi possível enviar o arquivo: ${up.error.message}`);
-    const t = file.type.startsWith("image/") ? "imagem" : file.type.startsWith("video/") ? "video" : "documento";
-    atualizar({ midia_url: supabase.storage.from("chat_media").getPublicUrl(path).data.publicUrl, midia_tipo: t, midia_nome: file.name });
+    if (a) atualizar({ midia_url: a.url, midia_tipo: a.tipo, midia_nome: a.nome });
+  };
+  const subirVarios = async (files: File[]) => {
+    setSubindo(true);
+    const novos: AnexoEd[] = [];
+    for (const f of files) { const a = await enviar(f); if (a) novos.push(a); }
+    setSubindo(false);
+    if (!novos.length) return;
+    // Sem mídia principal, o primeiro arquivo assume esse lugar (vai com a legenda).
+    if (tipo === "nenhuma" || !url) {
+      const [p, ...r] = novos;
+      atualizar({ midia_url: p!.url, midia_tipo: p!.tipo, midia_nome: p!.nome, anexos: [...extras, ...r] });
+    } else atualizar({ anexos: [...extras, ...novos] });
+  };
+  const limparPrincipal = () => {
+    const [p, ...r] = extras;
+    atualizar(p ? { midia_url: p.url, midia_tipo: p.tipo, midia_nome: p.nome ?? "", anexos: r } : { midia_tipo: "", midia_url: "", midia_nome: "" });
   };
   return (
     <>
       <Campo label="Anexar mídia">
-        <Select value={tipo} onValueChange={(v) => atualizar(v === "nenhuma" ? { midia_tipo: "", midia_url: "", midia_nome: "" } : { midia_tipo: v })}>
+        <Select value={tipo} onValueChange={(v) => atualizar(v === "nenhuma" ? { midia_tipo: "", midia_url: "", midia_nome: "", anexos: [] } : { midia_tipo: v })}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="nenhuma">Nenhuma (só texto)</SelectItem>
@@ -537,23 +573,33 @@ function MidiaMensagem({ d, atualizar }: { d: DadosNo; atualizar: (p: DadosNo) =
         </Select>
       </Campo>
       {tipo !== "nenhuma" && (
-        <>
-          <Campo label="Arquivo" ajuda="Envie o arquivo ou cole um endereço público. Aceita variáveis, ex.: {{foto}}. Vídeos até 16 MB.">
-            <div className="flex gap-2">
-              <CampoFluxo className="min-w-0 flex-1" linha mono value={url} onChange={(v) => atualizar({ midia_url: v })} />
-              <Button type="button" variant="outline" size="icon" disabled={subindo} asChild>
-                <label aria-label="Enviar arquivo" className="cursor-pointer">
-                  <Upload className="size-4" />
-                  <input type="file" className="hidden" accept={tipo === "imagem" ? "image/*" : tipo === "video" ? "video/*" : undefined}
-                    onChange={(e) => { const f = e.target.files?.[0]; if (f) void subir(f); e.target.value = ""; }} />
-                </label>
-              </Button>
-            </div>
-          </Campo>
-          {subindo && <p className="text-xs text-muted-foreground">Enviando arquivo…</p>}
-          {url.startsWith("http") && tipo === "imagem" && <img src={url} alt="" className="max-h-40 rounded border" />}
-          {url.startsWith("http") && tipo === "video" && <video src={url} controls className="max-h-40 rounded border" />}
-        </>
+        <Campo label="Arquivo principal (vai com a legenda)" ajuda="Envie o arquivo ou cole um endereço público. Aceita variáveis, ex.: {{foto}}. Vídeos até 16 MB.">
+          <div className="flex gap-2">
+            <CampoFluxo className="min-w-0 flex-1" linha mono value={url} onChange={(v) => atualizar({ midia_url: v })} />
+            <Button type="button" variant="outline" size="icon" disabled={subindo} asChild>
+              <label aria-label="Enviar arquivo" className="cursor-pointer">
+                <Upload className="size-4" />
+                <input type="file" className="hidden" accept={tipo === "imagem" ? "image/*" : tipo === "video" ? "video/*" : undefined}
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) void subir(f); e.target.value = ""; }} />
+              </label>
+            </Button>
+            {url && <Button type="button" variant="outline" size="icon" aria-label="Remover arquivo" onClick={limparPrincipal}><X className="size-4" /></Button>}
+          </div>
+        </Campo>
+      )}
+      <Campo label="Mais arquivos" ajuda="Imagens, vídeos e PDFs extras são enviados em sequência, logo após a mensagem.">
+        <Button type="button" variant="outline" size="sm" disabled={subindo} asChild>
+          <label className="cursor-pointer"><Plus className="mr-1 size-4" /> Adicionar arquivos
+            <input type="file" multiple className="hidden" onChange={(e) => { const fs = Array.from(e.target.files ?? []); if (fs.length) void subirVarios(fs); e.target.value = ""; }} />
+          </label>
+        </Button>
+      </Campo>
+      {subindo && <p className="text-xs text-muted-foreground">Enviando arquivo…</p>}
+      {(url || extras.length > 0) && (
+        <div className="flex flex-wrap gap-3 pt-1">
+          {url && tipo !== "nenhuma" && <PreviewAnexo a={{ url, tipo: tipo as AnexoEd["tipo"], nome: String(d["midia_nome"] ?? "") }} remover={limparPrincipal} />}
+          {extras.map((a, i) => <PreviewAnexo key={`${a.url}-${i}`} a={a} remover={() => atualizar({ anexos: extras.filter((_, j) => j !== i) })} />)}
+        </div>
       )}
     </>
   );
@@ -673,7 +719,24 @@ function Propriedades({ no, atualizar, quadros, etapas, campos, fluxos }: {
             </div>
           )}
           {texto("Mensagem")}
-          {texto("Opções", "opcoes", "Uma opção por linha — cada uma vira uma saída. Pode usar {{variavel}} com várias linhas (máx. 10 na lista).")}
+          <div className="space-y-3 rounded-md border p-3">
+            <p className="text-sm font-medium">Lista vinda de API (opcional)</p>
+            <p className="text-xs text-muted-foreground">O cliente vê só o texto do rótulo; a linha inteira escolhida fica guardada para os próximos blocos.</p>
+            <Campo label="Lista (variável)" ajuda="Ex.: resposta.data — preenchido, ignora as opções fixas abaixo.">
+              <Input className="font-mono" value={s("lista_origem")} placeholder="resposta.data" onChange={(e) => atualizar({ lista_origem: e.target.value })} />
+            </Campo>
+            {s("lista_origem").trim() && (
+              <>
+                <Campo label="O que o cliente vê" ajuda="Use os campos de cada linha, ex.: {{condominio}} ({{torre}} - Unidade {{unidade}})">
+                  <Input className="font-mono" value={s("lista_rotulo")} placeholder="{{nome}}" onChange={(e) => atualizar({ lista_rotulo: e.target.value })} />
+                </Campo>
+                <Campo label="Guardar linha escolhida em" ajuda={`Depois use {{${s("guardar_em") || "item_escolhido"}.condominio_id}}, {{${s("guardar_em") || "item_escolhido"}.adm_id}}…`}>
+                  <Input className="font-mono" value={s("guardar_em")} placeholder="item_escolhido" onChange={(e) => atualizar({ guardar_em: e.target.value })} />
+                </Campo>
+              </>
+            )}
+          </div>
+          {!s("lista_origem").trim() && texto("Opções", "opcoes", "Uma opção por linha — cada uma vira uma saída. Pode usar {{variavel}} com várias linhas (máx. 10 na lista).")}
         </>
       );
     case "pergunta":
