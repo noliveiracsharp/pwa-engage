@@ -355,6 +355,7 @@ function AtendimentosPage() {
             kanbans={kanbans}
             etapas={etapas}
             orcamentos={orcamentos}
+            instancia={instMap.get(text(pick(ativo, A.instancia)))}
             onFechar={() => setPainel(false)}
           />
         </div>

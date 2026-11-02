@@ -1,3 +1,4 @@
+import { ehHtml, htmlSeguro } from "@/lib/propostas";
 import { useIdioma } from "@/lib/i18n";
 import { tx } from "@/lib/i18n-termos";
 import { BlindagemErro } from "@/components/layout/BlindagemErro";
@@ -325,8 +326,12 @@ function OrcamentosPage() {
                     <Info className="h-3 w-3" /> {tx("Ver descrição")}
                   </button>
                 </PopoverTrigger>
-                <PopoverContent align="start" className="max-h-72 w-80 overflow-auto whitespace-pre-wrap text-sm">
-                  {String(r["descricao"])}
+                <PopoverContent align="start" className="max-h-72 w-80 overflow-auto text-sm">
+                  {ehHtml(String(r["descricao"])) ? (
+                    <div className="prop-rich" dangerouslySetInnerHTML={{ __html: htmlSeguro(String(r["descricao"])) }} />
+                  ) : (
+                    <p className="whitespace-pre-wrap">{String(r["descricao"])}</p>
+                  )}
                 </PopoverContent>
               </Popover>
             ) : null}
