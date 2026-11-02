@@ -31,7 +31,7 @@ type Props = {
   kanbans: Row[];
   etapas: Row[];
   orcamentos: Row[];
-  instancia?: Row;
+  instancia?: Row | undefined;
   onFechar: () => void;
 };
 

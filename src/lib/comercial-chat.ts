@@ -9,7 +9,7 @@ export function linhaOfertaDoItem(item: Row) {
     unidade_medida_id: (item["unidade_medida_id"] as string | undefined) ?? null,
     valor_unitario: valor, total_linha: valor, preco_custo: custo, imposto_pct: 0, imposto_valor: 0,
     custo_total: custo, lucro: valor - custo, margem_pct: valor > 0 ? ((valor - custo) / valor) * 100 : 0,
-    natureza: "servico",
+    natureza: "servico", detalhe: null,
   };
 }
 
