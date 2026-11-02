@@ -124,7 +124,11 @@ export function CentralAjuda() {
       const { data: ses } = await supabase.auth.getSession();
       const token = ses.session?.access_token;
       if (!token) { toast.error("Sessão expirada. Entre novamente."); return; }
-      const contexto = buscarArtigos(artigos, q, 4).map(artigoTexto).join("\n\n");
+      // Mais relevantes primeiro; completa com o índice de títulos para a IA achar sinônimos.
+      const top = buscarArtigos(artigos, q, 6);
+      const ids = new Set(top.map((a) => a.id));
+      const indice = artigos.filter((a) => !ids.has(a.id)).map((a) => `- ${a.titulo} (${a.modulo}): ${a.resumo}`).join("\n");
+      const contexto = `${top.map(artigoTexto).join("\n\n")}\n\nOutros guias (só título e resumo):\n${indice}`.slice(0, 38000);
       const r = await perguntar({ data: { pergunta: q, contexto, token } });
       if (r.erro) toast.error(r.erro); else setResposta(r.texto);
     } catch {

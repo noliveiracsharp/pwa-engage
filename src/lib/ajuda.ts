@@ -589,6 +589,48 @@ export const ARTIGOS_PADRAO: ArtigoAjuda[] = [
     ],
     tags: ["etiqueta", "kanban", "quadro", "tag"],
   },
+  {
+    id: "fin-boleto-config", modulo: "Financeiro", titulo: "Configurar a emissão de boletos (Banco Inter)",
+    resumo: "Ligue a conta do banco para emitir boleto com Pix e baixa automática.", rota: "/financeiro", perfil: "Financeiro / Administrador",
+    passos: [
+      "No Internet Banking PJ do Inter, crie uma integração (API) e baixe o Client ID, Client Secret e os certificados .crt e .key.",
+      "Em Financeiro → Contas Bancárias, edite a conta do Inter e informe esses dados na integração bancária.",
+      "Cadastre multa, juros e as tarifas do boleto na mesma conta.",
+      "Para testar, abra um título em Contas a Receber, clique em Cobrança e emita o boleto.",
+      "Use Baixar PDF do boleto para ver exatamente como o cliente vai receber.",
+    ],
+    dica: "O boleto do Inter já vem com QR Code Pix; quando o cliente paga, o título é baixado sozinho.",
+    faq: [{ p: "Posso juntar produto e serviço num boleto só?", r: "Sim. O padrão é um boleto por parcela; o valor fica separado por dentro (rateio) para as notas fiscais." }],
+    tags: ["boleto", "inter", "banco", "cobranca", "pix", "certificado", "emitir", "api"],
+  },
+  {
+    id: "fin-nota-config", modulo: "Financeiro", titulo: "Configurar notas fiscais (Focus NFe) e certificado A1",
+    resumo: "Contrate o emissor, envie o certificado A1, teste em homologação e depois vá para produção.", rota: "/financeiro", perfil: "Financeiro / Administrador",
+    passos: [
+      "Crie a conta no Focus NFe (bom custo-benefício: cobra por nota, atende NF-e e NFS-e na maioria das prefeituras).",
+      "No painel do Focus NFe, cadastre a empresa e envie o certificado digital A1 (arquivo .pfx e a senha). O certificado fica guardado no emissor, não no sistema.",
+      "Copie o token de HOMOLOGAÇÃO do Focus NFe.",
+      "Em Financeiro → Régua de Cobrança → Nota fiscal, cole o token, escolha Ambiente: Homologação e preencha inscrição municipal, código IBGE, item LC 116 e alíquota ISS.",
+      "Confira se clientes têm CPF/CNPJ e endereço e se os produtos têm NCM — sem isso a nota é recusada.",
+      "Emita uma nota de teste; quando sair autorizada, troque para o token e ambiente de Produção.",
+    ],
+    dica: "Nota de produto (NF-e) e de serviço (NFS-e) são sempre separadas, mesmo com boleto único.",
+    faq: [{ p: "A nota foi recusada", r: "Leia a mensagem do emissor: normalmente falta NCM, CNPJ/CPF, endereço do cliente ou o item LC 116 não é aceito pela prefeitura." }],
+    tags: ["nota", "fiscal", "nfe", "nfse", "focus", "certificado", "a1", "homologacao", "producao", "prefeitura", "iss"],
+  },
+  {
+    id: "fin-envio-automatico", modulo: "Financeiro", titulo: "Envio automático de boleto e nota ao cliente",
+    resumo: "A Régua de Cobrança emite e envia boleto e nota por e-mail/WhatsApp sozinha.", rota: "/financeiro", perfil: "Financeiro",
+    passos: [
+      "Configure o e-mail da empresa em Empresas → E-mail (servidor SMTP) e teste o envio.",
+      "Abra Financeiro → Régua de Cobrança e ligue a régua; escolha o horário diário.",
+      "Em Boleto, escolha quando emitir: X dias antes do vencimento ou num dia fixo do mês.",
+      "Em Nota fiscal, escolha: junto com o boleto ou quando o cliente pagar.",
+      "Monte as etapas de lembrete (antes, no dia e depois do vencimento) e use Visualizar modelo.",
+    ],
+    dica: "O cliente recebe um link único da fatura com boleto, Pix e a nota fiscal juntos.",
+    tags: ["regua", "automatico", "envio", "email", "whatsapp", "lembrete", "boleto", "nota"],
+  },
 ];
 
 const norm = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
