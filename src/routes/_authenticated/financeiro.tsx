@@ -1053,8 +1053,8 @@ function FaturaAcoes({ fatura, itens, onVencimento, onParcial, onEstornar }: {
 
 type ModoForm = ModoLancamento | "cartao";
 
-function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes, readOnly, onClose, onSaved }: {
-  tipo: TipoTitulo; registro: Row | null; modelo?: Row | null; presetCartao?: string; parceiros: Row[]; cartoes: Row[]; readOnly: boolean; onClose: () => void; onSaved: () => void;
+function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes, readOnly, onClose, onSaved, onDelete }: {
+  tipo: TipoTitulo; registro: Row | null; modelo?: Row | null; presetCartao?: string; parceiros: Row[]; cartoes: Row[]; readOnly: boolean; onClose: () => void; onSaved: () => void; onDelete?: (() => void) | undefined;
 }) {
   const { isMaster, empresa } = useAuth();
   const { empresaId } = useAudit();
@@ -1784,6 +1784,7 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
             <Textarea value={v.observacao} disabled={readOnly} onChange={(e) => setV({ ...v, observacao: e.target.value })} /></div>
         </div>
         <div className="flex justify-end gap-2 border-t p-4">
+          {onDelete && <Button variant="destructive" className="mr-auto" disabled={salvando} onClick={onDelete}><Trash2 className="mr-1 h-4 w-4" />Excluir</Button>}
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
           {!readOnly && <Button disabled={salvando} onClick={() => void salvar()}>{salvando ? "Salvando…" : "Salvar"}</Button>}
         </div>
