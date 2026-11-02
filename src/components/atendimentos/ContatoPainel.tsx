@@ -18,6 +18,7 @@ import { A, corEtiqueta, etapaPayload, etapasDoKanban, fotoPessoa, iniciais, nom
 import { filterPayload, useCols } from "@/lib/projetos";
 import { usePesquisaSatisfacao } from "./Pesquisa";
 import { ChecklistsPainel } from "./ChecklistRespostas";
+import { ComercialChat } from "./ComercialChat";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type Props = {
@@ -30,12 +31,13 @@ type Props = {
   kanbans: Row[];
   etapas: Row[];
   orcamentos: Row[];
+  instancia?: Row | undefined;
   onFechar: () => void;
 };
 
 const nomeUsuario = (u: Row | undefined) => pick<string>(u, ["nome", "nome_completo", "email"], "Usuário") ?? "";
 
-export function ContatoPainel({ atendimento, pessoa, usuarios, participantes, etiquetas, vinculosEtiqueta, kanbans, etapas, orcamentos, onFechar }: Props) {
+export function ContatoPainel({ atendimento, pessoa, usuarios, participantes, etiquetas, vinculosEtiqueta, kanbans, etapas, orcamentos, instancia, onFechar }: Props) {
   const qc = useQueryClient();
   const { data: colsAt } = useCols("atendimentos");
   const atId = text(rowId(atendimento));
@@ -217,6 +219,7 @@ export function ContatoPainel({ atendimento, pessoa, usuarios, participantes, et
           )}
         </section>
 
+        <ComercialChat atendimento={atendimento} pessoa={pessoa} instancia={instancia} usuarios={usuarios} orcamentos={orcamentos} />
         <ChecklistsPainel atId={atId} />
           </TabsContent>
           <TabsContent value="campos" className="space-y-4 pt-3">
