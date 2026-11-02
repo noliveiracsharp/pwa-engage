@@ -27,7 +27,6 @@ import {
   type Bloco,
 } from "@/lib/propostas";
 import type { Row } from "@/lib/row";
-import { confirmar } from "@/components/layout/DialogoGlobal";
 import { TIPO_MODELO_PADRAO } from "@/lib/orcamento-totais-auto";
 import { PropostaDocumento } from "./PropostaDocumento";
 import { CapaEstiloEditor } from "./CapaEstiloEditor";
