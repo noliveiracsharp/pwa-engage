@@ -33,6 +33,20 @@ export type NovoTitulo = {
   parcela_n: number;
   /** Cliente que recebe o serviço quando quem paga é outro (administradora, facilities…). */
   cliente_atendido_id?: string | null;
+  /** Compra lançada no cartão de crédito: entra na fatura do cartão (agrupada por vencimento). */
+  cartao_id?: string | null;
+  forma_pagamento?: string | null;
+  data_compra?: string | null;
+};
+
+/** Escolhas do assistente "Gerar financeiro da Oferta". Sem opções, mantém o comportamento padrão. */
+export type OpcoesFinanceiroOferta = {
+  /** Boletos separados para produtos e serviços avulsos (padrão: um título por parcela, rateado internamente). */
+  separarProdutoServico?: boolean;
+  /** Custo dos produtos: fornecedor (cronograma da Oferta), cartão de crédito ou Pedido de Compra (não lança aqui). */
+  produtos?: { modo: "fornecedor" | "cartao" | "pedido"; cartaoId?: string; diaFechamento?: number; diaVencimento?: number; parcelas?: number; dataCompra?: string };
+  /** Parcelamento do pagamento a cada fornecedor de serviço avulso terceirizado. */
+  terceiros?: Record<string, { parcelas: number; primeiro: string }>;
 };
 
 export const CATEGORIAS_FINANCEIRO: Record<TipoTitulo, string[]> = {
@@ -132,7 +146,7 @@ function pesosPorPagador(itens: Row[], cliente: string, recorrente: boolean): Ma
  * Com `itens`, cada item pode ser faturado para outro pagador (administradora, facilities…):
  * implantação e mensalidade são divididas por pagador, guardando o cliente atendido.
  */
-export function titulosDaOferta(orc: Row, itens: Row[] = []): NovoTitulo[] {
+export function titulosDaOferta(orc: Row, itens: Row[] = [], opcoes: OpcoesFinanceiroOferta = {}): NovoTitulo[] {
   const id = String(orc["id"] ?? "");
   const numero = String(orc["numero"] ?? "");
   const cliente = (orc["parceiro_id"] ?? orc["parceiros_id"] ?? null) as string | null;
@@ -146,20 +160,31 @@ export function titulosDaOferta(orc: Row, itens: Row[] = []): NovoTitulo[] {
   const pesosImpl = pesosPorPagador(itens, chaveCliente, false);
   const out: NovoTitulo[] = [];
   let seqN = 0;
+  // Peso de produtos dentro da implantação de cada pagador (para boletos separados).
+  const naoRec = itens.filter((it) => String(it["natureza"] ?? "") !== "recorrente");
+  const pesoProd = new Map<string, number>();
+  for (const it of naoRec) if (String(it["natureza"] ?? "") === "produto") {
+    const q = String(it["faturar_para_id"] ?? "") || chaveCliente;
+    pesoProd.set(q, (pesoProd.get(q) ?? 0) + Math.max(0, num(it["total_linha"])));
+  }
   for (const p of parcelas) {
     for (const [k, v] of ratearPorPagador(p.valor, pesosImpl, chaveCliente)) {
       if (v <= 0) continue;
+      const base = { tipo: "receber" as const, vencimento: p.vencimento || hojeISO(), parceiro_id: pagadorDe(k), origem_tipo: "oferta" as const, origem_id: id, ...atendido(k) };
+      const totK = pesosImpl.get(k) ?? 0;
+      const fracProd = opcoes.separarProdutoServico && totK > 0 ? (pesoProd.get(k) ?? 0) / totK : -1;
+      if (fracProd > 0 && fracProd < 1) {
+        const vp = round2(v * fracProd);
+        out.push({ ...base, descricao: `Oferta ${numero} — Produtos ${p.numero}/${total}`, categoria: "Venda de produtos", valor: vp, parcela_n: ++seqN });
+        out.push({ ...base, descricao: `Oferta ${numero} — Serviços ${p.numero}/${total}`, categoria: "Serviço avulso", valor: round2(v - vp), parcela_n: ++seqN });
+        continue;
+      }
       out.push({
-        tipo: "receber",
+        ...base,
         descricao: `Oferta ${numero} — Implantação ${p.numero}/${total}`,
         categoria: "Implantação / Venda",
-        vencimento: p.vencimento || hojeISO(),
         valor: round2(v),
-        parceiro_id: pagadorDe(k),
-        origem_tipo: "oferta",
-        origem_id: id,
         parcela_n: ++seqN,
-        ...atendido(k),
       });
     }
   }
@@ -225,8 +250,10 @@ export function titulosDaOferta(orc: Row, itens: Row[] = []): NovoTitulo[] {
   const vencTerc = parcelas[0]?.vencimento || iso(orc["dt_orcamento"] ?? orc["created_at"]) || hojeISO();
   for (const [f, v] of somaPor(false)) {
     if (v <= 0) continue;
-    out.push({ tipo: "pagar", descricao: `Oferta ${numero} — Serviço terceirizado`, categoria: "Serviços de terceiros",
-      vencimento: vencTerc, valor: v, parceiro_id: f, origem_tipo: "oferta", origem_id: id, parcela_n: ++seqN });
+    const cfg = opcoes.terceiros?.[f];
+    const ps = parcelasManuais({ modo: "parcelado", valor: v, quantidade: cfg?.parcelas ?? 1, primeira: cfg?.primeiro || vencTerc });
+    ps.forEach((p, i) => out.push({ tipo: "pagar", descricao: ps.length > 1 ? `Oferta ${numero} — Serviço terceirizado ${i + 1}/${ps.length}` : `Oferta ${numero} — Serviço terceirizado`,
+      categoria: "Serviços de terceiros", vencimento: p.vencimento, valor: p.valor, parceiro_id: f, origem_tipo: "oferta", origem_id: id, parcela_n: ++seqN }));
   }
   const recTerc = somaPor(true);
   if (recTerc.size) {
@@ -243,8 +270,18 @@ export function titulosDaOferta(orc: Row, itens: Row[] = []): NovoTitulo[] {
       }
   }
   const custoBase = num(orc["total_custo"]) > 0 ? num(orc["total_custo"]) : round2(itens.reduce((s, l) => s + custoLinha(l), 0));
-  const forn = cronogramaCompra({
-    custo: round2(Math.max(0, custoBase - custoTerceiros)),
+  const custoProdutos = round2(Math.max(0, custoBase - custoTerceiros));
+  const prodCfg = opcoes.produtos;
+  if (prodCfg?.modo === "cartao" && prodCfg.cartaoId) {
+    const dataCompra = prodCfg.dataCompra || iso(orc["dt_orcamento"] ?? orc["created_at"]) || hojeISO();
+    const ps = parcelasCartao({ valor: custoProdutos, parcelas: prodCfg.parcelas ?? 1, dataCompra,
+      diaFechamento: prodCfg.diaFechamento ?? 1, diaVencimento: prodCfg.diaVencimento ?? 10 });
+    ps.forEach((p, i) => out.push({ tipo: "pagar", descricao: ps.length > 1 ? `Oferta ${numero} — Produtos (${i + 1}/${ps.length})` : `Oferta ${numero} — Produtos`,
+      categoria: "Fornecedores", vencimento: p.vencimento, valor: p.valor, parceiro_id: null, origem_tipo: "oferta", origem_id: id, parcela_n: i + 1,
+      cartao_id: prodCfg.cartaoId ?? null, forma_pagamento: "Cartão de crédito", data_compra: dataCompra }));
+  }
+  const forn = prodCfg && prodCfg.modo !== "fornecedor" ? [] : cronogramaCompra({
+    custo: custoProdutos,
     condicao: condicaoCompraFromValue(orc["compra_condicao"]),
     parcelasCliente: parcelas,
     dataPadrao: iso(orc["dt_orcamento"] ?? orc["created_at"]) || hojeISO(),
