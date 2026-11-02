@@ -267,7 +267,6 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
   const situacoesSel = f.situacao === "todos" ? [] : f.situacao.split(",").filter(Boolean);
   const [relatorio, setRelatorio] = useState(false);
   const [sel, setSel] = useState<Set<string>>(new Set());
-  const [confirmarLote, setConfirmarLote] = useState(false);
   const periodoF = f.per;
   const [editar, setEditar] = useState<Row | null | undefined>(undefined);
   const [novoNoCartao, setNovoNoCartao] = useState<string>("");
