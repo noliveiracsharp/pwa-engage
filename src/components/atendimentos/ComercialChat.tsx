@@ -97,6 +97,42 @@ export function ComercialChat({ atendimento, pessoa, instancia, usuarios, orcame
     await supabase.from("orcamentos").update({ enviada_em: new Date().toISOString(), enviada_via: "whatsapp" } as never).eq("id", String(rowId(of)));
   }
 
+  const [ofAberta, setOfAberta] = useState(false);
+  const [of, setOf] = useState<{ descricao: string; itens: { itemId: string; qtd: number }[] }>({ descricao: "", itens: [] });
+  const totalOf = of.itens.reduce((s, l) => {
+    const it = itens.find((i) => text(rowId(i)) === l.itemId);
+    return s + (it ? linhaOfertaDoItem(it).valor_unitario * l.qtd : 0);
+  }, 0);
+
+  async function criarOferta() {
+    if (!parceiroId) return void toast.error("Vincule este contato a um cliente antes de criar a Oferta.");
+    if (!of.itens.length) return void toast.error("Adicione ao menos um item do catálogo.");
+    setSalvando(true);
+    try {
+      const linhas = of.itens.map((l, idx) => {
+        const base = linhaOfertaDoItem(itens.find((i) => text(rowId(i)) === l.itemId)!);
+        const q = Math.max(1, l.qtd);
+        const total = base.valor_unitario * q;
+        const custo = base.preco_custo * q;
+        return { ...base, ordem: idx + 1, quantidade: q, total_linha: total, custo_total: custo, lucro: total - custo };
+      });
+      const res = await salvarOferta.mutateAsync({
+        original: null, linhas,
+        header: {
+          empresa_id: empresaId, parceiro_id: parceiroId, usuario_id: usuarioId ?? null, dt_orcamento: todayISO(),
+          situacao: "Em andamento", atendimento_id: atId, origem_lead: "Atendimento", descricao: of.descricao.trim() || null,
+        },
+      });
+      await notaInterna(`🧾 Oferta ${res.numero} criada pelo atendimento — use "Enviar" no painel Comercial.`);
+      void qc.invalidateQueries({ queryKey: ["table", "orcamentos"] });
+      setOfAberta(false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível criar a Oferta.");
+    } finally {
+      setSalvando(false);
+    }
+  }
+
   async function solicitar() {
     if (!parceiroId) return void toast.error("Vincule este contato a um cliente (Clientes e Fornecedores) antes de solicitar o laudo.");
     if (!f.tecnico) return void toast.error("Selecione o técnico responsável.");
@@ -151,6 +187,7 @@ export function ComercialChat({ atendimento, pessoa, instancia, usuarios, orcame
       <h3 className="text-xs font-semibold uppercase text-muted-foreground">Comercial</h3>
       <div className="flex flex-wrap gap-2">
         <Button size="sm" variant="outline" onClick={() => setAberto(true)}><ClipboardCheck className="mr-1 h-4 w-4" /> Solicitar laudo</Button>
+        <Button size="sm" variant="outline" onClick={() => { setOf({ descricao: "", itens: [] }); setOfAberta(true); }}><FileText className="mr-1 h-4 w-4" /> Criar oferta</Button>
       </div>
       {meusLaudos.map((l) => (
         <p key={text(rowId(l))} className="text-sm text-muted-foreground">Laudo {text(l["numero"])} · {text(l["status"])}</p>
