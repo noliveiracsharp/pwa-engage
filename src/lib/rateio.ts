@@ -56,7 +56,10 @@ export function fontesDoTitulo(t: NovoTitulo, fontes: FonteRateio[], clienteId: 
   if (t.origem_tipo === "pedido" && t.tipo === "pagar") return fontes.filter((f) => f.origem_tipo === "pedido_item");
   if (t.origem_tipo !== "oferta" || t.tipo !== "receber") return [];
   const mensal = t.categoria === "Mensalidade de contrato";
+  // Boletos separados: produtos e serviços avulsos rateiam só os próprios itens.
+  const parte = t.categoria === "Venda de produtos" ? true : t.categoria === "Serviço avulso" ? false : null;
   return fontes.filter((f) => f.origem_tipo === "oferta_item" && !!f.recorrente === mensal
+    && (parte === null || !!f.produto === parte)
     && (f.pagador || clienteId) === t.parceiro_id);
 }
 
