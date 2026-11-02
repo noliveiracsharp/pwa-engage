@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 export function PeriodoNavegavel({ label = "Vencimento", value, onChange }: { label?: string; value: Periodo; onChange: (p: Periodo) => void }) {
   const semSetas = value.preset === "todo";
   return (
-    <div className="space-y-1">
+    <div data-busca="1" className="space-y-1">
       <Label className="text-xs">{label}</Label>
       <div className="flex flex-wrap items-center gap-2">
         <div className="bg-background flex items-center rounded-md border">
