@@ -112,6 +112,7 @@ export function KanbanConfigDialog({
   const [editHum, setEditHum] = useState(false);
   const [editCk, setEditCk] = useState(false);
   const [editGanha, setEditGanha] = useState(false);
+  const [editEnc, setEditEnc] = useState(false);
   const [editTpl, setEditTpl] = useState("");
   const [editCkS, setEditCkS] = useState(false);
   const [editTplS, setEditTplS] = useState("");
@@ -619,7 +620,11 @@ export function KanbanConfigDialog({
                         )}
                         <label className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 text-sm">
                           <span>Venda ganha / fechamento<span className="block text-xs text-muted-foreground">Entra na DRE do Board e no faturamento</span></span>
-                          <Switch checked={editGanha} onCheckedChange={setEditGanha} />
+                          <Switch checked={editGanha} onCheckedChange={(v) => { setEditGanha(v); if (v) setEditEnc(false); }} />
+                        </label>
+                        <label className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 text-sm">
+                          <span>Etapa de Encerramento / Desistência<span className="block text-xs text-muted-foreground">O cliente desistiu ou a negociação foi encerrada sem contratação. Não entra na DRE nem no faturamento; usada pelo botão Encerrar do chat.</span></span>
+                          <Switch checked={editEnc} onCheckedChange={(v) => { setEditEnc(v); if (v) setEditGanha(false); }} />
                         </label>
                         <div className="space-y-2 rounded-md border p-3">
                           <span className="block text-sm">Ao entrar nesta etapa, criar card em outro quadro<span className="block text-xs text-muted-foreground">Ex.: Comercial → Implantação. Leva contato e responsável.</span></span>
@@ -648,7 +653,7 @@ export function KanbanConfigDialog({
                             updEtapa.mutate({ id, patch: {
                               descricao: editDesc.trim(), cor: editCor, is_default_ia: editIA, is_default_humano: editHum,
                               exige_checklist: editCk, checklist_template_id: editCk ? editTpl : null,
-                              ...(editCkS || "exige_checklist_saida" in e ? { exige_checklist_saida: editCkS, checklist_saida_template_id: editCkS ? editTplS : null } : {}), etapa_ganha: editGanha,
+                              ...(editCkS || "exige_checklist_saida" in e ? { exige_checklist_saida: editCkS, checklist_saida_template_id: editCkS ? editTplS : null } : {}), etapa_ganha: editGanha, is_default_encerrado: editEnc,
                               acao_kanban_destino_id: editDestK || null, acao_etapa_destino_id: editDestK ? editDestE : null,
                             } })
                           }
@@ -694,6 +699,7 @@ export function KanbanConfigDialog({
                             setEditCkS([true, 1, "true", "t"].includes(e["exige_checklist_saida"] as never));
                             setEditTplS(String(e["checklist_saida_template_id"] ?? ""));
                             setEditGanha([true, 1, "true", "t"].includes(e["etapa_ganha"] as never));
+                            setEditEnc(e["is_default_encerrado"] === true);
                             setEditDestK(String(e["acao_kanban_destino_id"] ?? ""));
                             setEditDestE(String(e["acao_etapa_destino_id"] ?? ""));
                           }}
