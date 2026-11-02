@@ -440,43 +440,43 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
   const itensPorTitulo = useItensPorTitulo();
   const { data: ofertasFin = [] } = useTableRows("orcamentos");
   const numOferta = (id: string) => text(ofertasFin.find((o) => text(rowId(o)) === id)?.["numero"]);
-  const [excluirSerie, setExcluirSerie] = useState<Row | null>(null);
   const ehSerie = (t: Row) => t["origem_tipo"] === "manual" && (!!t["origem_id"] || !!serieLegada(t));
-  const excluir = async (t: Row) => {
-    if (ehSerie(t)) return void setExcluirSerie(t);
-    const { error } = await supabase.from("financeiro_titulos").delete().eq("id", text(rowId(t)));
-    if (error) return void toast.error(erroFinanceiro(error));
-    toast.success("Título excluído."); invalidar();
+  const ehRecorrente = (t: Row) => ehSerie(t) || (t["origem_tipo"] === "oferta" && !!t["origem_id"]);
+  const [excluirAlvo, setExcluirAlvo] = useState<Row[] | null>(null);
+  const [escopoExc, setEscopoExc] = useState<EscopoRecorrencia>("atual");
+  const [excluindo, setExcluindo] = useState(false);
+  const pedirExclusao = (ts: Row[]) => { if (!ts.length) return; setEscopoExc("atual"); setExcluirAlvo(ts); };
+  const setExcluirSerie = (t: Row | null) => (t ? pedirExclusao([t]) : setExcluirAlvo(null));
+  const excluir = (t: Row) => pedirExclusao([t]);
+  /** Irmãs da série (manual, legada ou de Oferta), normalizadas para as regras de alcance. */
+  const alvosExclusao = async (t: Row, escopo: EscopoRecorrencia): Promise<string[]> => {
+    const id = text(rowId(t));
+    if (escopo === "atual" || !ehRecorrente(t)) return [id];
+    const oferta = t["origem_tipo"] === "oferta";
+    let q = supabase.from("financeiro_titulos").select("*").eq("origem_tipo", oferta ? "oferta" : "manual").eq("tipo", tipo).eq("empresa_id", text(t["empresa_id"]));
+    q = t["origem_id"] ? q.eq("origem_id", text(t["origem_id"])) : q.is("origem_id", null);
+    const { data, error } = await q;
+    if (error) throw error;
+    const todas = (data ?? []) as Row[];
+    const irmas = oferta ? parcelasDaOferta(t, todas) : t["origem_id"] ? todas : parcelasLegadas(t, todas);
+    const norm = (x: Row) => ({ ...x, origem_tipo: "manual", origem_id: "serie" });
+    return [id, ...alvosRecorrencia(norm(t), irmas.map(norm), escopo, hojeISO()).map((x) => text(rowId(x)))];
   };
-  const excluirAlcance = async (alcance: "atual" | "seguintes" | "todas") => {
-    const t = excluirSerie; if (!t) return;
-    setExcluirSerie(null);
-    let ids = [text(rowId(t))];
-    if (alcance !== "atual") {
-      let q = supabase.from("financeiro_titulos").select("*").eq("origem_tipo", "manual").eq("tipo", tipo).eq("empresa_id", text(t["empresa_id"]));
-      q = t["origem_id"] ? q.eq("origem_id", text(t["origem_id"])) : q.is("origem_id", null);
-      const { data, error } = await q;
-      if (error) return void toast.error(erroFinanceiro(error));
-      let irmas = (data ?? []) as Row[];
-      if (!t["origem_id"]) irmas = parcelasLegadas(t, irmas);
-      if (alcance === "seguintes") irmas = irmas.filter((x) => text(x["vencimento"]) >= text(t["vencimento"]) && x["status"] !== "pago");
-      ids = [...new Set([text(rowId(t)), ...irmas.map((x) => text(rowId(x)))])];
-    }
-    const { error } = await supabase.from("financeiro_titulos").delete().in("id", ids);
-    if (error) return void toast.error(erroFinanceiro(error));
-    toast.success(`${ids.length} parcela(s) excluída(s).`); invalidar();
+  const confirmarExclusao = async () => {
+    const ts = excluirAlvo; if (!ts) return;
+    setExcluindo(true);
+    try {
+      const ids = new Set<string>();
+      for (const t of ts) for (const i of await alvosExclusao(t, escopoExc)) ids.add(i);
+      const { error } = await supabase.from("financeiro_titulos").delete().in("id", [...ids]);
+      if (error) throw error;
+      toast.success(`${ids.size} título(s) excluído(s).`); setExcluirAlvo(null); setSel(new Set()); invalidar();
+    } catch (e) { toast.error(erroFinanceiro(e)); } finally { setExcluindo(false); }
   };
 
   const selecionados = rows.filter((t) => sel.has(text(rowId(t))));
   const todosMarcados = rows.length > 0 && selecionados.length === rows.length;
   const alternar = (id: string) => setSel((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
-  const excluirLote = async () => {
-    const ids = selecionados.map((t) => text(rowId(t)));
-    const { error } = await supabase.from("financeiro_titulos").delete().in("id", ids);
-    setConfirmarLote(false);
-    if (error) return void toast.error(erroFinanceiro(error));
-    toast.success(`${ids.length} título(s) excluído(s).`); setSel(new Set()); invalidar();
-  };
 
   const [loteAcao, setLoteAcao] = useState<null | { acao: "pagar" | "agendar" | "reajustar"; itens: Row[] }>(null);
   const [loteForm, setLoteForm] = useState({ data: hojeISO(), forma: "", percentual: "", whats: true, email: true });
@@ -730,7 +730,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
                 <Button variant="outline" size="sm" disabled={!pagosSel.length} onClick={() => void estornarLote()}><Undo2 className="mr-1 h-4 w-4" />Estornar baixa ({pagosSel.length})</Button>
                 <Button variant="outline" size="sm" disabled={!reajustaveisSel.length} onClick={() => abrirLote("reajustar", reajustaveisSel)}><TrendingUp className="mr-1 h-4 w-4" />Reajustar ({reajustaveisSel.length})</Button>
               </>}
-              {perms.canDelete && <Button variant="destructive" size="sm" onClick={() => setConfirmarLote(true)}><Trash2 className="mr-1 h-4 w-4" />Excluir selecionados</Button>}
+              {perms.canDelete && <Button variant="destructive" size="sm" onClick={() => pedirExclusao(selecionados)}><Trash2 className="mr-1 h-4 w-4" />Excluir selecionados</Button>}
             </div>
           )}
         </div>
@@ -820,19 +820,6 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
         </DialogContent>
       </Dialog>
 
-      <Dialog open={confirmarLote} onOpenChange={setConfirmarLote}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Excluir {selecionados.length} título(s)?</DialogTitle></DialogHeader>
-          <p className="text-sm">Total: <strong>{formatBRL(selecionados.reduce((s, t) => s + num(t["valor"]), 0))}</strong>. Esta ação não pode ser desfeita.</p>
-          {selecionados.some((t) => situacaoTitulo(t, hoje) === "pago") && (
-            <p className="text-destructive text-sm font-medium">Atenção: {selecionados.filter((t) => situacaoTitulo(t, hoje) === "pago").length} título(s) já estão baixados.</p>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmarLote(false)}>Cancelar</Button>
-            <Button variant="destructive" onClick={() => void excluirLote()}>Excluir</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={!!fatura} onOpenChange={(o) => !o && setFatura(null)}>
         <DialogContent className="max-w-3xl">
@@ -899,6 +886,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
         onEdit={(r) => (r["__fatura"] ? setFatura(r) : setEditar(r))}
         rowMenu={rowMenu}
         editReadOnly={!perms.canUpdate}
+        skipDeleteConfirm
         onDelete={perms.canDelete ? (r) => (r["__fatura"] ? setExcluirFat(r) : r["__filho"] ? void excluirItemFatura(r) : excluir(r)) : undefined}
         filters={
           <>
@@ -941,6 +929,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
 
       {editar !== undefined && (
         <TituloSheet key={novoNoCartao || "x"} tipo={tipo} registro={editar} presetCartao={novoNoCartao} parceiros={parceiros} cartoes={cartoes} readOnly={!!editar && !perms.canUpdate}
+          onDelete={editar && perms.canDelete ? () => { const t = editar; setEditar(undefined); setNovoNoCartao(""); pedirExclusao([t]); } : undefined}
           onClose={() => { setEditar(undefined); setNovoNoCartao(""); }} onSaved={invalidar} />
       )}
       {clonar && (
@@ -996,16 +985,32 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <Dialog open={!!excluirSerie} onOpenChange={(o) => !o && setExcluirSerie(null)}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Excluir parcela</DialogTitle></DialogHeader>
-          <p className="text-sm">"{text(excluirSerie?.["descricao"])}" faz parte de uma série. O que deseja excluir?</p>
-          <div className="grid gap-2">
-            <Button variant="outline" onClick={() => void excluirAlcance("atual")}>Apenas esta parcela</Button>
-            <Button variant="outline" onClick={() => void excluirAlcance("seguintes")}>Esta e as seguintes em aberto</Button>
-            <Button variant="destructive" onClick={() => void excluirAlcance("todas")}>Todas as parcelas da série</Button>
-          </div>
-          <DialogFooter><Button variant="ghost" onClick={() => setExcluirSerie(null)}>Cancelar</Button></DialogFooter>
+      <Dialog open={!!excluirAlvo} onOpenChange={(o) => !o && !excluindo && setExcluirAlvo(null)}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader><DialogTitle>{excluirAlvo?.some(ehRecorrente) ? "Exclusão de lançamento recorrente" : "Confirmar exclusão"}</DialogTitle></DialogHeader>
+          {excluirAlvo && <>
+            <p className="text-sm">{excluirAlvo.length === 1 ? `"${text(excluirAlvo[0]!["descricao"])}"` : `${excluirAlvo.length} título(s)`} — total <strong>{formatBRL(excluirAlvo.reduce((s, t) => s + num(t["valor"]), 0))}</strong>. Esta ação não pode ser desfeita.</p>
+            {excluirAlvo.some((t) => situacaoTitulo(t, hoje) === "pago") && <p className="text-destructive text-sm font-medium">Atenção: há título(s) já baixados na seleção.</p>}
+            {excluirAlvo.some(ehRecorrente) && <>
+              <p className="text-sm">A exclusão deve ser refletida:</p>
+              <div role="radiogroup" aria-label="Alcance da exclusão" className="space-y-4 py-2">
+                {([
+                  ["atual", "Somente o lançamento atual"],
+                  ["nao_vencidos", "Lançamento atual e todos os não vencidos que não possuam baixas"],
+                  ["abertos", "Lançamento atual e todos os em aberto (vencidos + a vencer) que não possuam baixas"],
+                  ["todos", "Todos os lançamentos"],
+                ] as const).map(([valor, label]) => <label key={valor} className="flex cursor-pointer items-start gap-3 text-sm">
+                  <input type="radio" name="escopo-exclusao" checked={escopoExc === valor} disabled={excluindo} onChange={() => setEscopoExc(valor)} className="mt-0.5 h-4 w-4 shrink-0 accent-primary" />
+                  <span>{label}</span>
+                </label>)}
+              </div>
+              {escopoExc === "todos" && <p className="text-sm text-warning">Inclui lançamentos já pagos, recebidos e cancelados da série.</p>}
+            </>}
+          </>}
+          <DialogFooter>
+            <Button variant="outline" disabled={excluindo} onClick={() => setExcluirAlvo(null)}>Cancelar</Button>
+            <Button variant="destructive" disabled={excluindo} onClick={() => void confirmarExclusao()}>{excluindo ? "Excluindo…" : "Excluir"}</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
       {cobrar && <CobrancaDialog titulo={cobrar} parceiro={parceiroById.get(text(cobrar["parceiro_id"]))} onClose={() => setCobrar(null)} onSaved={invalidar} />}
