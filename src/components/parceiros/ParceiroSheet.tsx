@@ -146,7 +146,15 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly: roTela, sa
   const [tab, setTab] = useState("gerais");
   const [cepLoading, setCepLoading] = useState(false);
   const [cnpjLoading, setCnpjLoading] = useState(false);
-  useEffect(() => { if (open) { setF(record ? toForm(record) : { ...toForm(null), ...(inicial ? Object.fromEntries(Object.entries(toForm(inicial)).filter(([, v]) => v !== "" && v != null)) : {}) }); setTab("gerais"); } }, [open, record]);
+  useEffect(() => {
+    if (!open) return;
+    const base = toForm(record);
+    if (!record && inicial) for (const k of ["razao_social", "telefone", "email"] as const) {
+      const v = inicial[k];
+      if (v != null && String(v).trim()) (base as Record<string, unknown>)[k] = String(v);
+    }
+    setF(base); setTab("gerais");
+  }, [open, record]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setF((p) => ({ ...p, [k]: v }));
   const pf = f.tipo_pessoa === "Física";
