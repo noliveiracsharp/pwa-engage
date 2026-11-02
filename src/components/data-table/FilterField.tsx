@@ -1,7 +1,7 @@
 import { termo, termoNo } from "@/lib/i18n-termos";
 import { useIdioma, tr } from "@/lib/i18n";
 import { createContext, useCallback, useContext, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { Check, ChevronDown, RotateCcw, SlidersHorizontal, X } from "lucide-react";
+import { ChevronDown, RotateCcw, SlidersHorizontal, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -67,22 +67,14 @@ export function FilterBar({ children, className }: { children: ReactNode; classN
       <div ref={grade} className={cn(className, !aberto && "[&>*:not([data-busca]):not([data-fixo])]:hidden")}>
         {children}
         {temAvancado && (
-          <div data-fixo="1" className={cn("flex items-end gap-2", aberto && "col-span-full justify-end")}>
-            {aberto ? (
-              <>
-                {ativos.length > 0 && (
-                  <Button type="button" variant="ghost" size="sm" onClick={() => limpar()}>
-                    <RotateCcw className="mr-1 h-3.5 w-3.5" /> Limpar filtros
-                  </Button>
-                )}
-                <Button type="button" size="sm" onClick={() => setAberto(false)}>
-                  <Check className="mr-1 h-3.5 w-3.5" /> Aplicar filtros
-                </Button>
-              </>
-            ) : (
-              <Button type="button" variant="outline" onClick={() => setAberto(true)} aria-expanded={false}>
-                <SlidersHorizontal className="mr-2 h-4 w-4" /> Filtros{avancados.length ? ` (${avancados.length})` : ""}
-                <ChevronDown className="ml-1 h-3.5 w-3.5" />
+          <div data-fixo="1" className="flex items-end gap-2">
+            <Button type="button" variant={aberto ? "secondary" : "outline"} onClick={() => setAberto((v) => !v)} aria-expanded={aberto}>
+              <SlidersHorizontal className="mr-2 h-4 w-4" /> {aberto ? "Menos filtros" : "Mais filtros"}{avancados.length ? ` (${avancados.length})` : ""}
+              <ChevronDown className={cn("ml-1 h-3.5 w-3.5 transition-transform", aberto && "rotate-180")} />
+            </Button>
+            {aberto && ativos.length > 0 && (
+              <Button type="button" variant="ghost" size="sm" onClick={() => limpar()}>
+                <RotateCcw className="mr-1 h-3.5 w-3.5" /> Limpar
               </Button>
             )}
           </div>
