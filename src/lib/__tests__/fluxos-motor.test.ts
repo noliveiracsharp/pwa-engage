@@ -123,3 +123,32 @@ describe("mídia e trilha no bloco mensagem", () => {
     expect(r.trilha).toEqual(["m"]);
   });
 });
+
+describe("menu com lista de API e anexos extras", () => {
+  it("mostra só o rótulo e guarda a linha inteira escolhida", async () => {
+    const { executarFluxo } = await import("@/lib/fluxos-motor");
+    const nos = [
+      { id: "g", data: { tipo: "gatilho" as const } },
+      { id: "m", data: { tipo: "menu" as const, texto: "Escolha", lista_origem: "resposta.data", lista_rotulo: "{{nome}} ({{torre}})", guardar_em: "imovel" } },
+      { id: "f", data: { tipo: "mensagem" as const, texto: "adm {{imovel.adm_id}}" } },
+    ];
+    const conexoes = [{ source: "g", target: "m" }, { source: "m", target: "f", sourceHandle: "selecionado" }];
+    const resposta = JSON.stringify({ data: [{ nome: "SID", torre: "A", adm_id: 12 }, { nome: "Sol", torre: "B", adm_id: 7 }] });
+    const r1 = executarFluxo({ nos, conexoes, estado: { no_atual: null, status: "ativo", variaveis: { resposta } }, texto: "oi" });
+    const msg = r1.acoes[0] as { texto: string };
+    expect(msg.texto).toContain("1. SID (A)");
+    expect(msg.texto).not.toContain("adm_id");
+    const r2 = executarFluxo({ nos, conexoes, estado: r1.estado, texto: "2" });
+    expect((r2.acoes[0] as { texto: string }).texto).toBe("adm 7");
+  });
+  it("envia cada anexo extra como mensagem separada", async () => {
+    const { executarFluxo } = await import("@/lib/fluxos-motor");
+    const nos = [
+      { id: "g", data: { tipo: "gatilho" as const } },
+      { id: "m", data: { tipo: "mensagem" as const, texto: "Oi", midia_tipo: "imagem", midia_url: "https://x/a.jpg", anexos: [{ url: "https://x/b.pdf", tipo: "documento", nome: "b.pdf" }, { url: "https://x/c.mp4", tipo: "video" }] } },
+    ];
+    const r = executarFluxo({ nos, conexoes: [{ source: "g", target: "m" }], estado: null, texto: "oi" });
+    expect(r.acoes).toHaveLength(3);
+    expect(r.acoes.map((a) => (a as { midiaTipo?: string }).midiaTipo)).toEqual(["imagem", "documento", "video"]);
+  });
+});
