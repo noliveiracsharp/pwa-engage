@@ -19,3 +19,27 @@ export function intervaloDaVista(vista: Vista, ref: string, deP: string, ateP: s
     case "personalizado": return deP <= ateP ? { de: deP, ate: ateP, passo: 1 } : { de: ateP, ate: deP, passo: 1 };
   }
 }
+
+/** Horário de trabalho: dias da semana (0=dom..6=sáb) e faixa "HH:MM". */
+export type Expediente = { dias: number[]; inicio: string; fim: string };
+export const EXPEDIENTE_PADRAO: Expediente = { dias: [1, 2, 3, 4, 5], inicio: "08:00", fim: "18:00" };
+const min = (h: string) => { const [a, b] = h.split(":").map(Number); return (a ?? 0) * 60 + (b ?? 0); };
+
+/** true quando o minuto do dia (0..1439) da data ISO está fora do expediente. */
+export function foraDoExpediente(dia: string, minuto: number, e: Expediente): boolean {
+  const sem = new Date(`${dia}T12:00:00`).getDay();
+  if (!e.dias.includes(sem)) return true;
+  return minuto < min(e.inicio) || minuto >= min(e.fim);
+}
+export const minutoInicioExpediente = (e: Expediente) => min(e.inicio);
+
+/** Bloqueio de agenda (indisponível/foco). */
+export type Bloqueio = { id: string; usuario_id: string; inicio: string; fim: string; titulo: string };
+
+/** Bloqueios do usuário que colidem com o intervalo [inicio, fim). */
+export function conflitosBloqueio(bloqueios: Bloqueio[], usuarioId: string, inicio: Date, fim: Date): Bloqueio[] {
+  return bloqueios.filter((b) => b.usuario_id === usuarioId && new Date(b.inicio) < fim && new Date(b.fim) > inicio);
+}
+
+/** Cores fixas das agendas sobrepostas (índice na seleção). */
+export const CORES_AGENDA = ["primary", "success", "warning", "destructive", "accent"] as const;
