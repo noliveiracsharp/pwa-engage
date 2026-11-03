@@ -11,7 +11,7 @@ import "@xyflow/react/dist/style.css";
 import {
   Bot, Clock, GitBranch, Hourglass, KanbanSquare, ListOrdered, MessageSquare,
   MessageCircleQuestion, PhoneForwarded, Plus, Save, Trash2, UserPlus, Workflow, Zap, PenLine, CircleStop, Globe, Code2, X, FlaskConical, Upload, Copy, Play,
-  Split, FileText,
+  Split, FileText, PanelLeftClose, PanelLeftOpen, Search,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -453,6 +453,7 @@ function FluxosPage() {
               </div>
             ))}
           </aside>
+          )}
           <div className="flex min-w-0 flex-1 flex-col gap-2">
           <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden rounded-lg border bg-muted/30" onDragOver={(e) => e.preventDefault()} onDrop={onDrop}>
             {fluxo ? (
