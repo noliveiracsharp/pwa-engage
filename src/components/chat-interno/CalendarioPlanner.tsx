@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CalendarDays, CheckSquare, ChevronLeft, ChevronRight, Copy, LogIn, MapPin, Pencil, Ban, Video, X } from "lucide-react";
+import { CalendarDays, CheckSquare, ChevronLeft, ChevronRight, Copy, LogIn, MapPin, Pencil, Ban, Video, X, Lock, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { linkReuniao, presencial, textoConvite, type Reuniao } from "@/components/chat-interno/ReunioesPainel";
 import { diaDoItem, inicioSemana, ordenar, somarDias, type PlannerItem } from "@/lib/planner";
-import { intervaloDaVista, type Vista } from "@/lib/planner-calendario";
+import { EXPEDIENTE_PADRAO, foraDoExpediente, intervaloDaVista, minutoInicioExpediente, type Bloqueio, type Expediente, type Vista } from "@/lib/planner-calendario";
+
+const BORDA_COR: Record<string, string> = { primary: "border-l-primary", success: "border-l-success", warning: "border-l-warning", destructive: "border-l-destructive", accent: "border-l-accent-foreground" };
 
 const HORA_PX = 48;
 const diaLocal = (d: Date) => d.toLocaleDateString("sv-SE");
@@ -17,7 +19,7 @@ const nomeDia = (iso: string, f: Intl.DateTimeFormatOptions) => new Date(`${iso}
 const hhmm = (d: Date) => d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 const MESES = Array.from({ length: 12 }, (_, i) => new Date(2026, i, 1).toLocaleDateString("pt-BR", { month: "long" }));
 
-export type NovoNoCalendario = { tipo: "online" | "presencial" | "tarefa"; inicio: Date; titulo: string };
+export type NovoNoCalendario = { tipo: "online" | "presencial" | "tarefa" | "indisponivel"; inicio: Date; titulo: string };
 
 type Props = {
   me: string;
@@ -29,9 +31,14 @@ type Props = {
   onConcluir: (i: PlannerItem, feito: boolean) => void;
   onEditarReuniao: (r: Reuniao) => void;
   onCancelarReuniao: (r: Reuniao) => void;
+  expediente?: Expediente;
+  bloqueios?: Bloqueio[];
+  /** Cor (token) e nome da agenda dona do evento, quando há várias agendas sobrepostas. */
+  agendaDe?: (usuarios: string[]) => { cor: string; nome: string } | null;
+  onExcluirBloqueio?: (b: Bloqueio) => void;
 };
 
-export function CalendarioPlanner({ me, proprio, reunioes, itens, onCriar, onAbrirTarefa, onConcluir, onEditarReuniao, onCancelarReuniao }: Props) {
+export function CalendarioPlanner({ me, proprio, reunioes, itens, onCriar, onAbrirTarefa, onConcluir, onEditarReuniao, onCancelarReuniao, expediente = EXPEDIENTE_PADRAO, bloqueios = [], agendaDe, onExcluirBloqueio }: Props) {
   const [vista, setVista] = useState<Vista>("semana");
   const [ref, setRef] = useState(hojeISO());
   const [deP, setDeP] = useState(inicioSemana(hojeISO()));
@@ -44,7 +51,7 @@ export function CalendarioPlanner({ me, proprio, reunioes, itens, onCriar, onAbr
   const dias = useMemo(() => { const r: string[] = []; for (let d = de; d <= ate; d = somarDias(d, 1)) r.push(d); return r; }, [de, ate]);
   const horaria = (vista === "dia" || vista === "semana" || vista === "4dias" || (vista === "personalizado" && dias.length <= 14));
 
-  useEffect(() => { if (horaria && grade.current) grade.current.scrollTop = 7 * HORA_PX; }, [horaria, vista]);
+  useEffect(() => { if (horaria && grade.current) grade.current.scrollTop = Math.max(0, minutoInicioExpediente(expediente) / 60 - 1) * HORA_PX; }, [horaria, vista, expediente]);
 
   const reunioesDoDia = (d: string) => reunioes.filter((r) => diaLocal(new Date(r.inicio)) === d).sort((a, b) => a.inicio.localeCompare(b.inicio));
   const tarefasDoDia = (d: string) => ordenar(itens.filter((i) => diaDoItem(i) === d));
@@ -66,12 +73,13 @@ export function CalendarioPlanner({ me, proprio, reunioes, itens, onCriar, onAbr
   };
   const irPara = (dia: string, v: Vista = "dia") => { setRef(dia); setVista(v); };
 
-  const CardReuniao = ({ r, compacto }: { r: Reuniao; compacto?: boolean }) => (
+  const bloqueiosDoDia = (d: string) => bloqueios.filter((b) => diaLocal(new Date(b.inicio)) === d);
+  const CardReuniao = ({ r, compacto }: { r: Reuniao; compacto?: boolean }) => { const ag = agendaDe?.([r.criado_por, ...r.participantes]); return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button type="button" onClick={(e) => e.stopPropagation()}
           className={cn("flex h-full w-full min-w-0 items-start gap-1 overflow-hidden rounded-md border px-1.5 py-0.5 text-left text-[11px] leading-tight",
-            presencial(r) ? "border-accent bg-accent text-accent-foreground" : "border-primary/50 bg-primary/15 text-foreground hover:bg-primary/25")}>
+            presencial(r) ? "border-accent bg-accent text-accent-foreground" : "border-primary/50 bg-primary/15 text-foreground hover:bg-primary/25", ag && cn("border-l-4", BORDA_COR[ag.cor]))} title={ag?.nome}>
           {presencial(r) ? <MapPin className="mt-0.5 h-3 w-3 shrink-0" /> : <Video className="mt-0.5 h-3 w-3 shrink-0 text-primary" />}
           <span className="min-w-0 flex-1">
             <b className="block truncate">{r.titulo}</b>
@@ -92,7 +100,21 @@ export function CalendarioPlanner({ me, proprio, reunioes, itens, onCriar, onAbr
         {r.criado_por === me && <DropdownMenuItem className="text-destructive" onClick={() => onCancelarReuniao(r)}><Ban className="mr-2 h-4 w-4" /> Cancelar reunião</DropdownMenuItem>}
       </DropdownMenuContent>
     </DropdownMenu>
-  );
+  ); };
+
+  const CardBloqueio = ({ b }: { b: Bloqueio }) => {
+    const ag = agendaDe?.([b.usuario_id]);
+    const meu = b.usuario_id === me;
+    return (
+      <div onClick={(e) => e.stopPropagation()} title={ag?.nome}
+        className={cn("group flex h-full w-full items-start gap-1 overflow-hidden rounded-md border border-border px-1.5 py-0.5 text-[11px] leading-tight text-muted-foreground", ag && cn("border-l-4", BORDA_COR[ag.cor]))}
+        style={{ backgroundImage: "repeating-linear-gradient(45deg, var(--muted) 0 6px, transparent 6px 12px)" }}>
+        <Lock className="mt-0.5 h-3 w-3 shrink-0" />
+        <span className="min-w-0 flex-1"><b className="block truncate">{b.titulo || "Indisponível"}</b>{ag && !meu && <span className="block truncate">{ag.nome}</span>}</span>
+        {meu && onExcluirBloqueio && <button type="button" aria-label="Remover bloqueio" className="opacity-0 group-hover:opacity-100" onClick={() => onExcluirBloqueio(b)}><Trash2 className="h-3 w-3" /></button>}
+      </div>
+    );
+  };
 
   const ChipTarefa = ({ i }: { i: PlannerItem }) => (
     <div className={cn("flex min-w-0 items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-[11px]", i.status === "concluida" && "opacity-60")} onClick={(e) => e.stopPropagation()}>
@@ -157,9 +179,14 @@ export function CalendarioPlanner({ me, proprio, reunioes, itens, onCriar, onAbr
                 <div key={d} className="relative border-l border-border">
                   {Array.from({ length: 48 }, (_, n) => (
                     <div key={n} style={{ height: HORA_PX / 2 }} onClick={() => abrirRapido(d, Math.floor(n / 2), (n % 2) * 30)}
-                      className={cn("cursor-pointer hover:bg-muted/60", n % 2 === 1 ? "border-b border-border" : "border-b border-dashed border-border/40")} />
+                      className={cn("cursor-pointer hover:bg-muted/60", foraDoExpediente(d, n * 30, expediente) && "bg-muted/50", n % 2 === 1 ? "border-b border-border" : "border-b border-dashed border-border/40")} />
                   ))}
                   {d === hojeISO() && <div className="pointer-events-none absolute inset-x-0 h-0.5 bg-destructive" style={{ top: ((new Date().getHours() * 60 + new Date().getMinutes()) / 60) * HORA_PX }} />}
+                  {bloqueiosDoDia(d).map((b) => {
+                    const ini = new Date(b.inicio); const top = ((ini.getHours() * 60 + ini.getMinutes()) / 60) * HORA_PX;
+                    const dur = (new Date(b.fim).getTime() - ini.getTime()) / 60000;
+                    return <div key={b.id} className="absolute inset-x-0.5" style={{ top, height: Math.max(20, (dur / 60) * HORA_PX - 2) }}><CardBloqueio b={b} /></div>;
+                  })}
                   {reunioesDoDia(d).map((r) => {
                     const ini = new Date(r.inicio); const top = ((ini.getHours() * 60 + ini.getMinutes()) / 60) * HORA_PX;
                     return <div key={r.id} className="absolute inset-x-0.5" style={{ top, height: Math.max(20, (r.duracao_min / 60) * HORA_PX - 2) }}><CardReuniao r={r} compacto={r.duracao_min < 45} /></div>;
@@ -245,8 +272,8 @@ export function CalendarioPlanner({ me, proprio, reunioes, itens, onCriar, onAbr
             </div>
             <Input autoFocus placeholder="Adicionar título (opcional)" value={tituloRapido} onChange={(e) => setTituloRapido(e.target.value)} className="mb-3" />
             <p className="mb-2 text-xs text-muted-foreground">O que deseja criar?</p>
-            <div className="grid gap-2 sm:grid-cols-3">
-              {([["online", "Reunião online", Video], ["presencial", "Reunião presencial", MapPin], ["tarefa", "Tarefa", CheckSquare]] as const).map(([t, rot, Ic]) => (
+            <div className="grid gap-2 sm:grid-cols-4">
+              {([["online", "Reunião online", Video], ["presencial", "Reunião presencial", MapPin], ["tarefa", "Tarefa", CheckSquare], ["indisponivel", "Indisponível", Lock]] as const).map(([t, rot, Ic]) => (
                 <Button key={t} variant="outline" className="h-auto flex-col gap-1 py-3" onClick={() => { onCriar({ tipo: t, inicio: rapido, titulo: tituloRapido }); setRapido(null); }}>
                   <Ic className="h-5 w-5" /><span className="text-xs">{rot}</span>
                 </Button>
