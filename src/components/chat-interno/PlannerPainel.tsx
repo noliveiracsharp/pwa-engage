@@ -32,6 +32,7 @@ const hoje = () => new Date().toISOString().slice(0, 10);
 const dataBR = (s: string) => { const [a, m, d] = s.slice(0, 10).split("-"); return `${d}/${m}/${a}`; };
 const tb = (t: string) => supabase.from(t as never) as unknown as ReturnType<typeof supabase.from>;
 const DIAS = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+const BOLINHA_COR: Record<string, string> = { primary: "bg-primary", success: "bg-success", warning: "bg-warning", destructive: "bg-destructive", accent: "bg-accent-foreground" };
 const COR_PRI = { alta: "bg-destructive", media: "bg-warning", baixa: "bg-muted-foreground/50" } as const;
 
 function deTarefa(t: Row): PlannerItem {
@@ -313,7 +314,7 @@ export function PlannerPainel({ me, empresaId, usuarios, onFechar, embutido, aco
                   <label key={id} className="flex cursor-pointer items-center gap-2 rounded px-1 py-1 text-sm hover:bg-muted">
                     <Checkbox checked={on} onCheckedChange={(v) => setExtras((x) => v ? [...x, id] : x.filter((y) => y !== id))} />
                     <span className="flex-1 truncate">{id === me ? "Meu planner" : String(pick(u, ["nome"], "Usuário"))}</span>
-                    {cor && <span className={cn("h-2.5 w-2.5 rounded-full", `bg-${cor}`)} />}
+                    {cor && <span className={cn("h-2.5 w-2.5 rounded-full", BOLINHA_COR[cor])} />}
                   </label>
                 );
               })}
