@@ -100,7 +100,7 @@ export function ChamadaFlutuante({ chamada, nome, titulo, onEncerrar, onParticip
         <span className="h-2 w-2 animate-pulse rounded-full bg-destructive" />
         <p className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{titulo}</p>
         <span className="text-xs tabular-nums text-muted-foreground">{duracao(agora - chamada.inicio)}</span>
-        {meet && onChat && !min && (
+        {meet && onChat && !min && !pip && (
           <Button size="sm" variant={chatAberto ? "default" : "ghost"} className="h-7" onClick={onChat} aria-label={chatAberto ? "Ocultar chat" : "Mostrar chat"} title={chatAberto ? "Ocultar chat" : "Mostrar chat"}>
             <MessageSquare className="mr-1 h-4 w-4" /> Chat
           </Button>
@@ -108,17 +108,20 @@ export function ChamadaFlutuante({ chamada, nome, titulo, onEncerrar, onParticip
         <Button size="icon" variant="ghost" className="h-7 w-7" title="Copiar link para convidar mais pessoas" aria-label="Copiar link de convite" onClick={() => void navigator.clipboard.writeText(linkConvite(chamada.sala, chamada.video)).then(() => toast.success("Link copiado. Envie para quem deve entrar na sala."))}>
           <Link2 className="h-4 w-4" />
         </Button>
-        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => void abrirPip()} aria-label="Janela flutuante fora do sistema" title="Janela flutuante (acompanha você em outros programas)">
+        <Button size="icon" variant={pip ? "default" : "ghost"} className="h-7 w-7" onClick={() => void abrirPip()} aria-label={pip ? "Voltar a chamada para o sistema" : "Janela flutuante fora do sistema"} title={pip ? "Voltar a chamada para o sistema" : "Janela flutuante (acompanha você em outros programas)"}>
           <PictureInPicture2 className="h-4 w-4" />
         </Button>
-        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setMin(!min)} aria-label={min ? "Expandir" : "Minimizar"} title={min ? "Expandir" : "Minimizar para navegar no sistema"}>
-          {min ? <Maximize2 className="h-4 w-4" /> : <Minimize2 className="h-4 w-4" />}
-        </Button>
+        {!pip && (
+          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setMin(!min)} aria-label={min ? "Expandir" : "Minimizar"} title={min ? "Expandir" : "Minimizar para navegar no sistema"}>
+            {min ? <Maximize2 className="h-4 w-4" /> : <Minimize2 className="h-4 w-4" />}
+          </Button>
+        )}
         <Button size="sm" variant="destructive" className="h-7" onClick={onEncerrar}>
           <PhoneOff className="mr-1 h-4 w-4" /> Encerrar
         </Button>
       </div>
       <SalaWebRTC sala={chamada.sala} nome={nome} video={chamada.video} onSair={onEncerrar} onParticipante={onParticipante} gravavel onGravacao={onGravacao} className="flex-1" />
-    </div>
+    </div>,
+    caixa,
   );
 }
