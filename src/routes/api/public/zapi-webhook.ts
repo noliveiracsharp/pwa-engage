@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ehRespostaAutomatica } from "@/lib/instancia-finalidade";
-import { extrairTagAcesso } from "@/lib/qr-direto";
+import { extrairTagAcesso, noDoAtalho } from "@/lib/qr-direto";
 import { detectarComando, mensagemComando } from "@/lib/comandos-fluxo";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
@@ -189,11 +189,14 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
         if (comando === "inicio" && r.execucao) r.execucao = { ...r.execucao, no_atual: null, status: "ativo" };
 
 
-        // Atalho "#kanban" (QR Code de acesso): pula o robô e entra direto no Kanban da tag.
+        // Atalho "#tag": entra no fluxo pelo bloco "Mover no Kanban" da tag (pula o menu inicial).
+        // Sem bloco correspondente no fluxo, apenas move para o Kanban e passa para humano.
         const tag = !r.execucao && tipo === "texto" ? extrairTagAcesso(texto) : null;
+        let entradaAtalho: string | null = null;
         if (tag) {
           const { data: etapaId } = await db.rpc("fluxo_webhook_rota", { p_token: k, p_tag: tag });
-          if (etapaId) {
+          entradaAtalho = noDoAtalho(r.fluxo.nos ?? [], tag, etapaId ? String(etapaId) : null);
+          if (!entradaAtalho && etapaId) {
             await acao("etapa", { etapa_id: etapaId });
             await acao("modo", { modo: "Humano" });
             return ok({ robo: false, motivo: "atalho_kanban", tag });
@@ -210,7 +213,7 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
         };
         const estadoIni = r.execucao
           ? { ...r.execucao, variaveis: { ...contato, ...(r.execucao.variaveis ?? {}), protocolo: contato.protocolo, telefone: contato.telefone } }
-          : { no_atual: null, status: "ativo" as const, variaveis: contato };
+          : { no_atual: entradaAtalho, status: "ativo" as const, variaveis: tag ? { ...contato, atalho: tag } : contato };
         let res = executarFluxo({ nos: fluxoAtual.nos ?? [], conexoes: fluxoAtual.conexoes ?? [], estado: estadoIni, texto: textoMotor });
         const acoes = [...res.acoes];
         // Blocos externos (HTTP/JavaScript) e "Executar outro fluxo" (limite evita laço).
