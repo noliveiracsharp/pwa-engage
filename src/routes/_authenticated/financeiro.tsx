@@ -248,6 +248,12 @@ function RelatorioTitulos({ tipo, rows, hoje, filtros, resumo, nomeParc, nomeCen
   );
 }
 
+/** Inbox DDA só busca os títulos a pagar quando a aba é aberta. */
+function DdaComTitulos({ perms }: { perms: Perms }) {
+  const { data: titulos = [] } = useTableRows("financeiro_titulos", true, undefined, { key: "pagar|dda", apply: (q) => q.eq("tipo", "pagar") });
+  return <DdaInbox titulos={titulos} perms={perms} />;
+}
+
 function Titulos({ tipo, perms }: { tipo: TipoTitulo; perms: Perms }) {
   const qc = useQueryClient();
   const { data: parceiros = [] } = useTableRows("parceiros");
