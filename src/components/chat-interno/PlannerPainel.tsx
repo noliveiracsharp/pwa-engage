@@ -19,6 +19,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Clock, Users } from "lucide-react";
+import { CORES_AGENDA, EXPEDIENTE_PADRAO, conflitosBloqueio, type Bloqueio, type Expediente } from "@/lib/planner-calendario";
 import {
   calcularPerformance, diaDoItem, horas, inicioSemana, lerEventos, normalizarPrioridade, novasRemarcacoes, ordenar, somarDias, textoRemarcacao,
   type PlannerItem,
@@ -28,6 +32,7 @@ const hoje = () => new Date().toISOString().slice(0, 10);
 const dataBR = (s: string) => { const [a, m, d] = s.slice(0, 10).split("-"); return `${d}/${m}/${a}`; };
 const tb = (t: string) => supabase.from(t as never) as unknown as ReturnType<typeof supabase.from>;
 const DIAS = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+const BOLINHA_COR: Record<string, string> = { primary: "bg-primary", success: "bg-success", warning: "bg-warning", destructive: "bg-destructive", accent: "bg-accent-foreground" };
 const COR_PRI = { alta: "bg-destructive", media: "bg-warning", baixa: "bg-muted-foreground/50" } as const;
 
 function deTarefa(t: Row): PlannerItem {
@@ -174,6 +179,52 @@ export function PlannerPainel({ me, empresaId, usuarios, onFechar, embutido, aco
     void qcReuniao.invalidateQueries({ queryKey: ["reunioes", empresaId] });
   };
   const reunioes = useReunioes(empresaId).data ?? [];
+  const [extras, setExtras] = useState<string[]>([]);
+  const [buscaAg, setBuscaAg] = useState("");
+  const agendas = useMemo(() => [alvo, ...extras.filter((x) => x !== alvo)], [alvo, extras]);
+  const expQ = useQuery({
+    queryKey: ["planner-expediente", alvo], enabled: !!alvo,
+    queryFn: async () => {
+      const r = await tb("planner_expediente").select("*").eq("usuario_id", alvo).maybeSingle();
+      if (r.error || !r.data) return EXPEDIENTE_PADRAO;
+      const d = r.data as Row;
+      return { dias: (d["dias"] as number[]) ?? EXPEDIENTE_PADRAO.dias, inicio: String(d["inicio"] ?? "08:00"), fim: String(d["fim"] ?? "18:00") } as Expediente;
+    },
+  });
+  const expediente = expQ.data ?? EXPEDIENTE_PADRAO;
+  const [expEdit, setExpEdit] = useState<Expediente | null>(null);
+  const salvarExpediente = async () => {
+    if (!expEdit) return;
+    if (expEdit.inicio >= expEdit.fim) return void toast.error("O fim do expediente deve ser depois do início.");
+    const r = await tb("planner_expediente").upsert({ usuario_id: me, empresa_id: empresaId, ...expEdit, updated_at: new Date().toISOString() } as never);
+    if (r.error) return void toast.error(r.error.message.includes("planner_expediente") ? "Rode o script atendeai-planner-agenda.sql no banco." : r.error.message);
+    toast.success("Horário de trabalho salvo.");
+    setExpEdit(null);
+    void qcReuniao.invalidateQueries({ queryKey: ["planner-expediente", me] });
+  };
+  const bloqQ = useQuery({
+    queryKey: ["planner-bloqueios", agendas.join(",")],
+    queryFn: async () => {
+      const r = await tb("planner_bloqueios").select("*").in("usuario_id", agendas).limit(2000);
+      if (r.error) return [] as Bloqueio[];
+      return ((r.data ?? []) as Row[]).map((b) => ({ id: String(b["id"]), usuario_id: String(b["usuario_id"]), inicio: String(b["inicio"]), fim: String(b["fim"]), titulo: String(b["titulo"] ?? "") }));
+    },
+  });
+  const bloqueios = bloqQ.data ?? [];
+  const criarBloqueio = async (inicio: Date, titulo: string) => {
+    const fim = new Date(inicio.getTime() + 60 * 60000);
+    if (conflitosBloqueio(bloqueios, me, inicio, fim).length) return void toast.info("Você já está indisponível nesse horário.");
+    const r = await tb("planner_bloqueios").insert({ empresa_id: empresaId, usuario_id: me, inicio: inicio.toISOString(), fim: fim.toISOString(), titulo: titulo || "Indisponível" } as never);
+    if (r.error) return void toast.error(r.error.message.includes("planner_bloqueios") ? "Rode o script atendeai-planner-agenda.sql no banco." : r.error.message);
+    toast.success("Horário marcado como indisponível (1h).");
+    void bloqQ.refetch();
+  };
+  const excluirBloqueio = async (b: Bloqueio) => {
+    if (!(await confirmar("Remover este bloqueio da agenda?"))) return;
+    const r = await tb("planner_bloqueios").delete().eq("id", b.id);
+    if (r.error) return void toast.error(r.error.message);
+    void bloqQ.refetch();
+  };
   const { itens, concluir, planejar } = usePlannerItens(alvo, me);
   const proprio = alvo === me;
   const mapaNomes = useMemo(() => new Map(usuarios.map((u) => [String(u["id"]), String(pick(u, ["nome"], "Usuário"))])), [usuarios]);
@@ -184,6 +235,12 @@ export function PlannerPainel({ me, empresaId, usuarios, onFechar, embutido, aco
   const atrasadas = ativos.filter((i) => i.status !== "concluida" && (diaDoItem(i) ?? "9") < hoje());
   const perf = useMemo(() => calcularPerformance(itens, desde, ate), [itens, desde, ate]);
   const pessoas = useMemo(() => [...usuarios].sort((a, b) => String(pick(a, ["nome"], "")).localeCompare(String(pick(b, ["nome"], "")), "pt-BR")), [usuarios]);
+  const agendaDe = (ids: string[]) => {
+    if (agendas.length < 2) return null;
+    const i = agendas.findIndex((a) => ids.includes(a));
+    if (i < 0) return null;
+    return { cor: CORES_AGENDA[i % CORES_AGENDA.length]!, nome: agendas[i] === me ? "Você" : mapaNomes.get(agendas[i]!) ?? "Usuário" };
+  };
   const nomeAlvo = proprio ? String(pick(usuario, ["nome"], "Você")) : String(pick(usuarios.find((u) => String(u["id"]) === alvo) ?? {}, ["nome"], "Usuário"));
   const detalhes = ordenar(itens.filter((i) => { const d = diaDoItem(i); return i.status !== "recusada" && i.status !== "aguardando" && d && d >= desde && d <= ate; }));
   const farol = perf.classificacao === "Excelente" ? "text-success" : perf.classificacao === "Bom" ? "text-warning" : "text-destructive";
@@ -243,6 +300,54 @@ export function PlannerPainel({ me, empresaId, usuarios, onFechar, embutido, aco
             </SelectContent>
           </Select>
         )}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button size="sm" variant="outline"><Users className="mr-1 h-4 w-4" /> Outras agendas{extras.length ? ` (${extras.length})` : ""}</Button>
+          </PopoverTrigger>
+          <PopoverContent className="z-[80] w-64 p-2" align="end">
+            <Input placeholder="Pesquisar pessoa" value={buscaAg} onChange={(e) => setBuscaAg(e.target.value)} className="mb-2 h-8" />
+            <div className="max-h-72 space-y-0.5 overflow-y-auto">
+              {pessoas.filter((u) => String(u["id"]) !== alvo && String(pick(u, ["nome"], "")).toLowerCase().includes(buscaAg.toLowerCase())).map((u) => {
+                const id = String(u["id"]); const on = extras.includes(id);
+                const cor = on ? agendaDe([id])?.cor : null;
+                return (
+                  <label key={id} className="flex cursor-pointer items-center gap-2 rounded px-1 py-1 text-sm hover:bg-muted">
+                    <Checkbox checked={on} onCheckedChange={(v) => setExtras((x) => v ? [...x, id] : x.filter((y) => y !== id))} />
+                    <span className="flex-1 truncate">{id === me ? "Meu planner" : String(pick(u, ["nome"], "Usuário"))}</span>
+                    {cor && <span className={cn("h-2.5 w-2.5 rounded-full", BOLINHA_COR[cor])} />}
+                  </label>
+                );
+              })}
+            </div>
+            {extras.length > 0 && <Button size="sm" variant="ghost" className="mt-1 w-full" onClick={() => setExtras([])}>Limpar seleção</Button>}
+          </PopoverContent>
+        </Popover>
+        {proprio && (
+          <Popover open={!!expEdit} onOpenChange={(o) => setExpEdit(o ? expediente : null)}>
+            <PopoverTrigger asChild><Button size="sm" variant="outline"><Clock className="mr-1 h-4 w-4" /> Horário de trabalho</Button></PopoverTrigger>
+            <PopoverContent className="z-[80] w-72" align="end">
+              {expEdit && (
+                <div className="space-y-3">
+                  <Label>Dias de trabalho</Label>
+                  <div className="flex gap-1">
+                    {["D", "S", "T", "Q", "Q", "S", "S"].map((l, d) => (
+                      <button key={d} type="button" onClick={() => setExpEdit({ ...expEdit, dias: expEdit.dias.includes(d) ? expEdit.dias.filter((x) => x !== d) : [...expEdit.dias, d].sort() })}
+                        className={cn("h-8 w-8 rounded-full border border-border text-xs", expEdit.dias.includes(d) && "bg-primary text-primary-foreground")}>{l}</button>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div><Label className="text-xs">Início</Label><Input type="time" value={expEdit.inicio} onChange={(e) => setExpEdit({ ...expEdit, inicio: e.target.value })} /></div>
+                    <div><Label className="text-xs">Fim</Label><Input type="time" value={expEdit.fim} onChange={(e) => setExpEdit({ ...expEdit, fim: e.target.value })} /></div>
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button size="sm" variant="outline" onClick={() => setExpEdit(null)}>Cancelar</Button>
+                    <Button size="sm" onClick={() => void salvarExpediente()}>Salvar</Button>
+                  </div>
+                </div>
+              )}
+            </PopoverContent>
+          </Popover>
+        )}
         {proprio && atrasadas.length > 0 && (
           <Button size="sm" variant="outline" onClick={() => void Promise.all(atrasadas.filter((i) => i.origem === "tarefa").map((i) => planejar(i, hoje())))}>
             Trazer {atrasadas.length} pendência(s) para hoje
@@ -262,13 +367,22 @@ export function PlannerPainel({ me, empresaId, usuarios, onFechar, embutido, aco
         </div>
         {modo === "agenda" ? (
           <CalendarioPlanner me={me} proprio={proprio}
-            reunioes={reunioes.filter((r) => !r.cancelada && (r.criado_por === alvo || r.participantes.includes(alvo)))}
+            reunioes={reunioes.filter((r) => !r.cancelada && agendas.some((a) => r.criado_por === a || r.participantes.includes(a)))}
             itens={ativos}
+            expediente={expediente}
+            bloqueios={bloqueios}
+            agendaDe={agendaDe}
+            onExcluirBloqueio={(b) => void excluirBloqueio(b)}
             onAbrirTarefa={setAberta}
             onConcluir={(i, f) => void concluir(i, f)}
             onEditarReuniao={(r) => { setEditarReuniao(r); setReunioesAberto(true); }}
             onCancelarReuniao={(r) => void cancelarReuniao(r)}
             onCriar={(n) => {
+              if (n.tipo === "indisponivel") {
+                if (!proprio) return void toast.info("Só é possível bloquear a sua própria agenda.");
+                return void criarBloqueio(n.inicio, n.titulo);
+              }
+              if (conflitosBloqueio(bloqueios, me, n.inicio, new Date(n.inicio.getTime() + 3600000)).length) toast.warning("Atenção: você marcou esse horário como indisponível.");
               if (n.tipo === "tarefa") {
                 const dia = n.inicio.toLocaleDateString("sv-SE");
                 if (onNovaTarefa) onNovaTarefa(dia); else toast.info("Abra o Planner pelo menu para criar tarefas.");
