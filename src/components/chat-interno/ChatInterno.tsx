@@ -316,6 +316,9 @@ export function ChatInterno({ sidebarOpen, onAbrir }: { sidebarOpen: boolean; on
         {!sidebarOpen && <TooltipContent side="right">Chat da equipe</TooltipContent>}
       </Tooltip>
 
+      {ativa.c && createPortal(<ChamadaFlutuante chamada={ativa.c} nome={ativa.c.nome} titulo={ativa.c.titulo} onEncerrar={() => void encerrarChamadaAtiva()}
+        meet min={ativa.min} onMin={(v) => setEstadoChamada({ min: v })} chatAberto={ativa.chat && open}
+        onChat={() => { if (!open) { setOpen(true); setEstadoChamada({ chat: true }); } else setEstadoChamada({ chat: !ativa.chat }); }} />, document.body)}
       {open && createPortal(
         <div
           ref={painelRef}
