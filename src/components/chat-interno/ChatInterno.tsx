@@ -87,6 +87,13 @@ function iniciais(nome: string) {
   return nome.split(" ").filter(Boolean).slice(0, 2).map((p) => p[0]).join("").toUpperCase() || "U";
 }
 
+/** Lista de quem leu (aceita array, texto JSON ou nulo). */
+function leitoresDe(m: Row): string[] {
+  let v = m["lida_por"];
+  if (typeof v === "string") { try { v = JSON.parse(v); } catch { v = []; } }
+  return Array.isArray(v) ? v.map(String) : [];
+}
+
 function hora(v: unknown) {
   const d = new Date(String(v ?? ""));
   return Number.isNaN(d.getTime()) ? "" : d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
@@ -553,15 +560,21 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack, onModoMeet }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canalId]);
 
-  // Marca como lidas as mensagens recebidas.
+  // Marca como lidas as mensagens recebidas (função atômica no banco; fallback por linha).
   useEffect(() => {
-    msgs
-      .filter((m) => String(m["remetente_id"]) !== me && !((m["lida_por"] as string[] | null) ?? []).includes(me))
-      .forEach((m) => {
-        void supabase.from(TABLE).update({ lida_por: [...((m["lida_por"] as string[] | null) ?? []), me] }).eq("id", String(m["id"]));
-      });
+    const pendentes = msgs.filter((m) => String(m["remetente_id"]) !== me && !leitoresDe(m).includes(me));
+    if (pendentes.length && canalId) {
+      void (async () => {
+        const { error } = await supabase.rpc("chat_interno_marcar_canal_lido" as never, { p_canal_id: canalId, p_usuario_id: me } as never);
+        if (error) {
+          for (const m of pendentes) {
+            await supabase.from(TABLE).update({ lida_por: [...leitoresDe(m), me] } as never).eq("id", String(m["id"]));
+          }
+        }
+      })();
+    }
     endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [msgs, me]);
+  }, [msgs, me, canalId]);
 
   const enviar = async (anexo?: Anexo) => {
     const msg = texto.trim();
@@ -781,7 +794,7 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack, onModoMeet }
                   )}
                   {anexos.length === 0 && <p className="break-words whitespace-pre-wrap"><Linkify text={String(m["mensagem"] ?? "")} /></p>}
                   {(() => {
-                    const leitores = ((m["lida_por"] as string[] | null) ?? []).filter((u) => u !== me);
+                    const leitores = leitoresDe(m).filter((u) => u !== me);
                     const vista = leitores.length > 0;
                     const quem = leitores.map((u) => nomes.get(u) ?? "Usuário").join(", ");
                     return (
