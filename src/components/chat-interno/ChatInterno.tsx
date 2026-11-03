@@ -794,7 +794,7 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack, onModoMeet }
                   )}
                   {anexos.length === 0 && <p className="break-words whitespace-pre-wrap"><Linkify text={String(m["mensagem"] ?? "")} /></p>}
                   {(() => {
-                    const leitores = ((m["lida_por"] as string[] | null) ?? []).filter((u) => u !== me);
+                    const leitores = leitoresDe(m).filter((u) => u !== me);
                     const vista = leitores.length > 0;
                     const quem = leitores.map((u) => nomes.get(u) ?? "Usuário").join(", ");
                     return (
