@@ -29,6 +29,7 @@ export const MODULOS_AJUDA = [
 export const ARTIGOS_PADRAO: ArtigoAjuda[] = [
   {
     id: "primeiro-acesso", modulo: "Primeiros passos", titulo: "Conhecendo a tela do Atende.ai",
+    imagem: "/ajuda/dashboard.jpg",
     resumo: "Onde ficam o menu, os avisos, a troca de tema e seus dados.", perfil: "Todos",
     passos: [
       "O menu lateral à esquerda leva a todas as telas que você tem permissão para usar.",
@@ -42,6 +43,7 @@ export const ARTIGOS_PADRAO: ArtigoAjuda[] = [
   },
   {
     id: "atend-iniciar", modulo: "Atendimentos", titulo: "Como iniciar e responder uma conversa no WhatsApp",
+    imagem: "/ajuda/atendimentos.jpg",
     resumo: "Atenda clientes pelo WhatsApp direto do sistema.", rota: "/atendimentos", perfil: "Atendente",
     passos: [
       "Abra o menu Atendimentos.",
@@ -78,6 +80,7 @@ export const ARTIGOS_PADRAO: ArtigoAjuda[] = [
   },
   {
     id: "oferta-criar", modulo: "Ofertas", titulo: "Como criar e enviar uma Oferta",
+    imagem: "/ajuda/orcamentos.jpg",
     resumo: "Monte a proposta com itens, desconto e envie o link para o cliente aprovar.", rota: "/orcamentos", perfil: "Vendedor",
     passos: [
       "Abra o menu Ofertas e clique em Nova.",
@@ -125,6 +128,7 @@ export const ARTIGOS_PADRAO: ArtigoAjuda[] = [
   },
   {
     id: "fin-despesa", modulo: "Financeiro", titulo: "Lançar uma despesa (Contas a Pagar)",
+    imagem: "/ajuda/fin-pagar.jpg",
     resumo: "Registre contas, com categoria, centro de custo e repetição.", rota: "/financeiro", perfil: "Financeiro",
     passos: [
       "Abra Financeiro → Contas a Pagar e clique em Novo.",
@@ -149,6 +153,7 @@ export const ARTIGOS_PADRAO: ArtigoAjuda[] = [
   },
   {
     id: "fin-fluxo", modulo: "Financeiro", titulo: "Ler o Fluxo de Caixa",
+    imagem: "/ajuda/fin-fluxo.jpg",
     resumo: "Veja entradas, saídas e saldo mês a mês.", rota: "/financeiro",
     passos: [
       "Abra Financeiro → Fluxo de Caixa.",
@@ -160,6 +165,7 @@ export const ARTIGOS_PADRAO: ArtigoAjuda[] = [
   },
   {
     id: "fin-controller", modulo: "Financeiro", titulo: "Parecer do Controller e relatório gerencial",
+    imagem: "/ajuda/fin-controller.jpg",
     resumo: "Alertas do caixa e um parecer da IA com plano de ação.", rota: "/financeiro",
     passos: [
       "Abra Financeiro → Controller.",
@@ -173,6 +179,7 @@ export const ARTIGOS_PADRAO: ArtigoAjuda[] = [
   },
   {
     id: "fin-reembolso", modulo: "Financeiro", titulo: "Pedir e aprovar reembolso",
+    imagem: "/ajuda/fin-reembolso.jpg",
     resumo: "Envie a foto do comprovante; a IA lê os dados.", rota: "/reembolsos",
     passos: [
       "Abra Reembolsos e clique em Novo.",
@@ -184,6 +191,7 @@ export const ARTIGOS_PADRAO: ArtigoAjuda[] = [
   },
   {
     id: "sup-cotacao", modulo: "Suprimentos", titulo: "Fazer cotação com fornecedores",
+    imagem: "/ajuda/cotacoes.jpg",
     resumo: "Mande um link e o fornecedor preenche os preços.", rota: "/cotacoes",
     passos: [
       "Abra Cotações e clique em Nova.",
@@ -195,6 +203,7 @@ export const ARTIGOS_PADRAO: ArtigoAjuda[] = [
   },
   {
     id: "sup-itens", modulo: "Suprimentos", titulo: "Cadastrar itens e reajustar preços",
+    imagem: "/ajuda/itens.jpg",
     resumo: "Produtos e serviços com custo, preço e dados fiscais.", rota: "/itens",
     passos: [
       "Abra Itens e clique em Novo.",
@@ -218,6 +227,7 @@ export const ARTIGOS_PADRAO: ArtigoAjuda[] = [
   },
   {
     id: "adm-empresa", modulo: "Administração", titulo: "Dados da empresa, logo e IA",
+    imagem: "/ajuda/empresas.jpg",
     resumo: "Configure a marca da empresa e a Inteligência Artificial.", rota: "/empresas", perfil: "Administrador",
     passos: [
       "Abra Empresas e edite sua empresa.",
@@ -591,6 +601,7 @@ export const ARTIGOS_PADRAO: ArtigoAjuda[] = [
   },
   {
     id: "fin-boleto-config", modulo: "Financeiro", titulo: "Configurar a emissão de boletos (Banco Inter)",
+    imagem: "/ajuda/fin-bancos.jpg",
     resumo: "Ligue a conta do banco para emitir boleto com Pix e baixa automática.", rota: "/financeiro", perfil: "Financeiro / Administrador",
     passos: [
       "No Internet Banking PJ do Inter, crie uma integração (API) e baixe o Client ID, Client Secret e os certificados .crt e .key.",
@@ -605,6 +616,7 @@ export const ARTIGOS_PADRAO: ArtigoAjuda[] = [
   },
   {
     id: "fin-nota-config", modulo: "Financeiro", titulo: "Configurar notas fiscais (Focus NFe) e certificado A1",
+    imagem: "/ajuda/notas_fiscais.jpg",
     resumo: "Contrate o emissor, envie o certificado A1, teste em homologação e depois vá para produção.", rota: "/financeiro", perfil: "Financeiro / Administrador",
     passos: [
       "Crie a conta no Focus NFe (bom custo-benefício: cobra por nota, atende NF-e e NFS-e na maioria das prefeituras).",
@@ -620,6 +632,7 @@ export const ARTIGOS_PADRAO: ArtigoAjuda[] = [
   },
   {
     id: "fin-envio-automatico", modulo: "Financeiro", titulo: "Envio automático de boleto e nota ao cliente",
+    imagem: "/ajuda/fin-cobranca.jpg",
     resumo: "A Régua de Cobrança emite e envia boleto e nota por e-mail/WhatsApp sozinha.", rota: "/financeiro", perfil: "Financeiro",
     passos: [
       "Configure o e-mail da empresa em Empresas → E-mail (servidor SMTP) e teste o envio.",
