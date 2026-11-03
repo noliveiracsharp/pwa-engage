@@ -5,7 +5,7 @@ import { buscarIpca12m } from "@/lib/indices.functions";
 import { periodoPreset, type Periodo } from "@/lib/periodo-vencimento";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarClock, CheckCircle2, ChevronDown, ChevronRight, Copy, CreditCard, FileText, FileUp, TrendingUp, Paperclip, Plus, QrCode, Receipt, Trash2, Undo2 } from "lucide-react";
 import { ImportarFaturaDialog } from "@/components/financeiro/ImportarFaturaDialog";
 import { ImportarContaDialog } from "@/components/financeiro/ImportarContaDialog";
@@ -133,7 +133,8 @@ function FinanceiroPage() {
   const visiveis = [...(perms.canRead ? SECOES_FIN.filter((s) => secoes[s.key]?.canRead) : []), ...filhas.map((a) => ({ key: a.path, label: a.label }))];
   const [abaSel, setAba] = useState<string>("receber");
   const aba = visiveis.some((s) => s.key === abaSel) ? abaSel : (visiveis[0]?.key ?? "");
-  const { data: titulos = [], isLoading } = useTableRows("financeiro_titulos");
+  // Histórico completo só para as visões que realmente precisam dele (caixa e controller).
+  const { data: titulos = [] } = useTableRows("financeiro_titulos", aba === "caixa" || aba === "controller");
   if (!perms.loading && visiveis.length === 0) return <p className="text-muted-foreground text-sm">Você não tem acesso a esta página.</p>;
   const p = (k: string) => ({ ...(secoes[k] ?? perms) });
   return (
@@ -144,12 +145,12 @@ function FinanceiroPage() {
       </TabsList>
       </div>
       {["receber", "pagar", "caixa"].includes(aba) && <SaldosBancarios />}
-      <TabsContent value="receber"><Titulos tipo="receber" todos={titulos} loading={isLoading} perms={p("receber")} /></TabsContent>
+      <TabsContent value="receber">{aba === "receber" && <Titulos tipo="receber" perms={p("receber")} />}</TabsContent>
       <TabsContent value="pagar">
         <Tabs defaultValue="titulos" className="space-y-4">
           <TabsList><TabsTrigger value="titulos">Títulos a pagar</TabsTrigger><TabsTrigger value="dda">Inbox DDA</TabsTrigger></TabsList>
-          <TabsContent value="titulos"><Titulos tipo="pagar" todos={titulos} loading={isLoading} perms={p("pagar")} /></TabsContent>
-          <TabsContent value="dda"><DdaInbox titulos={titulos} perms={p("pagar")} /></TabsContent>
+          <TabsContent value="titulos">{aba === "pagar" && <Titulos tipo="pagar" perms={p("pagar")} />}</TabsContent>
+          <TabsContent value="dda"><DdaComTitulos perms={p("pagar")} /></TabsContent>
         </Tabs>
       </TabsContent>
       <TabsContent value="caixa"><Caixa titulos={titulos} /></TabsContent>
@@ -247,7 +248,13 @@ function RelatorioTitulos({ tipo, rows, hoje, filtros, resumo, nomeParc, nomeCen
   );
 }
 
-function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row[]; loading: boolean; perms: Perms }) {
+/** Inbox DDA só busca os títulos a pagar quando a aba é aberta. */
+function DdaComTitulos({ perms }: { perms: Perms }) {
+  const { data: titulos = [] } = useTableRows("financeiro_titulos", true, undefined, { key: "pagar|dda", apply: (q) => q.eq("tipo", "pagar") });
+  return <DdaInbox titulos={titulos} perms={perms} />;
+}
+
+function Titulos({ tipo, perms }: { tipo: TipoTitulo; perms: Perms }) {
   const qc = useQueryClient();
   const { data: parceiros = [] } = useTableRows("parceiros");
   const parceiroById = useMemo(() => new Map(parceiros.map((p) => [text(rowId(p)), p])), [parceiros]);
@@ -274,11 +281,37 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
   const [cobrar, setCobrar] = useState<Row | null>(null);
   const hoje = hojeISO();
 
+  // Só os títulos deste tipo e do período vêm do banco (antes vinha todo o histórico).
+  const { data: todos = [], isLoading: loading } = useTableRows("financeiro_titulos", true, undefined, {
+    key: `${tipo}|${periodoF.de}|${periodoF.ate}`,
+    apply: (q) => {
+      let x = q.eq("tipo", tipo);
+      if (periodoF.de) x = x.gte("vencimento", periodoF.de);
+      if (periodoF.ate) x = x.lte("vencimento", periodoF.ate);
+      return x;
+    },
+  });
   const doTipo = useMemo(() => todos.filter((t) => t["tipo"] === tipo), [todos, tipo]);
+  // Série completa (só colunas leves) para numerar n/total mesmo com parcelas fora do período.
+  const seriesIds = useMemo(() => [...new Set(doTipo.filter((t) => t["origem_tipo"] === "manual" && t["origem_id"]).map((t) => text(t["origem_id"])))].sort(), [doTipo]);
+  const { data: serieRows = [] } = useQuery({
+    queryKey: ["table", "financeiro_titulos", "series", tipo, seriesIds.join(",")],
+    enabled: seriesIds.length > 0,
+    queryFn: async () => {
+      const out: Row[] = [];
+      for (let i = 0; i < seriesIds.length; i += 150) {
+        const { data, error } = await supabase.from("financeiro_titulos").select("id,origem_tipo,origem_id,descricao,vencimento").eq("tipo", tipo).eq("origem_tipo", "manual").in("origem_id", seriesIds.slice(i, i + 150));
+        if (error) throw error;
+        out.push(...((data ?? []) as Row[]));
+      }
+      return out;
+    },
+  });
   // Posição real na série (n/total) pelo vínculo origem_id, independente do texto da descrição.
   const posSerie = useMemo(() => {
     const grupos = new Map<string, Row[]>();
-    for (const t of doTipo) {
+    const fonte = serieRows.length ? serieRows : doTipo;
+    for (const t of fonte) {
       if (t["origem_tipo"] !== "manual" || !t["origem_id"]) continue;
       // Mesma série = mesmo vínculo E mesma descrição base (evita "parcelas" entre compras diferentes do cartão).
       const k = `${text(t["origem_id"])}|${text(t["descricao"]).replace(/\s*\(\d+\/\d+\)\s*$/, "").trim().toLowerCase()}`;
@@ -291,7 +324,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
       l.forEach((t, i) => mapa.set(text(rowId(t)), `${i + 1}/${l.length}`));
     }
     return mapa;
-  }, [doTipo]);
+  }, [doTipo, serieRows]);
   // Base = todos os filtros menos a situação (os cards do topo não zeram ao filtrar uma situação).
   const base = useMemo(
     () =>
@@ -436,8 +469,14 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
   const [consultaOferta, setConsultaOferta] = useState("");
   const [consultaTitulo, setConsultaTitulo] = useState<Row | null>(null);
   const [verItens, setVerItens] = useState<Row | null>(null);
-  const itensPorTitulo = useItensPorTitulo();
-  const { data: ofertasFin = [] } = useTableRows("orcamentos");
+  const idsTela = useMemo(() => doTipo.map((t) => text(rowId(t))), [doTipo]);
+  const itensPorTitulo = useItensPorTitulo(idsTela);
+  // Só as Ofertas vinculadas aos títulos da tela (número para o link), não a tabela inteira.
+  const ofertaIds = useMemo(() => [...new Set(doTipo.map((t) => ofertaDoTitulo(t)).filter(Boolean))].sort(), [doTipo]);
+  const { data: ofertasFin = [] } = useTableRows("orcamentos", ofertaIds.length > 0, undefined, {
+    key: `ids|${ofertaIds.join(",")}`,
+    apply: (q) => q.in("id", ofertaIds),
+  });
   const numOferta = (id: string) => text(ofertasFin.find((o) => text(rowId(o)) === id)?.["numero"]);
   const ehSerie = (t: Row) => t["origem_tipo"] === "manual" && (!!t["origem_id"] || !!serieLegada(t));
   const ehRecorrente = (t: Row) => ehSerie(t) || (t["origem_tipo"] === "oferta" && !!t["origem_id"]);

@@ -7,14 +7,20 @@ import { rowId, text, useTableRows } from "@/lib/crud";
 import { formatBRL, num, round2 } from "@/lib/orcamentos";
 import type { Row } from "@/lib/row";
 
-/** Itens discriminados de todos os títulos visíveis (RLS limita à empresa), agrupados por título. */
-export function useItensPorTitulo() {
+/** Itens discriminados apenas dos títulos informados (os da tela), agrupados por título. */
+export function useItensPorTitulo(ids: string[]) {
+  const lista = [...new Set(ids.filter(Boolean))].sort();
   const q = useQuery({
-    queryKey: ["financeiro_titulos_itens", "todos"],
+    queryKey: ["financeiro_titulos_itens", "ids", lista.join(",")],
+    enabled: lista.length > 0,
     queryFn: async () => {
-      const { data, error } = await supabase.from("financeiro_titulos_itens" as never).select("*").order("created_at");
-      if (error) return [] as Row[];
-      return (data ?? []) as Row[];
+      const out: Row[] = [];
+      for (let i = 0; i < lista.length; i += 150) {
+        const { data, error } = await supabase.from("financeiro_titulos_itens" as never).select("*").in("titulo_id", lista.slice(i, i + 150) as never).order("created_at");
+        if (error) return [] as Row[];
+        out.push(...((data ?? []) as Row[]));
+      }
+      return out;
     },
   });
   return useMemo(() => {
