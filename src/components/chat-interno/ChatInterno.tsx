@@ -5,7 +5,7 @@ import { Linkify } from "@/components/ui/linkify";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Check, ArrowLeftRight, ArrowLeft, Maximize2, MessageSquare, Minimize2, Paperclip, Search, Send, Users, X, FileText, Loader2, Phone, Video, Mic, ClipboardList, Trash2, CornerUpLeft } from "lucide-react";
+import { Plus, Check, CheckCheck, ArrowLeftRight, ArrowLeft, Maximize2, MessageSquare, Minimize2, Paperclip, Search, Send, Users, X, FileText, Loader2, Phone, Video, Mic, ClipboardList, Trash2, CornerUpLeft } from "lucide-react";
 import { confirmar } from "@/components/layout/DialogoGlobal";
 import { ChamadaFlutuante, duracao, novaSala, type Chamada } from "@/components/atendimentos/ChamadaFlutuante";
 
@@ -90,7 +90,8 @@ export function ChatInterno({ sidebarOpen, onAbrir }: { sidebarOpen: boolean; on
     localStorage.setItem("chat-dock", expanded ? lado : "");
     setDockEl(document.getElementById(`chat-dock-${lado}`));
   }, [expanded, lado]);
-  const acoplado = expanded && desktop && !!dockEl;
+  const [modoMeet, setModoMeet] = useState<"off" | "chat" | "oculto">("off");
+  const acoplado = expanded && desktop && !!dockEl && modoMeet === "off";
   const [busca, setBusca] = useState("");
   const [sel, setSel] = useState<Sel | null>(null);
   const [criando, setCriando] = useState(false);
@@ -292,7 +293,11 @@ export function ChatInterno({ sidebarOpen, onAbrir }: { sidebarOpen: boolean; on
         <div
           ref={painelRef}
           className={cn(
-            acoplado
+            modoMeet === "chat"
+              ? "fixed inset-y-0 right-0 z-[60] flex w-full flex-col overflow-hidden border-l border-border bg-popover text-popover-foreground shadow-2xl md:w-[380px] max-md:top-1/2"
+              : modoMeet === "oculto"
+                ? "hidden"
+                : acoplado
               ? cn("flex h-full w-[400px] flex-col overflow-hidden bg-popover text-popover-foreground animate-in fade-in", lado === "direita" ? "border-l border-border slide-in-from-right-4" : "border-r border-border slide-in-from-left-4")
               : cn(
                   "fixed bottom-4 z-50 flex flex-col overflow-hidden rounded-2xl border border-border bg-popover text-popover-foreground shadow-2xl transition-all duration-300 animate-in fade-in slide-in-from-bottom-4",
@@ -359,6 +364,7 @@ export function ChatInterno({ sidebarOpen, onAbrir }: { sidebarOpen: boolean; on
                 usuarios={usuarios}
                 isOnline={sel.tipo === "direto" && online.has(String(sel.outro["id"]))}
                 onBack={() => setSel(null)}
+                onModoMeet={setModoMeet}
               />
             </div>
           ) : (
@@ -464,7 +470,7 @@ export function ChatInterno({ sidebarOpen, onAbrir }: { sidebarOpen: boolean; on
 
 type Anexo = { url: string; nome: string; tipo: string };
 
-function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack }: { me: string; empresaId: string; sel: Sel; usuarios: Row[]; isOnline: boolean; onBack: () => void }) {
+function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack, onModoMeet }: { me: string; empresaId: string; sel: Sel; usuarios: Row[]; isOnline: boolean; onBack: () => void; onModoMeet?: (modo: "off" | "chat" | "oculto") => void }) {
   const qc = useQueryClient();
   const nome = sel.tipo === "direto" ? String(pick(sel.outro, ["nome"], "Usuário")) : String(sel.canal["nome"] ?? "Grupo");
   const [canalId, setCanalId] = useState<string>(sel.tipo === "grupo" ? String(sel.canal["id"]) : "");
@@ -475,6 +481,13 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack }: { me: stri
   const { usuario } = useAuth();
   const meuNome = String(pick(usuario, ["nome"], "Colaborador"));
   const [chamada, setChamada] = useState<Chamada | null>(null);
+  const [chamadaMin, setChamadaMin] = useState(false);
+  const [chatNaChamada, setChatNaChamada] = useState(true);
+  // Informa o painel do chat para acoplar à direita da chamada (estilo Google Meet).
+  useEffect(() => {
+    onModoMeet?.(!chamada || chamadaMin ? "off" : chatNaChamada ? "chat" : "oculto");
+  }, [chamada, chamadaMin, chatNaChamada, onModoMeet]);
+  useEffect(() => () => onModoMeet?.("off"), [onModoMeet]);
   const endRef = useRef<HTMLDivElement>(null);
   const key = ["chat-interno", canalId];
   const nomes = useMemo(() => new Map(usuarios.map((u) => [String(u["id"]), String(pick(u, ["nome"], "Usuário"))])), [usuarios]);
@@ -565,7 +578,7 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack }: { me: stri
     if (fileRef.current) fileRef.current.value = "";
   };
 
-  const colar = (e: import("react").ClipboardEvent<HTMLInputElement>) => {
+  const colar = (e: import("react").ClipboardEvent<HTMLTextAreaElement>) => {
     const item = Array.from(e.clipboardData.items).find((i) => i.type.startsWith("image/"));
     const f = item?.getAsFile();
     if (!f) return;
@@ -701,7 +714,8 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack }: { me: stri
           )}
         </DialogContent>
       </Dialog>
-      {chamada && createPortal(<ChamadaFlutuante chamada={chamada} nome={meuNome} titulo={`Chamada · ${nome}`} onEncerrar={() => void encerrar()} />, document.body)}
+      {chamada && createPortal(<ChamadaFlutuante chamada={chamada} nome={meuNome} titulo={`Chamada · ${nome}`} onEncerrar={() => void encerrar()}
+        meet min={chamadaMin} onMin={setChamadaMin} chatAberto={chatNaChamada} onChat={() => setChatNaChamada((v) => !v)} />, document.body)}
 
       <ScrollArea className="min-h-0 min-w-0 flex-1 [&_[data-radix-scroll-area-viewport]>div]:!block [&_[data-radix-scroll-area-viewport]>div]:!min-w-0">
         <div className="min-w-0 space-y-2 p-3">
@@ -755,7 +769,21 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack }: { me: stri
                     ),
                   )}
                   {anexos.length === 0 && <p className="break-words whitespace-pre-wrap"><Linkify text={String(m["mensagem"] ?? "")} /></p>}
-                  <p className={cn("mt-0.5 text-right text-[10px]", mine ? "text-primary-foreground/70" : "text-muted-foreground")}>{hora(m["criado_em"])}</p>
+                  {(() => {
+                    const leitores = ((m["lida_por"] as string[] | null) ?? []).filter((u) => u !== me);
+                    const vista = leitores.length > 0;
+                    const quem = leitores.map((u) => nomes.get(u) ?? "Usuário").join(", ");
+                    return (
+                      <p className={cn("mt-0.5 flex items-center justify-end gap-1 text-[10px]", mine ? "text-primary-foreground/70" : "text-muted-foreground")}>
+                        {hora(m["criado_em"])}
+                        {mine && (
+                          <span title={vista ? `Visualizada${sel.tipo === "grupo" ? ` por ${quem}` : ""}` : "Enviada, ainda não visualizada"} aria-label={vista ? "Visualizada" : "Enviada"} className={cn("inline-flex", vista && "text-primary-foreground")}>
+                            {vista ? <CheckCheck className="h-3.5 w-3.5" /> : <Check className="h-3.5 w-3.5" />}
+                          </span>
+                        )}
+                      </p>
+                    );
+                  })()}
                 </div>
                 <Button
                   type="button" variant="ghost" size="icon" tooltip="Responder" aria-label="Responder"
@@ -778,7 +806,7 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack }: { me: stri
 
       {respondendo && <div className="min-w-0 border-t border-border px-2 pt-2"><FaixaResposta citacao={respondendo} onCancelar={() => setRespondendo(null)} /></div>}
       <form
-        className={cn("flex min-w-0 items-center gap-1 p-2", respondendo ? "pt-0" : "border-t border-border")}
+        className={cn("flex min-w-0 items-end gap-1 p-2", respondendo ? "pt-0" : "border-t border-border")}
         onSubmit={(e) => {
           e.preventDefault();
           void enviar();
@@ -803,7 +831,17 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack }: { me: stri
               <Paperclip className="h-4 w-4" />
             </Button>
             <UploadInfo perfil="chat" arquivos />
-            <Input value={texto} onChange={(e) => setTexto(e.target.value)} onPaste={colar} placeholder="Digite uma mensagem ou cole um print (Ctrl+V)..." className="min-w-0 flex-1" />
+            <textarea
+              ref={(el) => { if (el) { el.style.height = "auto"; el.style.height = `${Math.min(el.scrollHeight, 160)}px`; } }}
+              rows={1}
+              value={texto}
+              onChange={(e) => { setTexto(e.target.value); const el = e.currentTarget; el.style.height = "auto"; el.style.height = `${Math.min(el.scrollHeight, 160)}px`; }}
+              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void enviar(); } }}
+              onPaste={colar}
+              placeholder="Mensagem (Shift+Enter pula linha)..."
+              title="Enter envia · Shift+Enter pula linha"
+              className="max-h-40 min-h-9 min-w-0 flex-1 resize-none overflow-y-auto rounded-md border border-input bg-background px-3 py-2 text-sm leading-5 ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
             {texto.trim() ? (
               <Button type="submit" size="icon" className="h-9 w-9 shrink-0" disabled={enviando || !canalId} aria-label="Enviar">
                 {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
