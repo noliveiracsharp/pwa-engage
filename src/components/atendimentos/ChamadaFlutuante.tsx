@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link2, Maximize2, MessageSquare, Minimize2, PhoneOff, PictureInPicture2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
