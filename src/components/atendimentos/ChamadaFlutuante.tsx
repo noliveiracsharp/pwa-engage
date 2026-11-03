@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Link2, Maximize2, MessageSquare, Minimize2, PhoneOff } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Link2, Maximize2, MessageSquare, Minimize2, PhoneOff, PictureInPicture2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -38,8 +38,24 @@ export function ChamadaFlutuante({ chamada, nome, titulo, onEncerrar, onParticip
     const t = setInterval(() => setAgora(Date.now()), 1000);
     return () => clearInterval(t);
   }, []);
+  const raiz = useRef<HTMLDivElement>(null);
+  const abrirPip = async () => {
+    const doc = document as any;
+    try {
+      if (doc.pictureInPictureElement) { await doc.exitPictureInPicture(); return; }
+      if (!doc.pictureInPictureEnabled) { toast.error("Seu navegador não permite janela flutuante. Use Chrome ou Edge."); return; }
+      const vids = Array.from(raiz.current?.querySelectorAll("video") ?? []) as HTMLVideoElement[];
+      // Prefere o vídeo de quem está do outro lado (o local é mudo e fica por último).
+      const alvo = vids.find((v) => !v.muted && v.srcObject) ?? vids.find((v) => v.srcObject);
+      if (!alvo) { toast.error("Ainda não há vídeo na chamada."); return; }
+      await alvo.requestPictureInPicture();
+    } catch {
+      toast.error("Não foi possível abrir a janela flutuante.");
+    }
+  };
   return (
     <div
+      ref={raiz}
       className={cn(
         "fixed flex flex-col overflow-hidden border border-border bg-card shadow-2xl transition-all",
         min
@@ -60,6 +76,9 @@ export function ChamadaFlutuante({ chamada, nome, titulo, onEncerrar, onParticip
         )}
         <Button size="icon" variant="ghost" className="h-7 w-7" title="Copiar link para convidar mais pessoas" aria-label="Copiar link de convite" onClick={() => void navigator.clipboard.writeText(linkConvite(chamada.sala, chamada.video)).then(() => toast.success("Link copiado. Envie para quem deve entrar na sala."))}>
           <Link2 className="h-4 w-4" />
+        </Button>
+        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => void abrirPip()} aria-label="Janela flutuante fora do sistema" title="Janela flutuante (acompanha você em outros programas)">
+          <PictureInPicture2 className="h-4 w-4" />
         </Button>
         <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setMin(!min)} aria-label={min ? "Expandir" : "Minimizar"} title={min ? "Expandir" : "Minimizar para navegar no sistema"}>
           {min ? <Maximize2 className="h-4 w-4" /> : <Minimize2 className="h-4 w-4" />}
