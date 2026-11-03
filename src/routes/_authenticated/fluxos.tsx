@@ -39,6 +39,7 @@ import { confirmar } from "@/components/layout/DialogoGlobal";
 import { createContext, useContext } from "react";
 import { CampoVariaveis } from "@/components/ui/campo-variaveis";
 import type { VariavelDef } from "@/lib/variaveis";
+import { tagDoKanban } from "@/lib/qr-direto";
 
 const VARS_CONTATO: VariavelDef[] = [
   { chave: "nome", descricao: "Nome do contato" },

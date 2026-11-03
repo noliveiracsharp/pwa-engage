@@ -131,7 +131,11 @@ export function resumoNo(tipo: TipoNo, d: DadosNo, nomes: { etapa?: string | und
     case "switch": return `${d["variavel"] || "?"} → ${casosSwitch(d["casos"]).join(" | ") || "sem casos"}`;
     case "horario": return `${d["inicio"]}–${d["fim"]} (${d["dias"]})`;
     case "atraso": return `${d["segundos"] ?? 0}s`;
-    case "kanban": return nomes.quadro ? `${nomes.quadro} → ${nomes.etapa ?? "?"}` : "Escolha o quadro";
+    case "kanban": {
+      const base = nomes.quadro ? `${nomes.quadro} → ${nomes.etapa ?? "?"}` : "Escolha o quadro";
+      const tags = String(d["atalho"] ?? "").split(",").map((t) => t.trim().replace(/^#/, "")).filter(Boolean);
+      return tags.length ? `${base} · ${tags.map((t) => `#${t}`).join(" ")}` : base;
+    }
     case "atribuir": return d["modo"] === "roleta" ? "Roleta entre atendentes" : "Fila do departamento";
     case "campo": return `${d["template"] && d["template"] !== "todos" ? `[${d["template"]}] ` : ""}${d["chave"] || "?"} = ${d["valor"] ?? ""}`;
     case "http": return `${d["metodo"] ?? "GET"} ${d["url"] ?? ""} → {{${d["variavel"] || "resposta"}}}`;
