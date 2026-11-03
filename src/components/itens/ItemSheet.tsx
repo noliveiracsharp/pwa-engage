@@ -21,6 +21,7 @@ import { classificarItem } from "@/lib/itens-classificacao";
 import { HistoricoCompras } from "@/components/itens/HistoricoCompras";
 import { NcmBusca } from "@/components/itens/NcmBusca";
 import { HoraTecnicaDialog } from "@/components/itens/HoraTecnicaDialog";
+import { RichEditor } from "@/components/orcamentos/RichEditor";
 
 const NONE = "__none__";
 
@@ -53,6 +54,7 @@ type Values = {
   categoria: string;
   imagens: string[];
   observacoes: string;
+  especificacao: string;
   estoque_minimo: string;
   estoque_maximo: string;
   controla_estoque: string;
@@ -83,6 +85,7 @@ const EMPTY: Values = {
   categoria: "",
   imagens: [],
   observacoes: "",
+  especificacao: "",
   estoque_minimo: "",
   estoque_maximo: "",
   controla_estoque: "true",
@@ -197,6 +200,7 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, duplic
       categoria: text(pick(record, ["categoria"], "")),
       imagens: Array.isArray(record["imagens"]) ? (record["imagens"] as unknown[]).map(String).filter(Boolean) : [],
       observacoes: text(pick(record, ["observacoes"], "")),
+      especificacao: text(pick(record, ["especificacao"], "")),
       estoque_minimo: text(pick(record, ["estoque_minimo"], "")),
       estoque_maximo: text(pick(record, ["estoque_maximo"], "")),
       controla_estoque: record["controla_estoque"] === false ? "false" : "true",
@@ -273,6 +277,7 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, duplic
       categoria: v.categoria || null,
       imagens: v.imagens,
       observacoes: v.observacoes.trim() || null,
+      especificacao: v.especificacao.replace(/<[^>]*>|&nbsp;/g, "").trim() ? v.especificacao : null,
       ...(v.tipo === "Produto"
         ? {
             controla_estoque: v.controla_estoque === "true",
@@ -548,6 +553,12 @@ export function ItemSheet({ open, onOpenChange, record, saving, readOnly, duplic
                 value={v.observacoes}
                 onChange={(e) => setV((s) => ({ ...s, observacoes: e.target.value }))}
               />
+            </div>
+
+            <div className="min-w-0 space-y-1.5 sm:col-span-2">
+              <Label className="block text-sm font-medium">Descrição padrão na Oferta</Label>
+              <p className="text-muted-foreground text-xs">Carrega no Detalhe do item ao lançá-lo na Oferta; pode ser alterada lá livremente.</p>
+              <RichEditor value={v.especificacao} minHeight={110} onChange={(html) => setV((s) => ({ ...s, especificacao: html }))} />
             </div>
 
             <div className="min-w-0 space-y-1.5 sm:col-span-2">

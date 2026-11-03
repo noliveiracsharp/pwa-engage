@@ -243,9 +243,14 @@ export function linhaFromRow(row: Row, itemTipo?: unknown): Linha {
 /** Preenche a linha a partir do item escolhido (snapshot de preço, custo e imposto). */
 export function aplicarItem(linha: Linha, item: Row | undefined): Linha {
   if (!item) return { ...linha, item_id: "" };
+  const novoId = String(rowId(item) ?? "");
+  const espec = String(pick(item, ["especificacao"]) ?? "").trim();
+  // Descrição padrão do cadastro: entra ao escolher um item diferente; o texto continua editável na Oferta.
+  const detalhe = espec && novoId !== linha.item_id ? espec : linha.detalhe;
   return {
     ...linha,
-    item_id: String(rowId(item) ?? ""),
+    item_id: novoId,
+    detalhe,
     unidade_medida_id: String(pick(item, ["unidade_medida_id"]) ?? "") || linha.unidade_medida_id,
     valor_unitario: String(num(pick(item, ["preco_venda"]))),
     preco_custo: num(pick(item, ["preco_custo"])),
