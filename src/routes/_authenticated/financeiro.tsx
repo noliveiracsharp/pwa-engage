@@ -247,7 +247,7 @@ function RelatorioTitulos({ tipo, rows, hoje, filtros, resumo, nomeParc, nomeCen
   );
 }
 
-function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row[]; loading: boolean; perms: Perms }) {
+function Titulos({ tipo, perms }: { tipo: TipoTitulo; perms: Perms }) {
   const qc = useQueryClient();
   const { data: parceiros = [] } = useTableRows("parceiros");
   const parceiroById = useMemo(() => new Map(parceiros.map((p) => [text(rowId(p)), p])), [parceiros]);
@@ -274,11 +274,37 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
   const [cobrar, setCobrar] = useState<Row | null>(null);
   const hoje = hojeISO();
 
+  // Só os títulos deste tipo e do período vêm do banco (antes vinha todo o histórico).
+  const { data: todos = [], isLoading: loading } = useTableRows("financeiro_titulos", true, undefined, {
+    key: `${tipo}|${periodoF.de}|${periodoF.ate}`,
+    apply: (q) => {
+      let x = q.eq("tipo", tipo);
+      if (periodoF.de) x = x.gte("vencimento", periodoF.de);
+      if (periodoF.ate) x = x.lte("vencimento", periodoF.ate);
+      return x;
+    },
+  });
   const doTipo = useMemo(() => todos.filter((t) => t["tipo"] === tipo), [todos, tipo]);
+  // Série completa (só colunas leves) para numerar n/total mesmo com parcelas fora do período.
+  const seriesIds = useMemo(() => [...new Set(doTipo.filter((t) => t["origem_tipo"] === "manual" && t["origem_id"]).map((t) => text(t["origem_id"])))].sort(), [doTipo]);
+  const { data: serieRows = [] } = useQuery({
+    queryKey: ["table", "financeiro_titulos", "series", tipo, seriesIds.join(",")],
+    enabled: seriesIds.length > 0,
+    queryFn: async () => {
+      const out: Row[] = [];
+      for (let i = 0; i < seriesIds.length; i += 150) {
+        const { data, error } = await supabase.from("financeiro_titulos").select("id,origem_tipo,origem_id,descricao,vencimento").eq("tipo", tipo).eq("origem_tipo", "manual").in("origem_id", seriesIds.slice(i, i + 150));
+        if (error) throw error;
+        out.push(...((data ?? []) as Row[]));
+      }
+      return out;
+    },
+  });
   // Posição real na série (n/total) pelo vínculo origem_id, independente do texto da descrição.
   const posSerie = useMemo(() => {
     const grupos = new Map<string, Row[]>();
-    for (const t of doTipo) {
+    const fonte = serieRows.length ? serieRows : doTipo;
+    for (const t of fonte) {
       if (t["origem_tipo"] !== "manual" || !t["origem_id"]) continue;
       // Mesma série = mesmo vínculo E mesma descrição base (evita "parcelas" entre compras diferentes do cartão).
       const k = `${text(t["origem_id"])}|${text(t["descricao"]).replace(/\s*\(\d+\/\d+\)\s*$/, "").trim().toLowerCase()}`;
@@ -291,7 +317,7 @@ function Titulos({ tipo, todos, loading, perms }: { tipo: TipoTitulo; todos: Row
       l.forEach((t, i) => mapa.set(text(rowId(t)), `${i + 1}/${l.length}`));
     }
     return mapa;
-  }, [doTipo]);
+  }, [doTipo, serieRows]);
   // Base = todos os filtros menos a situação (os cards do topo não zeram ao filtrar uma situação).
   const base = useMemo(
     () =>
