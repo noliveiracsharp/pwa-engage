@@ -482,12 +482,8 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack, onModoMeet }
   const meuNome = String(pick(usuario, ["nome"], "Colaborador"));
   const [chamada, setChamada] = useState<Chamada | null>(null);
   const [chamadaMin, setChamadaMin] = useState(false);
-  const [chatNaChamada, setChatNaChamada] = useState(true);
-  // Informa o painel do chat para acoplar à direita da chamada (estilo Google Meet).
-  useEffect(() => {
-    onModoMeet?.(!chamada || chamadaMin ? "off" : chatNaChamada ? "chat" : "oculto");
-  }, [chamada, chamadaMin, chatNaChamada, onModoMeet]);
-  useEffect(() => () => onModoMeet?.("off"), [onModoMeet]);
+  // Chamada abre em janela flutuante estável; o chat continua visível ao lado.
+  void onModoMeet;
   const endRef = useRef<HTMLDivElement>(null);
   const key = ["chat-interno", canalId];
   const nomes = useMemo(() => new Map(usuarios.map((u) => [String(u["id"]), String(pick(u, ["nome"], "Usuário"))])), [usuarios]);
@@ -715,7 +711,7 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack, onModoMeet }
         </DialogContent>
       </Dialog>
       {chamada && createPortal(<ChamadaFlutuante chamada={chamada} nome={meuNome} titulo={`Chamada · ${nome}`} onEncerrar={() => void encerrar()}
-        meet min={chamadaMin} onMin={setChamadaMin} chatAberto={chatNaChamada} onChat={() => setChatNaChamada((v) => !v)} />, document.body)}
+        min={chamadaMin} onMin={setChamadaMin} />, document.body)}
 
       <ScrollArea className="min-h-0 min-w-0 flex-1 [&_[data-radix-scroll-area-viewport]>div]:!block [&_[data-radix-scroll-area-viewport]>div]:!min-w-0">
         <div className="min-w-0 space-y-2 p-3">
