@@ -91,7 +91,7 @@ export function ChatInterno({ sidebarOpen, onAbrir }: { sidebarOpen: boolean; on
     setDockEl(document.getElementById(`chat-dock-${lado}`));
   }, [expanded, lado]);
   const [modoMeet, setModoMeet] = useState<"off" | "chat" | "oculto">("off");
-  const acoplado = expanded && desktop && !!dockEl && modoMeet === "off";
+  const acoplado = expanded && desktop && !!dockEl;
   const [busca, setBusca] = useState("");
   const [sel, setSel] = useState<Sel | null>(null);
   const [criando, setCriando] = useState(false);
@@ -294,7 +294,7 @@ export function ChatInterno({ sidebarOpen, onAbrir }: { sidebarOpen: boolean; on
           ref={painelRef}
           className={cn(
             modoMeet === "chat"
-              ? "fixed inset-y-0 right-0 z-[60] flex w-full flex-col overflow-hidden border-l border-border bg-popover text-popover-foreground shadow-2xl md:w-[380px] max-md:top-1/2"
+              ? "fixed inset-y-0 right-0 z-[60] flex w-full flex-col overflow-hidden border-l border-border bg-popover text-popover-foreground shadow-2xl md:w-[380px] max-md:top-[55%]"
               : modoMeet === "oculto"
                 ? "hidden"
                 : acoplado
@@ -482,8 +482,12 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack, onModoMeet }
   const meuNome = String(pick(usuario, ["nome"], "Colaborador"));
   const [chamada, setChamada] = useState<Chamada | null>(null);
   const [chamadaMin, setChamadaMin] = useState(false);
-  // Chamada abre em janela flutuante estável; o chat continua visível ao lado.
-  void onModoMeet;
+  const [chatNaChamada, setChatNaChamada] = useState(true);
+  // Estilo Google Meet: chamada em tela cheia e chat acoplado à direita.
+  useEffect(() => {
+    onModoMeet?.(!chamada || chamadaMin ? "off" : chatNaChamada ? "chat" : "oculto");
+  }, [chamada, chamadaMin, chatNaChamada, onModoMeet]);
+  useEffect(() => () => onModoMeet?.("off"), [onModoMeet]);
   const endRef = useRef<HTMLDivElement>(null);
   const key = ["chat-interno", canalId];
   const nomes = useMemo(() => new Map(usuarios.map((u) => [String(u["id"]), String(pick(u, ["nome"], "Usuário"))])), [usuarios]);
@@ -711,7 +715,7 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack, onModoMeet }
         </DialogContent>
       </Dialog>
       {chamada && createPortal(<ChamadaFlutuante chamada={chamada} nome={meuNome} titulo={`Chamada · ${nome}`} onEncerrar={() => void encerrar()}
-        min={chamadaMin} onMin={setChamadaMin} />, document.body)}
+        meet min={chamadaMin} onMin={setChamadaMin} chatAberto={chatNaChamada} onChat={() => setChatNaChamada((v) => !v)} />, document.body)}
 
       <ScrollArea className="min-h-0 min-w-0 flex-1 [&_[data-radix-scroll-area-viewport]>div]:!block [&_[data-radix-scroll-area-viewport]>div]:!min-w-0">
         <div className="min-w-0 space-y-2 p-3">
