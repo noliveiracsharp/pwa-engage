@@ -2,7 +2,7 @@ import { comprimirImagem } from "@/lib/image-compress";
 import { CitacaoNoBalao, FaixaResposta, lerCitacao, type Citacao } from "@/components/chat/Citacao";
 import { UploadInfo } from "@/components/ui/upload-info";
 import { Linkify } from "@/components/ui/linkify";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Check, CheckCheck, ArrowLeftRight, ArrowLeft, Maximize2, MessageSquare, Minimize2, Paperclip, Search, Send, Users, X, FileText, Loader2, Phone, Video, Mic, ClipboardList, Trash2, CornerUpLeft } from "lucide-react";
@@ -26,6 +26,31 @@ import { tocarSom } from "@/lib/som-notificacao";
 import { adicionarAviso, EVT_ABRIR_CHAT } from "@/lib/avisos";
 import { TarefasChat, NovaTarefa } from "@/components/chat-interno/TarefasChat";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
+/** Chamada ativa fica fora dos componentes: fechar/reorganizar o chat não derruba a ligação. */
+type ChamadaAtiva = Chamada & { canalId: string; empresaId: string; me: string; nome: string; titulo: string };
+type EstadoChamada = { c: ChamadaAtiva | null; min: boolean; chat: boolean };
+let estadoChamada: EstadoChamada = { c: null, min: false, chat: true };
+const ouvintesChamada = new Set<() => void>();
+function setEstadoChamada(p: Partial<EstadoChamada>) {
+  estadoChamada = { ...estadoChamada, ...p };
+  ouvintesChamada.forEach((f) => f());
+}
+function useChamadaAtiva() {
+  return useSyncExternalStore((f) => { ouvintesChamada.add(f); return () => { ouvintesChamada.delete(f); }; }, () => estadoChamada, () => estadoChamada);
+}
+async function encerrarChamadaAtiva() {
+  const c = estadoChamada.c;
+  setEstadoChamada({ c: null, min: false });
+  if (!c || !c.canalId) return;
+  const fim = Date.now();
+  const h = (t: number) => new Date(t).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  await supabase.from(TABLE).insert({
+    empresa_id: c.empresaId, canal_id: c.canalId, remetente_id: c.me,
+    mensagem: `${ENCERRADA}\nInício: ${h(c.inicio)} · Término: ${h(fim)} · Duração: ${duracao(fim - c.inicio)}`,
+    anexos: [], lida_por: [c.me],
+  });
+}
 
 /** Canal da conversa aberta no momento (para não notificar o que já está na tela). */
 let canalAberto = "";
@@ -90,7 +115,9 @@ export function ChatInterno({ sidebarOpen, onAbrir }: { sidebarOpen: boolean; on
     localStorage.setItem("chat-dock", expanded ? lado : "");
     setDockEl(document.getElementById(`chat-dock-${lado}`));
   }, [expanded, lado]);
-  const [modoMeet, setModoMeet] = useState<"off" | "chat" | "oculto">("off");
+  const ativa = useChamadaAtiva();
+  const modoMeet: "off" | "chat" | "oculto" = !ativa.c || ativa.min ? "off" : ativa.chat && open ? "chat" : "oculto";
+  const setModoMeet = (_: "off" | "chat" | "oculto") => {};
   const acoplado = expanded && desktop && !!dockEl;
   const [busca, setBusca] = useState("");
   const [sel, setSel] = useState<Sel | null>(null);
@@ -289,6 +316,9 @@ export function ChatInterno({ sidebarOpen, onAbrir }: { sidebarOpen: boolean; on
         {!sidebarOpen && <TooltipContent side="right">Chat da equipe</TooltipContent>}
       </Tooltip>
 
+      {ativa.c && createPortal(<ChamadaFlutuante chamada={ativa.c} nome={ativa.c.nome} titulo={ativa.c.titulo} onEncerrar={() => void encerrarChamadaAtiva()}
+        meet min={ativa.min} onMin={(v) => setEstadoChamada({ min: v })} chatAberto={ativa.chat && open}
+        onChat={() => { if (!open) { setOpen(true); setEstadoChamada({ chat: true }); } else setEstadoChamada({ chat: !ativa.chat }); }} />, document.body)}
       {open && createPortal(
         <div
           ref={painelRef}
@@ -480,14 +510,8 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack, onModoMeet }
   const fileRef = useRef<HTMLInputElement>(null);
   const { usuario } = useAuth();
   const meuNome = String(pick(usuario, ["nome"], "Colaborador"));
-  const [chamada, setChamada] = useState<Chamada | null>(null);
-  const [chamadaMin, setChamadaMin] = useState(false);
-  const [chatNaChamada, setChatNaChamada] = useState(true);
-  // Estilo Google Meet: chamada em tela cheia e chat acoplado à direita.
-  useEffect(() => {
-    onModoMeet?.(!chamada || chamadaMin ? "off" : chatNaChamada ? "chat" : "oculto");
-  }, [chamada, chamadaMin, chatNaChamada, onModoMeet]);
-  useEffect(() => () => onModoMeet?.("off"), [onModoMeet]);
+  const chamada = useChamadaAtiva().c;
+  void onModoMeet;
   const endRef = useRef<HTMLDivElement>(null);
   const key = ["chat-interno", canalId];
   const nomes = useMemo(() => new Map(usuarios.map((u) => [String(u["id"]), String(pick(u, ["nome"], "Usuário"))])), [usuarios]);
@@ -642,7 +666,7 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack, onModoMeet }
   const iniciarChamada = async (video: boolean) => {
     if (!canalId || chamada) return;
     const sala = novaSala();
-    setChamada({ sala, video, inicio: Date.now(), iniciador: meuNome });
+    setEstadoChamada({ c: { sala, video, inicio: Date.now(), iniciador: meuNome, canalId, empresaId, me, nome: meuNome, titulo: `Chamada · ${nome}` }, min: false, chat: true });
     await supabase.from(TABLE).insert({
       empresa_id: empresaId, canal_id: canalId, remetente_id: me,
       mensagem: `${CONVITE}${sala}|${video ? 1 : 0}`, anexos: [], lida_por: [me],
@@ -652,22 +676,10 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack, onModoMeet }
 
   const entrar = (sala: string, video: boolean) => {
     if (chamada) return;
-    setChamada({ sala, video, inicio: Date.now() });
+    setEstadoChamada({ c: { sala, video, inicio: Date.now(), canalId, empresaId, me, nome: meuNome, titulo: `Chamada · ${nome}` }, min: false, chat: true });
   };
 
-  const encerrar = async () => {
-    const c = chamada;
-    setChamada(null);
-    if (!c || !canalId) return;
-    const fim = Date.now();
-    const h = (t: number) => new Date(t).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-    await supabase.from(TABLE).insert({
-      empresa_id: empresaId, canal_id: canalId, remetente_id: me,
-      mensagem: `${ENCERRADA}\nInício: ${h(c.inicio)} · Término: ${h(fim)} · Duração: ${duracao(fim - c.inicio)}`,
-      anexos: [], lida_por: [me],
-    });
-    void qc.invalidateQueries({ queryKey: key });
-  };
+  const encerrar = async () => { await encerrarChamadaAtiva(); void qc.invalidateQueries({ queryKey: key }); };
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden animate-in fade-in slide-in-from-right-4">
@@ -714,8 +726,7 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack, onModoMeet }
           )}
         </DialogContent>
       </Dialog>
-      {chamada && createPortal(<ChamadaFlutuante chamada={chamada} nome={meuNome} titulo={`Chamada · ${nome}`} onEncerrar={() => void encerrar()}
-        meet min={chamadaMin} onMin={setChamadaMin} chatAberto={chatNaChamada} onChat={() => setChatNaChamada((v) => !v)} />, document.body)}
+
 
       <ScrollArea className="min-h-0 min-w-0 flex-1 [&_[data-radix-scroll-area-viewport]>div]:!block [&_[data-radix-scroll-area-viewport]>div]:!min-w-0">
         <div className="min-w-0 space-y-2 p-3">
@@ -738,9 +749,9 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack, onModoMeet }
                       <span className="ml-auto text-[10px] text-muted-foreground">{hora(m["criado_em"])}</span>
                     </div>
                     {!convite && <p className="mt-1 text-xs text-muted-foreground">{txt.split("\n").slice(1).join(" ")}</p>}
-                    {convite && !mine && (
+                    {convite && (
                       <Button size="sm" className="mt-2 w-full" disabled={!!chamada} onClick={() => entrar(sala, video)}>
-                        Entrar na chamada
+                        {chamada?.sala === sala ? "Você está nesta chamada" : mine ? "Voltar à chamada" : "Entrar na chamada"}
                       </Button>
                     )}
                   </div>
