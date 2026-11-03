@@ -10,8 +10,12 @@ const GLOBAL_TABLES = new Set(["empresas", "funcoes", "menu", "planos", "modulos
 /** Tabelas de catálogo que a matriz pode compartilhar com as filiais (só leitura nas filiais). */
 const CATALOG_TABLES = new Set(["itens", "marcas", "categorias", "unidades", "centro_custo"]);
 
+/** Filtro aplicado no banco (ex.: período). `key` entra na chave do cache. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type FiltroBanco = { key: string; apply: (q: any) => any };
+
 /** Reads every row of a table (schema-tolerant: no column names assumed). */
-export function useTableRows(table: string, enabled = true, orderBy?: string) {
+export function useTableRows(table: string, enabled = true, orderBy?: string, filtro?: FiltroBanco) {
   const { isMaster, empresa, usuario, loading } = useAuth();
   // Master: empresa do "Contexto da Empresa". Demais perfis: sempre a empresa do próprio usuário.
   const ownEmpresa = usuario ? text(pick(usuario, ["empresa_id", "id_empresa", "empresaid"])) : "";
@@ -21,8 +25,9 @@ export function useTableRows(table: string, enabled = true, orderBy?: string) {
   const ctx = !scoped ? "" : isMaster ? (empresa ? String(rowId(empresa) ?? "") : "") : ownEmpresa || "__sem_empresa__";
   // Não-Master só consulta depois de saber a empresa, para nunca exibir dados de outras.
   const ready = isMaster || !scoped || (!loading && !!usuario);
+  const chave = ctx ? ["table", table, "ctx", ctx] : ["table", table];
   return useQuery({
-    queryKey: ctx ? ["table", table, "ctx", ctx] : ["table", table],
+    queryKey: filtro ? [...chave, "f", filtro.key] : chave,
     enabled: enabled && ready,
     queryFn: async (): Promise<Row[]> => {
       // Busca em lotes de 1000 até trazer tudo (o banco corta cada resposta em 1000 linhas).
@@ -30,6 +35,7 @@ export function useTableRows(table: string, enabled = true, orderBy?: string) {
       const base = () => {
         let q = supabase.from(table).select("*");
         if (table === "perfil") q = q.gt("ordem", 0) as typeof q;
+        if (filtro) q = filtro.apply(q) as typeof q;
         if (orderBy) q = q.order(orderBy, { ascending: true }) as typeof q;
         return q;
       };
