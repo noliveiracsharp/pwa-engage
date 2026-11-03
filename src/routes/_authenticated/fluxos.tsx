@@ -845,6 +845,13 @@ function Propriedades({ no, atualizar, quadros, etapas, campos, fluxos }: {
               </SelectContent>
             </Select>
           </Campo>
+          <Campo label="Atalho de entrada direta (#)" ajuda="Se a 1ª mensagem do cliente tiver esta #tag, o robô pula o início e começa neste bloco. Separe várias por vírgula. Vazio: usa o nome do quadro.">
+            <Input
+              value={s("atalho")}
+              placeholder={`#${tagDoKanban(pick<string>(quadros.find((q) => String(q["id"]) === s("quadro_id")) ?? {}, ["nome", "descricao", "titulo"]) ?? "") || "oferta"}`}
+              onChange={(e) => atualizar({ atalho: e.target.value })}
+            />
+          </Campo>
         </>
       );
     }
