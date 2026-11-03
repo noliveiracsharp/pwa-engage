@@ -70,7 +70,7 @@ export function QrComercialDialog({ instancia, onClose }: { instancia: Row | nul
                 : <span className="text-center text-xs text-muted-foreground">Escolha o Kanban para gerar</span>}
             </div>
             <p className="text-xs text-muted-foreground">
-              Quem ler este QR Code pula o robô e a conversa já entra como atendimento humano no Kanban escolhido.
+              Quem ler este QR Code entra direto no Kanban escolhido, pulando o menu inicial e seguindo o fluxo configurado.
             </p>
             <div className="flex justify-end gap-2">
               <Button variant="outline" disabled={!link} onClick={() => { void navigator.clipboard.writeText(link); toast.success("Link copiado."); }}>

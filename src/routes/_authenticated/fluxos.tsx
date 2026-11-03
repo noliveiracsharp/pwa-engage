@@ -11,7 +11,7 @@ import "@xyflow/react/dist/style.css";
 import {
   Bot, Clock, GitBranch, Hourglass, KanbanSquare, ListOrdered, MessageSquare,
   MessageCircleQuestion, PhoneForwarded, Plus, Save, Trash2, UserPlus, Workflow, Zap, PenLine, CircleStop, Globe, Code2, X, FlaskConical, Upload, Copy, Play,
-  Split, FileText,
+  Split, FileText, PanelLeftClose, PanelLeftOpen, Search,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -355,6 +355,13 @@ function FluxosPage() {
 
   const categorias = useMemo(() => Array.from(new Set(CATALOGO.map((c) => c.categoria))), []);
   const [testando, setTestando] = useState(false);
+  const [painelAberto, setPainelAberto] = useState(true);
+  const [buscaBloco, setBuscaBloco] = useState("");
+  const normBusca = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const blocosFiltrados = useMemo(() => {
+    const q = normBusca(buscaBloco.trim());
+    return CATALOGO.filter((c) => c.tipo !== "gatilho" && (!q || normBusca(`${c.nome} ${c.descricao} ${c.categoria}`).includes(q)));
+  }, [buscaBloco]);
   const [trilhaTeste, setTrilhaTeste] = useState<{ visitados: string[]; atual: string | null; erro?: { id: string; msg: string } | null }>({ visitados: [], atual: null });
   const [entradasTeste, setEntradasTeste] = useState<Record<string, Record<string, string>>>({});
   const nosVisiveis = useMemo(() => {
@@ -405,11 +412,28 @@ function FluxosPage() {
         </div>
       ) : (
         <div className="flex min-h-0 flex-1 gap-3">
+          {!painelAberto ? (
+            <aside className="hidden shrink-0 md:block">
+              <Button variant="outline" size="icon" title="Abrir painel de blocos" aria-label="Abrir painel de blocos" onClick={() => setPainelAberto(true)}>
+                <PanelLeftOpen className="size-4" />
+              </Button>
+            </aside>
+          ) : (
           <aside className="hidden w-56 shrink-0 space-y-3 overflow-y-auto rounded-lg border bg-card p-2 md:block">
-            {categorias.map((cat) => (
+            <div className="flex items-center gap-1">
+              <div className="relative flex-1">
+                <Search className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                <Input value={buscaBloco} onChange={(e) => setBuscaBloco(e.target.value)} placeholder="Buscar bloco…" className="h-8 pl-7 text-sm" />
+              </div>
+              <Button variant="ghost" size="icon" className="size-8 shrink-0" title="Recolher painel" aria-label="Recolher painel" onClick={() => setPainelAberto(false)}>
+                <PanelLeftClose className="size-4" />
+              </Button>
+            </div>
+            {blocosFiltrados.length === 0 && <p className="px-1 text-xs text-muted-foreground">Nenhum bloco encontrado.</p>}
+            {categorias.filter((cat) => blocosFiltrados.some((c) => c.categoria === cat)).map((cat) => (
               <div key={cat}>
                 <p className="px-1 pb-1 text-[11px] font-semibold uppercase text-muted-foreground">{cat}</p>
-                {CATALOGO.filter((c) => c.categoria === cat && c.tipo !== "gatilho").map((c) => {
+                {blocosFiltrados.filter((c) => c.categoria === cat).map((c) => {
                   const Icone = ICONES[c.tipo];
                   return (
                     <button
@@ -429,6 +453,7 @@ function FluxosPage() {
               </div>
             ))}
           </aside>
+          )}
           <div className="flex min-w-0 flex-1 flex-col gap-2">
           <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden rounded-lg border bg-muted/30" onDragOver={(e) => e.preventDefault()} onDrop={onDrop}>
             {fluxo ? (
