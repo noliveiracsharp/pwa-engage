@@ -578,7 +578,7 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack, onModoMeet }
     if (fileRef.current) fileRef.current.value = "";
   };
 
-  const colar = (e: import("react").ClipboardEvent<HTMLInputElement>) => {
+  const colar = (e: import("react").ClipboardEvent<HTMLTextAreaElement>) => {
     const item = Array.from(e.clipboardData.items).find((i) => i.type.startsWith("image/"));
     const f = item?.getAsFile();
     if (!f) return;
