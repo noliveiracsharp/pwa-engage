@@ -5,7 +5,8 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { pick, type Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
-import { adicionarEvento, lerEventos, PRIORIDADES, textoRemarcacao } from "@/lib/planner";
+import { adicionarEvento, lerEventos, PRIORIDADES, textoRemarcacao, progressoTarefaPatch } from "@/lib/planner";
+import { ProgressoTarefa } from "@/components/chat-interno/ProgressoTarefa";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,7 +29,7 @@ export async function registrarEvento(id: string, autorId: string, texto: string
 
 export function TarefaDetalhe({ id, me, usuarios, onFechar, onAvisar }: {
   id: string | null; me: string; usuarios: Row[]; onFechar: () => void;
-  onAvisar?: (usuarioId: string, texto: string) => Promise<void>;
+  onAvisar?: ((usuarioId: string, texto: string) => Promise<void>) | undefined;
 }) {
   const qc = useQueryClient();
   const nomes = useMemo(() => new Map(usuarios.map((u) => [String(u["id"]), String(pick(u, ["nome"], "Usuário"))])), [usuarios]);
@@ -87,6 +88,21 @@ export function TarefaDetalhe({ id, me, usuarios, onFechar, onAvisar }: {
     onFechar();
   };
 
+  const progredir = async (pct: number) => {
+    if (!t) return;
+    const jaConcluida = String(t["status"]) === "concluida";
+    setSalvando(true);
+    const r = await tb().update(progressoTarefaPatch(pct) as never).eq("id", String(t["id"]));
+    setSalvando(false);
+    if (r.error) { toast.error(r.error.message.includes("progresso") ? "Rode o script atendeai-tarefas-progresso.sql no banco." : r.error.message); return; }
+    await registrarEvento(String(t["id"]), me, pct >= 100 ? "🏁 Tarefa concluída (100%)." : `Progresso atualizado para ${pct}%.`);
+    const criador = String(t["criado_por"]);
+    if (pct >= 100 && !jaConcluida && criador !== me && onAvisar) {
+      await onAvisar(criador, `🏁 ${nomes.get(me) ?? "O responsável"} concluiu a tarefa "${String(t["titulo"])}" (100%).`).catch(() => undefined);
+    }
+    recarregar();
+  };
+
   const comentar = async () => {
     if (!t || !comentario.trim()) return;
     setSalvando(true);
@@ -119,6 +135,12 @@ export function TarefaDetalhe({ id, me, usuarios, onFechar, onAvisar }: {
               <div className="space-y-1"><Label>Planejada para (vazio = Backlog)</Label><Input disabled={!editavel} type="date" value={v("data_planejada")} onChange={(e) => set("data_planejada", e.target.value)} /></div>
               <div className="space-y-1"><Label>Prazo de entrega</Label><Input disabled={!editavel} type="date" value={v("data_entrega")} onChange={(e) => set("data_entrega", e.target.value)} /></div>
             </div>
+            {String(t["status"]) !== "aguardando" && String(t["status"]) !== "recusada" && (
+              <div className="mt-3 space-y-1">
+                <Label>Conclusão</Label>
+                <ProgressoTarefa valor={String(t["status"]) === "concluida" ? 100 : Number(t["progresso"] ?? 0) || 0} disabled={!editavel || salvando} onChange={(p) => void progredir(p)} />
+              </div>
+            )}
             <p className="mt-2 text-xs text-muted-foreground">De {nome(String(t["criado_por"]))} para {nome(String(t["responsavel_id"]))} • Remarcações: {Number(t["remarcacoes"] ?? 0)}</p>
 
             <section className="mt-6">

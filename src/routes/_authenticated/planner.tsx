@@ -61,7 +61,7 @@ function PlannerPagina() {
   if (!me) return null;
   return (
     <div className="p-4">
-      <PlannerPainel embutido onNovaTarefa={(d) => setCriando(d)} me={me} empresaId={empresaId} usuarios={usuarios}
+      <PlannerPainel embutido onAvisar={avisar} onNovaTarefa={(d) => setCriando(d)} me={me} empresaId={empresaId} usuarios={usuarios}
         acoes={<>
           <Button size="sm" variant={pendentes ? "default" : "outline"} onClick={() => setAceites(true)}>
             <Inbox className="mr-1 h-4 w-4" /> Aguardando aceite{pendentes ? ` (${pendentes})` : ""}
