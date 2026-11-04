@@ -39,3 +39,12 @@ describe("controller", () => {
     expect(diagnosticar([], 1000, () => "", H).alertas[0]?.nivel).toBe("ok");
   });
 });
+
+import { burnRate as br2 } from "./controller";
+describe("data-base do Controller", () => {
+  it("ignora meses antes do início e divide só pelos meses válidos", () => {
+    const t = [{ tipo: "pagar", status: "pago", valor: 300, pago_em: "2026-10-10" }];
+    expect(br2(t, "2026-11-04", 3, "2026-10")).toBe(300);
+    expect(br2(t, "2026-11-04", 3)).toBe(100);
+  });
+});
