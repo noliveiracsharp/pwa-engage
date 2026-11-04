@@ -72,6 +72,7 @@ function RelatorioEnvios() {
 
   const q = useQuery({
     queryKey: ["relatorio-envios", empresaId, desde, ate],
+    retry: 1,
     queryFn: async () => {
       const [cobr, ofertas, msgs] = await Promise.all([
         ler("cobranca_envios", "enviado_em", empresaId, desde, ate),

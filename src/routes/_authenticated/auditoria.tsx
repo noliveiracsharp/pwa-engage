@@ -44,6 +44,7 @@ function AuditoriaPage() {
 
   const { data = [], isLoading, error } = useQuery({
     queryKey: ["auditoria", "lista", de, ate, tabela, operacao],
+    retry: 1,
     queryFn: async () => {
       let q = db.from("auditoria_logs").select("*")
         .gte("criado_em", `${de}T00:00:00`).lte("criado_em", `${ate}T23:59:59.999`)
