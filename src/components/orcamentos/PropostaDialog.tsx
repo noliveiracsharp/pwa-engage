@@ -56,6 +56,7 @@ export function PropostaDialog(props: Props) {
   const [blocos, setBlocos] = useState<Bloco[]>([]);
   const [salvando, setSalvando] = useState(false);
   const [envioOpen, setEnvioOpen] = useState(false);
+  const [canalEnvio, setCanalEnvio] = useState<"whatsapp" | "email">("whatsapp");
   const empresaId = String(orcamento?.["empresa_id"] ?? rowId(empresa ?? {}) ?? "");
   const { data: modelosContrato, isFetched: modelosProntos } = useModelosContrato(empresaId, open);
 
@@ -162,11 +163,15 @@ export function PropostaDialog(props: Props) {
     const { error } = await supabase.from("orcamentos_templates" as never).insert({
       empresa_id: empresaId, nome: "Padrão da empresa", tipo: TIPO_MODELO_PADRAO, conteudo: JSON.stringify(blocos),
     } as never);
-    if (error) return void toast.error("Erro ao definir padrão", { description: error.message });
+    if (error) {
+      const msg = /tipo_check/i.test(error.message)
+        ? "Rode o script atendeai-oferta-padrao-empresa.sql no banco para liberar o modelo padrão."
+        : error.message;
+      return void toast.error("Erro ao definir padrão", { description: msg });
+    }
     toast.success("Modelo padrão da empresa salvo. Novas Ofertas já usarão esta configuração.");
   };
 
-  const [canalEnvio, setCanalEnvio] = useState<"whatsapp" | "email">("whatsapp");
   const whatsapp = () => { setCanalEnvio("whatsapp"); setEnvioOpen(true); };
   const porEmail = () => { setCanalEnvio("email"); setEnvioOpen(true); };
 
