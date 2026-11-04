@@ -42,7 +42,7 @@ export function PeriodoNavegavel({ label = "Vencimento", value, onChange }: { la
                   {rotuloPeriodo(value)}<ChevronDown className="ml-1 h-4 w-4 opacity-60" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="center">
+              <DropdownMenuContent align="center" onCloseAutoFocus={(e) => e.preventDefault()}>
                 {PRESETS_PERIODO.map((o) => (
                   <DropdownMenuItem key={o.value} className={cn(value.preset === o.value && "bg-accent font-medium")}
                     onSelect={() => (o.value === "personalizado" ? abrirPersonalizado() : onChange(periodoPreset(o.value)))}>
@@ -55,7 +55,10 @@ export function PeriodoNavegavel({ label = "Vencimento", value, onChange }: { la
               aria-label="Próximo período" onClick={() => onChange(navegarPeriodo(value, 1))}><ChevronRight className="h-4 w-4" /></Button>
           </div>
         </PopoverAnchor>
-        <PopoverContent align="start" className="w-auto p-0" aria-label="Período personalizado">
+        <PopoverContent align="start" className="w-auto p-0" aria-label="Período personalizado"
+          onOpenAutoFocus={(e) => { e.preventDefault(); setTimeout(() => document.getElementById("periodo-de")?.focus(), 0); }}
+          onFocusOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => { if (Date.now() - abertoEm.current < 400) e.preventDefault(); }}>
           <form onSubmit={(e) => { e.preventDefault(); aplicar(); }}>
             <div className="flex items-end gap-2 p-4">
               <div className="space-y-1">
