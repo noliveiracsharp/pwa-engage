@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Trash2, Check, CheckCircle2, FileText, Loader2, Maximize2, Paperclip, Plus, X } from "lucide-react";
+import { Trash2, Check, CheckCircle2, Download, FileText, HelpCircle, Loader2, Maximize2, Paperclip, Plus, X } from "lucide-react";
 import { PlannerPainel, ItemLinha, usePlannerItens } from "@/components/chat-interno/PlannerPainel";
-import { TarefaDetalhe } from "@/components/chat-interno/TarefaDetalhe";
+import { TarefaDetalhe, registrarEvento } from "@/components/chat-interno/TarefaDetalhe";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { diaDoItem, ordenar, PRIORIDADES, type Prioridade } from "@/lib/planner";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -93,6 +94,15 @@ export function TarefasChat({ me, empresaId, usuarios, onAvisar }: {
     if (criador !== me) await onAvisar(criador, aviso).catch(() => undefined);
   };
 
+  const perguntar = async (t: Row, pergunta: string) => {
+    const erro = await registrarEvento(String(t["id"]), me, `❓ Pediu mais informações: ${pergunta}`, "comentario");
+    if (erro) { toast.error(erro); return; }
+    toast.success("Pergunta enviada para quem delegou.");
+    void qc.invalidateQueries({ queryKey: key });
+    const criador = String(t["criado_por"]);
+    if (criador !== me) await onAvisar(criador, `❓ Pedido de mais informações na tarefa "${String(t["titulo"] ?? "")}": ${pergunta}`).catch(() => undefined);
+  };
+
   const apagarTarefa = async (id: string, titulo: string) => {
     const ok = await confirmar({ title: "Apagar tarefa?", description: `A tarefa "${titulo}" será apagada definitivamente.`, destructive: true });
     if (!ok) return;
@@ -135,7 +145,7 @@ export function TarefasChat({ me, empresaId, usuarios, onAvisar }: {
         <div className="space-y-2 px-3 pb-3">
           {isLoading && <Loader2 className="mx-auto my-6 h-5 w-5 animate-spin text-muted-foreground" />}
           {aba === "minhas" && lista.length > 0 && <p className="pt-1 text-[11px] font-semibold text-warning">Aguardando seu aceite</p>}
-          {lista.map((t) => <CardTarefa key={String(t["id"])} t={t} me={me} nome={nome} onAtualizar={atualizar} onApagar={apagarTarefa} />)}
+          {lista.map((t) => <CardTarefa key={String(t["id"])} t={t} me={me} nome={nome} onAtualizar={atualizar} onApagar={apagarTarefa} onPerguntar={perguntar} />)}
           {aba === "minhas" && doDia.map((i) => (
             <div key={i.id} className="flex items-center gap-1">
               <div className="min-w-0 flex-1"><ItemLinha i={i} nome={(id) => nome(id)} onCheck={(f) => void planner.concluir(i, f)} onAbrir={() => setAberta(i.id)} /></div>
@@ -158,12 +168,16 @@ export function TarefasChat({ me, empresaId, usuarios, onAvisar }: {
   );
 }
 
-function CardTarefa({ t, me, nome, onAtualizar, onApagar }: {
+function CardTarefa({ t, me, nome, onAtualizar, onApagar, onPerguntar }: {
   t: Row; me: string; nome: (id: unknown) => string; onApagar: (id: string, titulo: string) => Promise<void>;
   onAtualizar: (t: Row, patch: Record<string, unknown>, aviso: string) => Promise<void>;
+  onPerguntar: (t: Row, pergunta: string) => Promise<void>;
 }) {
-  const [recusando, setRecusando] = useState(false);
+  const [modo, setModo] = useState<null | "aceitar" | "info" | "recusar">(null);
   const [motivo, setMotivo] = useState("");
+  const [previsao, setPrevisao] = useState("");
+  const [duvida, setDuvida] = useState("");
+  const [imagem, setImagem] = useState<Anexo | null>(null);
   const st = STATUS[String(t["status"])] ?? STATUS["aguardando"]!;
   const souResp = String(t["responsavel_id"]) === me;
   const titulo = String(t["titulo"] ?? "");
@@ -189,25 +203,49 @@ function CardTarefa({ t, me, nome, onAtualizar, onApagar }: {
       {anexos.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-2">
           {anexos.map((a, i) => a.tipo === "imagem"
-            ? <a key={i} href={a.url} target="_blank" rel="noreferrer"><img src={a.url} alt={a.nome} className="h-12 w-12 rounded object-cover" /></a>
+            ? <button key={i} type="button" aria-label={`Ver imagem ${a.nome}`} onClick={() => setImagem(a)}><img src={a.url} alt={a.nome} className="h-12 w-12 rounded object-cover" /></button>
             : <a key={i} href={a.url} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-xs underline"><FileText className="h-3 w-3" />{a.nome}</a>)}
         </div>
       )}
       {t["status"] === "recusada" && t["motivo_recusa"] ? <p className="mt-2 rounded bg-destructive/10 p-2 text-xs text-destructive">Motivo: {String(t["motivo_recusa"])}</p> : null}
 
-      {souResp && t["status"] === "aguardando" && !recusando && (
-        <div className="mt-3 flex gap-2">
-          <Button size="sm" className="flex-1" onClick={() => void onAtualizar(t, { status: "andamento", respondido_em: new Date().toISOString() }, `✅ Aceitei a tarefa "${titulo}".`)}>
+      {souResp && t["status"] === "aguardando" && modo === null && (
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          <Button size="sm" onClick={() => { setPrevisao(String(t["data_entrega"] ?? "").slice(0, 10)); setModo("aceitar"); }}>
             <Check className="mr-1 h-4 w-4" /> Aceitar
           </Button>
-          <Button size="sm" variant="outline" className="flex-1" onClick={() => setRecusando(true)}><X className="mr-1 h-4 w-4" /> Recusar</Button>
+          <Button size="sm" variant="outline" onClick={() => setModo("info")}><HelpCircle className="mr-1 h-4 w-4" /> Pedir info</Button>
+          <Button size="sm" variant="outline" onClick={() => setModo("recusar")}><X className="mr-1 h-4 w-4" /> Recusar</Button>
         </div>
       )}
-      {recusando && (
+      {modo === "aceitar" && (
+        <div className="mt-3 space-y-2">
+          <Label htmlFor={`prev-${String(t["id"])}`}>Quando você vai entregar?</Label>
+          <Input id={`prev-${String(t["id"])}`} type="date" min={hoje()} value={previsao} onChange={(e) => setPrevisao(e.target.value)} />
+          <div className="flex justify-end gap-2">
+            <Button size="sm" variant="outline" onClick={() => setModo(null)}>Cancelar</Button>
+            <Button size="sm" disabled={!previsao} onClick={() => void onAtualizar(t, { status: "andamento", data_entrega: previsao, respondido_em: new Date().toISOString() }, `✅ Aceitei a tarefa "${titulo}". Previsão de entrega: ${dataBR(previsao)}.`).then(() => setModo(null))}>
+              Confirmar aceite
+            </Button>
+          </div>
+        </div>
+      )}
+      {modo === "info" && (
+        <div className="mt-3 space-y-2">
+          <Textarea value={duvida} onChange={(e) => setDuvida(e.target.value)} placeholder="Quais informações você precisa para executar a tarefa?" rows={2} aria-label="Informações necessárias" />
+          <div className="flex justify-end gap-2">
+            <Button size="sm" variant="outline" onClick={() => setModo(null)}>Cancelar</Button>
+            <Button size="sm" disabled={duvida.trim().length < 3} onClick={() => void onPerguntar(t, duvida.trim()).then(() => { setDuvida(""); setModo(null); })}>
+              Enviar pergunta
+            </Button>
+          </div>
+        </div>
+      )}
+      {modo === "recusar" && (
         <div className="mt-3 space-y-2">
           <Textarea value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="Por que você está recusando? (obrigatório)" rows={2} />
           <div className="flex justify-end gap-2">
-            <Button size="sm" variant="outline" onClick={() => setRecusando(false)}>Cancelar</Button>
+            <Button size="sm" variant="outline" onClick={() => setModo(null)}>Cancelar</Button>
             <Button size="sm" variant="destructive" disabled={motivo.trim().length < 3} onClick={() => void onAtualizar(t, { status: "recusada", motivo_recusa: motivo.trim(), respondido_em: new Date().toISOString() }, `❌ Recusei a tarefa "${titulo}". Motivo: ${motivo.trim()}`)}>
               Confirmar recusa
             </Button>
@@ -219,6 +257,13 @@ function CardTarefa({ t, me, nome, onAtualizar, onApagar }: {
           <CheckCircle2 className="mr-1 h-4 w-4" /> Marcar como concluída
         </Button>
       )}
+      <Dialog open={!!imagem} onOpenChange={(o) => { if (!o) setImagem(null); }}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader><DialogTitle className="truncate pr-6">{imagem?.nome}</DialogTitle></DialogHeader>
+          {imagem && <img src={imagem.url} alt={imagem.nome} className="max-h-[75vh] w-full rounded object-contain" />}
+          {imagem && <a href={imagem.url} download={imagem.nome} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 self-end text-sm text-primary underline"><Download className="h-4 w-4" /> Baixar</a>}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
