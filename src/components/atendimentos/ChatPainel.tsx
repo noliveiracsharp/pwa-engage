@@ -60,13 +60,28 @@ type Props = {
   onVoltar: () => void;
 };
 
+const RASCUNHOS = new Map<string, string>();
+
 export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, notas, painelAberto, onTogglePainel, onVoltar }: Props) {
   const qc = useQueryClient();
   const { usuarioId, empresaId } = useAudit();
   const id = text(rowId(atendimento));
   const { data: colsMsg } = useCols("atendimentos_mensagem");
   const { data: colsAt } = useCols("atendimentos");
-  const [texto, setTexto] = useState("");
+  const [texto, setTextoBruto] = useState(() => RASCUNHOS.get(id) ?? "");
+  // Rascunho isolado por conversa: trocar de atendimento nunca leva o texto para outro cliente.
+  const idRef = useRef(id);
+  const setTexto = (v: string | ((t: string) => string)) =>
+    setTextoBruto((atual) => {
+      const novo = typeof v === "function" ? v(atual) : v;
+      if (novo) RASCUNHOS.set(idRef.current, novo); else RASCUNHOS.delete(idRef.current);
+      return novo;
+    });
+  useEffect(() => {
+    if (idRef.current === id) return;
+    idRef.current = id;
+    setTextoBruto(RASCUNHOS.get(id) ?? "");
+  }, [id]);
   const [respondendo, setRespondendo] = useState<Citacao | null>(null);
   const [interna, setInterna] = useState(false);
   const [enviando, setEnviando] = useState(false);
@@ -631,6 +646,20 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
           <Textarea
             value={texto}
             onChange={(e) => setTexto(e.target.value)}
+            onPaste={(e) => {
+              const arquivos = Array.from(e.clipboardData.items)
+                .filter((it) => it.kind === "file" && it.type.startsWith("image/"))
+                .map((it) => it.getAsFile())
+                .filter((f): f is File => !!f);
+              if (!arquivos.length || enviando) return;
+              e.preventDefault();
+              void (async () => {
+                for (const f of arquivos) {
+                  const nome = f.name && f.name !== "image.png" ? f.name : `imagem-colada-${Date.now()}.${f.type.split("/")[1] || "png"}`;
+                  await anexar(new File([f], nome, { type: f.type }));
+                }
+              })();
+            }}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
