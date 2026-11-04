@@ -18,6 +18,14 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
           (!props.id && !props["aria-labelledby"] && props.placeholder ? props.placeholder : undefined)
         }
         {...props}
+        onClick={(e) => {
+          props.onClick?.(e);
+          // Campos de data abrem o calendário ao clicar em qualquer ponto do campo.
+          const el = e.currentTarget;
+          if (!e.defaultPrevented && !el.disabled && !el.readOnly && /^(date|datetime-local|month|time)$/.test(el.type)) {
+            try { el.showPicker?.(); } catch { /* navegador sem suporte */ }
+          }
+        }}
       />
     );
   },

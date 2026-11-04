@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { TextoRico } from "@/components/ui/texto-rico";
+import { htmlParaTexto } from "@/lib/html-texto";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { confirmar } from "@/components/layout/DialogoGlobal";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -178,7 +180,7 @@ function CardTarefa({ t, me, nome, onAtualizar, onApagar }: {
           <Button size="icon" variant="ghost" className="-my-1 h-6 w-6 shrink-0 text-destructive" title="Apagar tarefa" aria-label="Apagar tarefa" onClick={() => void onApagar(String(t["id"]), titulo)}><Trash2 className="h-3.5 w-3.5" /></Button>
         )}
       </div>
-      {t["descricao"] ? <p className="mt-1 whitespace-pre-wrap text-xs text-muted-foreground">{String(t["descricao"])}</p> : null}
+      {t["descricao"] ? <p className="mt-1 whitespace-pre-wrap text-xs text-muted-foreground">{htmlParaTexto(String(t["descricao"]))}</p> : null}
       <div className="mt-2 grid grid-cols-2 gap-x-2 text-[11px] text-muted-foreground">
         <span>De: <b className="text-foreground">{nome(t["criado_por"])}</b></span>
         <span>Para: <b className="text-foreground">{nome(t["responsavel_id"])}</b></span>
@@ -256,7 +258,7 @@ export function NovaTarefa({ me, empresaId, usuarios, onCancel, onSaved, respons
     setEnviando(true);
     const { error } = await tb().insert({
       empresa_id: empresaId, criado_por: me, responsavel_id: resp, titulo: titulo.trim(),
-      descricao: descricao.trim() || null, data_solicitacao: hoje(), data_entrega: entrega || null, anexos,
+      descricao: htmlParaTexto(descricao).trim() ? descricao : null, data_solicitacao: hoje(), data_entrega: entrega || null, anexos,
       status: resp === me ? "andamento" : "aguardando",
       prioridade, estimativa_min: estimativa ? Math.max(1, Math.round(Number(estimativa))) : null,
       data_planejada: resp === me ? planejada || null : null,
@@ -297,7 +299,7 @@ export function NovaTarefa({ me, empresaId, usuarios, onCancel, onSaved, respons
             <div className="space-y-1"><Label>Tempo (min)</Label><Input type="number" min={1} value={estimativa} onChange={(e) => setEstimativa(e.target.value)} placeholder="Opcional" /></div>
             <div className="space-y-1"><Label>Fazer em</Label><Input type="date" value={planejada} disabled={resp !== me} onChange={(e) => setPlanejada(e.target.value)} title="Deixe vazio para ir ao backlog" /></div>
           </div>
-          <div className="space-y-1"><Label>Descrição</Label><Textarea rows={4} value={descricao} onChange={(e) => setDescricao(e.target.value)} /></div>
+          <div className="space-y-1"><Label>Descrição</Label><TextoRico minHeight={140} value={descricao} onChange={setDescricao} /></div>
           <div className="space-y-1">
             <input ref={fileRef} type="file" multiple hidden onChange={(e) => e.target.files?.length && void anexar(e.target.files)} />
             <Button type="button" size="sm" variant="outline" onClick={() => fileRef.current?.click()} disabled={enviando}><Paperclip className="mr-1 h-4 w-4" /> Anexar arquivos</Button>
