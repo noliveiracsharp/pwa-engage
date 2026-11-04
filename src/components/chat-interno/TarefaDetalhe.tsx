@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { TextoRico } from "@/components/ui/texto-rico";
 
 const tb = () => supabase.from("tarefas_usuarios" as never) as unknown as ReturnType<typeof supabase.from>;
 const dataHora = (s: string) => new Date(s).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }).replace(",", " às");
@@ -106,7 +107,7 @@ export function TarefaDetalhe({ id, me, usuarios, onFechar, onAvisar }: {
           <div className="min-h-0 flex-1 overflow-auto px-5 py-4">
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1 md:col-span-2"><Label>Título</Label><Input disabled={!editavel} value={v("titulo")} onChange={(e) => set("titulo", e.target.value)} /></div>
-              <div className="space-y-1 md:col-span-2"><Label>Descrição</Label><Textarea disabled={!editavel} rows={3} value={v("descricao")} onChange={(e) => set("descricao", e.target.value)} /></div>
+              <div className="space-y-1 md:col-span-2"><Label>Descrição</Label><TextoRico disabled={!editavel} minHeight={140} value={v("descricao")} onChange={(h) => set("descricao", h)} /></div>
               <div className="space-y-1"><Label>Prioridade</Label>
                 <div className="grid grid-cols-3 rounded-md bg-muted p-0.5 text-xs">
                   {PRIORIDADES.map((p) => (

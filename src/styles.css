@@ -790,3 +790,8 @@ table img { cursor: zoom-in; }
 .orc-tabela tr, .orc-parcelas tr { break-inside: avoid; page-break-inside: avoid; }
 .orc-tabela thead, .orc-parcelas thead { display: table-header-group; }
 @media print { .orc-fechamento { display: block; } .orc-fechamento .orc-totais { margin-top: 12px; break-inside: avoid; } }
+
+/* Campos de data: ícone de calendário visível e clicável em ambos os temas. */
+input[type="date"], input[type="datetime-local"], input[type="month"], input[type="time"] { color-scheme: light; cursor: pointer; }
+.dark input[type="date"], .dark input[type="datetime-local"], .dark input[type="month"], .dark input[type="time"] { color-scheme: dark; }
+input[type="date"]::-webkit-calendar-picker-indicator, input[type="datetime-local"]::-webkit-calendar-picker-indicator, input[type="month"]::-webkit-calendar-picker-indicator { cursor: pointer; opacity: 0.8; }
