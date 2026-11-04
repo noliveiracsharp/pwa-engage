@@ -26,6 +26,7 @@ import { CORES_AGENDA, EXPEDIENTE_PADRAO, conflitosBloqueio, type Bloqueio, type
 import {
   calcularPerformance, diaDoItem, horas, inicioSemana, lerEventos, normalizarPrioridade, novasRemarcacoes, ordenar, somarDias, textoRemarcacao,
   type PlannerItem,
+  progressoTarefaPatch,
 } from "@/lib/planner";
 
 const hoje = () => new Date().toISOString().slice(0, 10);
@@ -49,6 +50,7 @@ function deTarefa(t: Row): PlannerItem {
     comentarios: lerEventos(t["comentarios"]).filter((e) => e.tipo === "comentario").length,
     criadoPor: t["criado_por"] ? String(t["criado_por"]) : null,
     responsavel: t["responsavel_id"] ? String(t["responsavel_id"]) : null,
+    progresso: st === "concluida" ? 100 : Number(t["progresso"] ?? 0) || 0,
   };
 }
 const projetoIdDe = (t: Row) => t["projeto_id"] ?? t["projetos_id"] ?? null;
@@ -112,7 +114,16 @@ export function usePlannerItens(usuarioId: string, autorId?: string) {
     if (autorId && i.planejada !== dia) await registrarEvento(i.id, autorId, textoRemarcacao(i.planejada, dia));
     recarregar();
   };
-  return { itens: q.data ?? [], isLoading: q.isLoading, concluir, planejar };
+  const definirProgresso = async (i: PlannerItem, pct: number) => {
+    if (i.origem !== "tarefa") return false;
+    const r = await tb("tarefas_usuarios").update(progressoTarefaPatch(pct) as never).eq("id", i.id);
+    if (r.error) { toast.error(r.error.message.includes("progresso") ? "Rode o script atendeai-tarefas-progresso.sql no banco." : r.error.message); return false; }
+    if (pct >= 100) tocarSom("equipe");
+    if (autorId) await registrarEvento(i.id, autorId, pct >= 100 ? "🏁 Tarefa concluída (100%)." : `Progresso atualizado para ${pct}%.`);
+    recarregar();
+    return true;
+  };
+  return { itens: q.data ?? [], isLoading: q.isLoading, concluir, planejar, definirProgresso, recarregar };
 }
 
 export function ItemLinha({ i, onCheck, compacto, editavel = true, onAbrir, nome }: { i: PlannerItem; onCheck: (feito: boolean) => void; compacto?: boolean; editavel?: boolean; onAbrir?: () => void; nome?: (id: string) => string }) {
