@@ -1,4 +1,5 @@
 import { imprimirDre } from "@/components/relatorios/DreRelatorioPDF";
+import { FILTRO_TITULOS_CARTAO, filtroTitulosRecentes } from "@/lib/financeiro-filtros";
 import { useEmpresaAtiva } from "@/hooks/useEmpresaAtiva";
 import { PeriodoNavegavel } from "@/components/financeiro/PeriodoNavegavel";
 import { buscarIpca12m } from "@/lib/indices.functions";
@@ -125,6 +126,8 @@ const SECOES_FIN = [
   { key: "comissoes", label: "Comissões" },
 ];
 
+const FILTRO_RECENTES = filtroTitulosRecentes();
+
 function FinanceiroPage() {
   const perms = usePagePermissions("/financeiro");
   const secoes = useSecoes("/financeiro", SECOES_FIN);
@@ -134,7 +137,7 @@ function FinanceiroPage() {
   const [abaSel, setAba] = useState<string>("receber");
   const aba = visiveis.some((s) => s.key === abaSel) ? abaSel : (visiveis[0]?.key ?? "");
   // Histórico completo só para as visões que realmente precisam dele (caixa e controller).
-  const { data: titulos = [] } = useTableRows("financeiro_titulos", aba === "caixa" || aba === "controller");
+  const { data: titulos = [] } = useTableRows("financeiro_titulos", aba === "caixa" || aba === "controller", undefined, FILTRO_RECENTES);
   if (!perms.loading && visiveis.length === 0) return <p className="text-muted-foreground text-sm">Você não tem acesso a esta página.</p>;
   const p = (k: string) => ({ ...(secoes[k] ?? perms) });
   return (
@@ -1162,7 +1165,7 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
       plano_contas_id: s.plano_contas_id || cat?.plano_contas_id || "" }));
   };
   const { data: contas = [] } = useTableRows("financeiro_contas_bancarias");
-  const { data: titulosCartao = [] } = useTableRows("financeiro_titulos");
+  const { data: titulosCartao = [] } = useTableRows("financeiro_titulos", true, undefined, FILTRO_TITULOS_CARTAO);
   const centroOpts = useMemo(() => buildTree(centros.filter((c) => c["status"] !== false || text(rowId(c)) === v.centro_custo_id), "centro_custo_pai_id").map((n) => {
     const parts = n.path.split(" > ");
     const pai = parts.length > 1 ? parts[parts.length - 2] : undefined;
@@ -1892,7 +1895,7 @@ function BaixaDialog({ tipo, titulo, onClose, onSaved }: { tipo: TipoTitulo; tit
     finally { setEnviando(false); }
   };
   const { data: contasBanc = [] } = useTableRows("financeiro_contas_bancarias");
-  const { data: todosTitulos = [] } = useTableRows("financeiro_titulos");
+  const { data: todosTitulos = [] } = useTableRows("financeiro_titulos", true, undefined, FILTRO_RECENTES);
   const conta = useMemo(() => {
     if (tipo !== "receber") return null;
     const id = text(titulo["conta_bancaria_id"]);

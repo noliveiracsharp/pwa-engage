@@ -10,7 +10,3 @@ export function filtroTitulosRecentes(hoje = new Date()): FiltroBanco {
   return { key: `recentes|${desde}`, apply: (q) => q.or(`pago_em.is.null,pago_em.gte.${desde},vencimento.gte.${desde}`) };
 }
 
-/** Recebimentos pagos de um mês (cálculo de tarifas/limites do mês). */
-export function filtroRecebidosMes(mes: string): FiltroBanco {
-  return { key: `recebidos|${mes}`, apply: (q) => q.eq("tipo", "receber").eq("status", "pago").gte("pago_em", `${mes}-01`).lte("pago_em", `${mes}-31T23:59:59`) };
-}

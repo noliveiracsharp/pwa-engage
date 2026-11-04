@@ -17,6 +17,8 @@ import { Badge } from "@/components/ui/badge";
 import { formatBRL, num, round2 } from "@/lib/orcamentos";
 import { cn } from "@/lib/utils";
 import type { Row } from "@/lib/row";
+import { FILTRO_TITULOS_CARTAO } from "@/lib/financeiro-filtros";
+import { FaturasCartaoGrafico } from "@/components/financeiro/FaturasCartaoGrafico";
 import { confirmar } from "@/components/layout/DialogoGlobal";
 
 type Perms = { canCreate: boolean; canUpdate: boolean; canDelete: boolean };
@@ -27,7 +29,7 @@ export function CartoesCredito({ perms }: { perms: Perms }) {
   const qc = useQueryClient();
   const { data: cartoes = [] } = useTableRows(TABELA);
   const { data: contas = [] } = useTableRows("financeiro_contas_bancarias");
-  const { data: titulos = [] } = useTableRows("financeiro_titulos");
+  const { data: titulos = [] } = useTableRows("financeiro_titulos", true, undefined, FILTRO_TITULOS_CARTAO);
   const [editar, setEditar] = useState<Row | null | undefined>(undefined);
   const invalidar = () => qc.invalidateQueries({ queryKey: ["table", TABELA] });
   const contaNome = (id: unknown) => text(contas.find((c) => text(rowId(c)) === text(id))?.["descricao"]) || "Sem conta vinculada";
@@ -86,6 +88,7 @@ export function CartoesCredito({ perms }: { perms: Perms }) {
           })}
         </div>
       )}
+      {cartoes.length > 0 && <FaturasCartaoGrafico cartoes={cartoes} titulos={titulos} />}
       {editar !== undefined && <CartaoCreditoSheet registro={editar} contas={contas} cartoes={cartoes} readOnly={!!editar && !perms.canUpdate} onClose={() => setEditar(undefined)} onSaved={invalidar} />}
     </div>
   );
