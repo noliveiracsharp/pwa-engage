@@ -1,4 +1,5 @@
 import { imprimirDre } from "@/components/relatorios/DreRelatorioPDF";
+import { Carregando } from "@/components/financeiro/Carregando";
 import { FILTRO_TITULOS_CARTAO, filtroTitulosRecentes } from "@/lib/financeiro-filtros";
 import { useEmpresaAtiva } from "@/hooks/useEmpresaAtiva";
 import { PeriodoNavegavel } from "@/components/financeiro/PeriodoNavegavel";
@@ -137,7 +138,7 @@ function FinanceiroPage() {
   const [abaSel, setAba] = useState<string>("receber");
   const aba = visiveis.some((s) => s.key === abaSel) ? abaSel : (visiveis[0]?.key ?? "");
   // Histórico completo só para as visões que realmente precisam dele (caixa e controller).
-  const { data: titulos = [] } = useTableRows("financeiro_titulos", aba === "caixa" || aba === "controller", undefined, FILTRO_RECENTES);
+  const { data: titulos = [], isLoading: carregandoTit } = useTableRows("financeiro_titulos", aba === "caixa" || aba === "controller", undefined, FILTRO_RECENTES);
   if (!perms.loading && visiveis.length === 0) return <p className="text-muted-foreground text-sm">Você não tem acesso a esta página.</p>;
   const p = (k: string) => ({ ...(secoes[k] ?? perms) });
   return (
@@ -156,8 +157,8 @@ function FinanceiroPage() {
           <TabsContent value="dda"><DdaComTitulos perms={p("pagar")} /></TabsContent>
         </Tabs>
       </TabsContent>
-      <TabsContent value="caixa"><Caixa titulos={titulos} /></TabsContent>
-      <TabsContent value="controller"><ControllerPainel titulos={titulos} /></TabsContent>
+      <TabsContent value="caixa">{carregandoTit ? <Carregando /> : <Caixa titulos={titulos} />}</TabsContent>
+      <TabsContent value="controller">{carregandoTit ? <Carregando /> : <ControllerPainel titulos={titulos} />}</TabsContent>
       <TabsContent value="regua"><ReguaCobranca canEdit={p("regua").canUpdate || p("regua").canCreate} /></TabsContent>
       <TabsContent value="bancos" className="space-y-8"><ContasBancarias perms={p("bancos")} /><CartoesCredito perms={p("bancos")} /></TabsContent>
       <TabsContent value="plano">{aba === "plano" && <ApoioCrud {...planoContasConfig} permsOverride={p("plano")} />}</TabsContent>

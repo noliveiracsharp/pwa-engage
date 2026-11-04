@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import type { Row } from "@/lib/row";
 import { FILTRO_TITULOS_CARTAO } from "@/lib/financeiro-filtros";
 import { FaturasCartaoGrafico } from "@/components/financeiro/FaturasCartaoGrafico";
+import { Carregando } from "@/components/financeiro/Carregando";
 import { confirmar } from "@/components/layout/DialogoGlobal";
 
 type Perms = { canCreate: boolean; canUpdate: boolean; canDelete: boolean };
@@ -29,7 +30,7 @@ export function CartoesCredito({ perms }: { perms: Perms }) {
   const qc = useQueryClient();
   const { data: cartoes = [] } = useTableRows(TABELA);
   const { data: contas = [] } = useTableRows("financeiro_contas_bancarias");
-  const { data: titulos = [] } = useTableRows("financeiro_titulos", true, undefined, FILTRO_TITULOS_CARTAO);
+  const { data: titulos = [], isLoading: carregando } = useTableRows("financeiro_titulos", true, undefined, FILTRO_TITULOS_CARTAO);
   const [editar, setEditar] = useState<Row | null | undefined>(undefined);
   const invalidar = () => qc.invalidateQueries({ queryKey: ["table", TABELA] });
   const contaNome = (id: unknown) => text(contas.find((c) => text(rowId(c)) === text(id))?.["descricao"]) || "Sem conta vinculada";
@@ -50,7 +51,7 @@ export function CartoesCredito({ perms }: { perms: Perms }) {
         </div>
         {perms.canCreate && <Button onClick={() => setEditar(null)}><Plus className="mr-1 h-4 w-4" />Novo cartão</Button>}
       </div>
-      {!cartoes.length ? (
+      {carregando ? <Carregando texto="Carregando cartões e faturas…" /> : !cartoes.length ? (
         <div className="text-muted-foreground rounded-lg border border-dashed p-8 text-center text-sm">Nenhum cartão cadastrado ainda.</div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -88,7 +89,7 @@ export function CartoesCredito({ perms }: { perms: Perms }) {
           })}
         </div>
       )}
-      {cartoes.length > 0 && <FaturasCartaoGrafico cartoes={cartoes} titulos={titulos} />}
+      {!carregando && cartoes.length > 0 && <FaturasCartaoGrafico cartoes={cartoes} titulos={titulos} />}
       {editar !== undefined && <CartaoCreditoSheet registro={editar} contas={contas} cartoes={cartoes} readOnly={!!editar && !perms.canUpdate} onClose={() => setEditar(undefined)} onSaved={invalidar} />}
     </div>
   );

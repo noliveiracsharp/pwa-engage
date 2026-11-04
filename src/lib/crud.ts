@@ -67,7 +67,8 @@ export function useTableRows(table: string, enabled = true, orderBy?: string, fi
       };
       let res: Res;
       if (ctx && !isEmpresas && !CATALOG_TABLES.has(table)) {
-        res = await run((q) => (isMaster ? q.or(`empresa_id.eq.${ctx},empresa_id.is.null`) : q.eq("empresa_id", ctx)) as typeof q);
+        // Com filtro próprio (que pode usar .or), evita um segundo "or" que o banco descartaria.
+        res = await run((q) => (isMaster && !filtro ? q.or(`empresa_id.eq.${ctx},empresa_id.is.null`) : q.eq("empresa_id", ctx)) as typeof q);
         if (res.error) res = await run();
       } else {
         res = await run();

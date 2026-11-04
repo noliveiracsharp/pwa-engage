@@ -544,9 +544,13 @@ export function fluxoPeriodo(titulos: Row[], opts: { de: string; ate: string; mo
 }
 
 /** Limite usado no cartão: soma das parcelas em aberto (não pagas/canceladas) lançadas nele. */
-export function limiteUsadoCartao(titulos: Row[], cartaoId: string): number {
+export function limiteUsadoCartao(titulos: Row[], cartaoId: string, hoje = new Date()): number {
+  // Faturas de meses já encerrados são consideradas liquidadas (não ocupam limite).
+  const inicioMes = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}-01`;
   return round2(titulos.reduce((s, t) => {
     const st = String(t["status"] ?? "aberto");
+    const venc = String(t["vencimento"] ?? "").slice(0, 10);
+    if (venc && venc < inicioMes) return s;
     return String(t["cartao_id"] ?? "") === cartaoId && st !== "pago" && st !== "cancelado" ? s + num(t["valor"]) : s;
   }, 0));
 }
