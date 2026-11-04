@@ -75,7 +75,7 @@ function PlannerPagina() {
               <h2 className="font-semibold">Tarefas e delegações</h2>
               <Button size="icon" variant="ghost" aria-label="Fechar" onClick={() => setAceites(false)}><X className="h-5 w-5" /></Button>
             </div>
-            <div className="min-h-0 flex-1 overflow-hidden">
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
               <TarefasChat me={me} empresaId={empresaId} usuarios={usuarios} onAvisar={avisar} />
             </div>
           </div>
