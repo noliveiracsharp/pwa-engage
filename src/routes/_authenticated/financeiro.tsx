@@ -1,6 +1,6 @@
 import { imprimirDre } from "@/components/relatorios/DreRelatorioPDF";
 import { Carregando } from "@/components/financeiro/Carregando";
-import { FILTRO_TITULOS_CARTAO, filtroTitulosRecentes } from "@/lib/financeiro-filtros";
+import { FILTRO_TITULOS_CARTAO, FILTRO_EM_ABERTO, filtroPagosDesde, filtroVencimentoEntre, filtroPagoEntre, unirTitulos } from "@/lib/financeiro-filtros";
 import { useEmpresaAtiva } from "@/hooks/useEmpresaAtiva";
 import { PeriodoNavegavel } from "@/components/financeiro/PeriodoNavegavel";
 import { buscarIpca12m } from "@/lib/indices.functions";
@@ -127,7 +127,7 @@ const SECOES_FIN = [
   { key: "comissoes", label: "Comissões" },
 ];
 
-const FILTRO_RECENTES = filtroTitulosRecentes();
+const FILTRO_PAGOS_24M = filtroPagosDesde(24);
 
 function FinanceiroPage() {
   const perms = usePagePermissions("/financeiro");
@@ -138,7 +138,11 @@ function FinanceiroPage() {
   const [abaSel, setAba] = useState<string>("receber");
   const aba = visiveis.some((s) => s.key === abaSel) ? abaSel : (visiveis[0]?.key ?? "");
   // Histórico completo só para as visões que realmente precisam dele (caixa e controller).
-  const { data: titulos = [], isLoading: carregandoTit } = useTableRows("financeiro_titulos", aba === "caixa" || aba === "controller", undefined, FILTRO_RECENTES);
+  const ctrl = aba === "controller";
+  const { data: abertosCtrl = [], isLoading: l1, error: e1 } = useTableRows("financeiro_titulos", ctrl, undefined, FILTRO_EM_ABERTO);
+  const { data: pagosCtrl = [], isLoading: l2, error: e2 } = useTableRows("financeiro_titulos", ctrl, undefined, FILTRO_PAGOS_24M);
+  const titulosCtrl = useMemo(() => unirTitulos(abertosCtrl, pagosCtrl), [abertosCtrl, pagosCtrl]);
+  const erroCtrl = e1 || e2;
   if (!perms.loading && visiveis.length === 0) return <p className="text-muted-foreground text-sm">Você não tem acesso a esta página.</p>;
   const p = (k: string) => ({ ...(secoes[k] ?? perms) });
   return (
@@ -157,8 +161,8 @@ function FinanceiroPage() {
           <TabsContent value="dda"><DdaComTitulos perms={p("pagar")} /></TabsContent>
         </Tabs>
       </TabsContent>
-      <TabsContent value="caixa">{carregandoTit ? <Carregando /> : <Caixa titulos={titulos} />}</TabsContent>
-      <TabsContent value="controller">{carregandoTit ? <Carregando /> : <ControllerPainel titulos={titulos} />}</TabsContent>
+      <TabsContent value="caixa">{aba === "caixa" && <Caixa />}</TabsContent>
+      <TabsContent value="controller">{!ctrl ? null : erroCtrl ? <p className="text-destructive text-sm">Não foi possível carregar os títulos: {(erroCtrl as Error).message}</p> : l1 || l2 ? <Carregando /> : <ControllerPainel titulos={titulosCtrl} />}</TabsContent>
       <TabsContent value="regua"><ReguaCobranca canEdit={p("regua").canUpdate || p("regua").canCreate} /></TabsContent>
       <TabsContent value="bancos" className="space-y-8"><ContasBancarias perms={p("bancos")} /><CartoesCredito perms={p("bancos")} /></TabsContent>
       <TabsContent value="plano">{aba === "plano" && <ApoioCrud {...planoContasConfig} permsOverride={p("plano")} />}</TabsContent>
@@ -1896,7 +1900,7 @@ function BaixaDialog({ tipo, titulo, onClose, onSaved }: { tipo: TipoTitulo; tit
     finally { setEnviando(false); }
   };
   const { data: contasBanc = [] } = useTableRows("financeiro_contas_bancarias");
-  const { data: todosTitulos = [] } = useTableRows("financeiro_titulos", true, undefined, FILTRO_RECENTES);
+  const { data: todosTitulos = [] } = useTableRows("financeiro_titulos", true, undefined, FILTRO_PAGOS_24M);
   const conta = useMemo(() => {
     if (tipo !== "receber") return null;
     const id = text(titulo["conta_bancaria_id"]);
@@ -1986,7 +1990,7 @@ const nomeMes = (k: string) => {
   return new Date(y ?? 2000, (m ?? 1) - 1, 1).toLocaleDateString("pt-BR", { month: "short", year: "2-digit" });
 };
 
-function Caixa({ titulos }: { titulos: Row[] }) {
+function Caixa() {
   const [saldoInicial, setSaldoInicial] = useState("");
   const { empresa } = useAuth();
   const empresaIdCaixa = empresa ? text(rowId(empresa)) : "";
@@ -1998,13 +2002,21 @@ function Caixa({ titulos }: { titulos: Row[] }) {
     preenchido.current = true;
     setSaldoInicial((s) => s || moedaDeNumero(somaBancos.total ?? 0));
   }, [somaBancos.total]);
-  const [per, setPer] = useState<Periodo>(() => periodoPreset("proximos12m"));
+  const [per, setPer] = useState<Periodo>(() => periodoPreset("mes"));
+  // Só consulta ao clicar em Processar (abre já com o mês atual).
+  const [aplicado, setAplicado] = useState<Periodo>(per);
+  const { data: previstos = [], isFetching: f1, error: e1 } = useTableRows("financeiro_titulos", true, undefined, filtroVencimentoEntre(aplicado.de, aplicado.ate));
+  const { data: realizados = [], isFetching: f2, error: e2 } = useTableRows("financeiro_titulos", true, undefined, filtroPagoEntre(aplicado.de, aplicado.ate));
+  const titulos = useMemo(() => unirTitulos(previstos, realizados), [previstos, realizados]);
+  const processando = f1 || f2;
+  const erroCaixa = e1 || e2;
   const [modo, setModo] = useState<ModoCaixa>("ambos");
   const periodo = useMemo(() => {
+    const per = aplicado;
     if (per.preset !== "todo") return { de: per.de, ate: per.ate };
     const datas = titulos.flatMap((t) => [text(t["vencimento"]).slice(0, 10), text(t["pago_em"]).slice(0, 10)]).filter(Boolean).sort();
     return { de: datas[0] ?? "", ate: datas.at(-1) ?? "" };
-  }, [per, titulos]);
+  }, [aplicado, titulos]);
   const linhas = fluxoPeriodo(titulos, { ...periodo, modo, saldoInicial: num(saldoInicial) });
   const tot = linhas.reduce((a, l) => ({ e: a.e + l.entradas, s: a.s + l.saidas }), { e: 0, s: 0 });
   const dados = linhas.map((l) => ({ ...l, nome: nomeMes(l.mes) }));
@@ -2017,6 +2029,9 @@ function Caixa({ titulos }: { titulos: Row[] }) {
     <div className="space-y-4">
       <div className="flex flex-wrap items-end gap-3">
         <PeriodoNavegavel label="Período" value={per} onChange={setPer} />
+        <Button type="button" className="h-9" disabled={processando} onClick={() => { setAplicado(per); }}>
+          {processando ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-1 h-4 w-4" />}Processar
+        </Button>
         <div className="space-y-1"><Label>Mostrar</Label>
           <Select value={modo} onValueChange={(x) => setModo(x as ModoCaixa)}>
             <SelectTrigger className="w-52"><SelectValue /></SelectTrigger>
@@ -2033,6 +2048,8 @@ function Caixa({ titulos }: { titulos: Row[] }) {
           </div>
         </div>
       </div>
+      {erroCaixa && <p className="text-destructive text-sm">Não foi possível carregar os títulos: {(erroCaixa as Error).message}</p>}
+      {processando && <Carregando texto="Processando fluxo de caixa…" />}
       <p className="text-muted-foreground text-xs">Realizado = baixas pela data do pagamento. Previsto = contas em aberto pelo vencimento.</p>
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="bg-card rounded-lg border p-3"><p className="text-muted-foreground text-xs">Entradas</p><p className="text-success text-lg font-semibold tabular-nums">{formatBRL(tot.e)}</p></div>
