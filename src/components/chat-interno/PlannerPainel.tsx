@@ -194,7 +194,16 @@ export function PlannerPainel({ me, empresaId, usuarios, onFechar, embutido, aco
     void qcReuniao.invalidateQueries({ queryKey: ["reunioes", empresaId] });
   };
   const reunioes = useReunioes(empresaId).data ?? [];
-  const [extras, setExtras] = useState<string[]>([]);
+  const chaveAgendas = `planner_agendas_extras_${me}`;
+  const [extras, setExtrasState] = useState<string[]>([]);
+  useEffect(() => {
+    try { const v = JSON.parse(localStorage.getItem(chaveAgendas) ?? "[]"); if (Array.isArray(v)) setExtrasState(v.map(String)); } catch { /* ignora */ }
+  }, [chaveAgendas]);
+  const setExtras = (v: string[] | ((p: string[]) => string[])) => setExtrasState((p) => {
+    const n = typeof v === "function" ? v(p) : v;
+    try { localStorage.setItem(chaveAgendas, JSON.stringify(n)); } catch { /* ignora */ }
+    return n;
+  });
   const [buscaAg, setBuscaAg] = useState("");
   const agendas = useMemo(() => [alvo, ...extras.filter((x) => x !== alvo)], [alvo, extras]);
   const expQ = useQuery({
