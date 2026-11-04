@@ -1455,6 +1455,7 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
       if (registro) {
         if (serieOferta && alcance && !v.desvincular) {
           const alvos = alvosOferta(registro, irmasOferta, alcance, hojeISO());
+          replicarPara.push(...alvos.map((t) => text(t["id"])).filter((id) => id !== text(registro["id"])));
           for (const t of alvos) {
             const patch = t["id"] === registro["id"] ? base : patchRecorrencia(registro, t, base);
             if (!Object.keys(patch).length) continue;
@@ -1484,6 +1485,7 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
           const atual = titulos.find((t) => t["id"] === reg["id"]);
           if (!atual) throw new Error("Este lançamento não está mais disponível. Atualize a lista.");
           const patches = alvosRecorrencia(atual, titulos, alcance, hojeISO()).map((t) => ({ id: t["id"], valores: patchRecorrencia(reg, t, base) }));
+          replicarPara.push(...patches.map((p) => text(p.id)).filter((id) => id !== text(reg["id"])));
           const { error } = await supabase.rpc("editar_serie_financeira", { p_atual: reg["id"], p_escopo: alcance, p_alteracoes: patches } as never);
           if (error) {
             if (error.code === "PGRST202" || error.code === "42883") throw new Error("Execute o script de edição recorrente no SQL Editor para ativar esta opção.");
@@ -1503,7 +1505,8 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
           const resto = previa.filter((_, i) => i !== iAtual).map((p, i) => ({ ...base, empresa_id: registro["empresa_id"], origem_tipo: "manual", origem_id: serieId,
             parcela_n: p.n ?? i + 2, descricao: `${base.descricao} (${p.n ?? i + 2}/${n})`, vencimento: p.vencimento, valor: p.valor, data_competencia: p.vencimento,
             ...(p.anterior && statusAnt === "pago" ? { status: "pago", pago_em: p.vencimento, valor_pago: p.valor } : { status: "aberto" }) }));
-          const { error: e2 } = await supabase.from("financeiro_titulos").insert(resto as never);
+          const { data: novos, error: e2 } = await supabase.from("financeiro_titulos").insert(resto as never).select("id");
+          replicarPara.push(...((novos ?? []) as Row[]).map((t) => text(t["id"])));
           if (e2) throw e2;
         } else {
           const pago = podeConverter && v.ja_pago ? { status: "pago", pago_em: v.vencimento, valor_pago: valor } : {};
@@ -1547,6 +1550,8 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
         if (error) throw error;
       }
       if (registro && rateio?.temLinhas && rateio.pendente) await rateio.salvar();
+      // Itens do lançamento valem também para as demais parcelas alcançadas pela edição.
+      if (registro && rateio?.temLinhas && replicarPara.length) await replicarItensTitulo(text(rowId(registro)), replicarPara);
       toast.success(previa.length > 1 ? `${previa.length} parcelas salvas.` : "Conta salva."); onSaved(); onClose();
     } catch (e) {
       toast.error(erroFinanceiro(e));
