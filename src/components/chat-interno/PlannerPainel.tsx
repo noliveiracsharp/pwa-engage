@@ -1,5 +1,5 @@
 import type React from "react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarClock, ChevronLeft, ChevronRight, CheckCircle2, Circle, Inbox, MessageSquare, Printer, Video, X, LogIn, Copy, Pencil, Ban } from "lucide-react";
 import { ReunioesPainel, linkReuniao, novaReuniao, textoConvite, useReunioes, type Reuniao } from "@/components/chat-interno/ReunioesPainel";
@@ -194,7 +194,16 @@ export function PlannerPainel({ me, empresaId, usuarios, onFechar, embutido, aco
     void qcReuniao.invalidateQueries({ queryKey: ["reunioes", empresaId] });
   };
   const reunioes = useReunioes(empresaId).data ?? [];
-  const [extras, setExtras] = useState<string[]>([]);
+  const chaveAgendas = `planner_agendas_extras_${me}`;
+  const [extras, setExtrasState] = useState<string[]>([]);
+  useEffect(() => {
+    try { const v = JSON.parse(localStorage.getItem(chaveAgendas) ?? "[]"); if (Array.isArray(v)) setExtrasState(v.map(String)); } catch { /* ignora */ }
+  }, [chaveAgendas]);
+  const setExtras = (v: string[] | ((p: string[]) => string[])) => setExtrasState((p) => {
+    const n = typeof v === "function" ? v(p) : v;
+    try { localStorage.setItem(chaveAgendas, JSON.stringify(n)); } catch { /* ignora */ }
+    return n;
+  });
   const [buscaAg, setBuscaAg] = useState("");
   const agendas = useMemo(() => [alvo, ...extras.filter((x) => x !== alvo)], [alvo, extras]);
   const expQ = useQuery({

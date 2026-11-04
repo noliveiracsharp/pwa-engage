@@ -97,6 +97,19 @@ export function EspacosSidebar({ espacos, ativo, onSelect, perms, onMoverProjeto
     qc.invalidateQueries({ queryKey: ["table", "projetos_status"] });
   }
 
+  const [arrastando, setArrastando] = useState<string | null>(null);
+  const [raizAlvo, setRaizAlvo] = useState(false);
+  async function moverEspaco(id: string, novoPai: string | null) {
+    if (novoPai && espacoEDescendentes(espacos, id).has(novoPai)) { toast.error("Não é possível mover um espaço para dentro dele mesmo."); return; }
+    const e = espacos.find((x) => String(rowId(x)) === id);
+    if (!e || String(e[PAI] ?? "") === (novoPai ?? "")) return;
+    const { error } = await supabase.from(ESPACOS).update({ [PAI]: novoPai } as never).eq(idColumn(e), id as never);
+    if (error) { toast.error(error.message); return; }
+    if (novoPai) setAbertos((s) => new Set(s).add(novoPai));
+    toast.success("Espaço movido.");
+    qc.invalidateQueries({ queryKey: ["table", ESPACOS] });
+  }
+
   const renderNivel = (pai: string, depth: number): React.ReactNode =>
     (filhos.get(pai) ?? []).map((e) => {
       const id = String(rowId(e));
@@ -107,9 +120,22 @@ export function EspacosSidebar({ espacos, ativo, onSelect, perms, onMoverProjeto
         <div key={id}>
           <div
             className={cn("group flex items-center gap-1 rounded-md py-1 pr-1 text-sm hover:bg-accent", ativo === id && "bg-primary/10 font-semibold text-primary", alvo === id && "ring-2 ring-primary bg-primary/10")}
-            onDragOver={(ev) => { if (onMoverProjeto && ev.dataTransfer.types.includes("text/projeto-id")) { ev.preventDefault(); setAlvo(id); } }}
+            draggable={perms.canUpdate}
+            onDragStart={(ev) => { ev.stopPropagation(); ev.dataTransfer.setData("text/espaco-id", id); ev.dataTransfer.effectAllowed = "move"; setArrastando(id); }}
+            onDragEnd={() => { setArrastando(null); setAlvo(null); setRaizAlvo(false); }}
+            onDragOver={(ev) => {
+              const t = ev.dataTransfer.types;
+              if (onMoverProjeto && t.includes("text/projeto-id")) { ev.preventDefault(); setAlvo(id); return; }
+              if (t.includes("text/espaco-id") && arrastando && !espacoEDescendentes(espacos, arrastando).has(id)) { ev.preventDefault(); setAlvo(id); }
+            }}
             onDragLeave={() => setAlvo((a) => (a === id ? null : a))}
-            onDrop={(ev) => { const pid = ev.dataTransfer.getData("text/projeto-id"); setAlvo(null); if (pid && onMoverProjeto) { ev.preventDefault(); onMoverProjeto(pid, id); } }}
+            onDrop={(ev) => {
+              setAlvo(null);
+              const eid = ev.dataTransfer.getData("text/espaco-id");
+              if (eid) { ev.preventDefault(); ev.stopPropagation(); void moverEspaco(eid, id); return; }
+              const pid = ev.dataTransfer.getData("text/projeto-id");
+              if (pid && onMoverProjeto) { ev.preventDefault(); onMoverProjeto(pid, id); }
+            }}
             style={{ paddingLeft: 4 + depth * 14 }}
           >
             <button className="flex h-5 w-5 shrink-0 items-center justify-center text-muted-foreground" aria-label={aberto ? "Recolher" : "Expandir"}
@@ -149,8 +175,12 @@ export function EspacosSidebar({ espacos, ativo, onSelect, perms, onMoverProjeto
         </span>
         {perms.canCreate && <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => setForm({ row: null, pai: null })}><Plus className="mr-1 h-3.5 w-3.5" />Novo Espaço</Button>}
       </div>
-      <button className={cn("mb-1 flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent", ativo === null && "bg-primary/10 font-semibold text-primary")} onClick={() => onSelect(null)}>
-        <Layers className="h-4 w-4" />Todos os projetos
+      <button className={cn("mb-1 flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent", ativo === null && "bg-primary/10 font-semibold text-primary", raizAlvo && "ring-2 ring-primary")} onClick={() => onSelect(null)}
+        title={arrastando ? "Solte aqui para tornar um espaço principal" : undefined}
+        onDragOver={(ev) => { if (ev.dataTransfer.types.includes("text/espaco-id")) { ev.preventDefault(); setRaizAlvo(true); } }}
+        onDragLeave={() => setRaizAlvo(false)}
+        onDrop={(ev) => { setRaizAlvo(false); const eid = ev.dataTransfer.getData("text/espaco-id"); if (eid) { ev.preventDefault(); void moverEspaco(eid, null); } }}>
+        <Layers className="h-4 w-4" />{arrastando ? "Soltar aqui: espaço principal" : "Todos os projetos"}
       </button>
       {renderNivel("", 0)}
       {espacos.length === 0 && <p className="px-2 py-3 text-xs text-muted-foreground">Nenhum espaço criado.</p>}
