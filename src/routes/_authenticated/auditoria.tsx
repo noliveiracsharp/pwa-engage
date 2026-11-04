@@ -33,7 +33,8 @@ const hoje = () => new Date().toISOString().slice(0, 10);
 const diasAtras = (n: number) => new Date(Date.now() - n * 864e5).toISOString().slice(0, 10);
 
 function AuditoriaPage() {
-  const [de, setDe] = useState(diasAtras(7));
+  const [de, setDe] = useState(hoje());
+  void diasAtras;
   const [ate, setAte] = useState(hoje());
   const [tabela, setTabela] = useState("todas");
   const [operacao, setOperacao] = useState("todas");
@@ -43,6 +44,7 @@ function AuditoriaPage() {
 
   const { data = [], isLoading, error } = useQuery({
     queryKey: ["auditoria", "lista", de, ate, tabela, operacao],
+    retry: 1,
     queryFn: async () => {
       let q = db.from("auditoria_logs").select("*")
         .gte("criado_em", `${de}T00:00:00`).lte("criado_em", `${ate}T23:59:59.999`)

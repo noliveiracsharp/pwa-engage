@@ -60,7 +60,8 @@ function RelatorioEnvios() {
   const perms = usePagePermissions("/relatorios/envios");
   const { empresaId } = useAudit();
   const { data: orcamentos = [] } = useTableRows("orcamentos");
-  const [desde, setDesde] = useState(inicioMes());
+  const [desde, setDesde] = useState(hojeISO());
+  void inicioMes;
   const [ate, setAte] = useState(hojeISO());
   const [canal, setCanal] = useState("todos");
   const [status, setStatus] = useState("todos");
@@ -71,6 +72,7 @@ function RelatorioEnvios() {
 
   const q = useQuery({
     queryKey: ["relatorio-envios", empresaId, desde, ate],
+    retry: 1,
     queryFn: async () => {
       const [cobr, ofertas, msgs] = await Promise.all([
         ler("cobranca_envios", "enviado_em", empresaId, desde, ate),
