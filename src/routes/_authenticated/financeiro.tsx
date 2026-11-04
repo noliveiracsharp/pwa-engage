@@ -326,22 +326,33 @@ function Titulos({ tipo, perms }: { tipo: TipoTitulo; perms: Perms }) {
     return mapa;
   }, [doTipo, serieRows]);
   // Base = todos os filtros menos a situação (os cards do topo não zeram ao filtrar uma situação).
-  const base = useMemo(
-    () =>
-      doTipo
-        .filter((t) => {
-          const v = text(t["vencimento"]).slice(0, 10);
-          return (
-            matchesAny([t["descricao"], nomeParc(t["parceiro_id"]), nomeParc(t["cliente_atendido_id"]), t["categoria"], moedaDeNumero(num(t["valor"])), num(t["valor"]).toFixed(2)], f.busca) &&
-            (f.categoria === "todos" || t["categoria"] === f.categoria) &&
-            (f.cartao === "todos" || text(t["cartao_id"]) === f.cartao) &&
-            (f.centro === "todos" || (f.centro === "sem" ? !t["centro_custo_id"] : text(t["centro_custo_id"]) === f.centro)) &&
-            (!periodoF.de || v >= periodoF.de) && (!periodoF.ate || v <= periodoF.ate)
-          );
-        })
-        .sort((a, b) => text(a["vencimento"]).localeCompare(text(b["vencimento"]))),
-    [doTipo, f.busca, f.categoria, f.cartao, f.centro, periodoF, parceiroById], // eslint-disable-line react-hooks/exhaustive-deps
-  );
+  const base = useMemo(() => {
+    const casaTexto = (t: Row) => matchesAny([t["descricao"], nomeParc(t["parceiro_id"]), nomeParc(t["cliente_atendido_id"]), t["categoria"], moedaDeNumero(num(t["valor"])), num(t["valor"]).toFixed(2)], f.busca);
+    // Compras no cartão: a busca também casa com a fatura (nome/final do cartão, "Fatura", "Cartão de crédito")
+    // e, se qualquer compra casar, a fatura inteira entra — para o total da fatura não ficar distorcido.
+    const grupoFat = (t: Row) => `${text(t["cartao_id"])}|${text(t["vencimento"]).slice(0, 10)}`;
+    const faturasCasadas = new Set<string>();
+    if (f.busca.trim()) {
+      for (const t of doTipo) {
+        if (!text(t["cartao_id"])) continue;
+        const c = cartoes.find((x) => text(rowId(x)) === text(t["cartao_id"]));
+        if (casaTexto(t) || matchesAny([`Fatura ${nomeCartao(c)}`, "Cartão de crédito"], f.busca)) faturasCasadas.add(grupoFat(t));
+      }
+    }
+    return doTipo
+      .filter((t) => {
+        const v = text(t["vencimento"]).slice(0, 10);
+        const casa = text(t["cartao_id"]) && f.busca.trim() ? faturasCasadas.has(grupoFat(t)) : casaTexto(t);
+        return (
+          casa &&
+          (f.categoria === "todos" || t["categoria"] === f.categoria) &&
+          (f.cartao === "todos" || text(t["cartao_id"]) === f.cartao) &&
+          (f.centro === "todos" || (f.centro === "sem" ? !t["centro_custo_id"] : text(t["centro_custo_id"]) === f.centro)) &&
+          (!periodoF.de || v >= periodoF.de) && (!periodoF.ate || v <= periodoF.ate)
+        );
+      })
+      .sort((a, b) => text(a["vencimento"]).localeCompare(text(b["vencimento"])));
+  }, [doTipo, f.busca, f.categoria, f.cartao, f.centro, periodoF, parceiroById, cartoes]); // eslint-disable-line react-hooks/exhaustive-deps
   const rows = useMemo(() => base.filter((t) => casaSituacao(t, situacoesSel, hoje)), [base, f.situacao, hoje]); // eslint-disable-line react-hooks/exhaustive-deps
   const resumo = resumoTitulos(base, hoje, periodoF);
   const totalFiltrado = round2(rows.reduce((s, t) => s + num(t["valor"]), 0));
