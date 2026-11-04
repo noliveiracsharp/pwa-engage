@@ -167,8 +167,8 @@ function FinanceiroPage() {
 
 const ORIGEM_LABEL: Record<string, string> = { manual: "Manual", oferta: "Oferta", pedido: "Pedido", despesa: "Despesa", comissao: "Comissão", reembolso: "Reembolso" };
 
-function FiltroMulti({ label, selecionadas, options, onChange }: { label: string; selecionadas: string[]; options: Array<{ value: string; label: string }>; onChange: (v: string[]) => void }) {
-  const resumo = !selecionadas.length ? "Todas" : selecionadas.length === 1 ? options.find((o) => o.value === selecionadas[0])?.label ?? "1 selecionada" : `${selecionadas.length} selecionadas`;
+function FiltroMulti({ label, selecionadas, options, onChange, todosLabel = "Todas" }: { label: string; selecionadas: string[]; options: Array<{ value: string; label: string }>; onChange: (v: string[]) => void; todosLabel?: string }) {
+  const resumo = !selecionadas.length ? todosLabel : selecionadas.length === 1 ? options.find((o) => o.value === selecionadas[0])?.label ?? "1 selecionada" : `${selecionadas.length} selecionadas`;
   const alternar = (v: string) => onChange(selecionadas.includes(v) ? selecionadas.filter((x) => x !== v) : [...selecionadas, v]);
   return (
     <div className="space-y-1">
@@ -177,8 +177,8 @@ function FiltroMulti({ label, selecionadas, options, onChange }: { label: string
         <PopoverTrigger asChild>
           <Button variant="outline" className="w-full justify-between font-normal"><span className="truncate">{resumo}</span><ChevronDown className="h-4 w-4 opacity-60" /></Button>
         </PopoverTrigger>
-        <PopoverContent className="w-60 p-2" align="start">
-          <button type="button" className="hover:bg-muted w-full rounded px-2 py-1.5 text-left text-sm" onClick={() => onChange([])}>Todas</button>
+        <PopoverContent className="w-72 p-2" align="start">
+          <button type="button" className="hover:bg-muted w-full rounded px-2 py-1.5 text-left text-sm" onClick={() => onChange([])}>{todosLabel}</button>
           {options.map((o) => (
             <label key={o.value} className="hover:bg-muted flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm">
               <Checkbox checked={selecionadas.includes(o.value)} onCheckedChange={() => alternar(o.value)} />{o.label}
