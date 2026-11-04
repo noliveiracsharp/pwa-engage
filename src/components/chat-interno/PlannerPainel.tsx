@@ -26,9 +26,9 @@ import { CORES_AGENDA, EXPEDIENTE_PADRAO, conflitosBloqueio, type Bloqueio, type
 import {
   calcularPerformance, diaDoItem, horas, inicioSemana, lerEventos, normalizarPrioridade, novasRemarcacoes, ordenar, somarDias, textoRemarcacao,
   type PlannerItem,
-  progressoTarefaPatch, FAIXAS_PROGRESSO,
+  progressoTarefaPatch,
 } from "@/lib/planner";
-import { progressoCor } from "@/lib/projetos";
+import { ProgressoTarefa } from "@/components/chat-interno/ProgressoTarefa";
 
 const hoje = () => new Date().toISOString().slice(0, 10);
 const dataBR = (s: string) => { const [a, m, d] = s.slice(0, 10).split("-"); return `${d}/${m}/${a}`; };
@@ -125,24 +125,6 @@ export function usePlannerItens(usuarioId: string, autorId?: string) {
     return true;
   };
   return { itens: q.data ?? [], isLoading: q.isLoading, concluir, planejar, definirProgresso, recarregar };
-}
-
-/** Controle de progresso 0/25/50/75/100 com as cores de Projetos. */
-export function ProgressoTarefa({ valor, onChange, disabled }: { valor: number; onChange: (p: number) => void; disabled?: boolean }) {
-  return (
-    <div className="mt-1.5 flex flex-wrap items-center gap-1" role="group" aria-label="Progresso da tarefa">
-      <div className="mr-1 h-1.5 w-14 overflow-hidden rounded-full bg-muted"><div className="h-full" style={{ width: `${valor}%`, backgroundColor: progressoCor(valor) }} /></div>
-      {FAIXAS_PROGRESSO.map((p) => {
-        const ativo = valor === p;
-        return (
-          <button key={p} type="button" disabled={disabled} aria-pressed={ativo} aria-label={`Progresso ${p}%`}
-            onClick={(e) => { e.stopPropagation(); onChange(p); }}
-            className={cn("rounded-full border px-1.5 py-0.5 text-[10px] font-semibold disabled:opacity-50", ativo ? "text-primary-foreground" : "border-border text-muted-foreground hover:bg-muted")}
-            style={ativo ? { backgroundColor: progressoCor(p), borderColor: progressoCor(p) } : undefined}>{p}%</button>
-        );
-      })}
-    </div>
-  );
 }
 
 export function ItemLinha({ i, onCheck, compacto, editavel = true, onAbrir, nome, onProgresso }: { i: PlannerItem; onCheck: (feito: boolean) => void; compacto?: boolean; editavel?: boolean; onAbrir?: () => void; nome?: (id: string) => string; onProgresso?: (p: number) => void }) {
