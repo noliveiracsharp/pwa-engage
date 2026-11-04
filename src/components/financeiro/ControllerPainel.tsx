@@ -45,8 +45,11 @@ export function ControllerPainel({ titulos }: { titulos: Row[] }) {
   const nomes = useMemo(() => new Map(parceiros.map((p) => [text(rowId(p)), text(p["nome_fantasia"] || p["razao_social"])])), [parceiros]);
   const [saldo, setSaldo] = useState("");
   const emp = useEmpresaAtiva();
+  const [inicio, setInicio] = useState("");
+  const inicioKey = `controller-inicio-${text(emp.slug || emp.nome)}`;
   useEffect(() => setSaldo(localStorage.getItem(SALDO_KEY) ?? ""), []);
-  const d = useMemo(() => diagnosticar(titulos, num(saldo), (t) => nomes.get(text(t["parceiro_id"])) ?? ""), [titulos, saldo, nomes]);
+  useEffect(() => setInicio(localStorage.getItem(inicioKey) ?? ""), [inicioKey]);
+  const d = useMemo(() => diagnosticar(titulos, num(saldo), (t) => nomes.get(text(t["parceiro_id"])) ?? "", undefined, inicio), [titulos, saldo, nomes, inicio]);
   const gerar = useServerFn(parecerController);
   const [parecer, setParecer] = useState("");
   const [carregando, setCarregando] = useState(false);
@@ -109,6 +112,12 @@ export function ControllerPainel({ titulos }: { titulos: Row[] }) {
               {puxando ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Landmark className="mr-1 h-3.5 w-3.5" />}Puxar saldo do banco
             </Button>
           )}
+        </div>
+        <div className="space-y-1 print:hidden">
+          <Label>Início do histórico</Label>
+          <Input type="month" className="w-44" value={inicio}
+            onChange={(e) => { setInicio(e.target.value); localStorage.setItem(inicioKey, e.target.value); }} />
+          <p className="text-xs text-muted-foreground">Médias ignoram meses anteriores.</p>
         </div>
         <div className="flex gap-2 print:hidden">
           <Button variant="outline" onClick={imprimirDre}><Printer className="mr-2 h-4 w-4" />Relatório gerencial</Button>
