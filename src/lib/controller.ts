@@ -37,11 +37,18 @@ export function rupturaCaixa(titulos: Row[], saldo: number, hoje = hojeISO(), ho
 }
 
 /** Média mensal de saídas pagas nos últimos `meses` meses fechados. */
-export function burnRate(titulos: Row[], hoje = hojeISO(), meses = 3): number {
-  const alvo = new Set(Array.from({ length: meses }, (_, i) => mesMenos(hoje, i + 1)));
+/** Meses fechados considerados (até `meses`), ignorando os anteriores à data-base `inicio` (AAAA-MM). */
+export function mesesBase(hoje: string, meses = 3, inicio = ""): string[] {
+  return Array.from({ length: meses }, (_, i) => mesMenos(hoje, i + 1)).filter((m) => !inicio || m >= inicio.slice(0, 7));
+}
+
+export function burnRate(titulos: Row[], hoje = hojeISO(), meses = 3, inicio = ""): number {
+  const lista = mesesBase(hoje, meses, inicio);
+  if (!lista.length) return 0;
+  const alvo = new Set(lista);
   let s = 0;
   for (const t of titulos) if (t["tipo"] === "pagar" && t["status"] === "pago" && alvo.has(iso(t["pago_em"]).slice(0, 7))) s += pagoValor(t);
-  return round2(s / meses);
+  return round2(s / lista.length);
 }
 
 /** Fôlego em meses: saldo / burn rate (null quando não há despesas). */
@@ -80,9 +87,11 @@ export function prazoMedio(titulos: Row[], tipo: "receber" | "pagar"): number | 
 
 export type CategoriaDesvio = { categoria: string; atual: number; media: number; variacao: number };
 /** Categorias de despesa do mês corrente acima da média dos 3 meses anteriores (+30%). */
-export function categoriasEmAlta(titulos: Row[], hoje = hojeISO(), limite = 0.3): CategoriaDesvio[] {
+export function categoriasEmAlta(titulos: Row[], hoje = hojeISO(), limite = 0.3, inicio = ""): CategoriaDesvio[] {
   const mesAtual = hoje.slice(0, 7);
-  const anteriores = new Set([1, 2, 3].map((i) => mesMenos(hoje, i)));
+  const base = mesesBase(hoje, 3, inicio);
+  if (!base.length) return [];
+  const anteriores = new Set(base);
   const atual = new Map<string, number>(), hist = new Map<string, number>();
   for (const t of titulos) {
     if (t["tipo"] !== "pagar" || !ativo(t)) continue;
@@ -94,7 +103,7 @@ export function categoriasEmAlta(titulos: Row[], hoje = hojeISO(), limite = 0.3)
   }
   const out: CategoriaDesvio[] = [];
   for (const [categoria, a] of atual) {
-    const media = (hist.get(categoria) ?? 0) / 3;
+    const media = (hist.get(categoria) ?? 0) / base.length;
     if (media > 0 && a > media * (1 + limite)) out.push({ categoria, atual: round2(a), media: round2(media), variacao: round2(a / media - 1) });
   }
   return out.sort((x, y) => y.atual - y.media - (x.atual - x.media));
@@ -117,14 +126,14 @@ export type Diagnostico = {
 const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const br = (d: string) => d.split("-").reverse().join("/");
 
-export function diagnosticar(titulos: Row[], saldo: number, nomeDe: (t: Row) => string, hoje = hojeISO()): Diagnostico {
-  const burn = burnRate(titulos, hoje);
+export function diagnosticar(titulos: Row[], saldo: number, nomeDe: (t: Row) => string, hoje = hojeISO(), inicio = ""): Diagnostico {
+  const burn = burnRate(titulos, hoje, 3, inicio);
   const runway = runwayMeses(saldo, burn);
   const ruptura = rupturaCaixa(titulos, saldo, hoje);
   const inad = inadimplencia(titulos, nomeDe, hoje);
   const pmr = prazoMedio(titulos, "receber");
   const pmp = prazoMedio(titulos, "pagar");
-  const categorias = categoriasEmAlta(titulos, hoje);
+  const categorias = categoriasEmAlta(titulos, hoje, 0.3, inicio);
   const lim = somaDias(hoje, 30);
   let aReceber30 = 0, aPagar30 = 0;
   for (const t of titulos) {
