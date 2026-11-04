@@ -26,8 +26,9 @@ import { CORES_AGENDA, EXPEDIENTE_PADRAO, conflitosBloqueio, type Bloqueio, type
 import {
   calcularPerformance, diaDoItem, horas, inicioSemana, lerEventos, normalizarPrioridade, novasRemarcacoes, ordenar, somarDias, textoRemarcacao,
   type PlannerItem,
-  progressoTarefaPatch,
+  progressoTarefaPatch, FAIXAS_PROGRESSO,
 } from "@/lib/planner";
+import { progressoCor } from "@/lib/projetos";
 
 const hoje = () => new Date().toISOString().slice(0, 10);
 const dataBR = (s: string) => { const [a, m, d] = s.slice(0, 10).split("-"); return `${d}/${m}/${a}`; };
@@ -126,7 +127,25 @@ export function usePlannerItens(usuarioId: string, autorId?: string) {
   return { itens: q.data ?? [], isLoading: q.isLoading, concluir, planejar, definirProgresso, recarregar };
 }
 
-export function ItemLinha({ i, onCheck, compacto, editavel = true, onAbrir, nome }: { i: PlannerItem; onCheck: (feito: boolean) => void; compacto?: boolean; editavel?: boolean; onAbrir?: () => void; nome?: (id: string) => string }) {
+/** Controle de progresso 0/25/50/75/100 com as cores de Projetos. */
+export function ProgressoTarefa({ valor, onChange, disabled }: { valor: number; onChange: (p: number) => void; disabled?: boolean }) {
+  return (
+    <div className="mt-1.5 flex flex-wrap items-center gap-1" role="group" aria-label="Progresso da tarefa">
+      <div className="mr-1 h-1.5 w-14 overflow-hidden rounded-full bg-muted"><div className="h-full" style={{ width: `${valor}%`, backgroundColor: progressoCor(valor) }} /></div>
+      {FAIXAS_PROGRESSO.map((p) => {
+        const ativo = valor === p;
+        return (
+          <button key={p} type="button" disabled={disabled} aria-pressed={ativo} aria-label={`Progresso ${p}%`}
+            onClick={(e) => { e.stopPropagation(); onChange(p); }}
+            className={cn("rounded-full border px-1.5 py-0.5 text-[10px] font-semibold disabled:opacity-50", ativo ? "text-primary-foreground" : "border-border text-muted-foreground hover:bg-muted")}
+            style={ativo ? { backgroundColor: progressoCor(p), borderColor: progressoCor(p) } : undefined}>{p}%</button>
+        );
+      })}
+    </div>
+  );
+}
+
+export function ItemLinha({ i, onCheck, compacto, editavel = true, onAbrir, nome, onProgresso }: { i: PlannerItem; onCheck: (feito: boolean) => void; compacto?: boolean; editavel?: boolean; onAbrir?: () => void; nome?: (id: string) => string; onProgresso?: (p: number) => void }) {
   const feito = i.status === "concluida";
   const atraso = !feito && !!i.entrega && i.entrega < hoje();
   const proprio = !!i.criadoPor && i.criadoPor === i.responsavel;
@@ -161,6 +180,7 @@ export function ItemLinha({ i, onCheck, compacto, editavel = true, onAbrir, nome
             {i.comentarios ? <span className="inline-flex items-center gap-0.5"><MessageSquare className="h-3 w-3" />{i.comentarios}</span> : null}
           </p>
         )}
+        {onProgresso && i.origem === "tarefa" && <ProgressoTarefa valor={i.progresso ?? 0} disabled={!editavel} onChange={onProgresso} />}
       </div>
     </div>
   );
@@ -236,7 +256,14 @@ export function PlannerPainel({ me, empresaId, usuarios, onFechar, embutido, aco
     if (r.error) return void toast.error(r.error.message);
     void bloqQ.refetch();
   };
-  const { itens, concluir, planejar } = usePlannerItens(alvo, me);
+  const { itens, concluir, planejar, definirProgresso } = usePlannerItens(alvo, me);
+  const progredir = async (i: PlannerItem, p: number) => {
+    const ok = await definirProgresso(i, p);
+    if (ok && p >= 100 && i.status !== "concluida" && onAvisar && i.criadoPor && i.criadoPor !== me) {
+      const quem = nomeUsuario(usuarios, me);
+      await onAvisar(i.criadoPor, `🏁 ${quem} concluiu a tarefa "${i.titulo}" (100%).`).catch(() => undefined);
+    }
+  };
   const proprio = alvo === me;
   const mapaNomes = useMemo(() => new Map(usuarios.map((u) => [String(u["id"]), String(pick(u, ["nome"], "Usuário"))])), [usuarios]);
   const nomeDe = (id: string) => (id === me ? "Você" : mapaNomes.get(id) ?? "Usuário");
@@ -290,7 +317,7 @@ export function PlannerPainel({ me, empresaId, usuarios, onFechar, embutido, aco
           ))}
           {lista.map((i) => (
             <div key={i.id} draggable={proprio && i.origem === "tarefa"} onDragStart={() => setArrastando(i.id)} className={cn(proprio && i.origem === "tarefa" && "cursor-grab")}>
-              <ItemLinha i={i} nome={nomeDe} editavel={proprio} onCheck={(f) => void concluir(i, f)} onAbrir={() => setAberta(i.id)} />
+              <ItemLinha i={i} nome={nomeDe} editavel={proprio} onCheck={(f) => void concluir(i, f)} onAbrir={() => setAberta(i.id)} onProgresso={(p) => void progredir(i, p)} />
             </div>
           ))}
         </div>
@@ -416,7 +443,7 @@ export function PlannerPainel({ me, empresaId, usuarios, onFechar, embutido, aco
             <div className="space-y-1.5">
               {backlog.map((i) => (
                 <div key={i.id} draggable={proprio && i.origem === "tarefa"} onDragStart={() => setArrastando(i.id)}>
-                  <ItemLinha i={i} nome={nomeDe} editavel={proprio} onCheck={(f) => void concluir(i, f)} onAbrir={() => setAberta(i.id)} />
+                  <ItemLinha i={i} nome={nomeDe} editavel={proprio} onCheck={(f) => void concluir(i, f)} onAbrir={() => setAberta(i.id)} onProgresso={(p) => void progredir(i, p)} />
                 </div>
               ))}
             </div>
