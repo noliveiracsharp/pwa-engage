@@ -147,50 +147,13 @@ export function TarefasChat({ me, empresaId, usuarios, onAvisar }: {
         <Button size="icon" variant="outline" className="h-8 w-8" aria-label="Expandir planner" title="Expandir planner" onClick={() => setExpandido(true)}><Maximize2 className="h-4 w-4" /></Button>
       </div>
       <TarefaDetalhe id={aberta} me={me} usuarios={usuarios} onFechar={() => setAberta(null)} onAvisar={onAvisar} />
-      {expandido && <PlannerPainel me={me} empresaId={empresaId} usuarios={usuarios} onFechar={() => setExpandido(false)} />}
-      {aba === "minhas" && (
-        <div className="flex gap-1 px-4 pb-2 text-[11px]">
-          {([["hoje", "Hoje"], ["proximos", "Próximos"], ["backlog", "Backlog"], ["concluidas", "Concluídas"]] as const).map(([v, l]) => (
-            <button key={v} type="button" onClick={() => setVisao(v)} className={cn("rounded-full border border-border px-2.5 py-1", visao === v && "border-primary bg-primary/10 text-primary")}>{l}</button>
-          ))}
-        </div>
-      )}
+      {expandido && <PlannerPainel onAvisar={onAvisar} me={me} empresaId={empresaId} usuarios={usuarios} onFechar={() => setExpandido(false)} />}
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
         <div className="space-y-2 px-3 pb-3">
           {isLoading && <Loader2 className="mx-auto my-6 h-5 w-5 animate-spin text-muted-foreground" />}
           {aba === "minhas" && lista.length > 0 && <p className="pt-1 text-[11px] font-semibold text-warning">Aguardando seu aceite</p>}
           {lista.map((t) => <CardTarefa key={String(t["id"])} t={t} me={me} nome={nome} onAtualizar={atualizar} onApagar={apagarTarefa} onPerguntar={perguntar} />)}
-          {aba === "minhas" && doDia.map((i) => (
-            <div key={i.id} className="flex items-center gap-1">
-              <div className="min-w-0 flex-1">
-                <ItemLinha i={i} nome={(id) => nome(id)} onCheck={(f) => void concluirItem(i, f)} onAbrir={() => setAberta(i.id)} />
-                {i.origem === "tarefa" && (
-                  <div className="mt-1 flex items-center gap-1 pl-7" role="group" aria-label="Progresso da tarefa">
-                    <div className="mr-1 h-1.5 w-16 overflow-hidden rounded-full bg-muted"><div className="h-full" style={{ width: `${i.progresso ?? 0}%`, backgroundColor: progressoCor(i.progresso ?? 0) }} /></div>
-                    {FAIXAS_PROGRESSO.map((p) => {
-                      const ativo = (i.progresso ?? 0) === p;
-                      return (
-                        <button key={p} type="button" aria-pressed={ativo} aria-label={`Progresso ${p}%`} onClick={() => void progredir(i, p)}
-                          className={cn("rounded-full border px-1.5 py-0.5 text-[10px] font-semibold", ativo ? "text-primary-foreground" : "border-border text-muted-foreground hover:bg-muted")}
-                          style={ativo ? { backgroundColor: progressoCor(p), borderColor: progressoCor(p) } : undefined}>{p}%</button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-              {i.origem === "tarefa" && minhaCriacao.has(i.id) && (
-                <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0 text-destructive" title="Apagar tarefa" aria-label="Apagar tarefa" onClick={() => void apagarTarefa(i.id, minhaCriacao.get(i.id)!)}><Trash2 className="h-3.5 w-3.5" /></Button>
-              )}
-              {i.origem === "tarefa" && i.status !== "concluida" && (
-                <select aria-label="Planejar para" className="h-7 rounded border border-border bg-background text-[10px]" value=""
-                  onChange={(e) => { const v = e.target.value; void planner.planejar(i, v === "backlog" ? null : v === "hoje" ? h : new Date(Date.now() + 864e5).toISOString().slice(0, 10)); }}>
-                  <option value="" disabled>Mover…</option>
-                  <option value="hoje">Hoje</option><option value="amanha">Amanhã</option><option value="backlog">Backlog</option>
-                </select>
-              )}
-            </div>
-          ))}
-          {!isLoading && lista.length === 0 && (aba === "delegadas" || doDia.length === 0) && <p className="py-6 text-center text-sm text-muted-foreground">Nenhuma tarefa aqui.</p>}
+          {!isLoading && lista.length === 0 && <p className="py-6 text-center text-sm text-muted-foreground">{aba === "minhas" ? "Nada aguardando seu aceite. As tarefas aceitas ficam na Agenda e no Quadro semanal." : "Nenhuma tarefa delegada."}</p>}
         </div>
       </div>
     </div>
