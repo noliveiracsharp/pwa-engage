@@ -4,7 +4,8 @@ import { Trash2, Check, CheckCircle2, Download, FileText, HelpCircle, Loader2, M
 import { PlannerPainel, ItemLinha, usePlannerItens } from "@/components/chat-interno/PlannerPainel";
 import { TarefaDetalhe, registrarEvento } from "@/components/chat-interno/TarefaDetalhe";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { diaDoItem, ordenar, PRIORIDADES, type Prioridade } from "@/lib/planner";
+import { diaDoItem, ordenar, PRIORIDADES, FAIXAS_PROGRESSO, type Prioridade, type PlannerItem } from "@/lib/planner";
+import { progressoCor } from "@/lib/projetos";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { pick, type Row } from "@/lib/row";
@@ -86,10 +87,23 @@ export function TarefasChat({ me, empresaId, usuarios, onAvisar }: {
   }));
   const pendentes = tarefas.filter((t) => String(t["responsavel_id"]) === me && t["status"] === "aguardando").length;
 
+  const avisarConclusao = async (i: PlannerItem) => {
+    if (i.criadoPor && i.criadoPor !== me) await onAvisar(i.criadoPor, `🏁 ${nome(me) === "Você" ? (nomes.get(me) ?? "O responsável") : nome(me)} concluiu a tarefa "${i.titulo}" (100%).`).catch(() => undefined);
+  };
+  const progredir = async (i: PlannerItem, p: number) => {
+    const ok = await planner.definirProgresso(i, p);
+    if (ok && p >= 100 && i.status !== "concluida") await avisarConclusao(i);
+  };
+  const concluirItem = async (i: PlannerItem, feito: boolean) => {
+    await planner.concluir(i, feito);
+    if (feito && i.origem === "tarefa") await avisarConclusao(i);
+  };
+
   const atualizar = async (t: Row, patch: Record<string, unknown>, aviso: string) => {
     const { error } = await tb().update(patch as never).eq("id", String(t["id"]));
     if (error) { toast.error(error.message); return; }
     void qc.invalidateQueries({ queryKey: key });
+    planner.recarregar();
     const criador = String(t["criado_por"]);
     if (criador !== me) await onAvisar(criador, aviso).catch(() => undefined);
   };
@@ -148,7 +162,22 @@ export function TarefasChat({ me, empresaId, usuarios, onAvisar }: {
           {lista.map((t) => <CardTarefa key={String(t["id"])} t={t} me={me} nome={nome} onAtualizar={atualizar} onApagar={apagarTarefa} onPerguntar={perguntar} />)}
           {aba === "minhas" && doDia.map((i) => (
             <div key={i.id} className="flex items-center gap-1">
-              <div className="min-w-0 flex-1"><ItemLinha i={i} nome={(id) => nome(id)} onCheck={(f) => void planner.concluir(i, f)} onAbrir={() => setAberta(i.id)} /></div>
+              <div className="min-w-0 flex-1">
+                <ItemLinha i={i} nome={(id) => nome(id)} onCheck={(f) => void concluirItem(i, f)} onAbrir={() => setAberta(i.id)} />
+                {i.origem === "tarefa" && (
+                  <div className="mt-1 flex items-center gap-1 pl-7" role="group" aria-label="Progresso da tarefa">
+                    <div className="mr-1 h-1.5 w-16 overflow-hidden rounded-full bg-muted"><div className="h-full" style={{ width: `${i.progresso ?? 0}%`, backgroundColor: progressoCor(i.progresso ?? 0) }} /></div>
+                    {FAIXAS_PROGRESSO.map((p) => {
+                      const ativo = (i.progresso ?? 0) === p;
+                      return (
+                        <button key={p} type="button" aria-pressed={ativo} aria-label={`Progresso ${p}%`} onClick={() => void progredir(i, p)}
+                          className={cn("rounded-full border px-1.5 py-0.5 text-[10px] font-semibold", ativo ? "text-primary-foreground" : "border-border text-muted-foreground hover:bg-muted")}
+                          style={ativo ? { backgroundColor: progressoCor(p), borderColor: progressoCor(p) } : undefined}>{p}%</button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
               {i.origem === "tarefa" && minhaCriacao.has(i.id) && (
                 <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0 text-destructive" title="Apagar tarefa" aria-label="Apagar tarefa" onClick={() => void apagarTarefa(i.id, minhaCriacao.get(i.id)!)}><Trash2 className="h-3.5 w-3.5" /></Button>
               )}

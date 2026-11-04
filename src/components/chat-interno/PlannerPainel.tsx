@@ -26,6 +26,7 @@ import { CORES_AGENDA, EXPEDIENTE_PADRAO, conflitosBloqueio, type Bloqueio, type
 import {
   calcularPerformance, diaDoItem, horas, inicioSemana, lerEventos, normalizarPrioridade, novasRemarcacoes, ordenar, somarDias, textoRemarcacao,
   type PlannerItem,
+  progressoTarefaPatch,
 } from "@/lib/planner";
 
 const hoje = () => new Date().toISOString().slice(0, 10);
