@@ -133,10 +133,25 @@ export function EnviarPropostaDialog({ open, onOpenChange, orcamento, empresa, c
       toast.success("Mensagem enviada pelo WhatsApp da empresa.");
       onOpenChange(false);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Falha ao enviar.");
+      const motivo = e instanceof Error ? e.message : "Falha ao enviar.";
+      toast.error(motivo);
+      await registrarFalha("whatsapp", telefone, motivo);
     } finally {
       setEnviando(false);
     }
+  };
+
+  /** Grava a tentativa que falhou na linha do tempo (sem marcar a Oferta como enviada). */
+  const registrarFalha = async (canal: "email" | "whatsapp", destino: string, motivo: string) => {
+    const id = String(rowId(orcamento) ?? "");
+    if (!id) return;
+    try {
+      await supabase.from("orcamento_interacoes" as never).insert({
+        orcamento_id: id, tipo: "falha_envio", empresa_id: empresaId || null,
+        descricao: `Falha no envio por ${canal === "email" ? "e-mail" : "WhatsApp"} para ${destino || "—"}: ${motivo}`,
+      } as never);
+      void qc.invalidateQueries({ queryKey: ["orcamento_interacoes", id] });
+    } catch { /* registro é complementar ao aviso na tela */ }
   };
 
   const registrar = async (descricao: string, tipo: string) => {
@@ -182,7 +197,9 @@ export function EnviarPropostaDialog({ open, onOpenChange, orcamento, empresa, c
       toast.success(`Oferta enviada para ${lista.length} e-mail(s).`);
       onOpenChange(false);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Falha ao enviar o e-mail.");
+      const motivo = e instanceof Error ? e.message : "Falha ao enviar o e-mail.";
+      toast.error(motivo);
+      await registrarFalha("email", lista.join(", "), motivo);
     } finally {
       setEnviando(false);
     }

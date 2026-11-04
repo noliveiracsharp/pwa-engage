@@ -74,7 +74,7 @@ function RelatorioEnvios() {
     queryFn: async () => {
       const [cobr, ofertas, msgs] = await Promise.all([
         ler("cobranca_envios", "enviado_em", empresaId, desde, ate),
-        ler("orcamento_interacoes", "created_at", empresaId, desde, ate, (x) => x.in("tipo", ["email", "whatsapp"])),
+        ler("orcamento_interacoes", "created_at", empresaId, desde, ate, (x) => x.in("tipo", ["email", "whatsapp", "falha_envio"])),
         // Mensagens enviadas pela equipe no WhatsApp (as recebidas não têm status de envio).
         ler("atendimentos_mensagem", "created_at", undefined, desde, ate, (x) => x.not("status_envio", "is", null)),
       ]);
@@ -97,9 +97,10 @@ function RelatorioEnvios() {
     for (const r of q.data.ofertas) {
       const num = numeroOferta.get(text(r["orcamento_id"]));
       out.push({
-        id: `o${text(r["id"])}`, quando: new Date(text(r["created_at"])), canal: text(r["tipo"]) === "email" ? "email" : "whatsapp",
-        origem: num ? `Oferta ${num}` : "Oferta", destino: text(r["descricao"]).replace(/^.*?para\s+/i, ""), descricao: text(r["descricao"]),
-        status: "sem_rastreio", lidoEm: null, aberturas: 0,
+        id: `o${text(r["id"])}`, quando: new Date(text(r["created_at"])),
+        canal: text(r["tipo"]) === "email" || /e-mail/i.test(text(r["descricao"]).slice(0, 40)) ? "email" : "whatsapp",
+        origem: num ? `Oferta ${num}` : "Oferta", destino: text(r["descricao"]).replace(/^.*?para\s+/i, "").replace(/:.*$/, ""), descricao: text(r["descricao"]),
+        status: text(r["tipo"]) === "falha_envio" ? "falhou" : "sem_rastreio", lidoEm: null, aberturas: 0,
       });
     }
     for (const r of q.data.msgs) {
