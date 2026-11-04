@@ -15,7 +15,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { TextoRico } from "@/components/ui/texto-rico";
 import { htmlParaTexto } from "@/lib/html-texto";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { confirmar } from "@/components/layout/DialogoGlobal";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -132,7 +131,7 @@ export function TarefasChat({ me, empresaId, usuarios, onAvisar }: {
           ))}
         </div>
       )}
-      <ScrollArea className="min-h-0 flex-1">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
         <div className="space-y-2 px-3 pb-3">
           {isLoading && <Loader2 className="mx-auto my-6 h-5 w-5 animate-spin text-muted-foreground" />}
           {aba === "minhas" && lista.length > 0 && <p className="pt-1 text-[11px] font-semibold text-warning">Aguardando seu aceite</p>}
@@ -154,7 +153,7 @@ export function TarefasChat({ me, empresaId, usuarios, onAvisar }: {
           ))}
           {!isLoading && lista.length === 0 && (aba === "delegadas" || doDia.length === 0) && <p className="py-6 text-center text-sm text-muted-foreground">Nenhuma tarefa aqui.</p>}
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 }
@@ -271,7 +270,7 @@ export function NovaTarefa({ me, empresaId, usuarios, onCancel, onSaved, respons
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <ScrollArea className="min-h-0 flex-1">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
         <div className="space-y-3 p-4">
           <div className="space-y-1"><Label>Título</Label><Input value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="O que precisa ser feito?" /></div>
           <div className="space-y-1">
@@ -311,7 +310,7 @@ export function NovaTarefa({ me, empresaId, usuarios, onCancel, onSaved, respons
             ))}
           </div>
         </div>
-      </ScrollArea>
+      </div>
       <div className="flex justify-end gap-2 border-t border-border p-3">
         <Button variant="outline" size="sm" onClick={onCancel}>Cancelar</Button>
         <Button size="sm" onClick={() => void salvar()} disabled={enviando}>{enviando && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}Salvar</Button>
