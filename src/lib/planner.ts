@@ -22,7 +22,20 @@ export type PlannerItem = {
   responsavel?: string | null;
   /** Nome do projeto de origem (tarefa de projeto). */
   projetoNome?: string | null;
+  /** Progresso 0/25/50/75/100. */
+  progresso?: number;
 };
+
+/** Faixas de progresso das tarefas (mesma escala de Projetos). */
+export const FAIXAS_PROGRESSO = [0, 25, 50, 75, 100] as const;
+
+/** Patch de progresso: 100 conclui; abaixo de 100 mantém/reabre em andamento. */
+export function progressoTarefaPatch(pct: number): Record<string, unknown> {
+  const p = Math.max(0, Math.min(100, Math.round(pct)));
+  return p >= 100
+    ? { progresso: 100, status: "concluida", concluido_em: new Date().toISOString() }
+    : { progresso: p, status: "andamento", concluido_em: null };
+}
 
 export const PRIORIDADES: { v: Prioridade; label: string; peso: number }[] = [
   { v: "alta", label: "Alta", peso: 0 },
