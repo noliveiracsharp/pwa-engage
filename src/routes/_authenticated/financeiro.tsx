@@ -47,6 +47,35 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UploadInfo } from "@/components/ui/upload-info";
 import { supabase } from "@/integrations/supabase/client";
+
+/** Copia os itens (rateio) de um título para outros da mesma série, proporcional ao valor de cada um. */
+async function replicarItensTitulo(origemId: string, destinos: string[]) {
+  const ids = [...new Set(destinos)].filter((id) => id && id !== origemId);
+  if (!ids.length) return;
+  const { data: itens, error } = await supabase.from("financeiro_titulos_itens" as never).select("*").eq("titulo_id", origemId);
+  if (error || !itens?.length) return;
+  const linhas = itens as Row[];
+  const { data: tits, error: e1 } = await supabase.from("financeiro_titulos").select("id,valor").in("id", [origemId, ...ids] as never);
+  if (e1) throw e1;
+  const valorDe = new Map(((tits ?? []) as Row[]).map((t) => [text(t["id"]), Number(t["valor"]) || 0]));
+  const base = linhas.reduce((s, l) => s + (Number(l["valor"]) || 0), 0) || valorDe.get(origemId) || 0;
+  for (const id of ids) {
+    const alvo = valorDe.get(id) ?? base;
+    const fator = base > 0 ? alvo / base : 1;
+    let acum = 0;
+    const lote = linhas.map((l, i) => {
+      const valor = i === linhas.length - 1 ? Math.round((alvo - acum) * 100) / 100 : Math.round((Number(l["valor"]) || 0) * fator * 100) / 100;
+      acum += valor;
+      return { empresa_id: l["empresa_id"], titulo_id: id, descricao: l["descricao"], quantidade: l["quantidade"], valor,
+        centro_custo_id: l["centro_custo_id"] ?? null, plano_contas_id: l["plano_contas_id"] ?? null, item_id: l["item_id"] ?? null,
+        origem_tipo: l["origem_tipo"] ?? "manual", origem_id: l["origem_id"] ?? null };
+    });
+    const del = await supabase.from("financeiro_titulos_itens" as never).delete().eq("titulo_id", id);
+    if (del.error) throw del.error;
+    const ins = await supabase.from("financeiro_titulos_itens" as never).insert(lote as never);
+    if (ins.error) throw ins.error;
+  }
+}
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { useSecoes } from "@/hooks/useSecoes";
 import { ConteudoAbaFilha, useAbasFilhas } from "@/components/layout/SubmenuTabs";
@@ -1423,6 +1452,7 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
     if ((temSerie || serieOferta) && !alcance && !v.desvincular) { setEscopo("atual"); setConfirmarSerie(true); return; }
     if (registro && v.status === "pago" && !v.pago_em) return void toast.error("Informe a data do pagamento.");
     setSalvando(true);
+    const replicarPara: string[] = [];
     try {
       const statusBase = v.status === "pago" ? (text(registro?.["status"]) === "pago" ? "pago" : "aberto") : v.status;
       const base = { tipo, descricao: v.descricao.trim(), categoria: v.categoria || (categorias.ativas[0] ?? ""), parceiro_id: v.parceiro_id || null,
@@ -1455,6 +1485,7 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
       if (registro) {
         if (serieOferta && alcance && !v.desvincular) {
           const alvos = alvosOferta(registro, irmasOferta, alcance, hojeISO());
+          replicarPara.push(...alvos.map((t) => text(t["id"])).filter((id) => id !== text(registro["id"])));
           for (const t of alvos) {
             const patch = t["id"] === registro["id"] ? base : patchRecorrencia(registro, t, base);
             if (!Object.keys(patch).length) continue;
@@ -1484,6 +1515,7 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
           const atual = titulos.find((t) => t["id"] === reg["id"]);
           if (!atual) throw new Error("Este lançamento não está mais disponível. Atualize a lista.");
           const patches = alvosRecorrencia(atual, titulos, alcance, hojeISO()).map((t) => ({ id: t["id"], valores: patchRecorrencia(reg, t, base) }));
+          replicarPara.push(...patches.map((p) => text(p.id)).filter((id) => id !== text(reg["id"])));
           const { error } = await supabase.rpc("editar_serie_financeira", { p_atual: reg["id"], p_escopo: alcance, p_alteracoes: patches } as never);
           if (error) {
             if (error.code === "PGRST202" || error.code === "42883") throw new Error("Execute o script de edição recorrente no SQL Editor para ativar esta opção.");
@@ -1503,7 +1535,8 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
           const resto = previa.filter((_, i) => i !== iAtual).map((p, i) => ({ ...base, empresa_id: registro["empresa_id"], origem_tipo: "manual", origem_id: serieId,
             parcela_n: p.n ?? i + 2, descricao: `${base.descricao} (${p.n ?? i + 2}/${n})`, vencimento: p.vencimento, valor: p.valor, data_competencia: p.vencimento,
             ...(p.anterior && statusAnt === "pago" ? { status: "pago", pago_em: p.vencimento, valor_pago: p.valor } : { status: "aberto" }) }));
-          const { error: e2 } = await supabase.from("financeiro_titulos").insert(resto as never);
+          const { data: novos, error: e2 } = await supabase.from("financeiro_titulos").insert(resto as never).select("id");
+          replicarPara.push(...((novos ?? []) as Row[]).map((t) => text(t["id"])));
           if (e2) throw e2;
         } else {
           const pago = podeConverter && v.ja_pago ? { status: "pago", pago_em: v.vencimento, valor_pago: valor } : {};
@@ -1547,6 +1580,8 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
         if (error) throw error;
       }
       if (registro && rateio?.temLinhas && rateio.pendente) await rateio.salvar();
+      // Itens do lançamento valem também para as demais parcelas alcançadas pela edição.
+      if (registro && rateio?.temLinhas && replicarPara.length) await replicarItensTitulo(text(rowId(registro)), replicarPara);
       toast.success(previa.length > 1 ? `${previa.length} parcelas salvas.` : "Conta salva."); onSaved(); onClose();
     } catch (e) {
       toast.error(erroFinanceiro(e));
