@@ -1,5 +1,5 @@
 import type React from "react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarClock, ChevronLeft, ChevronRight, CheckCircle2, Circle, Inbox, MessageSquare, Printer, Video, X, LogIn, Copy, Pencil, Ban } from "lucide-react";
 import { ReunioesPainel, linkReuniao, novaReuniao, textoConvite, useReunioes, type Reuniao } from "@/components/chat-interno/ReunioesPainel";
