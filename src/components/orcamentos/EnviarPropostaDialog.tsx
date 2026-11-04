@@ -141,6 +141,19 @@ export function EnviarPropostaDialog({ open, onOpenChange, orcamento, empresa, c
     }
   };
 
+  /** Grava a tentativa que falhou na linha do tempo (sem marcar a Oferta como enviada). */
+  const registrarFalha = async (canal: "email" | "whatsapp", destino: string, motivo: string) => {
+    const id = String(rowId(orcamento) ?? "");
+    if (!id) return;
+    try {
+      await supabase.from("orcamento_interacoes" as never).insert({
+        orcamento_id: id, tipo: "falha_envio", empresa_id: empresaId || null,
+        descricao: `Falha no envio por ${canal === "email" ? "e-mail" : "WhatsApp"} para ${destino || "—"}: ${motivo}`,
+      } as never);
+      void qc.invalidateQueries({ queryKey: ["orcamento_interacoes", id] });
+    } catch { /* registro é complementar ao aviso na tela */ }
+  };
+
   const registrar = async (descricao: string, tipo: string) => {
     await supabase.from("orcamento_interacoes" as never).insert({
       orcamento_id: String(rowId(orcamento) ?? ""), tipo, descricao, empresa_id: empresaId || null,

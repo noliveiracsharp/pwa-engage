@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowRightLeft, Clock, MessageSquare, Phone, Send, StickyNote, Users, MapPin, Trash2, Pencil } from "lucide-react";
+import { AlertTriangle, ArrowRightLeft, Clock, MessageSquare, Phone, Send, StickyNote, Users, MapPin, Trash2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,7 @@ const TIPOS = [
   { value: "visita", label: "Visita", icon: MapPin },
   { value: "whatsapp", label: "WhatsApp", icon: MessageSquare },
 ];
-const AUTO = new Set(["etapa", "situacao", "sistema"]);
+const AUTO = new Set(["etapa", "situacao", "sistema", "falha_envio"]);
 
 /** Linha do tempo da Oferta: anotações do vendedor + mudanças registradas pelo banco. */
 export function OfertaTimeline({ orcamentoId, empresaId, readOnly }: { orcamentoId: string; empresaId?: unknown; readOnly?: boolean }) {
@@ -96,7 +96,7 @@ export function OfertaTimeline({ orcamentoId, empresaId, readOnly }: { orcamento
         <ol className="space-y-2 border-l border-border pl-4">
           {data.map((r) => {
             const t = String(r["tipo"] ?? "nota");
-            const Icon = AUTO.has(t) ? ArrowRightLeft : TIPOS.find((x) => x.value === t)?.icon ?? Clock;
+            const Icon = t === "falha_envio" ? AlertTriangle : AUTO.has(t) ? ArrowRightLeft : TIPOS.find((x) => x.value === t)?.icon ?? Clock;
             return (
               <li key={String(r["id"])} className="relative">
                 <span className="absolute -left-[1.4rem] top-1 flex h-5 w-5 items-center justify-center rounded-full border border-border bg-background">
@@ -115,7 +115,7 @@ export function OfertaTimeline({ orcamentoId, empresaId, readOnly }: { orcamento
                     </div>
                   ) : (
                   <div className="min-w-0">
-                    <p className={AUTO.has(t) ? "text-xs text-muted-foreground" : "text-sm text-foreground whitespace-pre-wrap"}>{String(r["descricao"] ?? "")}</p>
+                    <p className={t === "falha_envio" ? "text-xs font-medium text-destructive" : AUTO.has(t) ? "text-xs text-muted-foreground" : "text-sm text-foreground whitespace-pre-wrap"}>{String(r["descricao"] ?? "")}</p>
                     <p className="text-[11px] text-muted-foreground">
                       {AUTO.has(t) ? "Automático" : TIPOS.find((x) => x.value === t)?.label} · {new Date(String(r["created_at"])).toLocaleString("pt-BR")}
                     </p>

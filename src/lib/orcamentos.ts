@@ -700,5 +700,8 @@ export function seloEnvio(o: Row | null | undefined): string | null {
   const d = new Date(String(em));
   if (isNaN(d.getTime())) return null;
   const canal = o?.["enviada_canal"] === "email" ? "e-mail" : o?.["enviada_canal"] === "whatsapp" ? "WhatsApp" : "";
-  return `Enviada ${d.toLocaleDateString("pt-BR")} ${d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}${canal ? ` via ${canal}` : ""}`;
+  const hm = (x: Date) => `${x.toLocaleDateString("pt-BR")} ${x.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
+  const v = o?.["visualizado_em"] ? new Date(String(o["visualizado_em"])) : null;
+  const leitura = v && !isNaN(v.getTime()) ? ` • Aberta ${hm(v)}` : "";
+  return `Enviada ${hm(d)}${canal ? ` via ${canal}` : ""}${leitura}`;
 }
