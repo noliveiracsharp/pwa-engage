@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,12 +15,13 @@ export function PeriodoNavegavel({ label = "Vencimento", value, onChange }: { la
   const [ate, setAte] = useState(value.ate);
   const invalido = !de || !ate || de > ate;
 
+  const abertoEm = useRef(0);
   const abrirPersonalizado = () => {
     const m = periodoPreset("mes");
     setDe(value.de || m.de);
     setAte(value.ate || m.ate);
-    // Aguarda o menu fechar para o foco não voltar ao gatilho e fechar o popover.
-    setTimeout(() => setAberto(true), 0);
+    // Aguarda o menu fechar por completo; o clique que fechou o menu não deve fechar o quadro.
+    setTimeout(() => { abertoEm.current = Date.now(); setAberto(true); }, 50);
   };
   const aplicar = () => {
     if (invalido) return;
