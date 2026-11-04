@@ -304,7 +304,12 @@ function OrcamentosPage() {
       fields: ["numero"],
       render: (r) => (
         <div>
-          <div className="font-semibold tabular-nums">{String(r["numero"] ?? "—")}</div>
+          <div className="font-semibold tabular-nums">
+            {String(r["numero"] ?? "—")}
+            {(Number(r["versao_atual"] ?? 1) || 1) > 1 && (
+              <span className="ml-1.5 rounded bg-primary/10 px-1.5 py-0.5 text-xs font-bold text-primary">V{Number(r["versao_atual"])}</span>
+            )}
+          </div>
           <div className="text-muted-foreground text-xs">
             {qtdItensPorOrcamento.get(String(rowId(r) ?? "")) ?? 0}{" "}
             {qtdItensPorOrcamento.get(String(rowId(r) ?? "")) === 1 ? "item" : "itens"}
@@ -370,7 +375,8 @@ function OrcamentosPage() {
       fields: ["validade_orcamento"],
       render: (r) => {
         const dias = daysUntil(r["validade_orcamento"]);
-        const emAndamento = situacaoOf(r["situacao"]) === "Em andamento";
+        // Oferta aprovada/ativada (contrato fechado) não exibe alerta de validade.
+        const emAndamento = situacaoOf(r["situacao"]) === "Em andamento" && !ofertaTravada(r, etapasKanban);
         return (
           <div>
             <div>{formatDate(r["validade_orcamento"])}</div>
