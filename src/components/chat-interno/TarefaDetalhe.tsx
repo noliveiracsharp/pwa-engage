@@ -29,7 +29,7 @@ export async function registrarEvento(id: string, autorId: string, texto: string
 
 export function TarefaDetalhe({ id, me, usuarios, onFechar, onAvisar }: {
   id: string | null; me: string; usuarios: Row[]; onFechar: () => void;
-  onAvisar?: (usuarioId: string, texto: string) => Promise<void>;
+  onAvisar?: ((usuarioId: string, texto: string) => Promise<void>) | undefined;
 }) {
   const qc = useQueryClient();
   const nomes = useMemo(() => new Map(usuarios.map((u) => [String(u["id"]), String(pick(u, ["nome"], "Usuário"))])), [usuarios]);
