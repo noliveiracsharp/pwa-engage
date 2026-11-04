@@ -46,7 +46,7 @@ export function ControllerPainel({ titulos }: { titulos: Row[] }) {
   const [saldo, setSaldo] = useState("");
   const emp = useEmpresaAtiva();
   const [inicio, setInicio] = useState("");
-  const inicioKey = `controller-inicio-${text(emp?.id ?? "")}`;
+  const inicioKey = `controller-inicio-${text(emp.slug || emp.nome)}`;
   useEffect(() => setSaldo(localStorage.getItem(SALDO_KEY) ?? ""), []);
   useEffect(() => setInicio(localStorage.getItem(inicioKey) ?? ""), [inicioKey]);
   const d = useMemo(() => diagnosticar(titulos, num(saldo), (t) => nomes.get(text(t["parceiro_id"])) ?? "", undefined, inicio), [titulos, saldo, nomes, inicio]);
