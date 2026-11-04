@@ -272,6 +272,14 @@ function Titulos({ tipo, perms }: { tipo: TipoTitulo; perms: Perms }) {
   };
   const [f, setF] = useState({ busca: "", situacao: "todos", categoria: "todos", cartao: "todos", centro: "todos", per: periodoPreset("mes") });
   const situacoesSel = f.situacao === "todos" ? [] : f.situacao.split(",").filter(Boolean);
+  // Cartão: multisseleção — "__cartoes" = qualquer cartão, "__sem" = sem cartão, demais = ids de cartões (OU entre si).
+  const cartoesSel = f.cartao === "todos" ? [] : f.cartao.split(",").filter(Boolean);
+  const cartaoUnico = cartoesSel.length === 1 && !cartoesSel[0]!.startsWith("__");
+  const casaCartao = (t: Row) => {
+    if (!cartoesSel.length) return true;
+    const cid = text(t["cartao_id"]);
+    return cartoesSel.some((s) => (s === "__cartoes" ? !!cid : s === "__sem" ? !cid : cid === s));
+  };
   const [relatorio, setRelatorio] = useState(false);
   const [sel, setSel] = useState<Set<string>>(new Set());
   const periodoF = f.per;
@@ -346,7 +354,7 @@ function Titulos({ tipo, perms }: { tipo: TipoTitulo; perms: Perms }) {
         return (
           casa &&
           (f.categoria === "todos" || t["categoria"] === f.categoria) &&
-          (f.cartao === "todos" || text(t["cartao_id"]) === f.cartao) &&
+          casaCartao(t) &&
           (f.centro === "todos" || (f.centro === "sem" ? !t["centro_custo_id"] : text(t["centro_custo_id"]) === f.centro)) &&
           (!periodoF.de || v >= periodoF.de) && (!periodoF.ate || v <= periodoF.ate)
         );
@@ -363,7 +371,7 @@ function Titulos({ tipo, perms }: { tipo: TipoTitulo; perms: Perms }) {
   const [importarConta, setImportarConta] = useState(false);
   const [abertas, setAbertas] = useState<Set<string>>(new Set());
   const exibidos: Row[] = useMemo(() => {
-    if (tipo !== "pagar" || f.cartao !== "todos") return rows;
+    if (tipo !== "pagar" || cartaoUnico) return rows;
     const grupos = new Map<string, Row[]>();
     const out: Row[] = [];
     for (const t of rows) {
@@ -947,8 +955,10 @@ function Titulos({ tipo, perms }: { tipo: TipoTitulo; perms: Perms }) {
             <FilterSelect label="Categoria" value={f.categoria} onChange={(v) => setF((s) => ({ ...s, categoria: v }))}
               options={[{ value: "todos", label: "Todas" }, ...categorias.todas.map((c) => ({ value: c, label: c }))]} />
             {tipo === "pagar" && cartoes.length > 0 && (
-              <FilterSelect label="Cartão" value={f.cartao} onChange={(v) => setF((s) => ({ ...s, cartao: v }))}
-                options={[{ value: "todos", label: "Todos" }, ...cartoes.map((c) => ({ value: text(rowId(c)), label: nomeCartao(c) }))]} />
+              <FiltroMulti label="Cartão" selecionadas={cartoesSel} todosLabel="Todos os títulos"
+                options={[{ value: "__cartoes", label: "Somente cartões de crédito" }, { value: "__sem", label: "Sem cartão" },
+                  ...[...cartoes].sort((a, b) => nomeCartao(a).localeCompare(nomeCartao(b), "pt-BR")).map((c) => ({ value: text(rowId(c)), label: nomeCartao(c) }))]}
+                onChange={(l) => setF((s) => ({ ...s, cartao: l.length ? l.join(",") : "todos" }))} />
             )}
             <PeriodoNavegavel value={f.per} onChange={(p) => setF((s) => ({ ...s, per: p }))} />
             <div className="flex items-end">
@@ -969,7 +979,7 @@ function Titulos({ tipo, perms }: { tipo: TipoTitulo; perms: Perms }) {
         }
       />
 
-      {tipo === "pagar" && f.cartao !== "todos" && faturaAberta.length > 0 && perms.canUpdate && (
+      {tipo === "pagar" && cartaoUnico && faturaAberta.length > 0 && perms.canUpdate && (
         <div className="bg-card flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3">
           <p className="text-sm">Fatura do período: <strong>{faturaAberta.length}</strong> parcela(s) em aberto • <strong className="tabular-nums">{formatBRL(faturaAberta.reduce((s, t) => s + num(t["valor"]), 0))}</strong></p>
           <Button onClick={baixarFatura}><CheckCircle2 className="mr-1 h-4 w-4" />Baixar fatura</Button>
