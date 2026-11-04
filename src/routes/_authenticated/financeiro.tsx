@@ -47,6 +47,35 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UploadInfo } from "@/components/ui/upload-info";
 import { supabase } from "@/integrations/supabase/client";
+
+/** Copia os itens (rateio) de um título para outros da mesma série, proporcional ao valor de cada um. */
+async function replicarItensTitulo(origemId: string, destinos: string[]) {
+  const ids = [...new Set(destinos)].filter((id) => id && id !== origemId);
+  if (!ids.length) return;
+  const { data: itens, error } = await supabase.from("financeiro_titulos_itens" as never).select("*").eq("titulo_id", origemId);
+  if (error || !itens?.length) return;
+  const linhas = itens as Row[];
+  const { data: tits, error: e1 } = await supabase.from("financeiro_titulos").select("id,valor").in("id", [origemId, ...ids] as never);
+  if (e1) throw e1;
+  const valorDe = new Map(((tits ?? []) as Row[]).map((t) => [text(t["id"]), Number(t["valor"]) || 0]));
+  const base = linhas.reduce((s, l) => s + (Number(l["valor"]) || 0), 0) || valorDe.get(origemId) || 0;
+  for (const id of ids) {
+    const alvo = valorDe.get(id) ?? base;
+    const fator = base > 0 ? alvo / base : 1;
+    let acum = 0;
+    const lote = linhas.map((l, i) => {
+      const valor = i === linhas.length - 1 ? Math.round((alvo - acum) * 100) / 100 : Math.round((Number(l["valor"]) || 0) * fator * 100) / 100;
+      acum += valor;
+      return { empresa_id: l["empresa_id"], titulo_id: id, descricao: l["descricao"], quantidade: l["quantidade"], valor,
+        centro_custo_id: l["centro_custo_id"] ?? null, plano_contas_id: l["plano_contas_id"] ?? null, item_id: l["item_id"] ?? null,
+        origem_tipo: l["origem_tipo"] ?? "manual", origem_id: l["origem_id"] ?? null };
+    });
+    const del = await supabase.from("financeiro_titulos_itens" as never).delete().eq("titulo_id", id);
+    if (del.error) throw del.error;
+    const ins = await supabase.from("financeiro_titulos_itens" as never).insert(lote as never);
+    if (ins.error) throw ins.error;
+  }
+}
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { useSecoes } from "@/hooks/useSecoes";
 import { ConteudoAbaFilha, useAbasFilhas } from "@/components/layout/SubmenuTabs";
@@ -1423,6 +1452,7 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
     if ((temSerie || serieOferta) && !alcance && !v.desvincular) { setEscopo("atual"); setConfirmarSerie(true); return; }
     if (registro && v.status === "pago" && !v.pago_em) return void toast.error("Informe a data do pagamento.");
     setSalvando(true);
+    const replicarPara: string[] = [];
     try {
       const statusBase = v.status === "pago" ? (text(registro?.["status"]) === "pago" ? "pago" : "aberto") : v.status;
       const base = { tipo, descricao: v.descricao.trim(), categoria: v.categoria || (categorias.ativas[0] ?? ""), parceiro_id: v.parceiro_id || null,
