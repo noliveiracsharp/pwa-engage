@@ -133,7 +133,9 @@ export function EnviarPropostaDialog({ open, onOpenChange, orcamento, empresa, c
       toast.success("Mensagem enviada pelo WhatsApp da empresa.");
       onOpenChange(false);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Falha ao enviar.");
+      const motivo = e instanceof Error ? e.message : "Falha ao enviar.";
+      toast.error(motivo);
+      await registrarFalha("whatsapp", telefone, motivo);
     } finally {
       setEnviando(false);
     }
@@ -182,7 +184,9 @@ export function EnviarPropostaDialog({ open, onOpenChange, orcamento, empresa, c
       toast.success(`Oferta enviada para ${lista.length} e-mail(s).`);
       onOpenChange(false);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Falha ao enviar o e-mail.");
+      const motivo = e instanceof Error ? e.message : "Falha ao enviar o e-mail.";
+      toast.error(motivo);
+      await registrarFalha("email", lista.join(", "), motivo);
     } finally {
       setEnviando(false);
     }
