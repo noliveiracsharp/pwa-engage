@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Inbox, Plus, X } from "lucide-react";
+import { ClipboardCheck, Inbox, Plus, X } from "lucide-react";
+import { SolicitarLaudoDialog } from "@/components/laudos/SolicitarLaudoDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { pick, type Row } from "@/lib/row";
@@ -32,6 +33,7 @@ function PlannerPagina() {
   const qc = useQueryClient();
   const [criando, setCriando] = useState<string | false>(false);
   const [aceites, setAceites] = useState(false);
+  const [laudo, setLaudo] = useState(false);
   const { data: pendentes = 0 } = useQuery({
     queryKey: ["tarefas-usuarios", me, "pendentes"],
     enabled: !!me,
@@ -66,8 +68,10 @@ function PlannerPagina() {
           <Button size="sm" variant={pendentes ? "default" : "outline"} onClick={() => setAceites(true)}>
             <Inbox className="mr-1 h-4 w-4" /> Aguardando aceite{pendentes ? ` (${pendentes})` : ""}
           </Button>
+          <Button size="sm" variant="outline" onClick={() => setLaudo(true)}><ClipboardCheck className="mr-1 h-4 w-4" /> Laudo técnico</Button>
           <Button size="sm" onClick={() => setCriando("")}><Plus className="mr-1 h-4 w-4" /> Nova tarefa</Button>
         </>} />
+      <SolicitarLaudoDialog open={laudo} onOpenChange={setLaudo} usuarios={usuarios} me={me} onAvisar={avisar} />
       {aceites && (
         <div className="fixed inset-0 z-[80] flex justify-end bg-foreground/30" onClick={() => setAceites(false)}>
           <div className="flex h-full w-full flex-col overflow-hidden bg-background md:w-[60%]" onClick={(e) => e.stopPropagation()}>
