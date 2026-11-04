@@ -187,7 +187,9 @@ export function ItemLinha({ i, onCheck, compacto, editavel = true, onAbrir, nome
 }
 
 /** Planner completo em tela cheia: backlog + semana + performance + relatório. */
-export function PlannerPainel({ me, empresaId, usuarios, onFechar, embutido, acoes, onNovaTarefa }: { me: string; empresaId: string; usuarios: Row[]; onFechar?: () => void; embutido?: boolean; acoes?: React.ReactNode; onNovaTarefa?: (dia: string) => void }) {
+const nomeUsuario = (usuarios: Row[], id: string) => String(pick(usuarios.find((u) => String(u["id"]) === id) ?? {}, ["nome"], "O responsável"));
+
+export function PlannerPainel({ me, empresaId, usuarios, onFechar, embutido, acoes, onNovaTarefa, onAvisar }: { me: string; empresaId: string; usuarios: Row[]; onFechar?: () => void; embutido?: boolean; acoes?: React.ReactNode; onNovaTarefa?: (dia: string) => void; onAvisar?: (usuarioId: string, texto: string) => Promise<void> }) {
   const { isMaster, usuario } = useAuth();
   const permUsuarios = usePagePermissions("/usuarios");
   const gestor = isMaster || permUsuarios.canUpdate;
@@ -396,7 +398,7 @@ export function PlannerPainel({ me, empresaId, usuarios, onFechar, embutido, aco
         {!embutido && onFechar && <Button size="sm" variant="ghost" aria-label="Fechar planner" onClick={onFechar}><X className="h-5 w-5" /></Button>}
       </div>
       {reunioesAberto && <ReunioesPainel key={editarReuniao ? editarReuniao.id || editarReuniao.sala : "lista"} me={me} empresaId={empresaId} usuarios={usuarios} editar={editarReuniao} onFechar={() => { setReunioesAberto(false); setEditarReuniao(null); }} />}
-      <TarefaDetalhe id={aberta} me={me} usuarios={usuarios} onFechar={() => setAberta(null)} />
+      <TarefaDetalhe id={aberta} me={me} usuarios={usuarios} onFechar={() => setAberta(null)} onAvisar={onAvisar} />
 
       <div className="min-h-0 flex-1 overflow-auto p-4">
         <div className="mb-3 flex gap-1">
