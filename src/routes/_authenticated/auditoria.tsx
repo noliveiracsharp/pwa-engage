@@ -33,7 +33,8 @@ const hoje = () => new Date().toISOString().slice(0, 10);
 const diasAtras = (n: number) => new Date(Date.now() - n * 864e5).toISOString().slice(0, 10);
 
 function AuditoriaPage() {
-  const [de, setDe] = useState(diasAtras(7));
+  const [de, setDe] = useState(hoje());
+  void diasAtras;
   const [ate, setAte] = useState(hoje());
   const [tabela, setTabela] = useState("todas");
   const [operacao, setOperacao] = useState("todas");
