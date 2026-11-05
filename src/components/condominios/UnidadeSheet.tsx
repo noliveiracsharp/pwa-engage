@@ -148,6 +148,17 @@ const PERMISSOES = [
   { k: "pode_ver_documentos", l: "Vê documentos" },
 ];
 
+function Cabecalho({ titulo, total, podeCriar, onNovo, rotulo = "Adicionar" }: { titulo: string; total: number; podeCriar: boolean; onNovo: () => void; rotulo?: string }) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <p className="text-sm font-medium">{titulo} <span className="text-muted-foreground">({total})</span></p>
+      {podeCriar && <Button size="sm" onClick={onNovo}><Plus className="size-4" /> {rotulo}</Button>}
+    </div>
+  );
+}
+
+const Vazio = ({ texto }: { texto: string }) => <p className="rounded-lg border border-dashed py-10 text-center text-sm text-muted-foreground">{texto}</p>;
+
 function Pessoas({ unidadeId, perms, lado, papeis, titulo }: { unidadeId: string; perms: Perms; lado: string; papeis: string[]; titulo: string }) {
   const qc = useQueryClient();
   const { data: vinculos = [] } = useCondRows("cond_unidades_vinculos", "cond_unidade_id", unidadeId);
@@ -155,6 +166,8 @@ function Pessoas({ unidadeId, perms, lado, papeis, titulo }: { unidadeId: string
   const salvar = useCondSalvar("cond_unidades_vinculos");
   const vazio = { nome: "", email: "", celular: "", cpf: "", papel: papeis[0]!, extra: "", foto: "" };
   const [editando, setEditando] = useState<Pessoa | null>(null);
+  const [novo, setNovo] = useState(false);
+  const [permsDe, setPermsDe] = useState<Row | null>(null);
   const [n, setN] = useState(vazio);
   const [ocupado, setOcupado] = useState(false);
   const meus = vinculos.filter((v) => papeis.includes(s(v["papel"])) && (s(v["lado"]) || "proprietario") === lado);
@@ -162,6 +175,7 @@ function Pessoas({ unidadeId, perms, lado, papeis, titulo }: { unidadeId: string
   const papelLabel = (p: string) => PAPEIS.find((x) => x.value === p)?.label ?? p;
   const recarregar = () => qc.invalidateQueries({ queryKey: ["cond", "cond_unidades_vinculos"] });
   const extraLabel = n.papel === "prestador" ? "Função (diarista, babá…)" : n.papel === "familiar" || n.papel === "visitante" ? "Parentesco" : "";
+  const vAtual = permsDe ? vinculos.find((x) => s(x["id"]) === s(permsDe["id"])) ?? permsDe : null;
 
   async function acao(fn: string, args: Record<string, unknown>, ok: string) {
     setOcupado(true);
@@ -175,43 +189,28 @@ function Pessoas({ unidadeId, perms, lado, papeis, titulo }: { unidadeId: string
   }
 
   return (
-    <div className="space-y-4">
-      <p className="text-sm font-medium">{titulo}</p>
-      {perms.canCreate && (
-        <div className="grid gap-2 rounded-lg border p-3 sm:grid-cols-3">
-          <div className="row-span-2 flex justify-center sm:col-span-3"><FotoCond rosto value={n.foto} onChange={(u) => setN({ ...n, foto: u })} /></div>
-          <div><Label htmlFor={`p-nome-${lado}`}>Nome</Label><Input id={`p-nome-${lado}`} value={n.nome} onChange={(e) => setN({ ...n, nome: e.target.value })} /></div>
-          <div><Label htmlFor={`p-email-${lado}`}>E-mail (obrigatório)</Label><Input id={`p-email-${lado}`} type="email" value={n.email} onChange={(e) => setN({ ...n, email: e.target.value })} /></div>
-          <div><Label htmlFor={`p-cel-${lado}`}>Celular</Label><PhoneInput id={`p-cel-${lado}`} value={n.celular} onChange={(x) => setN({ ...n, celular: x })} /></div>
-          <div><Label htmlFor={`p-cpf-${lado}`}>CPF</Label><Input id={`p-cpf-${lado}`} inputMode="numeric" placeholder="000.000.000-00" value={n.cpf} onChange={(e) => setN({ ...n, cpf: formatCpfCnpj(e.target.value).slice(0, 14) })} /></div>
-          {papeis.length > 1 && <div><Label className="mb-1.5 block">Papel</Label><SearchSelect value={n.papel} allowClear={false} onChange={(x) => setN({ ...n, papel: x })} options={PAPEIS.filter((p) => papeis.includes(p.value))} /></div>}
-          {extraLabel && <div><Label htmlFor={`p-extra-${lado}`}>{extraLabel}</Label><Input id={`p-extra-${lado}`} value={n.extra} onChange={(e) => setN({ ...n, extra: e.target.value })} /></div>}
-          <div className="flex items-end sm:col-start-3"><Button className="w-full" disabled={ocupado || !n.nome.trim() || !n.email.includes("@")} onClick={async () => {
-            const ok = await acao("cond_morador_vincular", {
-              p_unidade: unidadeId, p_nome: n.nome, p_email: n.email, p_celular: n.celular, p_cpf: n.cpf, p_papel: n.papel, p_lado: lado,
-              p_extra: { ...(n.papel === "prestador" ? { prestador_funcao: n.extra } : { parentesco: n.extra }), foto_url: n.foto },
-            }, "Pessoa vinculada.");
-            if (ok) setN(vazio);
-          }}><Plus className="size-4" /> Adicionar</Button></div>
-        </div>
-      )}
-      {meus.length === 0 ? <p className="py-6 text-center text-sm text-muted-foreground">Ninguém cadastrado.</p> : meus.map((v) => {
+    <div className="space-y-3">
+      <Cabecalho titulo={titulo} total={meus.length} podeCriar={perms.canCreate} onNovo={() => { setN(vazio); setNovo(true); }} />
+      {meus.length === 0 ? <Vazio texto="Ninguém cadastrado." /> : meus.map((v) => {
         const p = pessoa(s(v["usuario_id"]));
+        const ativas = PERMISSOES.filter((x) => v[x.k] === true);
         return (
-          <div key={s(v["id"])} className="space-y-3 rounded-lg border p-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <FotoCond rosto tamanho="sm" disabled value={p?.foto_url ?? ""} onChange={() => {}} alt={p?.nome ?? "Foto"} />
-              <div className="mr-auto">
-                <p className="font-medium">{p?.nome ?? "—"} <Badge variant="secondary" className="ml-1">{papelLabel(s(v["papel"]))}</Badge></p>
-                <p className="text-xs text-muted-foreground">{[p?.email, p?.celular, s(v["parentesco"]) || s(v["prestador_funcao"])].filter(Boolean).join(" · ")}</p>
-              </div>
+          <div key={s(v["id"])} className="flex flex-wrap items-center gap-3 rounded-lg border p-3 transition hover:bg-muted/40">
+            <FotoCond rosto tamanho="sm" disabled value={p?.foto_url ?? ""} onChange={() => {}} alt={p?.nome ?? "Foto"} />
+            <div className="min-w-0 flex-1">
+              <p className="flex flex-wrap items-center gap-1 font-medium">{p?.nome ?? "—"} <Badge variant="secondary">{papelLabel(s(v["papel"]))}</Badge>
+                <Badge variant={p?.tem_acesso ? "default" : "outline"}>{p?.tem_acesso ? "Acesso ativo" : "Sem acesso"}</Badge></p>
+              <p className="truncate text-xs text-muted-foreground">{[p?.email, p?.celular, p?.cpf ? formatCpfCnpj(p.cpf) : "", s(v["parentesco"]) || s(v["prestador_funcao"])].filter(Boolean).join(" · ")}</p>
+              {ativas.length > 0 && <p className="mt-1 text-xs text-muted-foreground">{ativas.map((x) => x.l).join(" · ")}</p>}
+            </div>
+            <div className="flex flex-wrap gap-1">
               {perms.canUpdate && p && <Button size="sm" variant="outline" onClick={() => setEditando(p)}><Pencil className="size-4" /> Editar</Button>}
-              <Badge variant={p?.tem_acesso ? "default" : "outline"}>{p?.tem_acesso ? "Acesso ativo" : "Sem acesso"}</Badge>
+              <Button size="sm" variant="outline" onClick={() => setPermsDe(v)}><Settings2 className="size-4" /> Permissões</Button>
               {perms.canUpdate && p && (p.tem_acesso ? (
                 <Button size="sm" variant="outline" className="text-destructive" disabled={ocupado} onClick={async () => {
                   if (!(await confirmar({ title: `Revogar acesso de ${p.nome}?`, description: "O login é apagado e as sessões abertas caem. O cadastro e os vínculos continuam.", destructive: true, confirmText: "Revogar" }))) return;
                   await acao("cond_revogar_acesso", { p_usuario: p.usuario_id }, "Acesso revogado.");
-                }}><ShieldOff className="size-4" /> Revogar acesso</Button>
+                }}><ShieldOff className="size-4" /> Revogar</Button>
               ) : (
                 <Button size="sm" variant="outline" disabled={ocupado} onClick={async () => {
                   const senha = await perguntar({ title: `Liberar acesso para ${p.nome}`, description: `Login: ${p.email}. Defina a senha inicial (mínimo 6 caracteres).`, placeholder: "Senha inicial", required: true, confirmText: "Liberar" });
@@ -222,17 +221,51 @@ function Pessoas({ unidadeId, perms, lado, papeis, titulo }: { unidadeId: string
                 if (await confirmar({ title: "Remover vínculo com a unidade?", description: "O cadastro da pessoa é mantido.", destructive: true, confirmText: "Remover" })) await salvar.mutateAsync({ id: s(v["id"]), excluir: true });
               }}><Trash2 className="size-4" /></Button>}
             </div>
-            <div className="grid gap-2 sm:grid-cols-3">
-              {PERMISSOES.map((x) => (
-                <label key={x.k} className="flex items-center gap-2 text-sm">
-                  <Switch disabled={!perms.canUpdate} checked={v[x.k] === true} onCheckedChange={(c) => salvar.mutate({ id: s(v["id"]), valores: { [x.k]: c } })} />
-                  {x.l}
-                </label>
-              ))}
-            </div>
           </div>
         );
       })}
+
+      <Dialog open={novo} onOpenChange={setNovo}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader><DialogTitle>Adicionar pessoa</DialogTitle></DialogHeader>
+          <div className="grid gap-4 sm:grid-cols-[auto_1fr]">
+            <FotoCond rosto value={n.foto} onChange={(u) => setN({ ...n, foto: u })} />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="sm:col-span-2"><Label htmlFor={`p-nome-${lado}`}>Nome *</Label><Input id={`p-nome-${lado}`} value={n.nome} onChange={(e) => setN({ ...n, nome: e.target.value })} /></div>
+              <div className="sm:col-span-2"><Label htmlFor={`p-email-${lado}`}>E-mail * (login)</Label><Input id={`p-email-${lado}`} type="email" value={n.email} onChange={(e) => setN({ ...n, email: e.target.value })} /></div>
+              <div><Label htmlFor={`p-cel-${lado}`}>Celular</Label><PhoneInput id={`p-cel-${lado}`} value={n.celular} onChange={(x) => setN({ ...n, celular: x })} /></div>
+              <div><Label htmlFor={`p-cpf-${lado}`}>CPF</Label><Input id={`p-cpf-${lado}`} inputMode="numeric" placeholder="000.000.000-00" value={n.cpf} onChange={(e) => setN({ ...n, cpf: formatCpfCnpj(e.target.value).slice(0, 14) })} /></div>
+              {papeis.length > 1 && <div><Label className="mb-1.5 block">Papel</Label><SearchSelect value={n.papel} allowClear={false} onChange={(x) => setN({ ...n, papel: x })} options={PAPEIS.filter((p) => papeis.includes(p.value))} /></div>}
+              {extraLabel && <div><Label htmlFor={`p-extra-${lado}`}>{extraLabel}</Label><Input id={`p-extra-${lado}`} value={n.extra} onChange={(e) => setN({ ...n, extra: e.target.value })} /></div>}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNovo(false)}>Cancelar</Button>
+            <Button disabled={ocupado || !n.nome.trim() || !n.email.includes("@")} onClick={async () => {
+              const ok = await acao("cond_morador_vincular", {
+                p_unidade: unidadeId, p_nome: n.nome, p_email: n.email, p_celular: n.celular, p_cpf: n.cpf, p_papel: n.papel, p_lado: lado,
+                p_extra: { ...(n.papel === "prestador" ? { prestador_funcao: n.extra } : { parentesco: n.extra }), foto_url: n.foto },
+              }, "Pessoa vinculada.");
+              if (ok) { setN(vazio); setNovo(false); }
+            }}>{ocupado && <Loader2 className="size-4 animate-spin" />} Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!vAtual} onOpenChange={(o) => !o && setPermsDe(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Permissões · {pessoa(s(vAtual?.["usuario_id"]))?.nome ?? ""}</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            {vAtual && PERMISSOES.map((x) => (
+              <label key={x.k} className="flex items-center justify-between gap-2 rounded-md border p-2 text-sm">
+                {x.l}
+                <Switch disabled={!perms.canUpdate} checked={vAtual[x.k] === true} onCheckedChange={(c) => salvar.mutate({ id: s(vAtual["id"]), valores: { [x.k]: c } })} />
+              </label>
+            ))}
+          </div>
+          <DialogFooter><Button onClick={() => setPermsDe(null)}>Concluir</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
       {editando && <EditarPessoa pessoa={editando} onClose={() => setEditando(null)} onSalvo={recarregar} />}
     </div>
   );
