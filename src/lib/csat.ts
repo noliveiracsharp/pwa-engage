@@ -1,17 +1,17 @@
 /** Pesquisa de satisfação (CSAT) enviada ao encerrar o atendimento pelo WhatsApp. */
 
 export const CSAT_OPCOES = [
-  "5 ⭐⭐⭐⭐⭐ Excelente",
-  "4 ⭐⭐⭐⭐ Muito bom",
-  "3 ⭐⭐⭐ Bom",
-  "2 ⭐⭐ Regular",
   "1 ⭐ Ruim",
+  "2 ⭐⭐ Regular",
+  "3 ⭐⭐⭐ Bom",
+  "4 ⭐⭐⭐⭐ Muito bom",
+  "5 ⭐⭐⭐⭐⭐ Excelente",
 ];
 
-/** A lista interativa devolve o id da linha (1º item = "1"); converte para a nota real. */
+/** A lista devolve o id da linha; em ordem crescente, linha N = nota N (também vale para o texto numerado de reserva). */
 export const notaDaLinha = (id: string): number | null => {
   const i = Number(id);
-  return Number.isInteger(i) && i >= 1 && i <= CSAT_OPCOES.length ? CSAT_OPCOES.length + 1 - i : null;
+  return Number.isInteger(i) && i >= 1 && i <= CSAT_OPCOES.length ? i : null;
 };
 
 export const CSAT_AGRADECIMENTO_PADRAO =
@@ -25,7 +25,7 @@ export function detectarNota(texto: string): number | null {
   const t = (texto ?? "").trim();
   if (!t || t.length > 40) return null;
   const linha = CSAT_OPCOES.findIndex((o) => o.toLowerCase() === t.toLowerCase());
-  if (linha >= 0) return CSAT_OPCOES.length - linha;
+  if (linha >= 0) return linha + 1;
   const nums = t.match(/\d+/g) ?? [];
   if (nums.length === 1) {
     const n = Number(nums[0]);

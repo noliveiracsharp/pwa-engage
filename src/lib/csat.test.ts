@@ -12,6 +12,6 @@ describe("detectarNota", () => {
 });
 
 describe("notaDaLinha", () => {
-  it("primeira linha é nota 5", () => expect(notaDaLinha("1")).toBe(5));
-  it("última linha é nota 1", () => expect(notaDaLinha("5")).toBe(1));
+  it("linha 1 é nota 1", () => expect(notaDaLinha("1")).toBe(1));
+  it("linha 5 é nota 5", () => expect(notaDaLinha("5")).toBe(5));
 });
