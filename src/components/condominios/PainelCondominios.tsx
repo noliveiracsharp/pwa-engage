@@ -17,12 +17,21 @@ async function linhas(tabela: string, colunas: string): Promise<Row[]> {
   return (data ?? []) as Row[];
 }
 
-function Kpi({ icone: I, rotulo, valor, sub }: { icone: typeof Building; rotulo: string; valor: number | string; sub?: string }) {
+const CORES = ["var(--foreground)", "var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)", "var(--primary)", "var(--muted-foreground)"];
+let corIdx = 0;
+function Kpi({ icone: I, rotulo, valor, sub, cor }: { icone: typeof Building; rotulo: string; valor: number | string; sub?: string; cor?: string }) {
+  const c = cor ?? CORES[corIdx++ % CORES.length];
   return (
-    <div className="rounded-lg border bg-card p-4">
-      <div className="flex items-center gap-2 text-sm text-muted-foreground"><I className="size-4" /> {rotulo}</div>
-      <p className="mt-1 text-2xl font-semibold tabular-nums">{valor}</p>
-      {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
+    <div className="overflow-hidden rounded-xl border bg-card shadow-sm" style={{ borderTop: `4px solid ${c}` }}>
+      <div className="p-4">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span className="size-2.5 rounded-full" style={{ background: c }} />
+          {rotulo}
+          <I className="ml-auto size-4 opacity-60" />
+        </div>
+        <p className="mt-1 text-2xl font-bold tabular-nums">{valor}</p>
+        {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
+      </div>
     </div>
   );
 }
