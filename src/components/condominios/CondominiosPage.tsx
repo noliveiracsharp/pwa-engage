@@ -19,6 +19,8 @@ import { CondominiosSidebar, useSecoesCondominio } from "./CondominiosSidebar";
 import { VagasPanel } from "./VagasPanel";
 import { SorteioPanel } from "./SorteioPanel";
 import { PainelCondominios } from "./PainelCondominios";
+import { EquipePanel } from "./EquipePanel";
+import { GestaoTerceirosPanel } from "./GestaoTerceirosPanel";
 
 export function CondominiosPage() {
   const perms = usePagePermissions("/condominios");
@@ -134,6 +136,10 @@ export function CondominiosPage() {
         <VagasPanel condominioId={condId} blocos={blocos} unidades={unidades} perms={secAtual} />
       ) : secao === "sorteio" && secAtual ? (
         <SorteioPanel condominioId={condId} blocos={blocos} unidades={unidades} perms={secAtual} />
+      ) : secao === "equipe" && secAtual ? (
+        <EquipePanel condominioId={condId} blocos={blocos} unidades={unidades} perms={secAtual} />
+      ) : secao === "gestao" && secAtual ? (
+        <GestaoTerceirosPanel condominioId={condId} podeEditar={secAtual.canUpdate} />
       ) : !secAtual ? (
         <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">Seu perfil não tem acesso a esta área.</div>
       ) : (

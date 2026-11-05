@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Building2, LayoutDashboard, PanelLeftClose, PanelLeftOpen, ParkingSquare, Shuffle, type LucideIcon } from "lucide-react";
+import { Briefcase, Users, Building2, LayoutDashboard, PanelLeftClose, PanelLeftOpen, ParkingSquare, Shuffle, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { useTableRows } from "@/lib/crud";
@@ -12,6 +12,8 @@ const DEF = [
   { key: "unidades", label: "Estrutura & Unidades", path: "/condominios/unidades", icon: Building2 },
   { key: "vagas", label: "Garagem & Vagas", path: "/condominios/vagas", icon: ParkingSquare },
   { key: "sorteio", label: "Sorteio de Vagas", path: "/condominios/sorteio", icon: Shuffle },
+  { key: "equipe", label: "Equipe & Diretoria", path: "/condominios/equipe", icon: Users },
+  { key: "gestao", label: "Gestão & Terceiros", path: "/condominios/gestao", icon: Briefcase },
 ] as const;
 
 /**
@@ -23,14 +25,16 @@ export function useSecoesCondominio(pagina: P): Secao[] {
   const u = usePagePermissions(DEF[0].path);
   const v = usePagePermissions(DEF[1].path);
   const s = usePagePermissions(DEF[2].path);
+  const e = usePagePermissions(DEF[3].path);
+  const g = usePagePermissions(DEF[4].path);
   return useMemo(() => {
     const existe = (path: string) => funcoes.some((f) => String(f["path"] ?? "") === path);
     const painel: Secao = { key: "painel", label: "Painel", icon: LayoutDashboard, canRead: pagina.canRead, canCreate: false, canUpdate: pagina.canUpdate, canDelete: false };
     return [painel, ...DEF.map((d, i) => {
-      const p = existe(d.path) ? [u, v, s][i]! : pagina;
+      const p = existe(d.path) ? [u, v, s, e, g][i]! : pagina;
       return { key: d.key, label: d.label, icon: d.icon, canRead: p.canRead, canCreate: p.canCreate, canUpdate: p.canUpdate, canDelete: p.canDelete };
     })].filter((x) => x.canRead);
-  }, [funcoes, u, v, s, pagina]);
+  }, [funcoes, u, v, s, e, g, pagina]);
 }
 
 export function CondominiosSidebar({ secoes, ativa, onChange }: { secoes: Secao[]; ativa: string; onChange: (k: string) => void }) {
