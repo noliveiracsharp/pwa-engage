@@ -9,25 +9,35 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { text, useTableRows } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
-import { linkAcessoKanban, tagDoKanban } from "@/lib/qr-direto";
+import { linkAcessoKanban, tagDoKanban, tagsDoNo } from "@/lib/qr-direto";
 
 /** QR Code de acesso: abre o WhatsApp com "#kanban" e a conversa pula o robô direto para o Kanban escolhido. */
 export function QrComercialDialog({ instancia, onClose }: { instancia: Row | null; onClose: () => void }) {
   const { data: kanbans = [] } = useTableRows("kanban_nome");
-  const opcoes = useMemo(
-    () => kanbans
-      .filter((k) => k["status"] !== false && text(k["nome"]))
-      .map((k) => ({ id: text(k["id"]), nome: text(k["nome"]) }))
-      .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")),
-    [kanbans],
-  );
+  const { data: fluxos = [] } = useTableRows("fluxos_atendimento");
+  // Kanbans (tag do nome) + atalhos personalizados dos blocos "Mover no Kanban" dos fluxos.
+  const opcoes = useMemo(() => {
+    const m = new Map<string, { id: string; nome: string; tag: string }>();
+    for (const k of kanbans) {
+      if (k["status"] === false || !text(k["nome"])) continue;
+      const tag = tagDoKanban(text(k["nome"]));
+      if (tag) m.set(tag, { id: tag, nome: `${text(k["nome"])} (#${tag})`, tag });
+    }
+    for (const f of fluxos) {
+      if (f["ativo"] === false) continue;
+      for (const n of ((f["nos"] as Array<{ id: string; type?: string; data?: Record<string, unknown> }>) ?? [])) {
+        for (const tag of tagsDoNo(n)) if (!m.has(tag)) m.set(tag, { id: tag, nome: `#${tag} — ${text(f["nome"]) || "Fluxo"}`, tag });
+      }
+    }
+    return [...m.values()].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+  }, [kanbans, fluxos]);
   const [kanbanId, setKanbanId] = useState("");
   const kanban = opcoes.find((o) => o.id === kanbanId) ?? null;
   const [mensagem, setMensagem] = useState("Olá! Gostaria de atendimento.");
   const [img, setImg] = useState("");
   const telefone = instancia ? text(pick(instancia, ["telefone"])) : "";
   const link = useMemo(
-    () => (telefone && kanban ? linkAcessoKanban(telefone, mensagem, kanban.nome) : ""),
+    () => (telefone && kanban ? linkAcessoKanban(telefone, mensagem, kanban.tag) : ""),
     [telefone, mensagem, kanban],
   );
 
@@ -39,7 +49,7 @@ export function QrComercialDialog({ instancia, onClose }: { instancia: Row | nul
   const baixar = () => {
     const a = document.createElement("a");
     a.href = img;
-    a.download = `qrcode-${kanban ? tagDoKanban(kanban.nome) : "acesso"}.png`;
+    a.download = `qrcode-${kanban ? kanban.tag : "acesso"}.png`;
     a.click();
   };
 
@@ -52,14 +62,14 @@ export function QrComercialDialog({ instancia, onClose }: { instancia: Row | nul
         ) : (
           <div className="flex flex-col gap-4">
             <div className="space-y-1">
-              <Label>Kanban de destino</Label>
+              <Label>Destino (Kanban ou atalho do fluxo)</Label>
               <Select value={kanbanId} onValueChange={setKanbanId}>
                 <SelectTrigger><SelectValue placeholder="Escolha o Kanban" /></SelectTrigger>
                 <SelectContent>
                   {opcoes.map((o) => <SelectItem key={o.id} value={o.id}>{o.nome}</SelectItem>)}
                 </SelectContent>
               </Select>
-              {kanban && <p className="text-xs text-muted-foreground">Atalho: <b>#{tagDoKanban(kanban.nome)}</b> — o cliente também pode digitar isso na primeira mensagem.</p>}
+              {kanban && <p className="text-xs text-muted-foreground">Atalho: <b>#{kanban.tag}</b> — o cliente também pode digitar isso na primeira mensagem.</p>}
             </div>
             <div className="space-y-1">
               <Label>Mensagem inicial do cliente</Label>
