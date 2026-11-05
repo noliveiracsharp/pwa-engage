@@ -18,6 +18,7 @@ import { UnidadeSheet } from "./UnidadeSheet";
 import { CondominiosSidebar, useSecoesCondominio } from "./CondominiosSidebar";
 import { VagasPanel } from "./VagasPanel";
 import { SorteioPanel } from "./SorteioPanel";
+import { PainelCondominios } from "./PainelCondominios";
 
 export function CondominiosPage() {
   const perms = usePagePermissions("/condominios");
@@ -52,7 +53,7 @@ export function CondominiosPage() {
   }, [blocos, blocoId]);
 
   const secoes = useSecoesCondominio(perms);
-  const [secao, setSecao] = useState("unidades");
+  const [secao, setSecao] = useState("painel");
   useEffect(() => {
     if (secoes.length && !secoes.some((x) => x.key === secao)) setSecao(secoes[0]!.key);
   }, [secoes, secao]);
@@ -122,7 +123,9 @@ export function CondominiosPage() {
         </div>
       </div>
 
-      {!condId ? (
+      {secao === "painel" ? (
+        <PainelCondominios condominios={condominios} condId={condId} podeConfigurar={perms.canUpdate} onAbrir={(id) => { setCondId(id); setSecao("unidades"); }} />
+      ) : !condId ? (
         <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
           <Building className="mx-auto mb-2 size-8 opacity-60" />
           Selecione um condomínio para ver os blocos e unidades.
