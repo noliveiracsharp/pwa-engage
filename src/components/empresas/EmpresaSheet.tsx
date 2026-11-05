@@ -798,6 +798,7 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
   }, [quadros, empresa]);
   const configFor: Record<string, ChildConfig> = { instancias: INSTANCIAS, campos: CAMPOS, etiquetas: etiquetasCfg, notas: NOTAS };
   const [values, setValues] = useState<Record<string, string>>({});
+  const { data: classificacoes = [] } = useClassificacoes();
   type Cnae = { codigo: string; descricao: string };
   type Socio = { nome: string; qualificacao: string; pais: string; faixa_etaria: string };
   const [extras, setExtras] = useState<{ cnaes_secundarios: Cnae[]; qsa: Socio[]; alterado: boolean }>({ cnaes_secundarios: [], qsa: [], alterado: false });
@@ -842,6 +843,8 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
     const payload: Row = {};
     for (const field of EMPRESA_FIELDS) {
       if (comContatos && (field.key === "telefone1" || field.key === "telefone2")) continue;
+      // Gestão condominial só é gravada para condomínios (colunas novas no banco).
+      if (field.grupo === "gestao" && !ehCondominio(classificacoes, values["classificacao_id"])) continue;
       const raw = values[field.key] ?? "";
       if (raw === "" && !empresa) continue;
       if (field.type === "boolean") {
