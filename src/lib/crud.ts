@@ -75,7 +75,9 @@ export function useTableRows(table: string, enabled = true, orderBy?: string, fi
       }
       const { data, error } = res;
       if (error) throw error;
-      const rows = (data ?? []) as Row[];
+      const todasLinhas = (data ?? []) as Row[];
+      // Clientes/fornecedores migrados para empresas (is_tenant = false) não são empresas operadoras.
+      const rows = isEmpresas ? todasLinhas.filter((r) => r["is_tenant"] !== false) : todasLinhas;
       if (!ctx) return rows;
       if (isEmpresas) return rows.filter((r) => String(rowId(r) ?? "") === ctx || String(r["empresa_pai_id"] ?? "") === ctx);
       // Catálogo compartilhado: filial também vê os itens da matriz quando ela permite.
