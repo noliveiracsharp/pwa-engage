@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { DocumentosButton } from "@/components/documentos/DocumentosPainel";
 import { ContatosPainel } from "@/components/contatos/ContatosButton";
+import { ClassificacaoField } from "@/components/parceiros/ClassificacaoField";
 import { IaConfigPainel } from "@/components/financeiro/IaConfigDialog";
 import { EmpresaEmailPainel } from "@/components/empresas/EmpresaEmailPainel";
 import { useAudit } from "@/lib/audit";
@@ -47,7 +48,11 @@ type EmpresaField = {
   key: string;
   label: string;
   full?: boolean;
-  type?: "text" | "boolean" | "photo" | "tel" | "document" | "select" | "color" | "favicon";
+  type?: "text" | "boolean" | "photo" | "tel" | "document" | "select" | "color" | "favicon" | "classificacao" | "money";
+  /** Sub-aba do formulário onde o campo aparece. */
+  grupo?: "gerais" | "endereco" | "fiscal" | "wl";
+  /** Vazio grava null. */
+  nul?: boolean;
   options?: Array<{ value: string; label: string }>;
   numeric?: boolean;
   fiscal?: boolean;
@@ -58,25 +63,40 @@ type EmpresaField = {
 };
 
 export const EMPRESA_FIELDS: EmpresaField[] = [
-  { key: "tipo_pessoa", label: "Tipo de pessoa", type: "select", options: [{ value: "Jurídica", label: "Jurídica" }, { value: "Física", label: "Física" }] },
-  { key: "cnpj_cpf", label: "CNPJ / CPF", type: "document" },
-  { key: "status", label: "Status", type: "boolean" },
-  { key: "compartilhar_catalogo_filiais", label: "Compartilhar catálogo com filiais", type: "boolean", full: true },
-  { key: "nome", label: "Nome", full: true },
-  { key: "endereco", label: "Endereço", full: true },
-  { key: "latitude", label: "Latitude", coord: true },
-  { key: "longitude", label: "Longitude", coord: true },
-  { key: "telefone1", label: "Telefone 1", type: "tel" },
-  { key: "telefone2", label: "Telefone 2", type: "tel" },
-  { key: "logo", label: "Logo", type: "photo", full: true },
-  { key: "logo_escuro", label: "Logo — modo escuro", type: "photo", full: true },
-  { key: "login_imagem", label: "Imagem da tela de login", type: "photo", full: true },
-  { key: "titulo", label: "Título exibido", full: true },
-  { key: "site_url", label: "URL / site da empresa", full: true, wl: true },
-  { key: "slug", label: "Endereço exclusivo (atendeai.co/endereco) — minúsculas, números e hífen", full: true, wl: true },
-  { key: "cor_primaria_claro", label: "Cor primária — modo claro", type: "color", wl: true },
-  { key: "cor_primaria_escuro", label: "Cor primária — modo escuro", type: "color", wl: true },
-  { key: "favicon", label: "Favicon (ícone da aba)", type: "favicon", full: true, wl: true },
+  { key: "tipo_pessoa", label: "Tipo de pessoa", grupo: "gerais", type: "select", options: [{ value: "Jurídica", label: "Jurídica" }, { value: "Física", label: "Física" }] },
+  { key: "cnpj_cpf", label: "CNPJ / CPF", grupo: "gerais", type: "document" },
+  { key: "status", label: "Status", grupo: "gerais", type: "boolean" },
+  { key: "compartilhar_catalogo_filiais", label: "Compartilhar catálogo com filiais", grupo: "gerais", type: "boolean", full: true },
+  { key: "nome", label: "Razão social / Nome", grupo: "gerais", full: true },
+  { key: "titulo", label: "Nome fantasia (título exibido)", grupo: "gerais", full: true },
+  { key: "classificacao_id", label: "Classificação", grupo: "gerais", type: "classificacao", full: true, nul: true },
+  { key: "telefone1", label: "Telefone 1", grupo: "gerais", type: "tel" },
+  { key: "telefone2", label: "Telefone 2", grupo: "gerais", type: "tel" },
+  { key: "cep", label: "CEP", grupo: "endereco", nul: true },
+  { key: "endereco", label: "Logradouro", grupo: "endereco", full: true },
+  { key: "numero", label: "Número", grupo: "endereco", nul: true },
+  { key: "complemento", label: "Complemento", grupo: "endereco", nul: true },
+  { key: "bairro", label: "Bairro", grupo: "endereco", nul: true },
+  { key: "cidade", label: "Cidade", grupo: "endereco", nul: true },
+  { key: "uf", label: "UF", grupo: "endereco", nul: true },
+  { key: "latitude", label: "Latitude", grupo: "endereco", coord: true },
+  { key: "longitude", label: "Longitude", grupo: "endereco", coord: true },
+  { key: "logo", label: "Logo", grupo: "wl", type: "photo", full: true },
+  { key: "logo_escuro", label: "Logo — modo escuro", grupo: "wl", type: "photo", full: true },
+  { key: "login_imagem", label: "Imagem da tela de login", grupo: "wl", type: "photo", full: true },
+  { key: "site_url", label: "URL / site da empresa", grupo: "wl", full: true, wl: true },
+  { key: "slug", label: "Endereço exclusivo (atendeai.co/endereco) — minúsculas, números e hífen", grupo: "wl", full: true, wl: true },
+  { key: "cor_primaria_claro", label: "Cor primária — modo claro", grupo: "wl", type: "color", wl: true },
+  { key: "cor_primaria_escuro", label: "Cor primária — modo escuro", grupo: "wl", type: "color", wl: true },
+  { key: "favicon", label: "Favicon (ícone da aba)", grupo: "wl", type: "favicon", full: true, wl: true },
+  { key: "situacao_cadastral", label: "Situação cadastral (Receita)", grupo: "fiscal", nul: true },
+  { key: "natureza_juridica", label: "Natureza jurídica", grupo: "fiscal", nul: true },
+  { key: "porte", label: "Porte", grupo: "fiscal", nul: true },
+  { key: "capital_social", label: "Capital social (R$)", grupo: "fiscal", type: "money" },
+  { key: "opcao_pelo_simples", label: "Optante pelo Simples", grupo: "fiscal", type: "boolean" },
+  { key: "opcao_pelo_mei", label: "MEI", grupo: "fiscal", type: "boolean" },
+  { key: "cnae_principal_codigo", label: "CNAE principal (código)", grupo: "fiscal", nul: true },
+  { key: "cnae_principal_descricao", label: "CNAE principal (descrição)", grupo: "fiscal", full: true, nul: true },
   { key: "inscricao_estadual", label: "Inscrição Estadual (IE)", fiscal: true },
   { key: "inscricao_municipal", label: "Inscrição Municipal (IM)", fiscal: true },
   {
@@ -700,20 +720,38 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
       const tel = (v: unknown) => { const n = digitsOnly(String(v ?? "")); return n.length >= 10 ? `+55${n}` : ""; };
       const cep = digitsOnly(String(d.cep ?? "")).replace(/^(\d{5})(\d{3})$/, "$1-$2");
       const rua = [d.descricao_tipo_de_logradouro, d.logradouro].filter(Boolean).join(" ").trim();
-      const endereco = [
-        [rua, d.numero].filter(Boolean).join(", "),
-        d.complemento, d.bairro,
-        [d.municipio, d.uf].filter(Boolean).join("/"),
-        cep && `CEP ${cep}`,
-      ].filter(Boolean).join(" - ");
+      const s = (v: unknown) => (v == null ? "" : String(v));
       setValues((p) => ({
         ...p,
         nome: nomeProprio(d.razao_social || p["nome"] || ""),
         titulo: p["titulo"] || nomeProprio(d.nome_fantasia || d.razao_social || ""),
-        endereco: endereco || p["endereco"] || "",
+        cep: cep || p["cep"] || "",
+        endereco: rua || p["endereco"] || "",
+        numero: s(d.numero) || p["numero"] || "",
+        complemento: s(d.complemento) || p["complemento"] || "",
+        bairro: s(d.bairro) || p["bairro"] || "",
+        cidade: s(d.municipio) || p["cidade"] || "",
+        uf: s(d.uf) || p["uf"] || "",
+        situacao_cadastral: s(d.descricao_situacao_cadastral),
+        natureza_juridica: s(d.natureza_juridica),
+        porte: s(d.porte || d.descricao_porte),
+        capital_social: s(d.capital_social),
+        opcao_pelo_simples: String(d.opcao_pelo_simples === true),
+        opcao_pelo_mei: String(d.opcao_pelo_mei === true),
+        cnae_principal_codigo: s(d.cnae_fiscal),
+        cnae_principal_descricao: s(d.cnae_fiscal_descricao),
         telefone1: tel(d.ddd_telefone_1) || p["telefone1"] || "",
         telefone2: tel(d.ddd_telefone_2) || p["telefone2"] || "",
       }));
+      setExtras({
+        cnaes_secundarios: (Array.isArray(d.cnaes_secundarios) ? d.cnaes_secundarios : [])
+          .filter((i: { codigo?: number }) => i.codigo)
+          .map((i: { codigo: number; descricao: string }) => ({ codigo: String(i.codigo), descricao: i.descricao ?? "" })),
+        qsa: (Array.isArray(d.qsa) ? d.qsa : []).map((i: Record<string, unknown>) => ({
+          nome: s(i["nome_socio"]), qualificacao: s(i["qualificacao_socio"]), pais: s(i["pais"]), faixa_etaria: s(i["faixa_etaria"]),
+        })),
+        alterado: true,
+      });
       const sit = String(d.descricao_situacao_cadastral ?? "");
       if (sit && sit.toUpperCase() !== "ATIVA") toast.warning(`Situação cadastral: ${sit}.`);
       else toast.success("Dados encontrados na Receita Federal.");
@@ -727,8 +765,9 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
   async function buscarCoordenadas(gps = false) {
     setGeoLoading(true);
     try {
-      const end = values["endereco"] ?? "";
-      const cep = (end.match(/\d{5}-?\d{3}/) ?? [""])[0];
+      const end = [[values["endereco"], values["numero"]].filter(Boolean).join(", "), values["bairro"], [values["cidade"], values["uf"]].filter(Boolean).join("/")]
+        .filter(Boolean).join(" - ");
+      const cep = values["cep"] || ((values["endereco"] ?? "").match(/\d{5}-?\d{3}/) ?? [""])[0];
       const c = gps ? await gpsNavegador() : await geocodificar({ livre: end.replace(/CEP\s*/i, ""), cep });
       if (!c) { toast.error(gps ? "Não foi possível obter a localização do aparelho." : "Não encontramos coordenadas para este endereço."); return; }
       setValues((p) => ({ ...p, latitude: String(c.latitude), longitude: String(c.longitude) }));
@@ -755,6 +794,9 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
   }, [quadros, empresa]);
   const configFor: Record<string, ChildConfig> = { instancias: INSTANCIAS, campos: CAMPOS, etiquetas: etiquetasCfg, notas: NOTAS };
   const [values, setValues] = useState<Record<string, string>>({});
+  type Cnae = { codigo: string; descricao: string };
+  type Socio = { nome: string; qualificacao: string; pais: string; faixa_etaria: string };
+  const [extras, setExtras] = useState<{ cnaes_secundarios: Cnae[]; qsa: Socio[]; alterado: boolean }>({ cnaes_secundarios: [], qsa: [], alterado: false });
   const dadosPerms = tabs.find((t) => t.kind === "dados")?.perms;
   const dadosLocked =
     !!readOnly || (dadosPerms ? !(empresa ? dadosPerms.canUpdate : dadosPerms.canCreate) : false);
@@ -765,6 +807,8 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
     for (const field of EMPRESA_FIELDS) next[field.key] = text(pick(empresa, [field.key], ""));
     if (!next["tipo_pessoa"]) next["tipo_pessoa"] = "Jurídica";
     setValues(next);
+    const arr = <T,>(v: unknown): T[] => (Array.isArray(v) ? (v as T[]) : []);
+    setExtras({ cnaes_secundarios: arr<Cnae>(empresa?.["cnaes_secundarios"]), qsa: arr<Socio>(empresa?.["qsa"]), alterado: false });
   }, [open, empresa]);
 
   const title = useMemo(() => (empresa ? "Editar empresa" : "Nova empresa"), [empresa]);
@@ -803,7 +847,10 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
         payload[field.key] = raw === "" ? null : Number(digitsOnly(raw)) || 0;
       } else if (field.coord) {
         payload[field.key] = coordNum(raw);
-      } else if (field.fiscal || field.wl) {
+      } else if (field.type === "money") {
+        const n = Number(raw.replace(/\./g, "").replace(",", "."));
+        payload[field.key] = raw.trim() === "" || !Number.isFinite(n) ? null : n;
+      } else if (field.fiscal || field.wl || field.nul) {
         payload[field.key] = raw.trim() || null;
       } else {
         payload[field.key] = raw;
@@ -812,103 +859,21 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
     if (typeof payload["nome"] === "string") payload["nome"] = nomeProprio(payload["nome"]);
     // Título exibido: respeita exatamente o que foi digitado (ex.: "ConectCon HUB").
     if (typeof payload["titulo"] === "string") payload["titulo"] = payload["titulo"].trim();
+    if (extras.alterado) { payload["cnaes_secundarios"] = extras.cnaes_secundarios; payload["qsa"] = extras.qsa; }
     onSave(payload);
   };
 
-  return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full overflow-y-auto pb-0 sm:max-w-2xl">
-        <SheetHeader className="px-4 pb-4">
-          <SheetTitle className="pr-8">{title}</SheetTitle>
-        </SheetHeader>
-
-        <Tabs key={tabs[0]!.key} defaultValue={tabs[0]!.key} className="px-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <TabsList className="h-auto flex-wrap">
-              {tabs.map((t) => (
-                <TabsTrigger key={t.key} value={t.key}>{t.label}</TabsTrigger>
-              ))}
-              {empresa && iaSecao && <TabsTrigger value="__ia">Inteligência Artificial</TabsTrigger>}
-              {empresa && emailSecao && rowId(empresa) !== undefined && <TabsTrigger value="__email">E-mail</TabsTrigger>}
-            </TabsList>
-            {empresa && docSecao && rowId(empresa) !== undefined && (
-              <div className="ml-auto">
-                <DocumentosButton entidadeTipo="empresa" entidadeId={String(rowId(empresa))} entidadeNome={String(empresa["razao_social"] ?? empresa["nome"] ?? "")} registro={empresa} />
-              </div>
-            )}
-          </div>
-
-          {tabs.map((t) =>
-            t.kind === "dados" ? (
-          <TabsContent key={t.key} value={t.key} className="mt-4">
-            <fieldset disabled={dadosLocked} className="min-w-0 disabled:opacity-70">
-            <div className="border-border mb-5 grid gap-4 border-b pb-5 sm:grid-cols-2">
-              <div className="light rounded-lg border border-border bg-background p-3 text-foreground">
-                <p className="mb-2 text-sm font-medium">Logo — modo claro (padrão)</p>
-                <PhotoUpload
-                  value={values["logo"] ?? ""}
-                  alt={values["nome"] ? `Logo de ${values["nome"]}` : "Logo da empresa"}
-                  onChange={(url) => setValues((current) => ({ ...current, logo: url }))}
-                />
-              </div>
-              <div className="dark rounded-lg border border-border bg-background p-3 text-foreground">
-                <p className="mb-2 text-sm font-medium">Logo — modo escuro (opcional)</p>
-                <PhotoUpload
-                  value={values["logo_escuro"] ?? ""}
-                  alt="Logo para o modo escuro"
-                  onChange={(url) => setValues((current) => ({ ...current, logo_escuro: url }))}
-                />
-                <p className="mt-2 text-xs text-muted-foreground">Sem logo escuro, o logo padrão é usado.</p>
-              </div>
-              <div className="rounded-lg border border-border bg-background p-3 text-foreground sm:col-span-2">
-                <p className="mb-2 text-sm font-medium">Imagem da tela de login (opcional)</p>
-                <PhotoUpload
-                  value={values["login_imagem"] ?? ""}
-                  alt="Imagem da tela de login"
-                  onChange={(url) => setValues((current) => ({ ...current, login_imagem: url }))}
-                />
-                <p className="mt-2 text-xs text-muted-foreground">Aparece ao lado do formulário de login no endereço exclusivo da empresa. Use uma imagem vertical (ex.: 1024×1536).</p>
-              </div>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-            {EMPRESA_FIELDS.filter((field) => field.type !== "photo")
-              .filter((field) => field.key !== "compartilhar_catalogo_filiais" || !empresa?.["empresa_pai_id"])
-              .filter((field) => !(empresa && rowId(empresa) !== undefined && (field.key === "telefone1" || field.key === "telefone2")))
-              .map((field) => (
-              <Fragment key={field.key}>
-              {field.key === "site_url" && (
-                <div className="border-border mt-2 border-t pt-4 sm:col-span-2">
-                  <h3 className="text-sm font-semibold">White label (identidade visual)</h3>
-                  <p className="text-muted-foreground text-xs">
-                    Cores, ícone e site aplicados ao sistema para os usuários desta empresa. Deixe vazio para usar o padrão.
-                  </p>
-                </div>
-              )}
-              {field.key === "latitude" && empresa && rowId(empresa) !== undefined && (
-                <div className="rounded-lg border bg-muted/30 p-3 sm:col-span-2">
-                  <h3 className="text-sm font-semibold">Contatos (telefones e e-mails)</h3>
-                  <p className="mb-2 text-xs text-muted-foreground">Usados nos envios. O Principal ⭐ é espelhado no cadastro.</p>
-                  <ContatosPainel entidade="empresa" entidadeId={String(rowId(empresa))} />
-                </div>
-              )}
-              {field.key === "latitude" && (
-                <div className="flex flex-wrap items-center gap-2 sm:col-span-2">
-                  <span className="text-sm font-medium">Localização</span>
-                  <Button type="button" variant="outline" size="sm" disabled={geoLoading} onClick={() => void buscarCoordenadas()}>
-                    {geoLoading ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <MapPin className="mr-1 h-4 w-4" />}Obter pelo endereço/CEP
-                  </Button>
-                  <Button type="button" variant="outline" size="sm" disabled={geoLoading} onClick={() => void buscarCoordenadas(true)}>
-                    <LocateFixed className="mr-1 h-4 w-4" />Localização do aparelho
-                  </Button>
-                </div>
-              )}
-              {field.key === "inscricao_estadual" && (
-                <div className="border-border mt-2 border-t pt-4 sm:col-span-2">
-                  <h3 className="text-sm font-semibold">Dados fiscais (emissão de notas)</h3>
-                  <p className="text-muted-foreground text-xs">Usados na futura emissão de NF-e e NFS-e.</p>
-                </div>
-              )}
-              <div
+  const secao = (t: string) => <h3 className="text-muted-foreground mb-3 text-sm font-semibold uppercase tracking-wide">{t}</h3>;
+  const camposDo = (g: NonNullable<EmpresaField["grupo"]>) => EMPRESA_FIELDS
+    .filter((field) => (field.grupo ?? "fiscal") === g)
+    .filter((field) => field.key !== "compartilhar_catalogo_filiais" || !empresa?.["empresa_pai_id"])
+    .filter((field) => !(empresa && rowId(empresa) !== undefined && (field.key === "telefone1" || field.key === "telefone2")));
+  const campo = (field: EmpresaField) => field.type === "classificacao" ? (
+    <div key={field.key} className="min-w-0 sm:col-span-2">
+      <ClassificacaoField value={values[field.key] ?? ""} disabled={dadosLocked} onChange={(v) => setValues((c) => ({ ...c, [field.key]: v }))} />
+    </div>
+  ) : (
+              <div key={field.key}
                 className={field.full || field.type === "tel" ? "min-w-0 sm:col-span-2" : "min-w-0"}
               >
                 <Label htmlFor={field.key} className="mb-1.5 block">
@@ -962,7 +927,7 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
                 ) : field.type === "boolean" ? (
                   <div className="flex h-10 items-center justify-between gap-3 rounded-md border bg-background px-3 py-2">
                     <span className="text-sm text-muted-foreground">
-                      {values[field.key] === "true" ? "Ativo" : "Inativo"}
+                      {field.key.startsWith("opcao_") ? (values[field.key] === "true" ? "Sim" : "Não") : values[field.key] === "true" ? "Ativo" : "Inativo"}
                     </span>
                     <Switch
                       id={field.key}
@@ -1003,9 +968,156 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
                   />
                 )}
               </div>
-              </Fragment>
-            ))}
-            </div>
+  );
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="w-full overflow-y-auto pb-0 sm:max-w-2xl">
+        <SheetHeader className="px-4 pb-4">
+          <SheetTitle className="pr-8">{title}</SheetTitle>
+        </SheetHeader>
+
+        <Tabs key={tabs[0]!.key} defaultValue={tabs[0]!.key} className="px-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <TabsList className="h-auto flex-wrap">
+              {tabs.map((t) => (
+                <TabsTrigger key={t.key} value={t.key}>{t.label}</TabsTrigger>
+              ))}
+              {empresa && iaSecao && <TabsTrigger value="__ia">Inteligência Artificial</TabsTrigger>}
+              {empresa && emailSecao && rowId(empresa) !== undefined && <TabsTrigger value="__email">E-mail</TabsTrigger>}
+            </TabsList>
+            {empresa && docSecao && rowId(empresa) !== undefined && (
+              <div className="ml-auto">
+                <DocumentosButton entidadeTipo="empresa" entidadeId={String(rowId(empresa))} entidadeNome={String(empresa["razao_social"] ?? empresa["nome"] ?? "")} registro={empresa} />
+              </div>
+            )}
+          </div>
+
+          {tabs.map((t) =>
+            t.kind === "dados" ? (
+          <TabsContent key={t.key} value={t.key} className="mt-4">
+            <fieldset disabled={dadosLocked} className="min-w-0 disabled:opacity-70">
+            <Tabs defaultValue="gerais">
+              <TabsList className="h-auto flex-wrap">
+                <TabsTrigger value="gerais">Dados Gerais</TabsTrigger>
+                <TabsTrigger value="fiscal">Fiscal e Atividades</TabsTrigger>
+                <TabsTrigger value="qsa">Quadro Societário</TabsTrigger>
+                <TabsTrigger value="wl">White Label</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="gerais" className="mt-4 space-y-6">
+                {values["situacao_cadastral"] && (
+                  <div className={`flex flex-wrap items-center gap-2 rounded-lg border px-4 py-3 text-sm ${values["situacao_cadastral"].toUpperCase() === "ATIVA" ? "border-success/40 bg-success/10" : "border-destructive/40 bg-destructive/10"}`}>
+                    <span className="font-medium">Situação na Receita Federal:</span>
+                    <Badge variant={values["situacao_cadastral"].toUpperCase() === "ATIVA" ? "default" : "destructive"}>{values["situacao_cadastral"].toUpperCase()}</Badge>
+                  </div>
+                )}
+                <div>
+                  {secao("Identificação")}
+                  <div className="grid gap-4 sm:grid-cols-2">{camposDo("gerais").map(campo)}</div>
+                </div>
+                {empresa && rowId(empresa) !== undefined && (
+                  <div>
+                    {secao("Contatos")}
+                    <div className="rounded-lg border bg-muted/30 p-3">
+                      <p className="mb-2 text-xs text-muted-foreground">Usados nos envios. O Principal ⭐ é espelhado no cadastro.</p>
+                      <ContatosPainel entidade="empresa" entidadeId={String(rowId(empresa))} />
+                    </div>
+                  </div>
+                )}
+                <div>
+                  {secao("Endereço")}
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {camposDo("endereco").filter((f) => !f.coord).map(campo)}
+                    <div className="flex flex-wrap items-center gap-2 sm:col-span-2">
+                      <span className="text-sm font-medium">Localização</span>
+                      <Button type="button" variant="outline" size="sm" disabled={geoLoading} onClick={() => void buscarCoordenadas()}>
+                        {geoLoading ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <MapPin className="mr-1 h-4 w-4" />}Obter pelo endereço/CEP
+                      </Button>
+                      <Button type="button" variant="outline" size="sm" disabled={geoLoading} onClick={() => void buscarCoordenadas(true)}>
+                        <LocateFixed className="mr-1 h-4 w-4" />Localização do aparelho
+                      </Button>
+                    </div>
+                    {camposDo("endereco").filter((f) => f.coord).map(campo)}
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="fiscal" className="mt-4 space-y-6">
+                <div>
+                  {secao("Porte e enquadramento")}
+                  <div className="grid gap-4 sm:grid-cols-2">{camposDo("fiscal").filter((f) => !f.fiscal && !f.key.startsWith("cnae")).map(campo)}</div>
+                </div>
+                <div>
+                  {secao("Atividades econômicas")}
+                  <div className="grid gap-4 sm:grid-cols-2">{camposDo("fiscal").filter((f) => f.key.startsWith("cnae")).map(campo)}</div>
+                  <div className="mt-4 rounded-lg border p-4">
+                    <div className="text-muted-foreground mb-2 text-xs font-medium">CNAEs Secundários ({extras.cnaes_secundarios.length})</div>
+                    {extras.cnaes_secundarios.length === 0
+                      ? <span className="text-muted-foreground text-sm">Nenhum CNAE secundário. Use a busca do CNPJ para preencher.</span>
+                      : <ul className="divide-y text-sm">
+                          {extras.cnaes_secundarios.map((c) => (
+                            <li key={c.codigo} className="py-1.5"><span className="font-mono font-semibold">{c.codigo}</span> — {c.descricao}</li>
+                          ))}
+                        </ul>}
+                  </div>
+                </div>
+                <div>
+                  {secao("Emissão de notas (NF-e / NFS-e)")}
+                  <div className="grid gap-4 sm:grid-cols-2">{camposDo("fiscal").filter((f) => f.fiscal).map(campo)}</div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="qsa" className="mt-4">
+                {extras.qsa.length === 0
+                  ? <div className="text-muted-foreground rounded-lg border border-dashed p-8 text-center text-sm">Nenhum sócio registrado. Use a busca do CNPJ em Dados Gerais para preencher.</div>
+                  : <div className="grid gap-3">
+                      {extras.qsa.map((s, i) => (
+                        <div key={`${s.nome}-${i}`} className="rounded-lg border p-4">
+                          <div className="font-medium">{s.nome || "—"}</div>
+                          <div className="text-muted-foreground mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                            {s.qualificacao && <span>{s.qualificacao}</span>}
+                            {s.pais && <span>País: {s.pais}</span>}
+                            {s.faixa_etaria && <span>Faixa etária: {s.faixa_etaria}</span>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>}
+              </TabsContent>
+
+              <TabsContent value="wl" className="mt-4 space-y-6">
+                <p className="text-muted-foreground text-xs">Logos, cores, ícone e endereço aplicados ao sistema para os usuários desta empresa. Deixe vazio para usar o padrão.</p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="light rounded-lg border border-border bg-background p-3 text-foreground">
+                    <p className="mb-2 text-sm font-medium">Logo — modo claro (padrão)</p>
+                    <PhotoUpload
+                      value={values["logo"] ?? ""}
+                      alt={values["nome"] ? `Logo de ${values["nome"]}` : "Logo da empresa"}
+                      onChange={(url) => setValues((current) => ({ ...current, logo: url }))}
+                    />
+                  </div>
+                  <div className="dark rounded-lg border border-border bg-background p-3 text-foreground">
+                    <p className="mb-2 text-sm font-medium">Logo — modo escuro (opcional)</p>
+                    <PhotoUpload
+                      value={values["logo_escuro"] ?? ""}
+                      alt="Logo para o modo escuro"
+                      onChange={(url) => setValues((current) => ({ ...current, logo_escuro: url }))}
+                    />
+                    <p className="mt-2 text-xs text-muted-foreground">Sem logo escuro, o logo padrão é usado.</p>
+                  </div>
+                  <div className="rounded-lg border border-border bg-background p-3 text-foreground sm:col-span-2">
+                    <p className="mb-2 text-sm font-medium">Imagem da tela de login (opcional)</p>
+                    <PhotoUpload
+                      value={values["login_imagem"] ?? ""}
+                      alt="Imagem da tela de login"
+                      onChange={(url) => setValues((current) => ({ ...current, login_imagem: url }))}
+                    />
+                    <p className="mt-2 text-xs text-muted-foreground">Aparece ao lado do formulário de login no endereço exclusivo da empresa. Use uma imagem vertical (ex.: 1024×1536).</p>
+                  </div>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">{camposDo("wl").filter((f) => f.type !== "photo").map(campo)}</div>
+              </TabsContent>
+            </Tabs>
             </fieldset>
           </TabsContent>
             ) : (
