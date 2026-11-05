@@ -10,7 +10,7 @@ import { GestaoCondominial } from "@/components/empresas/GestaoCondominial";
 import { supabase } from "@/integrations/supabase/client";
 import { rowId, useTableRows } from "@/lib/crud";
 import { pick } from "@/lib/row";
-import { PhoneInput } from "@/components/ui/phone-input";
+import { PhoneInput } from "@/components/data-table/PhoneInput";
 
 const CAMPOS = ["tipo_gestao", "administradora_id", "facilities_id", "cond_contato_administradora", "cond_contato_portaria", "cond_portaria_modalidade"] as const;
 
@@ -73,7 +73,7 @@ export function GestaoTerceirosPanel({ condominioId, podeEditar }: { condominioI
           </div>
           <div className="min-w-0">
             <Label className="mb-1.5 block">Telefone da portaria (emergência)</Label>
-            <PhoneInput value={v["cond_contato_portaria"] ?? ""} disabled={!podeEditar} onChange={(x: string) => set("cond_contato_portaria", x)} />
+            {podeEditar ? <PhoneInput value={v["cond_contato_portaria"] ?? ""} onChange={(x: string) => set("cond_contato_portaria", x)} /> : <Input value={v["cond_contato_portaria"] ?? ""} disabled />}
           </div>
           <div className="min-w-0 sm:col-span-2">
             <Label className="mb-1.5 block">Contato na administradora (gerente de conta, e-mail)</Label>
