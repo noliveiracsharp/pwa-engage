@@ -411,7 +411,7 @@ function Dashboard() {
     enabled: empresaId != null,
     queryFn: async () => {
       const { data } = await supabase.from("empresas").select("*").eq("empresa_pai_id", empresaId as never);
-      return (data ?? []) as Row[];
+      return ((data ?? []) as Row[]).filter((r) => r["is_tenant"] !== false);
     },
   });
   const escopo = !filiais.length || empresaId == null ? undefined
