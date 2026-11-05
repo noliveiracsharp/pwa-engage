@@ -322,7 +322,7 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly: roTela, sa
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="z-[60] flex w-full flex-col gap-0 p-0 sm:max-w-2xl">
+      <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-2xl">
         <SheetHeader className="px-6 pt-6 pb-4">
           <SheetTitle className="pr-8">{record ? "Editar parceiro" : "Novo parceiro"}</SheetTitle>
           <SheetDescription>Clientes e fornecedores usados no financeiro e faturamento.</SheetDescription>
