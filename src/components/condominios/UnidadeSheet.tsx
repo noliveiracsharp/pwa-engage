@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Car, DoorOpen, FileText, KeyRound, Loader2, PawPrint, Phone, Plus, Search, ShieldOff, Trash2, UserRound, Users, Wrench } from "lucide-react";
+import { Car, DoorOpen, FileText, KeyRound, Loader2, PawPrint, Phone, Pencil, Plus, Search, ShieldOff, Trash2, UserRound, Users, Wrench } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -16,11 +16,15 @@ import { confirmar, perguntar } from "@/components/layout/DialogoGlobal";
 import type { Row } from "@/lib/row";
 import { consultarPlaca } from "@/lib/placa.functions";
 import { normalizarPlaca } from "@/lib/sorteio-vagas";
+import { PhoneInput } from "@/components/data-table/PhoneInput";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { formatCpfCnpj } from "@/lib/input-masks";
+import { FotoCond } from "./FotoCond";
 import { OCUPACOES, PAPEIS, TIPOS_UNIDADE, s, useCatalogo, useCondRows, useCondSalvar } from "./cond-data";
 
 type Perms = { canCreate: boolean; canUpdate: boolean; canDelete: boolean };
 type Props = { unidade: Row; condominioId: string; blocoNome: string; perms: Perms; onClose: () => void };
-type Pessoa = { usuario_id: string; nome: string; email: string; celular: string | null; cpf: string | null; tem_acesso: boolean };
+type Pessoa = { usuario_id: string; nome: string; email: string; celular: string | null; cpf: string | null; foto_url?: string | null; tem_acesso: boolean };
 
 const rpc = (fn: string, args: Record<string, unknown>) =>
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -44,7 +48,7 @@ export function UnidadeSheet({ unidade, condominioId, blocoNome, perms, onClose 
     { v: "dados", l: "Dados", i: DoorOpen },
     { v: "proprietario", l: "Proprietário", i: UserRound },
     ...(ocupacao === "alugada" ? [{ v: "inquilino", l: "Inquilino", i: KeyRound }] : []),
-    { v: "familia", l: "Família & colaboradores", i: Users },
+    { v: "familia", l: "Família & Visitantes", i: Users },
     { v: "prestadores", l: "Prestadores", i: Wrench },
     { v: "veiculos", l: "Veículos", i: Car },
     { v: "pets", l: "Pets", i: PawPrint },
@@ -65,7 +69,7 @@ export function UnidadeSheet({ unidade, condominioId, blocoNome, perms, onClose 
             <TabsContent value="dados"><DadosUnidade unidade={unidade} condominioId={condominioId} perms={perms} onClose={onClose} onOcupacao={setOcupacao} /></TabsContent>
             <TabsContent value="proprietario"><Pessoas unidadeId={id} perms={perms} lado="proprietario" papeis={["proprietario", "preposto"]} titulo="Proprietários e procuradores" /></TabsContent>
             <TabsContent value="inquilino"><Pessoas unidadeId={id} perms={perms} lado="inquilino" papeis={["inquilino"]} titulo="Inquilinos (locatários)" /></TabsContent>
-            <TabsContent value="familia"><Pessoas unidadeId={id} perms={perms} lado={ocupacao === "alugada" ? "inquilino" : "proprietario"} papeis={["familiar", "colaborador", "visitante"]} titulo="Família, colaboradores e visitantes da unidade" /></TabsContent>
+            <TabsContent value="familia"><Pessoas unidadeId={id} perms={perms} lado={ocupacao === "alugada" ? "inquilino" : "proprietario"} papeis={s(unidade["tipo"]) === "comercial" || s(unidade["tipo"]) === "sala" || s(unidade["tipo"]) === "loja" ? ["colaborador", "visitante"] : ["familiar", "visitante"]} titulo="Família e visitantes da unidade (pai, mãe, avós…)" /></TabsContent>
             <TabsContent value="prestadores"><Pessoas unidadeId={id} perms={perms} lado={ocupacao === "alugada" ? "inquilino" : "proprietario"} papeis={["prestador"]} titulo="Prestadores de serviço da unidade" /></TabsContent>
             <TabsContent value="veiculos"><Veiculos unidadeId={id} condominioId={condominioId} perms={perms} /></TabsContent>
             <TabsContent value="pets"><Pets unidadeId={id} perms={perms} /></TabsContent>
@@ -149,7 +153,8 @@ function Pessoas({ unidadeId, perms, lado, papeis, titulo }: { unidadeId: string
   const { data: vinculos = [] } = useCondRows("cond_unidades_vinculos", "cond_unidade_id", unidadeId);
   const { data: pessoas = [] } = usePessoas(unidadeId);
   const salvar = useCondSalvar("cond_unidades_vinculos");
-  const vazio = { nome: "", email: "", celular: "", cpf: "", papel: papeis[0]!, extra: "" };
+  const vazio = { nome: "", email: "", celular: "", cpf: "", papel: papeis[0]!, extra: "", foto: "" };
+  const [editando, setEditando] = useState<Pessoa | null>(null);
   const [n, setN] = useState(vazio);
   const [ocupado, setOcupado] = useState(false);
   const meus = vinculos.filter((v) => papeis.includes(s(v["papel"])) && (s(v["lado"]) || "proprietario") === lado);
@@ -164,7 +169,8 @@ function Pessoas({ unidadeId, perms, lado, papeis, titulo }: { unidadeId: string
       const { error } = await rpc(fn, args);
       if (error) throw new Error(error.message);
       toast.success(ok); await recarregar();
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Não foi possível concluir."); }
+      return true;
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Não foi possível concluir."); return false; }
     finally { setOcupado(false); }
   }
 
@@ -173,18 +179,19 @@ function Pessoas({ unidadeId, perms, lado, papeis, titulo }: { unidadeId: string
       <p className="text-sm font-medium">{titulo}</p>
       {perms.canCreate && (
         <div className="grid gap-2 rounded-lg border p-3 sm:grid-cols-3">
+          <div className="row-span-2 flex justify-center sm:col-span-3"><FotoCond rosto value={n.foto} onChange={(u) => setN({ ...n, foto: u })} /></div>
           <div><Label htmlFor={`p-nome-${lado}`}>Nome</Label><Input id={`p-nome-${lado}`} value={n.nome} onChange={(e) => setN({ ...n, nome: e.target.value })} /></div>
           <div><Label htmlFor={`p-email-${lado}`}>E-mail (obrigatório)</Label><Input id={`p-email-${lado}`} type="email" value={n.email} onChange={(e) => setN({ ...n, email: e.target.value })} /></div>
-          <div><Label htmlFor={`p-cel-${lado}`}>Celular</Label><Input id={`p-cel-${lado}`} value={n.celular} onChange={(e) => setN({ ...n, celular: e.target.value })} /></div>
-          <div><Label htmlFor={`p-cpf-${lado}`}>CPF</Label><Input id={`p-cpf-${lado}`} value={n.cpf} onChange={(e) => setN({ ...n, cpf: e.target.value })} /></div>
+          <div><Label htmlFor={`p-cel-${lado}`}>Celular</Label><PhoneInput id={`p-cel-${lado}`} value={n.celular} onChange={(x) => setN({ ...n, celular: x })} /></div>
+          <div><Label htmlFor={`p-cpf-${lado}`}>CPF</Label><Input id={`p-cpf-${lado}`} inputMode="numeric" placeholder="000.000.000-00" value={n.cpf} onChange={(e) => setN({ ...n, cpf: formatCpfCnpj(e.target.value).slice(0, 14) })} /></div>
           {papeis.length > 1 && <div><Label className="mb-1.5 block">Papel</Label><SearchSelect value={n.papel} allowClear={false} onChange={(x) => setN({ ...n, papel: x })} options={PAPEIS.filter((p) => papeis.includes(p.value))} /></div>}
           {extraLabel && <div><Label htmlFor={`p-extra-${lado}`}>{extraLabel}</Label><Input id={`p-extra-${lado}`} value={n.extra} onChange={(e) => setN({ ...n, extra: e.target.value })} /></div>}
           <div className="flex items-end sm:col-start-3"><Button className="w-full" disabled={ocupado || !n.nome.trim() || !n.email.includes("@")} onClick={async () => {
-            await acao("cond_morador_vincular", {
+            const ok = await acao("cond_morador_vincular", {
               p_unidade: unidadeId, p_nome: n.nome, p_email: n.email, p_celular: n.celular, p_cpf: n.cpf, p_papel: n.papel, p_lado: lado,
-              p_extra: n.papel === "prestador" ? { prestador_funcao: n.extra } : { parentesco: n.extra },
+              p_extra: { ...(n.papel === "prestador" ? { prestador_funcao: n.extra } : { parentesco: n.extra }), foto_url: n.foto },
             }, "Pessoa vinculada.");
-            setN(vazio);
+            if (ok) setN(vazio);
           }}><Plus className="size-4" /> Adicionar</Button></div>
         </div>
       )}
@@ -193,10 +200,12 @@ function Pessoas({ unidadeId, perms, lado, papeis, titulo }: { unidadeId: string
         return (
           <div key={s(v["id"])} className="space-y-3 rounded-lg border p-3">
             <div className="flex flex-wrap items-center gap-2">
+              <FotoCond rosto tamanho="sm" disabled value={p?.foto_url ?? ""} onChange={() => {}} alt={p?.nome} />
               <div className="mr-auto">
                 <p className="font-medium">{p?.nome ?? "—"} <Badge variant="secondary" className="ml-1">{papelLabel(s(v["papel"]))}</Badge></p>
                 <p className="text-xs text-muted-foreground">{[p?.email, p?.celular, s(v["parentesco"]) || s(v["prestador_funcao"])].filter(Boolean).join(" · ")}</p>
               </div>
+              {perms.canUpdate && p && <Button size="sm" variant="outline" onClick={() => setEditando(p)}><Pencil className="size-4" /> Editar</Button>}
               <Badge variant={p?.tem_acesso ? "default" : "outline"}>{p?.tem_acesso ? "Acesso ativo" : "Sem acesso"}</Badge>
               {perms.canUpdate && p && (p.tem_acesso ? (
                 <Button size="sm" variant="outline" className="text-destructive" disabled={ocupado} onClick={async () => {
@@ -224,7 +233,37 @@ function Pessoas({ unidadeId, perms, lado, papeis, titulo }: { unidadeId: string
           </div>
         );
       })}
+      {editando && <EditarPessoa pessoa={editando} onClose={() => setEditando(null)} onSalvo={recarregar} />}
     </div>
+  );
+}
+
+function EditarPessoa({ pessoa, onClose, onSalvo }: { pessoa: Pessoa; onClose: () => void; onSalvo: () => Promise<unknown> }) {
+  const [v, setV] = useState({ nome: pessoa.nome, celular: pessoa.celular ?? "", cpf: formatCpfCnpj(pessoa.cpf ?? ""), foto: pessoa.foto_url ?? "" });
+  const [salvando, setSalvando] = useState(false);
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader><DialogTitle>Editar cadastro</DialogTitle></DialogHeader>
+        <div className="grid gap-3">
+          <FotoCond rosto value={v.foto} onChange={(u) => setV({ ...v, foto: u })} alt={v.nome} />
+          <div><Label htmlFor="ep-nome">Nome</Label><Input id="ep-nome" value={v.nome} onChange={(e) => setV({ ...v, nome: e.target.value })} /></div>
+          <div><Label htmlFor="ep-email">E-mail (login)</Label><Input id="ep-email" value={pessoa.email} disabled /></div>
+          <div><Label htmlFor="ep-cel">Celular</Label><PhoneInput id="ep-cel" value={v.celular} onChange={(x) => setV({ ...v, celular: x })} /></div>
+          <div><Label htmlFor="ep-cpf">CPF</Label><Input id="ep-cpf" inputMode="numeric" value={v.cpf} onChange={(e) => setV({ ...v, cpf: formatCpfCnpj(e.target.value).slice(0, 14) })} /></div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button disabled={salvando || !v.nome.trim()} onClick={async () => {
+            setSalvando(true);
+            const { error } = await rpc("cond_pessoa_atualizar", { p_usuario: pessoa.usuario_id, p_nome: v.nome, p_celular: v.celular, p_cpf: v.cpf, p_foto: v.foto });
+            setSalvando(false);
+            if (error) { toast.error(error.message); return; }
+            toast.success("Cadastro atualizado."); await onSalvo(); onClose();
+          }}>Salvar</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -237,7 +276,7 @@ function Veiculos({ unidadeId, condominioId, perms }: { unidadeId: string; condo
   const { data: cores = [] } = useCatalogo("veiculos_cores");
   const salvar = useCondSalvar("cond_unidades_veiculos");
   const consultar = useServerFn(consultarPlaca);
-  const vazio = { placa: "", marca_id: "", modelo_id: "", cor_id: "", cond_vaga_id: "", usuario_id: "", ano: "", descricao_livre: "" };
+  const vazio = { foto_url: "", placa: "", marca_id: "", modelo_id: "", cor_id: "", cond_vaga_id: "", usuario_id: "", ano: "", descricao_livre: "" };
   const [n, setN] = useState(vazio);
   const [buscando, setBuscando] = useState(false);
   const opt = (rs: Row[]) => rs.map((r) => ({ value: s(r["id"]), label: s(r["descricao"]) }));
@@ -268,6 +307,7 @@ function Veiculos({ unidadeId, condominioId, perms }: { unidadeId: string; condo
     <div className="space-y-4">
       {perms.canCreate && (
         <div className="grid gap-2 rounded-lg border p-3 sm:grid-cols-3">
+          <div className="flex justify-center sm:col-span-3"><FotoCond value={n.foto_url} onChange={(u) => setN({ ...n, foto_url: u })} alt="Foto do veículo" /></div>
           <div>
             <Label htmlFor="v-placa">Placa</Label>
             <div className="flex gap-1">
@@ -283,14 +323,15 @@ function Veiculos({ unidadeId, condominioId, perms }: { unidadeId: string; condo
           <div><Label className="mb-1.5 block">Morador responsável</Label><SearchSelect value={n.usuario_id} onChange={(x) => setN({ ...n, usuario_id: x })} options={pessoas.map((p) => ({ value: p.usuario_id, label: p.nome }))} emptyText="Cadastre moradores primeiro." /></div>
           <div><Label className="mb-1.5 block">Vaga</Label><SearchSelect value={n.cond_vaga_id} onChange={(x) => setN({ ...n, cond_vaga_id: x })} options={vagasUnidade} emptyText="A unidade não tem vaga." /></div>
           <div className="flex items-end sm:col-start-3"><Button className="w-full" disabled={!placaOk || salvar.isPending} onClick={async () => {
-            await salvar.mutateAsync({ valores: { cond_unidade_id: unidadeId, placa: placaOk, marca_id: n.marca_id || null, modelo_id: n.modelo_id || null, cor_id: n.cor_id || null, cond_vaga_id: n.cond_vaga_id || null, usuario_id: n.usuario_id || null, ano: n.ano || null, descricao_livre: n.descricao_livre || null } });
+            await salvar.mutateAsync({ valores: { cond_unidade_id: unidadeId, foto_url: n.foto_url || null, placa: placaOk, marca_id: n.marca_id || null, modelo_id: n.modelo_id || null, cor_id: n.cor_id || null, cond_vaga_id: n.cond_vaga_id || null, usuario_id: n.usuario_id || null, ano: n.ano || null, descricao_livre: n.descricao_livre || null } });
             setN(vazio); toast.success("Veículo cadastrado.");
           }}><Plus className="size-4" /> Adicionar</Button></div>
         </div>
       )}
       {veiculos.length === 0 ? <p className="py-6 text-center text-sm text-muted-foreground">Nenhum veículo cadastrado.</p> : veiculos.map((v) => (
         <div key={s(v["id"])} className="flex flex-wrap items-center gap-2 rounded-lg border p-3 text-sm">
-          <Car className="size-4" />
+          {v["foto_url"] ? <img src={s(v["foto_url"])} alt={s(v["placa"])} className="size-12 rounded-md object-cover" /> : <Car className="size-4" />}
+          {perms.canUpdate && <FotoCond tamanho="sm" value={s(v["foto_url"])} onChange={(u) => salvar.mutate({ id: s(v["id"]), valores: { foto_url: u || null } })} alt="Trocar foto" />}
           <span className="font-mono font-semibold">{s(v["placa"])}</span>
           <span className="text-muted-foreground">{[nome(marcas, v["marca_id"]), nome(modelos, v["modelo_id"]), nome(cores, v["cor_id"]), s(v["ano"])].filter(Boolean).join(" · ") || s(v["descricao_livre"]) || "—"}</span>
           {v["usuario_id"] ? <Badge variant="secondary">{pessoas.find((p) => p.usuario_id === s(v["usuario_id"]))?.nome ?? "Morador"}</Badge> : null}
@@ -305,8 +346,8 @@ function Veiculos({ unidadeId, condominioId, perms }: { unidadeId: string; condo
 }
 
 /** Lista simples com formulário de inclusão (pets, contatos). */
-function ListaSimples({ unidadeId, perms, tabela, campos, obrigatorios, resumo, icone: Icone, vazio }: {
-  unidadeId: string; perms: Perms; tabela: string; vazio: string;
+function ListaSimples({ unidadeId, perms, tabela, foto = false, campos, obrigatorios, resumo, icone: Icone, vazio }: {
+  unidadeId: string; perms: Perms; tabela: string; vazio: string; foto?: boolean;
   campos: { k: string; l: string; opcoes?: { value: string; label: string }[] }[];
   obrigatorios: string[]; resumo: (r: Row) => string; icone: typeof Phone;
 }) {
@@ -314,10 +355,12 @@ function ListaSimples({ unidadeId, perms, tabela, campos, obrigatorios, resumo, 
   const salvar = useCondSalvar(tabela);
   const inicial = Object.fromEntries(campos.map((c) => [c.k, c.opcoes?.[0]?.value ?? ""]));
   const [n, setN] = useState<Record<string, string>>(inicial);
+  const [fotoN, setFotoN] = useState("");
   return (
     <div className="space-y-4">
       {perms.canCreate && (
         <div className="grid gap-2 rounded-lg border p-3 sm:grid-cols-3">
+          {foto && <div className="flex justify-center sm:col-span-3"><FotoCond value={fotoN} onChange={setFotoN} /></div>}
           {campos.map((c) => (
             <div key={c.k}>
               {c.opcoes ? (<><Label className="mb-1.5 block">{c.l}</Label><SearchSelect value={n[c.k] ?? ""} allowClear={false} options={c.opcoes} onChange={(x) => setN({ ...n, [c.k]: x })} /></>)
@@ -327,13 +370,14 @@ function ListaSimples({ unidadeId, perms, tabela, campos, obrigatorios, resumo, 
           <div className="flex items-end"><Button className="w-full" disabled={salvar.isPending || obrigatorios.some((k) => !n[k]?.trim())} onClick={async () => {
             const valores: Row = { cond_unidade_id: unidadeId };
             for (const c of campos) valores[c.k] = n[c.k]?.trim() || null;
-            await salvar.mutateAsync({ valores }); setN(inicial); toast.success("Cadastrado.");
+            if (foto) valores["foto_url"] = fotoN || null;
+            await salvar.mutateAsync({ valores }); setN(inicial); setFotoN(""); toast.success("Cadastrado.");
           }}><Plus className="size-4" /> Adicionar</Button></div>
         </div>
       )}
       {rows.length === 0 ? <p className="py-6 text-center text-sm text-muted-foreground">{vazio}</p> : rows.map((r) => (
         <div key={s(r["id"])} className="flex items-center gap-2 rounded-lg border p-3 text-sm">
-          <Icone className="size-4" /><span>{resumo(r)}</span>
+          {foto ? <FotoCond tamanho="sm" disabled={!perms.canUpdate} value={s(r["foto_url"])} onChange={(u) => salvar.mutate({ id: s(r["id"]), valores: { foto_url: u || null } })} /> : <Icone className="size-4" />}<span>{resumo(r)}</span>
           {perms.canDelete && <Button size="icon" variant="ghost" className="ml-auto size-8 text-destructive" aria-label="Excluir" onClick={async () => {
             if (await confirmar({ title: "Excluir registro?", destructive: true, confirmText: "Excluir" })) await salvar.mutateAsync({ id: s(r["id"]), excluir: true });
           }}><Trash2 className="size-4" /></Button>}
@@ -347,7 +391,7 @@ const ESPECIES = [{ value: "cachorro", label: "Cachorro" }, { value: "gato", lab
 const PORTES = [{ value: "pequeno", label: "Pequeno" }, { value: "medio", label: "Médio" }, { value: "grande", label: "Grande" }];
 
 function Pets({ unidadeId, perms }: { unidadeId: string; perms: Perms }) {
-  return <ListaSimples unidadeId={unidadeId} perms={perms} tabela="cond_unidades_pets" icone={PawPrint} vazio="Nenhum pet cadastrado." obrigatorios={["nome"]}
+  return <ListaSimples unidadeId={unidadeId} perms={perms} tabela="cond_unidades_pets" foto icone={PawPrint} vazio="Nenhum pet cadastrado." obrigatorios={["nome"]}
     campos={[{ k: "nome", l: "Nome" }, { k: "especie", l: "Espécie", opcoes: ESPECIES }, { k: "raca", l: "Raça" }, { k: "porte", l: "Porte", opcoes: PORTES }, { k: "cor", l: "Cor" }]}
     resumo={(r) => [s(r["nome"]), s(r["especie"]), s(r["raca"]), s(r["porte"]), s(r["cor"])].filter(Boolean).join(" · ")} />;
 }
