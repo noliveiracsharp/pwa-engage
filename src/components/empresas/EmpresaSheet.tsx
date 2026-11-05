@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { DocumentosButton } from "@/components/documentos/DocumentosPainel";
 import { ContatosPainel } from "@/components/contatos/ContatosButton";
+import { ClassificacaoField } from "@/components/parceiros/ClassificacaoField";
 import { IaConfigPainel } from "@/components/financeiro/IaConfigDialog";
 import { EmpresaEmailPainel } from "@/components/empresas/EmpresaEmailPainel";
 import { useAudit } from "@/lib/audit";
@@ -861,6 +862,113 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
     if (extras.alterado) { payload["cnaes_secundarios"] = extras.cnaes_secundarios; payload["qsa"] = extras.qsa; }
     onSave(payload);
   };
+
+  const secao = (t: string) => <h3 className="text-muted-foreground mb-3 text-sm font-semibold uppercase tracking-wide">{t}</h3>;
+  const camposDo = (g: NonNullable<EmpresaField["grupo"]>) => EMPRESA_FIELDS
+    .filter((field) => (field.grupo ?? "fiscal") === g)
+    .filter((field) => field.key !== "compartilhar_catalogo_filiais" || !empresa?.["empresa_pai_id"])
+    .filter((field) => !(empresa && rowId(empresa) !== undefined && (field.key === "telefone1" || field.key === "telefone2")));
+  const campo = (field: EmpresaField) => field.type === "classificacao" ? (
+    <div key={field.key} className="min-w-0 sm:col-span-2">
+      <ClassificacaoField value={values[field.key] ?? ""} disabled={dadosLocked} onChange={(v) => setValues((c) => ({ ...c, [field.key]: v }))} />
+    </div>
+  ) : (
+              <div key={field.key}
+                className={field.full || field.type === "tel" ? "min-w-0 sm:col-span-2" : "min-w-0"}
+              >
+                <Label htmlFor={field.key} className="mb-1.5 block">
+                  {field.label}
+                </Label>
+                {field.type === "select" ? (
+                  <Select
+                    value={values[field.key] ?? ""}
+                    onValueChange={(val) => setValues((c) => ({ ...c, [field.key]: val }))}
+                  >
+                    <SelectTrigger id={field.key}>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {field.options?.map((o) => (
+                        <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : field.type === "color" ? (
+                  <div className="flex gap-2">
+                    <input
+                      type="color"
+                      aria-label={field.label}
+                      className="h-10 w-12 shrink-0 cursor-pointer rounded-md border bg-background p-1"
+                      value={/^#[0-9a-f]{6}$/i.test(values[field.key] ?? "") ? values[field.key] : "#2563eb"}
+                      onChange={(e) => setValues((c) => ({ ...c, [field.key]: e.target.value }))}
+                    />
+                    <Input
+                      id={field.key}
+                      placeholder="Padrão do sistema"
+                      value={values[field.key] ?? ""}
+                      onChange={(e) => setValues((c) => ({ ...c, [field.key]: e.target.value }))}
+                    />
+                    {values[field.key] && (
+                      <Button type="button" variant="ghost" size="icon" title="Restaurar padrão"
+                        onClick={() => setValues((c) => ({ ...c, [field.key]: "" }))}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                ) : field.type === "favicon" ? (
+                  <div className="space-y-1">
+                    <PhotoUpload
+                      value={values[field.key] ?? ""}
+                      alt="Favicon da empresa"
+                      onChange={(url) => setValues((c) => ({ ...c, [field.key]: url }))}
+                    />
+                    <p className="text-muted-foreground text-xs">Use uma imagem quadrada simples (ex.: 512×512). Sem favicon, o logo é usado.</p>
+                  </div>
+                ) : field.type === "boolean" ? (
+                  <div className="flex h-10 items-center justify-between gap-3 rounded-md border bg-background px-3 py-2">
+                    <span className="text-sm text-muted-foreground">
+                      {field.key.startsWith("opcao_") ? (values[field.key] === "true" ? "Sim" : "Não") : values[field.key] === "true" ? "Ativo" : "Inativo"}
+                    </span>
+                    <Switch
+                      id={field.key}
+                      checked={values[field.key] === "true"}
+                      onCheckedChange={(checked) =>
+                        setValues((current) => ({ ...current, [field.key]: String(checked) }))
+                      }
+                    />
+                  </div>
+                ) : field.type === "tel" ? (
+                  <PhoneInput
+                    id={field.key}
+                    value={values[field.key] ?? ""}
+                    onChange={(phone) => setValues((current) => ({ ...current, [field.key]: phone }))}
+                  />
+                ) : field.type === "document" ? (
+                  <div className="flex gap-2">
+                    <DocumentInput
+                      id={field.key}
+                      value={values[field.key] ?? ""}
+                      onChange={(document) => {
+                        const prev = digitsOnly(values[field.key] ?? "");
+                        setValues((current) => ({ ...current, [field.key]: document }));
+                        const d = digitsOnly(document);
+                        if (d.length === 14 && prev !== d && !dadosLocked) void lookupCnpj(d);
+                      }}
+                    />
+                    <Button type="button" variant="outline" size="icon" disabled={dadosLocked || cnpjLoading}
+                      title="Buscar dados na Receita Federal" onClick={() => void lookupCnpj(values[field.key] ?? "")}>
+                      {cnpjLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                ) : (
+                  <Input
+                    id={field.key}
+                    value={values[field.key] ?? ""}
+                    onChange={(e) => setValues((v) => ({ ...v, [field.key]: e.target.value }))}
+                  />
+                )}
+              </div>
+  );
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
