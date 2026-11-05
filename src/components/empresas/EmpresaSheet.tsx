@@ -889,170 +889,127 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
             t.kind === "dados" ? (
           <TabsContent key={t.key} value={t.key} className="mt-4">
             <fieldset disabled={dadosLocked} className="min-w-0 disabled:opacity-70">
-            <div className="border-border mb-5 grid gap-4 border-b pb-5 sm:grid-cols-2">
-              <div className="light rounded-lg border border-border bg-background p-3 text-foreground">
-                <p className="mb-2 text-sm font-medium">Logo — modo claro (padrão)</p>
-                <PhotoUpload
-                  value={values["logo"] ?? ""}
-                  alt={values["nome"] ? `Logo de ${values["nome"]}` : "Logo da empresa"}
-                  onChange={(url) => setValues((current) => ({ ...current, logo: url }))}
-                />
-              </div>
-              <div className="dark rounded-lg border border-border bg-background p-3 text-foreground">
-                <p className="mb-2 text-sm font-medium">Logo — modo escuro (opcional)</p>
-                <PhotoUpload
-                  value={values["logo_escuro"] ?? ""}
-                  alt="Logo para o modo escuro"
-                  onChange={(url) => setValues((current) => ({ ...current, logo_escuro: url }))}
-                />
-                <p className="mt-2 text-xs text-muted-foreground">Sem logo escuro, o logo padrão é usado.</p>
-              </div>
-              <div className="rounded-lg border border-border bg-background p-3 text-foreground sm:col-span-2">
-                <p className="mb-2 text-sm font-medium">Imagem da tela de login (opcional)</p>
-                <PhotoUpload
-                  value={values["login_imagem"] ?? ""}
-                  alt="Imagem da tela de login"
-                  onChange={(url) => setValues((current) => ({ ...current, login_imagem: url }))}
-                />
-                <p className="mt-2 text-xs text-muted-foreground">Aparece ao lado do formulário de login no endereço exclusivo da empresa. Use uma imagem vertical (ex.: 1024×1536).</p>
-              </div>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-            {EMPRESA_FIELDS.filter((field) => field.type !== "photo")
-              .filter((field) => field.key !== "compartilhar_catalogo_filiais" || !empresa?.["empresa_pai_id"])
-              .filter((field) => !(empresa && rowId(empresa) !== undefined && (field.key === "telefone1" || field.key === "telefone2")))
-              .map((field) => (
-              <Fragment key={field.key}>
-              {field.key === "site_url" && (
-                <div className="border-border mt-2 border-t pt-4 sm:col-span-2">
-                  <h3 className="text-sm font-semibold">White label (identidade visual)</h3>
-                  <p className="text-muted-foreground text-xs">
-                    Cores, ícone e site aplicados ao sistema para os usuários desta empresa. Deixe vazio para usar o padrão.
-                  </p>
-                </div>
-              )}
-              {field.key === "latitude" && empresa && rowId(empresa) !== undefined && (
-                <div className="rounded-lg border bg-muted/30 p-3 sm:col-span-2">
-                  <h3 className="text-sm font-semibold">Contatos (telefones e e-mails)</h3>
-                  <p className="mb-2 text-xs text-muted-foreground">Usados nos envios. O Principal ⭐ é espelhado no cadastro.</p>
-                  <ContatosPainel entidade="empresa" entidadeId={String(rowId(empresa))} />
-                </div>
-              )}
-              {field.key === "latitude" && (
-                <div className="flex flex-wrap items-center gap-2 sm:col-span-2">
-                  <span className="text-sm font-medium">Localização</span>
-                  <Button type="button" variant="outline" size="sm" disabled={geoLoading} onClick={() => void buscarCoordenadas()}>
-                    {geoLoading ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <MapPin className="mr-1 h-4 w-4" />}Obter pelo endereço/CEP
-                  </Button>
-                  <Button type="button" variant="outline" size="sm" disabled={geoLoading} onClick={() => void buscarCoordenadas(true)}>
-                    <LocateFixed className="mr-1 h-4 w-4" />Localização do aparelho
-                  </Button>
-                </div>
-              )}
-              {field.key === "inscricao_estadual" && (
-                <div className="border-border mt-2 border-t pt-4 sm:col-span-2">
-                  <h3 className="text-sm font-semibold">Dados fiscais (emissão de notas)</h3>
-                  <p className="text-muted-foreground text-xs">Usados na futura emissão de NF-e e NFS-e.</p>
-                </div>
-              )}
-              <div
-                className={field.full || field.type === "tel" ? "min-w-0 sm:col-span-2" : "min-w-0"}
-              >
-                <Label htmlFor={field.key} className="mb-1.5 block">
-                  {field.label}
-                </Label>
-                {field.type === "select" ? (
-                  <Select
-                    value={values[field.key] ?? ""}
-                    onValueChange={(val) => setValues((c) => ({ ...c, [field.key]: val }))}
-                  >
-                    <SelectTrigger id={field.key}>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {field.options?.map((o) => (
-                        <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : field.type === "color" ? (
-                  <div className="flex gap-2">
-                    <input
-                      type="color"
-                      aria-label={field.label}
-                      className="h-10 w-12 shrink-0 cursor-pointer rounded-md border bg-background p-1"
-                      value={/^#[0-9a-f]{6}$/i.test(values[field.key] ?? "") ? values[field.key] : "#2563eb"}
-                      onChange={(e) => setValues((c) => ({ ...c, [field.key]: e.target.value }))}
-                    />
-                    <Input
-                      id={field.key}
-                      placeholder="Padrão do sistema"
-                      value={values[field.key] ?? ""}
-                      onChange={(e) => setValues((c) => ({ ...c, [field.key]: e.target.value }))}
-                    />
-                    {values[field.key] && (
-                      <Button type="button" variant="ghost" size="icon" title="Restaurar padrão"
-                        onClick={() => setValues((c) => ({ ...c, [field.key]: "" }))}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
+            <Tabs defaultValue="gerais">
+              <TabsList className="h-auto flex-wrap">
+                <TabsTrigger value="gerais">Dados Gerais</TabsTrigger>
+                <TabsTrigger value="fiscal">Fiscal e Atividades</TabsTrigger>
+                <TabsTrigger value="qsa">Quadro Societário</TabsTrigger>
+                <TabsTrigger value="wl">White Label</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="gerais" className="mt-4 space-y-6">
+                {values["situacao_cadastral"] && (
+                  <div className={`flex flex-wrap items-center gap-2 rounded-lg border px-4 py-3 text-sm ${values["situacao_cadastral"].toUpperCase() === "ATIVA" ? "border-success/40 bg-success/10" : "border-destructive/40 bg-destructive/10"}`}>
+                    <span className="font-medium">Situação na Receita Federal:</span>
+                    <Badge variant={values["situacao_cadastral"].toUpperCase() === "ATIVA" ? "default" : "destructive"}>{values["situacao_cadastral"].toUpperCase()}</Badge>
                   </div>
-                ) : field.type === "favicon" ? (
-                  <div className="space-y-1">
-                    <PhotoUpload
-                      value={values[field.key] ?? ""}
-                      alt="Favicon da empresa"
-                      onChange={(url) => setValues((c) => ({ ...c, [field.key]: url }))}
-                    />
-                    <p className="text-muted-foreground text-xs">Use uma imagem quadrada simples (ex.: 512×512). Sem favicon, o logo é usado.</p>
-                  </div>
-                ) : field.type === "boolean" ? (
-                  <div className="flex h-10 items-center justify-between gap-3 rounded-md border bg-background px-3 py-2">
-                    <span className="text-sm text-muted-foreground">
-                      {values[field.key] === "true" ? "Ativo" : "Inativo"}
-                    </span>
-                    <Switch
-                      id={field.key}
-                      checked={values[field.key] === "true"}
-                      onCheckedChange={(checked) =>
-                        setValues((current) => ({ ...current, [field.key]: String(checked) }))
-                      }
-                    />
-                  </div>
-                ) : field.type === "tel" ? (
-                  <PhoneInput
-                    id={field.key}
-                    value={values[field.key] ?? ""}
-                    onChange={(phone) => setValues((current) => ({ ...current, [field.key]: phone }))}
-                  />
-                ) : field.type === "document" ? (
-                  <div className="flex gap-2">
-                    <DocumentInput
-                      id={field.key}
-                      value={values[field.key] ?? ""}
-                      onChange={(document) => {
-                        const prev = digitsOnly(values[field.key] ?? "");
-                        setValues((current) => ({ ...current, [field.key]: document }));
-                        const d = digitsOnly(document);
-                        if (d.length === 14 && prev !== d && !dadosLocked) void lookupCnpj(d);
-                      }}
-                    />
-                    <Button type="button" variant="outline" size="icon" disabled={dadosLocked || cnpjLoading}
-                      title="Buscar dados na Receita Federal" onClick={() => void lookupCnpj(values[field.key] ?? "")}>
-                      {cnpjLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-                    </Button>
-                  </div>
-                ) : (
-                  <Input
-                    id={field.key}
-                    value={values[field.key] ?? ""}
-                    onChange={(e) => setValues((v) => ({ ...v, [field.key]: e.target.value }))}
-                  />
                 )}
-              </div>
-              </Fragment>
-            ))}
-            </div>
+                <div>
+                  {secao("Identificação")}
+                  <div className="grid gap-4 sm:grid-cols-2">{camposDo("gerais").map(campo)}</div>
+                </div>
+                {empresa && rowId(empresa) !== undefined && (
+                  <div>
+                    {secao("Contatos")}
+                    <div className="rounded-lg border bg-muted/30 p-3">
+                      <p className="mb-2 text-xs text-muted-foreground">Usados nos envios. O Principal ⭐ é espelhado no cadastro.</p>
+                      <ContatosPainel entidade="empresa" entidadeId={String(rowId(empresa))} />
+                    </div>
+                  </div>
+                )}
+                <div>
+                  {secao("Endereço")}
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {camposDo("endereco").filter((f) => !f.coord).map(campo)}
+                    <div className="flex flex-wrap items-center gap-2 sm:col-span-2">
+                      <span className="text-sm font-medium">Localização</span>
+                      <Button type="button" variant="outline" size="sm" disabled={geoLoading} onClick={() => void buscarCoordenadas()}>
+                        {geoLoading ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <MapPin className="mr-1 h-4 w-4" />}Obter pelo endereço/CEP
+                      </Button>
+                      <Button type="button" variant="outline" size="sm" disabled={geoLoading} onClick={() => void buscarCoordenadas(true)}>
+                        <LocateFixed className="mr-1 h-4 w-4" />Localização do aparelho
+                      </Button>
+                    </div>
+                    {camposDo("endereco").filter((f) => f.coord).map(campo)}
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="fiscal" className="mt-4 space-y-6">
+                <div>
+                  {secao("Porte e enquadramento")}
+                  <div className="grid gap-4 sm:grid-cols-2">{camposDo("fiscal").filter((f) => !f.fiscal && !f.key.startsWith("cnae")).map(campo)}</div>
+                </div>
+                <div>
+                  {secao("Atividades econômicas")}
+                  <div className="grid gap-4 sm:grid-cols-2">{camposDo("fiscal").filter((f) => f.key.startsWith("cnae")).map(campo)}</div>
+                  <div className="mt-4 rounded-lg border p-4">
+                    <div className="text-muted-foreground mb-2 text-xs font-medium">CNAEs Secundários ({extras.cnaes_secundarios.length})</div>
+                    {extras.cnaes_secundarios.length === 0
+                      ? <span className="text-muted-foreground text-sm">Nenhum CNAE secundário. Use a busca do CNPJ para preencher.</span>
+                      : <ul className="divide-y text-sm">
+                          {extras.cnaes_secundarios.map((c) => (
+                            <li key={c.codigo} className="py-1.5"><span className="font-mono font-semibold">{c.codigo}</span> — {c.descricao}</li>
+                          ))}
+                        </ul>}
+                  </div>
+                </div>
+                <div>
+                  {secao("Emissão de notas (NF-e / NFS-e)")}
+                  <div className="grid gap-4 sm:grid-cols-2">{camposDo("fiscal").filter((f) => f.fiscal).map(campo)}</div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="qsa" className="mt-4">
+                {extras.qsa.length === 0
+                  ? <div className="text-muted-foreground rounded-lg border border-dashed p-8 text-center text-sm">Nenhum sócio registrado. Use a busca do CNPJ em Dados Gerais para preencher.</div>
+                  : <div className="grid gap-3">
+                      {extras.qsa.map((s, i) => (
+                        <div key={`${s.nome}-${i}`} className="rounded-lg border p-4">
+                          <div className="font-medium">{s.nome || "—"}</div>
+                          <div className="text-muted-foreground mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                            {s.qualificacao && <span>{s.qualificacao}</span>}
+                            {s.pais && <span>País: {s.pais}</span>}
+                            {s.faixa_etaria && <span>Faixa etária: {s.faixa_etaria}</span>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>}
+              </TabsContent>
+
+              <TabsContent value="wl" className="mt-4 space-y-6">
+                <p className="text-muted-foreground text-xs">Logos, cores, ícone e endereço aplicados ao sistema para os usuários desta empresa. Deixe vazio para usar o padrão.</p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="light rounded-lg border border-border bg-background p-3 text-foreground">
+                    <p className="mb-2 text-sm font-medium">Logo — modo claro (padrão)</p>
+                    <PhotoUpload
+                      value={values["logo"] ?? ""}
+                      alt={values["nome"] ? `Logo de ${values["nome"]}` : "Logo da empresa"}
+                      onChange={(url) => setValues((current) => ({ ...current, logo: url }))}
+                    />
+                  </div>
+                  <div className="dark rounded-lg border border-border bg-background p-3 text-foreground">
+                    <p className="mb-2 text-sm font-medium">Logo — modo escuro (opcional)</p>
+                    <PhotoUpload
+                      value={values["logo_escuro"] ?? ""}
+                      alt="Logo para o modo escuro"
+                      onChange={(url) => setValues((current) => ({ ...current, logo_escuro: url }))}
+                    />
+                    <p className="mt-2 text-xs text-muted-foreground">Sem logo escuro, o logo padrão é usado.</p>
+                  </div>
+                  <div className="rounded-lg border border-border bg-background p-3 text-foreground sm:col-span-2">
+                    <p className="mb-2 text-sm font-medium">Imagem da tela de login (opcional)</p>
+                    <PhotoUpload
+                      value={values["login_imagem"] ?? ""}
+                      alt="Imagem da tela de login"
+                      onChange={(url) => setValues((current) => ({ ...current, login_imagem: url }))}
+                    />
+                    <p className="mt-2 text-xs text-muted-foreground">Aparece ao lado do formulário de login no endereço exclusivo da empresa. Use uma imagem vertical (ex.: 1024×1536).</p>
+                  </div>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">{camposDo("wl").filter((f) => f.type !== "photo").map(campo)}</div>
+              </TabsContent>
+            </Tabs>
             </fieldset>
           </TabsContent>
             ) : (
