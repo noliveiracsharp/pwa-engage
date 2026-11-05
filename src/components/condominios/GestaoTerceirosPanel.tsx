@@ -48,7 +48,7 @@ export function GestaoTerceirosPanel({ condominioId, podeEditar }: { condominioI
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase as any).from("empresas").update(valores).eq("id", condominioId);
     setSalvando(false);
-    if (error) return toast.error(/column/i.test(error.message) ? "Rode o script atendeai-condominios-equipe-gestao.sql no banco." : error.message);
+    if (error) return void toast.error(/column/i.test(error.message) ? "Rode o script atendeai-condominios-equipe-gestao.sql no banco." : error.message);
     toast.success("Gestão do condomínio salva.");
     void qc.invalidateQueries({ queryKey: ["table", "parceiros"] });
     void qc.invalidateQueries({ queryKey: ["table", "empresas"] });
