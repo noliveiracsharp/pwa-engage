@@ -117,7 +117,7 @@ function MembroDialog({ inicial, empresaOpts, unidadeOpts, onClose, onSalvar }: 
 
   async function ok() {
     const erro = validarMembro(v);
-    if (erro) return toast.error(erro);
+    if (erro) { toast.error(erro); return; }
     setSalvando(true);
     const valores: Row = { status: ativo };
     for (const c of CAMPOS) valores[c] = v[c]?.trim() ? v[c]!.trim() : null;
