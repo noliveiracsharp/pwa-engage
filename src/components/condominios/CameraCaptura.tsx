@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Camera, CheckCircle2, Glasses, Loader2, RefreshCw, RotateCcw, ScanFace, SwitchCamera } from "lucide-react";
+import { Camera, CheckCircle2, Glasses, Loader2, RotateCcw, ScanFace, SwitchCamera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { avaliarAoVivo, avaliarLuz, detectorVideo } from "@/lib/foto-rosto";
@@ -167,7 +167,7 @@ export function CameraCaptura({ open, rosto, onClose, onFoto }: Props) {
             {rosto && <p className="text-center text-sm text-muted-foreground">Confira: rosto nítido, sem óculos, boné ou máscara?</p>}
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => { URL.revokeObjectURL(previa.url); setPrevia(null); setEtapa("camera"); }}><RotateCcw className="size-4" /> Tirar outra</Button>
-              <Button onClick={() => { onFoto(previa.file); URL.revokeObjectURL(previa.url); onClose(); }}><RefreshCw className="hidden" /><CheckCircle2 className="size-4" /> Usar esta foto</Button>
+              <Button onClick={() => { onFoto(previa.file); URL.revokeObjectURL(previa.url); onClose(); }}><CheckCircle2 className="size-4" /> Usar esta foto</Button>
             </div>
           </div>
         )}

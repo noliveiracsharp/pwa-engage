@@ -1,11 +1,12 @@
 import { useRef, useState } from "react";
-import { Camera, Loader2, ScanFace, Trash2, User } from "lucide-react";
+import { Camera, Loader2, Trash2, Upload, User } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { comprimirImagem } from "@/lib/image-compress";
 import { recortarRosto } from "@/lib/foto-rosto";
 import { cn } from "@/lib/utils";
+import { CameraCaptura } from "./CameraCaptura";
 
 type Props = { value: string; onChange: (url: string) => void; rosto?: boolean; disabled?: boolean; tamanho?: "sm" | "lg"; alt?: string };
 
@@ -14,6 +15,7 @@ export function FotoCond({ value, onChange, rosto = false, disabled, tamanho = "
   const ref = useRef<HTMLInputElement>(null);
   const [ocupado, setOcupado] = useState(false);
   const [aviso, setAviso] = useState("");
+  const [camera, setCamera] = useState(false);
 
   async function enviar(original: File) {
     if (!original.type.startsWith("image/")) { toast.error("Selecione uma imagem."); return; }
@@ -38,22 +40,22 @@ export function FotoCond({ value, onChange, rosto = false, disabled, tamanho = "
   const dim = tamanho === "lg" ? "size-28" : "size-12";
   return (
     <div className="flex flex-col items-center gap-2">
-      <button type="button" disabled={disabled || ocupado} onClick={() => ref.current?.click()} aria-label={value ? "Trocar foto" : "Adicionar foto"}
+      <button type="button" disabled={disabled || ocupado} onClick={() => setCamera(true)} aria-label={value ? "Trocar foto pela câmera" : "Tirar foto"}
         className={cn("relative flex items-center justify-center overflow-hidden border bg-muted transition hover:ring-2 hover:ring-primary/40 disabled:cursor-default disabled:hover:ring-0", rosto ? "rounded-full" : "rounded-lg", dim)}>
         {value ? <img src={value} alt={alt} className="size-full object-cover" /> : rosto ? <User className="size-1/2 text-muted-foreground" /> : <Camera className="size-1/2 text-muted-foreground" />}
         {ocupado && <span className="absolute inset-0 flex items-center justify-center bg-background/70"><Loader2 className="size-5 animate-spin" /></span>}
       </button>
       {tamanho === "lg" && !disabled && (
         <div className="flex gap-1">
-          <Button type="button" size="sm" variant="outline" disabled={ocupado} onClick={() => ref.current?.click()}>
-            {rosto ? <ScanFace className="size-4" /> : <Camera className="size-4" />} {value ? "Trocar" : "Foto"}
-          </Button>
+          <Button type="button" size="sm" variant="outline" disabled={ocupado} onClick={() => setCamera(true)}><Camera className="size-4" /> Câmera</Button>
+          <Button type="button" size="sm" variant="outline" disabled={ocupado} onClick={() => ref.current?.click()}><Upload className="size-4" /> Arquivo</Button>
           {value && <Button type="button" size="icon" variant="ghost" className="size-8 text-destructive" aria-label="Remover foto" onClick={() => onChange("")}><Trash2 className="size-4" /></Button>}
         </div>
       )}
       {rosto && tamanho === "lg" && <p className="max-w-56 text-center text-xs text-muted-foreground">{aviso || "De frente, sem óculos escuros, boné ou máscara. A IA enquadra o rosto."}</p>}
+      {camera && <CameraCaptura open={camera} rosto={rosto} onClose={() => setCamera(false)} onFoto={(f) => void enviar(f)} />}
       {aviso && <p className="sr-only" role="alert">{aviso}</p>}
-      <input ref={ref} type="file" accept="image/*" capture={rosto ? "user" : "environment"} className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void enviar(f); }} />
+      <input ref={ref} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void enviar(f); }} />
     </div>
   );
 }
