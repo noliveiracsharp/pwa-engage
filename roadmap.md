@@ -52,3 +52,8 @@
 - [x] Fase 2b: captação de leads + roleta de vendedores
 - [x] Fase 3: metas por vendedor, forecast ponderado, relatório de perdas
 - [x] /funcoes: só perfis e permissões da empresa ativa.
+
+## Condomínios — unidade completa
+- [x] Moradores em Usuários (e-mail obrigatório), liberar/revogar acesso, proprietário x inquilino, prestadores, veículos com placa, pets, documentos, emergência, menu lateral, vagas privativas e sorteio auditável.
+- [ ] Ativar no banco próprio — aguarda executar atendeai-condominios-unidades-completo.sql e liberar as 3 funções aos perfis.
+- [ ] Consulta automática de placa — aguarda token do provedor (PLACA_API_TOKEN).

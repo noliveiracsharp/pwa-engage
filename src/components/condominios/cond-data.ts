@@ -52,7 +52,23 @@ export const PAPEIS = [
   { value: "proprietario", label: "Proprietário" },
   { value: "inquilino", label: "Inquilino" },
   { value: "familiar", label: "Familiar" },
-  { value: "preposto", label: "Preposto" },
+  { value: "preposto", label: "Procurador / preposto" },
+  { value: "prestador", label: "Prestador de serviço" },
+  { value: "colaborador", label: "Colaborador" },
+  { value: "visitante", label: "Visitante da unidade" },
+];
+
+export const OCUPACOES = [
+  { value: "alugada", label: "Alugada (inquilino reside)" },
+  { value: "propria", label: "Própria (proprietário reside)" },
+  { value: "vazia", label: "Vazia" },
+];
+
+export const MODALIDADES_VAGA = [
+  { value: "privativa", label: "Privativa (escritura — não sorteia)" },
+  { value: "rotativa", label: "Rotativa" },
+  { value: "sorteada", label: "Sorteada" },
+  { value: "visitante", label: "Visitante" },
 ];
 
 export const TIPOS_UNIDADE = [

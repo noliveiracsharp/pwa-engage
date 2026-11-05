@@ -15,6 +15,9 @@ import { pick, type Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
 import { ordemNatural, s, useCondRows, useCondSalvar } from "./cond-data";
 import { UnidadeSheet } from "./UnidadeSheet";
+import { CondominiosSidebar, useSecoesCondominio } from "./CondominiosSidebar";
+import { VagasPanel } from "./VagasPanel";
+import { SorteioPanel } from "./SorteioPanel";
 
 export function CondominiosPage() {
   const perms = usePagePermissions("/condominios");
@@ -48,6 +51,13 @@ export function CondominiosPage() {
     if (!blocoId && blocos.length) setBlocoId(s(blocos[0]!["id"]));
   }, [blocos, blocoId]);
 
+  const secoes = useSecoesCondominio(perms);
+  const [secao, setSecao] = useState("unidades");
+  useEffect(() => {
+    if (secoes.length && !secoes.some((x) => x.key === secao)) setSecao(secoes[0]!.key);
+  }, [secoes, secao]);
+  const secAtual = secoes.find((x) => x.key === secao);
+  const permsUnid = secoes.find((x) => x.key === "unidades") ?? { canCreate: false, canUpdate: false, canDelete: false };
   const [busca, setBusca] = useState("");
   const [unidadeAberta, setUnidadeAberta] = useState<Row | null>(null);
   const [gerar, setGerar] = useState(false);
@@ -98,7 +108,9 @@ export function CondominiosPage() {
   if (!perms.loading && !perms.canRead) return <p className="p-6 text-sm text-muted-foreground">Você não tem acesso a esta tela.</p>;
 
   return (
-    <div className="space-y-4 p-4 md:p-6">
+    <div className="flex min-h-full">
+    <CondominiosSidebar secoes={secoes} ativa={secao} onChange={setSecao} />
+    <div className="min-w-0 flex-1 space-y-4 p-4 md:p-6">
       <div className="flex flex-wrap items-end gap-3">
         <div className="mr-auto">
           <h1 className="flex items-center gap-2 text-2xl font-semibold"><Building2 className="size-6" /> Condomínios</h1>
@@ -115,13 +127,19 @@ export function CondominiosPage() {
           <Building className="mx-auto mb-2 size-8 opacity-60" />
           Selecione um condomínio para ver os blocos e unidades.
         </div>
+      ) : secao === "vagas" && secAtual ? (
+        <VagasPanel condominioId={condId} blocos={blocos} unidades={unidades} perms={secAtual} />
+      ) : secao === "sorteio" && secAtual ? (
+        <SorteioPanel condominioId={condId} blocos={blocos} unidades={unidades} perms={secAtual} />
+      ) : !secAtual ? (
+        <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">Seu perfil não tem acesso a esta área.</div>
       ) : (
         <>
           {/* Passo 2: blocos */}
           <section className="space-y-2">
             <div className="flex items-center gap-2">
               <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground"><Layers className="size-4" /> Blocos</h2>
-              {perms.canCreate && <Button size="sm" variant="outline" className="ml-auto" onClick={novoBloco}><Plus className="size-4" /> Novo bloco</Button>}
+              {permsUnid.canCreate && <Button size="sm" variant="outline" className="ml-auto" onClick={novoBloco}><Plus className="size-4" /> Novo bloco</Button>}
             </div>
             {carregandoBlocos ? (
               <p className="text-sm text-muted-foreground">Carregando…</p>
@@ -139,10 +157,10 @@ export function CondominiosPage() {
                         <p className="font-semibold">{s(b["nome"])}</p>
                         <p className="text-xs text-muted-foreground">{qtd} {qtd === 1 ? "unidade" : "unidades"}</p>
                       </button>
-                      {(perms.canUpdate || perms.canDelete) && (
+                      {(permsUnid.canUpdate || permsUnid.canDelete) && (
                         <div className="absolute right-1 top-1 flex opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
-                          {perms.canUpdate && <Button size="icon" variant="ghost" className="size-7" aria-label="Renomear bloco" onClick={() => renomearBloco(b)}><Pencil className="size-3.5" /></Button>}
-                          {perms.canDelete && <Button size="icon" variant="ghost" className="size-7 text-destructive" aria-label="Excluir bloco" onClick={() => excluirBloco(b)}><Trash2 className="size-3.5" /></Button>}
+                          {permsUnid.canUpdate && <Button size="icon" variant="ghost" className="size-7" aria-label="Renomear bloco" onClick={() => renomearBloco(b)}><Pencil className="size-3.5" /></Button>}
+                          {permsUnid.canDelete && <Button size="icon" variant="ghost" className="size-7 text-destructive" aria-label="Excluir bloco" onClick={() => excluirBloco(b)}><Trash2 className="size-3.5" /></Button>}
                         </div>
                       )}
                     </div>
@@ -161,7 +179,7 @@ export function CondominiosPage() {
                   <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
                   <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar unidade" className="pl-8" aria-label="Buscar unidade" />
                 </div>
-                {perms.canCreate && (
+                {permsUnid.canCreate && (
                   <>
                     <Button size="sm" variant="outline" onClick={() => setGerar(true)}><Wand2 className="size-4" /> Gerar em lote</Button>
                     <Button size="sm" onClick={novaUnidade}><Plus className="size-4" /> Nova unidade</Button>
@@ -213,10 +231,11 @@ export function CondominiosPage() {
           unidade={unidadeAberta}
           condominioId={condId}
           blocoNome={s(blocoAtual?.["nome"])}
-          perms={perms}
+          perms={permsUnid}
           onClose={() => setUnidadeAberta(null)}
         />
       )}
+    </div>
     </div>
   );
 }
