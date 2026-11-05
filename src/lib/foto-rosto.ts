@@ -98,7 +98,7 @@ export async function detectorVideo() {
     detVideoP = (async () => {
       const { FilesetResolver, FaceDetector } = await import("@mediapipe/tasks-vision");
       const fs = await FilesetResolver.forVisionTasks(`https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${VER}/wasm`);
-      return FaceDetector.createFromOptions(fs, { baseOptions: { modelAssetPath: MODELO }, runningMode: "VIDEO", minDetectionConfidence: 0.6 });
+      return FaceDetector.createFromOptions(fs, { baseOptions: { modelAssetPath: MODELO }, runningMode: "VIDEO", minDetectionConfidence: 0.35 });
     })().catch((e) => { detVideoP = null; throw e; });
   }
   return detVideoP;
