@@ -39,30 +39,36 @@ export function useSecoesCondominio(pagina: P): Secao[] {
 
 export function CondominiosSidebar({ secoes, ativa, onChange }: { secoes: Secao[]; ativa: string; onChange: (k: string) => void }) {
   const [aberto, setAberto] = useState(true);
-  return (
-    <aside className={cn("shrink-0 border-r bg-card transition-all", aberto ? "w-56" : "w-12")} aria-label="Menu de condomínios">
-      <div className={cn("flex items-center p-2", aberto ? "justify-between" : "justify-center")}>
-        {aberto && <span className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Condomínio</span>}
-        <Button size="icon" variant="ghost" className="size-8" aria-label={aberto ? "Recolher menu" : "Expandir menu"} onClick={() => setAberto(!aberto)}>
-          {aberto ? <PanelLeftClose className="size-4" /> : <PanelLeftOpen className="size-4" />}
+  if (!aberto)
+    return (
+      <aside className="shrink-0 self-start rounded-lg border border-border bg-card p-1" aria-label="Menu de condomínios">
+        <Button size="sm" variant="ghost" className="h-8 gap-1 px-2" onClick={() => setAberto(true)} aria-label="Mostrar menu" title="Mostrar menu">
+          <PanelLeftOpen className="h-4 w-4" /><span className="text-xs md:hidden">Condomínio</span>
         </Button>
+      </aside>
+    );
+  return (
+    <aside className="w-full shrink-0 self-start rounded-lg border border-border bg-card p-2 md:w-64" aria-label="Menu de condomínios">
+      <div className="mb-2 flex items-center gap-1 px-1">
+        <span className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setAberto(false)} aria-label="Recolher menu" title="Recolher menu"><PanelLeftClose className="h-4 w-4" /></Button>
+          Condomínio
+        </span>
       </div>
-      <nav className="flex flex-col gap-1 p-2">
+      <nav className="flex flex-col gap-0.5">
         {secoes.map((x) => (
           <button
             key={x.key}
             type="button"
-            title={x.label}
             aria-current={ativa === x.key ? "page" : undefined}
             onClick={() => onChange(x.key)}
             className={cn(
-              "flex items-center gap-2 rounded-md px-2 py-2 text-sm transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-              ativa === x.key && "bg-primary/10 font-medium text-primary",
-              !aberto && "justify-center",
+              "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              ativa === x.key && "bg-primary/10 font-semibold text-primary",
             )}
           >
-            <x.icon className="size-4 shrink-0" />
-            {aberto && <span className="truncate">{x.label}</span>}
+            <x.icon className="h-4 w-4 shrink-0" />
+            <span className="truncate">{x.label}</span>
           </button>
         ))}
       </nav>
