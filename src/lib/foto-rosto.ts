@@ -61,3 +61,45 @@ export async function recortarRosto(file: File): Promise<{ arquivo: File; ok: bo
   const blob = await new Promise<Blob>((ok) => c.toBlob((b) => ok(b!), "image/jpeg", 0.9));
   return { arquivo: new File([blob], "rosto.jpg", { type: "image/jpeg" }), ...aval };
 }
+
+/** Avaliação ao vivo (câmera): centralização na moldura, distância, inclinação e uma pessoa só. */
+export function avaliarAoVivo(
+  qtd: number, rosto: Caixa | null, w: number, h: number,
+  olhos?: { esq: { x: number; y: number }; dir: { x: number; y: number } } | null,
+): { ok: boolean; aviso: string } {
+  if (qtd === 0 || !rosto) return { ok: false, aviso: "Posicione o rosto dentro da moldura" };
+  if (qtd > 1) return { ok: false, aviso: "Apenas uma pessoa na câmera" };
+  const cx = (rosto.x + rosto.w / 2) / w;
+  const cy = (rosto.y + rosto.h / 2) / h;
+  const tam = rosto.w / w;
+  if (tam < 0.22) return { ok: false, aviso: "Aproxime-se da câmera" };
+  if (tam > 0.6) return { ok: false, aviso: "Afaste-se um pouco" };
+  if (Math.abs(cx - 0.5) > 0.12 || Math.abs(cy - 0.45) > 0.15) return { ok: false, aviso: "Centralize o rosto na moldura" };
+  if (olhos) {
+    const ang = Math.abs((Math.atan2(olhos.dir.y - olhos.esq.y, olhos.dir.x - olhos.esq.x) * 180) / Math.PI);
+    const incl = Math.min(ang, 180 - ang);
+    if (incl > 12) return { ok: false, aviso: "Mantenha a cabeça reta" };
+  }
+  return { ok: true, aviso: "Perfeito! Mantenha a posição" };
+}
+
+/** Luminosidade média (0-255) suficiente para leitura facial. */
+export function avaliarLuz(media: number): { ok: boolean; aviso?: string } {
+  if (media < 55) return { ok: false, aviso: "Ambiente escuro. Procure um local mais iluminado" };
+  if (media > 225) return { ok: false, aviso: "Luz forte demais. Evite contraluz" };
+  return { ok: true };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let detVideoP: Promise<any> | null = null;
+/** Detector em modo vídeo (para o preview ao vivo da câmera). Só no cliente. */
+export async function detectorVideo() {
+  if (!detVideoP) {
+    detVideoP = (async () => {
+      const { FilesetResolver, FaceDetector } = await import("@mediapipe/tasks-vision");
+      const fs = await FilesetResolver.forVisionTasks(`https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${VER}/wasm`);
+      return FaceDetector.createFromOptions(fs, { baseOptions: { modelAssetPath: MODELO }, runningMode: "VIDEO", minDetectionConfidence: 0.6 });
+    })().catch((e) => { detVideoP = null; throw e; });
+  }
+  return detVideoP;
+}
