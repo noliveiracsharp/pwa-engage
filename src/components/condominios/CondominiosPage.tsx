@@ -201,7 +201,7 @@ export function CondominiosPage() {
           existentes={new Set(unidadesBloco.map((u) => s(u["numero"])))}
           onClose={() => setGerar(false)}
           onGerar={async (linhas) => {
-            for (const l of linhas) await salvarUnidade.mutateAsync({ valores: { ...l, cond_bloco_id: blocoId, condominio_id: condId } });
+            await salvarUnidade.mutateAsync({ valores: linhas.map((l) => ({ ...l, cond_bloco_id: blocoId, condominio_id: condId })) as unknown as Row });
             toast.success(`${linhas.length} unidades criadas.`);
             setGerar(false);
           }}
