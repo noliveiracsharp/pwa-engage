@@ -719,20 +719,38 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
       const tel = (v: unknown) => { const n = digitsOnly(String(v ?? "")); return n.length >= 10 ? `+55${n}` : ""; };
       const cep = digitsOnly(String(d.cep ?? "")).replace(/^(\d{5})(\d{3})$/, "$1-$2");
       const rua = [d.descricao_tipo_de_logradouro, d.logradouro].filter(Boolean).join(" ").trim();
-      const endereco = [
-        [rua, d.numero].filter(Boolean).join(", "),
-        d.complemento, d.bairro,
-        [d.municipio, d.uf].filter(Boolean).join("/"),
-        cep && `CEP ${cep}`,
-      ].filter(Boolean).join(" - ");
+      const s = (v: unknown) => (v == null ? "" : String(v));
       setValues((p) => ({
         ...p,
         nome: nomeProprio(d.razao_social || p["nome"] || ""),
         titulo: p["titulo"] || nomeProprio(d.nome_fantasia || d.razao_social || ""),
-        endereco: endereco || p["endereco"] || "",
+        cep: cep || p["cep"] || "",
+        endereco: rua || p["endereco"] || "",
+        numero: s(d.numero) || p["numero"] || "",
+        complemento: s(d.complemento) || p["complemento"] || "",
+        bairro: s(d.bairro) || p["bairro"] || "",
+        cidade: s(d.municipio) || p["cidade"] || "",
+        uf: s(d.uf) || p["uf"] || "",
+        situacao_cadastral: s(d.descricao_situacao_cadastral),
+        natureza_juridica: s(d.natureza_juridica),
+        porte: s(d.porte || d.descricao_porte),
+        capital_social: s(d.capital_social),
+        opcao_pelo_simples: String(d.opcao_pelo_simples === true),
+        opcao_pelo_mei: String(d.opcao_pelo_mei === true),
+        cnae_principal_codigo: s(d.cnae_fiscal),
+        cnae_principal_descricao: s(d.cnae_fiscal_descricao),
         telefone1: tel(d.ddd_telefone_1) || p["telefone1"] || "",
         telefone2: tel(d.ddd_telefone_2) || p["telefone2"] || "",
       }));
+      setExtras({
+        cnaes_secundarios: (Array.isArray(d.cnaes_secundarios) ? d.cnaes_secundarios : [])
+          .filter((i: { codigo?: number }) => i.codigo)
+          .map((i: { codigo: number; descricao: string }) => ({ codigo: String(i.codigo), descricao: i.descricao ?? "" })),
+        qsa: (Array.isArray(d.qsa) ? d.qsa : []).map((i: Record<string, unknown>) => ({
+          nome: s(i["nome_socio"]), qualificacao: s(i["qualificacao_socio"]), pais: s(i["pais"]), faixa_etaria: s(i["faixa_etaria"]),
+        })),
+        alterado: true,
+      });
       const sit = String(d.descricao_situacao_cadastral ?? "");
       if (sit && sit.toUpperCase() !== "ATIVA") toast.warning(`Situação cadastral: ${sit}.`);
       else toast.success("Dados encontrados na Receita Federal.");
@@ -746,8 +764,9 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
   async function buscarCoordenadas(gps = false) {
     setGeoLoading(true);
     try {
-      const end = values["endereco"] ?? "";
-      const cep = (end.match(/\d{5}-?\d{3}/) ?? [""])[0];
+      const end = [[values["endereco"], values["numero"]].filter(Boolean).join(", "), values["bairro"], [values["cidade"], values["uf"]].filter(Boolean).join("/")]
+        .filter(Boolean).join(" - ");
+      const cep = values["cep"] || ((values["endereco"] ?? "").match(/\d{5}-?\d{3}/) ?? [""])[0];
       const c = gps ? await gpsNavegador() : await geocodificar({ livre: end.replace(/CEP\s*/i, ""), cep });
       if (!c) { toast.error(gps ? "Não foi possível obter a localização do aparelho." : "Não encontramos coordenadas para este endereço."); return; }
       setValues((p) => ({ ...p, latitude: String(c.latitude), longitude: String(c.longitude) }));
@@ -774,6 +793,9 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
   }, [quadros, empresa]);
   const configFor: Record<string, ChildConfig> = { instancias: INSTANCIAS, campos: CAMPOS, etiquetas: etiquetasCfg, notas: NOTAS };
   const [values, setValues] = useState<Record<string, string>>({});
+  type Cnae = { codigo: string; descricao: string };
+  type Socio = { nome: string; qualificacao: string; pais: string; faixa_etaria: string };
+  const [extras, setExtras] = useState<{ cnaes_secundarios: Cnae[]; qsa: Socio[]; alterado: boolean }>({ cnaes_secundarios: [], qsa: [], alterado: false });
   const dadosPerms = tabs.find((t) => t.kind === "dados")?.perms;
   const dadosLocked =
     !!readOnly || (dadosPerms ? !(empresa ? dadosPerms.canUpdate : dadosPerms.canCreate) : false);
@@ -784,6 +806,8 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
     for (const field of EMPRESA_FIELDS) next[field.key] = text(pick(empresa, [field.key], ""));
     if (!next["tipo_pessoa"]) next["tipo_pessoa"] = "Jurídica";
     setValues(next);
+    const arr = <T,>(v: unknown): T[] => (Array.isArray(v) ? (v as T[]) : []);
+    setExtras({ cnaes_secundarios: arr<Cnae>(empresa?.["cnaes_secundarios"]), qsa: arr<Socio>(empresa?.["qsa"]), alterado: false });
   }, [open, empresa]);
 
   const title = useMemo(() => (empresa ? "Editar empresa" : "Nova empresa"), [empresa]);
@@ -822,7 +846,10 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
         payload[field.key] = raw === "" ? null : Number(digitsOnly(raw)) || 0;
       } else if (field.coord) {
         payload[field.key] = coordNum(raw);
-      } else if (field.fiscal || field.wl) {
+      } else if (field.type === "money") {
+        const n = Number(raw.replace(/\./g, "").replace(",", "."));
+        payload[field.key] = raw.trim() === "" || !Number.isFinite(n) ? null : n;
+      } else if (field.fiscal || field.wl || field.nul) {
         payload[field.key] = raw.trim() || null;
       } else {
         payload[field.key] = raw;
@@ -831,6 +858,7 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
     if (typeof payload["nome"] === "string") payload["nome"] = nomeProprio(payload["nome"]);
     // Título exibido: respeita exatamente o que foi digitado (ex.: "ConectCon HUB").
     if (typeof payload["titulo"] === "string") payload["titulo"] = payload["titulo"].trim();
+    if (extras.alterado) { payload["cnaes_secundarios"] = extras.cnaes_secundarios; payload["qsa"] = extras.qsa; }
     onSave(payload);
   };
 
