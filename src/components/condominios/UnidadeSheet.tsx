@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { SearchSelect } from "@/components/data-table/SearchSelect";
-import { confirmar } from "@/components/layout/DialogoGlobal";
+import { confirmar, perguntar } from "@/components/layout/DialogoGlobal";
 import { useTableRows } from "@/lib/crud";
 import type { Row } from "@/lib/row";
 import { PAPEIS, TIPOS_UNIDADE, ordemNatural, s, useCatalogo, useCondRows, useCondSalvar } from "./cond-data";
@@ -164,7 +164,6 @@ function Vagas({ unidadeId, condominioId, perms }: { unidadeId: string; condomin
           <div className="min-w-56 flex-1"><Label className="mb-1.5 block">Vincular vaga livre</Label><SearchSelect value={nova} onChange={setNova} options={livres} placeholder="Selecione a vaga" emptyText="Nenhuma vaga livre cadastrada." /></div>
           <Button disabled={!nova} onClick={async () => { await salvar.mutateAsync({ id: nova, valores: { cond_unidade_id: unidadeId } }); setNova(""); toast.success("Vaga vinculada."); }}><Plus className="size-4" /> Vincular</Button>
           {perms.canCreate && <Button variant="outline" onClick={async () => {
-            const { perguntar } = await import("@/components/layout/DialogoGlobal");
             const ident = await perguntar({ title: "Nova vaga", placeholder: "Identificação (ex.: G1-015)", required: true, confirmText: "Salvar" });
             if (ident?.trim()) { await salvar.mutateAsync({ valores: { condominio_id: condominioId, cond_unidade_id: unidadeId, identificacao: ident.trim() } }); toast.success("Vaga criada."); }
           }}>Nova vaga</Button>}
