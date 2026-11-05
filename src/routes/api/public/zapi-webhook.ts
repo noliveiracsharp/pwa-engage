@@ -210,11 +210,23 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
 
         // Atalho "#tag": entra no fluxo pelo bloco "Mover no Kanban" da tag (pula o menu inicial).
         // Sem bloco correspondente no fluxo, apenas move para o Kanban e passa para humano.
-        const tag = !r.execucao && tipo === "texto" ? extrairTagAcesso(texto) : null;
+        // Vale também com conversa em andamento: a #tag é intenção explícita do cliente.
+        const tag = tipo === "texto" ? extrairTagAcesso(texto) : null;
         let entradaAtalho: string | null = null;
         if (tag) {
           const { data: etapaId } = await db.rpc("fluxo_webhook_rota", { p_token: k, p_tag: tag });
           entradaAtalho = noDoAtalho(r.fluxo.nos ?? [], tag, etapaId ? String(etapaId) : null);
+          if (!entradaAtalho) {
+            // Atalho personalizado em outro fluxo da empresa (ex.: #comercial no fluxo da Oferta).
+            const { data: todos, error: eT } = await db.rpc("fluxo_webhook_fluxos" as never, { p_token: k } as never);
+            if (eT && !/function|schema cache/i.test(eT.message)) console.error("zapi-webhook atalhos", eT.message);
+            for (const f of ((todos ?? []) as Array<NonNullable<Recebido["fluxo"]> & { ativo?: boolean | null }>)) {
+              if (f.ativo === false) continue;
+              const no = noDoAtalho((f.nos ?? []).filter((n) => (n.data?.tipo ?? n.type) === "kanban" && String(n.data?.["atalho"] ?? "")), tag, null);
+              if (no) { r.fluxo = { id: f.id, nos: f.nos, conexoes: f.conexoes }; entradaAtalho = no; break; }
+            }
+          }
+          if (entradaAtalho) r.execucao = r.execucao ? { ...r.execucao, no_atual: null, status: "ativo" } : null;
           if (!entradaAtalho && etapaId) {
             await acao("etapa", { etapa_id: etapaId });
             await acao("modo", { modo: "Humano" });
