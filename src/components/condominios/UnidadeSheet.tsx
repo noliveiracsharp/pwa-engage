@@ -200,7 +200,7 @@ function Pessoas({ unidadeId, perms, lado, papeis, titulo }: { unidadeId: string
         return (
           <div key={s(v["id"])} className="space-y-3 rounded-lg border p-3">
             <div className="flex flex-wrap items-center gap-2">
-              <FotoCond rosto tamanho="sm" disabled value={p?.foto_url ?? ""} onChange={() => {}} alt={p?.nome} />
+              <FotoCond rosto tamanho="sm" disabled value={p?.foto_url ?? ""} onChange={() => {}} alt={p?.nome ?? "Foto"} />
               <div className="mr-auto">
                 <p className="font-medium">{p?.nome ?? "—"} <Badge variant="secondary" className="ml-1">{papelLabel(s(v["papel"]))}</Badge></p>
                 <p className="text-xs text-muted-foreground">{[p?.email, p?.celular, s(v["parentesco"]) || s(v["prestador_funcao"])].filter(Boolean).join(" · ")}</p>
