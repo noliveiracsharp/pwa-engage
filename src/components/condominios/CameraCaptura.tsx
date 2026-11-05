@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Camera, CheckCircle2, Glasses, Loader2, RotateCcw, ScanFace, SwitchCamera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { avaliarAoVivo, avaliarLuz, detectorVideo } from "@/lib/foto-rosto";
+import { avaliarAoVivo, avaliarLuz, detectorVideo, quadroRosto, type Caixa } from "@/lib/foto-rosto";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 
 type Props = { open: boolean; rosto: boolean; onClose: () => void; onFoto: (f: File) => void };
@@ -28,6 +29,8 @@ export function CameraCaptura({ open, rosto, onClose, onFoto }: Props) {
   const video = useRef<HTMLVideoElement>(null);
   const stream = useRef<MediaStream | null>(null);
   const okDesde = useRef(0);
+  const ultimaCaixa = useRef<Caixa | null>(null);
+  const [confirmado, setConfirmado] = useState(false);
 
   const parar = useCallback(() => { stream.current?.getTracks().forEach((t) => t.stop()); stream.current = null; }, []);
 
@@ -74,11 +77,18 @@ export function CameraCaptura({ open, rosto, onClose, onFoto }: Props) {
         ultimo = t;
         try {
           const r = det.detectForVideo(v, performance.now());
-          const d = r.detections[0];
+          // Conta qualquer rosto visível (mesmo ao fundo e com pouca confiança) para barrar outras pessoas.
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const todos = (r.detections as any[]).filter((x) => (x.boundingBox?.width ?? 0) > v.videoWidth * 0.05)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            .sort((a: any, b: any) => b.boundingBox.width - a.boundingBox.width);
+          r.detections = todos;
+          const d = todos[0];
           const b = d?.boundingBox;
           const kp = d?.keypoints;
           const res = avaliarAoVivo(r.detections.length, b ? { x: b.originX, y: b.originY, w: b.width, h: b.height } : null, v.videoWidth, v.videoHeight,
             kp && kp.length >= 2 ? { esq: kp[0], dir: kp[1] } : null);
+          ultimaCaixa.current = b ? { x: b.originX, y: b.originY, w: b.width, h: b.height } : null;
           let final = res;
           if (res.ok && ctx) {
             ctx.drawImage(v, 0, 0, 32, 24);
@@ -100,11 +110,21 @@ export function CameraCaptura({ open, rosto, onClose, onFoto }: Props) {
 
   async function capturar() {
     const v = video.current; if (!v || !v.videoWidth) return;
-    const c = document.createElement("canvas"); c.width = v.videoWidth; c.height = v.videoHeight;
-    c.getContext("2d")!.drawImage(v, 0, 0);
+    const c = document.createElement("canvas");
+    const cx = ultimaCaixa.current;
+    if (rosto && cx && iaOk) {
+      // Recorta já no clique: só o rosto (3x4 quadrado), sem fundo nem outras pessoas.
+      const q = quadroRosto(cx, v.videoWidth, v.videoHeight, 0.45);
+      c.width = 600; c.height = 600;
+      c.getContext("2d")!.drawImage(v, q.x, q.y, q.w, q.h, 0, 0, 600, 600);
+    } else {
+      c.width = v.videoWidth; c.height = v.videoHeight;
+      c.getContext("2d")!.drawImage(v, 0, 0);
+    }
     const blob = await new Promise<Blob>((r) => c.toBlob((b) => r(b!), "image/jpeg", 0.92));
     const file = new File([blob], "camera.jpg", { type: "image/jpeg" });
     parar();
+    setConfirmado(false);
     setPrevia({ url: URL.createObjectURL(blob), file });
     setEtapa("revisao");
   }
@@ -164,10 +184,15 @@ export function CameraCaptura({ open, rosto, onClose, onFoto }: Props) {
         {etapa === "revisao" && previa && (
           <div className="space-y-3">
             <img src={previa.url} alt="Prévia da foto" className={cn("mx-auto max-h-80 rounded-lg", espelho)} />
-            {rosto && <p className="text-center text-sm text-muted-foreground">Confira: rosto nítido, sem óculos, boné ou máscara?</p>}
+            {rosto && (
+              <label className="mx-auto flex max-w-md items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm">
+                <Checkbox checked={confirmado} onCheckedChange={(c) => setConfirmado(c === true)} className="mt-0.5" />
+                <span>Confirmo que estou <strong>sem óculos</strong>, boné ou máscara, com o rosto nítido e <strong>sozinho na foto</strong>. <span className="block text-xs text-muted-foreground">Fotos com óculos são recusadas pelos leitores faciais da portaria.</span></span>
+              </label>
+            )}
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => { URL.revokeObjectURL(previa.url); setPrevia(null); setEtapa("camera"); }}><RotateCcw className="size-4" /> Tirar outra</Button>
-              <Button onClick={() => { onFoto(previa.file); URL.revokeObjectURL(previa.url); onClose(); }}><CheckCircle2 className="size-4" /> Usar esta foto</Button>
+              <Button disabled={rosto && !confirmado} onClick={() => { onFoto(previa.file); URL.revokeObjectURL(previa.url); onClose(); }}><CheckCircle2 className="size-4" /> Usar esta foto</Button>
             </div>
           </div>
         )}
