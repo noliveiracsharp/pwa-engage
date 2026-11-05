@@ -242,7 +242,9 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
           telefone: String(r.telefone || body.phone || "").replace(/\D/g, ""),
           nome: body.senderName || body.chatName || "",
         };
-        const estadoIni = r.execucao
+        const estadoIni = entradaAtalho
+          ? { ...(r.execucao ?? {}), no_atual: entradaAtalho, status: "ativo" as const, variaveis: { ...(r.execucao?.variaveis ?? {}), ...contato, atalho: tag ?? "" } }
+          : r.execucao
           ? { ...r.execucao, variaveis: { ...contato, ...(r.execucao.variaveis ?? {}), protocolo: contato.protocolo, telefone: contato.telefone } }
           : { no_atual: entradaAtalho, status: "ativo" as const, variaveis: tag ? { ...contato, atalho: tag } : contato };
         let res = executarFluxo({ nos: fluxoAtual.nos ?? [], conexoes: fluxoAtual.conexoes ?? [], estado: estadoIni, texto: textoMotor });
