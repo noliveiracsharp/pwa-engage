@@ -14,6 +14,9 @@ import { filterPayload, useCols } from "@/lib/projetos";
 import { useAudit } from "@/lib/audit";
 import { A, telefonePessoa } from "@/lib/atendimentos";
 import { dispararMensagem, marcarEnvio } from "@/lib/atendimentos-envio";
+import { CSAT_AGRADECIMENTO_PADRAO, CSAT_OPCOES } from "@/lib/csat";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 export const TEXTO_PESQUISA =
   "O seu atendimento foi encerrado. Por favor, avalie o nosso suporte respondendo com uma nota de 1 a 5.";
@@ -25,7 +28,7 @@ export function textoEncerramento(protocolo: unknown, telefone: string, origem: 
   const linhas = ["O seu atendimento foi encerrado."];
   if (prot) linhas.push(`Protocolo: ${prot}`);
   if (tel && origem) linhas.push(`Consulte seus protocolos em: ${origem}/portal?tel=${tel}`);
-  linhas.push("", "Sua avaliação é muito importante para melhorarmos nosso atendimento. Responda com uma nota de 1 a 5.");
+  linhas.push("", "Sua avaliação é muito importante para melhorarmos nosso atendimento. Toque em \"Avaliar\" e escolha uma nota de 1 a 5.");
   return linhas.join("\n");
 }
 
@@ -63,10 +66,19 @@ export function usePesquisaSatisfacao() {
   const { data: colsMsg } = useCols("atendimentos_mensagem");
   const [pedido, setPedido] = useState<Pedido | null>(null);
   const [ocupado, setOcupado] = useState(false);
+  const [agradecimento, setAgradecimento] = useState("");
+  const agradOriginal = useRef("");
   const resolver = useRef<((ok: boolean) => void) | null>(null);
 
   function pedir(p: Pedido): Promise<boolean> {
     setPedido(p);
+    if (empresaId) {
+      void supabase.from("empresas").select("*").eq("id", empresaId).maybeSingle().then(({ data }) => {
+        const v = String((data as Row | null)?.["csat_msg_agradecimento"] ?? "");
+        agradOriginal.current = v;
+        setAgradecimento(v || CSAT_AGRADECIMENTO_PADRAO);
+      });
+    } else setAgradecimento(CSAT_AGRADECIMENTO_PADRAO);
     return new Promise((res) => { resolver.current = res; });
   }
 
@@ -100,7 +112,7 @@ export function usePesquisaSatisfacao() {
     }
     const mid = (salva as Row | null)?.["id"];
     try {
-      await dispararMensagem({ instancia, mensagemId: mid, atendimentoId: atId, telefone: telefonePessoa(pessoa), texto: TEXTO });
+      await dispararMensagem({ instancia, mensagemId: mid, atendimentoId: atId, telefone: telefonePessoa(pessoa), texto: TEXTO, lista: { titulo: "Avalie nosso atendimento", botao: "Avaliar", opcoes: CSAT_OPCOES } });
       await marcarEnvio(mid, "enviado");
       toast.success("Pesquisa de satisfação enviada.");
     } catch (e) {
@@ -119,6 +131,11 @@ export function usePesquisaSatisfacao() {
       return;
     }
     setOcupado(true);
+    const novo = agradecimento.trim() === CSAT_AGRADECIMENTO_PADRAO ? "" : agradecimento.trim();
+    if (empresaId && novo !== agradOriginal.current.trim()) {
+      const { error } = await supabase.from("empresas").update({ csat_msg_agradecimento: novo || null } as never).eq("id", empresaId);
+      if (error) toast.error(`Não foi possível salvar a mensagem pós-avaliação: ${error.message}`);
+    }
     const ok = await p.executar();
     if (ok && enviar) await enviarPesquisa(p);
     setOcupado(false);
@@ -136,6 +153,12 @@ export function usePesquisaSatisfacao() {
         <p className="whitespace-pre-wrap rounded-md bg-muted p-3 text-sm text-muted-foreground">
           {pedido ? textoEncerramento(pick(pedido.atendimento, ["protocolo"]), telefonePessoa(pedido.pessoa), typeof window !== "undefined" ? window.location.origin : "") : TEXTO_PESQUISA}
         </p>
+        <p className="text-xs text-muted-foreground">O cliente recebe as opções de 1 a 5 para tocar. Ao responder, a nota fica neste atendimento e nenhum atendimento novo é aberto.</p>
+        <div className="space-y-1.5">
+          <Label htmlFor="csat-agradecimento">Mensagem enviada após a avaliação</Label>
+          <Textarea id="csat-agradecimento" rows={3} value={agradecimento} onChange={(e) => setAgradecimento(e.target.value)} />
+          <p className="text-xs text-muted-foreground">Fica salva para os próximos encerramentos.</p>
+        </div>
         <DialogFooter className="gap-2">
           <Button variant="ghost" disabled={ocupado} onClick={() => concluir(null)}>Cancelar</Button>
           <Button disabled={ocupado} onClick={() => concluir(true)}>Encerrar e enviar</Button>

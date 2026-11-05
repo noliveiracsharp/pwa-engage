@@ -7,6 +7,7 @@ import { z } from "zod";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/integrations/supabase/client";
 import { dispararMensagem } from "@/lib/atendimentos-envio";
 import { executarExterno } from "@/lib/fluxos-externo";
+import { detectarNota, notaDaLinha } from "@/lib/csat";
 import { executarFluxo, proximoNoId, type ConexaoFluxo, type EstadoExec, type NoFluxo } from "@/lib/fluxos-motor";
 
 // Recebe as mensagens da Z-API ("Ao receber"). A chave ?k= identifica a instância.
@@ -133,6 +134,24 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
         // Linha exclusiva de notificações: respostas (ex.: auto-resposta de fornecedor) não abrem atendimento nem robô.
         const { data: fin } = await db.rpc("instancia_finalidade", { p_token: k });
         if (String(fin ?? "") === "notificacoes") return ok({ ignorada: true, motivo: "notificacoes" });
+
+        // Resposta à pesquisa de satisfação: grava a nota no atendimento encerrado, agradece e NÃO abre novo atendimento.
+        const notaCsat = tipo === "texto" ? (lr?.selectedRowId && /^[1-5]$/.test(texto) && /⭐/.test(String(lr.title ?? "")) ? notaDaLinha(texto) : detectarNota(texto)) : null;
+        if (notaCsat) {
+          const { data: av, error: eAv } = await db.rpc("csat_webhook_avaliar" as never, {
+            p_token: k, p_telefone: body.phone, p_nota: notaCsat, p_texto: lr?.title || texto, p_externo: body.messageId ?? null,
+          } as never);
+          if (eAv && !/function|schema cache/i.test(eAv.message)) console.error("zapi-webhook csat", eAv.message);
+          const a = av as { avaliado?: boolean; duplicada?: boolean; atendimento_id?: string; telefone?: string; mensagem?: string; mensagem_id?: string; instancia?: Record<string, unknown> } | null;
+          if (a?.avaliado) {
+            if (!a.duplicada && a.mensagem && a.instancia) {
+              try {
+                await dispararMensagem({ instancia: a.instancia, mensagemId: a.mensagem_id, atendimentoId: a.atendimento_id, telefone: a.telefone ?? body.phone, texto: a.mensagem });
+              } catch (e) { console.error("zapi-webhook csat envio", e); }
+            }
+            return ok({ avaliacao: notaCsat });
+          }
+        }
 
         const { data, error } = await db.rpc("fluxo_webhook_receber", {
           p_token: k, p_telefone: body.phone, p_nome: body.senderName || body.chatName || "",
