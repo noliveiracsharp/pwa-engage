@@ -111,9 +111,9 @@ export function CondominiosPage() {
   if (!perms.loading && !perms.canRead) return <p className="p-6 text-sm text-muted-foreground">Você não tem acesso a esta tela.</p>;
 
   return (
-    <div className="flex min-h-full">
+    <div className="flex min-h-full flex-col gap-4 p-4 md:flex-row md:items-start md:p-6">
     <CondominiosSidebar secoes={secoes} ativa={secao} onChange={setSecao} />
-    <div className="min-w-0 flex-1 space-y-4 p-4 md:p-6">
+    <div className="min-w-0 flex-1 space-y-4">
       <div className="flex flex-wrap items-end gap-3">
         <div className="mr-auto">
           <h1 className="flex items-center gap-2 text-2xl font-semibold"><Building2 className="size-6" /> Condomínios</h1>
