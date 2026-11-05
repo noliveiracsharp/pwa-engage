@@ -206,7 +206,7 @@ export function OrcamentoModalidade({
               disabled={Boolean(readOnly)}
               onChange={(e) => onChange({ dt_primeiro_faturamento: e.target.value })}
             />
-            <p className="text-muted-foreground text-xs">{tx("Vazio: mês seguinte à primeira parcela da implantação.")}</p>
+            <p className="text-muted-foreground text-xs">{tx("Vazio: mês seguinte à primeira parcela da implantação.")} {tx("Itens sem data própria herdam esta data.")}</p>
           </div>
         </div>
         <div className="flex items-center justify-between gap-3 rounded-md border p-3">

@@ -94,6 +94,9 @@ export function OrcamentoDocumento({ id, orcamento, linhas, empresa, cliente, ve
   const totalRecorrente =
     (mostrarInclusos ? 0 : num(orcamento["total_recorrente"]) - linhasOrdenadas.filter((l) => l["incluso"] === true && natDe(l) === "recorrente").reduce((s, l) => s + num(l["total_linha"]), 0)) || linhasRec.reduce((s, l) => s + num(l["total_linha"]), 0);
 
+  const datasItens = linhasRec.map((l) => txt(l["dt_inicio_faturamento"]).slice(0, 10)).filter(Boolean).sort();
+  const primeiroFat = txt(orcamento["dt_primeiro_faturamento"]).slice(0, 10) || datasItens[0] || "";
+
   const tabela = (rows: Row[], mensal: boolean) => {
     const grupos = agruparPorBloco(rows, (l) => String(l["bloco"] ?? ""));
     if (!grupos.some((g) => g.bloco)) return tabelaSimples(rows, mensal);
@@ -152,6 +155,9 @@ export function OrcamentoDocumento({ id, orcamento, linhas, empresa, cliente, ve
                 <strong>{descricao}</strong>
                 {nomeMarca && <div className="orc-detalhe">Marca: {nomeMarca}</div>}
                 {detalhe && textoDetalhe(detalhe) !== descricao && <div className="orc-detalhe prop-rich" dangerouslySetInnerHTML={{ __html: htmlSeguro(detalhe) }} />}
+                {mensal && (txt(l["dt_inicio_faturamento"]) || primeiroFat) && (
+                  <div className="orc-detalhe">Cobrança a partir de: {formatDate(txt(l["dt_inicio_faturamento"]) || primeiroFat)}</div>
+                )}
               </td>
               <td className="orc-right">{formatQtd(l["quantidade"])}</td>
               <td>{txt(pick(unidade ?? {}, ["sigla", "descricao"])) || "—"}</td>
@@ -415,7 +421,7 @@ export function OrcamentoDocumento({ id, orcamento, linhas, empresa, cliente, ve
                   <span>{formatBRL(totalRecorrente)}/mês</span>
                 </div>
                 <div>
-                  <span>Vigência {vigencia} meses · reajuste anual pelo {reajuste}{txt(orcamento["dt_primeiro_faturamento"]) ? ` · 1º faturamento em ${formatDate(orcamento["dt_primeiro_faturamento"])}` : ""}</span>
+                  <span>Vigência {vigencia} meses · reajuste anual pelo {reajuste}{primeiroFat ? ` · 1º faturamento em ${formatDate(primeiroFat)}` : " · 1º faturamento no mês seguinte à implantação"}</span>
                 </div>
               </div>
 
