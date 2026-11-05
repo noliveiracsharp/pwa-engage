@@ -85,6 +85,7 @@ export function OrcamentoDocumento({ id, orcamento, linhas, empresa, cliente, ve
   const linhasImpl = linhasCobradas.filter((l) => natDe(l) !== "recorrente");
   const linhasRec = linhasCobradas.filter((l) => natDe(l) === "recorrente");
   const modalidade = modalidadeOf(orcamento["modalidade"]);
+  const temImpl = linhasImpl.length > 0 || linhasRec.length === 0 || num(orcamento["total_liquido"]) - valorInclusos > 0.004;
   const descontoAvista = num(orcamento["desconto_avista_valor"]);
   const totalAvista = num(orcamento["total_avista"]) || totalLiquido - descontoAvista;
   const taxaInstalacao = num(orcamento["taxa_instalacao"]);
@@ -374,7 +375,7 @@ export function OrcamentoDocumento({ id, orcamento, linhas, empresa, cliente, ve
               )}
             </div>
 
-            <div className="orc-totais">
+            {temImpl && <div className="orc-totais">
               <div>
                 <span>Subtotal da implantação</span>
                 <span>{formatBRL(totalItens)}</span>
@@ -407,13 +408,13 @@ export function OrcamentoDocumento({ id, orcamento, linhas, empresa, cliente, ve
                 <span>{modalidade === "avista" ? "Total à vista" : "Total da implantação"}</span>
                 <span>{formatBRL(modalidade === "avista" ? totalAvista : totalLiquido)}</span>
               </div>
-            </div>
+            </div>}
           </div>
 
           {/* ------------------ 2. recorrentes mensais ------------------ */}
           {linhasRec.length > 0 && (
             <>
-              <h3 className="orc-grupo">2. Serviços recorrentes mensais</h3>
+              <h3 className="orc-grupo">{linhasImpl.length > 0 ? "2. " : ""}Serviços recorrentes mensais</h3>
               {tabela(linhasRec, true)}
               <div className="orc-totais orc-totais-rec">
                 <div className="orc-total-final">
@@ -427,14 +428,14 @@ export function OrcamentoDocumento({ id, orcamento, linhas, empresa, cliente, ve
 
               <Bloco titulo="Resumo do investimento">
                 <div className="orc-resumo">
-                  <div>
+                  {temImpl && <div>
                     <span>Investimento inicial / implantação</span>
                     <strong>
                       {formatBRL(modalidade === "avista" ? totalAvista : totalLiquido)}
                       {modalidade !== "avista" && parcelas.length > 1 && ` (${parcelas.length}x de ${formatBRL(parcelas[0]!.valor)})`}
                       {modalidade === "comodato" && " · comodato"}
                     </strong>
-                  </div>
+                  </div>}
                   <div>
                     <span>Mensalidade dos serviços</span>
                     <strong>{formatBRL(totalRecorrente)}/mês</strong>
