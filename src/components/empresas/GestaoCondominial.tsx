@@ -35,7 +35,7 @@ export function GestaoCondominial({ values, selfId, disabled, onChange }: Props)
       })
       .map((r) => ({
         value: String(rowId(r)),
-        label: pick<string>(r, ["titulo", "nome_fantasia", "nome", "razao_social"], "—"),
+        label: pick<string>(r, ["titulo", "nome_fantasia", "nome", "razao_social"], "—") ?? "—",
         hint: caminhoClassificacao(classificacoes, r["classificacao_id"]) || undefined,
       }));
     const filtradas = todas.filter((o) => padrao.test(o.hint ?? "") || padrao.test(o.label));
