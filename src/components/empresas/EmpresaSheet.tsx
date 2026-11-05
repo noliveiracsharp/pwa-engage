@@ -15,7 +15,8 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { DocumentosButton } from "@/components/documentos/DocumentosPainel";
 import { ContatosPainel } from "@/components/contatos/ContatosButton";
-import { ClassificacaoField } from "@/components/parceiros/ClassificacaoField";
+import { ClassificacaoField, useClassificacoes } from "@/components/parceiros/ClassificacaoField";
+import { GestaoCondominial, ehCondominio } from "@/components/empresas/GestaoCondominial";
 import { IaConfigPainel } from "@/components/financeiro/IaConfigDialog";
 import { EmpresaEmailPainel } from "@/components/empresas/EmpresaEmailPainel";
 import { useAudit } from "@/lib/audit";
@@ -50,7 +51,7 @@ type EmpresaField = {
   full?: boolean;
   type?: "text" | "boolean" | "photo" | "tel" | "document" | "select" | "color" | "favicon" | "classificacao" | "money";
   /** Sub-aba do formulário onde o campo aparece. */
-  grupo?: "gerais" | "endereco" | "fiscal" | "wl";
+  grupo?: "gerais" | "endereco" | "fiscal" | "wl" | "gestao";
   /** Vazio grava null. */
   nul?: boolean;
   options?: Array<{ value: string; label: string }>;
@@ -70,6 +71,9 @@ export const EMPRESA_FIELDS: EmpresaField[] = [
   { key: "nome", label: "Razão social / Nome", grupo: "gerais", full: true },
   { key: "titulo", label: "Nome fantasia (título exibido)", grupo: "gerais", full: true },
   { key: "classificacao_id", label: "Classificação", grupo: "gerais", type: "classificacao", full: true, nul: true },
+  { key: "tipo_gestao", label: "Tipo de gestão", grupo: "gestao", nul: true },
+  { key: "administradora_id", label: "Administradora", grupo: "gestao", nul: true },
+  { key: "facilities_id", label: "Facilities / Portaria", grupo: "gestao", nul: true },
   { key: "telefone1", label: "Telefone 1", grupo: "gerais", type: "tel" },
   { key: "telefone2", label: "Telefone 2", grupo: "gerais", type: "tel" },
   { key: "cep", label: "CEP", grupo: "endereco", nul: true },
@@ -1023,6 +1027,17 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
                       <p className="mb-2 text-xs text-muted-foreground">Usados nos envios. O Principal ⭐ é espelhado no cadastro.</p>
                       <ContatosPainel entidade="empresa" entidadeId={String(rowId(empresa))} />
                     </div>
+                  </div>
+                )}
+                {ehCondominio(classificacoes, values["classificacao_id"]) && (
+                  <div>
+                    {secao("Gestão condominial")}
+                    <GestaoCondominial
+                      values={values}
+                      selfId={empresa && rowId(empresa) !== undefined ? String(rowId(empresa)) : undefined}
+                      disabled={dadosLocked}
+                      onChange={(k, v) => setValues((c) => ({ ...c, [k]: v }))}
+                    />
                   </div>
                 )}
                 <div>
