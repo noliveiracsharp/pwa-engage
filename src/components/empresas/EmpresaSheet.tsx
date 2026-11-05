@@ -47,7 +47,11 @@ type EmpresaField = {
   key: string;
   label: string;
   full?: boolean;
-  type?: "text" | "boolean" | "photo" | "tel" | "document" | "select" | "color" | "favicon";
+  type?: "text" | "boolean" | "photo" | "tel" | "document" | "select" | "color" | "favicon" | "classificacao" | "money";
+  /** Sub-aba do formulário onde o campo aparece. */
+  grupo?: "gerais" | "endereco" | "fiscal" | "wl";
+  /** Vazio grava null. */
+  nul?: boolean;
   options?: Array<{ value: string; label: string }>;
   numeric?: boolean;
   fiscal?: boolean;
@@ -58,25 +62,40 @@ type EmpresaField = {
 };
 
 export const EMPRESA_FIELDS: EmpresaField[] = [
-  { key: "tipo_pessoa", label: "Tipo de pessoa", type: "select", options: [{ value: "Jurídica", label: "Jurídica" }, { value: "Física", label: "Física" }] },
-  { key: "cnpj_cpf", label: "CNPJ / CPF", type: "document" },
-  { key: "status", label: "Status", type: "boolean" },
-  { key: "compartilhar_catalogo_filiais", label: "Compartilhar catálogo com filiais", type: "boolean", full: true },
-  { key: "nome", label: "Nome", full: true },
-  { key: "endereco", label: "Endereço", full: true },
-  { key: "latitude", label: "Latitude", coord: true },
-  { key: "longitude", label: "Longitude", coord: true },
-  { key: "telefone1", label: "Telefone 1", type: "tel" },
-  { key: "telefone2", label: "Telefone 2", type: "tel" },
-  { key: "logo", label: "Logo", type: "photo", full: true },
-  { key: "logo_escuro", label: "Logo — modo escuro", type: "photo", full: true },
-  { key: "login_imagem", label: "Imagem da tela de login", type: "photo", full: true },
-  { key: "titulo", label: "Título exibido", full: true },
-  { key: "site_url", label: "URL / site da empresa", full: true, wl: true },
-  { key: "slug", label: "Endereço exclusivo (atendeai.co/endereco) — minúsculas, números e hífen", full: true, wl: true },
-  { key: "cor_primaria_claro", label: "Cor primária — modo claro", type: "color", wl: true },
-  { key: "cor_primaria_escuro", label: "Cor primária — modo escuro", type: "color", wl: true },
-  { key: "favicon", label: "Favicon (ícone da aba)", type: "favicon", full: true, wl: true },
+  { key: "tipo_pessoa", label: "Tipo de pessoa", grupo: "gerais", type: "select", options: [{ value: "Jurídica", label: "Jurídica" }, { value: "Física", label: "Física" }] },
+  { key: "cnpj_cpf", label: "CNPJ / CPF", grupo: "gerais", type: "document" },
+  { key: "status", label: "Status", grupo: "gerais", type: "boolean" },
+  { key: "compartilhar_catalogo_filiais", label: "Compartilhar catálogo com filiais", grupo: "gerais", type: "boolean", full: true },
+  { key: "nome", label: "Razão social / Nome", grupo: "gerais", full: true },
+  { key: "titulo", label: "Nome fantasia (título exibido)", grupo: "gerais", full: true },
+  { key: "classificacao_id", label: "Classificação", grupo: "gerais", type: "classificacao", full: true, nul: true },
+  { key: "telefone1", label: "Telefone 1", grupo: "gerais", type: "tel" },
+  { key: "telefone2", label: "Telefone 2", grupo: "gerais", type: "tel" },
+  { key: "cep", label: "CEP", grupo: "endereco", nul: true },
+  { key: "endereco", label: "Logradouro", grupo: "endereco", full: true },
+  { key: "numero", label: "Número", grupo: "endereco", nul: true },
+  { key: "complemento", label: "Complemento", grupo: "endereco", nul: true },
+  { key: "bairro", label: "Bairro", grupo: "endereco", nul: true },
+  { key: "cidade", label: "Cidade", grupo: "endereco", nul: true },
+  { key: "uf", label: "UF", grupo: "endereco", nul: true },
+  { key: "latitude", label: "Latitude", grupo: "endereco", coord: true },
+  { key: "longitude", label: "Longitude", grupo: "endereco", coord: true },
+  { key: "logo", label: "Logo", grupo: "wl", type: "photo", full: true },
+  { key: "logo_escuro", label: "Logo — modo escuro", grupo: "wl", type: "photo", full: true },
+  { key: "login_imagem", label: "Imagem da tela de login", grupo: "wl", type: "photo", full: true },
+  { key: "site_url", label: "URL / site da empresa", grupo: "wl", full: true, wl: true },
+  { key: "slug", label: "Endereço exclusivo (atendeai.co/endereco) — minúsculas, números e hífen", grupo: "wl", full: true, wl: true },
+  { key: "cor_primaria_claro", label: "Cor primária — modo claro", grupo: "wl", type: "color", wl: true },
+  { key: "cor_primaria_escuro", label: "Cor primária — modo escuro", grupo: "wl", type: "color", wl: true },
+  { key: "favicon", label: "Favicon (ícone da aba)", grupo: "wl", type: "favicon", full: true, wl: true },
+  { key: "situacao_cadastral", label: "Situação cadastral (Receita)", grupo: "fiscal", nul: true },
+  { key: "natureza_juridica", label: "Natureza jurídica", grupo: "fiscal", nul: true },
+  { key: "porte", label: "Porte", grupo: "fiscal", nul: true },
+  { key: "capital_social", label: "Capital social (R$)", grupo: "fiscal", type: "money" },
+  { key: "opcao_pelo_simples", label: "Optante pelo Simples", grupo: "fiscal", type: "boolean" },
+  { key: "opcao_pelo_mei", label: "MEI", grupo: "fiscal", type: "boolean" },
+  { key: "cnae_principal_codigo", label: "CNAE principal (código)", grupo: "fiscal", nul: true },
+  { key: "cnae_principal_descricao", label: "CNAE principal (descrição)", grupo: "fiscal", full: true, nul: true },
   { key: "inscricao_estadual", label: "Inscrição Estadual (IE)", fiscal: true },
   { key: "inscricao_municipal", label: "Inscrição Municipal (IM)", fiscal: true },
   {
