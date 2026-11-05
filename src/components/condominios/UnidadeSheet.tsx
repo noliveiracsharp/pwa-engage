@@ -370,7 +370,7 @@ function Documentos({ unidadeId, perms }: { unidadeId: string; perms: Perms }) {
   const [enviando, setEnviando] = useState(false);
   async function abrir(path: string) {
     const { data, error } = await supabase.storage.from("cond-documentos").createSignedUrl(path, 300);
-    if (error || !data) return toast.error("Não foi possível abrir o documento.");
+    if (error || !data) { toast.error("Não foi possível abrir o documento."); return; }
     window.open(data.signedUrl, "_blank", "noopener");
   }
   return (
@@ -383,7 +383,7 @@ function Documentos({ unidadeId, perms }: { unidadeId: string; perms: Perms }) {
           <label className="flex items-center gap-2 text-sm"><Switch checked={inq} onCheckedChange={setInq} /> Visível para o inquilino</label>
           <div className="flex items-end sm:col-start-3"><Button className="w-full" disabled={!titulo.trim() || !arquivo || enviando} onClick={async () => {
             if (!arquivo) return;
-            if (arquivo.size > 10 * 1024 * 1024) return toast.error("Arquivo maior que 10 MB.");
+            if (arquivo.size > 10 * 1024 * 1024) { toast.error("Arquivo maior que 10 MB."); return; }
             setEnviando(true);
             try {
               const path = `${unidadeId}/${Date.now()}-${arquivo.name.replace(/[^\w.-]/g, "_")}`;

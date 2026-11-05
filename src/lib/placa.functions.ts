@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { exigirLogin } from "@/lib/auth-guard";
 
-export type DadosPlaca = { ok: boolean; motivo?: string; marca?: string; modelo?: string; cor?: string; ano?: string; tipo?: string; municipio?: string };
+export type DadosPlaca = { ok: boolean; motivo?: string | undefined; marca?: string | undefined; modelo?: string | undefined; cor?: string | undefined; ano?: string | undefined; tipo?: string | undefined; municipio?: string | undefined };
 
 /**
  * Consulta dados do veículo pela placa (provedor WDAPI — wdapi2.com.br).
