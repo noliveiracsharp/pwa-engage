@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Car, DoorOpen, FileText, KeyRound, Loader2, PawPrint, Phone, Pencil, Plus, Search, ShieldOff, Trash2, UserRound, Users, Wrench } from "lucide-react";
+import { Car, DoorOpen, FileText, KeyRound, Loader2, PawPrint, Phone, Pencil, Plus, Search, Settings2, ShieldOff, Trash2, UserRound, Users, Wrench } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ import { PhoneInput } from "@/components/data-table/PhoneInput";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { formatCpfCnpj } from "@/lib/input-masks";
 import { FotoCond } from "./FotoCond";
+import { cn } from "@/lib/utils";
 import { OCUPACOES, PAPEIS, TIPOS_UNIDADE, s, useCatalogo, useCondRows, useCondSalvar } from "./cond-data";
 
 type Perms = { canCreate: boolean; canUpdate: boolean; canDelete: boolean };
@@ -276,14 +277,16 @@ function EditarPessoa({ pessoa, onClose, onSalvo }: { pessoa: Pessoa; onClose: (
   const [salvando, setSalvando] = useState(false);
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-2xl">
         <DialogHeader><DialogTitle>Editar cadastro</DialogTitle></DialogHeader>
-        <div className="grid gap-3">
+        <div className="grid gap-4 sm:grid-cols-[auto_1fr]">
           <FotoCond rosto value={v.foto} onChange={(u) => setV({ ...v, foto: u })} alt={v.nome} />
+          <div className="grid gap-3">
           <div><Label htmlFor="ep-nome">Nome</Label><Input id="ep-nome" value={v.nome} onChange={(e) => setV({ ...v, nome: e.target.value })} /></div>
           <div><Label htmlFor="ep-email">E-mail (login)</Label><Input id="ep-email" value={pessoa.email} disabled /></div>
           <div><Label htmlFor="ep-cel">Celular</Label><PhoneInput id="ep-cel" value={v.celular} onChange={(x) => setV({ ...v, celular: x })} /></div>
           <div><Label htmlFor="ep-cpf">CPF</Label><Input id="ep-cpf" inputMode="numeric" value={v.cpf} onChange={(e) => setV({ ...v, cpf: formatCpfCnpj(e.target.value).slice(0, 14) })} /></div>
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
@@ -311,6 +314,7 @@ function Veiculos({ unidadeId, condominioId, perms }: { unidadeId: string; condo
   const consultar = useServerFn(consultarPlaca);
   const vazio = { foto_url: "", placa: "", marca_id: "", modelo_id: "", cor_id: "", cond_vaga_id: "", usuario_id: "", ano: "", descricao_livre: "" };
   const [n, setN] = useState(vazio);
+  const [aberto, setAberto] = useState<string | null>(null); // "" = novo
   const [buscando, setBuscando] = useState(false);
   const opt = (rs: Row[]) => rs.map((r) => ({ value: s(r["id"]), label: s(r["descricao"]) }));
   const nome = (rs: Row[], id: unknown) => s(rs.find((r) => s(r["id"]) === s(id))?.["descricao"]);
@@ -336,85 +340,123 @@ function Veiculos({ unidadeId, condominioId, perms }: { unidadeId: string; condo
     } finally { setBuscando(false); }
   }
 
+  function editar(v: Row) {
+    setN({ foto_url: s(v["foto_url"]), placa: s(v["placa"]), marca_id: s(v["marca_id"]), modelo_id: s(v["modelo_id"]), cor_id: s(v["cor_id"]), cond_vaga_id: s(v["cond_vaga_id"]), usuario_id: s(v["usuario_id"]), ano: s(v["ano"]), descricao_livre: s(v["descricao_livre"]) });
+    setAberto(s(v["id"]));
+  }
+
   return (
-    <div className="space-y-4">
-      {perms.canCreate && (
-        <div className="grid gap-2 rounded-lg border p-3 sm:grid-cols-3">
-          <div className="flex justify-center sm:col-span-3"><FotoCond value={n.foto_url} onChange={(u) => setN({ ...n, foto_url: u })} alt="Foto do veículo" /></div>
-          <div>
-            <Label htmlFor="v-placa">Placa</Label>
-            <div className="flex gap-1">
-              <Input id="v-placa" value={n.placa} maxLength={8} onChange={(e) => setN({ ...n, placa: e.target.value.toUpperCase() })} placeholder="ABC1D23" />
-              <Button type="button" size="icon" variant="outline" aria-label="Consultar placa" disabled={!placaOk || buscando} onClick={buscarPlaca}>{buscando ? <Loader2 className="size-4 animate-spin" /> : <Search className="size-4" />}</Button>
-            </div>
-            {n.descricao_livre && <p className="mt-1 text-xs text-muted-foreground">{n.descricao_livre}</p>}
+    <div className="space-y-3">
+      <Cabecalho titulo="Veículos" total={veiculos.length} podeCriar={perms.canCreate} onNovo={() => { setN(vazio); setAberto(""); }} />
+      {veiculos.length === 0 ? <Vazio texto="Nenhum veículo cadastrado." /> : veiculos.map((v) => (
+        <div key={s(v["id"])} className="flex flex-wrap items-center gap-3 rounded-lg border p-3 text-sm transition hover:bg-muted/40">
+          <FotoCond tamanho="sm" disabled value={s(v["foto_url"])} onChange={() => {}} alt={`Foto ${s(v["placa"])}`} />
+          <div className="min-w-0 flex-1">
+            <p className="font-mono font-semibold">{s(v["placa"])}</p>
+            <p className="text-xs text-muted-foreground">{[nome(marcas, v["marca_id"]), nome(modelos, v["modelo_id"]), nome(cores, v["cor_id"]), s(v["ano"])].filter(Boolean).join(" · ") || s(v["descricao_livre"]) || "—"}</p>
           </div>
-          <div><Label className="mb-1.5 block">Marca</Label><SearchSelect value={n.marca_id} onChange={(x) => setN({ ...n, marca_id: x, modelo_id: "" })} options={opt(marcas)} /></div>
-          <div><Label className="mb-1.5 block">Modelo</Label><SearchSelect value={n.modelo_id} disabled={!n.marca_id} onChange={(x) => setN({ ...n, modelo_id: x })} options={opt(modelos.filter((m) => s(m["marca_id"]) === n.marca_id))} /></div>
-          <div><Label className="mb-1.5 block">Cor</Label><SearchSelect value={n.cor_id} onChange={(x) => setN({ ...n, cor_id: x })} options={opt(cores)} /></div>
-          <div><Label htmlFor="v-ano">Ano</Label><Input id="v-ano" value={n.ano} onChange={(e) => setN({ ...n, ano: e.target.value })} /></div>
-          <div><Label className="mb-1.5 block">Morador responsável</Label><SearchSelect value={n.usuario_id} onChange={(x) => setN({ ...n, usuario_id: x })} options={pessoas.map((p) => ({ value: p.usuario_id, label: p.nome }))} emptyText="Cadastre moradores primeiro." /></div>
-          <div><Label className="mb-1.5 block">Vaga</Label><SearchSelect value={n.cond_vaga_id} onChange={(x) => setN({ ...n, cond_vaga_id: x })} options={vagasUnidade} emptyText="A unidade não tem vaga." /></div>
-          <div className="flex items-end sm:col-start-3"><Button className="w-full" disabled={!placaOk || salvar.isPending} onClick={async () => {
-            await salvar.mutateAsync({ valores: { cond_unidade_id: unidadeId, foto_url: n.foto_url || null, placa: placaOk, marca_id: n.marca_id || null, modelo_id: n.modelo_id || null, cor_id: n.cor_id || null, cond_vaga_id: n.cond_vaga_id || null, usuario_id: n.usuario_id || null, ano: n.ano || null, descricao_livre: n.descricao_livre || null } });
-            setN(vazio); toast.success("Veículo cadastrado.");
-          }}><Plus className="size-4" /> Adicionar</Button></div>
-        </div>
-      )}
-      {veiculos.length === 0 ? <p className="py-6 text-center text-sm text-muted-foreground">Nenhum veículo cadastrado.</p> : veiculos.map((v) => (
-        <div key={s(v["id"])} className="flex flex-wrap items-center gap-2 rounded-lg border p-3 text-sm">
-          <FotoCond tamanho="sm" disabled={!perms.canUpdate} value={s(v["foto_url"])} onChange={(u) => salvar.mutate({ id: s(v["id"]), valores: { foto_url: u || null } })} alt={`Foto ${s(v["placa"])}`} />
-          <span className="font-mono font-semibold">{s(v["placa"])}</span>
-          <span className="text-muted-foreground">{[nome(marcas, v["marca_id"]), nome(modelos, v["modelo_id"]), nome(cores, v["cor_id"]), s(v["ano"])].filter(Boolean).join(" · ") || s(v["descricao_livre"]) || "—"}</span>
           {v["usuario_id"] ? <Badge variant="secondary">{pessoas.find((p) => p.usuario_id === s(v["usuario_id"]))?.nome ?? "Morador"}</Badge> : null}
           {v["cond_vaga_id"] ? <Badge variant="outline">Vaga {s(vagas.find((x) => s(x["id"]) === s(v["cond_vaga_id"]))?.["identificacao"])}</Badge> : null}
-          {perms.canDelete && <Button size="icon" variant="ghost" className="ml-auto size-8 text-destructive" aria-label="Excluir veículo" onClick={async () => {
+          {perms.canUpdate && <Button size="sm" variant="outline" onClick={() => editar(v)}><Pencil className="size-4" /> Editar</Button>}
+          {perms.canDelete && <Button size="icon" variant="ghost" className="size-8 text-destructive" aria-label="Excluir veículo" onClick={async () => {
             if (await confirmar({ title: `Excluir ${s(v["placa"])}?`, destructive: true, confirmText: "Excluir" })) await salvar.mutateAsync({ id: s(v["id"]), excluir: true });
           }}><Trash2 className="size-4" /></Button>}
         </div>
       ))}
+
+      <Dialog open={aberto !== null} onOpenChange={(o) => !o && setAberto(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader><DialogTitle>{aberto ? "Editar veículo" : "Adicionar veículo"}</DialogTitle></DialogHeader>
+          <div className="grid gap-4 sm:grid-cols-[auto_1fr]">
+            <FotoCond value={n.foto_url} onChange={(u) => setN({ ...n, foto_url: u })} alt="Foto do veículo" />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <Label htmlFor="v-placa">Placa *</Label>
+                <div className="flex gap-1">
+                  <Input id="v-placa" value={n.placa} maxLength={8} onChange={(e) => setN({ ...n, placa: e.target.value.toUpperCase() })} placeholder="ABC1D23" />
+                  <Button type="button" variant="outline" aria-label="Consultar placa" disabled={!placaOk || buscando} onClick={buscarPlaca}>{buscando ? <Loader2 className="size-4 animate-spin" /> : <Search className="size-4" />} Consultar</Button>
+                </div>
+                {n.descricao_livre && <p className="mt-1 text-xs text-muted-foreground">{n.descricao_livre}</p>}
+              </div>
+              <div><Label className="mb-1.5 block">Marca</Label><SearchSelect value={n.marca_id} onChange={(x) => setN({ ...n, marca_id: x, modelo_id: "" })} options={opt(marcas)} /></div>
+              <div><Label className="mb-1.5 block">Modelo</Label><SearchSelect value={n.modelo_id} disabled={!n.marca_id} onChange={(x) => setN({ ...n, modelo_id: x })} options={opt(modelos.filter((m) => s(m["marca_id"]) === n.marca_id))} /></div>
+              <div><Label className="mb-1.5 block">Cor</Label><SearchSelect value={n.cor_id} onChange={(x) => setN({ ...n, cor_id: x })} options={opt(cores)} /></div>
+              <div><Label htmlFor="v-ano">Ano</Label><Input id="v-ano" value={n.ano} onChange={(e) => setN({ ...n, ano: e.target.value })} /></div>
+              <div><Label className="mb-1.5 block">Morador responsável</Label><SearchSelect value={n.usuario_id} onChange={(x) => setN({ ...n, usuario_id: x })} options={pessoas.map((p) => ({ value: p.usuario_id, label: p.nome }))} emptyText="Cadastre moradores primeiro." /></div>
+              <div><Label className="mb-1.5 block">Vaga</Label><SearchSelect value={n.cond_vaga_id} onChange={(x) => setN({ ...n, cond_vaga_id: x })} options={vagasUnidade} emptyText="A unidade não tem vaga." /></div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAberto(null)}>Cancelar</Button>
+            <Button disabled={!placaOk || salvar.isPending} onClick={async () => {
+              const valores = { cond_unidade_id: unidadeId, foto_url: n.foto_url || null, placa: placaOk, marca_id: n.marca_id || null, modelo_id: n.modelo_id || null, cor_id: n.cor_id || null, cond_vaga_id: n.cond_vaga_id || null, usuario_id: n.usuario_id || null, ano: n.ano || null, descricao_livre: n.descricao_livre || null };
+              await salvar.mutateAsync(aberto ? { id: aberto, valores } : { valores });
+              setN(vazio); setAberto(null); toast.success(aberto ? "Veículo atualizado." : "Veículo cadastrado.");
+            }}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
-/** Lista simples com formulário de inclusão (pets, contatos). */
-function ListaSimples({ unidadeId, perms, tabela, foto = false, campos, obrigatorios, resumo, icone: Icone, vazio }: {
-  unidadeId: string; perms: Perms; tabela: string; vazio: string; foto?: boolean;
-  campos: { k: string; l: string; opcoes?: { value: string; label: string }[] }[];
-  obrigatorios: string[]; resumo: (r: Row) => string; icone: typeof Phone;
+/** Lista com cadastro/edição em janela (pets, contatos). */
+function ListaSimples({ unidadeId, perms, tabela, foto = false, campos, obrigatorios, resumo, icone: Icone, vazio, titulo }: {
+  unidadeId: string; perms: Perms; tabela: string; vazio: string; foto?: boolean; titulo: string;
+  campos: { k: string; l: string; opcoes?: { value: string; label: string }[]; tel?: boolean; largo?: boolean }[];
+  obrigatorios: string[]; resumo: (r: Row) => { titulo: string; sub: string }; icone: typeof Phone;
 }) {
   const { data: rows = [] } = useCondRows(tabela, "cond_unidade_id", unidadeId);
   const salvar = useCondSalvar(tabela);
   const inicial = Object.fromEntries(campos.map((c) => [c.k, c.opcoes?.[0]?.value ?? ""]));
   const [n, setN] = useState<Record<string, string>>(inicial);
   const [fotoN, setFotoN] = useState("");
+  const [aberto, setAberto] = useState<string | null>(null);
   return (
-    <div className="space-y-4">
-      {perms.canCreate && (
-        <div className="grid gap-2 rounded-lg border p-3 sm:grid-cols-3">
-          {foto && <div className="flex justify-center sm:col-span-3"><FotoCond value={fotoN} onChange={setFotoN} /></div>}
-          {campos.map((c) => (
-            <div key={c.k}>
-              {c.opcoes ? (<><Label className="mb-1.5 block">{c.l}</Label><SearchSelect value={n[c.k] ?? ""} allowClear={false} options={c.opcoes} onChange={(x) => setN({ ...n, [c.k]: x })} /></>)
-                : (<><Label htmlFor={`${tabela}-${c.k}`}>{c.l}</Label><Input id={`${tabela}-${c.k}`} value={n[c.k] ?? ""} onChange={(e) => setN({ ...n, [c.k]: e.target.value })} /></>)}
+    <div className="space-y-3">
+      <Cabecalho titulo={titulo} total={rows.length} podeCriar={perms.canCreate} onNovo={() => { setN(inicial); setFotoN(""); setAberto(""); }} />
+      {rows.length === 0 ? <Vazio texto={vazio} /> : rows.map((r) => {
+        const rs = resumo(r);
+        return (
+          <div key={s(r["id"])} className="flex items-center gap-3 rounded-lg border p-3 text-sm transition hover:bg-muted/40">
+            {foto ? <FotoCond tamanho="sm" disabled value={s(r["foto_url"])} onChange={() => {}} /> : <span className="flex size-10 items-center justify-center rounded-full bg-muted"><Icone className="size-4" /></span>}
+            <div className="min-w-0 flex-1"><p className="font-medium">{rs.titulo}</p><p className="truncate text-xs text-muted-foreground">{rs.sub}</p></div>
+            {perms.canUpdate && <Button size="sm" variant="outline" onClick={() => {
+              setN(Object.fromEntries(campos.map((c) => [c.k, s(r[c.k])]))); setFotoN(s(r["foto_url"])); setAberto(s(r["id"]));
+            }}><Pencil className="size-4" /> Editar</Button>}
+            {perms.canDelete && <Button size="icon" variant="ghost" className="size-8 text-destructive" aria-label="Excluir" onClick={async () => {
+              if (await confirmar({ title: "Excluir registro?", destructive: true, confirmText: "Excluir" })) await salvar.mutateAsync({ id: s(r["id"]), excluir: true });
+            }}><Trash2 className="size-4" /></Button>}
+          </div>
+        );
+      })}
+      <Dialog open={aberto !== null} onOpenChange={(o) => !o && setAberto(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader><DialogTitle>{aberto ? "Editar" : "Adicionar"} · {titulo}</DialogTitle></DialogHeader>
+          <div className={cn("grid gap-4", foto && "sm:grid-cols-[auto_1fr]")}>
+            {foto && <FotoCond value={fotoN} onChange={setFotoN} />}
+            <div className="grid gap-3 sm:grid-cols-2">
+              {campos.map((c) => (
+                <div key={c.k} className={c.largo ? "sm:col-span-2" : undefined}>
+                  {c.opcoes ? (<><Label className="mb-1.5 block">{c.l}</Label><SearchSelect value={n[c.k] ?? ""} allowClear={false} options={c.opcoes} onChange={(x) => setN({ ...n, [c.k]: x })} /></>)
+                    : c.tel ? (<><Label htmlFor={`${tabela}-${c.k}`}>{c.l}{obrigatorios.includes(c.k) && " *"}</Label><PhoneInput id={`${tabela}-${c.k}`} value={n[c.k] ?? ""} onChange={(x) => setN({ ...n, [c.k]: x })} /></>)
+                    : (<><Label htmlFor={`${tabela}-${c.k}`}>{c.l}{obrigatorios.includes(c.k) && " *"}</Label><Input id={`${tabela}-${c.k}`} value={n[c.k] ?? ""} onChange={(e) => setN({ ...n, [c.k]: e.target.value })} /></>)}
+                </div>
+              ))}
             </div>
-          ))}
-          <div className="flex items-end"><Button className="w-full" disabled={salvar.isPending || obrigatorios.some((k) => !n[k]?.trim())} onClick={async () => {
-            const valores: Row = { cond_unidade_id: unidadeId };
-            for (const c of campos) valores[c.k] = n[c.k]?.trim() || null;
-            if (foto) valores["foto_url"] = fotoN || null;
-            await salvar.mutateAsync({ valores }); setN(inicial); setFotoN(""); toast.success("Cadastrado.");
-          }}><Plus className="size-4" /> Adicionar</Button></div>
-        </div>
-      )}
-      {rows.length === 0 ? <p className="py-6 text-center text-sm text-muted-foreground">{vazio}</p> : rows.map((r) => (
-        <div key={s(r["id"])} className="flex items-center gap-2 rounded-lg border p-3 text-sm">
-          {foto ? <FotoCond tamanho="sm" disabled={!perms.canUpdate} value={s(r["foto_url"])} onChange={(u) => salvar.mutate({ id: s(r["id"]), valores: { foto_url: u || null } })} /> : <Icone className="size-4" />}<span>{resumo(r)}</span>
-          {perms.canDelete && <Button size="icon" variant="ghost" className="ml-auto size-8 text-destructive" aria-label="Excluir" onClick={async () => {
-            if (await confirmar({ title: "Excluir registro?", destructive: true, confirmText: "Excluir" })) await salvar.mutateAsync({ id: s(r["id"]), excluir: true });
-          }}><Trash2 className="size-4" /></Button>}
-        </div>
-      ))}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAberto(null)}>Cancelar</Button>
+            <Button disabled={salvar.isPending || obrigatorios.some((k) => !n[k]?.trim())} onClick={async () => {
+              const valores: Row = { cond_unidade_id: unidadeId };
+              for (const c of campos) valores[c.k] = n[c.k]?.trim() || null;
+              if (foto) valores["foto_url"] = fotoN || null;
+              await salvar.mutateAsync(aberto ? { id: aberto, valores } : { valores });
+              setAberto(null); toast.success(aberto ? "Atualizado." : "Cadastrado.");
+            }}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -423,15 +465,15 @@ const ESPECIES = [{ value: "cachorro", label: "Cachorro" }, { value: "gato", lab
 const PORTES = [{ value: "pequeno", label: "Pequeno" }, { value: "medio", label: "Médio" }, { value: "grande", label: "Grande" }];
 
 function Pets({ unidadeId, perms }: { unidadeId: string; perms: Perms }) {
-  return <ListaSimples unidadeId={unidadeId} perms={perms} tabela="cond_unidades_pets" foto icone={PawPrint} vazio="Nenhum pet cadastrado." obrigatorios={["nome"]}
+  return <ListaSimples titulo="Pets" unidadeId={unidadeId} perms={perms} tabela="cond_unidades_pets" foto icone={PawPrint} vazio="Nenhum pet cadastrado." obrigatorios={["nome"]}
     campos={[{ k: "nome", l: "Nome" }, { k: "especie", l: "Espécie", opcoes: ESPECIES }, { k: "raca", l: "Raça" }, { k: "porte", l: "Porte", opcoes: PORTES }, { k: "cor", l: "Cor" }]}
-    resumo={(r) => [s(r["nome"]), s(r["especie"]), s(r["raca"]), s(r["porte"]), s(r["cor"])].filter(Boolean).join(" · ")} />;
+    resumo={(r) => ({ titulo: s(r["nome"]), sub: [ESPECIES.find((e) => e.value === s(r["especie"]))?.label, s(r["raca"]), PORTES.find((e) => e.value === s(r["porte"]))?.label, s(r["cor"])].filter(Boolean).join(" · ") })} />;
 }
 
 function Contatos({ unidadeId, perms }: { unidadeId: string; perms: Perms }) {
-  return <ListaSimples unidadeId={unidadeId} perms={perms} tabela="cond_unidades_contatos" icone={Phone} vazio="Nenhum contato de emergência." obrigatorios={["nome", "telefone"]}
-    campos={[{ k: "nome", l: "Nome" }, { k: "parentesco", l: "Parentesco / vínculo" }, { k: "telefone", l: "Telefone" }, { k: "telefone2", l: "Telefone 2" }, { k: "observacoes", l: "Observações" }]}
-    resumo={(r) => [s(r["nome"]), s(r["parentesco"]), s(r["telefone"]), s(r["telefone2"])].filter(Boolean).join(" · ")} />;
+  return <ListaSimples titulo="Contatos de emergência" unidadeId={unidadeId} perms={perms} tabela="cond_unidades_contatos" icone={Phone} vazio="Nenhum contato de emergência." obrigatorios={["nome", "telefone"]}
+    campos={[{ k: "nome", l: "Nome", largo: true }, { k: "parentesco", l: "Parentesco / vínculo" }, { k: "telefone", l: "Telefone", tel: true }, { k: "telefone2", l: "Telefone 2", tel: true }, { k: "observacoes", l: "Observações", largo: true }]}
+    resumo={(r) => ({ titulo: s(r["nome"]), sub: [s(r["parentesco"]), s(r["telefone"]), s(r["telefone2"])].filter(Boolean).join(" · ") })} />;
 }
 
 const TIPOS_DOC = [{ value: "contrato_locacao", label: "Contrato de locação" }, { value: "escritura", label: "Escritura / matrícula" }, { value: "outro", label: "Outro" }, { value: "procuracao", label: "Procuração" }];
@@ -444,35 +486,43 @@ function Documentos({ unidadeId, perms }: { unidadeId: string; perms: Perms }) {
   const [inq, setInq] = useState(false);
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const [novo, setNovo] = useState(false);
   async function abrir(path: string) {
     const { data, error } = await supabase.storage.from("cond-documentos").createSignedUrl(path, 300);
     if (error || !data) { toast.error("Não foi possível abrir o documento."); return; }
     window.open(data.signedUrl, "_blank", "noopener");
   }
   return (
-    <div className="space-y-4">
-      {perms.canCreate && (
-        <div className="grid gap-2 rounded-lg border p-3 sm:grid-cols-3">
-          <div><Label htmlFor="d-tit">Título</Label><Input id="d-tit" value={titulo} onChange={(e) => setTitulo(e.target.value)} /></div>
-          <div><Label className="mb-1.5 block">Tipo</Label><SearchSelect value={tipo} allowClear={false} options={TIPOS_DOC} onChange={setTipo} /></div>
-          <div><Label htmlFor="d-arq">Arquivo (PDF ou imagem, até 10 MB)</Label><Input id="d-arq" type="file" accept="application/pdf,image/*" onChange={(e) => setArquivo(e.target.files?.[0] ?? null)} /></div>
-          <label className="flex items-center gap-2 text-sm"><Switch checked={inq} onCheckedChange={setInq} /> Visível para o inquilino</label>
-          <div className="flex items-end sm:col-start-3"><Button className="w-full" disabled={!titulo.trim() || !arquivo || enviando} onClick={async () => {
-            if (!arquivo) return;
-            if (arquivo.size > 10 * 1024 * 1024) { toast.error("Arquivo maior que 10 MB."); return; }
-            setEnviando(true);
-            try {
-              const path = `${unidadeId}/${Date.now()}-${arquivo.name.replace(/[^\w.-]/g, "_")}`;
-              const up = await supabase.storage.from("cond-documentos").upload(path, arquivo);
-              if (up.error) throw up.error;
-              await salvar.mutateAsync({ valores: { cond_unidade_id: unidadeId, titulo: titulo.trim(), tipo, arquivo_url: path, visivel_inquilino: inq } });
-              setTitulo(""); setArquivo(null); setInq(false); toast.success("Documento enviado.");
-            } catch (e) { toast.error(e instanceof Error ? e.message : "Falha no envio."); }
-            finally { setEnviando(false); }
-          }}>{enviando ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />} Enviar</Button></div>
-        </div>
-      )}
-      {docs.length === 0 ? <p className="py-6 text-center text-sm text-muted-foreground">Nenhum documento.</p> : docs.map((d) => (
+    <div className="space-y-3">
+      <Cabecalho titulo="Documentos" total={docs.length} podeCriar={perms.canCreate} rotulo="Enviar documento" onNovo={() => { setTitulo(""); setTipo("outro"); setArquivo(null); setInq(false); setNovo(true); }} />
+      <Dialog open={novo} onOpenChange={setNovo}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>Enviar documento</DialogTitle></DialogHeader>
+          <div className="grid gap-3">
+            <div><Label htmlFor="d-tit">Título *</Label><Input id="d-tit" value={titulo} onChange={(e) => setTitulo(e.target.value)} /></div>
+            <div><Label className="mb-1.5 block">Tipo</Label><SearchSelect value={tipo} allowClear={false} options={TIPOS_DOC} onChange={setTipo} /></div>
+            <div><Label htmlFor="d-arq">Arquivo * (PDF ou imagem, até 10 MB)</Label><Input id="d-arq" type="file" accept="application/pdf,image/*" onChange={(e) => setArquivo(e.target.files?.[0] ?? null)} /></div>
+            <label className="flex items-center gap-2 text-sm"><Switch checked={inq} onCheckedChange={setInq} /> Visível para o inquilino</label>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNovo(false)}>Cancelar</Button>
+            <Button disabled={!titulo.trim() || !arquivo || enviando} onClick={async () => {
+              if (!arquivo) return;
+              if (arquivo.size > 10 * 1024 * 1024) { toast.error("Arquivo maior que 10 MB."); return; }
+              setEnviando(true);
+              try {
+                const path = `${unidadeId}/${Date.now()}-${arquivo.name.replace(/[^\w.-]/g, "_")}`;
+                const up = await supabase.storage.from("cond-documentos").upload(path, arquivo);
+                if (up.error) throw up.error;
+                await salvar.mutateAsync({ valores: { cond_unidade_id: unidadeId, titulo: titulo.trim(), tipo, arquivo_url: path, visivel_inquilino: inq } });
+                setNovo(false); toast.success("Documento enviado.");
+              } catch (e) { toast.error(e instanceof Error ? e.message : "Falha no envio."); }
+              finally { setEnviando(false); }
+            }}>{enviando && <Loader2 className="size-4 animate-spin" />} Enviar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {docs.length === 0 ? <Vazio texto="Nenhum documento." /> : docs.map((d) => (
         <div key={s(d["id"])} className="flex flex-wrap items-center gap-2 rounded-lg border p-3 text-sm">
           <FileText className="size-4" />
           <button type="button" className="font-medium underline-offset-2 hover:underline" onClick={() => abrir(s(d["arquivo_url"]))}>{s(d["titulo"])}</button>
