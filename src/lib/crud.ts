@@ -65,8 +65,20 @@ export function useTableRows(table: string, enabled = true, orderBy?: string, fi
         }
         return r;
       };
+      // Catálogo compartilhado: filial também vê os itens da matriz quando ela permite.
+      let paiCatalogo = "";
+      const paiId = empresa ? text(empresa["empresa_pai_id"]) : "";
+      if (ctx && CATALOG_TABLES.has(table) && paiId) {
+        const { data: pai } = await supabase.from("empresas").select("*").eq("id", paiId).maybeSingle();
+        if (pai && (pai as Row)["compartilhar_catalogo_filiais"] === true) paiCatalogo = paiId;
+      }
       let res: Res;
-      if (ctx && !isEmpresas && !CATALOG_TABLES.has(table)) {
+      if (ctx && CATALOG_TABLES.has(table) && !filtro) {
+        // Filtra no banco (usa índice) em vez de trazer o catálogo de todas as empresas.
+        const ids = [ctx, ...(paiCatalogo ? [paiCatalogo] : [])].join(",");
+        res = await run((q) => (isMaster ? q.or(`empresa_id.in.(${ids}),empresa_id.is.null`) : q.in("empresa_id", ids.split(","))) as typeof q);
+        if (res.error) res = await run();
+      } else if (ctx && !isEmpresas && !CATALOG_TABLES.has(table)) {
         // Com filtro próprio (que pode usar .or), evita um segundo "or" que o banco descartaria.
         res = await run((q) => (isMaster && !filtro ? q.or(`empresa_id.eq.${ctx},empresa_id.is.null`) : q.eq("empresa_id", ctx)) as typeof q);
         if (res.error) res = await run();
@@ -80,13 +92,6 @@ export function useTableRows(table: string, enabled = true, orderBy?: string, fi
       const rows = isEmpresas ? todasLinhas.filter((r) => r["is_tenant"] !== false) : todasLinhas;
       if (!ctx) return rows;
       if (isEmpresas) return rows.filter((r) => String(rowId(r) ?? "") === ctx || String(r["empresa_pai_id"] ?? "") === ctx);
-      // Catálogo compartilhado: filial também vê os itens da matriz quando ela permite.
-      let paiCatalogo = "";
-      const paiId = empresa ? text(empresa["empresa_pai_id"]) : "";
-      if (CATALOG_TABLES.has(table) && paiId) {
-        const { data: pai } = await supabase.from("empresas").select("*").eq("id", paiId).maybeSingle();
-        if (pai && (pai as Row)["compartilhar_catalogo_filiais"] === true) paiCatalogo = paiId;
-      }
       // Master: mantém registros sem empresa (modelos). Demais: só a própria empresa.
       return rows.filter((r) => {
         if (!("empresa_id" in r)) return true;
