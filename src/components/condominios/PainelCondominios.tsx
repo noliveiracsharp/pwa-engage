@@ -17,12 +17,20 @@ async function linhas(tabela: string, colunas: string): Promise<Row[]> {
   return (data ?? []) as Row[];
 }
 
-function Kpi({ icone: I, rotulo, valor, sub }: { icone: typeof Building; rotulo: string; valor: number | string; sub?: string }) {
+const CORES = ["var(--foreground)", "var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)", "var(--primary)", "var(--muted-foreground)"];
+function Kpi({ icone: I, rotulo, valor, sub, i }: { icone: typeof Building; rotulo: string; valor: number | string; sub?: string; i: number }) {
+  const c = CORES[i % CORES.length];
   return (
-    <div className="rounded-lg border bg-card p-4">
-      <div className="flex items-center gap-2 text-sm text-muted-foreground"><I className="size-4" /> {rotulo}</div>
-      <p className="mt-1 text-2xl font-semibold tabular-nums">{valor}</p>
-      {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
+    <div className="overflow-hidden rounded-xl border bg-card shadow-sm" style={{ borderTop: `4px solid ${c}` }}>
+      <div className="p-4">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span className="size-2.5 rounded-full" style={{ background: c }} />
+          {rotulo}
+          <I className="ml-auto size-4 opacity-60" />
+        </div>
+        <p className="mt-1 text-2xl font-bold tabular-nums">{valor}</p>
+        {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
+      </div>
     </div>
   );
 }
@@ -78,19 +86,19 @@ export function PainelCondominios({ condominios, condId, podeConfigurar, onAbrir
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Kpi icone={Building2} rotulo="Condomínios" valor={condominios.length} />
-        <Kpi icone={DoorOpen} rotulo="Unidades" valor={unidades.length} sub={`${d.blocos.filter((b) => ids.has(s(b["condominio_id"]))).length} blocos/torres`} />
-        <Kpi icone={Users} rotulo="Pessoas cadastradas" valor={pessoas} sub={`${vinculos.filter((v) => v["is_residente"] === true).length} residentes`} />
-        <Kpi icone={KeyRound} rotulo="Unidades alugadas" valor={alugadas} sub={`${pct(alugadas, unidades.length)} do total`} />
-        <Kpi icone={ParkingSquare} rotulo="Vagas" valor={vagas.length} sub={`${pct(ocupadas, vagas.length)} vinculadas`} />
-        <Kpi icone={Car} rotulo="Veículos" valor={daUnid(d.veiculos).length} />
-        <Kpi icone={PawPrint} rotulo="Pets" valor={daUnid(d.pets).length} />
-        <Kpi icone={Users} rotulo="Média por unidade" valor={unidades.length ? (vinculos.length / unidades.length).toFixed(1) : "—"} sub="pessoas vinculadas" />
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-8">
+        <Kpi i={0} icone={Building2} rotulo="Condomínios" valor={condominios.length} sub="instalados" />
+        <Kpi i={1} icone={DoorOpen} rotulo="Unidades" valor={unidades.length} sub={`${d.blocos.filter((b) => ids.has(s(b["condominio_id"]))).length} blocos/torres`} />
+        <Kpi i={2} icone={Users} rotulo="Pessoas" valor={pessoas} sub={`${vinculos.filter((v) => v["is_residente"] === true).length} residentes`} />
+        <Kpi i={3} icone={KeyRound} rotulo="Alugadas" valor={alugadas} sub={`${pct(alugadas, unidades.length)} do total`} />
+        <Kpi i={4} icone={ParkingSquare} rotulo="Vagas" valor={vagas.length} sub={`${pct(ocupadas, vagas.length)} vinculadas`} />
+        <Kpi i={5} icone={Car} rotulo="Veículos" valor={daUnid(d.veiculos).length} sub="cadastrados" />
+        <Kpi i={6} icone={PawPrint} rotulo="Pets" valor={daUnid(d.pets).length} sub="cadastrados" />
+        <Kpi i={7} icone={Users} rotulo="Média/unidade" valor={unidades.length ? (vinculos.length / unidades.length).toFixed(1) : "—"} sub="pessoas vinculadas" />
       </div>
 
-      <section className="rounded-lg border bg-card">
-        <h2 className="border-b p-3 font-semibold">Condomínios instalados</h2>
+      <h2 className="text-2xl font-bold">Condomínios instalados</h2>
+      <section className="overflow-hidden rounded-xl border bg-card shadow-sm">
         {porCond.length === 0 ? <p className="p-6 text-center text-sm text-muted-foreground">Nenhum condomínio (classifique em Clientes e Fornecedores).</p> : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

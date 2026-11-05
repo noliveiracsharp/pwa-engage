@@ -46,9 +46,10 @@ export function GestaoTerceirosPanel({ condominioId, podeEditar }: { condominioI
     for (const c of CAMPOS) valores[c] = v[c] || null;
     if (valores["tipo_gestao"] === "autogestao") valores["administradora_id"] = null;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase as any).from("empresas").update(valores).eq("id", condominioId);
+    const { data, error } = await (supabase as any).from("parceiros").update(valores).eq("id", condominioId).select("id");
     setSalvando(false);
-    if (error) { toast.error(/column/i.test(error.message) ? "Rode o script atendeai-condominios-equipe-gestao.sql no banco." : error.message); return; }
+    if (error) { toast.error(/column|schema cache/i.test(error.message) ? "Rode o script atendeai-condominios-gestao-parceiros.sql no banco." : error.message); return; }
+    if (!data?.length) { toast.error("Nada foi gravado: seu perfil não tem permissão para alterar este condomínio."); return; }
     toast.success("Gestão do condomínio salva.");
     void qc.invalidateQueries({ queryKey: ["table", "parceiros"] });
     void qc.invalidateQueries({ queryKey: ["table", "empresas"] });
