@@ -94,7 +94,7 @@ export function ItemRapidoDialog({ open, termo, laudoNumero, onOpenChange, onCri
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="z-[70] flex max-h-[90vh] w-[calc(100vw-2rem)] flex-col overflow-hidden sm:max-w-md">
+      <DialogContent className="flex max-h-[90vh] w-[calc(100vw-2rem)] flex-col overflow-hidden sm:max-w-md">
         <DialogHeader><DialogTitle>Novo item rápido</DialogTitle></DialogHeader>
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-1">
           <div className="space-y-1.5">
