@@ -330,8 +330,7 @@ function Veiculos({ unidadeId, condominioId, perms }: { unidadeId: string; condo
       )}
       {veiculos.length === 0 ? <p className="py-6 text-center text-sm text-muted-foreground">Nenhum veículo cadastrado.</p> : veiculos.map((v) => (
         <div key={s(v["id"])} className="flex flex-wrap items-center gap-2 rounded-lg border p-3 text-sm">
-          {v["foto_url"] ? <img src={s(v["foto_url"])} alt={s(v["placa"])} className="size-12 rounded-md object-cover" /> : <Car className="size-4" />}
-          {perms.canUpdate && <FotoCond tamanho="sm" value={s(v["foto_url"])} onChange={(u) => salvar.mutate({ id: s(v["id"]), valores: { foto_url: u || null } })} alt="Trocar foto" />}
+          <FotoCond tamanho="sm" disabled={!perms.canUpdate} value={s(v["foto_url"])} onChange={(u) => salvar.mutate({ id: s(v["id"]), valores: { foto_url: u || null } })} alt={`Foto ${s(v["placa"])}`} />
           <span className="font-mono font-semibold">{s(v["placa"])}</span>
           <span className="text-muted-foreground">{[nome(marcas, v["marca_id"]), nome(modelos, v["modelo_id"]), nome(cores, v["cor_id"]), s(v["ano"])].filter(Boolean).join(" · ") || s(v["descricao_livre"]) || "—"}</span>
           {v["usuario_id"] ? <Badge variant="secondary">{pessoas.find((p) => p.usuario_id === s(v["usuario_id"]))?.nome ?? "Morador"}</Badge> : null}

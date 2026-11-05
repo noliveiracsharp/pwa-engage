@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Building2, PanelLeftClose, PanelLeftOpen, ParkingSquare, Shuffle, type LucideIcon } from "lucide-react";
+import { Building2, LayoutDashboard, PanelLeftClose, PanelLeftOpen, ParkingSquare, Shuffle, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { useTableRows } from "@/lib/crud";
@@ -25,10 +25,11 @@ export function useSecoesCondominio(pagina: P): Secao[] {
   const s = usePagePermissions(DEF[2].path);
   return useMemo(() => {
     const existe = (path: string) => funcoes.some((f) => String(f["path"] ?? "") === path);
-    return DEF.map((d, i) => {
+    const painel: Secao = { key: "painel", label: "Painel", icon: LayoutDashboard, canRead: pagina.canRead, canCreate: false, canUpdate: pagina.canUpdate, canDelete: false };
+    return [painel, ...DEF.map((d, i) => {
       const p = existe(d.path) ? [u, v, s][i]! : pagina;
       return { key: d.key, label: d.label, icon: d.icon, canRead: p.canRead, canCreate: p.canCreate, canUpdate: p.canUpdate, canDelete: p.canDelete };
-    }).filter((x) => x.canRead);
+    })].filter((x) => x.canRead);
   }, [funcoes, u, v, s, pagina]);
 }
 
