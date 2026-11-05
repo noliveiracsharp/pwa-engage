@@ -139,7 +139,7 @@ export function CondominiosPage() {
           <section className="space-y-2">
             <div className="flex items-center gap-2">
               <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground"><Layers className="size-4" /> Blocos</h2>
-              {perms.canCreate && <Button size="sm" variant="outline" className="ml-auto" onClick={novoBloco}><Plus className="size-4" /> Novo bloco</Button>}
+              {permsUnid.canCreate && <Button size="sm" variant="outline" className="ml-auto" onClick={novoBloco}><Plus className="size-4" /> Novo bloco</Button>}
             </div>
             {carregandoBlocos ? (
               <p className="text-sm text-muted-foreground">Carregando…</p>
@@ -157,10 +157,10 @@ export function CondominiosPage() {
                         <p className="font-semibold">{s(b["nome"])}</p>
                         <p className="text-xs text-muted-foreground">{qtd} {qtd === 1 ? "unidade" : "unidades"}</p>
                       </button>
-                      {(perms.canUpdate || perms.canDelete) && (
+                      {(permsUnid.canUpdate || permsUnid.canDelete) && (
                         <div className="absolute right-1 top-1 flex opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
-                          {perms.canUpdate && <Button size="icon" variant="ghost" className="size-7" aria-label="Renomear bloco" onClick={() => renomearBloco(b)}><Pencil className="size-3.5" /></Button>}
-                          {perms.canDelete && <Button size="icon" variant="ghost" className="size-7 text-destructive" aria-label="Excluir bloco" onClick={() => excluirBloco(b)}><Trash2 className="size-3.5" /></Button>}
+                          {permsUnid.canUpdate && <Button size="icon" variant="ghost" className="size-7" aria-label="Renomear bloco" onClick={() => renomearBloco(b)}><Pencil className="size-3.5" /></Button>}
+                          {permsUnid.canDelete && <Button size="icon" variant="ghost" className="size-7 text-destructive" aria-label="Excluir bloco" onClick={() => excluirBloco(b)}><Trash2 className="size-3.5" /></Button>}
                         </div>
                       )}
                     </div>
@@ -179,7 +179,7 @@ export function CondominiosPage() {
                   <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
                   <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar unidade" className="pl-8" aria-label="Buscar unidade" />
                 </div>
-                {perms.canCreate && (
+                {permsUnid.canCreate && (
                   <>
                     <Button size="sm" variant="outline" onClick={() => setGerar(true)}><Wand2 className="size-4" /> Gerar em lote</Button>
                     <Button size="sm" onClick={novaUnidade}><Plus className="size-4" /> Nova unidade</Button>
