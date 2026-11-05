@@ -33,9 +33,9 @@ export function GestaoCondominial({ values, selfId, disabled, onChange }: Props)
         vistos.add(id);
         return true;
       })
-      .map((r) => ({
+      .map((r): SearchOption => ({
         value: String(rowId(r)),
-        label: pick<string>(r, ["titulo", "nome_fantasia", "nome", "razao_social"], "—") ?? "—",
+        label: String(pick<string>(r, ["titulo", "nome_fantasia", "nome", "razao_social"], "—") ?? "—"),
         hint: caminhoClassificacao(classificacoes, r["classificacao_id"]) || undefined,
       }));
     const filtradas = todas.filter((o) => padrao.test(o.hint ?? "") || padrao.test(o.label));
