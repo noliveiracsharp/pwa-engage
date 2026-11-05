@@ -24,6 +24,7 @@ import { Route as AuthenticatedAtendimentosRouteImport } from './routes/_authent
 import { Route as AuthenticatedAuditoriaRouteImport } from './routes/_authenticated/auditoria'
 import { Route as AuthenticatedCentro_custosRouteImport } from './routes/_authenticated/centro_custos'
 import { Route as AuthenticatedComissoesRouteImport } from './routes/_authenticated/comissoes'
+import { Route as AuthenticatedCondominiosRouteImport } from './routes/_authenticated/condominios'
 import { Route as AuthenticatedCotacoesRouteImport } from './routes/_authenticated/cotacoes'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedDocumentosRouteImport } from './routes/_authenticated/documentos'
@@ -161,6 +162,12 @@ const AuthenticatedComissoesRoute = AuthenticatedComissoesRouteImport.update({
   path: '/comissoes',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedCondominiosRoute =
+  AuthenticatedCondominiosRouteImport.update({
+    id: '/condominios',
+    path: '/condominios',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedCotacoesRoute = AuthenticatedCotacoesRouteImport.update({
   id: '/cotacoes',
   path: '/cotacoes',
@@ -494,6 +501,7 @@ export interface FileRoutesByFullPath {
   '/auditoria': typeof AuthenticatedAuditoriaRoute
   '/centro_custos': typeof AuthenticatedCentro_custosRoute
   '/comissoes': typeof AuthenticatedComissoesRoute
+  '/condominios': typeof AuthenticatedCondominiosRoute
   '/cotacoes': typeof AuthenticatedCotacoesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/documentos': typeof AuthenticatedDocumentosRoute
@@ -570,6 +578,7 @@ export interface FileRoutesByTo {
   '/auditoria': typeof AuthenticatedAuditoriaRoute
   '/centro_custos': typeof AuthenticatedCentro_custosRoute
   '/comissoes': typeof AuthenticatedComissoesRoute
+  '/condominios': typeof AuthenticatedCondominiosRoute
   '/cotacoes': typeof AuthenticatedCotacoesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/documentos': typeof AuthenticatedDocumentosRoute
@@ -648,6 +657,7 @@ export interface FileRoutesById {
   '/_authenticated/auditoria': typeof AuthenticatedAuditoriaRoute
   '/_authenticated/centro_custos': typeof AuthenticatedCentro_custosRoute
   '/_authenticated/comissoes': typeof AuthenticatedComissoesRoute
+  '/_authenticated/condominios': typeof AuthenticatedCondominiosRoute
   '/_authenticated/cotacoes': typeof AuthenticatedCotacoesRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/documentos': typeof AuthenticatedDocumentosRoute
@@ -726,6 +736,7 @@ export interface FileRouteTypes {
     | '/auditoria'
     | '/centro_custos'
     | '/comissoes'
+    | '/condominios'
     | '/cotacoes'
     | '/dashboard'
     | '/documentos'
@@ -802,6 +813,7 @@ export interface FileRouteTypes {
     | '/auditoria'
     | '/centro_custos'
     | '/comissoes'
+    | '/condominios'
     | '/cotacoes'
     | '/dashboard'
     | '/documentos'
@@ -879,6 +891,7 @@ export interface FileRouteTypes {
     | '/_authenticated/auditoria'
     | '/_authenticated/centro_custos'
     | '/_authenticated/comissoes'
+    | '/_authenticated/condominios'
     | '/_authenticated/cotacoes'
     | '/_authenticated/dashboard'
     | '/_authenticated/documentos'
@@ -1077,6 +1090,13 @@ declare module '@tanstack/react-router' {
       path: '/comissoes'
       fullPath: '/comissoes'
       preLoaderRoute: typeof AuthenticatedComissoesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/condominios': {
+      id: '/_authenticated/condominios'
+      path: '/condominios'
+      fullPath: '/condominios'
+      preLoaderRoute: typeof AuthenticatedCondominiosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/cotacoes': {
@@ -1507,6 +1527,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAuditoriaRoute: typeof AuthenticatedAuditoriaRoute
   AuthenticatedCentro_custosRoute: typeof AuthenticatedCentro_custosRoute
   AuthenticatedComissoesRoute: typeof AuthenticatedComissoesRoute
+  AuthenticatedCondominiosRoute: typeof AuthenticatedCondominiosRoute
   AuthenticatedCotacoesRoute: typeof AuthenticatedCotacoesRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedDocumentosRoute: typeof AuthenticatedDocumentosRoute
@@ -1557,6 +1578,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAuditoriaRoute: AuthenticatedAuditoriaRoute,
   AuthenticatedCentro_custosRoute: AuthenticatedCentro_custosRoute,
   AuthenticatedComissoesRoute: AuthenticatedComissoesRoute,
+  AuthenticatedCondominiosRoute: AuthenticatedCondominiosRoute,
   AuthenticatedCotacoesRoute: AuthenticatedCotacoesRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedDocumentosRoute: AuthenticatedDocumentosRoute,
