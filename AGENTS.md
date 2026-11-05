@@ -31,3 +31,4 @@
 - Long e-mail texts use TextoRico (HTML); plain-text consumers (WhatsApp) stay Textarea because they cannot render formatting. E-mail HTML is sanitized by mensagemEmailHtml, mirrored in the Edge Function.
 - Offer contract sections (geral, A-D) can be overridden per company in contratos_modelos via Documentos → Contrato da Oferta; gerarContratoModular falls back to the built-in text so tenants without the table keep working.
 - Sidebar menu is flat (root funcoes only, always clickable); every child funcao is a tab of its root page via SubmenuTabs + SUBMENU_REGISTRY, and reading any tab grants opening the root page — keeps profile setup simple for tenants.
+- Condo residents live in public.usuarios (email required) linked via cond_unidades_vinculos; login is created/removed only by cond_liberar_acesso/cond_revogar_acesso RPCs so the profile survives revocation.
