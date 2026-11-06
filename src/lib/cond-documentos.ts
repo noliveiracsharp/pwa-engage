@@ -11,6 +11,24 @@ export const CATEGORIAS_DOC = [
   { value: "outros", label: "Outros", vence: false },
 ] as const;
 
+export type CategoriaDoc = { value: string; label: string; vence: boolean; id?: string };
+
+/** Categorias do condomínio; sem linhas próprias, usa a lista padrão. Ordem alfabética, "Outros" no fim. */
+export function categoriasEfetivas(rows: { id?: unknown; codigo?: unknown; descricao?: unknown; controla_vencimento?: unknown }[]): CategoriaDoc[] {
+  const base: CategoriaDoc[] = rows.length
+    ? rows.map((r) => ({ id: String(r.id ?? ""), value: String(r.codigo ?? ""), label: String(r.descricao ?? ""), vence: !!r.controla_vencimento }))
+    : CATEGORIAS_DOC.map((c) => ({ value: c.value, label: c.label, vence: c.vence }));
+  return base.sort((a, b) => (a.value === "outros" ? 1 : b.value === "outros" ? -1 : a.label.localeCompare(b.label, "pt-BR")));
+}
+
+/** Código estável a partir do nome, único entre os existentes. */
+export function codigoCategoria(nome: string, existentes: string[]): string {
+  const raiz = nome.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "") || "categoria";
+  let c = raiz, i = 2;
+  while (existentes.includes(c)) c = `${raiz}_${i++}`;
+  return c;
+}
+
 export const VISIBILIDADES_DOC = [
   { value: "diretoria", label: "Corpo diretivo (síndico e conselho)" },
   { value: "gestao", label: "Somente gestão (administradora e síndico)" },
