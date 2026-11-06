@@ -254,7 +254,7 @@ function Pessoas({ unidadeId, perms, lado, papeis, titulo }: { unidadeId: string
         if (error) throw new Error(error.message);
       }
       const { data, error } = await supabase.functions.invoke("cobranca-regua", {
-        body: { acao: "recuperar_senha", email: p.email, redirect: `${window.location.origin}/reset-password` },
+        body: { acao: "recuperar_senha", email: p.email, redirect: `${window.location.origin}/reset-password`, empresa_id: condominioId },
       });
       const erro = error ? "O serviço de e-mail não respondeu." : (data as { erro?: string } | null)?.erro;
       if (erro) throw new Error(erro);
