@@ -1,5 +1,6 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { AlertTriangle, CalendarClock, Eye, FileText, FolderOpen, Loader2, Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { AlertTriangle, Settings2, RotateCcw, CalendarClock, Eye, FileText, FolderOpen, Loader2, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,15 +11,15 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { SearchSelect } from "@/components/data-table/SearchSelect";
 import { confirmar } from "@/components/layout/DialogoGlobal";
 import { supabase } from "@/integrations/supabase/client";
-import { CATEGORIAS_DOC, TAMANHO_MAX_DOC, VISIBILIDADES_DOC, diasParaVencer, nomeArquivoSeguro, statusValidade, type StatusValidade } from "@/lib/cond-documentos";
+import { CATEGORIAS_DOC, categoriasEfetivas, codigoCategoria, type CategoriaDoc, TAMANHO_MAX_DOC, VISIBILIDADES_DOC, diasParaVencer, nomeArquivoSeguro, statusValidade, type StatusValidade } from "@/lib/cond-documentos";
 import type { Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
+import { Switch } from "@/components/ui/switch";
 import { CampoData } from "./CampoData";
 import { s, useCondRows, useCondSalvar } from "./cond-data";
 
 type Perms = { canCreate: boolean; canUpdate: boolean; canDelete: boolean };
 const BUCKET = "cond-documentos";
-const catLabel = (v: string) => CATEGORIAS_DOC.find((c) => c.value === v)?.label ?? v;
 const visLabel = (v: string) => VISIBILIDADES_DOC.find((c) => c.value === v)?.label ?? v;
 const norm = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 const dataBR = (iso: unknown) => (iso ? new Date(`${s(iso).slice(0, 10)}T00:00:00`).toLocaleDateString("pt-BR") : "—");
@@ -39,6 +40,10 @@ function BadgeValidade({ venc }: { venc: string }) {
 export function DocumentosPanel({ condominioId, perms }: { condominioId: string; perms: Perms }) {
   const { data: docs = [], isLoading } = useCondRows("cond_documentos", "condominio_id", condominioId);
   const salvar = useCondSalvar("cond_documentos");
+  const { data: catRows = [] } = useCondRows("cond_documentos_categorias", "condominio_id", condominioId);
+  const categorias = useMemo(() => categoriasEfetivas(catRows), [catRows]);
+  const catLabel = (v: string) => categorias.find((c) => c.value === v)?.label ?? CATEGORIAS_DOC.find((c) => c.value === v)?.label ?? v;
+  const [gerenciar, setGerenciar] = useState(false);
   const [cat, setCat] = useState("todas");
   const [busca, setBusca] = useState("");
   const [editando, setEditando] = useState<Row | null | undefined>(undefined);
@@ -75,7 +80,7 @@ export function DocumentosPanel({ condominioId, perms }: { condominioId: string;
   const pastas = [
     { value: "todas", label: "Todos os documentos", n: docs.length },
     ...(alertas.length ? [{ value: "alertas", label: "Vencidos / a vencer", n: alertas.length }] : []),
-    ...CATEGORIAS_DOC.map((c) => ({ value: c.value, label: c.label, n: contagem.get(c.value) ?? 0 })),
+    ...categorias.map((c) => ({ value: c.value, label: c.label, n: contagem.get(c.value) ?? 0 })),
   ];
 
   return (
@@ -104,6 +109,11 @@ export function DocumentosPanel({ condominioId, perms }: { condominioId: string;
               <span className="rounded-full bg-muted px-1.5 text-xs text-muted-foreground">{p.n}</span>
             </button>
           ))}
+          {perms.canUpdate && (
+            <button type="button" onClick={() => setGerenciar(true)} className="mt-1 flex shrink-0 items-center gap-2 rounded-md border-t px-2 pt-2 text-left text-sm text-muted-foreground hover:text-foreground">
+              <Settings2 className="size-4" /> Gerenciar categorias
+            </button>
+          )}
         </nav>
 
         <div className="space-y-3 rounded-lg border bg-card p-4">
@@ -144,8 +154,10 @@ export function DocumentosPanel({ condominioId, perms }: { condominioId: string;
       </div>
 
       {editando !== undefined && (
-        <DocumentoDialog condominioId={condominioId} doc={editando} categoriaInicial={cat} onClose={() => setEditando(undefined)} salvar={salvar.mutateAsync} />
+        <DocumentoDialog categorias={categorias} condominioId={condominioId} doc={editando} categoriaInicial={cat} onClose={() => setEditando(undefined)} salvar={salvar.mutateAsync} />
       )}
+
+      {gerenciar && <CategoriasDialog condominioId={condominioId} rows={catRows} contagem={contagem} onClose={() => setGerenciar(false)} />}
 
       <Dialog open={!!previa} onOpenChange={(o) => !o && setPrevia(null)}>
         <DialogContent className="flex h-[90vh] max-w-5xl flex-col">
@@ -163,11 +175,11 @@ export function DocumentosPanel({ condominioId, perms }: { condominioId: string;
   );
 }
 
-function DocumentoDialog({ condominioId, doc, categoriaInicial, onClose, salvar }: {
-  condominioId: string; doc: Row | null; categoriaInicial: string; onClose: () => void;
+function DocumentoDialog({ categorias, condominioId, doc, categoriaInicial, onClose, salvar }: {
+  categorias: CategoriaDoc[]; condominioId: string; doc: Row | null; categoriaInicial: string; onClose: () => void;
   salvar: (a: { id?: string; valores?: Row }) => Promise<void>;
 }) {
-  const inicialCat = doc ? s(doc["categoria"]) : CATEGORIAS_DOC.some((c) => c.value === categoriaInicial) ? categoriaInicial : "outros";
+  const inicialCat = doc ? s(doc["categoria"]) : categorias.some((c) => c.value === categoriaInicial) ? categoriaInicial : (categorias.find((c) => c.value === "outros") ?? categorias[0])?.value ?? "outros";
   const [categoria, setCategoria] = useState(inicialCat);
   const [titulo, setTitulo] = useState(s(doc?.["titulo"]));
   const [descricao, setDescricao] = useState(s(doc?.["descricao"]));
@@ -176,7 +188,7 @@ function DocumentoDialog({ condominioId, doc, categoriaInicial, onClose, salvar 
   const [venc, setVenc] = useState(s(doc?.["data_vencimento"]).slice(0, 10));
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [enviando, setEnviando] = useState(false);
-  const pedeVenc = CATEGORIAS_DOC.find((c) => c.value === categoria)?.vence ?? false;
+  const pedeVenc = categorias.find((c) => c.value === categoria)?.vence ?? false;
   const valido = titulo.trim() && (doc || arquivo);
 
   async function gravar() {
@@ -208,7 +220,7 @@ function DocumentoDialog({ condominioId, doc, categoriaInicial, onClose, salvar 
         <DialogHeader><DialogTitle>{doc ? "Editar documento" : "Enviar documento"}</DialogTitle></DialogHeader>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="sm:col-span-2"><Label htmlFor="doc-tit">Título *</Label><Input id="doc-tit" value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ex.: Ata da AGO 2026" /></div>
-          <div><Label className="mb-1.5 block">Categoria</Label><SearchSelect value={categoria} allowClear={false} options={[...CATEGORIAS_DOC]} onChange={setCategoria} /></div>
+          <div><Label className="mb-1.5 block">Categoria</Label><SearchSelect value={categoria} allowClear={false} options={categorias.map((c) => ({ value: c.value, label: c.label }))} onChange={setCategoria} /></div>
           <div><Label className="mb-1.5 block">Quem pode ver</Label><SearchSelect value={visibilidade} allowClear={false} options={[...VISIBILIDADES_DOC]} onChange={setVisibilidade} /></div>
           <div><Label htmlFor="doc-data">Data do documento</Label><CampoData id="doc-data" value={dataDoc} onChange={setDataDoc} inicio={1970} /></div>
           <div>
@@ -225,6 +237,96 @@ function DocumentoDialog({ condominioId, doc, categoriaInicial, onClose, salvar 
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={enviando}>Cancelar</Button>
           <Button onClick={gravar} disabled={!valido || enviando}>{enviando && <Loader2 className="size-4 animate-spin" />} Salvar</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function CategoriasDialog({ condominioId, rows, contagem, onClose }: { condominioId: string; rows: Row[]; contagem: Map<string, number>; onClose: () => void }) {
+  const salvar = useCondSalvar("cond_documentos_categorias");
+  const qc = useQueryClient();
+  const [nome, setNome] = useState("");
+  const [vence, setVence] = useState(false);
+  const [ocupado, setOcupado] = useState(false);
+  const lista = categoriasEfetivas(rows);
+
+  /** Primeira personalização: grava a lista padrão no condomínio. */
+  async function garantirProprias(): Promise<void> {
+    if (rows.length) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any).from("cond_documentos_categorias").insert(
+      CATEGORIAS_DOC.map((c) => ({ condominio_id: condominioId, codigo: c.value, descricao: c.label, controla_vencimento: c.vence })));
+    if (error) throw error;
+  }
+  async function idDe(codigo: string): Promise<string> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase as any).from("cond_documentos_categorias").select("id").eq("condominio_id", condominioId).eq("codigo", codigo).single();
+    if (error) throw error;
+    return data.id as string;
+  }
+  async function executar(fn: () => Promise<void>) {
+    setOcupado(true);
+    try { await fn(); } catch (e) { toast.error(e instanceof Error ? e.message : "Não foi possível salvar."); } finally { setOcupado(false); }
+  }
+  const adicionar = () => executar(async () => {
+    const n = nome.trim();
+    if (!n) return;
+    if (lista.some((c) => c.label.toLowerCase() === n.toLowerCase())) { toast.error("Já existe uma categoria com esse nome."); return; }
+    await garantirProprias();
+    await salvar.mutateAsync({ valores: { condominio_id: condominioId, codigo: codigoCategoria(n, lista.map((c) => c.value)), descricao: n, controla_vencimento: vence } });
+    setNome(""); setVence(false); toast.success("Categoria adicionada.");
+  });
+  const alterar = (c: CategoriaDoc, valores: Row) => executar(async () => {
+    await garantirProprias();
+    await salvar.mutateAsync({ id: c.id || (await idDe(c.value)), valores });
+  });
+  const excluir = async (c: CategoriaDoc) => {
+    if ((contagem.get(c.value) ?? 0) > 0) { toast.error(`"${c.label}" tem documentos. Mova-os para outra categoria antes de excluir.`); return; }
+    if (!(await confirmar({ title: `Excluir a categoria "${c.label}"?`, destructive: true, confirmText: "Excluir" }))) return;
+    executar(async () => { await garantirProprias(); await salvar.mutateAsync({ id: c.id || (await idDe(c.value)), excluir: true }); toast.success("Categoria excluída."); });
+  };
+  const restaurar = async () => {
+    if (!(await confirmar({ title: "Restaurar categorias padrão?", description: "Categorias padrão que faltam serão recriadas. As suas continuam.", confirmText: "Restaurar" }))) return;
+    executar(async () => {
+      const faltam = CATEGORIAS_DOC.filter((c) => !rows.some((r) => s(r["codigo"]) === c.value));
+      if (rows.length && faltam.length) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { error } = await (supabase as any).from("cond_documentos_categorias").insert(faltam.map((c) => ({ condominio_id: condominioId, codigo: c.value, descricao: c.label, controla_vencimento: c.vence })));
+        if (error) throw error;
+        await qc.invalidateQueries({ queryKey: ["cond", "cond_documentos_categorias"] });
+      }
+      toast.success("Categorias padrão restauradas.");
+    });
+  };
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && !ocupado && onClose()}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader><DialogTitle>Categorias de documentos</DialogTitle></DialogHeader>
+        <p className="text-sm text-muted-foreground">Estas categorias valem só para este condomínio.</p>
+        <ul className="max-h-[50vh] divide-y overflow-y-auto rounded-md border">
+          {lista.map((c) => (
+            <li key={c.value} className="flex items-center gap-2 p-2">
+              <Input defaultValue={c.label} aria-label="Nome da categoria" className="h-8 flex-1" disabled={ocupado}
+                onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== c.label) alterar(c, { descricao: v }); else e.target.value = c.label; }} />
+              <label className="flex items-center gap-1.5 text-xs text-muted-foreground" title="Controla data de vencimento">
+                <Switch checked={c.vence} disabled={ocupado} onCheckedChange={(v) => alterar(c, { controla_vencimento: v })} /> Vence
+              </label>
+              <span className="w-6 text-center text-xs text-muted-foreground">{contagem.get(c.value) ?? 0}</span>
+              <Button size="icon" variant="ghost" className="size-8 text-destructive" aria-label={`Excluir ${c.label}`} disabled={ocupado} onClick={() => excluir(c)}><Trash2 className="size-4" /></Button>
+            </li>
+          ))}
+        </ul>
+        <div className="flex items-end gap-2 rounded-md border border-dashed p-2">
+          <div className="flex-1"><Label htmlFor="cat-nova">Nova categoria</Label>
+            <Input id="cat-nova" value={nome} onChange={(e) => setNome(e.target.value)} onKeyDown={(e) => e.key === "Enter" && adicionar()} placeholder="Ex.: Obras e reformas" /></div>
+          <label className="flex items-center gap-1.5 pb-2 text-xs text-muted-foreground"><Switch checked={vence} onCheckedChange={setVence} /> Vence</label>
+          <Button onClick={adicionar} disabled={!nome.trim() || ocupado}><Plus className="size-4" /> Adicionar</Button>
+        </div>
+        <DialogFooter className="sm:justify-between">
+          <Button variant="ghost" onClick={restaurar} disabled={ocupado}><RotateCcw className="size-4" /> Restaurar padrão</Button>
+          <Button onClick={onClose} disabled={ocupado}>{ocupado && <Loader2 className="size-4 animate-spin" />} Concluir</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
