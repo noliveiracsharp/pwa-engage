@@ -50,7 +50,8 @@ export function UnidadeSheet({ unidade, condominioId, blocoNome, perms, onClose 
     { v: "dados", l: "Dados", i: DoorOpen },
     { v: "proprietario", l: "Proprietário", i: UserRound },
     ...(ocupacao === "alugada" ? [{ v: "inquilino", l: "Inquilino", i: KeyRound }] : []),
-    { v: "familia", l: "Família & Visitantes", i: Users },
+    { v: "familia", l: "Família", i: Users },
+    { v: "visitantes", l: "Visitantes", i: UserRound },
     { v: "prestadores", l: "Prestadores", i: Wrench },
     { v: "veiculos", l: "Veículos", i: Car },
     { v: "pets", l: "Pets", i: PawPrint },
@@ -71,7 +72,8 @@ export function UnidadeSheet({ unidade, condominioId, blocoNome, perms, onClose 
             <TabsContent value="dados"><DadosUnidade unidade={unidade} condominioId={condominioId} perms={perms} onClose={onClose} onOcupacao={setOcupacao} /></TabsContent>
             <TabsContent value="proprietario"><Pessoas unidadeId={id} condominioId={condominioId} perms={perms} lado="proprietario" papeis={["proprietario", "preposto"]} titulo="Proprietários e procuradores" /></TabsContent>
             <TabsContent value="inquilino"><Pessoas unidadeId={id} condominioId={condominioId} perms={perms} lado="inquilino" papeis={["inquilino"]} titulo="Inquilinos (locatários)" /></TabsContent>
-            <TabsContent value="familia"><Pessoas unidadeId={id} condominioId={condominioId} perms={perms} lado={ocupacao === "alugada" ? "inquilino" : "proprietario"} papeis={s(unidade["tipo"]) === "comercial" || s(unidade["tipo"]) === "sala" || s(unidade["tipo"]) === "loja" ? ["colaborador", "visitante"] : ["familiar", "visitante"]} titulo="Família e visitantes da unidade (pai, mãe, avós…)" /></TabsContent>
+            <TabsContent value="familia"><Pessoas unidadeId={id} condominioId={condominioId} perms={perms} lado={ocupacao === "alugada" ? "inquilino" : "proprietario"} papeis={s(unidade["tipo"]) === "comercial" || s(unidade["tipo"]) === "sala" || s(unidade["tipo"]) === "loja" ? ["colaborador"] : ["familiar"]} titulo="Família da unidade (pai, mãe, filhos, avós…)" /></TabsContent>
+            <TabsContent value="visitantes"><Pessoas unidadeId={id} condominioId={condominioId} perms={perms} lado={ocupacao === "alugada" ? "inquilino" : "proprietario"} papeis={["visitante"]} titulo="Visitantes autorizados (acesso temporário)" /></TabsContent>
             <TabsContent value="prestadores"><Pessoas unidadeId={id} condominioId={condominioId} perms={perms} lado={ocupacao === "alugada" ? "inquilino" : "proprietario"} papeis={["prestador"]} titulo="Prestadores de serviço da unidade" /></TabsContent>
             <TabsContent value="veiculos"><Veiculos unidadeId={id} condominioId={condominioId} perms={perms} /></TabsContent>
             <TabsContent value="pets"><Pets unidadeId={id} perms={perms} /></TabsContent>
