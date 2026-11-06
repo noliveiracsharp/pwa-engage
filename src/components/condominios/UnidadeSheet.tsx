@@ -105,7 +105,7 @@ function DadosUnidade({ unidade, condominioId, perms, onClose, onOcupacao }: { u
   const { data: pets = [] } = useCondRows("cond_unidades_pets", "cond_unidade_id", s(unidade["id"]));
   const tipoL = TIPOS_UNIDADE.find((x) => x.value === v.tipo)?.label ?? v.tipo;
   const ocupL = OCUPACOES.find((x) => x.value === v.ocupacao)?.label.split(" (")[0] ?? v.ocupacao;
-  const ocupCor = v.ocupacao === "alugada" ? "bg-warning/15 text-warning-foreground border-warning/30" : v.ocupacao === "vazia" ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary border-primary/20";
+  const ocupCor = v.ocupacao === "alugada" ? "bg-warning/15 text-warning border-warning/30" : v.ocupacao === "vazia" ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary border-primary/20";
   const stats = [
     { i: Users, l: "Pessoas", n: pessoas.length },
     { i: Car, l: "Veículos", n: veiculos.length },
