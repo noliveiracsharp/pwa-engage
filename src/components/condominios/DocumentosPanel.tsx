@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { AlertTriangle, Settings2, RotateCcw, CalendarClock, Eye, FileText, FolderOpen, Loader2, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
@@ -244,6 +245,7 @@ function DocumentoDialog({ categorias, condominioId, doc, categoriaInicial, onCl
 
 function CategoriasDialog({ condominioId, rows, contagem, onClose }: { condominioId: string; rows: Row[]; contagem: Map<string, number>; onClose: () => void }) {
   const salvar = useCondSalvar("cond_documentos_categorias");
+  const qc = useQueryClient();
   const [nome, setNome] = useState("");
   const [vence, setVence] = useState(false);
   const [ocupado, setOcupado] = useState(false);
@@ -292,7 +294,7 @@ function CategoriasDialog({ condominioId, rows, contagem, onClose }: { condomini
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { error } = await (supabase as any).from("cond_documentos_categorias").insert(faltam.map((c) => ({ condominio_id: condominioId, codigo: c.value, descricao: c.label, controla_vencimento: c.vence })));
         if (error) throw error;
-        await salvar.mutateAsync({ id: "__nenhum__", valores: {} }).catch(() => undefined);
+        await qc.invalidateQueries({ queryKey: ["cond", "cond_documentos_categorias"] });
       }
       toast.success("Categorias padrão restauradas.");
     });
