@@ -12,6 +12,7 @@ import { s } from "./cond-data";
 
 const norm = (v: string) => v.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
+
 type Cond = { value: string; label: string };
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabase as any;
