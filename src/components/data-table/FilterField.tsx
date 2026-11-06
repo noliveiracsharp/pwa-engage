@@ -136,8 +136,6 @@ export function FilterInput({
   );
 }
 
-export const SEM_CLASSIFICACAO = "__sem__";
-
 /** Multi-select filter with search; empty array = all. */
 export function FilterMultiSelect({
   label,

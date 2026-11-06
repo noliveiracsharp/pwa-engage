@@ -5,7 +5,7 @@ import { coordenadas, LEGENDA_PINS } from "@/lib/parceiros-mapa";
 const ParceirosMapa = lazy(() => import("@/components/parceiros/ParceirosMapa"));
 import { Badge } from "@/components/ui/badge";
 import { DataTable, type Column } from "@/components/data-table/DataTable";
-import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
+import { FilterInput, FilterMultiSelect, FilterSelect } from "@/components/data-table/FilterField";
 import { StatusBadge } from "@/components/data-table/StatusBadge";
 import { PARENT_KEY, ParceiroSheet, TIPOS_HIERARQUIA, tipoHierarquiaLabel } from "@/components/parceiros/ParceiroSheet";
 import { rowId, useDeleteRecord, useSaveRecord, useTableRows } from "@/lib/crud";
@@ -20,6 +20,7 @@ import { BarraAcoesLote, consultarCnpjReceita, geolocalizarRegistro, useAcoesCom
 import { Button } from "@/components/ui/button";
 import { RelatorioLista } from "@/components/relatorios/RelatorioLista";
 import { FileText } from "lucide-react";
+import { passaClassificacao, SEM_CLASSIFICACAO } from "@/lib/filtro-classificacao";
 import { ImportarParceirosDialog } from "@/components/parceiros/ImportarParceirosDialog";
 
 const SECOES_PARCEIRO = [
@@ -60,7 +61,7 @@ function ParceirosPage() {
   const [visao, setVisao] = useState<"tabela" | "mapa">("tabela");
   const [mf, setMf] = useState({ papel: "todos", uf: "todos", cidade: "todos" });
   const [record, setRecord] = useState<Row | null>(null);
-  const [f, setF] = useState({ busca: "", papel: "todos", status: "todos", situacao: "todos", estrutura: "todos", pai: "todos", classificacao: "todos" });
+  const [f, setF] = useState({ busca: "", papel: "todos", status: "todos", situacao: "todos", estrutura: "todos", pai: "todos", classificacao: [] as string[] });
   const [relOpen, setRelOpen] = useState(false);
 
   const escopo = useMemo(
@@ -93,7 +94,7 @@ function ParceirosPage() {
             (f.papel === "todos" || (f.papel === "cliente" ? r["is_cliente"] === true : r["is_fornecedor"] === true)) &&
             (f.status === "todos" || (f.status === "ativo" ? r["status"] !== false : r["status"] === false)) &&
             (f.situacao === "todos" || (f.situacao === "nao" ? !r["situacao_cadastral"] : String(r["situacao_cadastral"] ?? "").toUpperCase() === f.situacao)) &&
-            (f.classificacao === "todos" || String(r["classificacao_id"] ?? "") === f.classificacao) &&
+            passaClassificacao(f.classificacao, r["classificacao_id"]) &&
             (f.estrutura === "todos" || tipoDe(r) === f.estrutura) &&
             (f.pai === "todos" || String(r[PARENT_KEY] ?? "") === f.pai || String(rowId(r)) === f.pai)
           );
@@ -252,8 +253,8 @@ function ParceirosPage() {
               options={[{ value: "todos", label: "Todas" }, ...TIPOS_HIERARQUIA.map((t) => ({ value: t.value, label: t.label }))]} />
             <FilterSelect label="Matriz / Administradora" value={f.pai} onChange={(v) => setF({ ...f, pai: v })}
               options={[{ value: "todos", label: "Todas" }, ...matrizes.map((m) => ({ value: String(rowId(m)), label: String(m["razao_social"] ?? "—") }))]} />
-            <FilterSelect label="Classificação" value={f.classificacao} onChange={(v) => setF({ ...f, classificacao: v })}
-              options={[{ value: "todos", label: "Todas" }, ...classificacoes.map((c) => ({ value: String(rowId(c)), label: caminhoClassificacao(classificacoes, rowId(c)) })).sort((a, b) => a.label.localeCompare(b.label, "pt-BR"))]} />
+            <FilterMultiSelect label="Classificação" value={f.classificacao} onChange={(v) => setF({ ...f, classificacao: v })}
+              options={[{ value: SEM_CLASSIFICACAO, label: "Sem Classificação" }, ...classificacoes.map((c) => ({ value: String(rowId(c)), label: caminhoClassificacao(classificacoes, rowId(c)) })).sort((a, b) => a.label.localeCompare(b.label, "pt-BR"))]} />
           </>
         }
       />
@@ -270,7 +271,7 @@ function ParceirosPage() {
             f.situacao !== "todos" && `Situação Receita: ${f.situacao}`,
             f.estrutura !== "todos" && `Estrutura: ${tipoHierarquiaLabel(f.estrutura)}`,
             f.pai !== "todos" && `Matriz: ${String(porId.get(f.pai)?.["razao_social"] ?? "")}`,
-            f.classificacao !== "todos" && `Classificação: ${caminhoClassificacao(classificacoes, f.classificacao)}`,
+            f.classificacao.length > 0 && `Classificação: ${f.classificacao.map((c) => c === SEM_CLASSIFICACAO ? "Sem Classificação" : caminhoClassificacao(classificacoes, c)).join(", ")}`,
           ].filter((x): x is string => Boolean(x))}
           kpis={[
             { label: "Clientes", valor: rows.filter((r) => r["is_cliente"] === true).length },

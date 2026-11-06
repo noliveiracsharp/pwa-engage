@@ -1,13 +1,15 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { DataTable, type Column } from "@/components/data-table/DataTable";
-import { FilterInput, FilterSelect } from "@/components/data-table/FilterField";
+import { FilterInput, FilterMultiSelect, FilterSelect } from "@/components/data-table/FilterField";
 import { StatusBadge } from "@/components/data-table/StatusBadge";
 import { EmpresaSheet } from "@/components/empresas/EmpresaSheet";
 import { rowId, useDeleteRecord, useSaveRecord, useTableRows } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
 import { usePagePermissions, subtabKind } from "@/hooks/usePagePermissions";
 import { secoesComPermissao } from "@/lib/secoes-permissao";
+import { passaClassificacao, SEM_CLASSIFICACAO } from "@/lib/filtro-classificacao";
+import { caminhoClassificacao, useClassificacoes } from "@/components/parceiros/ClassificacaoField";
 import { formatCpfCnpj, formatPhoneDisplay, matchesAny } from "@/lib/input-masks";
 
 export const Route = createFileRoute("/_authenticated/empresas")({
@@ -61,7 +63,8 @@ function EmpresasPage() {
     const paiPerms = { canRead: perms.canRead, canCreate: perms.canCreate, canUpdate: perms.canUpdate, canDelete: perms.canDelete };
     return secoesComPermissao(base, paiPerms, definidas, perms.subtabs.map((t) => ({ ...t, kind: subtabKind(t), label: t.descricao })));
   }, [funcoes, perms]);
-  const [f, setF] = useState({ busca: "", status: "todos" });
+  const [f, setF] = useState({ busca: "", status: "todos", classificacao: [] as string[] });
+  const { data: classificacoes = [] } = useClassificacoes();
 
   const filtered = useMemo(
     () =>
@@ -72,7 +75,8 @@ function EmpresasPage() {
             f.busca,
           ) &&
           (f.status === "todos" ||
-            (f.status === "ativo" ? row["status"] === true : row["status"] === false)),
+            (f.status === "ativo" ? row["status"] === true : row["status"] === false)) &&
+          passaClassificacao(f.classificacao, row["classificacao_id"]),
       ),
     [rows, f],
   );
@@ -135,6 +139,12 @@ function EmpresasPage() {
               value={f.status}
               onChange={(v) => setF({ ...f, status: v })}
               options={STATUS_OPTIONS}
+            />
+            <FilterMultiSelect
+              label="Classificação"
+              value={f.classificacao}
+              onChange={(v) => setF({ ...f, classificacao: v })}
+              options={[{ value: SEM_CLASSIFICACAO, label: "Sem Classificação" }, ...classificacoes.map((c) => ({ value: String(rowId(c)), label: caminhoClassificacao(classificacoes, rowId(c)) })).sort((a, b) => a.label.localeCompare(b.label, "pt-BR"))]}
             />
           </>
         }
