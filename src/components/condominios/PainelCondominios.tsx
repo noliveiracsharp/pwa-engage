@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import type { Row } from "@/lib/row";
 import { s } from "./cond-data";
 
-const norm = (v: string) => v.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+const norm = (v: string) => v.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase(); // faixa U+0300–U+036F (acentos combinantes)
 
 
 type Cond = { value: string; label: string };
