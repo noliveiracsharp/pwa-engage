@@ -20,6 +20,8 @@ import {
   preferenciasDoPapel, valoresPreferencias, type PreferenciaCatalogo,
 } from "@/lib/cond-pessoa";
 import { CampoData } from "./CampoData";
+import { DIAS_SEMANA, TIPOS_SERVICO, copiarParaUteis, errosAgenda, normalizarAgenda, sincronizaFacial, type DiaKey } from "@/lib/cond-acesso";
+import { CalendarClock, Copy, ScanFace } from "lucide-react";
 import { FotoCond } from "./FotoCond";
 import { PAPEIS, s } from "./cond-data";
 
@@ -81,7 +83,18 @@ export function PessoaDialog({ unidadeId, lado, papeis, gestor, pessoa, vinculo,
     funcao_condominio: s(vinculo?.["funcao_condominio"]) || "condomino",
     sindico_delegado: vinculo?.["sindico_delegado"] === true,
     sindico_ate: s(vinculo?.["sindico_ate"]),
+    anunciado_portaria: vinculo ? vinculo["anunciado_portaria"] !== false : true,
+    acesso_agenda: normalizarAgenda(vinculo?.["acesso_agenda"]),
+    acesso_inicio: s(vinculo?.["acesso_inicio"]), acesso_fim: s(vinculo?.["acesso_fim"]),
+    tipo_servico: s(vinculo?.["tipo_servico"]), servico_descricao: s(vinculo?.["servico_descricao"]),
+    telefone_fixo: s(vinculo?.["telefone_fixo"]),
   });
+  const temAgenda = ["prestador", "colaborador", "visitante"].includes(vi.papel);
+  const erros = temAgenda && !vi.anunciado_portaria ? errosAgenda(vi.acesso_agenda) : [];
+  const periodoInvalido = !!(vi.acesso_inicio && vi.acesso_fim && vi.acesso_fim < vi.acesso_inicio);
+  const facial = temAgenda ? sincronizaFacial({ controle: vi.controle_acesso, anunciado: vi.anunciado_portaria, agenda: vi.acesso_agenda, fim: vi.acesso_fim }) : vi.controle_acesso;
+  const setDia = (k: DiaKey, f: Partial<{ ativo: boolean; entrada: string; saida: string }>) =>
+    setVi({ ...vi, acesso_agenda: { ...vi.acesso_agenda, [k]: { ...vi.acesso_agenda[k], ...f } } });
   const salvas = (vinculo?.["preferencias"] ?? {}) as Record<string, unknown>;
   const prefsPapel = useMemo(() => preferenciasDoPapel(catalogo, vi.papel), [catalogo, vi.papel]);
   const [prefs, setPrefs] = useState<Record<string, boolean> | null>(null);
@@ -97,7 +110,7 @@ export function PessoaDialog({ unidadeId, lado, papeis, gestor, pessoa, vinculo,
     if (d.profissao && !profissoes.includes(d.profissao)) l.push({ value: d.profissao, label: d.profissao });
     return l;
   }, [profissoes, d.profissao]);
-  const valido = d.nome.trim() && d.email.includes("@") && (!precisaAceite || aceite);
+  const valido = d.nome.trim() && d.email.includes("@") && (!precisaAceite || aceite) && erros.length === 0 && !periodoInvalido;
 
   async function salvar() {
     setSalvando(true);
@@ -130,6 +143,12 @@ export function PessoaDialog({ unidadeId, lado, papeis, gestor, pessoa, vinculo,
           controle_acesso: vi.controle_acesso,
           preferencias: { ...salvas, ...prefsAtuais },
         };
+        if (temAgenda) Object.assign(valores, {
+          anunciado_portaria: vi.anunciado_portaria, acesso_agenda: vi.acesso_agenda,
+          acesso_inicio: vi.acesso_inicio || null, acesso_fim: vi.acesso_fim || null,
+          tipo_servico: vi.tipo_servico || null, servico_descricao: vi.servico_descricao || null,
+          telefone_fixo: vi.telefone_fixo || null, facial_sincronizar: facial,
+        });
         if (gestor) Object.assign(valores, {
           status_conexao: vi.status_conexao, funcao_condominio: vi.funcao_condominio,
           sindico_delegado: vi.sindico_delegado, sindico_ate: vi.sindico_delegado ? vi.sindico_ate || null : null,
@@ -139,7 +158,7 @@ export function PessoaDialog({ unidadeId, lado, papeis, gestor, pessoa, vinculo,
           Object.assign(valores, { regimento_aceito_em: new Date().toISOString(), regimento_aceito_por: u.user?.id ?? null });
         }
         const { error } = await db.from("cond_unidades_vinculos").update(valores).eq("id", vincId);
-        if (error) throw new Error(/column/i.test(error.message) ? "Rode o script atendeai-condominios-cadastro-completo.sql no banco para salvar os novos campos." : error.message);
+        if (error) throw new Error(/column/i.test(error.message) ? "Rode o script atendeai-condominios-acesso-prestadores.sql no banco para salvar os novos campos." : error.message);
       }
       toast.success(novo ? "Pessoa cadastrada." : "Cadastro atualizado.");
       await onSalvo(); onClose();
@@ -155,6 +174,7 @@ export function PessoaDialog({ unidadeId, lado, papeis, gestor, pessoa, vinculo,
           <TabsList className="h-auto w-fit flex-wrap justify-start">
             <TabsTrigger value="dados"><UserRound className="mr-1 size-4" /> Dados</TabsTrigger>
             <TabsTrigger value="docs"><IdCard className="mr-1 size-4" /> Documentos & acesso</TabsTrigger>
+            {temAgenda && <TabsTrigger value="agenda"><CalendarClock className="mr-1 size-4" /> Dias & horários</TabsTrigger>}
             <TabsTrigger value="prefs"><SlidersHorizontal className="mr-1 size-4" /> Preferências</TabsTrigger>
             {gestor && <TabsTrigger value="gestao"><ShieldCheck className="mr-1 size-4" /> Status & função</TabsTrigger>}
           </TabsList>
@@ -188,6 +208,50 @@ export function PessoaDialog({ unidadeId, lado, papeis, gestor, pessoa, vinculo,
                 <Switch checked={vi.controle_acesso} onCheckedChange={(c) => setVi({ ...vi, controle_acesso: c })} />
               </label>
             </TabsContent>
+
+            {temAgenda && (
+              <TabsContent value="agenda" className="mt-0 space-y-4">
+                {vi.papel !== "visitante" && (
+                  <section className="grid gap-3 rounded-lg border p-3 sm:grid-cols-2">
+                    <div><Label className="mb-1.5 block">Tipo de serviço</Label><SearchSelect value={vi.tipo_servico} options={TIPOS_SERVICO} onChange={(x) => setVi({ ...vi, tipo_servico: x })} />
+                      {vi.tipo_servico === "personal" && <p className="mt-1 text-xs text-destructive">Personal Trainer: anexe o CREF em Documentos.</p>}</div>
+                    <div><Label htmlFor="pd-fixo">Telefone fixo</Label><PhoneInput id="pd-fixo" value={vi.telefone_fixo} onChange={(x) => setVi({ ...vi, telefone_fixo: x })} /></div>
+                    <div className="sm:col-span-2"><Label htmlFor="pd-desc">Descritivo do serviço</Label><Input id="pd-desc" value={vi.servico_descricao} onChange={(e) => setVi({ ...vi, servico_descricao: e.target.value })} /></div>
+                  </section>
+                )}
+                <label className="flex items-center justify-between gap-3 rounded-lg border p-3">
+                  <span><span className="block text-sm font-medium">Deve ser anunciado(a) pela portaria</span><span className="text-xs text-muted-foreground">Ligado: a entrada não é liberada automaticamente e a facial não é enviada aos leitores.</span></span>
+                  <Switch checked={vi.anunciado_portaria} onCheckedChange={(c) => setVi({ ...vi, anunciado_portaria: c })} />
+                </label>
+                <section className="grid gap-3 rounded-lg border p-3 sm:grid-cols-2">
+                  <p className="text-sm font-semibold sm:col-span-2">Vigência da autorização <span className="font-normal text-muted-foreground">(opcional — sem data final é recorrente)</span></p>
+                  <div><Label htmlFor="pd-ini">Data inicial</Label><CampoData id="pd-ini" inicio={new Date().getFullYear()} value={vi.acesso_inicio} onChange={(x) => setVi({ ...vi, acesso_inicio: x })} /></div>
+                  <div><Label htmlFor="pd-fim">Data final</Label><CampoData id="pd-fim" inicio={new Date().getFullYear()} value={vi.acesso_fim} onChange={(x) => setVi({ ...vi, acesso_fim: x })} /></div>
+                  {periodoInvalido && <p className="text-xs text-destructive sm:col-span-2">A data final deve ser depois da inicial.</p>}
+                </section>
+                <section className={cn("rounded-lg border", vi.anunciado_portaria && "opacity-60")}>
+                  <div className="flex items-center justify-between gap-2 border-b p-3">
+                    <span><span className="block text-sm font-semibold">Dias e horários da semana</span><span className="text-xs text-muted-foreground">Sincronizados com os equipamentos de entrada e saída.</span></span>
+                    <Button type="button" size="sm" variant="outline" disabled={vi.anunciado_portaria || !vi.acesso_agenda.seg.ativo} onClick={() => setVi({ ...vi, acesso_agenda: copiarParaUteis(vi.acesso_agenda) })}><Copy className="mr-1 size-3.5" /> Copiar segunda p/ seg–sex</Button>
+                  </div>
+                  {DIAS_SEMANA.map((dia) => {
+                    const f = vi.acesso_agenda[dia.k];
+                    return (
+                      <div key={dia.k} className="grid grid-cols-[1fr_auto_auto] items-center gap-2 border-b p-2 px-3 last:border-0">
+                        <label className="flex items-center gap-2 text-sm"><Switch disabled={vi.anunciado_portaria} checked={f.ativo} onCheckedChange={(c) => setDia(dia.k, { ativo: c, entrada: f.entrada || "08:00", saida: f.saida || "17:00" })} />{dia.l}</label>
+                        <Input aria-label={`Entrada ${dia.l}`} type="time" className="w-28" disabled={vi.anunciado_portaria || !f.ativo} value={f.entrada} onChange={(e) => setDia(dia.k, { entrada: e.target.value })} />
+                        <Input aria-label={`Saída ${dia.l}`} type="time" className="w-28" disabled={vi.anunciado_portaria || !f.ativo} value={f.saida} onChange={(e) => setDia(dia.k, { saida: e.target.value })} />
+                      </div>
+                    );
+                  })}
+                </section>
+                {erros.map((x) => <p key={x} className="text-xs text-destructive">{x}</p>)}
+                <div className={cn("flex items-start gap-2 rounded-lg border p-3 text-sm", facial ? "border-primary bg-primary/10" : "bg-muted")}>
+                  <ScanFace className="mt-0.5 size-4 shrink-0" />
+                  {facial ? "A facial será enviada aos leitores e liberada somente nos dias e horários marcados." : "A facial não será enviada aos leitores: entrada somente com anúncio da portaria."}
+                </div>
+              </TabsContent>
+            )}
 
             <TabsContent value="prefs" className="mt-0 space-y-4">
               <section className="rounded-lg border">
