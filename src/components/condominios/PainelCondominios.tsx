@@ -1,11 +1,16 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Building, Building2, Car, DoorOpen, KeyRound, PawPrint, ParkingSquare, Users } from "lucide-react";
+import { useState } from "react";
+import { Building, Building2, Car, DoorOpen, KeyRound, PawPrint, ParkingSquare, Search, Users, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { Row } from "@/lib/row";
 import { s } from "./cond-data";
+
+const norm = (v: string) => v.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
 type Cond = { value: string; label: string };
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
