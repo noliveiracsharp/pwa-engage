@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
@@ -99,23 +100,79 @@ function DadosUnidade({ unidade, condominioId, perms, onClose, onOcupacao }: { u
   });
   const ro = !perms.canUpdate;
   const num = (x: string) => (x.trim() === "" ? null : Number(x.replace(",", ".")));
+  const { data: pessoas = [] } = usePessoas(s(unidade["id"]));
+  const { data: veiculos = [] } = useCondRows("cond_unidades_veiculos", "cond_unidade_id", s(unidade["id"]));
+  const { data: pets = [] } = useCondRows("cond_unidades_pets", "cond_unidade_id", s(unidade["id"]));
+  const tipoL = TIPOS_UNIDADE.find((x) => x.value === v.tipo)?.label ?? v.tipo;
+  const ocupL = OCUPACOES.find((x) => x.value === v.ocupacao)?.label.split(" (")[0] ?? v.ocupacao;
+  const ocupCor = v.ocupacao === "alugada" ? "bg-warning/15 text-warning-foreground border-warning/30" : v.ocupacao === "vazia" ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary border-primary/20";
+  const stats = [
+    { i: Users, l: "Pessoas", n: pessoas.length },
+    { i: Car, l: "Veículos", n: veiculos.length },
+    { i: PawPrint, l: "Pets", n: pets.length },
+    { i: KeyRound, l: "Vagas", n: minhas.length },
+  ];
+  const Secao = ({ titulo, desc, children }: { titulo: string; desc: string; children: React.ReactNode }) => (
+    <section className="rounded-xl border bg-card p-4 shadow-sm">
+      <header className="mb-4"><h3 className="text-sm font-semibold">{titulo}</h3><p className="text-xs text-muted-foreground">{desc}</p></header>
+      {children}
+    </section>
+  );
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid gap-4 sm:grid-cols-3">
-        <div><Label htmlFor="u-num">Número</Label><Input id="u-num" disabled={ro} value={v.numero} onChange={(e) => setV({ ...v, numero: e.target.value })} /></div>
-        <div><Label htmlFor="u-andar">Andar</Label><Input id="u-andar" type="number" disabled={ro} value={v.andar} onChange={(e) => setV({ ...v, andar: e.target.value })} /></div>
-        <div><Label className="mb-1.5 block">Tipo</Label><SearchSelect value={v.tipo} disabled={ro} allowClear={false} options={TIPOS_UNIDADE} onChange={(x) => setV({ ...v, tipo: x })} /></div>
-        <div><Label className="mb-1.5 block">Ocupação</Label><SearchSelect value={v.ocupacao} disabled={ro} allowClear={false} options={OCUPACOES} onChange={(x) => setV({ ...v, ocupacao: x })} /></div>
-        <div><Label htmlFor="u-area">Área privativa (m²)</Label><Input id="u-area" inputMode="decimal" disabled={ro} value={v.area_privativa} onChange={(e) => setV({ ...v, area_privativa: e.target.value })} /></div>
-        <div><Label htmlFor="u-fr">Fração ideal</Label><Input id="u-fr" inputMode="decimal" disabled={ro} value={v.fracao_ideal} onChange={(e) => setV({ ...v, fracao_ideal: e.target.value })} /></div>
-        <div className="flex items-end gap-2 pb-2"><Switch id="u-st" disabled={ro} checked={v.status} onCheckedChange={(c) => setV({ ...v, status: c })} /><Label htmlFor="u-st">Ativa</Label></div>
+      <div className="overflow-hidden rounded-xl border bg-gradient-to-br from-primary/10 via-card to-card shadow-sm">
+        <div className="flex flex-wrap items-center gap-4 p-5">
+          <div className="flex size-16 shrink-0 flex-col items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-md">
+            <span className="text-[10px] uppercase opacity-80">Unid.</span>
+            <span className="text-xl font-bold leading-none tabular-nums">{v.numero || "—"}</span>
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-lg font-semibold">{tipoL}{v.andar ? ` · ${v.andar}º andar` : ""}</p>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              <Badge variant="outline" className={ocupCor}>{ocupL}</Badge>
+              <Badge variant="outline" className={v.status ? "border-success/30 bg-success/10 text-success" : "bg-muted text-muted-foreground"}>{v.status ? "Ativa" : "Inativa"}</Badge>
+              {v.area_privativa && <Badge variant="outline">{v.area_privativa} m²</Badge>}
+            </div>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 border-t bg-card/60 sm:grid-cols-4">
+          {stats.map((x, k) => (
+            <div key={x.l} className={cn("flex items-center gap-3 p-3", k > 0 && "sm:border-l", k % 2 === 1 && "border-l")}>
+              <span className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary"><x.i className="size-4" /></span>
+              <div><p className="text-lg font-bold leading-none tabular-nums">{x.n}</p><p className="text-xs text-muted-foreground">{x.l}</p></div>
+            </div>
+          ))}
+        </div>
       </div>
-      <div><Label htmlFor="u-obs">Observações</Label><Input id="u-obs" disabled={ro} value={v.observacoes} onChange={(e) => setV({ ...v, observacoes: e.target.value })} /></div>
-      <div className="rounded-lg border p-3 text-sm">
-        <p className="mb-1 font-medium">Vagas da unidade</p>
-        {minhas.length ? <div className="flex flex-wrap gap-2">{minhas.map((x) => <Badge key={s(x["id"])} variant="outline">{s(x["identificacao"])} · {s(x["modalidade_posse"])}</Badge>)}</div>
-          : <p className="text-muted-foreground">Nenhuma vaga. Gerencie em Garagem & Vagas, no menu lateral.</p>}
-      </div>
+
+      <Secao titulo="Identificação" desc="Como a unidade é localizada no condomínio.">
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div><Label htmlFor="u-num" className="mb-1.5 block">Número *</Label><Input id="u-num" disabled={ro} value={v.numero} onChange={(e) => setV({ ...v, numero: e.target.value })} /></div>
+          <div><Label htmlFor="u-andar" className="mb-1.5 block">Andar</Label><Input id="u-andar" type="number" disabled={ro} value={v.andar} onChange={(e) => setV({ ...v, andar: e.target.value })} /></div>
+          <div><Label className="mb-1.5 block">Tipo</Label><SearchSelect value={v.tipo} disabled={ro} allowClear={false} options={TIPOS_UNIDADE} onChange={(x) => setV({ ...v, tipo: x })} /></div>
+        </div>
+      </Secao>
+
+      <Secao titulo="Ocupação e medidas" desc="Quem reside e a participação da unidade no rateio.">
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div><Label className="mb-1.5 block">Ocupação</Label><SearchSelect value={v.ocupacao} disabled={ro} allowClear={false} options={OCUPACOES} onChange={(x) => setV({ ...v, ocupacao: x })} /></div>
+          <div><Label htmlFor="u-area" className="mb-1.5 block">Área privativa</Label><div className="relative"><Input id="u-area" inputMode="decimal" className="pr-10" disabled={ro} value={v.area_privativa} onChange={(e) => setV({ ...v, area_privativa: e.target.value })} /><span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">m²</span></div></div>
+          <div><Label htmlFor="u-fr" className="mb-1.5 block">Fração ideal</Label><Input id="u-fr" inputMode="decimal" disabled={ro} value={v.fracao_ideal} onChange={(e) => setV({ ...v, fracao_ideal: e.target.value })} /></div>
+        </div>
+        <div className="mt-4 flex items-center justify-between gap-3 rounded-lg border bg-muted/30 p-3">
+          <div><Label htmlFor="u-st" className="font-medium">Unidade ativa</Label><p className="text-xs text-muted-foreground">Unidades inativas não aparecem em cobranças, sorteios e portaria.</p></div>
+          <Switch id="u-st" disabled={ro} checked={v.status} onCheckedChange={(c) => setV({ ...v, status: c })} />
+        </div>
+      </Secao>
+
+      <Secao titulo="Vagas de garagem" desc="Vagas vinculadas a esta unidade.">
+        {minhas.length ? <div className="flex flex-wrap gap-2">{minhas.map((x) => <Badge key={s(x["id"])} variant="outline" className="gap-1 py-1"><Car className="size-3.5" /> {s(x["identificacao"])} · {s(x["modalidade_posse"])}</Badge>)}</div>
+          : <div className="flex items-center gap-3 rounded-lg border border-dashed p-4 text-sm text-muted-foreground"><Car className="size-5" /> Nenhuma vaga vinculada. Gerencie em <strong className="text-foreground">Garagem & Vagas</strong>, no menu lateral.</div>}
+      </Secao>
+
+      <Secao titulo="Observações" desc="Anotações internas sobre a unidade.">
+        <Textarea id="u-obs" rows={3} disabled={ro} placeholder="Ex.: reforma prevista, particularidades da unidade…" value={v.observacoes} onChange={(e) => setV({ ...v, observacoes: e.target.value })} />
+      </Secao>
       <div className="sticky bottom-0 flex justify-between gap-2 border-t bg-background pt-3">
         {perms.canDelete ? (
           <Button variant="ghost" className="text-destructive" onClick={async () => {
