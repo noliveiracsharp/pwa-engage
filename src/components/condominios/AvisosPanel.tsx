@@ -163,8 +163,8 @@ function NovoAvisoDialog({ condominioId, condominios, blocos, unidades, onClose 
 
   async function enviar() {
     const erro = validarAviso({ titulo, mensagemTexto: htmlParaTexto(mensagem), canais, condominios: condIds });
-    if (erro) return toast.error(erro);
-    if (!plano.envios.length) return toast.error("Nenhuma pessoa com contato para esse público.");
+    if (erro) { toast.error(erro); return; }
+    if (!plano.envios.length) { toast.error("Nenhuma pessoa com contato para esse público."); return; }
     const ok = await confirmar({ title: "Enviar aviso agora?", description: `${plano.envios.length} mensagem(ns) para ${plano.pessoas} pessoa(s). Não é possível desfazer.`, confirmText: "Enviar" });
     if (!ok) return;
     const lote = crypto.randomUUID();
