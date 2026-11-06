@@ -69,10 +69,10 @@ export function UnidadeSheet({ unidade, condominioId, blocoNome, perms, onClose 
           </TabsList>
           <div className="min-h-0 flex-1 overflow-y-auto p-4">
             <TabsContent value="dados"><DadosUnidade unidade={unidade} condominioId={condominioId} perms={perms} onClose={onClose} onOcupacao={setOcupacao} /></TabsContent>
-            <TabsContent value="proprietario"><Pessoas unidadeId={id} perms={perms} lado="proprietario" papeis={["proprietario", "preposto"]} titulo="Proprietários e procuradores" /></TabsContent>
-            <TabsContent value="inquilino"><Pessoas unidadeId={id} perms={perms} lado="inquilino" papeis={["inquilino"]} titulo="Inquilinos (locatários)" /></TabsContent>
-            <TabsContent value="familia"><Pessoas unidadeId={id} perms={perms} lado={ocupacao === "alugada" ? "inquilino" : "proprietario"} papeis={s(unidade["tipo"]) === "comercial" || s(unidade["tipo"]) === "sala" || s(unidade["tipo"]) === "loja" ? ["colaborador", "visitante"] : ["familiar", "visitante"]} titulo="Família e visitantes da unidade (pai, mãe, avós…)" /></TabsContent>
-            <TabsContent value="prestadores"><Pessoas unidadeId={id} perms={perms} lado={ocupacao === "alugada" ? "inquilino" : "proprietario"} papeis={["prestador"]} titulo="Prestadores de serviço da unidade" /></TabsContent>
+            <TabsContent value="proprietario"><Pessoas unidadeId={id} condominioId={condominioId} perms={perms} lado="proprietario" papeis={["proprietario", "preposto"]} titulo="Proprietários e procuradores" /></TabsContent>
+            <TabsContent value="inquilino"><Pessoas unidadeId={id} condominioId={condominioId} perms={perms} lado="inquilino" papeis={["inquilino"]} titulo="Inquilinos (locatários)" /></TabsContent>
+            <TabsContent value="familia"><Pessoas unidadeId={id} condominioId={condominioId} perms={perms} lado={ocupacao === "alugada" ? "inquilino" : "proprietario"} papeis={s(unidade["tipo"]) === "comercial" || s(unidade["tipo"]) === "sala" || s(unidade["tipo"]) === "loja" ? ["colaborador", "visitante"] : ["familiar", "visitante"]} titulo="Família e visitantes da unidade (pai, mãe, avós…)" /></TabsContent>
+            <TabsContent value="prestadores"><Pessoas unidadeId={id} condominioId={condominioId} perms={perms} lado={ocupacao === "alugada" ? "inquilino" : "proprietario"} papeis={["prestador"]} titulo="Prestadores de serviço da unidade" /></TabsContent>
             <TabsContent value="veiculos"><Veiculos unidadeId={id} condominioId={condominioId} perms={perms} /></TabsContent>
             <TabsContent value="pets"><Pets unidadeId={id} perms={perms} /></TabsContent>
             <TabsContent value="documentos"><Documentos unidadeId={id} perms={perms} /></TabsContent>
@@ -217,7 +217,7 @@ function Cabecalho({ titulo, total, podeCriar, onNovo, rotulo = "Adicionar" }: {
 
 const Vazio = ({ texto }: { texto: string }) => <p className="rounded-lg border border-dashed py-10 text-center text-sm text-muted-foreground">{texto}</p>;
 
-function Pessoas({ unidadeId, perms, lado, papeis, titulo }: { unidadeId: string; perms: Perms; lado: string; papeis: string[]; titulo: string }) {
+function Pessoas({ unidadeId, condominioId, perms, lado, papeis, titulo }: { unidadeId: string; condominioId: string; perms: Perms; lado: string; papeis: string[]; titulo: string }) {
   const qc = useQueryClient();
   const { data: vinculos = [] } = useCondRows("cond_unidades_vinculos", "cond_unidade_id", unidadeId);
   const { data: pessoas = [] } = usePessoas(unidadeId);
@@ -254,7 +254,7 @@ function Pessoas({ unidadeId, perms, lado, papeis, titulo }: { unidadeId: string
         if (error) throw new Error(error.message);
       }
       const { data, error } = await supabase.functions.invoke("cobranca-regua", {
-        body: { acao: "recuperar_senha", email: p.email, redirect: `${window.location.origin}/reset-password` },
+        body: { acao: "recuperar_senha", email: p.email, redirect: `${window.location.origin}/reset-password`, empresa_id: condominioId },
       });
       const erro = error ? "O serviço de e-mail não respondeu." : (data as { erro?: string } | null)?.erro;
       if (erro) throw new Error(erro);
