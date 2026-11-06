@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
 
 type Entry = { active: boolean; reset: () => void; busca?: boolean; chip?: string };
 type Registry = { set: (id: string, e: Entry | null) => void };
@@ -130,6 +132,57 @@ export function FilterInput({
           </button>
         )}
       </div>
+    </div>
+  );
+}
+
+/** Multi-select filter with search; empty array = all. */
+export function FilterMultiSelect({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: string[];
+  onChange: (value: string[]) => void;
+  options: Array<{ value: string; label: string }>;
+}): ReactNode {
+  const { idioma } = useIdioma();
+  const rotulo = termo(idioma, label);
+  const [q, setQ] = useState("");
+  const [open, setOpen] = useState(false);
+  const nomes = value.map((v) => options.find((o) => o.value === v)?.label ?? v);
+  const resumo = value.length === 0 ? "Todas" : value.length === 1 ? nomes[0] : `${value.length} selecionadas`;
+  useRegister(value.join("|"), (s) => onChange(s ? s.split("|") : []), { chip: `${rotulo}: ${nomes.join(", ")}` });
+  const id = useId();
+  const norm = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const vis = options.filter((o) => norm(o.label).includes(norm(q)));
+  const toggle = (v: string) => onChange(value.includes(v) ? value.filter((x) => x !== v) : [...value, v]);
+  return (
+    <div>
+      <Label htmlFor={id} className="mb-1.5 block text-xs uppercase tracking-wide text-muted-foreground">{rotulo}</Label>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button id={id} type="button" aria-label={rotulo} className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
+            <span className="truncate">{resumo}</span>
+            <ChevronDown className="h-4 w-4 opacity-50" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent align="start" className="z-[110] w-(--radix-popover-trigger-width) min-w-60 p-1">
+          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Pesquisar..." className="mb-1 h-8" />
+          <div className="max-h-72 overflow-y-auto">
+            <label className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-accent">
+              <Checkbox checked={value.length === 0} onCheckedChange={() => onChange([])} /> Todas
+            </label>
+            {vis.map((o) => (
+              <label key={o.value} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-accent">
+                <Checkbox checked={value.includes(o.value)} onCheckedChange={() => toggle(o.value)} /> {termo(idioma, o.label)}
+              </label>
+            ))}
+          </div>
+        </PopoverContent>
+      </Popover>
     </div>
   );
 }
