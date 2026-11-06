@@ -42,6 +42,7 @@ function Kpi({ icone: I, rotulo, valor, sub, i }: { icone: typeof Building; rotu
 
 export function PainelCondominios({ condominios, condId, podeConfigurar, onAbrir }: { condominios: Cond[]; condId: string; podeConfigurar: boolean; onAbrir: (id: string) => void }) {
   const qc = useQueryClient();
+  const [busca, setBusca] = useState("");
   const { data } = useQuery({
     queryKey: ["cond", "painel"],
     queryFn: async () => {
