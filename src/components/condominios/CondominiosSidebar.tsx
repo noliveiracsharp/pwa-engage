@@ -28,15 +28,15 @@ export function useSecoesCondominio(pagina: P): Secao[] {
   const s = usePagePermissions(DEF[2].path);
   const e = usePagePermissions(DEF[3].path);
   const g = usePagePermissions(DEF[4].path);
-  const d = usePagePermissions(DEF[5].path);
+  const dc = usePagePermissions(DEF[5].path);
   return useMemo(() => {
     const existe = (path: string) => funcoes.some((f) => String(f["path"] ?? "") === path);
     const painel: Secao = { key: "painel", label: "Painel", icon: LayoutDashboard, canRead: pagina.canRead, canCreate: false, canUpdate: pagina.canUpdate, canDelete: false };
     return [painel, ...DEF.map((d, i) => {
-      const p = existe(d.path) ? [u, v, s, e, g, d][i]! : pagina;
+      const p = existe(d.path) ? [u, v, s, e, g, dc][i]! : pagina;
       return { key: d.key, label: d.label, icon: d.icon, canRead: p.canRead, canCreate: p.canCreate, canUpdate: p.canUpdate, canDelete: p.canDelete };
     })].filter((x) => x.canRead);
-  }, [funcoes, u, v, s, e, g, d, pagina]);
+  }, [funcoes, u, v, s, e, g, dc, pagina]);
 }
 
 export function CondominiosSidebar({ secoes, ativa, onChange }: { secoes: Secao[]; ativa: string; onChange: (k: string) => void }) {
