@@ -11,7 +11,7 @@ describe("categorias de documentos por condomínio", () => {
       { id: "2", codigo: "obras", descricao: "Obras", controla_vencimento: true },
     ]);
     expect(r.map((c) => c.value)).toEqual(["obras", "outros"]);
-    expect(r[0].vence).toBe(true);
+    expect(r[0]?.vence).toBe(true);
   });
   it("gera código único sem acentos", () => {
     expect(codigoCategoria("Segurança Patrimonial", [])).toBe("seguranca_patrimonial");
