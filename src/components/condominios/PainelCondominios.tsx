@@ -6,6 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { Row } from "@/lib/row";
 import { s } from "./cond-data";
@@ -43,7 +45,10 @@ function Kpi({ icone: I, rotulo, valor, sub, i }: { icone: typeof Building; rotu
 
 export function PainelCondominios({ condominios, condId, podeConfigurar, onAbrir }: { condominios: Cond[]; condId: string; podeConfigurar: boolean; onAbrir: (id: string) => void }) {
   const qc = useQueryClient();
-  const [busca, setBusca] = useState("");
+  const [busca, setBuscaRaw] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const setBusca = (v: string) => { setBuscaRaw(v); setPage(1); };
   const { data } = useQuery({
     queryKey: ["cond", "painel"],
     queryFn: async () => {
@@ -85,6 +90,11 @@ export function PainelCondominios({ condominios, condId, podeConfigurar, onAbrir
   }).sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
 
   const filtrados = busca.trim() ? porCond.filter((c) => norm(c.label).includes(norm(busca.trim()))) : porCond;
+  const total = filtrados.length;
+  const size = pageSize || total || 1;
+  const totalPages = Math.max(1, Math.ceil(total / size));
+  const current = Math.min(page, totalPages);
+  const pagina = filtrados.slice((current - 1) * size, current * size);
 
   async function alternar(id: string, v: boolean) {
     const { error } = await db.from("cond_config").upsert({ condominio_id: id, morador_edita_dados: v, updated_at: new Date().toISOString() });
@@ -143,7 +153,7 @@ export function PainelCondominios({ condominios, condId, podeConfigurar, onAbrir
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtrados.map((c) => (
+                {pagina.map((c) => (
                   <TableRow
                     key={c.value}
                     className={`cursor-pointer ${c.value === condId ? "bg-primary/5" : ""}`}
@@ -169,6 +179,24 @@ export function PainelCondominios({ condominios, condId, podeConfigurar, onAbrir
           </div>
         )}
       </section>
+      {total > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <span>Linhas por página</span>
+            <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setPage(1); }}>
+              <SelectTrigger className="h-8 w-24" aria-label="Linhas por página"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {[10, 50, 100, 0].map((n) => <SelectItem key={n} value={String(n)}>{n || "Todos"}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-2">
+            <span role="status" aria-live="polite">{(current - 1) * size + 1}–{Math.min(current * size, total)} de {total}</span>
+            <Button variant="outline" size="sm" disabled={current <= 1} onClick={() => setPage(current - 1)}>Anterior</Button>
+            <Button variant="outline" size="sm" disabled={current >= totalPages} onClick={() => setPage(current + 1)}>Próxima</Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
