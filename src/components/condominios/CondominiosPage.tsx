@@ -21,6 +21,7 @@ import { SorteioPanel } from "./SorteioPanel";
 import { PainelCondominios } from "./PainelCondominios";
 import { EquipePanel } from "./EquipePanel";
 import { GestaoTerceirosPanel } from "./GestaoTerceirosPanel";
+import { DocumentosPanel } from "./DocumentosPanel";
 
 export function CondominiosPage() {
   const perms = usePagePermissions("/condominios");
@@ -138,6 +139,8 @@ export function CondominiosPage() {
         <SorteioPanel condominioId={condId} blocos={blocos} unidades={unidades} perms={secAtual} />
       ) : secao === "equipe" && secAtual ? (
         <EquipePanel condominioId={condId} blocos={blocos} unidades={unidades} perms={secAtual} />
+      ) : secao === "documentos" && secAtual ? (
+        <DocumentosPanel condominioId={condId} perms={secAtual} />
       ) : secao === "gestao" && secAtual ? (
         <GestaoTerceirosPanel condominioId={condId} podeEditar={secAtual.canUpdate} />
       ) : !secAtual ? (
