@@ -83,6 +83,8 @@ export function PainelCondominios({ condominios, condId, podeConfigurar, onAbrir
     };
   }).sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
 
+  const filtrados = busca.trim() ? porCond.filter((c) => norm(c.label).includes(norm(busca.trim()))) : porCond;
+
   async function alternar(id: string, v: boolean) {
     const { error } = await db.from("cond_config").upsert({ condominio_id: id, morador_edita_dados: v, updated_at: new Date().toISOString() });
     if (error) { toast.error(error.message); return; }
