@@ -189,12 +189,12 @@ function DocumentoDialog({ condominioId, doc, categoriaInicial, onClose, salvar 
       };
       if (arquivo) {
         const path = `condominio/${condominioId}/${categoria}/${Date.now()}-${nomeArquivoSeguro(arquivo.name)}`;
-        const up = await supabase.storage.from(BUCKET).upload(path, arquivo, { contentType: arquivo.type || undefined });
+        const up = await supabase.storage.from(BUCKET).upload(path, arquivo, arquivo.type ? { contentType: arquivo.type } : {});
         if (up.error) throw up.error;
         Object.assign(valores, { arquivo_path: path, arquivo_nome: arquivo.name, arquivo_tipo: arquivo.type, arquivo_tamanho: arquivo.size });
         if (doc) await supabase.storage.from(BUCKET).remove([s(doc["arquivo_path"])]);
       }
-      await salvar({ id: doc ? s(doc["id"]) : undefined, valores });
+      await salvar(doc ? { id: s(doc["id"]), valores } : { valores });
       toast.success(doc ? "Documento atualizado." : "Documento enviado.");
       onClose();
     } catch (e) {
