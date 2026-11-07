@@ -18,7 +18,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { rowId } from "@/lib/crud";
 import { htmlParaTexto } from "@/lib/html-texto";
 import { enviarWhatsappEmpresa, uploadAnexo } from "@/lib/manutencoes";
-import { ACEITE_MIDIA_AVISO, LIMITE_MIDIA_MB, tipoMidiaAviso, validarMidiaAviso, PUBLICOS_AVISO, TIPOS_AVISO, planejarEnvios, preencherAviso, validarAviso, type CanalAviso, type Destinatario, type PublicoAviso } from "@/lib/cond-avisos";
+import { ACEITE_MIDIA_AVISO, LIMITE_MIDIA_MB, tipoMidiaAviso, validarMidiaAviso, PUBLICOS_AVISO, TIPOS_AVISO, planejarEnvios, preencherAviso, validarAviso, imagensDoHtml, type CanalAviso, type Destinatario, type PublicoAviso } from "@/lib/cond-avisos";
 import type { Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
 import { ordemNatural, s, useCondRows } from "./cond-data";
@@ -175,7 +175,8 @@ function NovoAvisoDialog({ condominioId, condominios, blocos, unidades, onClose 
     : pUnids.length ? `${pUnids.length} unidade(s)` : pTorres.length ? blocosOpt.filter((b) => pTorres.includes(b.value)).map((b) => b.label).join(", ") : "Todas as torres";
 
   async function enviar() {
-    const erro = validarAviso({ titulo, mensagemTexto: htmlParaTexto(mensagem), canais, condominios: condIds });
+    const imagensTexto = imagensDoHtml(mensagem);
+    const erro = validarAviso({ titulo, mensagemTexto: htmlParaTexto(mensagem), canais, condominios: condIds, temImagem: imagensTexto.length > 0 });
     if (erro) { toast.error(erro); return; }
     if (!plano.envios.length) { toast.error("Nenhuma pessoa com contato para esse público."); return; }
     const ok = await confirmar({ title: "Enviar aviso agora?", description: `${plano.envios.length} mensagem(ns) para ${plano.pessoas} pessoa(s). Não é possível desfazer.`, confirmText: "Enviar" });
@@ -202,7 +203,10 @@ function NovoAvisoDialog({ condominioId, condominios, blocos, unidades, onClose 
           try {
             if (e.canal === "whatsapp") {
               const texto = `*${titulo.trim()}*\n\n${preencherAviso(htmlParaTexto(mensagem), vars)}`;
-              motivo = await enviarWhatsappEmpresa(rowId(empresa ?? {}), e.destino, texto, midia);
+              // Imagens do texto saem como fotos; a legenda vai na primeira mídia, o anexo fecha a sequência.
+              const midias = [...imagensTexto.map((url, n) => ({ url, tipo: "imagem" as const, nome: `imagem-${n + 1}.jpg` })), ...(midia ? [midia] : [])];
+              if (!midias.length) motivo = await enviarWhatsappEmpresa(rowId(empresa ?? {}), e.destino, texto);
+              for (let k = 0; k < midias.length && !motivo; k++) motivo = await enviarWhatsappEmpresa(rowId(empresa ?? {}), e.destino, k === 0 ? texto : "", midias[k]);
             } else {
               const { data, error: fe } = await supabase.functions.invoke("cobranca-regua", { body: { acao: "cond_aviso_email", condominio_id: cid, para: e.destino, nome: e.nome, unidades: e.unidades, titulo: titulo.trim(), tipo_label: tipoLabel(tipo), mensagem: preencherAviso(mensagem, vars), midia_url: midia?.url, midia_tipo: midia?.tipo, midia_nome: midia?.nome } });
               motivo = fe ? fe.message : (data as Row | null)?.["erro"] ? s((data as Row)["erro"]) : null;
@@ -257,8 +261,8 @@ function NovoAvisoDialog({ condominioId, condominios, blocos, unidades, onClose 
             </div>
             <div>
               <Label className="mb-1.5 block">Texto</Label>
-              <TextoRico value={mensagem} onChange={setMensagem} minHeight={140} placeholder="Escreva o comunicado…" />
-              <p className="mt-1 text-xs text-muted-foreground">Use {"{{nome}}"}, {"{{unidade}}"} e {"{{condominio}}"} para personalizar. No WhatsApp a formatação vira texto simples.</p>
+              <TextoRico value={mensagem} onChange={setMensagem} minHeight={140} placeholder="Escreva o comunicado, cole ou arraste uma imagem…" enviarImagem={uploadAnexo} />
+              <p className="mt-1 text-xs text-muted-foreground">Use {"{{nome}}"}, {"{{unidade}}"} e {"{{condominio}}"} para personalizar. Imagens no texto vão como foto no WhatsApp; a formatação vira texto simples.</p>
             </div>
             <div>
               <Label className="mb-1.5 block">Anexo (opcional)</Label>

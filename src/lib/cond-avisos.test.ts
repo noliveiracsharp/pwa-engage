@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { papelNoPublico, planejarEnvios, preencherAviso, tipoMidiaAviso, validarAviso, validarMidiaAviso, type Destinatario } from "./cond-avisos";
+import { imagensDoHtml, papelNoPublico, planejarEnvios, preencherAviso, tipoMidiaAviso, validarAviso, validarMidiaAviso, type Destinatario } from "./cond-avisos";
 
 const d = (o: Partial<Destinatario>): Destinatario => ({ condominio_id: "c1", cond_unidade_id: "u1", unidade: "101", bloco: "Torre 1", usuario_id: "p1", nome: "Ana Lima", email: "ana@x.com", celular: "(11) 99999-0000", papel: "proprietario", ...o });
 
@@ -47,5 +47,16 @@ describe("anexo do aviso", () => {
   it("recusa vídeo acima de 16 MB", () => {
     expect(validarMidiaAviso({ type: "video/mp4", name: "v.mp4", size: 17 * 1024 * 1024 })).toMatch(/16 MB/);
     expect(validarMidiaAviso({ type: "video/mp4", name: "v.mp4", size: 15 * 1024 * 1024 })).toBeNull();
+  });
+});
+
+describe("imagem dentro do texto do aviso", () => {
+  const base = { titulo: "Festa", canais: ["whatsapp" as const], condominios: ["c1"] };
+  it("aceita aviso que é só uma imagem", () => {
+    expect(validarAviso({ ...base, mensagemTexto: "", temImagem: true })).toBeNull();
+    expect(validarAviso({ ...base, mensagemTexto: "" })).toMatch(/imagem/);
+  });
+  it("lista as imagens http(s) em ordem, sem repetir e ignorando data:", () => {
+    expect(imagensDoHtml('<p>a</p><img src="https://x/1.png"><img src=\'https://x/2.jpg\'><img src="https://x/1.png"><img src="data:image/png;base64,AA">')).toEqual(["https://x/1.png", "https://x/2.jpg"]);
   });
 });
