@@ -79,7 +79,7 @@ export function CondominiosPage() {
   const unidadesBloco = unidades.filter((u) => s(u["cond_bloco_id"]) === blocoId);
   const termo = busca.trim().toLowerCase();
   const [filtroOcup, setFiltroOcup] = useState<string>("");
-  const ocupDe = (u: Row) => (u["status"] === false ? "inativa" : s(u["ocupacao"]) || "propria");
+  const ocupDe = (u: Row) => (u["status"] === false ? "inativa" : s(u["ocupacao"]) || "vazia");
   const filtradas = unidadesBloco.filter((u) => (!termo || s(u["numero"]).toLowerCase().includes(termo)) && (!filtroOcup || ocupDe(u) === filtroOcup));
 
   // Agrupa por andar, do mais alto para o térreo (como o prédio é visto).
