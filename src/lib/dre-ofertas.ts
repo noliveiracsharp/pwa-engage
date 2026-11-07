@@ -18,11 +18,11 @@ export type DreLinha = {
 
 const r2 = (v: number) => Math.round(v * 100) / 100;
 
-/** Comissões só contam quando o papel tem beneficiário definido. */
+/** Comissões registradas da oferta: pessoas (com beneficiário) e fundos/reservas (sem beneficiário, ligados na oferta). */
 export function comissoesDaOferta(comissoes: Row[], orcamentoId: string): number {
   return r2(
     comissoes
-      .filter((c) => String(c["orcamento_id"] ?? "") === orcamentoId && c["beneficiario_id"])
+      .filter((c) => String(c["orcamento_id"] ?? "") === orcamentoId && (c["beneficiario_id"] || c["papel_id"] || c["conta_bancaria_id"]))
       .reduce((s, c) => s + num(c["valor"]), 0),
   );
 }

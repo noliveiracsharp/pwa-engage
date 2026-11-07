@@ -170,3 +170,22 @@ export function recebidoPorOferta(
   }
   return m;
 }
+
+/* ------------------------------------------------------------------ */
+/* Extrato: agrupamento e elegibilidade                                */
+/* ------------------------------------------------------------------ */
+
+/** Grupo do extrato: pessoa pelo beneficiário; fundo/reserva separado por papel (cada um vai para sua aplicação). */
+export function grupoComissao(r: Record<string, unknown>): { chave: string; fundo: boolean } {
+  const b = String(r["beneficiario_id"] ?? "");
+  if (b) return { chave: b, fundo: false };
+  return { chave: `fundo:${String(r["papel_id"] ?? r["papel_nome"] ?? "")}`, fundo: true };
+}
+
+/** Comissão só é real quando a Oferta foi fechada (situação/etapa de Ativação ou "Venda ganha"). */
+export function comissaoValida(
+  r: Record<string, unknown>,
+  ofertaAtivada: (orcamentoId: string) => boolean,
+): boolean {
+  return ofertaAtivada(String(r["orcamento_id"] ?? ""));
+}
