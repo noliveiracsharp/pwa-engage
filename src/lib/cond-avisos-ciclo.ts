@@ -66,3 +66,18 @@ export function validarAgendamento(iso: string, agora = new Date()): string | nu
   if (d.getTime() <= agora.getTime()) return "O agendamento precisa ser no futuro.";
   return null;
 }
+
+/** Robôs que baixam imagens do e-mail sozinhos (proxy do Gmail, Apple, antivírus) — não são leitura humana. */
+const ROBOS_EMAIL = /googleimageproxy|ggpht|yahoomailproxy|bingpreview|outlook-?(ios|android)?-?linkpreview|microsoft office protocol|barracuda|mimecast|proofpoint|symantec|trendmicro|safelinks|bot\b|crawler|spider|preview|curl|wget|python|headless/i;
+export function ehRoboDeEmail(userAgent: string | null | undefined): boolean {
+  const ua = (userAgent ?? "").trim();
+  if (!ua) return true;
+  // Apple Mail Privacy baixa via "Mozilla/5.0" puro, sem navegador identificável.
+  if (/^Mozilla\/5\.0$/i.test(ua)) return true;
+  return ROBOS_EMAIL.test(ua);
+}
+
+/** Canal da leitura pelo link pessoal: segue o canal por onde a pessoa recebeu. */
+export function canalDoLink(v: unknown): "email" | "whatsapp" | "sistema" {
+  return v === "email" || v === "whatsapp" ? v : "sistema";
+}

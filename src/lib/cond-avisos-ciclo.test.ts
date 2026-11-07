@@ -35,3 +35,19 @@ describe("ciclo de avisos", () => {
     expect(validarAgendamento("2026-11-08T11:00:00Z", agora)).toBeNull();
   });
 });
+
+import { canalDoLink, ehRoboDeEmail } from "./cond-avisos-ciclo";
+describe("leitura real de avisos", () => {
+  it("ignora o proxy de imagens do Gmail e pedidos sem identificação", () => {
+    expect(ehRoboDeEmail("Mozilla/5.0 (Windows NT 5.1; rv:11.0) Gecko Firefox/11.0 (via ggpht.com GoogleImageProxy)")).toBe(true);
+    expect(ehRoboDeEmail("")).toBe(true);
+    expect(ehRoboDeEmail("Mozilla/5.0")).toBe(true);
+  });
+  it("aceita navegador/app de uma pessoa", () => {
+    expect(ehRoboDeEmail("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148")).toBe(false);
+  });
+  it("link pessoal registra o canal por onde recebeu", () => {
+    expect(canalDoLink("whatsapp")).toBe("whatsapp");
+    expect(canalDoLink("x")).toBe("sistema");
+  });
+});
