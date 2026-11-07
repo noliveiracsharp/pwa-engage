@@ -7,6 +7,7 @@ const GIF = Uint8Array.from(atob("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAA
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export const Route = createFileRoute("/api/public/aviso-lido/$id")({
+  staticData: { sitemap: false },
   server: {
     handlers: {
       GET: async ({ params }) => {

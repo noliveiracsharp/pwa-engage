@@ -92,7 +92,7 @@ export function AvisosPanel({ condominioId, condominios, blocos, unidades, perms
       confirmText: "Prosseguir", destructive: true,
     });
     if (!ok) return;
-    const motivo = await perguntar({ title: "Motivo do cancelamento", description: notifica ? "Este texto vai no comunicado de cancelamento." : undefined, multiline: true, required: true, placeholder: "Ex.: a manutenção foi adiada para a próxima semana." });
+    const motivo = await perguntar({ title: "Motivo do cancelamento", ...(notifica ? { description: "Este texto vai no comunicado de cancelamento." } : {}), multiline: true, required: true, placeholder: "Ex.: a manutenção foi adiada para a próxima semana." });
     if (!motivo?.trim()) return;
     try {
       await db.from("cond_avisos").update({ status: "cancelado", motivo_cancelamento: motivo.trim(), cancelado_em: new Date().toISOString(), agendado_para: null }).eq("id", a["id"]);
@@ -178,7 +178,7 @@ export function AvisosPanel({ condominioId, condominios, blocos, unidades, perms
           })}
       </div>
 
-      {editor && <AvisoEditorDialog base={editor.base} condominioId={condominioId} condominios={condominios} blocos={blocos} unidades={unidades} empresaId={empresaId} onClose={() => setEditor(null)} />}
+      {editor && <AvisoEditorDialog {...(editor.base ? { base: editor.base } : {})} condominioId={condominioId} condominios={condominios} blocos={blocos} unidades={unidades} empresaId={empresaId} onClose={() => setEditor(null)} />}
       {leituras && <LeiturasDialog avisos={leituras} onClose={() => setLeituras(null)} />}
       {status && <StatusEnvioDialog aviso={status} onClose={() => setStatus(null)} />}
       {reenviar && <ReenviarDialog aviso={reenviar} empresaId={empresaId} nomeCondominio={nomeCond} onClose={() => setReenviar(null)} />}

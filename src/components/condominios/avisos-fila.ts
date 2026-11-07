@@ -84,7 +84,8 @@ async function processar({ avisoId, empresaId, nomeCondominio }: { avisoId: stri
     const origem = origemPublica();
     let feito = 0, falhas = 0, i = 0;
 
-    async function um(e: Row) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    async function um(e: any) {
       const vars = { nome: s(e.nome), unidade: s(e.unidades), condominio: nomeCondominio };
       let motivo: string | null = null;
       try {
