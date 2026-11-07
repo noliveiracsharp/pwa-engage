@@ -8,7 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { dataBrParaIso, isoParaBr, mascaraData } from "@/lib/cond-pessoa";
 
 /** Data dd/mm/aaaa com ícone que abre o calendário. Valor em ISO (aaaa-mm-dd). */
-export function CampoData({ id, value, onChange, disabled, inicio = 1920 }: { id?: string; value: string; onChange: (iso: string) => void; disabled?: boolean; inicio?: number }) {
+export function CampoData({ id, value, onChange, disabled, inicio = 1920, nascimento = false }: { id?: string; value: string; onChange: (iso: string) => void; disabled?: boolean; inicio?: number; nascimento?: boolean }) {
   const [txt, setTxt] = useState(isoParaBr(value));
   const [aberto, setAberto] = useState(false);
   const data = value ? new Date(`${value}T12:00:00`) : undefined;
@@ -21,8 +21,8 @@ export function CampoData({ id, value, onChange, disabled, inicio = 1920 }: { id
           <Button type="button" variant="outline" size="icon" disabled={disabled} aria-label="Abrir calendário"><CalendarIcon className="size-4" /></Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="end">
-          <Calendar mode="single" locale={ptBR} captionLayout="dropdown" startMonth={new Date(inicio, 0)} endMonth={new Date()}
-            selected={data} defaultMonth={data ?? new Date(1990, 0)} className="pointer-events-auto p-3"
+          <Calendar mode="single" locale={ptBR} captionLayout="dropdown" startMonth={new Date(Math.min(inicio, new Date().getFullYear()), 0)} endMonth={nascimento ? new Date() : new Date(new Date().getFullYear() + 30, 11)}
+            selected={data} defaultMonth={data ?? (nascimento ? new Date(1990, 0) : new Date())} className="pointer-events-auto p-3"
             onSelect={(d) => {
               if (!d) return;
               const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
