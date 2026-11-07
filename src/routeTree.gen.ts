@@ -85,6 +85,7 @@ import { Route as ApiPublicLeadsRouteImport } from './routes/api/public/leads'
 import { Route as ApiPublicManifestRouteImport } from './routes/api/public/manifest'
 import { Route as ApiPublicVersaoRouteImport } from './routes/api/public/versao'
 import { Route as ApiPublicZapiWebhookRouteImport } from './routes/api/public/zapi-webhook'
+import { Route as ApiPublicAvisoLidoIdRouteImport } from './routes/api/public/aviso-lido.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -485,6 +486,11 @@ const ApiPublicZapiWebhookRoute = ApiPublicZapiWebhookRouteImport.update({
   path: '/api/public/zapi-webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicAvisoLidoIdRoute = ApiPublicAvisoLidoIdRouteImport.update({
+  id: '/api/public/aviso-lido/$id',
+  path: '/api/public/aviso-lido/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -562,6 +568,7 @@ export interface FileRoutesByFullPath {
   '/api/public/manifest': typeof ApiPublicManifestRoute
   '/api/public/versao': typeof ApiPublicVersaoRoute
   '/api/public/zapi-webhook': typeof ApiPublicZapiWebhookRoute
+  '/api/public/aviso-lido/$id': typeof ApiPublicAvisoLidoIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -639,6 +646,7 @@ export interface FileRoutesByTo {
   '/api/public/manifest': typeof ApiPublicManifestRoute
   '/api/public/versao': typeof ApiPublicVersaoRoute
   '/api/public/zapi-webhook': typeof ApiPublicZapiWebhookRoute
+  '/api/public/aviso-lido/$id': typeof ApiPublicAvisoLidoIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -718,6 +726,7 @@ export interface FileRoutesById {
   '/api/public/manifest': typeof ApiPublicManifestRoute
   '/api/public/versao': typeof ApiPublicVersaoRoute
   '/api/public/zapi-webhook': typeof ApiPublicZapiWebhookRoute
+  '/api/public/aviso-lido/$id': typeof ApiPublicAvisoLidoIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -797,6 +806,7 @@ export interface FileRouteTypes {
     | '/api/public/manifest'
     | '/api/public/versao'
     | '/api/public/zapi-webhook'
+    | '/api/public/aviso-lido/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -874,6 +884,7 @@ export interface FileRouteTypes {
     | '/api/public/manifest'
     | '/api/public/versao'
     | '/api/public/zapi-webhook'
+    | '/api/public/aviso-lido/$id'
   id:
     | '__root__'
     | '/'
@@ -952,6 +963,7 @@ export interface FileRouteTypes {
     | '/api/public/manifest'
     | '/api/public/versao'
     | '/api/public/zapi-webhook'
+    | '/api/public/aviso-lido/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -983,6 +995,7 @@ export interface RootRouteChildren {
   ApiPublicManifestRoute: typeof ApiPublicManifestRoute
   ApiPublicVersaoRoute: typeof ApiPublicVersaoRoute
   ApiPublicZapiWebhookRoute: typeof ApiPublicZapiWebhookRoute
+  ApiPublicAvisoLidoIdRoute: typeof ApiPublicAvisoLidoIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1519,6 +1532,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicZapiWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/aviso-lido/$id': {
+      id: '/api/public/aviso-lido/$id'
+      path: '/api/public/aviso-lido/$id'
+      fullPath: '/api/public/aviso-lido/$id'
+      preLoaderRoute: typeof ApiPublicAvisoLidoIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -1659,6 +1679,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicManifestRoute: ApiPublicManifestRoute,
   ApiPublicVersaoRoute: ApiPublicVersaoRoute,
   ApiPublicZapiWebhookRoute: ApiPublicZapiWebhookRoute,
+  ApiPublicAvisoLidoIdRoute: ApiPublicAvisoLidoIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
