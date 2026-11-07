@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Car, DoorOpen, FileText, KeyRound, Loader2, Mail, PawPrint, Phone, Pencil, Plus, Search, Settings2, ShieldOff, Trash2, UserRound, Users, Wrench } from "lucide-react";
+import { ArrowRightLeft, Car, DoorOpen, FileText, KeyRound, Loader2, Mail, PawPrint, Phone, Pencil, Plus, Search, Settings2, ShieldOff, Trash2, UserRound, Users, Wrench } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { formatCpfCnpj } from "@/lib/input-masks";
 import { FotoCond } from "./FotoCond";
 import { PessoaDialog, type Pessoa } from "./PessoaDialog";
+import { TransferenciaDialog } from "./TransferenciaDialog";
 import { cn } from "@/lib/utils";
 import { OCUPACOES, PAPEIS, TIPOS_UNIDADE, s, useCatalogo, useCondRows, useCondSalvar } from "./cond-data";
 
@@ -101,6 +102,7 @@ function DadosUnidade({ unidade, condominioId, perms, onClose, onOcupacao }: { u
     status: unidade["status"] !== false,
   });
   const ro = !perms.canUpdate;
+  const [excluindo, setExcluindo] = useState(false);
   const num = (x: string) => (x.trim() === "" ? null : Number(x.replace(",", ".")));
   const { data: pessoas = [] } = usePessoas(s(unidade["id"]));
   const { data: veiculos = [] } = useCondRows("cond_unidades_veiculos", "cond_unidade_id", s(unidade["id"]));
@@ -122,6 +124,7 @@ function DadosUnidade({ unidade, condominioId, perms, onClose, onOcupacao }: { u
   );
   return (
     <div className="flex flex-col gap-4">
+      {excluindo && <TransferenciaDialog modo="excluir" unidade={unidade} condominioId={condominioId} onClose={() => setExcluindo(false)} onConcluido={onClose} />}
       <div className="overflow-hidden rounded-xl border bg-gradient-to-br from-primary/10 via-card to-card shadow-sm">
         <div className="flex flex-wrap items-center gap-4 p-5">
           <div className="flex size-16 shrink-0 flex-col items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-md">
@@ -177,11 +180,7 @@ function DadosUnidade({ unidade, condominioId, perms, onClose, onOcupacao }: { u
       </Secao>
       <div className="sticky bottom-0 flex justify-between gap-2 border-t bg-background pt-3">
         {perms.canDelete ? (
-          <Button variant="ghost" className="text-destructive" onClick={async () => {
-            if (!(await confirmar({ title: "Excluir unidade?", description: "Moradores, pets, documentos e veículos vinculados serão removidos.", destructive: true, confirmText: "Excluir" }))) return;
-            await salvar.mutateAsync({ id: s(unidade["id"]), excluir: true });
-            toast.success("Unidade excluída."); onClose();
-          }}><Trash2 className="size-4" /> Excluir</Button>
+          <Button variant="ghost" className="text-destructive" onClick={() => setExcluindo(true)}><Trash2 className="size-4" /> Excluir</Button>
         ) : <span />}
         <div className="flex gap-2">
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
@@ -227,6 +226,9 @@ function Pessoas({ unidadeId, condominioId, perms, lado, papeis, titulo }: { uni
   const [form, setForm] = useState<{ pessoa: Pessoa | null; vinculo: Row | null } | null>(null);
   const [permsDe, setPermsDe] = useState<Row | null>(null);
   const [ocupado, setOcupado] = useState(false);
+  const [transferir, setTransferir] = useState<{ v: Row; nome: string } | null>(null);
+  const { data: unidadesCond = [] } = useCondRows("cond_unidades", "condominio_id", condominioId);
+  const unidadeRow = unidadesCond.find((u) => s(u["id"]) === unidadeId) ?? { id: unidadeId };
   const meus = vinculos.filter((v) => papeis.includes(s(v["papel"])) && (s(v["lado"]) || "proprietario") === lado);
   const pessoa = (uid: string) => pessoas.find((p) => p.usuario_id === uid);
   const papelLabel = (p: string) => PAPEIS.find((x) => x.value === p)?.label ?? p;
@@ -268,6 +270,7 @@ function Pessoas({ unidadeId, condominioId, perms, lado, papeis, titulo }: { uni
 
   return (
     <div className="space-y-3">
+      {transferir && <TransferenciaDialog modo="morador" unidade={unidadeRow} condominioId={condominioId} vinculo={transferir.v} pessoaNome={transferir.nome} onClose={() => setTransferir(null)} />}
       <Cabecalho titulo={titulo} total={meus.length} podeCriar={perms.canCreate} onNovo={() => setForm({ pessoa: null, vinculo: null })} />
       {meus.length === 0 ? <Vazio texto="Ninguém cadastrado." /> : meus.map((v) => {
         const p = pessoa(s(v["usuario_id"]));
@@ -287,6 +290,7 @@ function Pessoas({ unidadeId, condominioId, perms, lado, papeis, titulo }: { uni
             <div className="flex flex-wrap gap-1">
               {perms.canUpdate && p && <Button size="sm" variant="outline" onClick={() => setForm({ pessoa: p, vinculo: v })}><Pencil className="size-4" /> Editar</Button>}
               <Button size="sm" variant="outline" onClick={() => setPermsDe(v)}><Settings2 className="size-4" /> Permissões</Button>
+              {perms.canUpdate && <Button size="sm" variant="outline" onClick={() => setTransferir({ v, nome: p?.nome ?? "pessoa" })}><ArrowRightLeft className="size-4" /> Transferir</Button>}
               {perms.canUpdate && p && <Button size="sm" variant="outline" disabled={ocupado} onClick={() => enviarLink(p)}><Mail className="size-4" /> Enviar link de senha</Button>}
               {perms.canUpdate && p && (p.tem_acesso ? (
                 <Button size="sm" variant="outline" className="text-destructive" disabled={ocupado} onClick={async () => {
