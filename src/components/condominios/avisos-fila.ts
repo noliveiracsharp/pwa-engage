@@ -90,13 +90,14 @@ async function processar({ avisoId, empresaId, nomeCondominio }: { avisoId: stri
       let motivo: string | null = null;
       try {
         if (e.canal === "whatsapp") {
-          const texto = `*${titulo}*\n\n${preencherAviso(textoPlano, vars)}`;
+          const texto = `*${titulo}*\n\n${preencherAviso(textoPlano, vars)}\n\n👉 Ver comunicado oficial: ${origem}/aviso/${s(e.id)}`;
           const midias = [...imagensTexto.map((url, n) => ({ url, tipo: "imagem" as const, nome: `imagem-${n + 1}.jpg` })), ...(midia ? [midia] : [])];
           if (!midias.length) motivo = await enviarWhatsappEmpresa(empresaId, s(e.destino), texto);
           for (let k = 0; k < midias.length && !motivo; k++) motivo = await enviarWhatsappEmpresa(empresaId, s(e.destino), k === 0 ? texto : "", midias[k]);
         } else {
+          const link = `<p style="margin:24px 0 0"><a href="${origem}/aviso/${s(e.id)}" target="_blank" style="display:inline-block;padding:10px 18px;border-radius:6px;background:#2563eb;color:#ffffff;text-decoration:none;font-weight:600">Ver comunicado oficial</a></p>`;
           const pixel = `<img src="${origem}/api/public/aviso-lido/${s(e.id)}" width="1" height="1" alt="" style="display:block;width:1px;height:1px;border:0" />`;
-          const { data, error: fe } = await supabase.functions.invoke("cobranca-regua", { body: { acao: "cond_aviso_email", condominio_id: av.condominio_id, para: e.destino, nome: e.nome, unidades: e.unidades, titulo, tipo_label: tipoLabel, mensagem: preencherAviso(mensagem, vars) + pixel, midia_url: midia?.url, midia_tipo: midia?.tipo, midia_nome: midia?.nome } });
+          const { data, error: fe } = await supabase.functions.invoke("cobranca-regua", { body: { acao: "cond_aviso_email", condominio_id: av.condominio_id, para: e.destino, nome: e.nome, unidades: e.unidades, titulo, tipo_label: tipoLabel, mensagem: preencherAviso(mensagem, vars) + link + pixel, midia_url: midia?.url, midia_tipo: midia?.tipo, midia_nome: midia?.nome } });
           motivo = fe ? fe.message : (data as Row | null)?.["erro"] ? s((data as Row)["erro"]) : null;
         }
       } catch (x) { motivo = x instanceof Error ? x.message : "Falha no envio."; }

@@ -57,6 +57,7 @@ import { Route as AuthenticatedUnid_medidaRouteImport } from './routes/_authenti
 import { Route as AuthenticatedUsuariosRouteImport } from './routes/_authenticated/usuarios'
 import { Route as AuthenticatedVeiculosRouteImport } from './routes/_authenticated/veiculos'
 import { Route as AtivoTokenRouteImport } from './routes/ativo.$token'
+import { Route as AvisoIdRouteImport } from './routes/aviso.$id'
 import { Route as ChamadaSalaRouteImport } from './routes/chamada.$sala'
 import { Route as CobrancaTokenRouteImport } from './routes/cobranca.$token'
 import { Route as CompartilhadoTokenRouteImport } from './routes/compartilhado.$token'
@@ -334,6 +335,11 @@ const AtivoTokenRoute = AtivoTokenRouteImport.update({
   path: '/ativo/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AvisoIdRoute = AvisoIdRouteImport.update({
+  id: '/aviso/$id',
+  path: '/aviso/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ChamadaSalaRoute = ChamadaSalaRouteImport.update({
   id: '/chamada/$sala',
   path: '/chamada/$sala',
@@ -540,6 +546,7 @@ export interface FileRoutesByFullPath {
   '/usuarios': typeof AuthenticatedUsuariosRoute
   '/veiculos': typeof AuthenticatedVeiculosRoute
   '/ativo/$token': typeof AtivoTokenRoute
+  '/aviso/$id': typeof AvisoIdRoute
   '/chamada/$sala': typeof ChamadaSalaRoute
   '/cobranca/$token': typeof CobrancaTokenRoute
   '/compartilhado/$token': typeof CompartilhadoTokenRoute
@@ -618,6 +625,7 @@ export interface FileRoutesByTo {
   '/usuarios': typeof AuthenticatedUsuariosRoute
   '/veiculos': typeof AuthenticatedVeiculosRoute
   '/ativo/$token': typeof AtivoTokenRoute
+  '/aviso/$id': typeof AvisoIdRoute
   '/chamada/$sala': typeof ChamadaSalaRoute
   '/cobranca/$token': typeof CobrancaTokenRoute
   '/compartilhado/$token': typeof CompartilhadoTokenRoute
@@ -698,6 +706,7 @@ export interface FileRoutesById {
   '/_authenticated/usuarios': typeof AuthenticatedUsuariosRoute
   '/_authenticated/veiculos': typeof AuthenticatedVeiculosRoute
   '/ativo/$token': typeof AtivoTokenRoute
+  '/aviso/$id': typeof AvisoIdRoute
   '/chamada/$sala': typeof ChamadaSalaRoute
   '/cobranca/$token': typeof CobrancaTokenRoute
   '/compartilhado/$token': typeof CompartilhadoTokenRoute
@@ -778,6 +787,7 @@ export interface FileRouteTypes {
     | '/usuarios'
     | '/veiculos'
     | '/ativo/$token'
+    | '/aviso/$id'
     | '/chamada/$sala'
     | '/cobranca/$token'
     | '/compartilhado/$token'
@@ -856,6 +866,7 @@ export interface FileRouteTypes {
     | '/usuarios'
     | '/veiculos'
     | '/ativo/$token'
+    | '/aviso/$id'
     | '/chamada/$sala'
     | '/cobranca/$token'
     | '/compartilhado/$token'
@@ -935,6 +946,7 @@ export interface FileRouteTypes {
     | '/_authenticated/usuarios'
     | '/_authenticated/veiculos'
     | '/ativo/$token'
+    | '/aviso/$id'
     | '/chamada/$sala'
     | '/cobranca/$token'
     | '/compartilhado/$token'
@@ -979,6 +991,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermosRoute: typeof TermosRoute
   AtivoTokenRoute: typeof AtivoTokenRoute
+  AvisoIdRoute: typeof AvisoIdRoute
   ChamadaSalaRoute: typeof ChamadaSalaRoute
   CobrancaTokenRoute: typeof CobrancaTokenRoute
   CompartilhadoTokenRoute: typeof CompartilhadoTokenRoute
@@ -1336,6 +1349,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AtivoTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/aviso/$id': {
+      id: '/aviso/$id'
+      path: '/aviso/$id'
+      fullPath: '/aviso/$id'
+      preLoaderRoute: typeof AvisoIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/chamada/$sala': {
       id: '/chamada/$sala'
       path: '/chamada/$sala'
@@ -1663,6 +1683,7 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermosRoute: TermosRoute,
   AtivoTokenRoute: AtivoTokenRoute,
+  AvisoIdRoute: AvisoIdRoute,
   ChamadaSalaRoute: ChamadaSalaRoute,
   CobrancaTokenRoute: CobrancaTokenRoute,
   CompartilhadoTokenRoute: CompartilhadoTokenRoute,

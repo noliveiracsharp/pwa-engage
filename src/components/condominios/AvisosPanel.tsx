@@ -263,7 +263,10 @@ function LeiturasDialog({ avisos, onClose }: { avisos: Row[]; onClose: () => voi
         id: `${s(e["aviso_id"])}|${s(e["usuario_id"])}|${s(e["destino"])}`, aviso: s(av?.["titulo"]), unidade: s(e["unidades"]), nome: s(e["nome"]),
         contato: [...canais].map((c) => (c === "email" ? "E-mail" : "WhatsApp")).join(", "),
         entrega: status.has("enviado") ? "Entregue" : status.has("falha") ? "Falha" : "Pendente",
-        dataAviso: dtCurta(av?.["created_at"]), lido: ls[0] ? dtHora(ls[0]["lido_em"]) : "", onde: [...new Set(ls.map((l) => rotuloCanalLeitura(s(l["canal"]))))].join(", "),
+        dataAviso: dtCurta(av?.["created_at"]),
+        lido: ls[0] ? dtHora(ls[0]["lido_em"]) : "",
+        semConfirmacao: !ls.length && status.has("enviado") && canais.size === 1 && canais.has("whatsapp"),
+        onde: [...new Set(ls.map((l) => rotuloCanalLeitura(s(l["canal"]))))].join(", "),
       };
     })
       .filter((r) => filtro === "todos" || (filtro === "leram" ? !!r.lido : !r.lido))
@@ -274,7 +277,7 @@ function LeiturasDialog({ avisos, onClose }: { avisos: Row[]; onClose: () => voi
   const varios = avisos.length > 1;
   const titulo = varios ? `${avisos.length} avisos` : s(avisos[0]?.["titulo"]);
   const cab = [...(varios ? ["Aviso"] : []), "Unidade", "Usuário", "Recebeu por", "Entrega", "Data aviso", "Data leitura", "Onde visualizou"];
-  const valores = (r: (typeof linhas)[number]) => [...(varios ? [r.aviso] : []), r.unidade, r.nome, r.contato, r.entrega, r.dataAviso, r.lido || "Não visualizou", r.onde || "—"];
+  const valores = (r: (typeof linhas)[number]) => [...(varios ? [r.aviso] : []), r.unidade, r.nome, r.contato, r.entrega, r.dataAviso, r.lido || (r.semConfirmacao ? "Não foi possível conferir" : "Não visualizou"), r.onde || "—"];
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
@@ -304,14 +307,14 @@ function LeiturasDialog({ avisos, onClose }: { avisos: Row[]; onClose: () => voi
                     <TableCell className="text-sm">{r.contato}</TableCell>
                     <TableCell><Badge variant="outline" className={r.entrega === "Entregue" ? "border-success/40 text-success" : r.entrega === "Falha" ? "border-destructive/40 text-destructive" : ""}>{r.entrega}</Badge></TableCell>
                     <TableCell className="text-sm">{r.dataAviso}</TableCell>
-                    <TableCell className={cn("text-sm", !r.lido && "text-muted-foreground")}>{r.lido || "Não visualizou"}</TableCell>
+                    <TableCell className={cn("text-sm", !r.lido && "text-muted-foreground")}>{r.lido || (r.semConfirmacao ? "Não foi possível conferir" : "Não visualizou")}</TableCell>
                     <TableCell className="text-sm">{r.onde || "—"}</TableCell>
                   </TableRow>
                 ))}
             </TableBody>
           </Table>
         </div>
-        <p className="text-xs text-muted-foreground">A leitura por e-mail é registrada quando a pessoa abre a mensagem com as imagens liberadas. O WhatsApp não informa leitura ao sistema.</p>
+        <p className="text-xs text-muted-foreground">Cada mensagem leva um link pessoal do comunicado: ao abrir por ele, a leitura é registrada com o canal (E-mail ou WhatsApp). No e-mail, a abertura com imagens liberadas também conta; robôs de pré-carregamento (Gmail, Apple, antivírus) são ignorados. No WhatsApp, sem clique no link, aparece "Não foi possível conferir".</p>
         <DialogFooter><Button variant="outline" onClick={onClose}>Fechar</Button></DialogFooter>
 
         <div className="dre-print-src" aria-hidden>
@@ -537,10 +540,10 @@ function AvisoEditorDialog({ base, condominioId, condominios, blocos, unidades, 
 
   return (
     <Dialog open onOpenChange={(o) => !o && !salvando && onClose()}>
-      <DialogContent className="max-h-[92vh] max-w-3xl overflow-y-auto">
-        <DialogHeader><DialogTitle className="flex items-center gap-2"><Megaphone className="size-5" /> {editando ? (novaVersao ? `Editar aviso — nova versão V${Number(base!["versao"] ?? 1) + 1}` : "Editar aviso agendado") : "Novo aviso"}</DialogTitle></DialogHeader>
+      <DialogContent className="flex max-h-[92vh] max-w-3xl flex-col overflow-hidden">
+        <DialogHeader className="shrink-0"><DialogTitle className="flex items-center gap-2"><Megaphone className="size-5" /> {editando ? (novaVersao ? `Editar aviso — nova versão V${Number(base!["versao"] ?? 1) + 1}` : "Editar aviso agendado") : "Novo aviso"}</DialogTitle></DialogHeader>
 
-        <div className="space-y-5">
+        <div className="-mx-6 min-h-0 flex-1 space-y-5 overflow-y-auto px-6 pb-2">
           {editando ? (
             <p className="rounded-md border bg-muted/30 p-3 text-sm">Destinatários: <b>{s(base!["abrangencia"])}</b> — os mesmos do aviso original ({Number(base!["total"] ?? 0)} contato(s)).</p>
           ) : (
@@ -629,7 +632,7 @@ function AvisoEditorDialog({ base, condominioId, condominios, blocos, unidades, 
           )}
         </div>
 
-        <DialogFooter className="sticky bottom-0 -mx-6 -mb-6 border-t bg-background px-6 py-3">
+        <DialogFooter className="-mx-6 -mb-6 shrink-0 border-t bg-background px-6 py-3">
           <Button variant="outline" onClick={onClose} disabled={salvando}>Cancelar</Button>
           <Button onClick={salvar} disabled={salvando || (!editando && isFetching)}>{salvando ? <Loader2 className="size-4 animate-spin" /> : agendar ? <CalendarClock className="size-4" /> : <Megaphone className="size-4" />} {editando && !novaVersao ? "Salvar" : agendar ? "Agendar aviso" : "Enviar aviso"}</Button>
         </DialogFooter>
