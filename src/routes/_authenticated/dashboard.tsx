@@ -328,7 +328,8 @@ function PainelComercial({ periodo }: { periodo: Periodo }) {
       const vG = ganhas.reduce((t, g) => t + g.v, 0);
       const conv = rows.length ? Math.round((nG / rows.length) * 100) : 0;
       const ticket = nG ? vG / nG : 0;
-      const minhas = comissoes.filter((c) => c["status"] !== "paga").reduce((t, c) => t + (Number(c["valor"]) || 0), 0);
+      const ganhaIds = new Set(rows.filter((o) => { const e = etapas.find((x) => x.id === String(o["kanban_etapa_id"] ?? "")); return e?.ganha || /ativac/i.test(String(o["situacao"] ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "")); }).map((o) => String(o["id"])));
+      const minhas = comissoes.filter((c) => c["status"] !== "paga" && ganhaIds.has(String(c["orcamento_id"]))).reduce((t, c) => t + (Number(c["valor"]) || 0), 0);
       return { grupos, semEtapa, conv, ticket, minhas, temKanban: !!kanbanId, temGanha: ganhas.length > 0 };
     },
   });

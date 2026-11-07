@@ -316,7 +316,7 @@ function Extrato({ canUpdate, canDelete }: { canUpdate: boolean; canDelete: bool
           <h2 className="text-xl font-semibold">Comissões por beneficiário</h2>
           <div className="grid gap-3 rounded-lg border p-3 sm:grid-cols-3">{filtros}</div>
           {isLoading && <p className="text-muted-foreground text-sm">Carregando…</p>}
-          {!isLoading && grupos.length === 0 && <p className="text-muted-foreground text-sm">Nenhuma comissão neste período.</p>}
+          {!isLoading && grupos.length === 0 && <p className="text-muted-foreground text-sm">Nenhuma comissão neste período. Só aparecem comissões de Ofertas em Ativação (cliente fechou).</p>}
           {grupos.map((g) => {
             const aberto = abertos.has(g.id);
             return (
