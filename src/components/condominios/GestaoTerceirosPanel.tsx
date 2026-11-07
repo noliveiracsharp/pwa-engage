@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { rowId, useTableRows } from "@/lib/crud";
 import { pick } from "@/lib/row";
 import { PhoneInput } from "@/components/data-table/PhoneInput";
+import { SindicaturaSecao } from "./SindicaturaSecao";
 
 const CAMPOS = ["tipo_gestao", "administradora_id", "facilities_id", "cond_contato_administradora", "cond_contato_portaria", "cond_portaria_modalidade"] as const;
 
@@ -87,6 +88,7 @@ export function GestaoTerceirosPanel({ condominioId, podeEditar }: { condominioI
           </div>
         )}
       </section>
+      <SindicaturaSecao condominioId={condominioId} podeEditar={podeEditar} />
     </div>
   );
 }
