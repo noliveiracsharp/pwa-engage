@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Loader2, Megaphone, Paperclip } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { mensagemEmailHtml } from "@/lib/email-html";
+import { mensagemEmailHtml } from "@/lib/regua-cobranca";
 import type { Row } from "@/lib/row";
 
 export const Route = createFileRoute("/aviso/$id")({
