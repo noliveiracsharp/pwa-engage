@@ -315,9 +315,12 @@ function PainelComercial({ periodo }: { periodo: Periodo }) {
   const { data } = useQuery({
     queryKey: ["dashboard", "ofertas", empresaId, periodo, usuarioId],
     queryFn: async () => {
-      const [rows, comissoes] = await Promise.all([
+      const comissoes = await rowsOf("orcamento_comissoes", empresaId, (q) => q.eq("beneficiario_id", usuarioId));
+      const idsCom = [...new Set(comissoes.filter((c) => c["status"] !== "paga").map((c) => String(c["orcamento_id"] ?? "")).filter(Boolean))];
+      const [rows, orcsCom] = await Promise.all([
         rowsOf("orcamentos", empresaId, (q) => q.gte("created_at", since)),
-        rowsOf("orcamento_comissoes", empresaId, (q) => q.eq("beneficiario_id", usuarioId)),
+        // Ofertas das comissões em aberto, de qualquer período (vendas antigas ainda a pagar).
+        idsCom.length ? rowsOf("orcamentos", empresaId, (q) => q.in("id", idsCom)) : Promise.resolve([] as Row[]),
       ]);
       const val = (r: Row) => Number(pick(r, ["total_liquido", "valor_total", "total"]) ?? 0) || 0;
       const kanbanId = await kanbanDoModulo("orcamentos", "orcamento");
@@ -328,7 +331,7 @@ function PainelComercial({ periodo }: { periodo: Periodo }) {
       const vG = ganhas.reduce((t, g) => t + g.v, 0);
       const conv = rows.length ? Math.round((nG / rows.length) * 100) : 0;
       const ticket = nG ? vG / nG : 0;
-      const ganhaIds = new Set(rows.filter((o) => { const e = etapas.find((x) => x.id === String(o["kanban_etapa_id"] ?? "")); return e?.ganha || /ativac/i.test(String(o["situacao"] ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "")); }).map((o) => String(o["id"])));
+      const ganhaIds = new Set(orcsCom.filter((o) => { const e = etapas.find((x) => x.id === String(o["kanban_etapa_id"] ?? "")); return e?.ganha || /ativac/i.test(String(o["situacao"] ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "")); }).map((o) => String(o["id"])));
       const minhas = comissoes.filter((c) => c["status"] !== "paga" && ganhaIds.has(String(c["orcamento_id"]))).reduce((t, c) => t + (Number(c["valor"]) || 0), 0);
       return { grupos, semEtapa, conv, ticket, minhas, temKanban: !!kanbanId, temGanha: ganhas.length > 0 };
     },
