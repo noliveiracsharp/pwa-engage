@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
-import { Building, Building2, Loader2, Mail, Megaphone, MessageCircle, Plus, Search, Users, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Building, Building2, FileText, Film, ImageIcon, Loader2, Paperclip, Mail, Megaphone, MessageCircle, Plus, Search, Users, X } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,8 +17,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { rowId } from "@/lib/crud";
 import { htmlParaTexto } from "@/lib/html-texto";
-import { enviarWhatsappEmpresa } from "@/lib/manutencoes";
-import { PUBLICOS_AVISO, TIPOS_AVISO, planejarEnvios, preencherAviso, validarAviso, type CanalAviso, type Destinatario, type PublicoAviso } from "@/lib/cond-avisos";
+import { enviarWhatsappEmpresa, uploadAnexo } from "@/lib/manutencoes";
+import { ACEITE_MIDIA_AVISO, LIMITE_MIDIA_MB, tipoMidiaAviso, validarMidiaAviso, PUBLICOS_AVISO, TIPOS_AVISO, planejarEnvios, preencherAviso, validarAviso, type CanalAviso, type Destinatario, type PublicoAviso } from "@/lib/cond-avisos";
 import type { Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
 import { ordemNatural, s, useCondRows } from "./cond-data";
@@ -133,6 +133,16 @@ function NovoAvisoDialog({ condominioId, condominios, blocos, unidades, onClose 
   const [whats, setWhats] = useState(true);
   const [email, setEmail] = useState(true);
   const [progresso, setProgresso] = useState<{ feito: number; total: number } | null>(null);
+  const [anexo, setAnexo] = useState<File | null>(null);
+  const previa = useMemo(() => (anexo ? URL.createObjectURL(anexo) : ""), [anexo]);
+  useEffect(() => () => { if (previa) URL.revokeObjectURL(previa); }, [previa]);
+  const tipoAnexo = anexo ? tipoMidiaAviso(anexo.type, anexo.name) : null;
+  function escolherAnexo(f: File | undefined) {
+    if (!f) return;
+    const motivo = validarMidiaAviso(f);
+    if (motivo) { toast.error(motivo); return; }
+    setAnexo(f);
+  }
 
   const condIds = escopo === "carteira" ? condominios.map((c) => c.value) : [condominioId];
   const blocosOpt = useMemo(() => [...blocos].sort((a, b) => ordemNatural(s(a["nome"]), s(b["nome"]))).map((b) => ({ value: s(b["id"]), label: s(b["nome"]) })), [blocos]);
@@ -171,11 +181,13 @@ function NovoAvisoDialog({ condominioId, condominios, blocos, unidades, onClose 
     const nomeCond = new Map(condominios.map((c) => [c.value, c.label]));
     setProgresso({ feito: 0, total: plano.envios.length });
     try {
+      let midia: { url: string; tipo: "imagem" | "video" | "documento"; nome: string } | undefined;
+      if (anexo && tipoAnexo) midia = { url: await uploadAnexo(anexo), tipo: tipoAnexo, nome: anexo.name };
       const porCond = new Map<string, typeof plano.envios>();
       for (const e of plano.envios) porCond.set(e.condominio_id, [...(porCond.get(e.condominio_id) ?? []), e]);
       let feito = 0;
       for (const [cid, envios] of porCond) {
-        const { data: av, error } = await db.from("cond_avisos").insert({ lote_id: lote, condominio_id: cid, tipo, titulo: titulo.trim(), mensagem, canais, publico, abrangencia, total: envios.length }).select("id").single();
+        const { data: av, error } = await db.from("cond_avisos").insert({ lote_id: lote, condominio_id: cid, tipo, titulo: titulo.trim(), mensagem, canais, publico, abrangencia, total: envios.length, ...(midia ? { midia_url: midia.url, midia_tipo: midia.tipo, midia_nome: midia.nome } : {}) }).select("id").single();
         if (error) throw new Error(error.message);
         const { data: linhas, error: e2 } = await db.from("cond_avisos_envios").insert(envios.map((e) => ({ aviso_id: av.id, usuario_id: e.usuario_id, cond_unidade_id: e.cond_unidade_id, nome: e.nome, unidades: e.unidades, canal: e.canal, destino: e.destino }))).select("id");
         if (e2) throw new Error(e2.message);
@@ -187,9 +199,9 @@ function NovoAvisoDialog({ condominioId, condominios, blocos, unidades, onClose 
           try {
             if (e.canal === "whatsapp") {
               const texto = `*${titulo.trim()}*\n\n${preencherAviso(htmlParaTexto(mensagem), vars)}`;
-              motivo = await enviarWhatsappEmpresa(rowId(empresa ?? {}), e.destino, texto);
+              motivo = await enviarWhatsappEmpresa(rowId(empresa ?? {}), e.destino, texto, midia);
             } else {
-              const { data, error: fe } = await supabase.functions.invoke("cobranca-regua", { body: { acao: "cond_aviso_email", condominio_id: cid, para: e.destino, nome: e.nome, unidades: e.unidades, titulo: titulo.trim(), tipo_label: tipoLabel(tipo), mensagem: preencherAviso(mensagem, vars) } });
+              const { data, error: fe } = await supabase.functions.invoke("cobranca-regua", { body: { acao: "cond_aviso_email", condominio_id: cid, para: e.destino, nome: e.nome, unidades: e.unidades, titulo: titulo.trim(), tipo_label: tipoLabel(tipo), mensagem: preencherAviso(mensagem, vars), midia_url: midia?.url, midia_tipo: midia?.tipo, midia_nome: midia?.nome } });
               motivo = fe ? fe.message : (data as Row | null)?.["erro"] ? s((data as Row)["erro"]) : null;
             }
           } catch (x) { motivo = x instanceof Error ? x.message : "Falha no envio."; }
@@ -244,6 +256,29 @@ function NovoAvisoDialog({ condominioId, condominios, blocos, unidades, onClose 
               <Label className="mb-1.5 block">Texto</Label>
               <TextoRico value={mensagem} onChange={setMensagem} minHeight={140} placeholder="Escreva o comunicado…" />
               <p className="mt-1 text-xs text-muted-foreground">Use {"{{nome}}"}, {"{{unidade}}"} e {"{{condominio}}"} para personalizar. No WhatsApp a formatação vira texto simples.</p>
+            </div>
+            <div>
+              <Label className="mb-1.5 block">Anexo (opcional)</Label>
+              {!anexo ? (
+                <label onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); escolherAnexo(e.dataTransfer.files[0]); }}
+                  className="flex cursor-pointer flex-col items-center gap-1 rounded-lg border border-dashed p-5 text-center text-sm text-muted-foreground transition hover:border-primary/60 hover:bg-primary/5 focus-within:ring-2 focus-within:ring-primary/30">
+                  <Paperclip className="size-5 text-primary" />
+                  <span><b className="text-foreground">Clique ou arraste</b> uma imagem, vídeo ou PDF</span>
+                  <span className="text-xs">Imagem até {LIMITE_MIDIA_MB.imagem} MB · Vídeo MP4 até {LIMITE_MIDIA_MB.video} MB · PDF até {LIMITE_MIDIA_MB.documento} MB</span>
+                  <input type="file" accept={ACEITE_MIDIA_AVISO} className="sr-only" disabled={enviando} onChange={(e) => { escolherAnexo(e.target.files?.[0]); e.target.value = ""; }} />
+                </label>
+              ) : (
+                <div className="flex items-center gap-3 rounded-lg border bg-muted/30 p-3">
+                  {tipoAnexo === "imagem" ? <img src={previa} alt="Prévia do anexo" className="size-16 rounded object-cover" />
+                    : tipoAnexo === "video" ? <video src={previa} className="h-16 w-24 rounded bg-muted object-cover" muted />
+                    : <div className="flex size-16 items-center justify-center rounded bg-primary/10"><FileText className="size-7 text-primary" /></div>}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{anexo.name}</p>
+                    <p className="text-xs text-muted-foreground">{tipoAnexo === "imagem" ? "Imagem" : tipoAnexo === "video" ? "Vídeo" : "PDF"} · {(anexo.size / 1024 / 1024).toFixed(1)} MB · no WhatsApp o texto vai como legenda</p>
+                  </div>
+                  <Button type="button" variant="ghost" size="icon" aria-label="Remover anexo" onClick={() => setAnexo(null)} disabled={enviando}><X className="size-4" /></Button>
+                </div>
+              )}
             </div>
           </fieldset>
 

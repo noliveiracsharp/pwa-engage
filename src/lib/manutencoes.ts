@@ -160,13 +160,13 @@ export function mensagemOs(evento: "agendada" | "concluida", d: { cliente?: stri
 }
 
 /** Envia pela primeira instância ativa de WhatsApp da empresa. Retorna o motivo quando não envia. */
-export async function enviarWhatsappEmpresa(empresaId: unknown, telefone: string, texto: string): Promise<string | null> {
+export async function enviarWhatsappEmpresa(empresaId: unknown, telefone: string, texto: string, midia?: { url: string; tipo: "imagem" | "video" | "documento"; nome?: string }): Promise<string | null> {
   const { dispararMensagem, sanitizarTelefone } = await import("@/lib/atendimentos-envio");
   if (!sanitizarTelefone(telefone)) return "Cliente sem telefone cadastrado.";
   const { data } = await supabase.from("empresas_instancias").select("*").eq("empresa_id", String(empresaId) as never);
   const inst = instanciaParaAvisos((data ?? []) as Record<string, unknown>[]);
   if (!inst) return "Nenhum WhatsApp da empresa conectado.";
-  await dispararMensagem({ instancia: inst, mensagemId: null, atendimentoId: null, telefone, texto });
+  await dispararMensagem({ instancia: inst, mensagemId: null, atendimentoId: null, telefone, texto, ...(midia ? { midiaUrl: midia.url, tipo: midia.tipo, nomeArquivo: midia.nome } : {}) });
   return null;
 }
 

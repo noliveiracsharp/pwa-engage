@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { papelNoPublico, planejarEnvios, preencherAviso, validarAviso, type Destinatario } from "./cond-avisos";
+import { papelNoPublico, planejarEnvios, preencherAviso, tipoMidiaAviso, validarAviso, validarMidiaAviso, type Destinatario } from "./cond-avisos";
 
 const d = (o: Partial<Destinatario>): Destinatario => ({ condominio_id: "c1", cond_unidade_id: "u1", unidade: "101", bloco: "Torre 1", usuario_id: "p1", nome: "Ana Lima", email: "ana@x.com", celular: "(11) 99999-0000", papel: "proprietario", ...o });
 
