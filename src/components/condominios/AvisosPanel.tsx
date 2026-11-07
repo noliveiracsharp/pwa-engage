@@ -229,7 +229,7 @@ function CabecalhoDoc({ titulo, sub }: { titulo: string; sub: string }) {
 
 /* ---------------------- Leituras ("dedo duro") ---------------------- */
 
-function LeiturasDialog({ avisos, onClose }: { avisos: Row[]; onClose: () => void }) {
+export function LeiturasDialog({ avisos, onClose }: { avisos: Row[]; onClose: () => void }) {
   const ids = avisos.map((a) => s(a["id"]));
   const [filtro, setFiltro] = useState<"todos" | "leram" | "nao">("todos");
   const [busca, setBusca] = useState("");
@@ -338,7 +338,7 @@ function LeiturasDialog({ avisos, onClose }: { avisos: Row[]; onClose: () => voi
 
 /* ---------------------- Status de envio ---------------------- */
 
-function StatusEnvioDialog({ aviso, onClose }: { aviso: Row; onClose: () => void }) {
+export function StatusEnvioDialog({ aviso, onClose }: { aviso: Row; onClose: () => void }) {
   const fila = useFilaAvisos().find((t) => t.avisoId === s(aviso["id"]) && (t.estado === "fila" || t.estado === "enviando"));
   const total = fila?.total || Number(aviso["total"] ?? 0);
   const feito = fila ? fila.feito : Number(aviso["enviados"] ?? 0) + Number(aviso["falhas"] ?? 0);
@@ -372,7 +372,7 @@ function StatusEnvioDialog({ aviso, onClose }: { aviso: Row; onClose: () => void
 
 /* ---------------------- Reenviar / agendar ---------------------- */
 
-function ReenviarDialog({ aviso, empresaId, nomeCondominio, onClose }: { aviso: Row; empresaId: string; nomeCondominio: string; onClose: () => void }) {
+export function ReenviarDialog({ aviso, empresaId, nomeCondominio, onClose }: { aviso: Row; empresaId: string; nomeCondominio: string; onClose: () => void }) {
   const qc = useQueryClient();
   const [quem, setQuem] = useState<"todos" | "falhas" | "nao_leram">(Number(aviso["falhas"] ?? 0) > 0 ? "falhas" : "nao_leram");
   const [agendar, setAgendar] = useState(false);
@@ -426,7 +426,8 @@ function ReenviarDialog({ aviso, empresaId, nomeCondominio, onClose }: { aviso: 
 
 /* ---------------------- Novo / editar ---------------------- */
 
-function AvisoEditorDialog({ base, condominioId, condominios, blocos, unidades, empresaId, onClose }: { base?: Row; condominioId: string; condominios: Opt[]; blocos: Row[]; unidades: Row[]; empresaId: string; onClose: () => void }) {
+export type DocumentoAviso = { id: string; titulo: string; url: string; tipo: "pdf" | "imagem"; nome: string };
+export function AvisoEditorDialog({ base, documento, condominioId, condominios, blocos, unidades, empresaId, onClose }: { base?: Row; documento?: DocumentoAviso; condominioId: string; condominios: Opt[]; blocos: Row[]; unidades: Row[]; empresaId: string; onClose: () => void }) {
   const qc = useQueryClient();
   const editando = !!base;
   const novaVersao = editando && statusDoAviso(base!["status"]) === "enviado";
@@ -435,8 +436,8 @@ function AvisoEditorDialog({ base, condominioId, condominios, blocos, unidades, 
   const [unids, setUnids] = useState<string[]>([]);
   const [publico, setPublico] = useState<PublicoAviso>("todos");
   const [tipo, setTipo] = useState(s(base?.["tipo"]) || "geral");
-  const [titulo, setTitulo] = useState(s(base?.["titulo"]));
-  const [mensagem, setMensagem] = useState(s(base?.["mensagem"]));
+  const [titulo, setTitulo] = useState(s(base?.["titulo"]) || (documento ? documento.titulo.slice(0, 40) : ""));
+  const [mensagem, setMensagem] = useState(s(base?.["mensagem"]) || (documento ? `<p>Um novo documento está disponível: <b>${documento.titulo}</b>.</p><p>Abra o anexo para consultar.</p>` : ""));
   const [expira, setExpira] = useState(s(base?.["expira_em"]).slice(0, 10));
   const canaisBase = (base?.["canais"] as string[] | undefined) ?? ["whatsapp", "email"];
   const [whats, setWhats] = useState(canaisBase.includes("whatsapp"));
@@ -484,7 +485,7 @@ function AvisoEditorDialog({ base, condominioId, condominios, blocos, unidades, 
 
   async function salvar() {
     const imagensTexto = imagensDoHtml(mensagem);
-    const erro = validarAviso({ titulo, mensagemTexto: htmlParaTexto(mensagem), canais, condominios: editando ? [condominioId] : condIds, temImagem: imagensTexto.length > 0 || !!base?.["midia_url"] });
+    const erro = validarAviso({ titulo, mensagemTexto: htmlParaTexto(mensagem), canais, condominios: editando ? [condominioId] : condIds, temImagem: imagensTexto.length > 0 || !!base?.["midia_url"] || !!documento });
     if (erro) { toast.error(erro); return; }
     if (agendar) { const e = validarAgendamento(quando); if (e) { toast.error(e); return; } }
     if (!editando && !plano.envios.length) { toast.error("Nenhuma pessoa com contato para esse público."); return; }
@@ -496,7 +497,7 @@ function AvisoEditorDialog({ base, condominioId, condominios, blocos, unidades, 
     setSalvando(true);
     const nomeCond = new Map(condominios.map((c) => [c.value, c.label]));
     try {
-      let midia: Row = {};
+      let midia: Row = documento && !editando ? { midia_url: documento.url, midia_tipo: documento.tipo, midia_nome: documento.nome, documento_id: documento.id } : {};
       if (anexo && tipoAnexo) midia = { midia_url: await uploadAnexo(anexo), midia_tipo: tipoAnexo, midia_nome: anexo.name };
       const comum = { tipo, titulo: titulo.trim(), mensagem, canais, expira_em: expira || null, status: agendar ? "agendado" : "enviando", agendado_para: agendar ? new Date(quando).toISOString() : null, ...midia };
       const disparar = (id: string, cid: string) => { if (!agendar) enfileirarAviso({ avisoId: id, titulo: titulo.trim(), empresaId, nomeCondominio: nomeCond.get(cid) ?? "" }); };
