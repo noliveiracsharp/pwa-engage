@@ -37,6 +37,26 @@ function origemPublica() {
   return /localhost|id-preview|lovableproject/.test(o) ? URL_PUBLICA : o;
 }
 
+/** Lê todas as linhas em páginas de 1.000 (o banco limita cada resposta). */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function buscarTodos(tabela: string, filtro: (q: any) => any, colunas = "*"): Promise<Row[]> {
+  const out: Row[] = [];
+  for (let de = 0; ; de += 1000) {
+    const { data, error } = await filtro(db.from(tabela).select(colunas)).order("id").range(de, de + 999);
+    if (error) throw new Error(error.message);
+    out.push(...((data ?? []) as Row[]));
+    if (!data || data.length < 1000) return out;
+  }
+}
+
+/** Grava muitas linhas em lotes de 500. */
+export async function inserirEmLotes(tabela: string, linhas: Row[]) {
+  for (let i = 0; i < linhas.length; i += 500) {
+    const { error } = await db.from(tabela).insert(linhas.slice(i, i + 500));
+    if (error) throw new Error(error.message);
+  }
+}
+
 let fila = Promise.resolve();
 
 /** Coloca o aviso na fila. Pode ser chamado várias vezes; o mesmo aviso não entra duas vezes. */
@@ -51,9 +71,7 @@ async function processar({ avisoId, empresaId, nomeCondominio }: { avisoId: stri
   try {
     const { data: av, error } = await db.from("cond_avisos").select("*").eq("id", avisoId).single();
     if (error) throw new Error(error.message);
-    const { data: pend, error: e2 } = await db.from("cond_avisos_envios").select("*").eq("aviso_id", avisoId).eq("status", "pendente");
-    if (e2) throw new Error(e2.message);
-    const envios = (pend ?? []) as Row[];
+    const envios = await buscarTodos("cond_avisos_envios", (q) => q.eq("aviso_id", avisoId).eq("status", "pendente"));
     atualizar(avisoId, { estado: "enviando", total: envios.length, feito: 0, falhas: 0 });
     await db.from("cond_avisos").update({ status: "enviando", iniciado_em: new Date().toISOString(), agendado_para: null }).eq("id", avisoId);
 
