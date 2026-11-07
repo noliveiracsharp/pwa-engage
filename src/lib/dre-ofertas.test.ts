@@ -24,12 +24,12 @@ describe("DRE de Ofertas", () => {
     expect(l.margem).toBe(20);
   });
 
-  it("comissão sem beneficiário não é computada", () => {
+  it("fundos/reservas (Marketing, Inovação…) entram como custo na DRE", () => {
     const c = [
-      { orcamento_id: "o1", beneficiario_id: "u1", valor: 300 },
-      { orcamento_id: "o1", beneficiario_id: null, valor: 900 },
+      { orcamento_id: "o1", beneficiario_id: "u1", papel_id: "com", valor: 300 },
+      { orcamento_id: "o1", beneficiario_id: null, papel_id: "mkt", valor: 900 },
     ];
-    expect(comissoesDaOferta(c, "o1")).toBe(300);
+    expect(comissoesDaOferta(c, "o1")).toBe(1200);
   });
 
   it("soma despesas por categoria entre ofertas", () => {

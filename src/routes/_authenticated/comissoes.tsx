@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { etapasDoKanban, kanbanDoModuloOrcamentos } from "@/lib/orcamento-kanban";
+import { etapaDaOferta, situacaoAtivada } from "@/lib/oferta-ativacao";
 import { ChevronDown, ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { DataTable, type Column } from "@/components/data-table/DataTable";
@@ -15,7 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useComissaoConfig } from "@/hooks/useComissaoConfig";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { useAudit } from "@/lib/audit";
-import { comissaoDisponivel, comissaoLiberada, recebidoPorOferta, NATUREZAS_COMISSAO, REGRAS_LIBERACAO, type ParametroNatureza, type RegraLiberacao } from "@/lib/comissoes";
+import { comissaoDisponivel, comissaoLiberada, comissaoValida, grupoComissao, recebidoPorOferta, NATUREZAS_COMISSAO, REGRAS_LIBERACAO, type ParametroNatureza, type RegraLiberacao } from "@/lib/comissoes";
 import { rowId, text, useTableRows } from "@/lib/crud";
 import { matchesAny } from "@/lib/input-masks";
 import { formatBRL, formatDate, formatPct, num, parcelasFromValue, round2 } from "@/lib/orcamentos";
@@ -39,6 +41,18 @@ export const Route = createFileRoute("/_authenticated/comissoes")({
   }),
   component: ComissoesPage,
 });
+
+/** Ofertas fechadas (Ativação / "Venda ganha"): só elas geram comissão real. */
+function useOfertaAtivada(orcs: Row[]) {
+  const { data: etapas = [] } = useQuery({
+    queryKey: ["orcamentos-etapas-kanban"],
+    queryFn: async () => etapasDoKanban(await kanbanDoModuloOrcamentos()),
+  });
+  return useMemo(() => {
+    const ok = new Set(orcs.filter((o) => situacaoAtivada(o["situacao"], etapaDaOferta(o, etapas))).map((o) => text(rowId(o))));
+    return (id: string) => ok.has(id);
+  }, [orcs, etapas]);
+}
 
 const NAT_LABEL: Record<string, string> = { produto: "Produto", servico: "Serviço", recorrente: "Mensal" };
 
@@ -75,11 +89,13 @@ function Extrato({ canUpdate, canDelete }: { canUpdate: boolean; canDelete: bool
   const [abertos, setAbertos] = useState<Set<string>>(new Set());
   const orcById = useMemo(() => new Map(orcs.map((o) => [text(rowId(o)), o])), [orcs]);
   const userById = useMemo(() => new Map(usuarios.map((u) => [text(rowId(u)), u])), [usuarios]);
+  const ativada = useOfertaAtivada(orcs);
 
   const rows = useMemo(
     () =>
       rowsDb
         .filter((r) => {
+          if (!comissaoValida(r, ativada)) return false;
           const orc = orcById.get(text(r["orcamento_id"]));
           const u = userById.get(text(r["beneficiario_id"]));
           return (
@@ -89,7 +105,7 @@ function Extrato({ canUpdate, canDelete }: { canUpdate: boolean; canDelete: bool
           );
         })
         .sort((a, b) => text(b["created_at"]).localeCompare(text(a["created_at"]))),
-    [rowsDb, orcById, userById, f],
+    [rowsDb, orcById, userById, f, ativada],
   );
   const { data: recebs = [] } = useTableRows("orcamento_recebimentos");
   const { liberacao, entradaPct } = useComissaoConfig();
@@ -201,13 +217,15 @@ function Extrato({ canUpdate, canDelete }: { canUpdate: boolean; canDelete: bool
   const grupos = useMemo(() => {
     const m = new Map<string, Row[]>();
     for (const r of doMes) {
-      const k = text(r["beneficiario_id"]) || "—";
+      const k = grupoComissao(r).chave;
       m.set(k, [...(m.get(k) ?? []), r]);
     }
     return [...m.entries()]
       .map(([id, itens]) => ({
         id, itens,
-        nome: text(pick(userById.get(id) ?? {}, ["nome", "email"])) || "Sem beneficiário",
+        nome: id.startsWith("fundo:")
+          ? `Fundo: ${text(itens[0]?.["papel_nome"]) || "Reserva"}`
+          : text(pick(userById.get(id) ?? {}, ["nome", "email"])) || "Beneficiário removido",
         valor: itens.reduce((t, r) => t + calc(r).valor, 0),
         liberado: itens.reduce((t, r) => t + calc(r).liberado, 0),
         pago: itens.reduce((t, r) => t + calc(r).pago, 0),
@@ -560,7 +578,8 @@ function Recebimentos({ canEdit }: { canEdit: boolean }) {
   }, [titulos]);
   const ofertasComTitulo = useMemo(() => new Set([...titMap.keys()].map((k) => k.split(":")[0])), [titMap]);
   const [busca, setBusca] = useState("");
-  const comComissao = useMemo(() => new Set(comissoes.map((c) => text(c["orcamento_id"]))), [comissoes]);
+  const ativada = useOfertaAtivada(orcs);
+  const comComissao = useMemo(() => new Set(comissoes.map((c) => text(c["orcamento_id"])).filter(ativada)), [comissoes, ativada]);
   const ofertas = useMemo(
     () =>
       orcs
