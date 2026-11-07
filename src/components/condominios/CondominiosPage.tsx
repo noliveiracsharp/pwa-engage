@@ -24,6 +24,14 @@ import { GestaoTerceirosPanel } from "./GestaoTerceirosPanel";
 import { DocumentosPanel } from "./DocumentosPanel";
 import { AvisosPanel } from "./AvisosPanel";
 
+/** Cores semânticas por ocupação da unidade (grade e legenda). */
+const OCUP_VISUAL = [
+  { value: "propria", label: "Própria (proprietário)", curto: "Própria", card: "border-success/40 bg-success/10 text-foreground", chip: "border-success/40 bg-success/10", ponto: "bg-success" },
+  { value: "alugada", label: "Alugada (inquilino)", curto: "Alugada", card: "border-warning/60 bg-warning/15 text-foreground", chip: "border-warning/60 bg-warning/15", ponto: "bg-warning" },
+  { value: "vazia", label: "Vazia", curto: "Vazia", card: "border-dashed bg-muted/50 text-muted-foreground", chip: "border-dashed bg-muted/50", ponto: "bg-muted-foreground/50" },
+  { value: "inativa", label: "Inativa", curto: "Inativa", card: "bg-card text-muted-foreground opacity-50", chip: "bg-card opacity-70", ponto: "bg-destructive" },
+];
+
 export function CondominiosPage() {
   const perms = usePagePermissions("/condominios");
   const { data: classificacoes = [] } = useClassificacoes();
@@ -70,7 +78,9 @@ export function CondominiosPage() {
   const blocoAtual = blocos.find((b) => s(b["id"]) === blocoId);
   const unidadesBloco = unidades.filter((u) => s(u["cond_bloco_id"]) === blocoId);
   const termo = busca.trim().toLowerCase();
-  const filtradas = termo ? unidadesBloco.filter((u) => s(u["numero"]).toLowerCase().includes(termo)) : unidadesBloco;
+  const [filtroOcup, setFiltroOcup] = useState<string>("");
+  const ocupDe = (u: Row) => (u["status"] === false ? "inativa" : s(u["ocupacao"]) || "propria");
+  const filtradas = unidadesBloco.filter((u) => (!termo || s(u["numero"]).toLowerCase().includes(termo)) && (!filtroOcup || ocupDe(u) === filtroOcup));
 
   // Agrupa por andar, do mais alto para o térreo (como o prédio é visto).
   const porAndar = useMemo(() => {
@@ -200,6 +210,23 @@ export function CondominiosPage() {
                   </>
                 )}
               </div>
+              {unidadesBloco.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Legenda e filtro por ocupação">
+                  <span className="text-xs font-medium text-muted-foreground">Legenda:</span>
+                  {OCUP_VISUAL.map((o) => {
+                    const qtd = unidadesBloco.filter((u) => ocupDe(u) === o.value).length;
+                    if (o.value === "inativa" && qtd === 0) return null;
+                    const ativo = filtroOcup === o.value;
+                    return (
+                      <button key={o.value} type="button" aria-pressed={ativo} onClick={() => setFiltroOcup(ativo ? "" : o.value)}
+                        className={cn("inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", o.chip, ativo && "ring-2 ring-primary/40")}>
+                        <span className={cn("size-2 rounded-full", o.ponto)} /> {o.label} <span className="tabular-nums opacity-80">{qtd}</span>
+                      </button>
+                    );
+                  })}
+                  {filtroOcup && <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setFiltroOcup("")}>Limpar filtro</Button>}
+                </div>
+              )}
               {porAndar.length === 0 ? (
                 <p className="py-8 text-center text-sm text-muted-foreground">{termo ? "Nenhuma unidade encontrada." : "Nenhuma unidade neste bloco. Use “Gerar em lote” para criar todas de uma vez."}</p>
               ) : (
@@ -208,16 +235,22 @@ export function CondominiosPage() {
                     <div key={andar} className="flex gap-3">
                       <div className="w-16 shrink-0 pt-2 text-right text-xs font-medium text-muted-foreground">{andar === "—" ? "Sem andar" : andar === "0" ? "Térreo" : `${andar}º andar`}</div>
                       <div className="flex flex-1 flex-wrap gap-2 border-l pl-3">
-                        {us.map((u) => (
-                          <button
-                            key={s(u["id"])}
-                            type="button"
-                            onClick={() => setUnidadeAberta(u)}
-                            className={cn("min-w-20 rounded-md border px-3 py-2 text-center text-sm font-semibold transition hover:border-primary hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", u["status"] === false && "opacity-50")}
-                          >
-                            {s(u["numero"])}
-                          </button>
-                        ))}
+                        {us.map((u) => {
+                          const o = OCUP_VISUAL.find((x) => x.value === ocupDe(u)) ?? OCUP_VISUAL[0]!;
+                          return (
+                            <button
+                              key={s(u["id"])}
+                              type="button"
+                              onClick={() => setUnidadeAberta(u)}
+                              aria-label={`Unidade ${s(u["numero"])} — ${o.label}`}
+                              title={o.label}
+                              className={cn("flex min-w-20 flex-col items-center gap-0.5 rounded-md border px-3 py-1.5 text-center transition hover:shadow-sm hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", o.card)}
+                            >
+                              <span className="text-sm font-semibold">{s(u["numero"])}</span>
+                              <span className="text-[10px] font-medium uppercase tracking-wide opacity-80">{o.curto}</span>
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   ))}
