@@ -113,18 +113,17 @@ export function CondominiosPage() {
   if (!perms.loading && !perms.canRead) return <p className="p-6 text-sm text-muted-foreground">Você não tem acesso a esta tela.</p>;
 
   return (
-    <div className="flex min-h-full flex-col gap-4 p-4 md:flex-row md:items-start md:p-6">
-    <CondominiosSidebar secoes={secoes} ativa={secao} onChange={setSecao} />
-    <div className="min-w-0 flex-1 space-y-4">
-      <div className="flex flex-wrap items-end gap-3">
-        <div className="mr-auto">
-          <h1 className="flex items-center gap-2 text-2xl font-semibold"><Building2 className="size-6" /> Condomínios</h1>
-          <p className="text-sm text-muted-foreground">Escolha o condomínio, depois o bloco e clique na unidade.</p>
-        </div>
-        <div className="w-full sm:w-96">
-          <Label className="mb-1.5 block">Condomínio</Label>
-          <SearchSelect value={condId} onChange={setCondId} options={condominios} placeholder="Selecione o condomínio" emptyText="Nenhum condomínio (classifique em Clientes e Fornecedores)." />
-        </div>
+    <div className="-m-4 flex min-h-[calc(100%+2rem)] flex-col sm:-m-6 sm:min-h-[calc(100%+3rem)] md:flex-row">
+    <CondominiosSidebar
+      secoes={secoes}
+      ativa={secao}
+      onChange={setSecao}
+      topo={<SearchSelect value={condId} onChange={setCondId} options={condominios} placeholder="Selecione o condomínio" emptyText="Nenhum condomínio (classifique em Clientes e Fornecedores)." />}
+    />
+    <div className="min-w-0 flex-1 space-y-4 p-4 sm:p-6">
+      <div>
+        <h1 className="flex items-center gap-2 text-2xl font-semibold"><Building2 className="size-6" /> {condominios.find((c) => c.value === condId)?.label ?? "Condomínios"}</h1>
+        <p className="text-sm text-muted-foreground">{secoes.find((x) => x.key === secao)?.label ?? "Painel"}</p>
       </div>
 
       {secao === "painel" ? (
