@@ -72,7 +72,10 @@ export function AvisosPanel({ condominioId, condominios, blocos, unidades, perms
             ) : lista.map((a) => (
               <TableRow key={s(a["id"])} className="cursor-pointer" onClick={() => setDetalhe(a)}>
                 <TableCell className="whitespace-nowrap text-sm">{new Date(s(a["created_at"])).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}</TableCell>
-                <TableCell><p className="font-medium">{s(a["titulo"])}</p><Badge variant="outline" className={cn("mt-1", tipoCor[s(a["tipo"])])}>{tipoLabel(s(a["tipo"]))}</Badge></TableCell>
+                <TableCell><p className="flex items-center gap-1.5 font-medium">{s(a["titulo"])}{s(a["midia_url"]) && (
+                  <a href={s(a["midia_url"])} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-primary hover:opacity-80" aria-label={`Abrir anexo ${s(a["midia_nome"])}`} title={s(a["midia_nome"])}>
+                    {s(a["midia_tipo"]) === "imagem" ? <ImageIcon className="size-4" /> : s(a["midia_tipo"]) === "video" ? <Film className="size-4" /> : <FileText className="size-4" />}
+                  </a>)}</p><Badge variant="outline" className={cn("mt-1", tipoCor[s(a["tipo"])])}>{tipoLabel(s(a["tipo"]))}</Badge></TableCell>
                 <TableCell className="text-sm text-muted-foreground">{s(a["abrangencia"]) || "—"}</TableCell>
                 <TableCell><div className="flex gap-1">{((a["canais"] as string[]) ?? []).map((c) => c === "email" ? <Mail key={c} className="size-4" aria-label="E-mail" /> : <MessageCircle key={c} className="size-4" aria-label="WhatsApp" />)}</div></TableCell>
                 <TableCell className="text-right text-sm"><span className="text-success">{Number(a["enviados"] ?? 0)}</span> / {Number(a["total"] ?? 0)}{Number(a["falhas"] ?? 0) > 0 && <span className="ml-1 text-destructive">({Number(a["falhas"])} falha)</span>}</TableCell>
