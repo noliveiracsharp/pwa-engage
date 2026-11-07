@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { SubmenuTabs } from "@/components/layout/SubmenuTabs";
 import { useRealtimeRefresh } from "@/hooks/useRealtime";
+import { FilaEnvioFlutuante } from "@/components/condominios/FilaEnvioFlutuante";
 import { firstAllowedPath, getAllowedPathsCached, isPathAllowed } from "@/lib/access";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -34,6 +35,7 @@ function AuthenticatedLayout() {
       <SubmenuTabs>
         <Outlet />
       </SubmenuTabs>
+      <FilaEnvioFlutuante />
     </AppLayout>
   );
 }
