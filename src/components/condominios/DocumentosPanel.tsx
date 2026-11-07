@@ -58,7 +58,7 @@ export function DocumentosPanel({ condominioId, perms, condominios, blocos, unid
   async function prepararEnvio(d: Row) {
     const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(s(d["arquivo_path"]), UM_ANO);
     if (error || !data) { toast.error("Não foi possível preparar o link do documento."); return; }
-    setEnvio({ id: s(d["id"]), titulo: s(d["titulo"]), url: data.signedUrl, tipo: s(d["arquivo_tipo"]).startsWith("image/") ? "imagem" : "pdf", nome: s(d["arquivo_nome"]) });
+    setEnvio({ id: s(d["id"]), titulo: s(d["titulo"]), url: data.signedUrl, tipo: s(d["arquivo_tipo"]).startsWith("image/") ? "imagem" : "documento", nome: s(d["arquivo_nome"]) });
   }
   function verLeituras(d: Row) {
     const av = avisosDoDoc(s(d["id"]));

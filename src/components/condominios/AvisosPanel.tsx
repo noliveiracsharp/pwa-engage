@@ -426,7 +426,7 @@ export function ReenviarDialog({ aviso, empresaId, nomeCondominio, onClose }: { 
 
 /* ---------------------- Novo / editar ---------------------- */
 
-export type DocumentoAviso = { id: string; titulo: string; url: string; tipo: "pdf" | "imagem"; nome: string };
+export type DocumentoAviso = { id: string; titulo: string; url: string; tipo: "documento" | "imagem"; nome: string };
 export function AvisoEditorDialog({ base, documento, condominioId, condominios, blocos, unidades, empresaId, onClose }: { base?: Row; documento?: DocumentoAviso; condominioId: string; condominios: Opt[]; blocos: Row[]; unidades: Row[]; empresaId: string; onClose: () => void }) {
   const qc = useQueryClient();
   const editando = !!base;
