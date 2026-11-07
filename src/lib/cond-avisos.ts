@@ -94,3 +94,26 @@ export function validarAviso(a: { titulo: string; mensagemTexto: string; canais:
   if (!a.canais.length) return "Ligue pelo menos um canal (WhatsApp ou e-mail).";
   return null;
 }
+
+/* ---------------------- Anexo (imagem, vídeo ou PDF) ---------------------- */
+
+export type TipoMidiaAviso = "imagem" | "video" | "documento";
+/** Limites por tipo: o WhatsApp recusa vídeos grandes e e-mails pesados vão para o spam. */
+export const LIMITE_MIDIA_MB: Record<TipoMidiaAviso, number> = { imagem: 10, video: 16, documento: 20 };
+export const ACEITE_MIDIA_AVISO = "image/jpeg,image/png,image/webp,video/mp4,application/pdf";
+
+export function tipoMidiaAviso(mime: string, nome = ""): TipoMidiaAviso | null {
+  const m = mime.toLowerCase();
+  if (/^image\/(jpeg|png|webp)$/.test(m)) return "imagem";
+  if (m === "video/mp4") return "video";
+  if (m === "application/pdf" || /\.pdf$/i.test(nome)) return "documento";
+  return null;
+}
+
+/** Retorna o motivo da recusa ou null quando o arquivo pode ser anexado. */
+export function validarMidiaAviso(f: { type: string; name: string; size: number }): string | null {
+  const t = tipoMidiaAviso(f.type, f.name);
+  if (!t) return "Formato não aceito. Use imagem (JPG, PNG, WEBP), vídeo MP4 ou PDF.";
+  if (f.size > LIMITE_MIDIA_MB[t] * 1024 * 1024) return `Arquivo maior que ${LIMITE_MIDIA_MB[t]} MB.`;
+  return null;
+}
