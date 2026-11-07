@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/integrations/supabase/client";
+import { ehRoboDeEmail } from "@/lib/cond-avisos-ciclo";
 
-// Pixel de leitura dos avisos por e-mail. Só grava a primeira abertura; nunca devolve dados.
+// Pixel de leitura dos avisos por e-mail. Ignora robôs de pré-carregamento; nunca devolve dados.
 const GIF = Uint8Array.from(atob("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"), (c) => c.charCodeAt(0));
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -10,9 +11,9 @@ export const Route = createFileRoute("/api/public/aviso-lido/$id")({
   staticData: { sitemap: false },
   server: {
     handlers: {
-      GET: async ({ params }) => {
+      GET: async ({ params, request }) => {
         const id = String(params.id).replace(/\.gif$/i, "");
-        if (UUID.test(id)) {
+        if (UUID.test(id) && !ehRoboDeEmail(request.headers.get("user-agent"))) {
           try {
             const sb = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, { auth: { persistSession: false, autoRefreshToken: false, storage: undefined } });
             await sb.rpc("cond_aviso_registrar_leitura" as never, { p_envio: id, p_canal: "email" } as never);
