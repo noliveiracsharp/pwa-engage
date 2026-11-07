@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { Briefcase, FolderOpen, Users, Building2, LayoutDashboard, Megaphone, PanelLeftClose, PanelLeftOpen, ParkingSquare, Shuffle, type LucideIcon } from "lucide-react";
+import { useMemo, useState, type ReactNode } from "react";
+import { Briefcase, FolderOpen, Users, Building2, LayoutDashboard, Megaphone, ChevronLeft, ChevronRight, ParkingSquare, Shuffle, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { useTableRows } from "@/lib/crud";
@@ -41,41 +41,61 @@ export function useSecoesCondominio(pagina: P): Secao[] {
   }, [funcoes, u, v, s, e, g, dc, av, pagina]);
 }
 
-export function CondominiosSidebar({ secoes, ativa, onChange }: { secoes: Secao[]; ativa: string; onChange: (k: string) => void }) {
+export function CondominiosSidebar({ secoes, ativa, onChange, topo }: { secoes: Secao[]; ativa: string; onChange: (k: string) => void; topo?: ReactNode }) {
   const [aberto, setAberto] = useState(true);
-  if (!aberto)
-    return (
-      <aside className="shrink-0 self-start rounded-lg border border-border bg-card p-1" aria-label="Menu de condomínios">
-        <Button size="sm" variant="ghost" className="h-8 gap-1 px-2" onClick={() => setAberto(true)} aria-label="Mostrar menu" title="Mostrar menu">
-          <PanelLeftOpen className="h-4 w-4" /><span className="text-xs md:hidden">Condomínio</span>
-        </Button>
-      </aside>
-    );
   return (
-    <aside className="w-full shrink-0 self-start rounded-lg border border-border bg-card p-2 md:w-64" aria-label="Menu de condomínios">
-      <div className="mb-2 flex items-center gap-1 px-1">
-        <span className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setAberto(false)} aria-label="Recolher menu" title="Recolher menu"><PanelLeftClose className="h-4 w-4" /></Button>
-          Condomínio
-        </span>
-      </div>
-      <nav className="flex flex-col gap-0.5">
-        {secoes.map((x) => (
-          <button
-            key={x.key}
-            type="button"
-            aria-current={ativa === x.key ? "page" : undefined}
-            onClick={() => onChange(x.key)}
-            className={cn(
-              "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-              ativa === x.key && "bg-primary/10 font-semibold text-primary",
-            )}
+    <aside
+      aria-label="Menu de condomínios"
+      className={cn(
+        "flex shrink-0 flex-col border-b border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200 md:self-stretch md:border-b-0 md:border-r",
+        aberto ? "w-full md:w-64" : "w-full md:w-14",
+      )}
+    >
+      <div className="flex flex-col md:sticky md:top-0">
+        <div className={cn("flex items-center gap-2 px-3 pb-2 pt-4", !aberto && "md:justify-center md:px-0")}>
+          <Building2 className="size-5 shrink-0" />
+          {aberto && <span className="truncate text-base font-semibold">Condomínio</span>}
+          <Button
+            size="icon"
+            variant="ghost"
+            className={cn("ml-auto size-7 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground", !aberto && "md:hidden")}
+            onClick={() => setAberto((v) => !v)}
+            aria-label={aberto ? "Recolher menu" : "Mostrar menu"}
+            title={aberto ? "Recolher menu" : "Mostrar menu"}
           >
-            <x.icon className="h-4 w-4 shrink-0" />
-            <span className="truncate">{x.label}</span>
-          </button>
-        ))}
-      </nav>
+            {aberto ? <ChevronLeft className="size-4" /> : <ChevronRight className="size-4" />}
+          </Button>
+        </div>
+        {aberto && topo && <div className="px-3 pb-3 text-foreground">{topo}</div>}
+        <nav className={cn("flex flex-col gap-0.5 pb-3", aberto ? "pl-3" : "hidden md:flex md:px-2")}>
+          {secoes.map((x) => {
+            const ativo = ativa === x.key;
+            return (
+              <button
+                key={x.key}
+                type="button"
+                title={aberto ? undefined : x.label}
+                aria-label={x.label}
+                aria-current={ativo ? "page" : undefined}
+                onClick={() => onChange(x.key)}
+                className={cn(
+                  "flex w-full items-center gap-3 py-2.5 text-left text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring",
+                  aberto ? "rounded-l-lg px-3" : "justify-center rounded-lg px-0",
+                  ativo ? "bg-background font-semibold text-primary" : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                )}
+              >
+                <x.icon className="size-4 shrink-0" />
+                {aberto && <span className="truncate">{x.label}</span>}
+              </button>
+            );
+          })}
+        </nav>
+        {!aberto && (
+          <Button size="icon" variant="ghost" className="mx-auto mb-3 hidden size-8 text-sidebar-foreground hover:bg-sidebar-accent md:inline-flex" onClick={() => setAberto(true)} aria-label="Mostrar menu" title="Mostrar menu">
+            <ChevronRight className="size-4" />
+          </Button>
+        )}
+      </div>
     </aside>
   );
 }
