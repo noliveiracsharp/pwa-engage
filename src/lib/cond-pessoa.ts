@@ -29,6 +29,30 @@ export const FUNCOES_CONDOMINIO = [
   { value: "subsindico", label: "Subsíndico" },
 ];
 
+/** Papéis que não são condôminos (não integram o corpo diretivo). */
+const PAPEIS_EXTERNOS: Record<string, { value: string; label: string }> = {
+  prestador: { value: "prestador_servico", label: "Prestador(a) de serviço" },
+  colaborador: { value: "colaborador", label: "Colaborador(a)" },
+  visitante: { value: "visitante", label: "Visitante" },
+};
+const SEM_FUNCAO = { value: "sem_funcao", label: "Sem função diretiva" };
+
+/** Funções possíveis para o papel: externos nunca viram condômino nem síndico. */
+export function funcoesDoPapel(papel: string) {
+  const ext = PAPEIS_EXTERNOS[papel];
+  return ext ? [ext, SEM_FUNCAO] : [...FUNCOES_CONDOMINIO, SEM_FUNCAO].sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
+}
+
+/** Função padrão: a salva, se válida para o papel; senão o padrão do papel. */
+export function funcaoPadrao(papel: string, salva?: string | null): string {
+  const ops = funcoesDoPapel(papel);
+  if (salva && ops.some((o) => o.value === salva)) return salva;
+  return PAPEIS_EXTERNOS[papel]?.value ?? "condomino";
+}
+
+/** Permissão de síndico delegada só faz sentido para quem é condômino. */
+export const podeDelegarSindico = (papel: string) => !PAPEIS_EXTERNOS[papel];
+
 export const STATUS_CONEXAO = [
   { value: "ativo", label: "Ativo", ajuda: "Usa todas as funcionalidades liberadas." },
   { value: "inativo", label: "Inativo", ajuda: "Não interage com agendamentos, enquetes e anúncios internos." },

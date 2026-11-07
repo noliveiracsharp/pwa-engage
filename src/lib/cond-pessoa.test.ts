@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dataBrParaIso, exigeAceite, isoParaBr, mascaraData, preferenciasDoPapel, valoresPreferencias } from "./cond-pessoa";
+import { dataBrParaIso, exigeAceite, funcaoPadrao, funcoesDoPapel, podeDelegarSindico, isoParaBr, mascaraData, preferenciasDoPapel, valoresPreferencias } from "./cond-pessoa";
 
 const cat = [
   { chave: "boleto_email", descricao: "Boleto", publico: "titular", padrao: true, ordem: 3 },
@@ -29,6 +29,18 @@ describe("preferências por papel", () => {
   });
   it("usa o padrão do catálogo quando nunca respondido", () => {
     expect(valoresPreferencias(cat, { whatsapp: false })).toEqual({ boleto_email: true, whatsapp: false, anuncios: false });
+  });
+});
+
+describe("função no condomínio por papel", () => {
+  it("prestador nunca é condômino e não recebe permissão de síndico", () => {
+    expect(funcaoPadrao("prestador", "condomino")).toBe("prestador_servico");
+    expect(funcoesDoPapel("prestador").map((f) => f.value)).not.toContain("sindico");
+    expect(podeDelegarSindico("prestador")).toBe(false);
+  });
+  it("proprietário mantém condômino como padrão", () => {
+    expect(funcaoPadrao("proprietario", null)).toBe("condomino");
+    expect(podeDelegarSindico("proprietario")).toBe(true);
   });
 });
 
