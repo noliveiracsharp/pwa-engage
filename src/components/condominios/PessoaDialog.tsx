@@ -16,7 +16,7 @@ import { formatCpfCnpj } from "@/lib/input-masks";
 import type { Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
 import {
-  ACESSIBILIDADE, FUNCOES_CONDOMINIO, GENEROS, STATUS_CONEXAO, exigeAceite, isoParaBr,
+  ACESSIBILIDADE, GENEROS, funcaoPadrao, funcoesDoPapel, podeDelegarSindico, STATUS_CONEXAO, exigeAceite, isoParaBr,
   preferenciasDoPapel, valoresPreferencias, type PreferenciaCatalogo,
 } from "@/lib/cond-pessoa";
 import { CampoData } from "./CampoData";
@@ -80,7 +80,7 @@ export function PessoaDialog({ unidadeId, lado, papeis, gestor, pessoa, vinculo,
     extra: s(vinculo?.["parentesco"]) || s(vinculo?.["prestador_funcao"]),
     controle_acesso: vinculo ? vinculo["controle_acesso"] !== false : true,
     status_conexao: s(vinculo?.["status_conexao"]) || "ativo",
-    funcao_condominio: s(vinculo?.["funcao_condominio"]) || "condomino",
+    funcao_condominio: funcaoPadrao(s(vinculo?.["papel"]) || papeis[0]!, s(vinculo?.["funcao_condominio"])),
     sindico_delegado: vinculo?.["sindico_delegado"] === true,
     sindico_ate: s(vinculo?.["sindico_ate"]),
     anunciado_portaria: vinculo ? vinculo["anunciado_portaria"] !== false : true,
@@ -150,8 +150,9 @@ export function PessoaDialog({ unidadeId, lado, papeis, gestor, pessoa, vinculo,
           telefone_fixo: vi.telefone_fixo || null, facial_sincronizar: facial,
         });
         if (gestor) Object.assign(valores, {
-          status_conexao: vi.status_conexao, funcao_condominio: vi.funcao_condominio,
-          sindico_delegado: vi.sindico_delegado, sindico_ate: vi.sindico_delegado ? vi.sindico_ate || null : null,
+          status_conexao: vi.status_conexao, funcao_condominio: funcaoPadrao(vi.papel, vi.funcao_condominio),
+          sindico_delegado: podeDelegarSindico(vi.papel) && vi.sindico_delegado,
+          sindico_ate: podeDelegarSindico(vi.papel) && vi.sindico_delegado ? vi.sindico_ate || null : null,
         });
         if (precisaAceite && aceite) {
           const { data: u } = await supabase.auth.getUser();
@@ -186,11 +187,11 @@ export function PessoaDialog({ unidadeId, lado, papeis, gestor, pessoa, vinculo,
                   <div className="sm:col-span-2"><Label htmlFor="pd-nome">Nome completo *</Label><Input id="pd-nome" value={d.nome} onChange={(e) => setD({ ...d, nome: e.target.value })} /></div>
                   <div className="sm:col-span-2"><Label htmlFor="pd-email">E-mail * (login)</Label><Input id="pd-email" type="email" disabled={!novo} value={d.email} onChange={(e) => setD({ ...d, email: e.target.value })} /></div>
                   <div><Label className="mb-1.5 block">Gênero</Label><SearchSelect value={d.genero} options={GENEROS} onChange={(x) => setD({ ...d, genero: x })} /></div>
-                  <div><Label htmlFor="pd-nasc">Data de nascimento</Label><CampoData id="pd-nasc" value={d.data_nascimento} onChange={(x) => setD({ ...d, data_nascimento: x })} /></div>
-                  <div><Label htmlFor="pd-cel">Celular</Label><PhoneInput id="pd-cel" value={d.celular} onChange={(x) => setD({ ...d, celular: x })} /></div>
+                  <div><Label htmlFor="pd-nasc" className="mb-1.5 block">Data de nascimento</Label><CampoData id="pd-nasc" value={d.data_nascimento} onChange={(x) => setD({ ...d, data_nascimento: x })} /></div>
+                  <div className="sm:col-span-2"><Label htmlFor="pd-cel" className="mb-1.5 block">Celular</Label><PhoneInput id="pd-cel" value={d.celular} onChange={(x) => setD({ ...d, celular: x })} /></div>
                   <div><Label className="mb-1.5 block">Profissão</Label><SearchSelect value={d.profissao} options={profOpts} placeholder="Pesquisar profissão (CBO)" emptyText="Profissão não encontrada." onChange={(x) => setD({ ...d, profissao: x })} /></div>
                   {papeis.length > 1 && <div><Label className="mb-1.5 block">Papel</Label><SearchSelect value={vi.papel} allowClear={false} onChange={(x) => { setVi({ ...vi, papel: x }); setPrefs(null); }} options={PAPEIS.filter((p) => papeis.includes(p.value))} /></div>}
-                  {extraLabel && <div><Label htmlFor="pd-extra">{extraLabel}</Label><Input id="pd-extra" value={vi.extra} onChange={(e) => setVi({ ...vi, extra: e.target.value })} /></div>}
+                  {extraLabel && <div><Label htmlFor="pd-extra" className="mb-1.5 block">{extraLabel}</Label><Input id="pd-extra" value={vi.extra} onChange={(e) => setVi({ ...vi, extra: e.target.value })} /></div>}
                 </div>
               </div>
             </TabsContent>
@@ -285,14 +286,14 @@ export function PessoaDialog({ unidadeId, lado, papeis, gestor, pessoa, vinculo,
                     ))}
                   </div>
                 </section>
-                <div><Label className="mb-1.5 block">Função no condomínio (corpo diretivo)</Label><SearchSelect value={vi.funcao_condominio} allowClear={false} options={FUNCOES_CONDOMINIO} onChange={(x) => setVi({ ...vi, funcao_condominio: x })} /></div>
-                <section className="space-y-3 rounded-lg border p-3">
+                <div><Label className="mb-1.5 block">Função no condomínio (corpo diretivo)</Label><SearchSelect value={funcaoPadrao(vi.papel, vi.funcao_condominio)} allowClear={false} options={funcoesDoPapel(vi.papel)} onChange={(x) => setVi({ ...vi, funcao_condominio: x })} /></div>
+                {podeDelegarSindico(vi.papel) && <section className="space-y-3 rounded-lg border p-3">
                   <label className="flex items-center justify-between gap-3">
                     <span><span className="block text-sm font-medium">Permissão de síndico</span><span className="text-xs text-muted-foreground">Na ausência do síndico. Sem data, vale por tempo indeterminado.</span></span>
                     <Switch checked={vi.sindico_delegado} onCheckedChange={(c) => setVi({ ...vi, sindico_delegado: c })} />
                   </label>
                   {vi.sindico_delegado && <div className="max-w-xs"><Label htmlFor="pd-sind">Válida até</Label><CampoData id="pd-sind" inicio={new Date().getFullYear()} value={vi.sindico_ate} onChange={(x) => setVi({ ...vi, sindico_ate: x })} /></div>}
-                </section>
+                </section>}
               </TabsContent>
             )}
           </div>
