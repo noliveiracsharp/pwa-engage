@@ -43,3 +43,21 @@ describe("recebidoPorOferta (Financeiro como fonte única)", () => {
     expect(m.get("o1")).toBe(0);
   });
 });
+
+import { grupoComissao, comissaoValida } from "./comissoes";
+describe("extrato de comissões", () => {
+  it("cada fundo/reserva aparece separado, sem misturar em 'Sem beneficiário'", () => {
+    const mk = grupoComissao({ beneficiario_id: null, papel_id: "mkt" });
+    const ino = grupoComissao({ beneficiario_id: null, papel_id: "ino" });
+    expect(mk.fundo).toBe(true);
+    expect(mk.chave).not.toBe(ino.chave);
+  });
+  it("pessoa agrupa pelo beneficiário", () => {
+    expect(grupoComissao({ beneficiario_id: "u1", papel_id: "com" })).toEqual({ chave: "u1", fundo: false });
+  });
+  it("só conta comissão de oferta em Ativação", () => {
+    const ativas = new Set(["o1"]);
+    expect(comissaoValida({ orcamento_id: "o1" }, (id) => ativas.has(id))).toBe(true);
+    expect(comissaoValida({ orcamento_id: "o2" }, (id) => ativas.has(id))).toBe(false);
+  });
+});
