@@ -222,9 +222,9 @@ function DocumentoDialog({ categorias, condominioId, doc, categoriaInicial, onCl
           <div className="sm:col-span-2"><Label htmlFor="doc-tit">Título *</Label><Input id="doc-tit" value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ex.: Ata da AGO 2026" /></div>
           <div><Label className="mb-1.5 block">Categoria</Label><SearchSelect value={categoria} allowClear={false} options={categorias.map((c) => ({ value: c.value, label: c.label }))} onChange={setCategoria} /></div>
           <div><Label className="mb-1.5 block">Quem pode ver</Label><SearchSelect value={visibilidade} allowClear={false} options={[...VISIBILIDADES_DOC]} onChange={setVisibilidade} /></div>
-          <div><Label htmlFor="doc-data">Data do documento</Label><CampoData id="doc-data" value={dataDoc} onChange={setDataDoc} inicio={1970} /></div>
+          <div><Label htmlFor="doc-data" className="mb-1.5 flex h-5 items-center gap-1">Data do documento</Label><CampoData id="doc-data" value={dataDoc} onChange={setDataDoc} inicio={1970} /></div>
           <div>
-            <Label htmlFor="doc-venc" className="flex items-center gap-1"><CalendarClock className="size-3.5" /> Vencimento {pedeVenc && <span className="text-xs text-muted-foreground">(recomendado)</span>}</Label>
+            <Label htmlFor="doc-venc" className="mb-1.5 flex h-5 items-center gap-1"><CalendarClock className="size-3.5" /> Vencimento {pedeVenc && <span className="text-xs text-muted-foreground">(recomendado)</span>}</Label>
             <CampoData id="doc-venc" value={venc} onChange={setVenc} inicio={2000} />
           </div>
           <div className="sm:col-span-2"><Label htmlFor="doc-desc">Descrição</Label><Textarea id="doc-desc" rows={3} value={descricao} onChange={(e) => setDescricao(e.target.value)} /></div>
