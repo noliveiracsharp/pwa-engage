@@ -69,7 +69,7 @@ export function CondominiosSidebar({ secoes, ativa, onChange, topo }: { secoes: 
           </Button>
         </div>
         {aberto && topo && <div className="px-3 pb-3 text-foreground">{topo}</div>}
-        <nav className={cn("flex flex-col gap-0.5 pb-3", aberto ? "pl-3" : "hidden md:flex md:px-2")}>
+        <nav className={cn("flex flex-col gap-0.5 pb-3", aberto ? "px-3" : "hidden md:flex md:px-2")}>
           {secoes.map((x) => {
             const ativo = ativa === x.key;
             const btn = (
@@ -81,7 +81,7 @@ export function CondominiosSidebar({ secoes, ativa, onChange, topo }: { secoes: 
                 onClick={() => onChange(x.key)}
                 className={cn(
                   "flex w-full items-center gap-3 py-2.5 text-left text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring",
-                  aberto ? "rounded-l-lg px-3" : "justify-center rounded-lg px-0",
+                  aberto ? "rounded-lg px-3" : "justify-center rounded-lg px-0",
                   ativo ? "bg-sidebar-primary font-semibold text-sidebar-primary-foreground hover:bg-sidebar-primary" : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                 )}
               >
