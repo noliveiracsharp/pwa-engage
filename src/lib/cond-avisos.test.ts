@@ -36,3 +36,16 @@ describe("avisos do condomínio", () => {
     expect(validarAviso({ titulo: "a", mensagemTexto: "b", canais: [], condominios: ["c1"] })).toMatch(/canal/);
   });
 });
+
+describe("anexo do aviso", () => {
+  it("aceita imagem, vídeo MP4 e PDF", () => {
+    expect(tipoMidiaAviso("image/png")).toBe("imagem");
+    expect(tipoMidiaAviso("video/mp4")).toBe("video");
+    expect(tipoMidiaAviso("application/pdf")).toBe("documento");
+    expect(tipoMidiaAviso("application/zip", "a.zip")).toBeNull();
+  });
+  it("recusa vídeo acima de 16 MB", () => {
+    expect(validarMidiaAviso({ type: "video/mp4", name: "v.mp4", size: 17 * 1024 * 1024 })).toMatch(/16 MB/);
+    expect(validarMidiaAviso({ type: "video/mp4", name: "v.mp4", size: 15 * 1024 * 1024 })).toBeNull();
+  });
+});
