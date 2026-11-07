@@ -19,7 +19,7 @@ import { CampoData } from "./CampoData";
 import { s, useCondRows, useCondSalvar } from "./cond-data";
 import { AvisoEditorDialog, LeiturasDialog, ReenviarDialog, StatusEnvioDialog, type DocumentoAviso } from "./AvisosPanel";
 import { useAuth } from "@/hooks/useAuth";
-import { rowId } from "@/lib/row";
+import { rowId } from "@/lib/crud";
 import { STATUS_AVISO, statusDoAviso } from "@/lib/cond-avisos-ciclo";
 
 type Opt = { value: string; label: string };
