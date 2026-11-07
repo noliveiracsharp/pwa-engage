@@ -1,6 +1,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { Briefcase, FolderOpen, Users, Building2, LayoutDashboard, Megaphone, ChevronLeft, ChevronRight, ParkingSquare, Shuffle, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { useTableRows } from "@/lib/crud";
 import { cn } from "@/lib/utils";
@@ -42,8 +43,9 @@ export function useSecoesCondominio(pagina: P): Secao[] {
 }
 
 export function CondominiosSidebar({ secoes, ativa, onChange, topo }: { secoes: Secao[]; ativa: string; onChange: (k: string) => void; topo?: ReactNode }) {
-  const [aberto, setAberto] = useState(true);
+  const [aberto, setAberto] = useState(false);
   return (
+    <TooltipProvider delayDuration={100}>
     <aside
       aria-label="Menu de condomínios"
       className={cn(
@@ -70,23 +72,29 @@ export function CondominiosSidebar({ secoes, ativa, onChange, topo }: { secoes: 
         <nav className={cn("flex flex-col gap-0.5 pb-3", aberto ? "pl-3" : "hidden md:flex md:px-2")}>
           {secoes.map((x) => {
             const ativo = ativa === x.key;
-            return (
+            const btn = (
               <button
                 key={x.key}
                 type="button"
-                title={aberto ? undefined : x.label}
                 aria-label={x.label}
                 aria-current={ativo ? "page" : undefined}
                 onClick={() => onChange(x.key)}
                 className={cn(
                   "flex w-full items-center gap-3 py-2.5 text-left text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring",
                   aberto ? "rounded-l-lg px-3" : "justify-center rounded-lg px-0",
-                  ativo ? "bg-background font-semibold text-primary" : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                  ativo ? "bg-sidebar-primary font-semibold text-sidebar-primary-foreground hover:bg-sidebar-primary" : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                 )}
               >
                 <x.icon className="size-4 shrink-0" />
                 {aberto && <span className="truncate">{x.label}</span>}
               </button>
+            );
+            if (aberto) return btn;
+            return (
+              <Tooltip key={x.key}>
+                <TooltipTrigger asChild>{btn}</TooltipTrigger>
+                <TooltipContent side="right">{x.label}</TooltipContent>
+              </Tooltip>
             );
           })}
         </nav>
@@ -97,5 +105,6 @@ export function CondominiosSidebar({ secoes, ativa, onChange, topo }: { secoes: 
         )}
       </div>
     </aside>
+    </TooltipProvider>
   );
 }
