@@ -181,11 +181,11 @@ export function PessoaDialog({ unidadeId, lado, papeis, gestor, pessoa, vinculo,
           </TabsList>
           <div className="min-h-0 flex-1 overflow-y-auto py-4 pr-1">
             <TabsContent value="dados" className="mt-0">
-              <div className="grid gap-4 sm:grid-cols-[auto_1fr]">
+              <div className="grid gap-6 sm:grid-cols-[auto_1fr]">
                 <FotoCond rosto value={d.foto_url} onChange={(u) => setD({ ...d, foto_url: u })} alt={d.nome || "Foto"} />
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="sm:col-span-2"><Label htmlFor="pd-nome">Nome completo *</Label><Input id="pd-nome" value={d.nome} onChange={(e) => setD({ ...d, nome: e.target.value })} /></div>
-                  <div className="sm:col-span-2"><Label htmlFor="pd-email">E-mail * (login)</Label><Input id="pd-email" type="email" disabled={!novo} value={d.email} onChange={(e) => setD({ ...d, email: e.target.value })} /></div>
+                <div className="grid content-start gap-4 sm:grid-cols-2">
+                  <div className="sm:col-span-2"><Label htmlFor="pd-nome" className="mb-1.5 block">Nome completo *</Label><Input id="pd-nome" value={d.nome} onChange={(e) => setD({ ...d, nome: e.target.value })} /></div>
+                  <div className="sm:col-span-2"><Label htmlFor="pd-email" className="mb-1.5 block">E-mail * (login)</Label><Input id="pd-email" type="email" disabled={!novo} value={d.email} onChange={(e) => setD({ ...d, email: e.target.value })} /></div>
                   <div><Label className="mb-1.5 block">Gênero</Label><SearchSelect value={d.genero} options={GENEROS} onChange={(x) => setD({ ...d, genero: x })} /></div>
                   <div><Label htmlFor="pd-nasc" className="mb-1.5 block">Data de nascimento</Label><CampoData id="pd-nasc" value={d.data_nascimento} onChange={(x) => setD({ ...d, data_nascimento: x })} /></div>
                   <div className="sm:col-span-2"><Label htmlFor="pd-cel" className="mb-1.5 block">Celular</Label><PhoneInput id="pd-cel" value={d.celular} onChange={(x) => setD({ ...d, celular: x })} /></div>
