@@ -22,6 +22,7 @@ import { PainelCondominios } from "./PainelCondominios";
 import { EquipePanel } from "./EquipePanel";
 import { GestaoTerceirosPanel } from "./GestaoTerceirosPanel";
 import { DocumentosPanel } from "./DocumentosPanel";
+import { AvisosPanel } from "./AvisosPanel";
 
 export function CondominiosPage() {
   const perms = usePagePermissions("/condominios");
@@ -141,6 +142,8 @@ export function CondominiosPage() {
         <EquipePanel condominioId={condId} blocos={blocos} unidades={unidades} perms={secAtual} />
       ) : secao === "documentos" && secAtual ? (
         <DocumentosPanel condominioId={condId} perms={secAtual} />
+      ) : secao === "avisos" && secAtual ? (
+        <AvisosPanel condominioId={condId} condominios={condominios} blocos={blocos} unidades={unidades} perms={secAtual} />
       ) : secao === "gestao" && secAtual ? (
         <GestaoTerceirosPanel condominioId={condId} podeEditar={secAtual.canUpdate} />
       ) : !secAtual ? (
