@@ -45,7 +45,7 @@ function usePessoas(unidadeId: string) {
 
 export function UnidadeSheet({ unidade, condominioId, blocoNome, perms, onClose }: Props) {
   const id = s(unidade["id"]);
-  const [ocupacao, setOcupacao] = useState(s(unidade["ocupacao"]) || "propria");
+  const [ocupacao, setOcupacao] = useState(s(unidade["ocupacao"]) || "vazia");
   const abas = [
     { v: "dados", l: "Dados", i: DoorOpen },
     { v: "proprietario", l: "Proprietário", i: UserRound },
@@ -94,7 +94,7 @@ function DadosUnidade({ unidade, condominioId, perms, onClose, onOcupacao }: { u
     numero: s(unidade["numero"]),
     andar: s(unidade["andar"]),
     tipo: s(unidade["tipo"]) || "apartamento",
-    ocupacao: s(unidade["ocupacao"]) || "propria",
+    ocupacao: s(unidade["ocupacao"]) || "vazia",
     area_privativa: s(unidade["area_privativa"]),
     fracao_ideal: s(unidade["fracao_ideal"]),
     observacoes: s(unidade["observacoes"]),
