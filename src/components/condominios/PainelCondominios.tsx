@@ -1,6 +1,9 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { Building, Building2, Car, DoorOpen, KeyRound, PawPrint, ParkingSquare, Search, Users, X } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Briefcase, Building, Building2, Car, Crown, DoorOpen, KeyRound, PawPrint, ParkingSquare, Search, ShieldCheck, Star, Users, X } from "lucide-react";
+import { rowId, useTableRows } from "@/lib/crud";
+import { pick } from "@/lib/row";
+import { resumoCarteira, type GrupoCarteira } from "@/lib/cond-carteira";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Switch } from "@/components/ui/switch";
@@ -43,7 +46,28 @@ function Kpi({ icone: I, rotulo, valor, sub, i }: { icone: typeof Building; rotu
   );
 }
 
-export function PainelCondominios({ condominios, condId, podeConfigurar, onAbrir }: { condominios: Cond[]; condId: string; podeConfigurar: boolean; onAbrir: (id: string) => void }) {
+function GrupoCard({ icone: I, titulo, g, extra, nomeEmp, nomeCond }: { icone: typeof Building; titulo: string; g: GrupoCarteira; extra?: string; nomeEmp: (id: string) => string; nomeCond: (id: string) => string }) {
+  return (
+    <div className="rounded-xl border bg-card p-4 shadow-sm">
+      <div className="flex items-center gap-2 text-sm text-muted-foreground"><I className="size-4 text-primary" /> {titulo}</div>
+      <p className="mt-1 text-2xl font-bold tabular-nums">{g.empresas} <span className="text-sm font-normal text-muted-foreground">empresa(s) · {g.condominios} condomínio(s)</span></p>
+      {extra && <p className="text-xs text-muted-foreground">{extra}</p>}
+      <ul className="mt-3 max-h-48 space-y-1 overflow-y-auto text-sm">
+        {g.ranking.length === 0 && <li className="text-muted-foreground">Nenhuma vinculada.</li>}
+        {g.ranking.map((r) => (
+          <li key={r.empresaId}>
+            <details>
+              <summary className="flex cursor-pointer items-center justify-between gap-2 rounded px-1 hover:bg-muted"><span className="truncate">{nomeEmp(r.empresaId)}</span><span className="tabular-nums font-medium">{r.condominios.length}</span></summary>
+              <ul className="ml-3 border-l pl-2 text-xs text-muted-foreground">{r.condominios.map((c) => nomeCond(c)).sort((a, b) => a.localeCompare(b, "pt-BR")).map((n) => <li key={n}>{n}</li>)}</ul>
+            </details>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+export function PainelCondominios({ condominios, condId, podeConfigurar, onAbrir, padrao, onPadrao }: { condominios: Cond[]; condId: string; podeConfigurar: boolean; onAbrir: (id: string) => void; padrao?: string; onPadrao?: (id: string) => void }) {
   const qc = useQueryClient();
   const [busca, setBuscaRaw] = useState("");
   const [page, setPage] = useState(1);
@@ -64,6 +88,15 @@ export function PainelCondominios({ condominios, condId, podeConfigurar, onAbrir
       return { blocos, unidades, vinculos, vagas, veiculos, pets, config };
     },
   });
+  const { data: parceiros = [] } = useTableRows("parceiros");
+  const { data: sind = [] } = useQuery({ queryKey: ["cond", "cond_sindicatura", "todos"], queryFn: () => linhas("cond_sindicatura", "condominio_id,modalidade,empresa_id") });
+  const carteira = useMemo(() => {
+    const ids = new Set(condominios.map((c) => c.value));
+    const conds = parceiros.filter((p) => ids.has(s(rowId(p)))).map((p) => ({ id: s(rowId(p)), administradora_id: s(p["administradora_id"]), facilities_id: s(p["facilities_id"]), tipo_gestao: s(p["tipo_gestao"]) }));
+    return resumoCarteira(conds, sind.map((x) => ({ condominio_id: s(x["condominio_id"]), modalidade: s(x["modalidade"]), empresa_id: s(x["empresa_id"]) })));
+  }, [parceiros, sind, condominios]);
+  const nomeParceiro = (id: string) => { const p = parceiros.find((x) => s(rowId(x)) === id); return p ? s(pick(p, ["nome_fantasia", "titulo", "razao_social", "nome"]) ?? "—") : "—"; };
+  const nomeCond = (id: string) => condominios.find((c) => c.value === id)?.label ?? "—";
   const d = data ?? { blocos: [], unidades: [], vinculos: [], vagas: [], veiculos: [], pets: [], config: [] };
   const ids = new Set(condominios.map((c) => c.value));
   const unidades = d.unidades.filter((u) => ids.has(s(u["condominio_id"])));
@@ -116,6 +149,15 @@ export function PainelCondominios({ condominios, condId, podeConfigurar, onAbrir
         <Kpi i={7} icone={Users} rotulo="Média/unidade" valor={unidades.length ? (vinculos.length / unidades.length).toFixed(1) : "—"} sub="pessoas vinculadas" />
       </div>
 
+      <div>
+        <h2 className="mb-3 text-2xl font-bold">Gestão da carteira</h2>
+        <div className="grid gap-3 md:grid-cols-3">
+          <GrupoCard icone={Briefcase} titulo="Administradoras" g={carteira.administradoras} extra={`${carteira.autogestao} em autogestão`} nomeEmp={nomeParceiro} nomeCond={nomeCond} />
+          <GrupoCard icone={ShieldCheck} titulo="Facilities / Portaria" g={carteira.facilities} nomeEmp={nomeParceiro} nomeCond={nomeCond} />
+          <GrupoCard icone={Crown} titulo="Sindicatura profissional" g={carteira.sindicatura} extra={`${carteira.sindicoMorador} com síndico morador`} nomeEmp={nomeParceiro} nomeCond={nomeCond} />
+        </div>
+      </div>
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-2xl font-bold">Condomínios instalados</h2>
         <div className="relative w-full sm:w-72">
@@ -163,7 +205,16 @@ export function PainelCondominios({ condominios, condId, podeConfigurar, onAbrir
                       onAbrir(c.value);
                     }}
                   >
-                    <TableCell className="font-medium">{c.label}</TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-1.5">
+                        {onPadrao && (
+                          <Button size="icon" variant="ghost" className="size-7" aria-label={padrao === c.value ? "Condomínio padrão (clique para remover)" : "Definir como padrão"} onClick={() => onPadrao(c.value)}>
+                            <Star className={`size-4 ${padrao === c.value ? "fill-warning text-warning" : "text-muted-foreground"}`} />
+                          </Button>
+                        )}
+                        {c.label}
+                      </div>
+                    </TableCell>
                     <TableCell className="text-right tabular-nums">{c.blocos}</TableCell>
                     <TableCell className="text-right tabular-nums">{c.unidades}</TableCell>
                     <TableCell className="text-right tabular-nums">{c.alugadas}</TableCell>

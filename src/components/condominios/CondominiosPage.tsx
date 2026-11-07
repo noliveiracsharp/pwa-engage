@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { Building, Building2, DoorOpen, Layers, Pencil, Plus, Search, Trash2, Wand2 } from "lucide-react";
+import { Building, Building2, DoorOpen, Layers, Pencil, Plus, Search, Star, Trash2, Wand2 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { condominioInicial } from "@/lib/cond-carteira";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,10 +50,22 @@ export function CondominiosPage() {
     [parceiros, classificacoes],
   );
 
+  const { user } = useAuth();
+  const chavePadrao = `cond_padrao:${user?.id ?? ""}`;
   const [condId, setCondId] = useState("");
+  const [padrao, setPadraoState] = useState("");
+  useEffect(() => { setPadraoState(localStorage.getItem(chavePadrao) ?? ""); }, [chavePadrao]);
   useEffect(() => {
-    if (!condId && condominios.length === 1) setCondId(condominios[0]!.value);
-  }, [condominios, condId]);
+    if (condId || !condominios.length) return;
+    const ini = condominioInicial(localStorage.getItem(chavePadrao), condominios.map((c) => c.value));
+    if (ini) setCondId(ini);
+  }, [condominios, condId, chavePadrao]);
+  const alternarPadrao = (id: string) => {
+    const novo = padrao === id ? "" : id;
+    if (novo) localStorage.setItem(chavePadrao, novo); else localStorage.removeItem(chavePadrao);
+    setPadraoState(novo);
+    toast.success(novo ? "Condomínio padrão definido. Ele abrirá automaticamente." : "Condomínio padrão removido.");
+  };
 
   const { data: blocos = [], isLoading: carregandoBlocos } = useCondRows("cond_blocos", "condominio_id", condId, "ordem");
   const { data: unidades = [] } = useCondRows("cond_unidades", "condominio_id", condId);
@@ -131,13 +145,23 @@ export function CondominiosPage() {
       topo={<SearchSelect value={condId} onChange={setCondId} options={condominios} placeholder="Selecione o condomínio" emptyText="Nenhum condomínio (classifique em Clientes e Fornecedores)." />}
     />
     <div className="min-w-0 flex-1 space-y-4 p-4 sm:p-6">
-      <div>
-        <h1 className="flex items-center gap-2 text-2xl font-semibold"><Building2 className="size-6" /> {condominios.find((c) => c.value === condId)?.label ?? "Condomínios"}</h1>
-        <p className="text-sm text-muted-foreground">{secoes.find((x) => x.key === secao)?.label ?? "Painel"}</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="flex items-center gap-2 text-2xl font-semibold"><Building2 className="size-6" /> {condominios.find((c) => c.value === condId)?.label ?? "Condomínios"}</h1>
+          <p className="text-sm text-muted-foreground">{secoes.find((x) => x.key === secao)?.label ?? "Painel"}</p>
+        </div>
+        <div className="flex w-full items-center gap-2 sm:w-80">
+          <div className="min-w-0 flex-1">
+            <SearchSelect value={condId} onChange={setCondId} options={condominios} placeholder="Selecione o condomínio" emptyText="Nenhum condomínio (classifique em Clientes e Fornecedores)." />
+          </div>
+          <Button size="icon" variant="outline" disabled={!condId} aria-label={condId && padrao === condId ? "Remover condomínio padrão" : "Definir como condomínio padrão"} onClick={() => alternarPadrao(condId)}>
+            <Star className={cn("size-4", condId && padrao === condId ? "fill-warning text-warning" : "text-muted-foreground")} />
+          </Button>
+        </div>
       </div>
 
       {secao === "painel" ? (
-        <PainelCondominios condominios={condominios} condId={condId} podeConfigurar={perms.canUpdate} onAbrir={(id) => { setCondId(id); setSecao("unidades"); }} />
+        <PainelCondominios condominios={condominios} condId={condId} podeConfigurar={perms.canUpdate} onAbrir={(id) => { setCondId(id); setSecao("unidades"); }} padrao={padrao} onPadrao={alternarPadrao} />
       ) : !condId ? (
         <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
           <Building className="mx-auto mb-2 size-8 opacity-60" />
