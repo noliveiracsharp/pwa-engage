@@ -174,7 +174,7 @@ export function CondominiosPage() {
       ) : secao === "equipe" && secAtual ? (
         <EquipePanel condominioId={condId} blocos={blocos} unidades={unidades} perms={secAtual} />
       ) : secao === "documentos" && secAtual ? (
-        <DocumentosPanel condominioId={condId} perms={secAtual} />
+        <DocumentosPanel condominioId={condId} perms={secAtual} condominios={condominios} blocos={blocos} unidades={unidades} />
       ) : secao === "avisos" && secAtual ? (
         <AvisosPanel condominioId={condId} condominios={condominios} blocos={blocos} unidades={unidades} perms={secAtual} />
       ) : secao === "gestao" && secAtual ? (
