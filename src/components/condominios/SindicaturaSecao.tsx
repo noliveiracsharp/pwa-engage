@@ -108,11 +108,11 @@ export function SindicaturaSecao({ condominioId, podeEditar }: { condominioId: s
             </div>
             <div className="min-w-0">
               <Label className="mb-1.5 block">Início do mandato</Label>
-              <CampoData value={v["inicio"] ?? ""} disabled={!podeEditar} onChange={(x: string) => set("inicio", x)} />
+              <CampoData key={`i-${s(atual?.["id"])}`} value={v["inicio"] ?? ""} disabled={!podeEditar} onChange={(x: string) => set("inicio", x)} />
             </div>
             <div className="min-w-0">
               <Label className="mb-1.5 block">Fim do mandato</Label>
-              <CampoData value={v["fim"] ?? ""} disabled={!podeEditar} onChange={(x: string) => set("fim", x)} />
+              <CampoData key={`f-${s(atual?.["id"])}`} value={v["fim"] ?? ""} disabled={!podeEditar} onChange={(x: string) => set("fim", x)} />
             </div>
           </>
         )}

@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CarteiraCondominios } from "./CarteiraCondominios";
 import { DocumentosButton } from "@/components/documentos/DocumentosPainel";
 import { ContatosPainel } from "@/components/contatos/ContatosButton";
 import { rowId as docRowId } from "@/lib/crud";
@@ -333,6 +334,7 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly: roTela, sa
               <TabsTrigger value="gerais">Dados Gerais</TabsTrigger>
               {!pf && ver("fiscal") && <TabsTrigger value="fiscal">Fiscal e Atividades</TabsTrigger>}
               {!pf && ver("qsa") && <TabsTrigger value="qsa">Quadro Societário</TabsTrigger>}
+              {!pf && record && <TabsTrigger value="carteira">Condomínios</TabsTrigger>}
             </TabsList>
             {record && ver("documentos") && (
               <div className="ml-auto">
@@ -606,6 +608,12 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly: roTela, sa
                         </div>
                       ))}
                     </div>}
+              </TabsContent>
+            )}
+
+            {!pf && record && (
+              <TabsContent value="carteira" className="mt-0">
+                <CarteiraCondominios parceiroId={String(docRowId(record) ?? "")} />
               </TabsContent>
             )}
           </fieldset>
