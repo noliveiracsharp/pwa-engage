@@ -87,10 +87,10 @@ export function preencherAviso(texto: string, v: { nome: string; unidade: string
   return texto.replace(/\{\{\s*(nome|unidade|condominio)\s*\}\}/gi, (_, k: string) => (k.toLowerCase() === "nome" ? primeiro : k.toLowerCase() === "unidade" ? v.unidade : v.condominio));
 }
 
-export function validarAviso(a: { titulo: string; mensagemTexto: string; canais: CanalAviso[]; condominios: string[] }): string | null {
+export function validarAviso(a: { titulo: string; mensagemTexto: string; canais: CanalAviso[]; condominios: string[]; temImagem?: boolean }): string | null {
   if (!a.condominios.length) return "Escolha pelo menos um condomínio.";
   if (!a.titulo.trim()) return "Informe o título do aviso.";
-  if (!a.mensagemTexto.trim()) return "Escreva a mensagem do aviso.";
+  if (!a.mensagemTexto.trim() && !a.temImagem) return "Escreva a mensagem ou insira uma imagem no aviso.";
   if (!a.canais.length) return "Ligue pelo menos um canal (WhatsApp ou e-mail).";
   return null;
 }
@@ -116,4 +116,14 @@ export function validarMidiaAviso(f: { type: string; name: string; size: number 
   if (!t) return "Formato não aceito. Use imagem (JPG, PNG, WEBP), vídeo MP4 ou PDF.";
   if (f.size > LIMITE_MIDIA_MB[t] * 1024 * 1024) return `Arquivo maior que ${LIMITE_MIDIA_MB[t]} MB.`;
   return null;
+}
+
+/** URLs das imagens inseridas no texto do aviso (apenas http/https), na ordem em que aparecem. */
+export function imagensDoHtml(html: string): string[] {
+  const urls: string[] = [];
+  for (const m of html.matchAll(/<img\b[^>]*?\ssrc\s*=\s*("([^"]*)"|'([^']*)')/gi)) {
+    const u = (m[2] ?? m[3] ?? "").trim();
+    if (/^https?:\/\//i.test(u) && !urls.includes(u)) urls.push(u);
+  }
+  return urls;
 }
