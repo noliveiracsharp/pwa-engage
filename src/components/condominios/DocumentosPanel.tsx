@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { AlertTriangle, Settings2, RotateCcw, CalendarClock, Eye, FileText, FolderOpen, Loader2, Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { Activity, AlertTriangle, Settings2, RotateCcw, CalendarClock, Eye, ExternalLink, Megaphone, Send, FileText, FolderOpen, Loader2, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,13 @@ import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
 import { CampoData } from "./CampoData";
 import { s, useCondRows, useCondSalvar } from "./cond-data";
+import { AvisoEditorDialog, LeiturasDialog, ReenviarDialog, StatusEnvioDialog, type DocumentoAviso } from "./AvisosPanel";
+import { useAuth } from "@/hooks/useAuth";
+import { rowId } from "@/lib/row";
+import { STATUS_AVISO, statusDoAviso } from "@/lib/cond-avisos-ciclo";
+
+type Opt = { value: string; label: string };
+const UM_ANO = 60 * 60 * 24 * 365;
 
 type Perms = { canCreate: boolean; canUpdate: boolean; canDelete: boolean };
 const BUCKET = "cond-documentos";
@@ -37,8 +44,27 @@ function BadgeValidade({ venc }: { venc: string }) {
   return <Badge variant="outline" className={cls[st]}>{txt}</Badge>;
 }
 
-export function DocumentosPanel({ condominioId, perms }: { condominioId: string; perms: Perms }) {
+export function DocumentosPanel({ condominioId, perms, condominios, blocos, unidades }: { condominioId: string; perms: Perms; condominios: Opt[]; blocos: Row[]; unidades: Row[] }) {
   const { data: docs = [], isLoading } = useCondRows("cond_documentos", "condominio_id", condominioId);
+  const { data: avisos = [] } = useCondRows("cond_avisos", "condominio_id", condominioId);
+  const { empresa } = useAuth();
+  const empresaId = String(rowId(empresa ?? {}));
+  const nomeCond = condominios.find((c) => c.value === condominioId)?.label ?? "";
+  const avisosDoDoc = (id: string) => avisos.filter((a) => s(a["documento_id"]) === id).sort((a, b) => s(b["created_at"]).localeCompare(s(a["created_at"])));
+  const [envio, setEnvio] = useState<DocumentoAviso | null>(null);
+  const [leituras, setLeituras] = useState<Row[] | null>(null);
+  const [status, setStatus] = useState<Row | null>(null);
+  const [reenviar, setReenviar] = useState<Row | null>(null);
+  async function prepararEnvio(d: Row) {
+    const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(s(d["arquivo_path"]), UM_ANO);
+    if (error || !data) { toast.error("Não foi possível preparar o link do documento."); return; }
+    setEnvio({ id: s(d["id"]), titulo: s(d["titulo"]), url: data.signedUrl, tipo: s(d["arquivo_tipo"]).startsWith("image/") ? "imagem" : "pdf", nome: s(d["arquivo_nome"]) });
+  }
+  function verLeituras(d: Row) {
+    const av = avisosDoDoc(s(d["id"]));
+    if (!av.length) { toast.info("Este documento ainda não foi enviado aos moradores."); return; }
+    setLeituras(av);
+  }
   const salvar = useCondSalvar("cond_documentos");
   const { data: catRows = [] } = useCondRows("cond_documentos_categorias", "condominio_id", condominioId);
   const categorias = useMemo(() => categoriasEfetivas(catRows), [catRows]);
@@ -141,8 +167,13 @@ export function DocumentosPanel({ condominioId, perms }: { condominioId: string;
                     </p>
                   </button>
                   {s(d["data_vencimento"]) && <BadgeValidade venc={s(d["data_vencimento"])} />}
+                  {(() => { const ult = avisosDoDoc(s(d["id"]))[0]; if (!ult) return null; const st = statusDoAviso(ult["status"]); return <Badge variant="outline">{STATUS_AVISO[st].label}{st === "agendado" && ult["agendado_para"] ? ` · ${new Date(s(ult["agendado_para"])).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}` : ""}</Badge>; })()}
                   <div className="flex">
-                    <Button size="icon" variant="ghost" className="size-8" aria-label="Visualizar" onClick={() => abrir(d)}><Eye className="size-4" /></Button>
+                    <Button size="icon" variant="ghost" className="size-8" aria-label="Quem visualizou" onClick={() => verLeituras(d)}><Eye className="size-4" /></Button>
+                    <Button size="icon" variant="ghost" className="size-8" aria-label="Abrir documento" onClick={() => abrir(d)}><ExternalLink className="size-4" /></Button>
+                    {perms.canCreate && <Button size="icon" variant="ghost" className="size-8" aria-label="Enviar ou agendar para moradores" onClick={() => prepararEnvio(d)}><Megaphone className="size-4" /></Button>}
+                    {avisosDoDoc(s(d["id"]))[0] && <Button size="icon" variant="ghost" className="size-8" aria-label="Status do envio" onClick={() => setStatus(avisosDoDoc(s(d["id"]))[0]!)}><Activity className="size-4" /></Button>}
+                    {perms.canCreate && avisosDoDoc(s(d["id"]))[0] && <Button size="icon" variant="ghost" className="size-8" aria-label="Reenviar" onClick={() => setReenviar(avisosDoDoc(s(d["id"]))[0]!)}><Send className="size-4" /></Button>}
                     {perms.canUpdate && <Button size="icon" variant="ghost" className="size-8" aria-label="Editar" onClick={() => setEditando(d)}><Pencil className="size-4" /></Button>}
                     {perms.canDelete && <Button size="icon" variant="ghost" className="size-8 text-destructive" aria-label="Excluir" onClick={() => excluir(d)}><Trash2 className="size-4" /></Button>}
                   </div>
@@ -154,8 +185,12 @@ export function DocumentosPanel({ condominioId, perms }: { condominioId: string;
       </div>
 
       {editando !== undefined && (
-        <DocumentoDialog categorias={categorias} condominioId={condominioId} doc={editando} categoriaInicial={cat} onClose={() => setEditando(undefined)} salvar={salvar.mutateAsync} />
+        <DocumentoDialog categorias={categorias} condominioId={condominioId} doc={editando} categoriaInicial={cat} onClose={() => setEditando(undefined)} salvar={salvar.mutateAsync} aoCriar={(d) => void prepararEnvio(d)} />
       )}
+      {envio && <AvisoEditorDialog documento={envio} condominioId={condominioId} condominios={condominios} blocos={blocos} unidades={unidades} empresaId={empresaId} onClose={() => setEnvio(null)} />}
+      {leituras && <LeiturasDialog avisos={leituras} onClose={() => setLeituras(null)} />}
+      {status && <StatusEnvioDialog aviso={status} onClose={() => setStatus(null)} />}
+      {reenviar && <ReenviarDialog aviso={reenviar} empresaId={empresaId} nomeCondominio={nomeCond} onClose={() => setReenviar(null)} />}
 
       {gerenciar && <CategoriasDialog condominioId={condominioId} rows={catRows} contagem={contagem} onClose={() => setGerenciar(false)} />}
 
@@ -175,8 +210,8 @@ export function DocumentosPanel({ condominioId, perms }: { condominioId: string;
   );
 }
 
-function DocumentoDialog({ categorias, condominioId, doc, categoriaInicial, onClose, salvar }: {
-  categorias: CategoriaDoc[]; condominioId: string; doc: Row | null; categoriaInicial: string; onClose: () => void;
+function DocumentoDialog({ categorias, condominioId, doc, categoriaInicial, onClose, salvar, aoCriar }: {
+  categorias: CategoriaDoc[]; condominioId: string; doc: Row | null; categoriaInicial: string; onClose: () => void; aoCriar: (d: Row) => void;
   salvar: (a: { id?: string; valores?: Row }) => Promise<void>;
 }) {
   const inicialCat = doc ? s(doc["categoria"]) : categorias.some((c) => c.value === categoriaInicial) ? categoriaInicial : (categorias.find((c) => c.value === "outros") ?? categorias[0])?.value ?? "outros";
@@ -188,6 +223,7 @@ function DocumentoDialog({ categorias, condominioId, doc, categoriaInicial, onCl
   const [venc, setVenc] = useState(s(doc?.["data_vencimento"]).slice(0, 10));
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const [avisar, setAvisar] = useState(!doc);
   const pedeVenc = categorias.find((c) => c.value === categoria)?.vence ?? false;
   const valido = titulo.trim() && (doc || arquivo);
 
@@ -208,7 +244,13 @@ function DocumentoDialog({ categorias, condominioId, doc, categoriaInicial, onCl
       }
       await salvar(doc ? { id: s(doc["id"]), valores } : { valores });
       toast.success(doc ? "Documento atualizado." : "Documento enviado.");
+      let criado: Row | null = null;
+      if (!doc && avisar && valores["arquivo_path"]) {
+        const { data } = await supabase.from("cond_documentos" as never).select("*").eq("arquivo_path", s(valores["arquivo_path"])).maybeSingle();
+        criado = (data as Row | null) ?? null;
+      }
       onClose();
+      if (criado) aoCriar(criado);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Falha ao salvar o documento.");
     } finally { setEnviando(false); }
@@ -233,6 +275,7 @@ function DocumentoDialog({ categorias, condominioId, doc, categoriaInicial, onCl
             <Input id="doc-arq" type="file" accept="application/pdf,image/*,.doc,.docx,.xls,.xlsx" onChange={(e) => setArquivo(e.target.files?.[0] ?? null)} />
             <p className="mt-1 text-xs text-muted-foreground">PDF, imagem, Word ou Excel, até 20 MB.{doc && !arquivo ? ` Atual: ${s(doc["arquivo_nome"]) || "arquivo enviado"}` : ""}</p>
           </div>
+          {!doc && <label className="flex items-center gap-2 rounded-md border p-3 text-sm sm:col-span-2"><Switch checked={avisar} onCheckedChange={setAvisar} /> <span>Avisar os moradores ao salvar <span className="block text-xs text-muted-foreground">Você escolhe enviar agora ou agendar, e acompanha quem abriu por e-mail ou WhatsApp.</span></span></label>}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={enviando}>Cancelar</Button>
