@@ -23,6 +23,7 @@ import { formatCpfCnpj } from "@/lib/input-masks";
 import { FotoCond } from "./FotoCond";
 import { PessoaDialog, type Pessoa } from "./PessoaDialog";
 import { TransferenciaDialog } from "./TransferenciaDialog";
+import { AcaoIcone } from "./AcaoIcone";
 import { cn } from "@/lib/utils";
 import { OCUPACOES, PAPEIS, TIPOS_UNIDADE, s, useCatalogo, useCondRows, useCondSalvar } from "./cond-data";
 
@@ -287,25 +288,25 @@ function Pessoas({ unidadeId, condominioId, perms, lado, papeis, titulo }: { uni
               <p className="truncate text-xs text-muted-foreground">{[p?.email, p?.celular, p?.cpf ? formatCpfCnpj(p.cpf) : "", s(v["parentesco"]) || s(v["prestador_funcao"])].filter(Boolean).join(" · ")}</p>
               {ativas.length > 0 && <p className="mt-1 text-xs text-muted-foreground">{ativas.map((x) => x.l).join(" · ")}</p>}
             </div>
-            <div className="flex flex-wrap gap-1">
-              {perms.canUpdate && p && <Button size="sm" variant="outline" onClick={() => setForm({ pessoa: p, vinculo: v })}><Pencil className="size-4" /> Editar</Button>}
-              <Button size="sm" variant="outline" onClick={() => setPermsDe(v)}><Settings2 className="size-4" /> Permissões</Button>
-              {perms.canUpdate && <Button size="sm" variant="outline" onClick={() => setTransferir({ v, nome: p?.nome ?? "pessoa" })}><ArrowRightLeft className="size-4" /> Transferir</Button>}
-              {perms.canUpdate && p && <Button size="sm" variant="outline" disabled={ocupado} onClick={() => enviarLink(p)}><Mail className="size-4" /> Enviar link de senha</Button>}
+            <div className="flex flex-wrap items-center gap-0.5">
+              {perms.canUpdate && p && <AcaoIcone titulo="Editar" destaque onClick={() => setForm({ pessoa: p, vinculo: v })}><Pencil className="size-4" /></AcaoIcone>}
+              <AcaoIcone titulo="Permissões" onClick={() => setPermsDe(v)}><Settings2 className="size-4" /></AcaoIcone>
+              {perms.canUpdate && <AcaoIcone titulo="Transferir para outra unidade" onClick={() => setTransferir({ v, nome: p?.nome ?? "pessoa" })}><ArrowRightLeft className="size-4" /></AcaoIcone>}
+              {perms.canUpdate && p && <AcaoIcone titulo="Enviar link de senha" disabled={ocupado} onClick={() => enviarLink(p)}><Mail className="size-4" /></AcaoIcone>}
               {perms.canUpdate && p && (p.tem_acesso ? (
-                <Button size="sm" variant="outline" className="text-destructive" disabled={ocupado} onClick={async () => {
+                <AcaoIcone titulo="Revogar acesso" destrutivo disabled={ocupado} onClick={async () => {
                   if (!(await confirmar({ title: `Revogar acesso de ${p.nome}?`, description: "O login é apagado e as sessões abertas caem. O cadastro e os vínculos continuam.", destructive: true, confirmText: "Revogar" }))) return;
                   await acao("cond_revogar_acesso", { p_usuario: p.usuario_id }, "Acesso revogado.");
-                }}><ShieldOff className="size-4" /> Revogar</Button>
+                }}><ShieldOff className="size-4" /></AcaoIcone>
               ) : (
-                <Button size="sm" variant="outline" disabled={ocupado} onClick={async () => {
+                <AcaoIcone titulo="Liberar acesso com senha" disabled={ocupado} onClick={async () => {
                   const senha = await perguntar({ title: `Liberar acesso para ${p.nome}`, description: `Login: ${p.email}. Defina a senha inicial (mínimo 6 caracteres).`, placeholder: "Senha inicial", required: true, confirmText: "Liberar" });
                   if (senha) await acao("cond_liberar_acesso", { p_usuario: p.usuario_id, p_senha: senha }, "Acesso liberado.");
-                }}><KeyRound className="size-4" /> Liberar com senha</Button>
+                }}><KeyRound className="size-4" /></AcaoIcone>
               ))}
-              {perms.canDelete && <Button size="icon" variant="ghost" className="size-8 text-destructive" aria-label="Remover vínculo" onClick={async () => {
+              {perms.canDelete && <AcaoIcone titulo="Remover vínculo" destrutivo onClick={async () => {
                 if (await confirmar({ title: "Remover vínculo com a unidade?", description: "O cadastro da pessoa é mantido.", destructive: true, confirmText: "Remover" })) await salvar.mutateAsync({ id: s(v["id"]), excluir: true });
-              }}><Trash2 className="size-4" /></Button>}
+              }}><Trash2 className="size-4" /></AcaoIcone>}
             </div>
           </div>
         );
@@ -384,10 +385,10 @@ function Veiculos({ unidadeId, condominioId, perms }: { unidadeId: string; condo
           </div>
           {v["usuario_id"] ? <Badge variant="secondary">{pessoas.find((p) => p.usuario_id === s(v["usuario_id"]))?.nome ?? "Morador"}</Badge> : null}
           {v["cond_vaga_id"] ? <Badge variant="outline">Vaga {s(vagas.find((x) => s(x["id"]) === s(v["cond_vaga_id"]))?.["identificacao"])}</Badge> : null}
-          {perms.canUpdate && <Button size="sm" variant="outline" onClick={() => editar(v)}><Pencil className="size-4" /> Editar</Button>}
-          {perms.canDelete && <Button size="icon" variant="ghost" className="size-8 text-destructive" aria-label="Excluir veículo" onClick={async () => {
+          {perms.canUpdate && <AcaoIcone titulo="Editar veículo" destaque onClick={() => editar(v)}><Pencil className="size-4" /></AcaoIcone>}
+          {perms.canDelete && <AcaoIcone titulo="Excluir veículo" destrutivo onClick={async () => {
             if (await confirmar({ title: `Excluir ${s(v["placa"])}?`, destructive: true, confirmText: "Excluir" })) await salvar.mutateAsync({ id: s(v["id"]), excluir: true });
-          }}><Trash2 className="size-4" /></Button>}
+          }}><Trash2 className="size-4" /></AcaoIcone>}
         </div>
       ))}
 
@@ -448,12 +449,12 @@ function ListaSimples({ unidadeId, perms, tabela, foto = false, campos, obrigato
           <div key={s(r["id"])} className="flex items-center gap-3 rounded-lg border p-3 text-sm transition hover:bg-muted/40">
             {foto ? <FotoCond tamanho="sm" disabled value={s(r["foto_url"])} onChange={() => {}} /> : <span className="flex size-10 items-center justify-center rounded-full bg-muted"><Icone className="size-4" /></span>}
             <div className="min-w-0 flex-1"><p className="font-medium">{rs.titulo}</p><p className="truncate text-xs text-muted-foreground">{rs.sub}</p></div>
-            {perms.canUpdate && <Button size="sm" variant="outline" onClick={() => {
+            {perms.canUpdate && <AcaoIcone titulo="Editar" destaque onClick={() => {
               setN(Object.fromEntries(campos.map((c) => [c.k, s(r[c.k])]))); setFotoN(s(r["foto_url"])); setAberto(s(r["id"]));
-            }}><Pencil className="size-4" /> Editar</Button>}
-            {perms.canDelete && <Button size="icon" variant="ghost" className="size-8 text-destructive" aria-label="Excluir" onClick={async () => {
+            }}><Pencil className="size-4" /></AcaoIcone>}
+            {perms.canDelete && <AcaoIcone titulo="Excluir" destrutivo onClick={async () => {
               if (await confirmar({ title: "Excluir registro?", destructive: true, confirmText: "Excluir" })) await salvar.mutateAsync({ id: s(r["id"]), excluir: true });
-            }}><Trash2 className="size-4" /></Button>}
+            }}><Trash2 className="size-4" /></AcaoIcone>}
           </div>
         );
       })}
