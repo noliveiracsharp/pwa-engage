@@ -6,6 +6,7 @@ import { gravarAmbiente, useAmbientes } from "@/hooks/useAmbientes";
 import { destinoDoAmbiente, precisaEscolher, type Ambiente } from "@/lib/ambientes";
 
 export const Route = createFileRoute("/_authenticated/acesso")({
+  staticData: { sitemap: false },
   head: () => ({
     meta: [
       { title: "Onde deseja entrar? — Atende.ai" },

@@ -7,6 +7,7 @@ import { lerAmbiente, useAmbientes } from "@/hooks/useAmbientes";
 import { rotuloPapel } from "@/lib/ambientes";
 
 export const Route = createFileRoute("/_authenticated/minha-unidade")({
+  staticData: { sitemap: false },
   head: () => ({
     meta: [
       { title: "Minha unidade — Atende.ai" },
