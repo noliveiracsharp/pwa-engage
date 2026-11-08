@@ -25,6 +25,10 @@ import { EquipePanel } from "./EquipePanel";
 import { GestaoTerceirosPanel } from "./GestaoTerceirosPanel";
 import { DocumentosPanel } from "./DocumentosPanel";
 import { AvisosPanel } from "./AvisosPanel";
+import { useNavigate } from "@tanstack/react-router";
+import { Home } from "lucide-react";
+import { lerAmbiente, useAmbientes } from "@/hooks/useAmbientes";
+import { condominiosGeridos, emModoUnidade } from "@/lib/ambientes";
 
 /** Cores semânticas por ocupação da unidade (grade e legenda). */
 const OCUP_VISUAL = [
@@ -38,16 +42,22 @@ export function CondominiosPage() {
   const perms = usePagePermissions("/condominios");
   const { data: classificacoes = [] } = useClassificacoes();
   const { data: parceiros = [] } = useTableRows("parceiros");
+  // No acesso de condomínio (síndico), o escopo fica só nos condomínios que ele gere.
+  const modoUnidade = emModoUnidade(lerAmbiente());
+  const { data: ambientes = [] } = useAmbientes();
+  const geridos = useMemo(() => new Set(condominiosGeridos(ambientes)), [ambientes]);
+  const navigate = useNavigate();
   const condominios = useMemo(
     () =>
       parceiros
         .filter((p) => ehCondominio(classificacoes, s(p["classificacao_id"])))
+        .filter((p) => !modoUnidade || geridos.has(s(rowId(p))))
         .map((p) => ({
           value: s(rowId(p)),
           label: s(pick(p, ["titulo", "nome_fantasia", "nome", "razao_social"]) ?? "—"),
           hint: caminhoClassificacao(classificacoes, p["classificacao_id"]) || undefined,
         })),
-    [parceiros, classificacoes],
+    [parceiros, classificacoes, modoUnidade, geridos],
   );
 
   const { user } = useAuth();
@@ -78,7 +88,12 @@ export function CondominiosPage() {
     if (!blocoId && blocos.length) setBlocoId(s(blocos[0]!["id"]));
   }, [blocos, blocoId]);
 
-  const secoes = useSecoesCondominio(perms);
+  const secoesBase = useSecoesCondominio(perms);
+  const secoes = useMemo(
+    () => (modoUnidade ? [...secoesBase, { key: "minha-unidade", label: "Minha unidade", icon: Home, canRead: true, canCreate: false, canUpdate: false, canDelete: false }] : secoesBase),
+    [secoesBase, modoUnidade],
+  );
+  const irSecao = (k: string) => (k === "minha-unidade" ? navigate({ to: "/minha-unidade" }) : setSecao(k));
   const [secao, setSecao] = useState("painel");
   useEffect(() => {
     if (secoes.length && !secoes.some((x) => x.key === secao)) setSecao(secoes[0]!.key);
@@ -141,7 +156,7 @@ export function CondominiosPage() {
     <CondominiosSidebar
       secoes={secoes}
       ativa={secao}
-      onChange={setSecao}
+      onChange={irSecao}
       topo={<SearchSelect value={condId} onChange={setCondId} options={condominios} placeholder="Selecione o condomínio" emptyText="Nenhum condomínio (classifique em Clientes e Fornecedores)." />}
     />
     <div className="min-w-0 flex-1 space-y-4 p-4 sm:p-6">
@@ -161,7 +176,7 @@ export function CondominiosPage() {
       </div>
 
       {secao === "painel" ? (
-        <PainelCondominios condominios={condominios} condId={condId} podeConfigurar={perms.canUpdate} onAbrir={(id) => { setCondId(id); setSecao("unidades"); }} padrao={padrao} onPadrao={alternarPadrao} />
+        <PainelCondominios escopoSindico={modoUnidade} condominios={condominios} condId={condId} podeConfigurar={perms.canUpdate} onAbrir={(id) => { setCondId(id); setSecao("unidades"); }} padrao={padrao} onPadrao={alternarPadrao} />
       ) : !condId ? (
         <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
           <Building className="mx-auto mb-2 size-8 opacity-60" />

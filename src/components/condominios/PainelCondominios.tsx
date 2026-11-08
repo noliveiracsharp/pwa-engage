@@ -67,7 +67,7 @@ function GrupoCard({ icone: I, titulo, g, extra, nomeEmp, nomeCond }: { icone: t
   );
 }
 
-export function PainelCondominios({ condominios, condId, podeConfigurar, onAbrir, padrao, onPadrao }: { condominios: Cond[]; condId: string; podeConfigurar: boolean; onAbrir: (id: string) => void; padrao?: string; onPadrao?: (id: string) => void }) {
+export function PainelCondominios({ condominios, condId, podeConfigurar, onAbrir, padrao, onPadrao, escopoSindico }: { escopoSindico?: boolean; condominios: Cond[]; condId: string; podeConfigurar: boolean; onAbrir: (id: string) => void; padrao?: string; onPadrao?: (id: string) => void }) {
   const qc = useQueryClient();
   const [busca, setBuscaRaw] = useState("");
   const [page, setPage] = useState(1);
@@ -149,14 +149,14 @@ export function PainelCondominios({ condominios, condId, podeConfigurar, onAbrir
         <Kpi i={7} icone={Users} rotulo="Média/unidade" valor={unidades.length ? (vinculos.length / unidades.length).toFixed(1) : "—"} sub="pessoas vinculadas" />
       </div>
 
-      <div>
+      {!escopoSindico && <div>
         <h2 className="mb-3 text-2xl font-bold">Gestão da carteira</h2>
         <div className="grid gap-3 md:grid-cols-3">
           <GrupoCard icone={Briefcase} titulo="Administradoras" g={carteira.administradoras} extra={`${carteira.autogestao} em autogestão`} nomeEmp={nomeParceiro} nomeCond={nomeCond} />
           <GrupoCard icone={ShieldCheck} titulo="Facilities / Portaria" g={carteira.facilities} nomeEmp={nomeParceiro} nomeCond={nomeCond} />
           <GrupoCard icone={Crown} titulo="Sindicatura profissional" g={carteira.sindicatura} extra={`${carteira.sindicoMorador} com síndico morador`} nomeEmp={nomeParceiro} nomeCond={nomeCond} />
         </div>
-      </div>
+      </div>}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-2xl font-bold">Condomínios instalados</h2>
