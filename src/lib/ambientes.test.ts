@@ -53,3 +53,17 @@ describe("rotuloCargo", () => {
     expect(rotuloCargo({ papel: "proprietario", funcao: "condomino" })).toBe("Proprietário");
   });
 });
+
+import { condominiosGeridos, destinoDoAmbiente as destino2, montarAmbientes as montar2 } from "./ambientes";
+describe("escopo do síndico", () => {
+  const base = { vinculo_id: "v", condominio_nome: "C", bloco: "T1", numero: "101", papel: "proprietario" };
+  const amb = montar2({ nome: "Emp", perfil: "Adm" }, [
+    { ...base, unidade_id: "u1", condominio_id: "c1", funcao: "sindico" },
+    { ...base, unidade_id: "u2", condominio_id: "c2", funcao: "condomino" },
+  ]);
+  it("síndico vê só os condomínios que gere", () => expect(condominiosGeridos(amb)).toEqual(["c1"]));
+  it("síndico entra no painel do condomínio; morador na unidade", () => {
+    expect(destino2(amb.find((a) => a.id === "u1")!)).toBe("/condominios");
+    expect(destino2(amb.find((a) => a.id === "u2")!)).toBe("/minha-unidade");
+  });
+});
