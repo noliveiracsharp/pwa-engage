@@ -74,7 +74,7 @@ function MinhaUnidade() {
   if (!v) return <div className="py-12 text-center text-muted-foreground">Você não tem unidade vinculada. <Link to="/acesso" className="text-primary underline">Voltar</Link></div>;
 
   return (
-    <div className="-m-4 flex min-h-full flex-col md:-m-6 md:flex-row">
+    <div className="-m-4 flex min-h-full flex-col sm:-m-6 md:flex-row">
       <CondominiosSidebar secoes={secoes} ativa={secao} onChange={setSecao} />
       <div className="mx-auto w-full max-w-3xl min-w-0 flex-1 space-y-4 p-4 md:p-6">
       <div className="flex items-center justify-between gap-2">

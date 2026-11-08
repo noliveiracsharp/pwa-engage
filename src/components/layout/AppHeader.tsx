@@ -56,7 +56,6 @@ export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) 
   const [recarregando, setRecarregando] = useState(false);
   const modoUnidade = emModoUnidade(lerAmbiente());
   const ambAtual = modoUnidade ? ambientes?.find((a) => a.id === lerAmbiente()) : undefined;
-  const cargoExibido = ambAtual && ambAtual.tipo === "unidade" ? rotuloCargo(ambAtual.vinculo) : perfilNome;
 
   const ativa = useEmpresaAtiva();
   const nome = pick<string>(usuario, ["nome", "nome_completo", "usuario_nome"], user?.email ?? "Usuário");
@@ -70,6 +69,7 @@ export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) 
       return String((data as { descricao?: string } | null)?.descricao ?? "");
     },
   });
+  const cargoExibido = ambAtual && ambAtual.tipo === "unidade" ? rotuloCargo(ambAtual.vinculo) : perfilNome;
   const iniciais = (nome ?? "U").slice(0, 2).toUpperCase();
 
   async function handleSignOut() {
