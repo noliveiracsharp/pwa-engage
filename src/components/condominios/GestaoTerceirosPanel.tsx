@@ -66,7 +66,7 @@ export function GestaoTerceirosPanel({ condominioId, podeEditar }: { condominioI
         <Resumo icon={ShieldCheck} titulo="Facilities / Portaria" valor={nome(v["facilities_id"] ?? "")} />
       </div>
       <section className="space-y-4 rounded-lg border bg-card p-4">
-        <h2 className="font-semibold">Gestão & Terceiros</h2>
+        <h2 className="font-semibold">Administradora & Portaria</h2>
         <GestaoCondominial values={v} selfId={condominioId} disabled={!podeEditar} onChange={set} />
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="min-w-0">

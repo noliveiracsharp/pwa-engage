@@ -70,7 +70,6 @@ export function SorteioPanel({ condominioId, blocos, unidades, perms }: { condom
 
   return (
     <section className="space-y-4">
-      <h2 className="flex items-center gap-2 text-lg font-semibold"><Shuffle className="size-5" /> Sorteio de Vagas</h2>
       <div className="grid gap-3 rounded-lg border bg-card p-3 sm:grid-cols-3">
         <div><Label htmlFor="so-nome">1. Nome da rodada</Label><Input id="so-nome" value={nome} onChange={(e) => setNome(e.target.value)} /></div>
         <div><Label htmlFor="so-ini">Vigência inicial</Label><Input id="so-ini" type="date" value={ini} onChange={(e) => setIni(e.target.value)} /></div>

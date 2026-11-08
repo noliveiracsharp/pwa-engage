@@ -35,7 +35,7 @@ export function VagasPanel({ condominioId, blocos, unidades, perms }: { condomin
   return (
     <section className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="mr-auto flex items-center gap-2 text-lg font-semibold"><ParkingSquare className="size-5" /> Garagem & Vagas</h2>
+        <span className="mr-auto" />
         {MODALIDADES_VAGA.map((m) => <Badge key={m.value} variant="outline">{m.label.split(" (")[0]}: {total(m.value)}</Badge>)}
       </div>
       {perms.canCreate && (

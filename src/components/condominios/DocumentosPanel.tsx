@@ -112,10 +112,7 @@ export function DocumentosPanel({ condominioId, perms, condominios, blocos, unid
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <div className="mr-auto">
-          <h2 className="flex items-center gap-2 text-lg font-semibold"><FolderOpen className="size-5" /> Documentos do condomínio</h2>
-          <p className="text-sm text-muted-foreground">Atas, regimento, laudos, apólices e contratos em uma pasta digital.</p>
-        </div>
+        <span className="mr-auto" />
         {perms.canCreate && <Button onClick={() => setEditando(null)}><Plus className="size-4" /> Enviar documento</Button>}
       </div>
 
