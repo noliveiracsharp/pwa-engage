@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SlugRouteImport } from './routes/$slug'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as AcessoRouteImport } from './routes/acesso'
 import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as FornecedorRouteImport } from './routes/fornecedor'
 import { Route as LoginRouteImport } from './routes/login'
@@ -101,6 +102,11 @@ const SlugRoute = SlugRouteImport.update({
 } as any)
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AcessoRoute = AcessoRouteImport.update({
+  id: '/acesso',
+  path: '/acesso',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CheckoutRoute = CheckoutRouteImport.update({
@@ -508,6 +514,7 @@ const ApiPublicAvisoLidoIdRoute = ApiPublicAvisoLidoIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$slug': typeof SlugRoute
+  '/acesso': typeof AcessoRoute
   '/checkout': typeof CheckoutRoute
   '/fornecedor': typeof FornecedorRoute
   '/login': typeof LoginRoute
@@ -588,6 +595,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$slug': typeof SlugRoute
+  '/acesso': typeof AcessoRoute
   '/checkout': typeof CheckoutRoute
   '/fornecedor': typeof FornecedorRoute
   '/login': typeof LoginRoute
@@ -670,6 +678,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/$slug': typeof SlugRoute
+  '/acesso': typeof AcessoRoute
   '/checkout': typeof CheckoutRoute
   '/fornecedor': typeof FornecedorRoute
   '/login': typeof LoginRoute
@@ -752,6 +761,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/$slug'
+    | '/acesso'
     | '/checkout'
     | '/fornecedor'
     | '/login'
@@ -832,6 +842,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/$slug'
+    | '/acesso'
     | '/checkout'
     | '/fornecedor'
     | '/login'
@@ -913,6 +924,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/$slug'
+    | '/acesso'
     | '/checkout'
     | '/fornecedor'
     | '/login'
@@ -995,6 +1007,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   SlugRoute: typeof SlugRoute
+  AcessoRoute: typeof AcessoRoute
   CheckoutRoute: typeof CheckoutRoute
   FornecedorRoute: typeof FornecedorRoute
   LoginRoute: typeof LoginRoute
@@ -1045,6 +1058,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/acesso': {
+      id: '/acesso'
+      path: '/acesso'
+      fullPath: '/acesso'
+      preLoaderRoute: typeof AcessoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/checkout': {
@@ -1696,6 +1716,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   SlugRoute: SlugRoute,
+  AcessoRoute: AcessoRoute,
   CheckoutRoute: CheckoutRoute,
   FornecedorRoute: FornecedorRoute,
   LoginRoute: LoginRoute,
