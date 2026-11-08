@@ -86,7 +86,18 @@ export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) 
         <Button variant="ghost" size="icon" className="shrink-0" onClick={() => (modoUnidade ? window.dispatchEvent(new Event("cond-menu-toggle")) : onToggleSidebar())} aria-label="Abrir menu">
           <Menu className="h-5 w-5" />
         </Button>
-        <span className="truncate text-base font-bold tracking-tight text-foreground sm:text-lg">{ativa.titulo}</span>
+        {condSel && (!modoUnidade || condSel.opcoes.length > 1) ? (
+          <div className="flex min-w-0 items-center gap-1">
+            <div className="w-48 min-w-0 sm:w-72">
+              <SearchSelect value={condSel.valor} onChange={condSel.onChange} options={condSel.opcoes} placeholder="Selecione o condomínio" emptyText="Nenhum condomínio." />
+            </div>
+            <Button size="icon" variant="ghost" className="shrink-0" disabled={!condSel.valor} aria-label={condSel.valor && condSel.padrao === condSel.valor ? "Remover condomínio padrão" : "Definir como condomínio padrão"} title={condSel.valor && condSel.padrao === condSel.valor ? "Remover condomínio padrão" : "Definir como condomínio padrão"} onClick={() => condSel.onPadrao(condSel.valor)}>
+              <Star className={cn("size-4", condSel.valor && condSel.padrao === condSel.valor ? "fill-warning text-warning" : "text-muted-foreground")} />
+            </Button>
+          </div>
+        ) : (
+          <span className="truncate text-base font-bold tracking-tight text-foreground sm:text-lg">{ativa.titulo}</span>
+        )}
       </div>
 
       <div className="flex shrink-0 items-center gap-1">
