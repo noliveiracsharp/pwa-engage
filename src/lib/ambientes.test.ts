@@ -43,3 +43,13 @@ describe("modo unidade e filtro", () => {
     expect(filtrarAmbientes(l, "gestao").map((a) => a.id)).toEqual(["empresa"]);
   });
 });
+
+import { rotuloCargo } from "./ambientes";
+describe("rotuloCargo", () => {
+  it("síndico proprietário aparece como Síndico (Proprietário)", () => {
+    expect(rotuloCargo({ papel: "proprietario", funcao: "sindico" })).toBe("Síndico (Proprietário)");
+  });
+  it("condômino comum mostra só o papel", () => {
+    expect(rotuloCargo({ papel: "proprietario", funcao: "condomino" })).toBe("Proprietário");
+  });
+});

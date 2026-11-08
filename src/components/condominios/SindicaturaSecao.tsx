@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Crown } from "lucide-react";
 import { toast } from "sonner";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,7 +15,7 @@ import { MODALIDADES_SINDICO, diasParaFimMandato, normalizarSindicatura, validar
 import { CampoData } from "./CampoData";
 import { s, useCondRows } from "./cond-data";
 
-const CAMPOS = ["modalidade", "empresa_id", "cond_unidade_id", "sindico_nome", "sindico_email", "sindico_celular", "inicio", "fim"] as const;
+const CAMPOS = ["modalidade", "usuario_id", "empresa_id", "cond_unidade_id", "sindico_nome", "sindico_email", "sindico_celular", "inicio", "fim"] as const;
 const alfa = <T extends { label: string }>(l: T[]) => [...l].sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
 
 /** Define quem é o síndico: morador (unidade) ou profissional (empresa PJ). */
@@ -45,6 +45,35 @@ export function SindicaturaSecao({ condominioId, podeEditar }: { condominioId: s
     label: `${s(blocos.find((b) => s(b["id"]) === s(u["cond_bloco_id"]))?.["nome"])} — ${s(u["numero"])}`,
   }))), [unidades, blocos]);
 
+  const unidadeSel = v["modalidade"] === "morador" ? v["cond_unidade_id"] ?? "" : "";
+  const { data: vincUnidade = [] } = useCondRows("cond_unidades_vinculos", "cond_unidade_id", unidadeSel || undefined);
+  const idsPessoas = vincUnidade.map((x) => s(x["usuario_id"])).filter(Boolean);
+  const { data: pessoas = [] } = useQuery({
+    queryKey: ["cond", "sindicatura-pessoas", idsPessoas.join(",")],
+    enabled: idsPessoas.length > 0,
+    queryFn: async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data } = await (supabase as any).from("usuarios").select("id,nome,email,celular").in("id", idsPessoas);
+      return (data ?? []) as Record<string, unknown>[];
+    },
+  });
+  const moradorOpts = useMemo(() => alfa(pessoas.map((p) => {
+    const vi = vincUnidade.find((x) => s(x["usuario_id"]) === s(p["id"]));
+    const cargo = s(vi?.["funcao_condominio"]) === "sindico" ? " · Síndico" : "";
+    return { value: s(p["id"]), label: `${s(p["nome"]) || s(p["email"])}${cargo}` };
+  })), [pessoas, vincUnidade]);
+  const escolherMorador = (id: string) => {
+    const p = pessoas.find((x) => s(x["id"]) === id);
+    setV((o) => ({ ...o, usuario_id: id, sindico_nome: s(p?.["nome"]), sindico_email: s(p?.["email"]), sindico_celular: s(p?.["celular"]) }));
+  };
+  // Já existe alguém com cargo de Síndico na unidade? Pré-seleciona.
+  useEffect(() => {
+    if (!unidadeSel || v["usuario_id"] && pessoas.some((p) => s(p["id"]) === v["usuario_id"])) return;
+    const sind = vincUnidade.find((x) => s(x["funcao_condominio"]) === "sindico");
+    if (sind && pessoas.some((p) => s(p["id"]) === s(sind["usuario_id"]))) escolherMorador(s(sind["usuario_id"]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [unidadeSel, pessoas, vincUnidade]);
+
   const set = (k: string, x: string) => setV((o) => ({ ...normalizarSindicatura({ ...o, [k]: x }) } as Record<string, string>));
   const dias = diasParaFimMandato(v["fim"], new Date().toISOString().slice(0, 10));
 
@@ -59,6 +88,16 @@ export function SindicaturaSecao({ condominioId, podeEditar }: { condominioId: s
     setSalvando(false);
     if (e) { toast.error(/relation|schema cache/i.test(e.message) ? "Rode o script atendeai-condominios-sindicatura.sql no banco." : e.message); return; }
     if (!data?.length) { toast.error("Nada foi gravado: seu perfil não tem permissão para alterar este condomínio."); return; }
+    // Mantém o cargo do cadastro do morador igual ao mandato.
+    if (v["modalidade"] === "morador" && v["usuario_id"]) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const db = supabase as any;
+      const ids = unidades.map((u) => s(u["id"]));
+      await db.from("cond_unidades_vinculos").update({ funcao_condominio: "condomino" }).in("cond_unidade_id", ids).eq("funcao_condominio", "sindico").neq("usuario_id", v["usuario_id"]);
+      await db.from("cond_unidades_vinculos").update({ funcao_condominio: "sindico" }).eq("cond_unidade_id", v["cond_unidade_id"]).eq("usuario_id", v["usuario_id"]);
+      void qc.invalidateQueries({ queryKey: ["cond", "cond_unidades_vinculos"] });
+      void qc.invalidateQueries({ queryKey: ["ambientes"] });
+    }
     toast.success("Síndico do condomínio salvo.");
     void qc.invalidateQueries({ queryKey: ["cond", "cond_sindicatura"] });
   }
@@ -89,7 +128,14 @@ export function SindicaturaSecao({ condominioId, podeEditar }: { condominioId: s
         {v["modalidade"] === "morador" && (
           <div className="min-w-0 sm:col-span-2">
             <Label className="mb-1.5 block">Unidade do síndico</Label>
-            <SearchSelect value={v["cond_unidade_id"] ?? ""} disabled={!podeEditar} allowClear placeholder="Selecione a unidade" options={unidadeOpts} onChange={(x) => set("cond_unidade_id", x)} />
+            <SearchSelect value={v["cond_unidade_id"] ?? ""} disabled={!podeEditar} allowClear placeholder="Selecione a unidade" options={unidadeOpts} onChange={(x) => setV((o) => ({ ...o, cond_unidade_id: x, usuario_id: "", sindico_nome: "", sindico_email: "", sindico_celular: "" }))} />
+          </div>
+        )}
+        {v["modalidade"] === "morador" && unidadeSel && (
+          <div className="min-w-0 sm:col-span-2">
+            <Label className="mb-1.5 block">Morador da unidade</Label>
+            <SearchSelect value={v["usuario_id"] ?? ""} disabled={!podeEditar} placeholder={moradorOpts.length ? "Selecione quem é o síndico" : "Nenhum morador cadastrado nesta unidade"} options={moradorOpts} onChange={escolherMorador} />
+            <p className="mt-1 text-xs text-muted-foreground">Nome, e-mail e celular vêm do cadastro do morador. Ao salvar, ele passa a ter a função Síndico.</p>
           </div>
         )}
         {v["modalidade"] && (

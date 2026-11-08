@@ -5,10 +5,10 @@ import { FileText, Home, Loader2, Megaphone } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CondominiosSidebar, type Secao } from "@/components/condominios/CondominiosSidebar";
 import { supabase } from "@/integrations/supabase/client";
 import { lerAmbiente, useAmbientes } from "@/hooks/useAmbientes";
-import { rotuloPapel } from "@/lib/ambientes";
+import { rotuloCargo } from "@/lib/ambientes";
 import { htmlParaTexto } from "@/lib/html-texto";
 
 export const Route = createFileRoute("/_authenticated/minha-unidade")({
@@ -55,6 +55,13 @@ function MinhaUnidade() {
       return ((data ?? []) as Row[]).filter((d) => vis.includes(s(d["visibilidade"])));
     },
   });
+  const [secao, setSecao] = useState("unidade");
+  const ler = { canRead: true, canCreate: false, canUpdate: false, canDelete: false };
+  const secoes: Secao[] = [
+    { key: "unidade", label: "Minha unidade", icon: Home, ...ler },
+    { key: "avisos", label: "Avisos & Comunicados", icon: Megaphone, ...ler },
+    { key: "docs", label: "Documentos", icon: FileText, ...ler },
+  ];
   const [abrindo, setAbrindo] = useState<string | null>(null);
   const abrirDoc = async (d: Row) => {
     setAbrindo(s(d["id"]));
@@ -67,7 +74,9 @@ function MinhaUnidade() {
   if (!v) return <div className="py-12 text-center text-muted-foreground">Você não tem unidade vinculada. <Link to="/acesso" className="text-primary underline">Voltar</Link></div>;
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4 py-6">
+    <div className="-m-4 flex min-h-full flex-col sm:-m-6 md:flex-row">
+      <CondominiosSidebar secoes={secoes} ativa={secao} onChange={setSecao} />
+      <div className="mx-auto w-full max-w-3xl min-w-0 flex-1 space-y-4 p-4 md:p-6">
       <div className="flex items-center justify-between gap-2">
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Condomínio</p>
@@ -75,23 +84,17 @@ function MinhaUnidade() {
         </div>
         {(ambientes?.length ?? 0) > 1 && <Button variant="outline" asChild><Link to="/acesso">Trocar acesso</Link></Button>}
       </div>
-      <Tabs defaultValue="unidade">
-        <TabsList>
-          <TabsTrigger value="unidade"><Home className="mr-1.5 h-4 w-4" /> Minha unidade</TabsTrigger>
-          <TabsTrigger value="avisos"><Megaphone className="mr-1.5 h-4 w-4" /> Avisos</TabsTrigger>
-          <TabsTrigger value="docs"><FileText className="mr-1.5 h-4 w-4" /> Documentos</TabsTrigger>
-        </TabsList>
-        <TabsContent value="unidade">
+        {secao === "unidade" && (<div>
           <Card>
             <CardHeader><CardTitle className="text-base">Dados da unidade</CardTitle></CardHeader>
             <CardContent className="flex flex-wrap items-center gap-2 text-sm">
               {v.bloco && <span className="font-medium">{v.bloco}</span>}
               <span className="font-medium">Unidade {v.numero}</span>
-              <Badge variant="secondary">{rotuloPapel(v.papel)}</Badge>
+              <Badge variant="secondary">{rotuloCargo(v)}</Badge>
             </CardContent>
           </Card>
-        </TabsContent>
-        <TabsContent value="avisos" className="space-y-2">
+        </div>)}
+        {secao === "avisos" && (<div className="space-y-2">
           {avisos.isLoading ? <Loader2 className="mx-auto h-5 w-5 animate-spin" /> : (avisos.data ?? []).length === 0
             ? <p className="py-8 text-center text-sm text-muted-foreground">Nenhum aviso ativo.</p>
             : avisos.data!.map((a) => (
@@ -100,8 +103,8 @@ function MinhaUnidade() {
                 <p className="line-clamp-3 text-sm text-muted-foreground">{htmlParaTexto(s(a["mensagem"]))}</p>
               </CardContent></Card>
             ))}
-        </TabsContent>
-        <TabsContent value="docs" className="space-y-2">
+        </div>)}
+        {secao === "docs" && (<div className="space-y-2">
           {docs.isLoading ? <Loader2 className="mx-auto h-5 w-5 animate-spin" /> : (docs.data ?? []).length === 0
             ? <p className="py-8 text-center text-sm text-muted-foreground">Nenhum documento disponível.</p>
             : docs.data!.map((d) => (
@@ -110,8 +113,8 @@ function MinhaUnidade() {
                 <Button size="sm" variant="outline" disabled={abrindo === s(d["id"])} onClick={() => void abrirDoc(d)}>Abrir</Button>
               </CardContent></Card>
             ))}
-        </TabsContent>
-      </Tabs>
+        </div>)}
+      </div>
     </div>
   );
 }

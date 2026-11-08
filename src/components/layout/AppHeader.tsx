@@ -25,7 +25,7 @@ import { useTableRows, rowId } from "@/lib/crud";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeftRight, Building2 } from "lucide-react";
 import { lerAmbiente, useAmbientes } from "@/hooks/useAmbientes";
-import { emModoUnidade } from "@/lib/ambientes";
+import { emModoUnidade, rotuloCargo } from "@/lib/ambientes";
 import { useEffect, useState } from "react";
 import { MeusDadosSheet } from "@/components/perfil/MeusDadosSheet";
 import { useEmpresaAtiva } from "@/hooks/useEmpresaAtiva";
@@ -55,6 +55,7 @@ export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) 
   const { data: ambientes } = useAmbientes();
   const [recarregando, setRecarregando] = useState(false);
   const modoUnidade = emModoUnidade(lerAmbiente());
+  const ambAtual = modoUnidade ? ambientes?.find((a) => a.id === lerAmbiente()) : undefined;
 
   const ativa = useEmpresaAtiva();
   const nome = pick<string>(usuario, ["nome", "nome_completo", "usuario_nome"], user?.email ?? "Usuário");
@@ -68,6 +69,7 @@ export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) 
       return String((data as { descricao?: string } | null)?.descricao ?? "");
     },
   });
+  const cargoExibido = ambAtual && ambAtual.tipo === "unidade" ? rotuloCargo(ambAtual.vinculo) : perfilNome;
   const iniciais = (nome ?? "U").slice(0, 2).toUpperCase();
 
   async function handleSignOut() {
@@ -154,7 +156,7 @@ export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) 
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel className="flex flex-col">
               <span className="truncate">{nome}</span>
-              {perfilNome && <span className="truncate text-xs font-normal text-muted-foreground">{perfilNome}</span>}
+              {cargoExibido && <span className="truncate text-xs font-normal text-muted-foreground">{cargoExibido}</span>}
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={() => setMeusDados(true)}>
