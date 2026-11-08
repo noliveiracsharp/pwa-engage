@@ -169,7 +169,7 @@ export function CondominiosPage() {
       onChange={irSecao}
       direto={modoUnidade ? {
         nome: condominios.find((c) => c.value === condId)?.label ?? "Condomínio",
-        logo: ativa.logoAtivo,
+        logo: ativa.logoAtivo ?? null,
         cargo: (() => { const a = ambientes.find((x) => x.id === lerAmbiente()); return a && a.tipo === "unidade" ? rotuloCargo(a.vinculo) : null; })(),
       } : undefined}
       topo={<SearchSelect value={condId} onChange={setCondId} options={condominios} placeholder="Selecione o condomínio" emptyText="Nenhum condomínio (classifique em Clientes e Fornecedores)." />}
