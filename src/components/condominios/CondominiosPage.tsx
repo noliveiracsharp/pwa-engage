@@ -28,7 +28,8 @@ import { AvisosPanel } from "./AvisosPanel";
 import { useNavigate } from "@tanstack/react-router";
 import { Home } from "lucide-react";
 import { lerAmbiente, useAmbientes } from "@/hooks/useAmbientes";
-import { condominiosGeridos, emModoUnidade } from "@/lib/ambientes";
+import { condominiosGeridos, emModoUnidade, rotuloCargo } from "@/lib/ambientes";
+import { useEmpresaAtiva } from "@/hooks/useEmpresaAtiva";
 
 /** Cores semânticas por ocupação da unidade (grade e legenda). */
 const OCUP_VISUAL = [
@@ -47,6 +48,7 @@ export function CondominiosPage() {
   const { data: ambientes = [] } = useAmbientes();
   const geridos = useMemo(() => new Set(condominiosGeridos(ambientes)), [ambientes]);
   const navigate = useNavigate();
+  const ativa = useEmpresaAtiva();
   const condominios = useMemo(
     () =>
       parceiros
@@ -165,6 +167,11 @@ export function CondominiosPage() {
       secoes={secoes}
       ativa={secao}
       onChange={irSecao}
+      direto={modoUnidade ? {
+        nome: condominios.find((c) => c.value === condId)?.label ?? "Condomínio",
+        logo: ativa.logoAtivo,
+        cargo: (() => { const a = ambientes.find((x) => x.id === lerAmbiente()); return a && a.tipo === "unidade" ? rotuloCargo(a.vinculo) : null; })(),
+      } : undefined}
       topo={<SearchSelect value={condId} onChange={setCondId} options={condominios} placeholder="Selecione o condomínio" emptyText="Nenhum condomínio (classifique em Clientes e Fornecedores)." />}
     />
     <div className="min-w-0 flex-1 space-y-4 p-4 sm:p-6">
