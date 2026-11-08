@@ -1,3 +1,5 @@
+import { FUNCOES_CONDOMINIO } from "./cond-pessoa";
+
 // Ambientes de acesso: um mesmo login pode ser da empresa (gestão) e morador de unidades.
 
 export type VinculoAcesso = {
@@ -8,6 +10,8 @@ export type VinculoAcesso = {
   bloco: string | null;
   numero: string;
   papel: string;
+  /** Função no corpo diretivo (ex.: "sindico"). */
+  funcao?: string | null;
 };
 
 export type Ambiente =
@@ -22,6 +26,12 @@ const PAPEIS: Record<string, string> = {
 };
 export const rotuloPapel = (p: string) => PAPEIS[p] ?? p;
 
+/** Cargo exibido no acesso: função diretiva (Síndico, Conselheiro…) tem prioridade sobre o papel. */
+export function rotuloCargo(v: Pick<VinculoAcesso, "papel" | "funcao">): string {
+  const f = v.funcao && v.funcao !== "condomino" ? FUNCOES_CONDOMINIO.find((x) => x.value === v.funcao) : undefined;
+  return f ? `${f.label} (${rotuloPapel(v.papel)})` : rotuloPapel(v.papel);
+}
+
 /** Monta a lista de ambientes; a gestão da empresa sempre vem primeiro. */
 export function montarAmbientes(empresa: { nome: string; perfil: string } | null, vinculos: VinculoAcesso[]): Ambiente[] {
   const lista: Ambiente[] = [];
@@ -33,7 +43,7 @@ export function montarAmbientes(empresa: { nome: string; perfil: string } | null
     if (vistos.has(v.unidade_id)) continue;
     vistos.add(v.unidade_id);
     const local = [v.bloco, `Unidade ${v.numero}`].filter(Boolean).join(" · ");
-    lista.push({ tipo: "unidade", id: v.unidade_id, titulo: v.condominio_nome, subtitulo: `${rotuloPapel(v.papel)} · ${local}`, vinculo: v });
+    lista.push({ tipo: "unidade", id: v.unidade_id, titulo: v.condominio_nome, subtitulo: `${rotuloCargo(v)} · ${local}`, vinculo: v });
   }
   return lista;
 }
