@@ -105,7 +105,7 @@ export function DiretoriaSecao({ condominioId, podeEditar }: { condominioId: str
                 <p className="truncate font-medium">{s(m["nome"])}</p>
                 <p className="truncate text-xs text-muted-foreground">{FUNCOES_DIRETIVAS_UNIDADE[s(m["funcao_condominio"])]?.label} · {rotuloUnidade(s(m["cond_unidade_id"]))}</p>
               </div>
-              {podeEditar && <AcaoIcone icon={Trash2} label="Retirar do corpo diretivo" variante="perigo" onClick={() => remover(m)} />}
+              {podeEditar && <AcaoIcone titulo="Retirar do corpo diretivo" destrutivo onClick={() => remover(m)}><Trash2 className="size-4" /></AcaoIcone>}
             </li>
           ))}
         </ul>

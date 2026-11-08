@@ -22,3 +22,21 @@ describe("sindicatura", () => {
     expect(papeisNaCarteira("p", { administradora_id: "p", facilities_id: "x" }, "p")).toEqual(["administradora", "sindicatura"]);
   });
 });
+
+import { situacaoMandato as sm } from "./cond-sindicatura";
+describe("situacaoMandato", () => {
+  it("usa 60 dias quando não configurado", () => {
+    expect(sm("2026-03-01", "2026-01-15", null)?.situacao).toBe("alerta");
+    expect(sm("2026-05-01", "2026-01-15", null)?.situacao).toBe("ok");
+  });
+  it("respeita a antecedência configurada", () => {
+    expect(sm("2026-03-01", "2026-01-15", 30)?.situacao).toBe("ok");
+    expect(sm("2026-03-01", "2026-01-15", 90)?.situacao).toBe("alerta");
+  });
+  it("vencido após o fim", () => {
+    expect(sm("2026-01-10", "2026-01-15", 60)).toEqual({ situacao: "vencido", dias: -5 });
+  });
+  it("sem data de fim não alerta", () => {
+    expect(sm(null, "2026-01-15", 60)).toBeNull();
+  });
+});
