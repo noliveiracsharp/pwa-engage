@@ -33,3 +33,4 @@
 - Sidebar menu is flat (root funcoes only, always clickable); every child funcao is a tab of its root page via SubmenuTabs + SUBMENU_REGISTRY, and reading any tab grants opening the root page — keeps profile setup simple for tenants.
 - Condo residents live in public.usuarios (email required) linked via cond_unidades_vinculos; login is created/removed only by cond_liberar_acesso/cond_revogar_acesso RPCs so the profile survives revocation.
 - Condo notices send through the module-level queue in src/components/condominios/avisos-fila.ts, which processes 'pendente' rows from the database; new, resend, scheduled and cancellation sends all reuse it so a single path owns delivery and progress.
+- Password recovery validates callback evidence and the server-confirmed user before enabling edits; release signout skips the reset page so it cannot destroy a recovery session.
