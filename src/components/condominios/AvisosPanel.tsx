@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 import { CampoData } from "./CampoData";
 import { ordemNatural, s, useCondRows } from "./cond-data";
 import { buscarTodos, enfileirarAviso, inserirEmLotes, quandoConcluirEnvio, useFilaAvisos } from "./avisos-fila";
+import { AcaoIcone } from "./AcaoIcone";
 
 type Opt = { value: string; label: string };
 type Perms = { canCreate: boolean; canUpdate?: boolean; canDelete?: boolean };
@@ -164,14 +165,14 @@ export function AvisosPanel({ condominioId, condominios, blocos, unidades, perms
                     {s(a["motivo_cancelamento"]) && <p className="text-xs text-destructive">Motivo do cancelamento: {s(a["motivo_cancelamento"])}</p>}
                     <p className="text-xs"><span className="text-success">{Number(a["enviados"] ?? 0)}</span> de {Number(a["total"] ?? 0)} entregues{Number(a["falhas"] ?? 0) > 0 && <span className="ml-1 text-destructive">· {Number(a["falhas"])} falha(s)</span>}</p>
                   </div>
-                  <div className="flex flex-wrap items-center justify-end gap-1.5">
-                    <Button size="icon" variant="outline" aria-label="Quem recebeu e quem visualizou" onClick={() => setLeituras([a])}><Eye className="size-4" /></Button>
-                    {podeGerir && acoes.cancelar && <Button size="sm" variant="destructive" onClick={() => cancelar(a)}><Ban className="size-4" /> Cancelar</Button>}
-                    {podeGerir && acoes.editar && <Button size="sm" variant="outline" onClick={() => setEditor({ base: a })}><Pencil className="size-4" /> {acoes.editarCriaVersao ? "Editar (nova versão)" : "Editar"}</Button>}
-                    {podeGerir && (st === "arquivado" ? <Button size="sm" variant="outline" onClick={() => arquivar(a, true)}><RotateCcw className="size-4" /> Restaurar</Button>
-                      : acoes.arquivar && <Button size="sm" variant="outline" onClick={() => arquivar(a)}><Archive className="size-4" /> Arquivar</Button>)}
-                    {podeGerir && acoes.reenviar && <Button size="sm" variant="outline" onClick={() => setReenviar(a)}><Send className="size-4" /> Reenviar</Button>}
-                    <Button size="sm" variant="outline" onClick={() => setStatus(a)}><BarChart3 className="size-4" /> Status envio</Button>
+                  <div className="flex flex-wrap items-center justify-end gap-0.5">
+                    <AcaoIcone titulo="Quem recebeu e quem visualizou" onClick={() => setLeituras([a])}><Eye className="size-4" /></AcaoIcone>
+                    {podeGerir && acoes.cancelar && <AcaoIcone titulo="Cancelar aviso" destrutivo onClick={() => cancelar(a)}><Ban className="size-4" /></AcaoIcone>}
+                    {podeGerir && acoes.editar && <AcaoIcone titulo={acoes.editarCriaVersao ? "Editar (nova versão)" : "Editar"} destaque onClick={() => setEditor({ base: a })}><Pencil className="size-4" /></AcaoIcone>}
+                    {podeGerir && (st === "arquivado" ? <AcaoIcone titulo="Restaurar" onClick={() => arquivar(a, true)}><RotateCcw className="size-4" /></AcaoIcone>
+                      : acoes.arquivar && <AcaoIcone titulo="Arquivar" onClick={() => arquivar(a)}><Archive className="size-4" /></AcaoIcone>)}
+                    {podeGerir && acoes.reenviar && <AcaoIcone titulo="Reenviar" onClick={() => setReenviar(a)}><Send className="size-4" /></AcaoIcone>}
+                    <AcaoIcone titulo="Status do envio" onClick={() => setStatus(a)}><BarChart3 className="size-4" /></AcaoIcone>
                   </div>
                 </div>
               </article>
