@@ -13,7 +13,9 @@ import { PhoneInput } from "@/components/data-table/PhoneInput";
 import { confirmar } from "@/components/layout/DialogoGlobal";
 import { rowId, useTableRows } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
-import { CARGOS, VINCULOS, ehDiretoria, rotuloCargo, validarMembro, vigente, vinculoPadrao } from "@/lib/cond-equipe";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { CARGOS, FUNCOES_DIRETIVAS_UNIDADE, VINCULOS, ehDiretoria, rotuloCargo, validarMembro, vigente, vinculoPadrao } from "@/lib/cond-equipe";
 import { CampoData } from "./CampoData";
 import { s, useCondRows, useCondSalvar } from "./cond-data";
 
@@ -33,8 +35,34 @@ export function EquipePanel({ condominioId, blocos, unidades, perms }: { condomi
   const unidadeOpts = useMemo(() => alfa(unidades.map((u) => ({ value: s(u["id"]), label: `${s(blocos.find((b) => s(b["id"]) === s(u["cond_bloco_id"]))?.["nome"])} — ${s(u["numero"])}` }))), [unidades, blocos]);
   const nomeEmpresa = (id: string) => empresaOpts.find((o) => o.value === id)?.label;
 
-  const ordem = (r: Row) => CARGOS.findIndex((c) => c.value === s(r["cargo"]));
-  const diretoria = equipe.filter((r) => ehDiretoria(s(r["cargo"]))).sort((a, b) => ordem(a) - ordem(b));
+  // Diretoria definida no cadastro da pessoa dentro da unidade (Status & função).
+  const unidadeIds = useMemo(() => unidades.map((u) => s(u["id"])).filter(Boolean), [unidades]);
+  const { data: daUnidade = [] } = useQuery({
+    queryKey: ["cond", "cond_unidades_vinculos", "diretoria", condominioId, unidadeIds.join(",")],
+    enabled: unidadeIds.length > 0,
+    queryFn: async (): Promise<Row[]> => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const db = supabase as any;
+      const { data: vs, error } = await db.from("cond_unidades_vinculos").select("id,cond_unidade_id,usuario_id,funcao_condominio,status_conexao")
+        .in("cond_unidade_id", unidadeIds).in("funcao_condominio", Object.keys(FUNCOES_DIRETIVAS_UNIDADE));
+      if (error || !vs?.length) return [];
+      const unicos = [...new Set(vs.map((v: Row) => s(v["cond_unidade_id"])))] as string[];
+      const pessoas = new Map<string, Row>();
+      await Promise.all(unicos.map(async (u) => {
+        const { data } = await db.rpc("cond_unidade_pessoas", { p_unidade: u });
+        for (const p of (data ?? []) as Row[]) pessoas.set(s(p["usuario_id"]), p);
+      }));
+      return vs.map((v: Row) => {
+        const p = pessoas.get(s(v["usuario_id"]));
+        return { id: `u-${s(v["id"])}`, origem: "unidade", nome: s(p?.["nome"]) || "—", celular: s(p?.["celular"]), email: s(p?.["email"]),
+          funcao: s(v["funcao_condominio"]), cond_unidade_id: s(v["cond_unidade_id"]), vinculo: "morador", status: s(v["status_conexao"]) !== "bloqueado" };
+      });
+    },
+  });
+
+  const ordem = (r: Row) => r["origem"] === "unidade" ? FUNCOES_DIRETIVAS_UNIDADE[s(r["funcao"])]?.ordem ?? 9 : CARGOS.findIndex((c) => c.value === s(r["cargo"]));
+  const jaNaEquipe = (r: Row) => equipe.some((e) => s(e["cond_unidade_id"]) === s(r["cond_unidade_id"]) && s(e["nome"]).toLowerCase() === s(r["nome"]).toLowerCase());
+  const diretoria = [...equipe.filter((r) => ehDiretoria(s(r["cargo"]))), ...daUnidade.filter((r) => !jaNaEquipe(r))].sort((a, b) => ordem(a) - ordem(b) || s(a["nome"]).localeCompare(s(b["nome"]), "pt-BR"));
   const operacao = equipe.filter((r) => !ehDiretoria(s(r["cargo"]))).sort((a, b) => ordem(a) - ordem(b) || s(a["nome"]).localeCompare(s(b["nome"]), "pt-BR"));
 
   async function excluir(r: Row) {
@@ -61,13 +89,13 @@ export function EquipePanel({ condominioId, blocos, unidades, perms }: { condomi
             return (
               <li key={s(r["id"])} className="flex flex-wrap items-center gap-3 py-2">
                 <div className="min-w-0 flex-1">
-                  <p className="flex flex-wrap items-center gap-2 font-medium">{s(r["nome"])} <Badge variant="secondary">{rotuloCargo(s(r["cargo"]))}</Badge>{!ok && <Badge variant="outline">Fora de vigência</Badge>}</p>
+                  <p className="flex flex-wrap items-center gap-2 font-medium">{s(r["nome"])} <Badge variant="secondary">{r["origem"] === "unidade" ? FUNCOES_DIRETIVAS_UNIDADE[s(r["funcao"])]?.label : rotuloCargo(s(r["cargo"]))}</Badge>{r["origem"] === "unidade" && <Badge variant="outline">Definido na unidade</Badge>}{!ok && <Badge variant="outline">Fora de vigência</Badge>}</p>
                   <p className="truncate text-xs text-muted-foreground">
                     {[VINCULOS.find((v) => v.value === s(r["vinculo"]))?.label, empresaDoMembro(r), s(r["turno"]), s(r["celular"])].filter(Boolean).join(" · ")}
                   </p>
                 </div>
-                {perms.canUpdate && <Button size="icon" variant="ghost" aria-label="Editar" onClick={() => setEdit(r)}><Pencil className="size-4" /></Button>}
-                {perms.canDelete && <Button size="icon" variant="ghost" className="text-destructive" aria-label="Remover" onClick={() => excluir(r)}><Trash2 className="size-4" /></Button>}
+                {r["origem"] !== "unidade" && perms.canUpdate && <Button size="icon" variant="ghost" aria-label="Editar" onClick={() => setEdit(r)}><Pencil className="size-4" /></Button>}
+                {r["origem"] !== "unidade" && perms.canDelete && <Button size="icon" variant="ghost" className="text-destructive" aria-label="Remover" onClick={() => excluir(r)}><Trash2 className="size-4" /></Button>}
               </li>
             );
           })}

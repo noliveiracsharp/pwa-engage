@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Accessibility, Ban, IdCard, Loader2, ShieldCheck, SlidersHorizontal, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -67,6 +67,7 @@ type Props = {
 /** Cadastro completo da pessoa na unidade (novo ou edição), em abas. */
 export function PessoaDialog({ unidadeId, lado, papeis, gestor, pessoa, vinculo, onClose, onSalvo }: Props) {
   const novo = !pessoa;
+  const qc = useQueryClient();
   const { data: catalogo = [] } = usePreferenciasCatalogo();
   const { data: profissoes = [] } = useProfissoes();
   const [d, setD] = useState({
@@ -161,6 +162,9 @@ export function PessoaDialog({ unidadeId, lado, papeis, gestor, pessoa, vinculo,
         const { error } = await db.from("cond_unidades_vinculos").update(valores).eq("id", vincId);
         if (error) throw new Error(/column/i.test(error.message) ? "Rode o script atendeai-condominios-acesso-prestadores.sql no banco para salvar os novos campos." : error.message);
       }
+      // Ocupação da unidade acompanha os papéis (proprietário → própria, inquilino → alugada).
+      await rpc("cond_unidade_recalcular_ocupacao", { p_unidade: unidadeId });
+      await qc.invalidateQueries({ queryKey: ["cond"] });
       toast.success(novo ? "Pessoa cadastrada." : "Cadastro atualizado.");
       await onSalvo(); onClose();
     } catch (e) { toast.error(e instanceof Error ? e.message : "Não foi possível salvar."); }
