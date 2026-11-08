@@ -33,6 +33,10 @@ import { AvisosButton } from "@/components/layout/AvisosButton";
 import { CentralAjuda } from "@/components/ajuda/CentralAjuda";
 import { BuscaFuncoes } from "@/components/layout/BuscaFuncoes";
 import { slugLembrado } from "@/lib/marca-publica";
+import { Star } from "lucide-react";
+import { SearchSelect } from "@/components/data-table/SearchSelect";
+import { useCondSeletor } from "@/components/condominios/cond-seletor";
+import { cn } from "@/lib/utils";
 
 export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) {
   const { usuario, empresa, user, isMaster, empresaContextoId, setEmpresaContexto } = useAuth();
@@ -55,6 +59,7 @@ export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) 
   const { data: ambientes } = useAmbientes();
   const [recarregando, setRecarregando] = useState(false);
   const modoUnidade = emModoUnidade(lerAmbiente());
+  const condSel = useCondSeletor();
   const ambAtual = modoUnidade ? ambientes?.find((a) => a.id === lerAmbiente()) : undefined;
 
   const ativa = useEmpresaAtiva();
