@@ -43,7 +43,7 @@ export function useSecoesCondominio(pagina: P): Secao[] {
 }
 
 export function CondominiosSidebar({ secoes, ativa, onChange, topo, direto }: { secoes: Secao[]; ativa: string; onChange: (k: string) => void; topo?: ReactNode; direto?: { nome: string; logo?: string | null; cargo?: string | null } | undefined }) {
-  const [aberto, setAberto] = useState(!!direto);
+  const [aberto, setAberto] = useState(false);
   // No acesso direto do condomínio, o botão de menu do cabeçalho abre/recolhe este menu.
   useEffect(() => {
     if (!direto) return;
@@ -57,10 +57,11 @@ export function CondominiosSidebar({ secoes, ativa, onChange, topo, direto }: { 
       aria-label="Menu de condomínios"
       className={cn(
         "flex shrink-0 flex-col border-b border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200 md:self-stretch md:border-b-0 md:border-r",
-        aberto ? "w-full md:w-64" : "w-full md:w-14",
+        aberto ? "w-full md:w-60" : "w-full md:w-16",
       )}
     >
       <div className="flex flex-col md:sticky md:top-0">
+        {direto && !aberto && <div className="h-2" />}
         {direto ? (
           aberto ? (
             <div className="mx-3 mb-3 mt-3 flex flex-col items-center gap-1 border-b border-sidebar-border pb-3 text-center">
@@ -75,7 +76,7 @@ export function CondominiosSidebar({ secoes, ativa, onChange, topo, direto }: { 
                 </>
               )}
             </div>
-          ) : <div className="h-3" />
+          ) : null
         ) : (
         <div className={cn("flex items-center gap-2 px-3 pb-2 pt-4", !aberto && "md:justify-center md:px-0")}>
           <Building2 className="size-5 shrink-0" />
@@ -109,7 +110,7 @@ export function CondominiosSidebar({ secoes, ativa, onChange, topo, direto }: { 
                   ativo ? "bg-sidebar-primary font-semibold text-sidebar-primary-foreground hover:bg-sidebar-primary" : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                 )}
               >
-                <x.icon className="size-4 shrink-0" />
+                <x.icon className={cn("shrink-0", aberto ? "size-4" : "size-5")} />
                 {aberto && <span className="truncate">{x.label}</span>}
               </button>
             );
