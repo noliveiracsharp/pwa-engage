@@ -20,7 +20,6 @@ import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as TermosRouteImport } from './routes/termos'
-import { Route as AuthenticatedAcessoRouteImport } from './routes/_authenticated/acesso'
 import { Route as AuthenticatedAtendimentosRouteImport } from './routes/_authenticated/atendimentos'
 import { Route as AuthenticatedAuditoriaRouteImport } from './routes/_authenticated/auditoria'
 import { Route as AuthenticatedCentro_custosRouteImport } from './routes/_authenticated/centro_custos'
@@ -143,11 +142,6 @@ const TermosRoute = TermosRouteImport.update({
   id: '/termos',
   path: '/termos',
   getParentRoute: () => rootRouteImport,
-} as any)
-const AuthenticatedAcessoRoute = AuthenticatedAcessoRouteImport.update({
-  id: '/acesso',
-  path: '/acesso',
-  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedAtendimentosRoute =
   AuthenticatedAtendimentosRouteImport.update({
@@ -522,7 +516,6 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/termos': typeof TermosRoute
-  '/acesso': typeof AuthenticatedAcessoRoute
   '/atendimentos': typeof AuthenticatedAtendimentosRoute
   '/auditoria': typeof AuthenticatedAuditoriaRoute
   '/centro_custos': typeof AuthenticatedCentro_custosRoute
@@ -603,7 +596,6 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/termos': typeof TermosRoute
-  '/acesso': typeof AuthenticatedAcessoRoute
   '/atendimentos': typeof AuthenticatedAtendimentosRoute
   '/auditoria': typeof AuthenticatedAuditoriaRoute
   '/centro_custos': typeof AuthenticatedCentro_custosRoute
@@ -686,7 +678,6 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/termos': typeof TermosRoute
-  '/_authenticated/acesso': typeof AuthenticatedAcessoRoute
   '/_authenticated/atendimentos': typeof AuthenticatedAtendimentosRoute
   '/_authenticated/auditoria': typeof AuthenticatedAuditoriaRoute
   '/_authenticated/centro_custos': typeof AuthenticatedCentro_custosRoute
@@ -769,7 +760,6 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/sitemap.xml'
     | '/termos'
-    | '/acesso'
     | '/atendimentos'
     | '/auditoria'
     | '/centro_custos'
@@ -850,7 +840,6 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/sitemap.xml'
     | '/termos'
-    | '/acesso'
     | '/atendimentos'
     | '/auditoria'
     | '/centro_custos'
@@ -932,7 +921,6 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/sitemap.xml'
     | '/termos'
-    | '/_authenticated/acesso'
     | '/_authenticated/atendimentos'
     | '/_authenticated/auditoria'
     | '/_authenticated/centro_custos'
@@ -1114,13 +1102,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/termos'
       preLoaderRoute: typeof TermosRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/_authenticated/acesso': {
-      id: '/_authenticated/acesso'
-      path: '/acesso'
-      fullPath: '/acesso'
-      preLoaderRoute: typeof AuthenticatedAcessoRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/atendimentos': {
       id: '/_authenticated/atendimentos'
@@ -1602,7 +1583,6 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
-  AuthenticatedAcessoRoute: typeof AuthenticatedAcessoRoute
   AuthenticatedAtendimentosRoute: typeof AuthenticatedAtendimentosRoute
   AuthenticatedAuditoriaRoute: typeof AuthenticatedAuditoriaRoute
   AuthenticatedCentro_custosRoute: typeof AuthenticatedCentro_custosRoute
@@ -1655,7 +1635,6 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
-  AuthenticatedAcessoRoute: AuthenticatedAcessoRoute,
   AuthenticatedAtendimentosRoute: AuthenticatedAtendimentosRoute,
   AuthenticatedAuditoriaRoute: AuthenticatedAuditoriaRoute,
   AuthenticatedCentro_custosRoute: AuthenticatedCentro_custosRoute,

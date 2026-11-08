@@ -9,6 +9,8 @@ import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useNotificacoesChat } from "@/hooks/useNotificacoesChat";
 import { useWhiteLabel } from "@/hooks/useWhiteLabel";
+import { lerAmbiente } from "@/hooks/useAmbientes";
+import { emModoUnidade } from "@/lib/ambientes";
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
@@ -17,6 +19,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   useNotificacoesChat();
   useAvisosCotacao();
   useWhiteLabel();
+  const modoUnidade = emModoUnidade(lerAmbiente());
 
   // No celular, qualquer navegação fecha o menu.
   useEffect(() => { if (isMobile) setOpen(false); }, [pathname, isMobile]);
@@ -50,7 +53,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
       <AppHeader onToggleSidebar={() => setOpen((v) => !v)} />
       <BarraAprovacaoCotacao />
       <div className="relative flex min-h-0 flex-1">
-        {isMobile ? (
+        {modoUnidade ? null : isMobile ? (
           <>
             {open && (
               <div
