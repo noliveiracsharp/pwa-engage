@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { fetchCnpj } from "@/lib/cnpj";
 import { nomeProprio } from "@/lib/nome-proprio";
 import { Loader2, Search } from "lucide-react";
@@ -81,10 +83,10 @@ const TEXT_KEYS = [
   "data_inicio_atividade", "situacao_cadastral", "motivo_situacao_cadastral", "porte", "natureza_juridica",
   "cnae_principal_codigo", "cnae_principal_descricao", "capital_social", "cobranca_canais", "oferta_canais",
   "classificacao_id", "latitude", "longitude",
-  "logo", "logo_escuro", "cor_primaria_claro", "cor_primaria_escuro",
 ] as const;
-/** Marca própria do condomínio (White Label); colunas criadas pelo script de marca. */
+/** Marca própria do condomínio (White Label): gravada direto no cadastro (empresas). */
 const WL_KEYS = ["logo", "logo_escuro", "cor_primaria_claro", "cor_primaria_escuro"] as const;
+type WlKey = (typeof WL_KEYS)[number];
 type TextKey = (typeof TEXT_KEYS)[number];
 
 type Cnae = { codigo: string; descricao: string };
@@ -166,6 +168,23 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly: roTela, sa
   const pf = f.tipo_pessoa === "Física";
   const { data: classificacoes = [] } = useClassificacoes();
   const condo = ehCondominio(classificacoes, f.classificacao_id || undefined);
+  const queryClient = useQueryClient();
+  const vazioWl = (): Record<WlKey, string> => ({ logo: "", logo_escuro: "", cor_primaria_claro: "", cor_primaria_escuro: "" });
+  const [wl, setWl] = useState<Record<WlKey, string>>(vazioWl);
+  const [wlMudou, setWlMudou] = useState(false);
+  const setW = (k: WlKey, v: string) => { setWl((p) => ({ ...p, [k]: v })); setWlMudou(true); };
+  const recId = record ? String(rowId(record)) : "";
+  useEffect(() => {
+    setWl(vazioWl()); setWlMudou(false);
+    if (!open || !recId || !condo) return;
+    let vivo = true;
+    void supabase.from("empresas").select(WL_KEYS.join(",")).eq("id", recId as never).maybeSingle().then(({ data }) => {
+      if (!vivo || !data) return;
+      const d = data as unknown as Record<string, unknown>;
+      setWl(Object.fromEntries(WL_KEYS.map((k) => [k, d[k] == null ? "" : String(d[k])])) as Record<WlKey, string>);
+    });
+    return () => { vivo = false; };
+  }, [open, recId, condo]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const paiOptions = useMemo(() => {
     const blocked = record ? descendantIds(parceiros, PARENT_KEY, String(rowId(record))) : new Set<string>();
@@ -293,8 +312,11 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly: roTela, sa
       tipo_hierarquia: f.tipo_hierarquia,
     };
     for (const k of TEXT_KEYS) values[k] = f[k].trim() || null;
-    // marca só para condomínios; sem valores não envia (tenants sem o script continuam salvando)
-    if (!condo || WL_KEYS.every((k) => !values[k] && !record?.[k])) for (const k of WL_KEYS) delete values[k];
+    if (condo && record && wlMudou) {
+      const id = String(rowId(record));
+      void supabase.from("empresas").update(Object.fromEntries(WL_KEYS.map((k) => [k, wl[k].trim() || null])) as never).eq("id", id as never)
+        .then(({ error }) => { if (error) toast.error(`Marca não salva: ${error.message}`); else { setWlMudou(false); void queryClient.invalidateQueries({ queryKey: ["cond-marca"] }); } });
+    }
     // com cadastro existente, telefones/e-mail vêm da lista de contatos (sincronizados por ela)
     if (record) for (const k of ["telefone", "telefone2", "email"]) delete values[k];
     // só grava a preferência de cobrança quando escolhida (coluna criada pelo script da régua)
@@ -344,7 +366,7 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly: roTela, sa
               {!pf && ver("fiscal") && <TabsTrigger value="fiscal">Fiscal e Atividades</TabsTrigger>}
               {!pf && ver("qsa") && <TabsTrigger value="qsa">Quadro Societário</TabsTrigger>}
               {!pf && record && !condo && <TabsTrigger value="carteira">Condomínios</TabsTrigger>}
-              {!pf && condo && <TabsTrigger value="wl">White Label</TabsTrigger>}
+              {!pf && condo && record && <TabsTrigger value="wl">White Label</TabsTrigger>}
             </TabsList>
             {record && ver("documentos") && (
               <div className="ml-auto">
@@ -621,24 +643,24 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly: roTela, sa
               </TabsContent>
             )}
 
-            {!pf && condo && (
+            {!pf && condo && record && (
               <TabsContent value="wl" className="mt-0 space-y-4">
                 <p className="text-xs text-muted-foreground">Logo e cores exibidos para síndico, moradores e equipe quando entram neste condomínio. Vazio usa a marca da administradora.</p>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="light rounded-lg border border-border bg-background p-3 text-foreground">
                     <p className="mb-2 text-sm font-medium">Logo — modo claro</p>
-                    <PhotoUpload value={f.logo} alt="Logo do condomínio" onChange={(url) => set("logo", url)} />
+                    <PhotoUpload value={wl.logo} alt="Logo do condomínio" onChange={(url) => setW("logo", url)} />
                   </div>
                   <div className="dark rounded-lg border border-border bg-background p-3 text-foreground">
                     <p className="mb-2 text-sm font-medium">Logo — modo escuro (opcional)</p>
-                    <PhotoUpload value={f.logo_escuro} alt="Logo do condomínio no modo escuro" onChange={(url) => set("logo_escuro", url)} />
+                    <PhotoUpload value={wl.logo_escuro} alt="Logo do condomínio no modo escuro" onChange={(url) => setW("logo_escuro", url)} />
                   </div>
                   {([["cor_primaria_claro", "Cor primária — modo claro"], ["cor_primaria_escuro", "Cor primária — modo escuro"]] as const).map(([k, l]) => (
                     <div key={k} className="space-y-1.5">
                       <Label htmlFor={`p-${k}`}>{l}</Label>
                       <div className="flex gap-2">
-                        <input type="color" aria-label={l} value={/^#[0-9a-f]{6}$/i.test(f[k]) ? f[k] : "#6d28d9"} disabled={readOnly} onChange={(e) => set(k, e.target.value)} className="h-10 w-14 cursor-pointer rounded-md border border-input bg-background" />
-                        <Input id={`p-${k}`} value={f[k]} disabled={readOnly} placeholder="#000000" onChange={(e) => set(k, e.target.value)} />
+                        <input type="color" aria-label={l} value={/^#[0-9a-f]{6}$/i.test(wl[k]) ? wl[k] : "#6d28d9"} disabled={readOnly} onChange={(e) => setW(k, e.target.value)} className="h-10 w-14 cursor-pointer rounded-md border border-input bg-background" />
+                        <Input id={`p-${k}`} value={wl[k]} disabled={readOnly} placeholder="#000000" onChange={(e) => setW(k, e.target.value)} />
                       </div>
                     </div>
                   ))}
