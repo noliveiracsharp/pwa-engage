@@ -2,7 +2,7 @@ import { useSyncExternalStore } from "react";
 
 /** Seletor de condomínio publicado pela página de Condomínios e exibido no cabeçalho. */
 export type CondSeletor = {
-  opcoes: { value: string; label: string; hint?: string }[];
+  opcoes: { value: string; label: string; hint?: string | undefined }[];
   valor: string;
   padrao: string;
   onChange: (id: string) => void;
