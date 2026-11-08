@@ -48,3 +48,15 @@ export function papeisNaCarteira(
   if (sindicaturaEmpresaId === parceiroId) r.push("sindicatura");
   return r;
 }
+
+/** Antecedência padrão (dias) do alerta de fim de mandato, quando o condomínio não configurou. */
+export const ALERTA_MANDATO_PADRAO = 60;
+
+export type SituacaoMandato = "vencido" | "alerta" | "ok";
+/** Situação do mandato: vencido após o fim; alerta dentro da antecedência configurada. */
+export function situacaoMandato(fim: string | null | undefined, hoje: string, antecedencia?: number | null): { situacao: SituacaoMandato; dias: number } | null {
+  const dias = diasParaFimMandato(fim, hoje);
+  if (dias == null) return null;
+  const limite = antecedencia != null && antecedencia >= 0 ? antecedencia : ALERTA_MANDATO_PADRAO;
+  return { situacao: dias < 0 ? "vencido" : dias <= limite ? "alerta" : "ok", dias };
+}
