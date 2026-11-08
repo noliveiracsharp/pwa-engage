@@ -50,6 +50,7 @@ export function AvisosPanel({ condominioId, condominios, blocos, unidades, perms
   const { data: avisos = [], isLoading } = useCondRows("cond_avisos", "condominio_id", condominioId);
   const [editor, setEditor] = useState<{ base?: Row } | null>(null);
   const [leituras, setLeituras] = useState<Row[] | null>(null);
+  const [anexoAberto, setAnexoAberto] = useState<{ url: string; tipo: string; titulo: string } | null>(null);
   const [status, setStatus] = useState<Row | null>(null);
   const [reenviar, setReenviar] = useState<Row | null>(null);
   const [busca, setBusca] = useState("");
@@ -150,7 +151,7 @@ export function AvisosPanel({ condominioId, condominios, blocos, unidades, perms
                     <p className="flex flex-wrap items-center gap-2 font-semibold">
                       {s(a["titulo"])}
                       {Number(a["versao"] ?? 1) > 1 && <Badge variant="outline">V{Number(a["versao"])}</Badge>}
-                      {s(a["midia_url"]) && <a href={s(a["midia_url"])} target="_blank" rel="noopener noreferrer" className="text-primary" aria-label={`Abrir anexo ${s(a["midia_nome"])}`}>{s(a["midia_tipo"]) === "imagem" ? <ImageIcon className="size-4" /> : s(a["midia_tipo"]) === "video" ? <Film className="size-4" /> : <FileText className="size-4" />}</a>}
+                      {s(a["midia_url"]) && <button type="button" onClick={() => setAnexoAberto({ url: s(a["midia_url"]), tipo: s(a["midia_tipo"]), titulo: s(a["midia_nome"]) || s(a["titulo"]) })} className="text-primary" aria-label={`Abrir anexo ${s(a["midia_nome"])}`}>{s(a["midia_tipo"]) === "imagem" ? <ImageIcon className="size-4" /> : s(a["midia_tipo"]) === "video" ? <Film className="size-4" /> : <FileText className="size-4" />}</button>}
                     </p>
                     <div className="flex flex-wrap items-center gap-1.5 text-xs">
                       <Badge variant="outline" className={STATUS_AVISO[st].cor}>{STATUS_AVISO[st].label}</Badge>
@@ -182,6 +183,20 @@ export function AvisosPanel({ condominioId, condominios, blocos, unidades, perms
       {leituras && <LeiturasDialog avisos={leituras} onClose={() => setLeituras(null)} />}
       {status && <StatusEnvioDialog aviso={status} onClose={() => setStatus(null)} />}
       {reenviar && <ReenviarDialog aviso={reenviar} empresaId={empresaId} nomeCondominio={nomeCond} onClose={() => setReenviar(null)} />}
+      <Dialog open={!!anexoAberto} onOpenChange={(o) => !o && setAnexoAberto(null)}>
+        <DialogContent className="flex h-[90vh] max-w-5xl flex-col">
+          <DialogHeader><DialogTitle className="truncate pr-6">{anexoAberto?.titulo}</DialogTitle></DialogHeader>
+          {anexoAberto && (anexoAberto.tipo === "imagem"
+            ? <img src={anexoAberto.url} alt={anexoAberto.titulo} className="min-h-0 flex-1 rounded-md object-contain" />
+            : anexoAberto.tipo === "video"
+              ? <video src={anexoAberto.url} controls className="min-h-0 w-full flex-1 rounded-md bg-muted" />
+              : <iframe src={anexoAberto.url} title={anexoAberto.titulo} className="min-h-0 w-full flex-1 rounded-md border" />)}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => anexoAberto && window.open(anexoAberto.url, "_blank", "noopener")}>Abrir em nova aba</Button>
+            <Button onClick={() => setAnexoAberto(null)}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }
@@ -542,7 +557,7 @@ export function AvisoEditorDialog({ base, documento, condominioId, condominios, 
   return (
     <Dialog open onOpenChange={(o) => !o && !salvando && onClose()}>
       <DialogContent className="flex max-h-[92vh] max-w-3xl flex-col overflow-hidden">
-        <DialogHeader className="shrink-0"><DialogTitle className="flex items-center gap-2"><Megaphone className="size-5" /> {editando ? (novaVersao ? `Editar aviso — nova versão V${Number(base!["versao"] ?? 1) + 1}` : "Editar aviso agendado") : "Novo aviso"}</DialogTitle></DialogHeader>
+        <DialogHeader className="shrink-0"><DialogTitle className="flex items-center gap-2"><Megaphone className="size-5" /> {editando ? (novaVersao ? `Editar aviso — nova versão V${Number(base!["versao"] ?? 1) + 1}` : "Editar aviso agendado") : documento ? `Enviar documento aos moradores — ${documento.titulo}` : "Novo aviso"}</DialogTitle></DialogHeader>
 
         <div className="-mx-6 min-h-0 flex-1 space-y-5 overflow-y-auto px-6 pb-2">
           {editando ? (
@@ -586,7 +601,16 @@ export function AvisoEditorDialog({ base, documento, condominioId, condominios, 
             </div>
             <div>
               <Label className="mb-1.5 block">Anexo (opcional){editando && s(base!["midia_nome"]) && !anexo ? ` — atual: ${s(base!["midia_nome"])}` : ""}</Label>
-              {!anexo ? (
+              {documento && !editando ? (
+                <div className="flex items-center gap-3 rounded-lg border bg-muted/30 p-3">
+                  {documento.tipo === "imagem" ? <img src={documento.url} alt="Prévia do documento" className="size-16 rounded object-cover" />
+                    : <div className="flex size-16 items-center justify-center rounded bg-primary/10"><FileText className="size-7 text-primary" /></div>}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{documento.nome}</p>
+                    <p className="text-xs text-muted-foreground">Documento do condomínio · vai anexado automaticamente</p>
+                  </div>
+                </div>
+              ) : !anexo ? (
                 <label onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); escolherAnexo(e.dataTransfer.files[0]); }}
                   className="flex cursor-pointer flex-col items-center gap-1 rounded-lg border border-dashed p-5 text-center text-sm text-muted-foreground transition hover:border-primary/60 hover:bg-primary/5 focus-within:ring-2 focus-within:ring-primary/30">
                   <Paperclip className="size-5 text-primary" />

@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
-import { Activity, AlertTriangle, Settings2, RotateCcw, CalendarClock, Eye, ExternalLink, Megaphone, Send, FileText, FolderOpen, Loader2, Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Activity, AlertTriangle, Paperclip, Settings2, RotateCcw, CalendarClock, Eye, ExternalLink, Megaphone, Send, FileText, FolderOpen, Loader2, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -222,6 +222,8 @@ function DocumentoDialog({ categorias, condominioId, doc, categoriaInicial, onCl
   const [dataDoc, setDataDoc] = useState(s(doc?.["data_documento"]).slice(0, 10));
   const [venc, setVenc] = useState(s(doc?.["data_vencimento"]).slice(0, 10));
   const [arquivo, setArquivo] = useState<File | null>(null);
+  const previa = useMemo(() => (arquivo?.type.startsWith("image/") ? URL.createObjectURL(arquivo) : ""), [arquivo]);
+  useEffect(() => () => { if (previa) URL.revokeObjectURL(previa); }, [previa]);
   const [enviando, setEnviando] = useState(false);
   const [avisar, setAvisar] = useState(!doc);
   const pedeVenc = categorias.find((c) => c.value === categoria)?.vence ?? false;
@@ -271,9 +273,26 @@ function DocumentoDialog({ categorias, condominioId, doc, categoriaInicial, onCl
           </div>
           <div className="sm:col-span-2"><Label htmlFor="doc-desc">Descrição</Label><Textarea id="doc-desc" rows={3} value={descricao} onChange={(e) => setDescricao(e.target.value)} /></div>
           <div className="sm:col-span-2">
-            <Label htmlFor="doc-arq">{doc ? "Substituir arquivo (opcional)" : "Arquivo *"}</Label>
-            <Input id="doc-arq" type="file" accept="application/pdf,image/*,.doc,.docx,.xls,.xlsx" onChange={(e) => setArquivo(e.target.files?.[0] ?? null)} />
-            <p className="mt-1 text-xs text-muted-foreground">PDF, imagem, Word ou Excel, até 20 MB.{doc && !arquivo ? ` Atual: ${s(doc["arquivo_nome"]) || "arquivo enviado"}` : ""}</p>
+            <Label className="mb-1.5 block">{doc ? "Substituir arquivo (opcional)" : "Arquivo *"}{doc && !arquivo ? ` — atual: ${s(doc["arquivo_nome"]) || "arquivo enviado"}` : ""}</Label>
+            {!arquivo ? (
+              <label onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); setArquivo(e.dataTransfer.files[0] ?? null); }}
+                className="flex cursor-pointer flex-col items-center gap-1 rounded-lg border border-dashed p-5 text-center text-sm text-muted-foreground transition hover:border-primary/60 hover:bg-primary/5 focus-within:ring-2 focus-within:ring-primary/30">
+                <Paperclip className="size-5 text-primary" />
+                <span><b className="text-foreground">Clique ou arraste</b> o arquivo</span>
+                <span className="text-xs">PDF, imagem, Word ou Excel, até 20 MB</span>
+                <input type="file" accept="application/pdf,image/*,.doc,.docx,.xls,.xlsx" className="sr-only" disabled={enviando} onChange={(e) => { setArquivo(e.target.files?.[0] ?? null); e.target.value = ""; }} />
+              </label>
+            ) : (
+              <div className="flex items-center gap-3 rounded-lg border bg-muted/30 p-3">
+                {arquivo.type.startsWith("image/") && previa ? <img src={previa} alt="Prévia do arquivo" className="size-16 rounded object-cover" />
+                  : <div className="flex size-16 items-center justify-center rounded bg-primary/10"><FileText className="size-7 text-primary" /></div>}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{arquivo.name}</p>
+                  <p className="text-xs text-muted-foreground">{arquivo.type.startsWith("image/") ? "Imagem" : arquivo.type === "application/pdf" ? "PDF" : "Documento"} · {(arquivo.size / 1024 / 1024).toFixed(1)} MB</p>
+                </div>
+                <Button type="button" variant="ghost" size="icon" aria-label="Remover arquivo" onClick={() => setArquivo(null)} disabled={enviando}><X className="size-4" /></Button>
+              </div>
+            )}
           </div>
           {!doc && <label className="flex items-center gap-2 rounded-md border p-3 text-sm sm:col-span-2"><Switch checked={avisar} onCheckedChange={setAvisar} /> <span>Avisar os moradores ao salvar <span className="block text-xs text-muted-foreground">Você escolhe enviar agora ou agendar, e acompanha quem abriu por e-mail ou WhatsApp.</span></span></label>}
         </div>
