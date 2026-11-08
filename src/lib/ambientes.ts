@@ -42,3 +42,17 @@ export function montarAmbientes(empresa: { nome: string; perfil: string } | null
 export const precisaEscolher = (ambientes: Ambiente[]) => ambientes.length > 1;
 
 export const destinoDoAmbiente = (a: Ambiente) => (a.tipo === "empresa" ? "/dashboard" : "/minha-unidade");
+
+/** Ambiente gravado é uma unidade? Nesse modo o menu da empresa fica oculto. */
+export const emModoUnidade = (id: string | null) => !!id && id !== "empresa";
+
+/** Telas permitidas enquanto o login está dentro de uma unidade. */
+export const ROTAS_UNIDADE = ["/minha-unidade", "/meus-dados"];
+
+/** Filtra os ambientes pelo texto digitado (nome, torre, unidade, papel), sem acentos. */
+export function filtrarAmbientes(ambientes: Ambiente[], texto: string): Ambiente[] {
+  const norm = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const q = norm(texto.trim());
+  if (!q) return ambientes;
+  return ambientes.filter((a) => norm(`${a.titulo} ${a.subtitulo} ${a.tipo === "empresa" ? "gestao empresa" : "condominio"}`).includes(q));
+}

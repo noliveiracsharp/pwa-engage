@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SlugRouteImport } from './routes/$slug'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as AcessoRouteImport } from './routes/acesso'
 import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as FornecedorRouteImport } from './routes/fornecedor'
 import { Route as LoginRouteImport } from './routes/login'
@@ -20,7 +21,6 @@ import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as TermosRouteImport } from './routes/termos'
-import { Route as AuthenticatedAcessoRouteImport } from './routes/_authenticated/acesso'
 import { Route as AuthenticatedAtendimentosRouteImport } from './routes/_authenticated/atendimentos'
 import { Route as AuthenticatedAuditoriaRouteImport } from './routes/_authenticated/auditoria'
 import { Route as AuthenticatedCentro_custosRouteImport } from './routes/_authenticated/centro_custos'
@@ -104,6 +104,11 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AcessoRoute = AcessoRouteImport.update({
+  id: '/acesso',
+  path: '/acesso',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CheckoutRoute = CheckoutRouteImport.update({
   id: '/checkout',
   path: '/checkout',
@@ -143,11 +148,6 @@ const TermosRoute = TermosRouteImport.update({
   id: '/termos',
   path: '/termos',
   getParentRoute: () => rootRouteImport,
-} as any)
-const AuthenticatedAcessoRoute = AuthenticatedAcessoRouteImport.update({
-  id: '/acesso',
-  path: '/acesso',
-  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedAtendimentosRoute =
   AuthenticatedAtendimentosRouteImport.update({
@@ -514,6 +514,7 @@ const ApiPublicAvisoLidoIdRoute = ApiPublicAvisoLidoIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$slug': typeof SlugRoute
+  '/acesso': typeof AcessoRoute
   '/checkout': typeof CheckoutRoute
   '/fornecedor': typeof FornecedorRoute
   '/login': typeof LoginRoute
@@ -522,7 +523,6 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/termos': typeof TermosRoute
-  '/acesso': typeof AuthenticatedAcessoRoute
   '/atendimentos': typeof AuthenticatedAtendimentosRoute
   '/auditoria': typeof AuthenticatedAuditoriaRoute
   '/centro_custos': typeof AuthenticatedCentro_custosRoute
@@ -595,6 +595,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$slug': typeof SlugRoute
+  '/acesso': typeof AcessoRoute
   '/checkout': typeof CheckoutRoute
   '/fornecedor': typeof FornecedorRoute
   '/login': typeof LoginRoute
@@ -603,7 +604,6 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/termos': typeof TermosRoute
-  '/acesso': typeof AuthenticatedAcessoRoute
   '/atendimentos': typeof AuthenticatedAtendimentosRoute
   '/auditoria': typeof AuthenticatedAuditoriaRoute
   '/centro_custos': typeof AuthenticatedCentro_custosRoute
@@ -678,6 +678,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/$slug': typeof SlugRoute
+  '/acesso': typeof AcessoRoute
   '/checkout': typeof CheckoutRoute
   '/fornecedor': typeof FornecedorRoute
   '/login': typeof LoginRoute
@@ -686,7 +687,6 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/termos': typeof TermosRoute
-  '/_authenticated/acesso': typeof AuthenticatedAcessoRoute
   '/_authenticated/atendimentos': typeof AuthenticatedAtendimentosRoute
   '/_authenticated/auditoria': typeof AuthenticatedAuditoriaRoute
   '/_authenticated/centro_custos': typeof AuthenticatedCentro_custosRoute
@@ -761,6 +761,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/$slug'
+    | '/acesso'
     | '/checkout'
     | '/fornecedor'
     | '/login'
@@ -769,7 +770,6 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/sitemap.xml'
     | '/termos'
-    | '/acesso'
     | '/atendimentos'
     | '/auditoria'
     | '/centro_custos'
@@ -842,6 +842,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/$slug'
+    | '/acesso'
     | '/checkout'
     | '/fornecedor'
     | '/login'
@@ -850,7 +851,6 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/sitemap.xml'
     | '/termos'
-    | '/acesso'
     | '/atendimentos'
     | '/auditoria'
     | '/centro_custos'
@@ -924,6 +924,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/$slug'
+    | '/acesso'
     | '/checkout'
     | '/fornecedor'
     | '/login'
@@ -932,7 +933,6 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/sitemap.xml'
     | '/termos'
-    | '/_authenticated/acesso'
     | '/_authenticated/atendimentos'
     | '/_authenticated/auditoria'
     | '/_authenticated/centro_custos'
@@ -1007,6 +1007,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   SlugRoute: typeof SlugRoute
+  AcessoRoute: typeof AcessoRoute
   CheckoutRoute: typeof CheckoutRoute
   FornecedorRoute: typeof FornecedorRoute
   LoginRoute: typeof LoginRoute
@@ -1057,6 +1058,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/acesso': {
+      id: '/acesso'
+      path: '/acesso'
+      fullPath: '/acesso'
+      preLoaderRoute: typeof AcessoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/checkout': {
@@ -1114,13 +1122,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/termos'
       preLoaderRoute: typeof TermosRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/_authenticated/acesso': {
-      id: '/_authenticated/acesso'
-      path: '/acesso'
-      fullPath: '/acesso'
-      preLoaderRoute: typeof AuthenticatedAcessoRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/atendimentos': {
       id: '/_authenticated/atendimentos'
@@ -1602,7 +1603,6 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
-  AuthenticatedAcessoRoute: typeof AuthenticatedAcessoRoute
   AuthenticatedAtendimentosRoute: typeof AuthenticatedAtendimentosRoute
   AuthenticatedAuditoriaRoute: typeof AuthenticatedAuditoriaRoute
   AuthenticatedCentro_custosRoute: typeof AuthenticatedCentro_custosRoute
@@ -1655,7 +1655,6 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
-  AuthenticatedAcessoRoute: AuthenticatedAcessoRoute,
   AuthenticatedAtendimentosRoute: AuthenticatedAtendimentosRoute,
   AuthenticatedAuditoriaRoute: AuthenticatedAuditoriaRoute,
   AuthenticatedCentro_custosRoute: AuthenticatedCentro_custosRoute,
@@ -1717,6 +1716,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   SlugRoute: SlugRoute,
+  AcessoRoute: AcessoRoute,
   CheckoutRoute: CheckoutRoute,
   FornecedorRoute: FornecedorRoute,
   LoginRoute: LoginRoute,
