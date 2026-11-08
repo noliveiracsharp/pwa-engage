@@ -61,7 +61,7 @@ export function DiretoriaSecao({ condominioId, podeEditar }: { condominioId: str
     enabled: vincUnidade.length > 0 && !!unidade,
     queryFn: async () => {
       const { data } = await db.rpc("cond_unidade_pessoas", { p_unidade: unidade });
-      return ((data ?? []) as Row[]).map((p) => ({ ...p, id: s(p["usuario_id"]) }));
+      return ((data ?? []) as Row[]).map((p): Row => ({ ...p, id: s(p["usuario_id"]) }));
     },
   });
   const pessoaOpts = alfa(pessoas.map((p) => ({ value: s(p["id"]), label: s(p["nome"]) || s(p["email"]) })));
