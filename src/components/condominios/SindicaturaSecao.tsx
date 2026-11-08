@@ -11,11 +11,11 @@ import { PhoneInput } from "@/components/data-table/PhoneInput";
 import { supabase } from "@/integrations/supabase/client";
 import { rowId, useTableRows } from "@/lib/crud";
 import { pick } from "@/lib/row";
-import { MODALIDADES_SINDICO, diasParaFimMandato, normalizarSindicatura, validarSindicatura } from "@/lib/cond-sindicatura";
+import { ALERTA_MANDATO_PADRAO, MODALIDADES_SINDICO, normalizarSindicatura, situacaoMandato, validarSindicatura } from "@/lib/cond-sindicatura";
 import { CampoData } from "./CampoData";
 import { s, useCondRows } from "./cond-data";
 
-const CAMPOS = ["modalidade", "usuario_id", "empresa_id", "cond_unidade_id", "sindico_nome", "sindico_email", "sindico_celular", "inicio", "fim"] as const;
+const CAMPOS = ["modalidade", "usuario_id", "empresa_id", "cond_unidade_id", "sindico_nome", "sindico_email", "sindico_celular", "inicio", "fim", "alerta_dias"] as const;
 const alfa = <T extends { label: string }>(l: T[]) => [...l].sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
 
 /** Define quem é o síndico: morador (unidade) ou profissional (empresa PJ). */
@@ -75,7 +75,7 @@ export function SindicaturaSecao({ condominioId, podeEditar }: { condominioId: s
   }, [unidadeSel, pessoas, vincUnidade]);
 
   const set = (k: string, x: string) => setV((o) => ({ ...normalizarSindicatura({ ...o, [k]: x }) } as Record<string, string>));
-  const dias = diasParaFimMandato(v["fim"], new Date().toISOString().slice(0, 10));
+  const mand = situacaoMandato(v["fim"], new Date().toISOString().slice(0, 10), v["alerta_dias"] ? Number(v["alerta_dias"]) : null);
 
   async function salvar() {
     const erro = validarSindicatura(v);
@@ -86,7 +86,7 @@ export function SindicaturaSecao({ condominioId, podeEditar }: { condominioId: s
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error: e } = await (supabase as any).from("cond_sindicatura").upsert(valores, { onConflict: "condominio_id" }).select("id");
     setSalvando(false);
-    if (e) { toast.error(/relation|schema cache/i.test(e.message) ? "Rode o script atendeai-condominios-sindicatura.sql no banco." : e.message); return; }
+    if (e) { toast.error(/alerta_dias/i.test(e.message) ? "Rode o script atendeai-condominios-diretoria-mandato.sql no banco." : /relation|schema cache/i.test(e.message) ? "Rode o script atendeai-condominios-sindicatura.sql no banco." : e.message); return; }
     if (!data?.length) { toast.error("Nada foi gravado: seu perfil não tem permissão para alterar este condomínio."); return; }
     // Mantém o cargo do cadastro do morador igual ao mandato.
     if (v["modalidade"] === "morador" && v["usuario_id"]) {
@@ -108,9 +108,8 @@ export function SindicaturaSecao({ condominioId, podeEditar }: { condominioId: s
     <section className="space-y-4 rounded-lg border bg-card p-4">
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="mr-auto flex items-center gap-2 font-semibold"><Crown className="size-4 text-primary" /> Sindicatura</h2>
-        {dias != null && (dias < 0
-          ? <Badge variant="destructive">Mandato vencido</Badge>
-          : dias <= 60 && <Badge variant="outline">Mandato vence em {dias} dia(s)</Badge>)}
+        {mand?.situacao === "vencido" && <Badge variant="destructive">Mandato vencido</Badge>}
+        {mand?.situacao === "alerta" && <Badge variant="outline" className="border-warning/60 bg-warning/15">Mandato vence em {mand.dias} dia(s)</Badge>}
       </div>
       {tabelaFaltando && <p className="text-sm text-destructive">Rode o script atendeai-condominios-sindicatura.sql no banco para habilitar esta seção.</p>}
       <div className="grid gap-4 sm:grid-cols-2">
@@ -159,6 +158,11 @@ export function SindicaturaSecao({ condominioId, podeEditar }: { condominioId: s
             <div className="min-w-0">
               <Label className="mb-1.5 block">Fim do mandato</Label>
               <CampoData key={`f-${s(atual?.["id"])}`} value={v["fim"] ?? ""} disabled={!podeEditar} onChange={(x: string) => set("fim", x)} />
+            </div>
+            <div className="min-w-0 sm:col-span-2">
+              <Label htmlFor="alerta-dias" className="mb-1.5 block">Avisar o fim do mandato com quantos dias de antecedência?</Label>
+              <Input id="alerta-dias" type="number" min={0} max={365} className="w-40" placeholder={String(ALERTA_MANDATO_PADRAO)} value={v["alerta_dias"] ?? ""} disabled={!podeEditar} onChange={(e) => set("alerta_dias", e.target.value)} />
+              <p className="mt-1 text-xs text-muted-foreground">Em branco usa {ALERTA_MANDATO_PADRAO} dias. O aviso aparece no Painel do condomínio e aqui na Sindicatura.</p>
             </div>
           </>
         )}

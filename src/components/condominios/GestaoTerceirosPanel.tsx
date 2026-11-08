@@ -12,6 +12,7 @@ import { rowId, useTableRows } from "@/lib/crud";
 import { pick } from "@/lib/row";
 import { PhoneInput } from "@/components/data-table/PhoneInput";
 import { SindicaturaSecao } from "./SindicaturaSecao";
+import { DiretoriaSecao } from "./DiretoriaSecao";
 
 const CAMPOS = ["tipo_gestao", "administradora_id", "facilities_id", "cond_contato_administradora", "cond_contato_portaria", "cond_portaria_modalidade"] as const;
 
@@ -66,7 +67,7 @@ export function GestaoTerceirosPanel({ condominioId, podeEditar }: { condominioI
         <Resumo icon={ShieldCheck} titulo="Facilities / Portaria" valor={nome(v["facilities_id"] ?? "")} />
       </div>
       <section className="space-y-4 rounded-lg border bg-card p-4">
-        <h2 className="font-semibold">Gestão & Terceiros</h2>
+        <h2 className="font-semibold">Administradora & Portaria</h2>
         <GestaoCondominial values={v} selfId={condominioId} disabled={!podeEditar} onChange={set} />
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="min-w-0">
@@ -89,6 +90,7 @@ export function GestaoTerceirosPanel({ condominioId, podeEditar }: { condominioI
         )}
       </section>
       <SindicaturaSecao condominioId={condominioId} podeEditar={podeEditar} />
+      <DiretoriaSecao condominioId={condominioId} podeEditar={podeEditar} />
     </div>
   );
 }

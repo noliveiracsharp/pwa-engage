@@ -107,7 +107,7 @@ export function EquipePanel({ condominioId, blocos, unidades, perms }: { condomi
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <h2 className="mr-auto flex items-center gap-2 text-lg font-semibold"><Users className="size-5" /> Equipe & Diretoria</h2>
+        <span className="mr-auto" />
         {perms.canCreate && <Button size="sm" onClick={() => setEdit({})}><Plus className="size-4" /> Adicionar</Button>}
       </div>
       {isLoading ? <p className="text-sm text-muted-foreground">Carregando…</p> : (

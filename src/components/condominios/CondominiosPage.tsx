@@ -30,6 +30,20 @@ import { Home } from "lucide-react";
 import { lerAmbiente, useAmbientes } from "@/hooks/useAmbientes";
 import { condominiosGeridos, emModoUnidade, rotuloCargo } from "@/lib/ambientes";
 import { useEmpresaAtiva } from "@/hooks/useEmpresaAtiva";
+import { publicarSeletor } from "./cond-seletor";
+import { AlertaMandato } from "./AlertaMandato";
+
+const DESCRICAO_SECAO: Record<string, string> = {
+  painel: "Visão geral do condomínio: unidades, pessoas, vagas e alertas.",
+  unidades: "Blocos, torres e unidades com seus moradores.",
+  vagas: "Mapa de vagas de garagem, tipos e vínculos com as unidades.",
+  sorteio: "Rodadas de sorteio de vagas com registro auditável.",
+  equipe: "Corpo diretivo, conselho e equipe operacional.",
+  gestao: "Administradora, portaria, sindicatura, diretoria e configurações do condomínio.",
+  documentos: "Atas, regimento, laudos, apólices e contratos em uma pasta digital.",
+  avisos: "Envie por WhatsApp e e-mail para a carteira, o condomínio, torres ou unidades.",
+  "minha-unidade": "As unidades em que você mora ou é proprietário.",
+};
 
 /** Cores semânticas por ocupação da unidade (grade e legenda). */
 const OCUP_VISUAL = [
@@ -159,6 +173,13 @@ export function CondominiosPage() {
     toast.success("Unidade criada.");
   }
 
+  // O seletor de condomínio fica no cabeçalho do sistema (o menu lateral costuma ficar fechado).
+  useEffect(() => {
+    publicarSeletor({ opcoes: condominios, valor: condId, padrao, onChange: setCondId, onPadrao: alternarPadrao });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [condominios, condId, padrao]);
+  useEffect(() => () => publicarSeletor(null), []);
+
   if (!perms.loading && !perms.canRead) return <p className="p-6 text-sm text-muted-foreground">Você não tem acesso a esta tela.</p>;
 
   return (
@@ -172,23 +193,18 @@ export function CondominiosPage() {
         logo: ativa.logoAtivo ?? null,
         cargo: (() => { const a = ambientes.find((x) => x.id === lerAmbiente()); return a && a.tipo === "unidade" ? rotuloCargo(a.vinculo) : null; })(),
       } : undefined}
-      topo={<SearchSelect value={condId} onChange={setCondId} options={condominios} placeholder="Selecione o condomínio" emptyText="Nenhum condomínio (classifique em Clientes e Fornecedores)." />}
     />
     <div className="min-w-0 flex-1 space-y-4 p-4 sm:p-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="flex items-center gap-2 text-2xl font-semibold"><Building2 className="size-6" /> {condominios.find((c) => c.value === condId)?.label ?? "Condomínios"}</h1>
-          <p className="text-sm text-muted-foreground">{secoes.find((x) => x.key === secao)?.label ?? "Painel"}</p>
-        </div>
-        <div className="flex w-full items-center gap-2 sm:w-80">
-          <div className="min-w-0 flex-1">
-            <SearchSelect value={condId} onChange={setCondId} options={condominios} placeholder="Selecione o condomínio" emptyText="Nenhum condomínio (classifique em Clientes e Fornecedores)." />
+      {(() => {
+        const I = secAtual?.icon ?? Building2;
+        return (
+          <div className="min-w-0">
+            <h1 className="flex items-center gap-2 text-2xl font-semibold"><I className="size-6 text-primary" /> {secAtual?.label ?? "Painel"}</h1>
+            {DESCRICAO_SECAO[secao] && <p className="text-sm text-muted-foreground">{DESCRICAO_SECAO[secao]}</p>}
           </div>
-          <Button size="icon" variant="outline" disabled={!condId} aria-label={condId && padrao === condId ? "Remover condomínio padrão" : "Definir como condomínio padrão"} onClick={() => alternarPadrao(condId)}>
-            <Star className={cn("size-4", condId && padrao === condId ? "fill-warning text-warning" : "text-muted-foreground")} />
-          </Button>
-        </div>
-      </div>
+        );
+      })()}
+      {secao === "painel" && condId && <AlertaMandato condominioId={condId} />}
 
       {secao === "painel" ? (
         <PainelCondominios escopoSindico={modoUnidade} condominios={condominios} condId={condId} podeConfigurar={perms.canUpdate} onAbrir={(id) => { setCondId(id); setSecao("unidades"); }} padrao={padrao} onPadrao={alternarPadrao} />

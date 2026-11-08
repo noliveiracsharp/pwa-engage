@@ -123,10 +123,7 @@ export function AvisosPanel({ condominioId, condominios, blocos, unidades, perms
   return (
     <section className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <div className="mr-auto">
-          <h2 className="flex items-center gap-2 text-lg font-semibold"><Megaphone className="size-5" /> Avisos & Comunicados</h2>
-          <p className="text-sm text-muted-foreground">Envie por WhatsApp e e-mail para a carteira, o condomínio, torres ou unidades.</p>
-        </div>
+        <span className="mr-auto" />
         <div className="relative w-full sm:w-64">
           <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
           <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar aviso" className="pl-8 pr-8" aria-label="Buscar aviso" />
