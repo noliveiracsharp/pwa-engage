@@ -20,6 +20,7 @@ import { Route as PrivacidadeRouteImport } from './routes/privacidade'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as TermosRouteImport } from './routes/termos'
+import { Route as AuthenticatedAcessoRouteImport } from './routes/_authenticated/acesso'
 import { Route as AuthenticatedAtendimentosRouteImport } from './routes/_authenticated/atendimentos'
 import { Route as AuthenticatedAuditoriaRouteImport } from './routes/_authenticated/auditoria'
 import { Route as AuthenticatedCentro_custosRouteImport } from './routes/_authenticated/centro_custos'
@@ -41,6 +42,7 @@ import { Route as AuthenticatedLaudosRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedManutencoesRouteImport } from './routes/_authenticated/manutencoes'
 import { Route as AuthenticatedMarcasRouteImport } from './routes/_authenticated/marcas'
 import { Route as AuthenticatedMeusDadosRouteImport } from './routes/_authenticated/meus-dados'
+import { Route as AuthenticatedMinhaUnidadeRouteImport } from './routes/_authenticated/minha-unidade'
 import { Route as AuthenticatedNotas_fiscaisRouteImport } from './routes/_authenticated/notas_fiscais'
 import { Route as AuthenticatedOrcamentosRouteImport } from './routes/_authenticated/orcamentos'
 import { Route as AuthenticatedParceirosRouteImport } from './routes/_authenticated/parceiros'
@@ -141,6 +143,11 @@ const TermosRoute = TermosRouteImport.update({
   id: '/termos',
   path: '/termos',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedAcessoRoute = AuthenticatedAcessoRouteImport.update({
+  id: '/acesso',
+  path: '/acesso',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedAtendimentosRoute =
   AuthenticatedAtendimentosRouteImport.update({
@@ -252,6 +259,12 @@ const AuthenticatedMeusDadosRoute = AuthenticatedMeusDadosRouteImport.update({
   path: '/meus-dados',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedMinhaUnidadeRoute =
+  AuthenticatedMinhaUnidadeRouteImport.update({
+    id: '/minha-unidade',
+    path: '/minha-unidade',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedNotas_fiscaisRoute =
   AuthenticatedNotas_fiscaisRouteImport.update({
     id: '/notas_fiscais',
@@ -509,6 +522,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/termos': typeof TermosRoute
+  '/acesso': typeof AuthenticatedAcessoRoute
   '/atendimentos': typeof AuthenticatedAtendimentosRoute
   '/auditoria': typeof AuthenticatedAuditoriaRoute
   '/centro_custos': typeof AuthenticatedCentro_custosRoute
@@ -530,6 +544,7 @@ export interface FileRoutesByFullPath {
   '/manutencoes': typeof AuthenticatedManutencoesRoute
   '/marcas': typeof AuthenticatedMarcasRoute
   '/meus-dados': typeof AuthenticatedMeusDadosRoute
+  '/minha-unidade': typeof AuthenticatedMinhaUnidadeRoute
   '/notas_fiscais': typeof AuthenticatedNotas_fiscaisRoute
   '/orcamentos': typeof AuthenticatedOrcamentosRoute
   '/parceiros': typeof AuthenticatedParceirosRoute
@@ -588,6 +603,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/termos': typeof TermosRoute
+  '/acesso': typeof AuthenticatedAcessoRoute
   '/atendimentos': typeof AuthenticatedAtendimentosRoute
   '/auditoria': typeof AuthenticatedAuditoriaRoute
   '/centro_custos': typeof AuthenticatedCentro_custosRoute
@@ -609,6 +625,7 @@ export interface FileRoutesByTo {
   '/manutencoes': typeof AuthenticatedManutencoesRoute
   '/marcas': typeof AuthenticatedMarcasRoute
   '/meus-dados': typeof AuthenticatedMeusDadosRoute
+  '/minha-unidade': typeof AuthenticatedMinhaUnidadeRoute
   '/notas_fiscais': typeof AuthenticatedNotas_fiscaisRoute
   '/orcamentos': typeof AuthenticatedOrcamentosRoute
   '/parceiros': typeof AuthenticatedParceirosRoute
@@ -669,6 +686,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/termos': typeof TermosRoute
+  '/_authenticated/acesso': typeof AuthenticatedAcessoRoute
   '/_authenticated/atendimentos': typeof AuthenticatedAtendimentosRoute
   '/_authenticated/auditoria': typeof AuthenticatedAuditoriaRoute
   '/_authenticated/centro_custos': typeof AuthenticatedCentro_custosRoute
@@ -690,6 +708,7 @@ export interface FileRoutesById {
   '/_authenticated/manutencoes': typeof AuthenticatedManutencoesRoute
   '/_authenticated/marcas': typeof AuthenticatedMarcasRoute
   '/_authenticated/meus-dados': typeof AuthenticatedMeusDadosRoute
+  '/_authenticated/minha-unidade': typeof AuthenticatedMinhaUnidadeRoute
   '/_authenticated/notas_fiscais': typeof AuthenticatedNotas_fiscaisRoute
   '/_authenticated/orcamentos': typeof AuthenticatedOrcamentosRoute
   '/_authenticated/parceiros': typeof AuthenticatedParceirosRoute
@@ -750,6 +769,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/sitemap.xml'
     | '/termos'
+    | '/acesso'
     | '/atendimentos'
     | '/auditoria'
     | '/centro_custos'
@@ -771,6 +791,7 @@ export interface FileRouteTypes {
     | '/manutencoes'
     | '/marcas'
     | '/meus-dados'
+    | '/minha-unidade'
     | '/notas_fiscais'
     | '/orcamentos'
     | '/parceiros'
@@ -829,6 +850,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/sitemap.xml'
     | '/termos'
+    | '/acesso'
     | '/atendimentos'
     | '/auditoria'
     | '/centro_custos'
@@ -850,6 +872,7 @@ export interface FileRouteTypes {
     | '/manutencoes'
     | '/marcas'
     | '/meus-dados'
+    | '/minha-unidade'
     | '/notas_fiscais'
     | '/orcamentos'
     | '/parceiros'
@@ -909,6 +932,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/sitemap.xml'
     | '/termos'
+    | '/_authenticated/acesso'
     | '/_authenticated/atendimentos'
     | '/_authenticated/auditoria'
     | '/_authenticated/centro_custos'
@@ -930,6 +954,7 @@ export interface FileRouteTypes {
     | '/_authenticated/manutencoes'
     | '/_authenticated/marcas'
     | '/_authenticated/meus-dados'
+    | '/_authenticated/minha-unidade'
     | '/_authenticated/notas_fiscais'
     | '/_authenticated/orcamentos'
     | '/_authenticated/parceiros'
@@ -1090,6 +1115,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TermosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/acesso': {
+      id: '/_authenticated/acesso'
+      path: '/acesso'
+      fullPath: '/acesso'
+      preLoaderRoute: typeof AuthenticatedAcessoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/atendimentos': {
       id: '/_authenticated/atendimentos'
       path: '/atendimentos'
@@ -1235,6 +1267,13 @@ declare module '@tanstack/react-router' {
       path: '/meus-dados'
       fullPath: '/meus-dados'
       preLoaderRoute: typeof AuthenticatedMeusDadosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/minha-unidade': {
+      id: '/_authenticated/minha-unidade'
+      path: '/minha-unidade'
+      fullPath: '/minha-unidade'
+      preLoaderRoute: typeof AuthenticatedMinhaUnidadeRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/notas_fiscais': {
@@ -1563,6 +1602,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAcessoRoute: typeof AuthenticatedAcessoRoute
   AuthenticatedAtendimentosRoute: typeof AuthenticatedAtendimentosRoute
   AuthenticatedAuditoriaRoute: typeof AuthenticatedAuditoriaRoute
   AuthenticatedCentro_custosRoute: typeof AuthenticatedCentro_custosRoute
@@ -1584,6 +1624,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedManutencoesRoute: typeof AuthenticatedManutencoesRoute
   AuthenticatedMarcasRoute: typeof AuthenticatedMarcasRoute
   AuthenticatedMeusDadosRoute: typeof AuthenticatedMeusDadosRoute
+  AuthenticatedMinhaUnidadeRoute: typeof AuthenticatedMinhaUnidadeRoute
   AuthenticatedNotas_fiscaisRoute: typeof AuthenticatedNotas_fiscaisRoute
   AuthenticatedOrcamentosRoute: typeof AuthenticatedOrcamentosRoute
   AuthenticatedParceirosRoute: typeof AuthenticatedParceirosRoute
@@ -1614,6 +1655,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAcessoRoute: AuthenticatedAcessoRoute,
   AuthenticatedAtendimentosRoute: AuthenticatedAtendimentosRoute,
   AuthenticatedAuditoriaRoute: AuthenticatedAuditoriaRoute,
   AuthenticatedCentro_custosRoute: AuthenticatedCentro_custosRoute,
@@ -1635,6 +1677,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedManutencoesRoute: AuthenticatedManutencoesRoute,
   AuthenticatedMarcasRoute: AuthenticatedMarcasRoute,
   AuthenticatedMeusDadosRoute: AuthenticatedMeusDadosRoute,
+  AuthenticatedMinhaUnidadeRoute: AuthenticatedMinhaUnidadeRoute,
   AuthenticatedNotas_fiscaisRoute: AuthenticatedNotas_fiscaisRoute,
   AuthenticatedOrcamentosRoute: AuthenticatedOrcamentosRoute,
   AuthenticatedParceirosRoute: AuthenticatedParceirosRoute,
