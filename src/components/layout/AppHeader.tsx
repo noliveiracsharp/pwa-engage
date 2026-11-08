@@ -83,9 +83,9 @@ export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) 
   return (
     <header className="flex h-16 w-full shrink-0 items-center justify-between gap-2 overflow-hidden border-b border-border bg-card px-2 sm:gap-3 sm:px-4">
       <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-        {!modoUnidade && <Button variant="ghost" size="icon" className="shrink-0" onClick={onToggleSidebar} aria-label="Abrir menu">
+        <Button variant="ghost" size="icon" className="shrink-0" onClick={() => (modoUnidade ? window.dispatchEvent(new Event("cond-menu-toggle")) : onToggleSidebar())} aria-label="Abrir menu">
           <Menu className="h-5 w-5" />
-        </Button>}
+        </Button>
         <span className="truncate text-base font-bold tracking-tight text-foreground sm:text-lg">{ativa.titulo}</span>
       </div>
 

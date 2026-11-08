@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Briefcase, FolderOpen, Users, Building2, LayoutDashboard, Megaphone, ChevronLeft, ChevronRight, ParkingSquare, Shuffle, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -42,8 +42,15 @@ export function useSecoesCondominio(pagina: P): Secao[] {
   }, [funcoes, u, v, s, e, g, dc, av, pagina]);
 }
 
-export function CondominiosSidebar({ secoes, ativa, onChange, topo }: { secoes: Secao[]; ativa: string; onChange: (k: string) => void; topo?: ReactNode }) {
-  const [aberto, setAberto] = useState(false);
+export function CondominiosSidebar({ secoes, ativa, onChange, topo, direto }: { secoes: Secao[]; ativa: string; onChange: (k: string) => void; topo?: ReactNode; direto?: { nome: string; logo?: string | null; cargo?: string | null } }) {
+  const [aberto, setAberto] = useState(!!direto);
+  // No acesso direto do condomínio, o botão de menu do cabeçalho abre/recolhe este menu.
+  useEffect(() => {
+    if (!direto) return;
+    const alternar = () => setAberto((v) => !v);
+    window.addEventListener("cond-menu-toggle", alternar);
+    return () => window.removeEventListener("cond-menu-toggle", alternar);
+  }, [direto]);
   return (
     <TooltipProvider delayDuration={100}>
     <aside
@@ -54,6 +61,23 @@ export function CondominiosSidebar({ secoes, ativa, onChange, topo }: { secoes: 
       )}
     >
       <div className="flex flex-col md:sticky md:top-0">
+        {direto ? (
+          aberto ? (
+            <div className="mx-3 mb-3 mt-3 flex flex-col items-center gap-1 border-b border-sidebar-border pb-3 text-center">
+              {direto.logo ? (
+                <img src={direto.logo} alt={direto.nome} className="h-10 w-auto max-w-full object-contain" />
+              ) : (
+                <>
+                  <span className="flex size-10 items-center justify-center rounded-full bg-sidebar-primary text-sm font-bold text-sidebar-primary-foreground">
+                    {direto.nome.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]).join("").toUpperCase()}
+                  </span>
+                  <span className="line-clamp-2 text-sm font-bold">{direto.nome}</span>
+                </>
+              )}
+              {direto.cargo && <span className="text-xs text-muted-foreground">{direto.cargo}</span>}
+            </div>
+          ) : <div className="h-3" />
+        ) : (
         <div className={cn("flex items-center gap-2 px-3 pb-2 pt-4", !aberto && "md:justify-center md:px-0")}>
           <Building2 className="size-5 shrink-0" />
           {aberto && <span className="truncate text-base font-semibold">Condomínio</span>}
@@ -68,7 +92,8 @@ export function CondominiosSidebar({ secoes, ativa, onChange, topo }: { secoes: 
             {aberto ? <ChevronLeft className="size-4" /> : <ChevronRight className="size-4" />}
           </Button>
         </div>
-        {aberto && topo && <div className="px-3 pb-3 text-foreground">{topo}</div>}
+        )}
+        {aberto && topo && !direto && <div className="px-3 pb-3 text-foreground">{topo}</div>}
         <nav className={cn("flex flex-col gap-0.5 pb-3", aberto ? "px-3" : "hidden md:flex md:px-2")}>
           {secoes.map((x) => {
             const ativo = ativa === x.key;
@@ -98,7 +123,7 @@ export function CondominiosSidebar({ secoes, ativa, onChange, topo }: { secoes: 
             );
           })}
         </nav>
-        {!aberto && (
+        {!aberto && !direto && (
           <Button size="icon" variant="ghost" className="mx-auto mb-3 hidden size-8 text-sidebar-foreground hover:bg-sidebar-accent md:inline-flex" onClick={() => setAberto(true)} aria-label="Mostrar menu" title="Mostrar menu">
             <ChevronRight className="size-4" />
           </Button>
