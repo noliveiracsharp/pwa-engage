@@ -26,3 +26,20 @@ describe("ambientes de acesso", () => {
     expect(montarAmbientes(null, [v({ vinculo_id: "a" }), v({ vinculo_id: "b" })])).toHaveLength(1);
   });
 });
+
+import { emModoUnidade, filtrarAmbientes } from "./ambientes";
+describe("modo unidade e filtro", () => {
+  it("só unidade oculta o menu da empresa", () => {
+    expect(emModoUnidade("empresa")).toBe(false);
+    expect(emModoUnidade(null)).toBe(false);
+    expect(emModoUnidade("v1")).toBe(true);
+  });
+  it("filtra por torre sem acento", () => {
+    const l = [
+      { tipo: "empresa", id: "empresa", titulo: "ConectCon", subtitulo: "Gestão da empresa" },
+      { tipo: "unidade", id: "v1", titulo: "Conectcon", subtitulo: "Proprietário · Torre 1 · Unidade 101", vinculo: {} },
+    ] as never;
+    expect(filtrarAmbientes(l, "torre 1").map((a) => a.id)).toEqual(["v1"]);
+    expect(filtrarAmbientes(l, "gestao").map((a) => a.id)).toEqual(["empresa"]);
+  });
+});
