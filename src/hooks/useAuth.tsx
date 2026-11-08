@@ -2,10 +2,11 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { pick, type Row } from "@/lib/row";
+import { preservarRecuperacao, RECUPERACAO_KEY } from "@/lib/recuperacao-senha";
 
 const CTX_KEY = "atendeai.empresaContexto";
 /** Mude este valor a cada atualização publicada: força novo login de todos. */
-const APP_RELEASE = "2026-11-08-diretoria-mandato";
+const APP_RELEASE = "2026-11-08-recuperacao-senha";
 const RELEASE_KEY = "atendeai.release";
 
 type AuthContextValue = {
@@ -72,7 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setCtxId(localStorage.getItem(CTX_KEY));
-    if (localStorage.getItem(RELEASE_KEY) !== APP_RELEASE) {
+    if (localStorage.getItem(RELEASE_KEY) !== APP_RELEASE && !preservarRecuperacao(window.location.pathname)) {
       localStorage.setItem(RELEASE_KEY, APP_RELEASE);
       void supabase.auth.getSession().then(async ({ data }) => {
         if (data.session) {
@@ -87,6 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         void import("@/lib/access").then((m) => m.clearAccessCache());
       }
       if (!nextSession) {
+        sessionStorage.removeItem(RECUPERACAO_KEY);
         sessionStorage.removeItem(USUARIO_CACHE);
         setUsuario(null);
         setEmpresaOriginal(null);

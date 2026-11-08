@@ -4,6 +4,9 @@ export const SUPABASE_URL = "https://kvzxnubbdsbfqzcrrwmg.supabase.co";
 export const SUPABASE_PUBLISHABLE_KEY =
   "sb_publishable_AJMNIa9nwgbaiTE2vIevXw_iprqvDu_";
 
+// Captura antes de o SDK consumir/remover os parâmetros de recuperação.
+export const INITIAL_AUTH_URL = typeof window !== "undefined" ? window.location.href : "";
+
 export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     persistSession: true,

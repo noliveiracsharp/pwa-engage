@@ -5,7 +5,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
+import { INITIAL_AUTH_URL, supabase } from "@/integrations/supabase/client";
+import { RECUPERACAO_KEY, validarRecuperacao } from "@/lib/recuperacao-senha";
 import { useTheme } from "@/components/theme-provider";
 import { aplicarMarca, buscarMarca, lembrarSlug, slugDoHost, slugLembrado, type MarcaPublica } from "@/lib/marca-publica";
 
@@ -36,10 +37,10 @@ function CampoSenha({ id, label, valor, onChange, invalido }: { id: string; labe
       <div className="relative">
         <Input id={id} type={ver ? "text" : "password"} autoComplete="new-password" required minLength={MIN} value={valor}
           onChange={(e) => onChange(e.target.value)} aria-invalid={invalido || undefined} className="pr-10" />
-        <button type="button" onClick={() => setVer((v) => !v)} aria-label={ver ? "Ocultar senha" : "Mostrar senha"}
+        <Button variant="ghost" type="button" onClick={() => setVer((v) => !v)} aria-label={ver ? "Ocultar senha" : "Mostrar senha"}
           className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-r-md">
           {ver ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -60,6 +61,31 @@ function ResetPasswordPage() {
   const [repetir, setRepetir] = useState("");
   const [loading, setLoading] = useState(false);
   const [marca, setMarca] = useState<MarcaPublica | null>(null);
+  const [recuperacao, setRecuperacao] = useState<"validando" | "valida" | "invalida" | "concluida">("validando");
+
+  useEffect(() => {
+    let cancelled = false;
+    let recoveryEvent = false;
+    const { data } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") recoveryEvent = true;
+    });
+    const initial = INITIAL_AUTH_URL && new URL(INITIAL_AUTH_URL).pathname === "/reset-password"
+      ? INITIAL_AUTH_URL : window.location.href;
+    validarRecuperacao(supabase.auth, initial, sessionStorage.getItem(RECUPERACAO_KEY), () => recoveryEvent)
+      .then((id) => {
+        if (cancelled) return;
+        if (id) sessionStorage.setItem(RECUPERACAO_KEY, id);
+        else sessionStorage.removeItem(RECUPERACAO_KEY);
+        // Nunca mantém tokens/códigos no endereço após o processamento.
+        const clean = new URL(window.location.href);
+        clean.hash = "";
+        for (const key of ["code", "token_hash", "type", "error", "error_code", "error_description"]) clean.searchParams.delete(key);
+        window.history.replaceState(window.history.state, "", clean.pathname + clean.search);
+        setRecuperacao(id ? "valida" : "invalida");
+      })
+      .catch(() => { if (!cancelled) setRecuperacao("invalida"); });
+    return () => { cancelled = true; data.subscription.unsubscribe(); };
+  }, []);
 
   useEffect(() => {
     const slug = slugDoHost(window.location.hostname) || new URLSearchParams(window.location.search).get("e") || slugLembrado();
@@ -80,6 +106,7 @@ function ResetPasswordPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (recuperacao !== "valida") return;
     if (!valido) {
       toast.error(tamanhoOk ? "As senhas não coincidem." : `A senha precisa ter pelo menos ${MIN} caracteres.`);
       return;
@@ -88,11 +115,17 @@ function ResetPasswordPage() {
     const { error } = await supabase.auth.updateUser({ password: senha });
     setLoading(false);
     if (error) {
-      toast.error("Não foi possível alterar a senha", { description: error.message });
+      if (error.name === "AuthSessionMissingError" || error.status === 401) {
+        sessionStorage.removeItem(RECUPERACAO_KEY);
+        setRecuperacao("invalida");
+      } else toast.error("Não foi possível alterar a senha", { description: "Tente novamente. Se o problema continuar, solicite outro link de recuperação." });
       return;
     }
     toast.success("Senha atualizada!");
-    navigate({ to: "/dashboard", replace: true });
+    sessionStorage.removeItem(RECUPERACAO_KEY);
+    setRecuperacao("concluida");
+    await supabase.auth.signOut();
+    navigate({ to: "/login", replace: true });
   }
 
   return (
@@ -110,6 +143,13 @@ function ResetPasswordPage() {
             </div>
           </div>
 
+          {recuperacao === "validando" ? (
+            <p role="status" className="flex items-center justify-center gap-2 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" />Validando seu link de recuperação…</p>
+          ) : recuperacao === "invalida" ? (
+            <p role="alert" className="text-center text-sm text-destructive">Este link de recuperação é inválido ou expirou. Volte ao login e solicite um novo link.</p>
+          ) : recuperacao === "concluida" ? (
+            <p role="status" className="text-center text-sm">Senha atualizada. Entre com sua nova senha.</p>
+          ) : <>
           <CampoSenha id="nova" label="Nova senha" valor={senha} onChange={setSenha} />
           <CampoSenha id="repetir" label="Repetir nova senha" valor={repetir} onChange={setRepetir} invalido={repetir.length > 0 && !iguais} />
 
@@ -121,6 +161,7 @@ function ResetPasswordPage() {
           <Button type="submit" className="w-full" disabled={loading || !valido}>
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Salvar nova senha
           </Button>
+          </>}
           <p className="text-center text-sm">
             <Link to="/login" className="text-primary hover:underline">Voltar ao login</Link>
           </p>

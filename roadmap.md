@@ -1,5 +1,9 @@
 # Roadmap
 
+## Recuperação de senha
+- [x] Validar o link antes de permitir nova senha e preservar a sessão de recuperação durante atualizações — 6 testes passaram; links inválidos e retorno ao login verificados no computador e celular.
+- [ ] Testar o fluxo real pelo e-mail — sessão do banco externo indisponível nesta execução.
+
 ## Régua de Ofertas e WhatsApp
 - [x] Configurar etapas e templates próprios com e-mail no padrão de cobrança.
 - [x] Entregar envio agendado, interrupção por situação e histórico sem duplicidade.
