@@ -24,7 +24,8 @@ import { pick } from "@/lib/row";
 import { useTableRows, rowId } from "@/lib/crud";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeftRight, Building2 } from "lucide-react";
-import { useAmbientes } from "@/hooks/useAmbientes";
+import { lerAmbiente, useAmbientes } from "@/hooks/useAmbientes";
+import { emModoUnidade } from "@/lib/ambientes";
 import { useEffect, useState } from "react";
 import { MeusDadosSheet } from "@/components/perfil/MeusDadosSheet";
 import { useEmpresaAtiva } from "@/hooks/useEmpresaAtiva";
@@ -53,6 +54,7 @@ export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) 
   const [meusDados, setMeusDados] = useState(false);
   const { data: ambientes } = useAmbientes();
   const [recarregando, setRecarregando] = useState(false);
+  const modoUnidade = emModoUnidade(lerAmbiente());
 
   const ativa = useEmpresaAtiva();
   const nome = pick<string>(usuario, ["nome", "nome_completo", "usuario_nome"], user?.email ?? "Usuário");
@@ -86,8 +88,8 @@ export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) 
       </div>
 
       <div className="flex shrink-0 items-center gap-1">
-        <BuscaFuncoes />
-        {isMaster && (
+        {!modoUnidade && <BuscaFuncoes />}
+        {isMaster && !modoUnidade && (
           <Select
             value={empresaContextoId ?? String(empresa ? rowId(empresa) ?? "" : "")}
             onValueChange={(v) => {
@@ -136,7 +138,7 @@ export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) 
           <RotateCw className={`h-5 w-5 ${recarregando ? "animate-spin" : ""}`} />
         </Button>
         <CentralAjuda />
-        <AvisosButton />
+        {!modoUnidade && <AvisosButton />}
         <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Alternar tema">
           {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
         </Button>

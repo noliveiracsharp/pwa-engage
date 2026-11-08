@@ -51,7 +51,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div id="app-layout-raiz" className="fixed inset-0 flex w-full flex-col overflow-hidden bg-background">
       <AppHeader onToggleSidebar={() => setOpen((v) => !v)} />
-      <BarraAprovacaoCotacao />
+      {!modoUnidade && <BarraAprovacaoCotacao />}
       <div className="relative flex min-h-0 flex-1">
         {modoUnidade ? null : isMobile ? (
           <>
