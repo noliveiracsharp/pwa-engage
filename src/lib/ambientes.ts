@@ -57,7 +57,7 @@ export const destinoDoAmbiente = (a: Ambiente) => (a.tipo === "empresa" ? "/dash
 export const emModoUnidade = (id: string | null) => !!id && id !== "empresa";
 
 /** Telas permitidas enquanto o login está dentro de uma unidade. */
-export const ROTAS_UNIDADE = ["/minha-unidade", "/meus-dados"];
+export const ROTAS_UNIDADE = ["/minha-unidade", "/meus-dados", "/condominios"];
 
 /** Filtra os ambientes pelo texto digitado (nome, torre, unidade, papel), sem acentos. */
 export function filtrarAmbientes(ambientes: Ambiente[], texto: string): Ambiente[] {

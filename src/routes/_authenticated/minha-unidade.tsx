@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { lerAmbiente, useAmbientes } from "@/hooks/useAmbientes";
 import { rotuloCargo } from "@/lib/ambientes";
 import { htmlParaTexto } from "@/lib/html-texto";
+import { usePagePermissions } from "@/hooks/usePagePermissions";
 
 export const Route = createFileRoute("/_authenticated/minha-unidade")({
   staticData: { sitemap: false },
@@ -55,6 +56,7 @@ function MinhaUnidade() {
       return ((data ?? []) as Row[]).filter((d) => vis.includes(s(d["visibilidade"])));
     },
   });
+  const gestao = usePagePermissions("/condominios");
   const [secao, setSecao] = useState("unidade");
   const ler = { canRead: true, canCreate: false, canUpdate: false, canDelete: false };
   const secoes: Secao[] = [
@@ -82,7 +84,10 @@ function MinhaUnidade() {
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Condomínio</p>
           <h1 className="text-2xl font-bold text-foreground">{v.condominio_nome}</h1>
         </div>
+        <div className="flex flex-wrap gap-2">
+        {gestao.canRead && <Button asChild><Link to="/condominios">Gestão do condomínio</Link></Button>}
         {(ambientes?.length ?? 0) > 1 && <Button variant="outline" asChild><Link to="/acesso">Trocar acesso</Link></Button>}
+        </div>
       </div>
         {secao === "unidade" && (<div>
           <Card>
