@@ -93,7 +93,15 @@ export function CondominiosPage() {
     () => (modoUnidade ? [...secoesBase, { key: "minha-unidade", label: "Minha unidade", icon: Home, canRead: true, canCreate: false, canUpdate: false, canDelete: false }] : secoesBase),
     [secoesBase, modoUnidade],
   );
-  const irSecao = (k: string) => (k === "minha-unidade" ? navigate({ to: "/minha-unidade" }) : setSecao(k));
+  void navigate;
+  const irSecao = (k: string) => setSecao(k);
+  // Unidades do próprio login neste condomínio (seção "Minha unidade", sem sair do painel).
+  const minhasIds = useMemo(
+    () => new Set(ambientes.flatMap((a) => (a.tipo === "unidade" && a.vinculo.condominio_id === condId ? [a.vinculo.unidade_id] : []))),
+    [ambientes, condId],
+  );
+  const minhas = unidades.filter((u) => minhasIds.has(s(u["id"])));
+  const [minhaAberta, setMinhaAberta] = useState<Row | null>(null);
   const [secao, setSecao] = useState("painel");
   useEffect(() => {
     if (secoes.length && !secoes.some((x) => x.key === secao)) setSecao(secoes[0]!.key);
@@ -194,6 +202,23 @@ export function CondominiosPage() {
         <AvisosPanel condominioId={condId} condominios={condominios} blocos={blocos} unidades={unidades} perms={secAtual} />
       ) : secao === "gestao" && secAtual ? (
         <GestaoTerceirosPanel condominioId={condId} podeEditar={secAtual.canUpdate} />
+      ) : secao === "minha-unidade" ? (
+        minhas.length === 0 ? (
+          <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">Você não tem unidade vinculada neste condomínio.</div>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {minhas.map((u) => {
+              const amb = ambientes.find((a) => a.tipo === "unidade" && a.vinculo.unidade_id === s(u["id"]));
+              return (
+                <button key={s(u["id"])} type="button" onClick={() => setMinhaAberta(u)} className="rounded-lg border bg-card p-4 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                  <p className="text-xs text-muted-foreground">{s(blocos.find((b) => s(b["id"]) === s(u["cond_bloco_id"]))?.["nome"])}</p>
+                  <p className="text-lg font-semibold">Unidade {s(u["numero"])}</p>
+                  {amb?.tipo === "unidade" && <p className="text-sm text-muted-foreground">{amb.subtitulo.split(" · ")[0]}</p>}
+                </button>
+              );
+            })}
+          </div>
+        )
       ) : !secAtual ? (
         <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">Seu perfil não tem acesso a esta área.</div>
       ) : (
@@ -319,6 +344,15 @@ export function CondominiosPage() {
           blocoNome={s(blocoAtual?.["nome"])}
           perms={permsUnid}
           onClose={() => setUnidadeAberta(null)}
+        />
+      )}
+      {minhaAberta && (
+        <UnidadeSheet
+          unidade={minhaAberta}
+          condominioId={condId}
+          blocoNome={s(blocos.find((b) => s(b["id"]) === s(minhaAberta["cond_bloco_id"]))?.["nome"])}
+          perms={{ canCreate: true, canUpdate: true, canDelete: permsUnid.canDelete }}
+          onClose={() => setMinhaAberta(null)}
         />
       )}
     </div>
