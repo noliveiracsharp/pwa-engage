@@ -51,7 +51,17 @@ export function montarAmbientes(empresa: { nome: string; perfil: string } | null
 /** Só pergunta "onde entrar" quando há mais de um ambiente. */
 export const precisaEscolher = (ambientes: Ambiente[]) => ambientes.length > 1;
 
-export const destinoDoAmbiente = (a: Ambiente) => (a.tipo === "empresa" ? "/dashboard" : "/minha-unidade");
+/** Funções diretivas que operam a gestão do condomínio (escopo de administrador, só do próprio condomínio). */
+export const FUNCOES_GESTAO = ["sindico", "subsindico"];
+export const ehGestor = (v: Pick<VinculoAcesso, "funcao">) => !!v.funcao && FUNCOES_GESTAO.includes(v.funcao);
+
+/** Condomínios que o login gere como síndico (vários só para síndico profissional). */
+export function condominiosGeridos(ambientes: Ambiente[]): string[] {
+  return [...new Set(ambientes.flatMap((a) => (a.tipo === "unidade" && ehGestor(a.vinculo) ? [a.vinculo.condominio_id] : [])))];
+}
+
+export const destinoDoAmbiente = (a: Ambiente) =>
+  a.tipo === "empresa" ? "/dashboard" : ehGestor(a.vinculo) ? "/condominios" : "/minha-unidade";
 
 /** Ambiente gravado é uma unidade? Nesse modo o menu da empresa fica oculto. */
 export const emModoUnidade = (id: string | null) => !!id && id !== "empresa";
