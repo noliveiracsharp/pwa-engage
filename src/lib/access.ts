@@ -3,7 +3,7 @@ import { pick, type Row } from "@/lib/row";
 import { isPerfilMaster } from "@/hooks/useAuth";
 
 /** Paths that every authenticated user may open, regardless of menu grants. */
-const ALWAYS_ALLOWED = ["/meus-dados", "/sem-acesso"];
+const ALWAYS_ALLOWED = ["/meus-dados", "/sem-acesso", "/acesso", "/minha-unidade"];
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const _LEGACY_PATHS = [

@@ -23,7 +23,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { pick } from "@/lib/row";
 import { useTableRows, rowId } from "@/lib/crud";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Building2 } from "lucide-react";
+import { ArrowLeftRight, Building2 } from "lucide-react";
+import { useAmbientes } from "@/hooks/useAmbientes";
 import { useEffect, useState } from "react";
 import { MeusDadosSheet } from "@/components/perfil/MeusDadosSheet";
 import { useEmpresaAtiva } from "@/hooks/useEmpresaAtiva";
@@ -50,6 +51,7 @@ export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) 
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [meusDados, setMeusDados] = useState(false);
+  const { data: ambientes } = useAmbientes();
   const [recarregando, setRecarregando] = useState(false);
 
   const ativa = useEmpresaAtiva();
@@ -156,6 +158,11 @@ export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) 
             <DropdownMenuItem onSelect={() => setMeusDados(true)}>
               <User className="mr-2 h-4 w-4" /> {t("menu.meusDados")}
             </DropdownMenuItem>
+            {(ambientes?.length ?? 0) > 1 && (
+              <DropdownMenuItem onSelect={() => navigate({ to: "/acesso" })}>
+                <ArrowLeftRight className="mr-2 h-4 w-4" /> Trocar acesso
+              </DropdownMenuItem>
+            )}
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>
                 <Languages className="mr-2 h-4 w-4" /> {t("menu.idioma")}

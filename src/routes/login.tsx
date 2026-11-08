@@ -94,7 +94,7 @@ function LoginPage() {
       return;
     }
     salvarEstado(email, null);
-    navigate({ to: "/dashboard", replace: true });
+    navigate({ to: "/acesso", replace: true });
   }
 
   async function handleReset() {
