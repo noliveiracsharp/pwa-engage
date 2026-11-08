@@ -43,6 +43,15 @@ export function vinculoPadrao(cargo: string): string {
   return "proprio";
 }
 
+/** Funções diretivas definidas no cadastro da pessoa na unidade → rótulo exibido em Equipe & Diretoria. */
+export const FUNCOES_DIRETIVAS_UNIDADE: Record<string, { label: string; ordem: number }> = {
+  sindico: { label: "Síndico morador", ordem: 0 },
+  subsindico: { label: "Subsíndico", ordem: 2 },
+  conselheiro_consultivo: { label: "Conselheiro consultivo", ordem: 3 },
+  conselheiro_fiscal: { label: "Conselheiro fiscal", ordem: 3 },
+};
+export const ehFuncaoDiretiva = (f: string) => f in FUNCOES_DIRETIVAS_UNIDADE;
+
 /** Mandato vigente na data (ISO yyyy-mm-dd). */
 export function vigente(m: { status?: boolean; inicio?: string | null; fim?: string | null }, hoje: string): boolean {
   if (m.status === false) return false;
