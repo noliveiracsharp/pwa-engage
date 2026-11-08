@@ -74,7 +74,6 @@ export function CondominiosSidebar({ secoes, ativa, onChange, topo, direto }: { 
                   <span className="line-clamp-2 text-sm font-bold">{direto.nome}</span>
                 </>
               )}
-              {direto.cargo && <span className="text-xs text-muted-foreground">{direto.cargo}</span>}
             </div>
           ) : <div className="h-3" />
         ) : (
