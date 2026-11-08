@@ -1,7 +1,7 @@
 # Roadmap
 
 ## Recuperação de senha
-- [ ] Validar o link antes de permitir nova senha e preservar a sessão de recuperação durante atualizações.
+- [x] Validar o link antes de permitir nova senha e preservar a sessão de recuperação durante atualizações — 6 testes passaram; links inválidos e retorno ao login verificados no computador e celular.
 - [ ] Testar o fluxo real pelo e-mail — sessão do banco externo indisponível nesta execução.
 
 ## Régua de Ofertas e WhatsApp
