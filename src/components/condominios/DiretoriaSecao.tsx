@@ -40,9 +40,15 @@ export function DiretoriaSecao({ condominioId, podeEditar }: { condominioId: str
     queryFn: async (): Promise<Row[]> => {
       const { data: vs } = await db.from("cond_unidades_vinculos").select("id,cond_unidade_id,usuario_id,funcao_condominio").in("cond_unidade_id", unidadeIds).in("funcao_condominio", [...FUNCOES]);
       if (!vs?.length) return [];
-      const ids = [...new Set(vs.map((v: Row) => s(v["usuario_id"])))];
-      const { data: us } = await db.from("usuarios").select("id,nome,email").in("id", ids);
-      return vs.map((v: Row) => ({ ...v, nome: s((us ?? []).find((u: Row) => s(u["id"]) === s(v["usuario_id"]))?.["nome"]) || "—" }));
+      const pessoas = new Map<string, Row>();
+      await Promise.all([...new Set(vs.map((v: Row) => s(v["cond_unidade_id"])))].map(async (u) => {
+        const { data } = await db.rpc("cond_unidade_pessoas", { p_unidade: u });
+        for (const p of (data ?? []) as Row[]) pessoas.set(s(p["usuario_id"]), p);
+      }));
+      return vs.map((v: Row) => {
+        const p = pessoas.get(s(v["usuario_id"]));
+        return { ...v, nome: s(p?.["nome"]) || s(p?.["email"]) || "—" };
+      });
     },
   });
 
@@ -51,11 +57,11 @@ export function DiretoriaSecao({ condominioId, podeEditar }: { condominioId: str
   const [pessoa, setPessoa] = useState("");
   const { data: vincUnidade = [] } = useCondRows("cond_unidades_vinculos", "cond_unidade_id", unidade || undefined);
   const { data: pessoas = [] } = useQuery({
-    queryKey: ["cond", "diretoria-pessoas", vincUnidade.map((x) => s(x["usuario_id"])).join(",")],
-    enabled: vincUnidade.length > 0,
+    queryKey: ["cond", "diretoria-pessoas", unidade, vincUnidade.map((x) => s(x["usuario_id"])).join(",")],
+    enabled: vincUnidade.length > 0 && !!unidade,
     queryFn: async () => {
-      const { data } = await db.from("usuarios").select("id,nome,email").in("id", vincUnidade.map((x) => s(x["usuario_id"])));
-      return (data ?? []) as Row[];
+      const { data } = await db.rpc("cond_unidade_pessoas", { p_unidade: unidade });
+      return ((data ?? []) as Row[]).map((p) => ({ ...p, id: s(p["usuario_id"]) }));
     },
   });
   const pessoaOpts = alfa(pessoas.map((p) => ({ value: s(p["id"]), label: s(p["nome"]) || s(p["email"]) })));
