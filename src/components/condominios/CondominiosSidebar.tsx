@@ -42,7 +42,7 @@ export function useSecoesCondominio(pagina: P): Secao[] {
   }, [funcoes, u, v, s, e, g, dc, av, pagina]);
 }
 
-export function CondominiosSidebar({ secoes, ativa, onChange, topo, direto }: { secoes: Secao[]; ativa: string; onChange: (k: string) => void; topo?: ReactNode; direto?: { nome: string; logo?: string | null; cargo?: string | null } }) {
+export function CondominiosSidebar({ secoes, ativa, onChange, topo, direto }: { secoes: Secao[]; ativa: string; onChange: (k: string) => void; topo?: ReactNode; direto?: { nome: string; logo?: string | null; cargo?: string | null } | undefined }) {
   const [aberto, setAberto] = useState(!!direto);
   // No acesso direto do condomínio, o botão de menu do cabeçalho abre/recolhe este menu.
   useEffect(() => {
