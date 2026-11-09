@@ -32,6 +32,10 @@ import { condominiosGeridos, emModoUnidade, rotuloCargo } from "@/lib/ambientes"
 import { useEmpresaAtiva } from "@/hooks/useEmpresaAtiva";
 import { publicarSeletor } from "./cond-seletor";
 import { AlertaMandato } from "./AlertaMandato";
+import { ExcluirBlocoDialog } from "./ExcluirBlocoDialog";
+import { TransferenciaDialog } from "./TransferenciaDialog";
+import { X } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const DESCRICAO_SECAO: Record<string, string> = {
   painel: "Visão geral do condomínio: unidades, pessoas, vagas e alertas.",
@@ -158,12 +162,9 @@ export function CondominiosPage() {
     if (!nome?.trim()) return;
     await salvarBloco.mutateAsync({ id: s(b["id"]), valores: { nome: nome.trim() } });
   }
-  async function excluirBloco(b: Row) {
-    const ok = await confirmar({ title: `Excluir ${s(b["nome"])}?`, description: "Todas as unidades deste bloco também serão excluídas.", destructive: true, confirmText: "Excluir" });
-    if (!ok) return;
-    await salvarBloco.mutateAsync({ id: s(b["id"]), excluir: true });
-    toast.success("Bloco excluído.");
-  }
+  const [blocoExcluir, setBlocoExcluir] = useState<Row | null>(null);
+  const [unidadeExcluir, setUnidadeExcluir] = useState<Row | null>(null);
+  function excluirBloco(b: Row) { setBlocoExcluir(b); }
   async function novaUnidade() {
     const numero = await perguntar({ title: `Nova unidade — ${s(blocoAtual?.["nome"])}`, placeholder: "Número da unidade (ex.: 101)", required: true, confirmText: "Salvar" });
     if (!numero?.trim()) return;
@@ -325,8 +326,8 @@ export function CondominiosPage() {
                         {us.map((u) => {
                           const o = OCUP_VISUAL.find((x) => x.value === ocupDe(u)) ?? OCUP_VISUAL[0]!;
                           return (
+                            <div key={s(u["id"])} className="group relative">
                             <button
-                              key={s(u["id"])}
                               type="button"
                               onClick={() => setUnidadeAberta(u)}
                               aria-label={`Unidade ${s(u["numero"])} — ${o.label}`}
@@ -336,6 +337,18 @@ export function CondominiosPage() {
                               <span className="text-sm font-semibold">{s(u["numero"])}</span>
                               <span className="text-[10px] font-medium uppercase tracking-wide opacity-80">{o.curto}</span>
                             </button>
+                            {permsUnid.canDelete && (
+                              <TooltipProvider delayDuration={100}><Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button type="button" aria-label={`Excluir unidade ${s(u["numero"])}`} onClick={() => setUnidadeExcluir(u)}
+                                    className="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground opacity-0 shadow transition focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-hover:opacity-100">
+                                    <X className="size-3" />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent>Excluir unidade</TooltipContent>
+                              </Tooltip></TooltipProvider>
+                            )}
+                            </div>
                           );
                         })}
                       </div>
@@ -348,6 +361,8 @@ export function CondominiosPage() {
         </>
       )}
 
+      {blocoExcluir && <ExcluirBlocoDialog bloco={blocoExcluir} blocos={blocos} unidades={unidades} onClose={() => setBlocoExcluir(null)} />}
+      {unidadeExcluir && condId && <TransferenciaDialog modo="excluir" unidade={unidadeExcluir} condominioId={condId} onClose={() => setUnidadeExcluir(null)} />}
       {gerar && blocoAtual && (
         <GerarUnidadesDialog
           existentes={new Set(unidadesBloco.map((u) => s(u["numero"])))}
