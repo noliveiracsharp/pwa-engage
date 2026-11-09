@@ -4,7 +4,9 @@ import { CalendarClock, ReceiptText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { num } from "@/lib/orcamentos";
 import { useAudit } from "@/lib/audit";
-import type { ParcelaServico } from "@/lib/oferta-cronogramas";
+import type { CondServico, ParcelaServico } from "@/lib/oferta-cronogramas";
+import type { Linha } from "@/lib/orcamentos";
+import { ServicosCobranca } from "@/components/orcamentos/ServicosCobranca";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -112,10 +114,12 @@ type Props = {
   modalidade?: "avista" | "prazo" | "comodato";
   readOnly?: boolean | undefined;
   onChange: (patch: Partial<PagamentoState>) => void;
+  onServicoCond?: (sid: string, patch: Partial<CondServico>) => void;
+  onServicoLinha?: (key: string, patch: Partial<Linha>) => void;
 };
 
 /** Observações fiscais, forma de pagamento e geração automática das parcelas. */
-export function OrcamentoPagamento({ value, parcelas, parcelasServicos = [], totalLiquido, entradaValor = 0, modalidade = "prazo", readOnly, onChange }: Props) {
+export function OrcamentoPagamento({ value, parcelas, parcelasServicos = [], totalLiquido, entradaValor = 0, modalidade = "prazo", readOnly, onChange, onServicoCond, onServicoLinha }: Props) {
   const avista = modalidade === "avista";
   const comodato = modalidade === "comodato";
   const total = somaParcelas(parcelas);
@@ -487,39 +491,8 @@ export function OrcamentoPagamento({ value, parcelas, parcelasServicos = [], tot
           </p>
         )}
 
-        {parcelasServicos.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Serviços avulsos — cobrança separada</p>
-            <p className="text-muted-foreground text-xs">Estes serviços têm início de cobrança próprio e não entram no parcelamento acima.</p>
-            <div className="overflow-hidden rounded-md border">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50 text-muted-foreground">
-                  <tr>
-                    <th className="px-3 py-2 text-left font-medium">Serviço</th>
-                    <th className="px-3 py-2 text-left font-medium">{tx("Parcela")}</th>
-                    <th className="px-3 py-2 text-left font-medium">Vencimento</th>
-                    <th className="px-3 py-2 text-right font-medium">Valor</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {parcelasServicos.map((p) => (
-                    <tr key={`${p.linha}-${p.numero}`} className="border-t">
-                      <td className="px-3 py-2">{p.descricao}</td>
-                      <td className="px-3 py-2 tabular-nums">{p.numero}/{p.total_parcelas}</td>
-                      <td className="px-3 py-2 tabular-nums">{formatDate(p.vencimento)}</td>
-                      <td className="px-3 py-2 text-right tabular-nums">{formatBRL(p.valor)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr className="bg-muted/30 border-t font-semibold">
-                    <td className="px-3 py-2" colSpan={3}>Total dos serviços separados</td>
-                    <td className="px-3 py-2 text-right tabular-nums">{formatBRL(somaParcelas(parcelasServicos))}</td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-          </div>
+        {onServicoCond && onServicoLinha && (
+          <ServicosCobranca parcelas={parcelasServicos} readOnly={readOnly} onCond={onServicoCond} onLinha={onServicoLinha} />
         )}
 
         {!avista && parcelas.length >= 2 && !readOnly && (

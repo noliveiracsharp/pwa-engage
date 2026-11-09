@@ -652,7 +652,20 @@ export function OrcamentoLinhas({
               </Button>
             </>
           )}
-          <span className="ml-auto text-sm font-semibold tabular-nums">Subtotal: {formatBRL(subtotal)}</span>
+          {rows.length > 0 && (
+            <div className="ml-auto flex items-center gap-2">
+              <Switch
+                id={`inc-grupo-${bloco || "geral"}`}
+                checked={rows.every((x) => x.incluso)}
+                disabled={Boolean(readOnly)}
+                onCheckedChange={(v) => { for (const x of rows) if (x.incluso !== v) onChange(x.key, { incluso: v }); }}
+              />
+              <Label htmlFor={`inc-grupo-${bloco || "geral"}`} className="text-xs font-normal" title="Marca ou desmarca todos os itens deste grupo como incluso / apenas conferência">
+                Todos inclusos
+              </Label>
+            </div>
+          )}
+          <span className={cn("text-sm font-semibold tabular-nums", rows.length === 0 && "ml-auto")}>Subtotal: {formatBRL(subtotal)}</span>
         </div>
         {!readOnly && (
           <div className="border-b p-2">

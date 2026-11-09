@@ -2,6 +2,7 @@ import { rowId } from "@/lib/crud";
 import { formatCpfCnpj, formatPhoneDisplay } from "@/lib/input-masks";
 import { textoDetalhe, agruparPorBloco, formatBRL, formatDate, formatQtd, modalidadeLabel, modalidadeOf, naturezaOf, num, parcelasFromValue, situacaoOf } from "@/lib/orcamentos";
 import { pick, type Row } from "@/lib/row";
+import { agruparServicos, type ParcelaServico } from "@/lib/oferta-cronogramas";
 import { ehHtml, htmlSeguro } from "@/lib/propostas";
 
 export type OrcamentoDocumentoProps = {
@@ -57,6 +58,10 @@ export function OrcamentoDocumento({ id, orcamento, linhas, empresa, cliente, ve
   const numero = txt(orcamento["numero"]) || "Oferta";
   const situacao = situacaoOf(orcamento["situacao"]);
   const parcelas = parcelasFromValue(orcamento["parcelas"]);
+  const servicosSep = agruparServicos(
+    (Array.isArray(orcamento["parcelas_servicos"]) ? (orcamento["parcelas_servicos"] as ParcelaServico[]) : [])
+      .map((p) => ({ ...p, linha: String(p.sid ?? p.linha ?? ""), valor: num(p.valor), numero: num(p.numero) })),
+  );
   const mostrarInclusos = orcamento["mostrar_valores_inclusos"] === true;
   const descontoValor = num(orcamento["desconto_valor"]);
   const frete = num(orcamento["frete"]);
@@ -373,6 +378,32 @@ export function OrcamentoDocumento({ id, orcamento, linhas, empresa, cliente, ve
                   )}
                 </Bloco>
               )}
+              {servicosSep.map(({ linha, parcelas: ps }) => {
+                const p0 = ps[0]!;
+                const total = ps.reduce((s, p) => s + p.valor, 0);
+                return (
+                  <Bloco key={linha} titulo={`Serviço · ${p0.bloco ? `${p0.bloco} — ` : ""}${p0.descricao}`}>
+                    <div>
+                      <strong>{p0.forma || txt(orcamento["forma_pagamento"]) || "Pagamento"}</strong>
+                      {ps.length > 1 && <> · {ps.length}x</>} · total {formatBRL(total)}
+                    </div>
+                    <table className="orc-parcelas">
+                      <thead>
+                        <tr><th>Parcela</th><th>Vencimento</th><th className="orc-right">Valor</th></tr>
+                      </thead>
+                      <tbody>
+                        {ps.map((p) => (
+                          <tr key={p.numero}>
+                            <td>{p.numero}/{ps.length}{p.numero === 1 && ps.length > 1 && num(p0.entrada) > 0 ? " (entrada)" : ""}</td>
+                            <td>{formatDate(p.vencimento)}</td>
+                            <td className="orc-right">{formatBRL(p.valor)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </Bloco>
+                );
+              })}
             </div>
 
             {temImpl && <div className="orc-totais">
