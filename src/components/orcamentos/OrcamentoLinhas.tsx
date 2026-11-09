@@ -475,10 +475,36 @@ export function OrcamentoLinhas({
                   )}
                 </div>
               );
+              if (readOnly) return editor;
+              return (
+                <Dialog key={l.key} open onOpenChange={(o) => { if (!o) cancelar(l.key); }}>
+                  <DialogContent
+                    className="max-h-[90vh] w-full max-w-[95vw] overflow-y-auto p-4 lg:max-w-5xl"
+                    onPointerDownOutside={(e) => e.preventDefault()}
+                    onInteractOutside={(e) => e.preventDefault()}
+                  >
+                    <DialogHeader>
+                      <DialogTitle>{nomeItem ? tx("Editar item") : tx("Novo item")}</DialogTitle>
+                      <DialogDescription>{l.bloco.trim() || tx("Itens gerais")}</DialogDescription>
+                    </DialogHeader>
+                    {editor}
+                  </DialogContent>
+                </Dialog>
+              );
             }
 
             return (
-              <div key={l.key} className="border-b last:border-b-0">
+              <div
+                key={l.key}
+                className={cn("border-b last:border-b-0", !readOnly && "hover:bg-muted/50 cursor-pointer transition-colors")}
+                role={readOnly ? undefined : "button"}
+                tabIndex={readOnly ? undefined : 0}
+                aria-label={readOnly ? undefined : `${tx("Editar item")}: ${nomeItem || index + 1}`}
+                onClick={readOnly ? undefined : () => toggleAberta(l.key)}
+                onKeyDown={readOnly ? undefined : (e) => {
+                  if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); toggleAberta(l.key); }
+                }}
+              >
                 {/* Linha compacta — mobile */}
                 <div className="flex items-start gap-2 p-3 sm:hidden">
                   <span className="text-muted-foreground mt-0.5 w-5 shrink-0 text-right text-xs tabular-nums">
