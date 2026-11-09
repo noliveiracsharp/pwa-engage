@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { condicoesDoCronograma, cronogramaServicos, cronogramaTerceiro, servicoSeparado, terceirosAvulsos } from "./oferta-cronogramas";
+import { condServicoVazia, condicoesDoCronograma, cronogramaServicos, cronogramaTerceiro, servicoSeparado, terceirosAvulsos } from "./oferta-cronogramas";
 
 describe("cronogramas da Oferta", () => {
   it("serviço avulso com início de cobrança sai do parcelamento geral", () => {
