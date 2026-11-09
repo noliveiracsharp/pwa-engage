@@ -11,7 +11,7 @@ import { TEMPERATURAS } from "@/lib/temperatura";
 import { MOTIVOS_PERDA, ORIGENS_LEAD, TIPOS_ACAO, negocioPerdido } from "@/lib/crm";
 import { OrcamentoDespesas } from "@/components/orcamentos/OrcamentoDespesas";
 import { OrcamentoCompra } from "@/components/orcamentos/OrcamentoCompra";
-import { cronogramaServicos, cronogramaTerceiro, servicoSeparado, terceirosAvulsos } from "@/lib/oferta-cronogramas";
+import { condicoesDoCronograma, cronogramaServicos, cronogramaTerceiro, condServicoVazia, servicoSeparado, sidsServicos, terceirosAvulsos, type CondServico } from "@/lib/oferta-cronogramas";
 import { condicaoCompraFromValue, condicaoCompraPadrao, condicaoCompraToValue, cronogramaCompra, type CondicaoCompra } from "@/lib/orcamentos";
 import {
   despesasFromValue,
@@ -106,6 +106,8 @@ const paraLocal = (v: unknown) => {
 };
 
 type Header = {
+  /** Condição comercial própria de cada serviço avulso (chave = sid estável). */
+  servicos_cfg: Record<string, CondServico>;
   situacao: string;
   temperatura: string;
   origem_lead: string;
@@ -154,6 +156,7 @@ const emptyHeader = (vendedorId: string): Header => {
     frete: "",
     valores_adicionais: "",
     mostrar_valores_inclusos: false,
+    servicos_cfg: {},
     despesas: [],
     compra: condicaoCompraPadrao(),
     obs_nota_fiscal: "",
@@ -241,6 +244,7 @@ const headerFromRecord = (r: Row): Header => {
     frete: num(r["frete"]) ? String(num(r["frete"])) : "",
     valores_adicionais: num(r["valores_adicionais"]) ? String(num(r["valores_adicionais"])) : "",
     mostrar_valores_inclusos: r["mostrar_valores_inclusos"] === true,
+    servicos_cfg: condicoesDoCronograma(r["parcelas_servicos"]),
     despesas: despesasFromValue(r["despesas_operacionais"]),
     compra: condicaoCompraFromValue(r["compra_condicao"]),
     obs_nota_fiscal: String(pick(r, ["obs_nota_fiscal"]) ?? ""),
@@ -584,19 +588,18 @@ export function OrcamentoSheet({
   // Serviços avulsos com início próprio saem do parcelamento geral (cronograma separado).
   const fatorDesc = totais.total_itens > 0 ? (totais.total_itens - totais.desconto_valor) / totais.total_itens : 1;
   const fatorAvista = ehAvista && totais.total_liquido > 0 ? avista.total / totais.total_liquido : 1;
-  const parcelasServicos = useMemo(
-    () =>
-      cronogramaServicos(
-        linhasValidas.flatMap((l, i) =>
-          servicoSeparado(l) && !l.incluso
-            ? [{ linha: l.key, descricao: String(itemById.get(l.item_id)?.["descricao"] ?? itemById.get(l.item_id)?.["nome"] ?? "") || "Serviço avulso",
-                pagador: l.faturar_para_id && l.faturar_para_id !== h.parceiro_id ? l.faturar_para_id : "",
-                valor: round2(calcs[i]!.total_linha * fatorDesc * fatorAvista), inicio: l.dt_inicio_faturamento, parcelas: num(l.parcelas_faturamento) || 1 }]
-            : [],
-        ),
-      ),
-    [linhasValidas, calcs, fatorDesc, fatorAvista, itemById, h.parceiro_id],
-  );
+  const parcelasServicos = useMemo(() => {
+    const sep = linhasValidas.map((l, i) => ({ l, i })).filter(({ l }) => servicoSeparado(l) && !l.incluso);
+    const sids = sidsServicos(sep.map(({ l }) => l));
+    return cronogramaServicos(
+      sep.map(({ l, i }, k) => ({
+        linha: l.key, sid: sids[k]!, bloco: l.bloco.trim(), cond: h.servicos_cfg[sids[k]!],
+        descricao: String(itemById.get(l.item_id)?.["descricao"] ?? itemById.get(l.item_id)?.["nome"] ?? "") || "Serviço avulso",
+        pagador: l.faturar_para_id && l.faturar_para_id !== h.parceiro_id ? l.faturar_para_id : "",
+        valor: round2(calcs[i]!.total_linha * fatorDesc * fatorAvista), inicio: l.dt_inicio_faturamento, parcelas: num(l.parcelas_faturamento) || 1,
+      })),
+    );
+  }, [linhasValidas, calcs, fatorDesc, fatorAvista, itemById, h.parceiro_id, h.servicos_cfg]);
   const totalSeparado = round2(parcelasServicos.reduce((s, p) => s + p.valor, 0));
   const baseGeral = round2(Math.max(0, totais.total_liquido - (ehAvista ? 0 : totalSeparado)));
   const qtdNum = Math.floor(num(h.qtd_parcelas) || 1);
@@ -1179,6 +1182,8 @@ export function OrcamentoSheet({
             value={h}
             parcelas={parcelas}
             parcelasServicos={parcelasServicos}
+            onServicoCond={(sid, patch) => setH((p) => ({ ...p, servicos_cfg: { ...p.servicos_cfg, [sid]: { ...(p.servicos_cfg[sid] ?? condServicoVazia()), ...patch } } }))}
+            onServicoLinha={(key, patch) => updateLinha(key, patch)}
             totalLiquido={ehAvista ? round2(Math.max(0, avista.total - totalSeparado)) : baseGeral}
             entradaValor={entradaValor}
             modalidade={h.modalidade}
