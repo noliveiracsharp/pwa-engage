@@ -159,6 +159,8 @@ export type Linha = {
   desconto_linha: string;
   /** Início da cobrança deste item recorrente ("" = início geral da Oferta). */
   dt_inicio_faturamento: string;
+  /** Serviço avulso com início próprio: em quantas parcelas o cliente paga. */
+  parcelas_faturamento: string;
 };
 
 export type Execucao = "interno" | "terceiro";
@@ -215,6 +217,7 @@ export function novaLinha(): Linha {
     incluso: false,
     desconto_linha: "",
     dt_inicio_faturamento: "",
+    parcelas_faturamento: "1",
   };
 }
 
@@ -237,6 +240,7 @@ export function linhaFromRow(row: Row, itemTipo?: unknown): Linha {
     incluso: row["incluso"] === true,
     desconto_linha: num(row["desconto_linha"]) > 0 ? String(num(row["desconto_linha"])) : "",
     dt_inicio_faturamento: row["dt_inicio_faturamento"] ? String(row["dt_inicio_faturamento"]).slice(0, 10) : "",
+    parcelas_faturamento: String(Math.max(1, Math.floor(num(row["parcelas_faturamento"])) || 1)),
   };
 }
 
@@ -612,6 +616,8 @@ export type CondicaoCompra = {
   /** 1º vencimento (avista/personalizado), yyyy-mm-dd. */
   primeira: string;
   obs: string;
+  /** Serviços avulsos terceirizados: parcelas e 1º vencimento por fornecedor. */
+  terceiros?: Record<string, { parcelas: string; primeira: string }>;
 };
 
 export const COMPRA_MODOS: Array<{ value: CompraModo; label: string }> = [
@@ -636,6 +642,8 @@ export function condicaoCompraFromValue(value: unknown): CondicaoCompra {
     parcelas: String(Math.max(1, Math.floor(num(r["parcelas"]) || 1))),
     primeira: toISODate(r["primeira"]) || "",
     obs: String(r["obs"] ?? ""),
+    terceiros: Object.fromEntries(Object.entries((r["terceiros"] && typeof r["terceiros"] === "object" ? r["terceiros"] : {}) as Record<string, Row>)
+      .map(([f, t]) => [f, { parcelas: String(Math.max(1, Math.floor(num(t?.["parcelas"]) || 1))), primeira: toISODate(t?.["primeira"]) || "" }])),
   };
 }
 
@@ -645,6 +653,7 @@ export function condicaoCompraToValue(c: CondicaoCompra) {
     parcelas: Math.max(1, Math.floor(num(c.parcelas) || 1)),
     primeira: toISODate(c.primeira) || null,
     obs: c.obs.trim(),
+    terceiros: Object.fromEntries(Object.entries(c.terceiros ?? {}).map(([f, t]) => [f, { parcelas: Math.max(1, Math.floor(num(t.parcelas) || 1)), primeira: toISODate(t.primeira) || null }])),
   };
 }
 
