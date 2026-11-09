@@ -18,13 +18,23 @@ export type ParcelaServico = Parcela & {
   forma?: string;
   entrada_tipo?: "percentual" | "valor";
   entrada?: string;
+  modo?: ModoServico;
+  juros?: string;
+  taxa_instalacao?: string;
+  taxa_isenta?: boolean;
   /** Valor/data digitados à mão nesta parcela. */
   fixa?: boolean;
   data_manual?: boolean;
 };
 
 /** Condição comercial própria de cada serviço avulso (como a dos produtos). */
+export type ModoServico = "sem_juros" | "com_juros" | "comodato";
 export type CondServico = {
+  /** Sem juros, com juros (taxa ao mês) ou comodato (taxa de instalação). */
+  modo?: ModoServico;
+  juros?: string;
+  taxa_instalacao?: string;
+  taxa_isenta?: boolean;
   forma: string;
   entrada_tipo: "percentual" | "valor";
   entrada: string;
@@ -55,11 +65,24 @@ export function cronogramaServicos(
     if (valor <= 0 || !inicio) continue;
     const n = Math.max(1, Math.min(120, Math.floor(num(l.parcelas)) || 1));
     const c = l.cond ?? condServicoVazia();
-    const entrada = n >= 2 ? calcEntrada(valor, c.entrada_tipo, c.entrada) : 0;
-    for (const p of gerarParcelas({ total: valor, quantidade: n, primeiraData: inicio, comJuros: false, entrada, fixas: c.fixas, datas: c.datas }))
+    const modo = c.modo ?? "sem_juros";
+    const base = modo === "comodato" ? (c.taxa_isenta ? 0 : round2(num(c.taxa_instalacao))) : valor;
+    if (base <= 0) {
+      // Comodato isento: mantém o bloco visível (valor zero) para o vendedor poder alterar.
+      out.push({ numero: 1, vencimento: inicio, valor: 0, linha: l.linha, descricao: l.descricao, pagador: l.pagador, total_parcelas: 1,
+        ...(l.sid ? { sid: l.sid } : {}), bloco: l.bloco ?? "", forma: c.forma, entrada_tipo: c.entrada_tipo, entrada: c.entrada,
+        modo, juros: c.juros ?? "", taxa_instalacao: c.taxa_instalacao ?? "", taxa_isenta: Boolean(c.taxa_isenta) } as ParcelaServico);
+      continue;
+    }
+    const entrada = n >= 2 ? calcEntrada(base, c.entrada_tipo, c.entrada) : 0;
+    const nFin = entrada > 0 ? n - 1 : n;
+    const i = num(c.juros) / 100;
+    const coef = modo === "com_juros" && i > 0 && nFin > 0 ? i / (1 - Math.pow(1 + i, -nFin)) : 0;
+    for (const p of gerarParcelas({ total: base, quantidade: n, primeiraData: inicio, comJuros: coef > 0, coeficiente: coef, entrada, fixas: c.fixas, datas: c.datas }))
       out.push({
         ...p, linha: l.linha, descricao: l.descricao, pagador: l.pagador, total_parcelas: n,
         ...(l.sid ? { sid: l.sid } : {}), bloco: l.bloco ?? "", forma: c.forma, entrada_tipo: c.entrada_tipo, entrada: c.entrada,
+        modo, juros: c.juros ?? "", taxa_instalacao: c.taxa_instalacao ?? "", taxa_isenta: Boolean(c.taxa_isenta),
         ...(c.fixas[p.numero] !== undefined ? { fixa: true } : {}),
         ...(c.datas[p.numero] ? { data_manual: true } : {}),
       });
@@ -78,6 +101,10 @@ export function condicoesDoCronograma(v: unknown): Record<string, CondServico> {
       forma: String(p["forma"] ?? ""),
       entrada_tipo: p["entrada_tipo"] === "valor" ? "valor" : "percentual",
       entrada: String(p["entrada"] ?? ""),
+      modo: p["modo"] === "com_juros" || p["modo"] === "comodato" ? p["modo"] : "sem_juros",
+      juros: String(p["juros"] ?? ""),
+      taxa_instalacao: String(p["taxa_instalacao"] ?? ""),
+      taxa_isenta: p["taxa_isenta"] === true,
       fixas: {}, datas: {},
     });
     const n = Math.floor(num(p["numero"]));

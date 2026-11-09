@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { condicoesDoCronograma, cronogramaServicos, cronogramaTerceiro, servicoSeparado, terceirosAvulsos } from "./oferta-cronogramas";
+import { condServicoVazia, condicoesDoCronograma, cronogramaServicos, cronogramaTerceiro, servicoSeparado, terceirosAvulsos } from "./oferta-cronogramas";
 
 describe("cronogramas da Oferta", () => {
   it("serviço avulso com início de cobrança sai do parcelamento geral", () => {
@@ -30,5 +30,15 @@ describe("cronogramas da Oferta", () => {
     expect(t).toEqual([{ fornecedor: "f1", custo: 6400, inicio: "2026-12-25" }]);
     const ps = cronogramaTerceiro(6400, { parcelas: "2", primeira: "" }, "2026-12-25", "2026-11-01");
     expect(ps.map((p) => [p.vencimento, p.valor])).toEqual([["2026-12-25", 3200], ["2027-01-25", 3200]]);
+  });
+});
+
+describe("modos do serviço avulso", () => {
+  it("com juros aplica tabela Price e comodato cobra só a taxa", () => {
+    const base = { linha: "a", sid: "s#1", descricao: "X", pagador: "", valor: 1000, inicio: "2026-12-10", parcelas: 2 };
+    const j = cronogramaServicos([{ ...base, cond: { ...condServicoVazia(), modo: "com_juros", juros: "10" } }]);
+    expect(j.map((p) => p.valor)).toEqual([576.19, 576.19]);
+    const c = cronogramaServicos([{ ...base, cond: { ...condServicoVazia(), modo: "comodato", taxa_instalacao: "300" } }]);
+    expect(c.reduce((s, p) => s + p.valor, 0)).toBe(300);
   });
 });
