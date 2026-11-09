@@ -64,9 +64,9 @@ export function ConfiguracoesCondSecao({ condominioId, podeEditar }: Props) {
         <p className="text-xs text-muted-foreground">Regras que valem para todas as unidades.</p></header>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="rounded-lg border p-3">
-          <Label htmlFor="cfg-lim" className="mb-1 block text-sm font-medium">Veículos liberados por unidade</Label>
+          <Label htmlFor="cfg-lim" className="mb-1 block text-sm font-medium">Limite padrão de veículos por unidade</Label>
           <Input id="cfg-lim" inputMode="numeric" disabled={ro} placeholder="Sem limite" value={v.limite_veiculos_ativos} onChange={(e) => setV({ ...v, limite_veiculos_ativos: e.target.value })} />
-          <p className="mt-1 text-xs text-muted-foreground">A unidade cadastra quantos quiser; só esse número fica liberado na portaria. Vazio = sem limite.</p>
+          <p className="mt-1 text-xs text-muted-foreground">Vale para unidades sem limite próprio (definido na ficha da unidade, em Dados → Vagas de garagem). Vazio = sem limite.</p>
         </div>
         <Chave k="morador_escolhe_veiculo" l="Morador escolhe o veículo liberado" d="O próprio morador liga e desliga qual veículo usa a garagem." />
         <Chave k="morador_edita_dados" l="Morador edita os próprios dados" d="Permite alterar nome, telefone e foto pelo portal." />
