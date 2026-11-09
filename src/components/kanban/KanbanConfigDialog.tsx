@@ -1,3 +1,4 @@
+import { JORNADA_24H, JORNADA_COMERCIAL_PADRAO, lerJornada, type Jornada } from "@/lib/sla-etapa";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, Bot, Check, ClipboardCheck, Pencil, Plus, Trash2, Users, X } from "lucide-react";
@@ -102,7 +103,7 @@ export function KanbanConfigDialog({
   const qc = useQueryClient();
   const kanbanId = kanban ? String(kanban["id"]) : "";
   const [tab, setTab] = useState("dados");
-  const [form, setForm] = useState({ nome: "", descricao: "", status: true, totais: false, temperatura: false, entrada: false });
+  const [form, setForm] = useState({ nome: "", descricao: "", status: true, totais: false, temperatura: false, entrada: false, jornada: JORNADA_24H as Jornada });
   const [novaEtapa, setNovaEtapa] = useState("");
   const [editId, setEditId] = useState<string | null>(null);
   const [editDesc, setEditDesc] = useState("");
@@ -133,6 +134,7 @@ export function KanbanConfigDialog({
       totais: [true, "true", "t", 1].includes(kanban?.["exibir_totais"] as never),
       temperatura: [true, "true", "t", 1].includes(kanban?.["habilitar_temperatura"] as never),
       entrada: [true, "true", "t", 1].includes(kanban?.["quadro_entrada"] as never),
+      jornada: lerJornada(kanban?.["jornada"]),
     });
     setEditId(null);
     setNovaEtapa("");
@@ -210,6 +212,7 @@ export function KanbanConfigDialog({
       if (form.totais || (kanban && "exibir_totais" in kanban)) payload["exibir_totais"] = form.totais;
       if (form.temperatura || (kanban && "habilitar_temperatura" in kanban)) payload["habilitar_temperatura"] = form.temperatura;
       if (form.entrada || (kanban && "quadro_entrada" in kanban)) payload["quadro_entrada"] = form.entrada;
+      if (form.jornada.modo !== "24h" || (kanban && "jornada" in kanban)) payload["jornada"] = form.jornada;
       if (kanbanId) {
         const { error } = await supabase.from("kanban_nome").update(payload).eq("id", kanbanId);
         if (error) throw error;
@@ -487,6 +490,32 @@ export function KanbanConfigDialog({
               <span>Quadro de entrada das conversas<span className="block text-xs text-muted-foreground">Novas mensagens do WhatsApp (sem atalho #) começam neste quadro. Ligue em apenas um.</span></span>
               <Switch checked={form.entrada} onCheckedChange={(v) => setForm({ ...form, entrada: v })} />
             </label>
+            <div className="space-y-3 rounded-md border p-3">
+              <label className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 text-sm">
+                <span>Atende 24 horas por dia<span className="block text-xs text-muted-foreground">Desligado: o prazo (SLA) das etapas só corre nos dias e horários de trabalho abaixo (horário de Brasília).</span></span>
+                <Switch checked={form.jornada.modo === "24h"} onCheckedChange={(v) => setForm({ ...form, jornada: v ? JORNADA_24H : JORNADA_COMERCIAL_PADRAO })} />
+              </label>
+              {form.jornada.modo === "comercial" && (() => {
+                const j = form.jornada;
+                const DIAS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+                return (
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap gap-1.5" role="group" aria-label="Dias de trabalho">
+                      {DIAS.map((d, i) => {
+                        const on = j.dias.includes(i);
+                        return <Button key={d} type="button" size="sm" variant={on ? "default" : "outline"} aria-pressed={on}
+                          onClick={() => { const dias = on ? j.dias.filter((x) => x !== i) : [...j.dias, i].sort(); if (dias.length) setForm({ ...form, jornada: { ...j, dias } }); }}>{d}</Button>;
+                      })}
+                    </div>
+                    <div className="flex flex-wrap items-end gap-3">
+                      <div><Label htmlFor="kb-j-ini" className="mb-1 block text-xs">Início</Label><Input id="kb-j-ini" type="time" className="w-32" value={j.inicio} onChange={(e) => setForm({ ...form, jornada: { ...j, inicio: e.target.value } })} /></div>
+                      <div><Label htmlFor="kb-j-fim" className="mb-1 block text-xs">Fim</Label><Input id="kb-j-fim" type="time" className="w-32" value={j.fim} onChange={(e) => setForm({ ...form, jornada: { ...j, fim: e.target.value } })} /></div>
+                    </div>
+                    {j.fim <= j.inicio && <p className="text-xs text-destructive">O fim precisa ser depois do início.</p>}
+                  </div>
+                );
+              })()}
+            </div>
             {transfer && (
               <div className="space-y-3 rounded-md border border-destructive/50 p-3">
                 <p className="text-sm">
