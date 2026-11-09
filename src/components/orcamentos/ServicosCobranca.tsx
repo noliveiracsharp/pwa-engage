@@ -3,6 +3,7 @@ import { FORMAS_PAGAMENTO, formatBRL, formatDate, num, somaParcelas, type Linha 
 import { agruparServicos, type CondServico, type ParcelaServico } from "@/lib/oferta-cronogramas";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { SearchSelect } from "@/components/data-table/SearchSelect";
 
@@ -44,11 +45,40 @@ export function ServicosCobranca({ parcelas, readOnly, onCond, onLinha }: Props)
             </div>
             <p className="text-sm">
               <strong>Resumo para o cliente:</strong>{" "}
-              {n === 1 ? `à vista, ${formatBRL(total)} em ${formatDate(p0.vencimento)}`
+              {total <= 0 ? "comodato com taxa isenta, sem cobrança" : n === 1 ? `à vista, ${formatBRL(total)} em ${formatDate(p0.vencimento)}`
                 : entradaValor > 0 ? `entrada de ${formatBRL(entradaValor)} + ${n - 1}x de ${formatBRL(ps[1]!.valor)}`
                 : `${n}x de ${formatBRL(p0.valor)}`}
-              {n > 1 && `, começando em ${formatDate(p0.vencimento)}`}
+              {total > 0 && n > 1 && `, começando em ${formatDate(p0.vencimento)}`}
             </p>
+            <ToggleGroup type="single" variant="outline" className="w-full" value={p0.modo ?? "sem_juros"} disabled={Boolean(readOnly)}
+              onValueChange={(v) => v && onCond(sid, { modo: v as CondServico["modo"], fixas: {} })} aria-label="Condição do serviço">
+              <ToggleGroupItem value="sem_juros" className="flex-1">Sem juros</ToggleGroupItem>
+              <ToggleGroupItem value="com_juros" className="flex-1">Com juros</ToggleGroupItem>
+              <ToggleGroupItem value="comodato" className="flex-1">Comodato</ToggleGroupItem>
+            </ToggleGroup>
+            {p0.modo === "com_juros" && (
+              <div className="max-w-xs space-y-1.5">
+                <Label htmlFor={`sp-j-${linha}`} className="block text-xs font-medium">Juros ao mês (%)</Label>
+                <Input id={`sp-j-${linha}`} inputMode="decimal" placeholder="Ex.: 1,99" disabled={Boolean(readOnly)} value={p0.juros ?? ""}
+                  onChange={(e) => onCond(sid, { juros: e.target.value, fixas: {} })} />
+              </div>
+            )}
+            {p0.modo === "comodato" && (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor={`sp-t-${linha}`} className="block text-xs font-medium">Taxa de instalação (R$)</Label>
+                  <Input id={`sp-t-${linha}`} inputMode="decimal" placeholder="Ex.: 500,00" disabled={Boolean(readOnly) || Boolean(p0.taxa_isenta)} value={p0.taxa_instalacao ?? ""}
+                    onChange={(e) => onCond(sid, { taxa_instalacao: e.target.value, fixas: {} })} />
+                  <p className="text-muted-foreground text-xs">No comodato o cliente paga só esta taxa; o serviço fica embutido no contrato.</p>
+                </div>
+                <div className="flex items-start justify-between gap-3 rounded-md border p-3">
+                  <Label htmlFor={`sp-i-${linha}`} className="text-sm">Isentar taxa de instalação</Label>
+                  <Switch id={`sp-i-${linha}`} checked={Boolean(p0.taxa_isenta)} disabled={Boolean(readOnly)}
+                    onCheckedChange={(v) => onCond(sid, { taxa_isenta: v, fixas: {} })} />
+                </div>
+              </div>
+            )}
+            {total > 0 && (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <div className="space-y-1.5">
                 <Label className="block text-xs font-medium">Forma de pagamento</Label>
@@ -81,6 +111,8 @@ export function ServicosCobranca({ parcelas, readOnly, onCond, onLinha }: Props)
                 </div>
               )}
             </div>
+            )}
+            {total > 0 && (
             <div className="overflow-hidden rounded-md border">
               <table className="w-full text-sm">
                 <thead className="bg-muted/50 text-muted-foreground">
@@ -125,6 +157,7 @@ export function ServicosCobranca({ parcelas, readOnly, onCond, onLinha }: Props)
                 </tbody>
               </table>
             </div>
+            )}
             {!readOnly && (Object.keys(fixas).length > 0 || Object.keys(datas).length > 0) && (
               <button type="button" className="text-primary text-xs underline underline-offset-2" onClick={() => onCond(sid, { fixas: {}, datas: {} })}>
                 Voltar para parcelas iguais, uma por mês
