@@ -218,56 +218,9 @@ export function OrcamentoLinhas({
               </div>
             );
 
-            if (aberta && !readOnly) {
-              return (
-                <Dialog key={l.key} open onOpenChange={(o) => { if (!o) cancelar(l.key); }}>
-                  <DialogContent
-                    className="max-h-[90vh] w-full max-w-[95vw] overflow-y-auto lg:max-w-5xl"
-                    onPointerDownOutside={(e) => e.preventDefault()}
-                    onInteractOutside={(e) => e.preventDefault()}
-                  >
-                    <DialogHeader>
-                      <DialogTitle>{nomeItem ? `${tx("Editar item")} ${index + 1}` : tx("Novo item")}</DialogTitle>
-                      <DialogDescription>{l.bloco.trim() || tx("Itens gerais")}</DialogDescription>
-                    </DialogHeader>
-                    {renderEditor(l, index, { c, semCusto, nomeMarca, acoes })}
-                  </DialogContent>
-                </Dialog>
-              );
-            }
-            if (aberta) return renderEditor(l, index, { c, semCusto, nomeMarca, acoes });
-            return renderCompacta();
-
-            function renderCompacta() {
-            return (
-              <div
-                key={l.key}
-                className={cn("border-b last:border-b-0", !readOnly && "hover:bg-muted/50 cursor-pointer transition-colors")}
-                role={readOnly ? undefined : "button"}
-                tabIndex={readOnly ? undefined : 0}
-                aria-label={readOnly ? undefined : `${tx("Editar item")} ${nomeItem}`}
-                onClick={readOnly ? undefined : () => toggleAberta(l.key)}
-                onKeyDown={readOnly ? undefined : (e) => {
-                  if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); toggleAberta(l.key); }
-                }}
-              >
-                {compactaConteudo()}
-              </div>
-            );
-            }
-
-            function compactaConteudo() {
-              return __COMPACTA__;
-            }
-  };
-
-  const renderEditor = (
-    l: Linha,
-    index: number,
-    { c, semCusto, nomeMarca, acoes }: { c: ReturnType<typeof calcLinha>; semCusto: boolean; nomeMarca: string; acoes: React.ReactNode },
-  ) => {
-              return (
-                <div key={l.key} className="bg-card space-y-3 border-b p-3 last:border-b-0">
+            if (aberta) {
+              const editor = (
+                <div key={l.key} className={cn("bg-card space-y-3 p-3", readOnly && "border-b last:border-b-0")}>
                   <div className="flex items-start gap-2">
                     <span className="text-muted-foreground mt-2.5 w-5 shrink-0 text-right text-xs tabular-nums">
                       {index + 1}.
