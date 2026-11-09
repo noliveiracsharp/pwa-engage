@@ -118,6 +118,7 @@ export function KanbanConfigDialog({
   const [editTplS, setEditTplS] = useState("");
   const [editDestK, setEditDestK] = useState("");
   const [editDestE, setEditDestE] = useState("");
+  const [editSla, setEditSla] = useState("");
   const { data: templates = [] } = useChecklistTemplates(empresaId);
   const [funcaoId, setFuncaoId] = useState("");
   const [sel, setSel] = useState<CampoCardTipado[]>([]);
@@ -626,6 +627,10 @@ export function KanbanConfigDialog({
                           <span>Etapa de Encerramento / Desistência<span className="block text-xs text-muted-foreground">O cliente desistiu ou a negociação foi encerrada sem contratação. Não entra na DRE nem no faturamento; usada pelo botão Encerrar do chat.</span></span>
                           <Switch checked={editEnc} onCheckedChange={(v) => { setEditEnc(v); if (v) setEditGanha(false); }} />
                         </label>
+                        <div className="space-y-1 rounded-md border p-3">
+                          <Label htmlFor="kb-sla" className="block text-sm font-normal">Prazo (SLA) nesta etapa, em horas<span className="block text-xs text-muted-foreground">O card fica amarelo com 80% do prazo e vermelho ao estourar. Vazio = sem prazo (ex.: aguardando cliente).</span></Label>
+                          <Input id="kb-sla" inputMode="decimal" className="max-w-40" placeholder="Sem prazo" value={editSla} onChange={(ev) => setEditSla(ev.target.value.replace(/[^\d.,]/g, ""))} />
+                        </div>
                         <div className="space-y-2 rounded-md border p-3">
                           <span className="block text-sm">Ao entrar nesta etapa, criar card em outro quadro<span className="block text-xs text-muted-foreground">Ex.: Comercial → Implantação. Leva contato e responsável.</span></span>
                           <Select value={editDestK || "nenhum"} onValueChange={(v) => { setEditDestK(v === "nenhum" ? "" : v); setEditDestE(""); }}>
@@ -655,6 +660,7 @@ export function KanbanConfigDialog({
                               exige_checklist: editCk, checklist_template_id: editCk ? editTpl : null,
                               ...(editCkS || "exige_checklist_saida" in e ? { exige_checklist_saida: editCkS, checklist_saida_template_id: editCkS ? editTplS : null } : {}), etapa_ganha: editGanha, is_default_encerrado: editEnc,
                               acao_kanban_destino_id: editDestK || null, acao_etapa_destino_id: editDestK ? editDestE : null,
+                              ...(editSla.trim() || "sla_horas" in e ? { sla_horas: editSla.trim() ? Number(editSla.replace(",", ".")) || null : null } : {}),
                             } })
                           }
                         >
@@ -692,6 +698,7 @@ export function KanbanConfigDialog({
                             setEditId(id);
                             setEditDesc(String(e["descricao"] ?? ""));
                             setEditCor(corEtapa(e["cor"]).value);
+                            setEditSla(e["sla_horas"] == null ? "" : String(e["sla_horas"]).replace(".", ","));
                             setEditIA(e["is_default_ia"] === true);
                             setEditHum(e["is_default_humano"] === true);
                             setEditCk([true, 1, "true", "t"].includes(e["exige_checklist"] as never));

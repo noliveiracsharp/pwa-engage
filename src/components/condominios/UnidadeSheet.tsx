@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { PainelUnidade } from "./PainelUnidade";
-import { podeAtivarVeiculo } from "@/lib/cond-unidade";
+import { limiteVeiculosUnidade, podeAtivarVeiculo } from "@/lib/cond-unidade";
 import { LayoutDashboard } from "lucide-react";
 import { ArrowRightLeft, Car, DoorOpen, FileText, KeyRound, Loader2, Mail, PawPrint, Phone, Pencil, Plus, Search, Settings2, ShieldOff, Trash2, UserRound, Users, Wrench } from "lucide-react";
 import { toast } from "sonner";
@@ -83,7 +83,7 @@ export function UnidadeSheet({ unidade, condominioId, blocoNome, perms, onClose 
             <TabsContent value="familia"><Pessoas unidadeId={id} condominioId={condominioId} perms={perms} lado={ocupacao === "alugada" ? "inquilino" : "proprietario"} papeis={s(unidade["tipo"]) === "comercial" || s(unidade["tipo"]) === "sala" || s(unidade["tipo"]) === "loja" ? ["colaborador"] : ["familiar"]} titulo="Família da unidade (pai, mãe, filhos, avós…)" /></TabsContent>
             <TabsContent value="visitantes"><Pessoas unidadeId={id} condominioId={condominioId} perms={perms} lado={ocupacao === "alugada" ? "inquilino" : "proprietario"} papeis={["visitante"]} titulo="Visitantes autorizados (acesso temporário)" /></TabsContent>
             <TabsContent value="prestadores"><Pessoas unidadeId={id} condominioId={condominioId} perms={perms} lado={ocupacao === "alugada" ? "inquilino" : "proprietario"} papeis={["prestador"]} titulo="Prestadores de serviço da unidade" /></TabsContent>
-            <TabsContent value="veiculos"><Veiculos unidadeId={id} condominioId={condominioId} perms={perms} /></TabsContent>
+            <TabsContent value="veiculos"><Veiculos unidadeId={id} limiteUnidade={unidade["limite_veiculos"]} condominioId={condominioId} perms={perms} /></TabsContent>
             <TabsContent value="pets"><Pets unidadeId={id} perms={perms} /></TabsContent>
             <TabsContent value="documentos"><Documentos unidadeId={id} perms={perms} /></TabsContent>
             <TabsContent value="emergencia"><Contatos unidadeId={id} perms={perms} /></TabsContent>
@@ -107,6 +107,7 @@ function DadosUnidade({ unidade, condominioId, perms, onClose, onOcupacao }: { u
     fracao_ideal: s(unidade["fracao_ideal"]),
     observacoes: s(unidade["observacoes"]),
     status: unidade["status"] !== false,
+    limite_veiculos: unidade["limite_veiculos"] == null ? "" : s(unidade["limite_veiculos"]),
   });
   const ro = !perms.canUpdate;
   const [excluindo, setExcluindo] = useState(false);
@@ -178,6 +179,11 @@ function DadosUnidade({ unidade, condominioId, perms, onClose, onOcupacao }: { u
       </Secao>
 
       <Secao titulo="Vagas de garagem" desc="Vagas vinculadas a esta unidade.">
+        <div className="mb-4 max-w-xs">
+          <Label htmlFor="u-limv" className="mb-1.5 block">Veículos liberados nesta unidade</Label>
+          <Input id="u-limv" inputMode="numeric" disabled={ro} placeholder="Usar padrão do condomínio" value={v.limite_veiculos} onChange={(e) => setV({ ...v, limite_veiculos: e.target.value.replace(/\D/g, "") })} />
+          <p className="mt-1 text-xs text-muted-foreground">Vazio = usa o padrão do condomínio. 0 = nenhum veículo liberado.</p>
+        </div>
         {minhas.length ? <div className="flex flex-wrap gap-2">{minhas.map((x) => <Badge key={s(x["id"])} variant="outline" className="gap-1 py-1"><Car className="size-3.5" /> {s(x["identificacao"])} · {s(x["modalidade_posse"])}</Badge>)}</div>
           : <div className="flex items-center gap-3 rounded-lg border border-dashed p-4 text-sm text-muted-foreground"><Car className="size-5" /> Nenhuma vaga vinculada. Gerencie em <strong className="text-foreground">Garagem & Vagas</strong>, no menu lateral.</div>}
       </Secao>
@@ -193,7 +199,7 @@ function DadosUnidade({ unidade, condominioId, perms, onClose, onOcupacao }: { u
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
           {!ro && (
             <Button disabled={salvar.isPending || !v.numero.trim()} onClick={async () => {
-              await salvar.mutateAsync({ id: s(unidade["id"]), valores: { numero: v.numero.trim(), andar: num(v.andar), tipo: v.tipo, ocupacao: v.ocupacao, area_privativa: num(v.area_privativa), fracao_ideal: num(v.fracao_ideal) ?? 0, observacoes: v.observacoes || null, status: v.status } });
+              await salvar.mutateAsync({ id: s(unidade["id"]), valores: { numero: v.numero.trim(), andar: num(v.andar), tipo: v.tipo, ocupacao: v.ocupacao, area_privativa: num(v.area_privativa), fracao_ideal: num(v.fracao_ideal) ?? 0, observacoes: v.observacoes || null, status: v.status, ...(v.limite_veiculos !== "" || "limite_veiculos" in unidade ? { limite_veiculos: v.limite_veiculos === "" ? null : Number(v.limite_veiculos) } : {}) } });
               onOcupacao(v.ocupacao);
               toast.success("Unidade salva.");
             }}>Salvar</Button>
@@ -338,7 +344,7 @@ function Pessoas({ unidadeId, condominioId, perms, lado, papeis, titulo }: { uni
   );
 }
 
-function Veiculos({ unidadeId, condominioId, perms }: { unidadeId: string; condominioId: string; perms: Perms }) {
+function Veiculos({ unidadeId, limiteUnidade, condominioId, perms }: { unidadeId: string; limiteUnidade: unknown; condominioId: string; perms: Perms }) {
   const { data: veiculos = [] } = useCondRows("cond_unidades_veiculos", "cond_unidade_id", unidadeId);
   const { data: vagas = [] } = useCondRows("cond_vagas", "condominio_id", condominioId);
   const { data: pessoas = [] } = usePessoas(unidadeId);
@@ -357,8 +363,9 @@ function Veiculos({ unidadeId, condominioId, perms }: { unidadeId: string; condo
   const vagasUnidade = vagas.filter((v) => s(v["cond_unidade_id"]) === unidadeId).map((v) => ({ value: s(v["id"]), label: s(v["identificacao"]) }));
   const placaOk = normalizarPlaca(n.placa);
   const { data: cfg = [] } = useCondRows("cond_config", "condominio_id", condominioId);
-  const limRaw = cfg[0]?.["limite_veiculos_ativos"];
-  const limite = limRaw === null || limRaw === undefined || limRaw === "" ? null : Number(limRaw);
+  const { data: unidadesCond = [] } = useCondRows("cond_unidades", "condominio_id", condominioId);
+  const limProprio = unidadesCond.find((u) => s(u["id"]) === unidadeId)?.["limite_veiculos"] ?? limiteUnidade;
+  const limite = limiteVeiculosUnidade(limProprio, cfg[0]?.["limite_veiculos_ativos"]);
   const ativos = veiculos.filter((v) => v["status"] !== false && v["arquivado"] !== true).length;
 
   async function buscarPlaca() {

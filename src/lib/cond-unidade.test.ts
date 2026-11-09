@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { acaoLocacao, nomeConfere, numerosEmConflito, podeAtivarVeiculo } from "./cond-unidade";
+import { acaoLocacao, limiteVeiculosUnidade, nomeConfere, numerosEmConflito, podeAtivarVeiculo } from "./cond-unidade";
 
 describe("veículos ativos", () => {
   it("bloqueia ao atingir o limite configurado", () => {
@@ -7,6 +7,9 @@ describe("veículos ativos", () => {
     expect(podeAtivarVeiculo(0, 1)).toBe(true);
   });
   it("sem limite libera sempre", () => expect(podeAtivarVeiculo(10, null)).toBe(true));
+  it("limite da unidade prevalece sobre o padrão", () => expect(limiteVeiculosUnidade(3, 1)).toBe(3));
+  it("unidade com zero vagas vale zero", () => expect(limiteVeiculosUnidade(0, 2)).toBe(0));
+  it("sem limite próprio herda o padrão", () => expect(limiteVeiculosUnidade(null, 2)).toBe(2));
 });
 
 describe("transferência de bloco", () => {
