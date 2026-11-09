@@ -11,6 +11,7 @@ import { TEMPERATURAS } from "@/lib/temperatura";
 import { MOTIVOS_PERDA, ORIGENS_LEAD, TIPOS_ACAO, negocioPerdido } from "@/lib/crm";
 import { OrcamentoDespesas } from "@/components/orcamentos/OrcamentoDespesas";
 import { OrcamentoCompra } from "@/components/orcamentos/OrcamentoCompra";
+import { cronogramaServicos, cronogramaTerceiro, servicoSeparado, terceirosAvulsos } from "@/lib/oferta-cronogramas";
 import { condicaoCompraFromValue, condicaoCompraPadrao, condicaoCompraToValue, cronogramaCompra, type CondicaoCompra } from "@/lib/orcamentos";
 import {
   despesasFromValue,
@@ -580,14 +581,32 @@ export function OrcamentoSheet({
 
   /* ----------------------------- parcelas ----------------------------- */
 
+  // Serviços avulsos com início próprio saem do parcelamento geral (cronograma separado).
+  const fatorDesc = totais.total_itens > 0 ? (totais.total_itens - totais.desconto_valor) / totais.total_itens : 1;
+  const fatorAvista = ehAvista && totais.total_liquido > 0 ? avista.total / totais.total_liquido : 1;
+  const parcelasServicos = useMemo(
+    () =>
+      cronogramaServicos(
+        linhasValidas.flatMap((l, i) =>
+          servicoSeparado(l) && !l.incluso
+            ? [{ linha: l.key, descricao: (itens.find((x) => String(rowId(x)) === l.item_id)?.["nome"] as string) || textoDetalhe(l.detalhe) || "Serviço avulso",
+                pagador: l.faturar_para_id && l.faturar_para_id !== h.parceiro_id ? l.faturar_para_id : "",
+                valor: round2(calcs[i]!.total_linha * fatorDesc * fatorAvista), inicio: l.dt_inicio_faturamento, parcelas: num(l.parcelas_faturamento) || 1 }]
+            : [],
+        ),
+      ),
+    [linhasValidas, calcs, fatorDesc, fatorAvista, itens, h.parceiro_id],
+  );
+  const totalSeparado = round2(parcelasServicos.reduce((s, p) => s + p.valor, 0));
+  const baseGeral = round2(Math.max(0, totais.total_liquido - (ehAvista ? 0 : totalSeparado)));
   const qtdNum = Math.floor(num(h.qtd_parcelas) || 1);
   const entradaValor =
-    !ehAvista && qtdNum >= 2 ? calcEntrada(totais.total_liquido, h.entrada_tipo, h.entrada) : 0;
+    !ehAvista && qtdNum >= 2 ? calcEntrada(baseGeral, h.entrada_tipo, h.entrada) : 0;
 
   const parcelas = useMemo(
     () =>
       gerarParcelas({
-        total: ehAvista ? avista.total : totais.total_liquido,
+        total: ehAvista ? round2(Math.max(0, avista.total - totalSeparado)) : baseGeral,
         quantidade: ehAvista ? 1 : num(h.qtd_parcelas) || 1,
         primeiraData: h.primeira_parcela,
         comJuros: !ehAvista && h.tem_juros,
@@ -596,16 +615,25 @@ export function OrcamentoSheet({
         fixas: ehAvista ? {} : h.fixas,
         datas: h.datas,
       }),
-    [h.datas, ehAvista, avista.total, totais.total_liquido, h.qtd_parcelas, h.primeira_parcela, h.tem_juros, h.coeficiente_juros, entradaValor, h.fixas],
+    [h.datas, ehAvista, avista.total, baseGeral, totalSeparado, h.qtd_parcelas, h.primeira_parcela, h.tem_juros, h.coeficiente_juros, entradaValor, h.fixas],
   );
 
   // Acréscimo financeiro quando o parcelamento é "Com juros".
+  const terceiros = useMemo(
+    () => terceirosAvulsos(linhasValidas.map((l, i) => ({ natureza: l.natureza, execucao: l.execucao, fornecedor_id: l.fornecedor_id, custo: calcs[i]!.custo_total, dt_inicio_faturamento: l.dt_inicio_faturamento }))),
+    [linhasValidas, calcs],
+  );
+  const custoTerceirosAvulsos = round2(terceiros.reduce((s, t) => s + t.custo, 0));
   const compraParcelas = useMemo(
-    () => cronogramaCompra({ custo: totais.total_custo, condicao: h.compra, parcelasCliente: parcelas, dataPadrao: h.dt_orcamento }),
-    [totais.total_custo, h.compra, parcelas, h.dt_orcamento],
+    () => cronogramaCompra({ custo: Math.max(0, totais.total_custo - custoTerceirosAvulsos), condicao: h.compra, parcelasCliente: parcelas, dataPadrao: h.dt_orcamento }),
+    [totais.total_custo, custoTerceirosAvulsos, h.compra, parcelas, h.dt_orcamento],
+  );
+  const cronogramasTerceiros = useMemo(
+    () => terceiros.map((t) => ({ ...t, parcelas: cronogramaTerceiro(t.custo, h.compra.terceiros?.[t.fornecedor], t.inicio, parcelas[0]?.vencimento || h.dt_orcamento) })),
+    [terceiros, h.compra.terceiros, parcelas, h.dt_orcamento],
   );
   const acrescimoJuros = !ehAvista && h.tem_juros
-    ? Math.max(0, somaParcelas(parcelas) - totais.total_liquido)
+    ? Math.max(0, somaParcelas(parcelas) - baseGeral)
     : 0;
 
   // Comodato sempre parcela com juros.
@@ -683,6 +711,7 @@ export function OrcamentoSheet({
       total_despesas: totalDespesas(h.despesas),
       compra_condicao: condicaoCompraToValue(h.compra),
       compra_parcelas: compraParcelas,
+      ...(parcelasServicos.length || record?.["parcelas_servicos"] ? { parcelas_servicos: parcelasServicos } : {}),
       obs_nota_fiscal: h.obs_nota_fiscal.trim() || null,
       forma_pagamento: h.forma_pagamento || null,
       forma_pagamento_obs: h.forma_pagamento_obs.trim() || null,
@@ -1002,8 +1031,10 @@ export function OrcamentoSheet({
 
           <OrcamentoCompra
             value={h.compra}
-            custo={totais.total_custo}
+            custo={Math.max(0, totais.total_custo - custoTerceirosAvulsos)}
             cronograma={compraParcelas}
+            terceiros={cronogramasTerceiros}
+            nomeFornecedor={nomeFornecedor}
             readOnly={readOnly}
             onChange={(compra) => patchHeader({ compra })}
           />
@@ -1144,7 +1175,8 @@ export function OrcamentoSheet({
           <OrcamentoPagamento
             value={h}
             parcelas={parcelas}
-            totalLiquido={ehAvista ? avista.total : totais.total_liquido}
+            parcelasServicos={parcelasServicos}
+            totalLiquido={ehAvista ? round2(Math.max(0, avista.total - totalSeparado)) : baseGeral}
             entradaValor={entradaValor}
             modalidade={h.modalidade}
             readOnly={readOnly}
