@@ -67,7 +67,13 @@ export function cronogramaServicos(
     const c = l.cond ?? condServicoVazia();
     const modo = c.modo ?? "sem_juros";
     const base = modo === "comodato" ? (c.taxa_isenta ? 0 : round2(num(c.taxa_instalacao))) : valor;
-    if (base <= 0) continue;
+    if (base <= 0) {
+      // Comodato isento: mantém o bloco visível (valor zero) para o vendedor poder alterar.
+      out.push({ numero: 1, vencimento: inicio, valor: 0, linha: l.linha, descricao: l.descricao, pagador: l.pagador, total_parcelas: 1,
+        ...(l.sid ? { sid: l.sid } : {}), bloco: l.bloco ?? "", forma: c.forma, entrada_tipo: c.entrada_tipo, entrada: c.entrada,
+        modo, juros: c.juros ?? "", taxa_instalacao: c.taxa_instalacao ?? "", taxa_isenta: Boolean(c.taxa_isenta) } as ParcelaServico);
+      continue;
+    }
     const entrada = n >= 2 ? calcEntrada(base, c.entrada_tipo, c.entrada) : 0;
     const nFin = entrada > 0 ? n - 1 : n;
     const i = num(c.juros) / 100;
