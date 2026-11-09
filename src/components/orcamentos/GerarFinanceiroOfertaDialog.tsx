@@ -7,7 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { SearchSelect } from "@/components/data-table/SearchSelect";
 import { useTableRows, rowId } from "@/lib/crud";
 import { hojeISO, type OpcoesFinanceiroOferta } from "@/lib/financeiro";
-import { formatBRL, num, round2 } from "@/lib/orcamentos";
+import { condicaoCompraFromValue, formatBRL, num, round2 } from "@/lib/orcamentos";
 import type { Row } from "@/lib/row";
 
 type Props = {
@@ -52,8 +52,10 @@ export function GerarFinanceiroOfertaDialog({ open, onOpenChange, oferta, itens,
   useEffect(() => {
     if (!open) return;
     setSeparar(false); setModo("fornecedor"); setCartaoId(""); setParcCartao("1"); setDataCompra(hojeISO()); setSalvando(false);
-    setTerc(Object.fromEntries(fornecedores.map(([f]) => [f, { parcelas: "1", primeiro: hojeISO() }])));
-  }, [open, fornecedores]);
+    const salvo = condicaoCompraFromValue(oferta?.["compra_condicao"]).terceiros ?? {};
+    const inicioDe = (f: string) => itens.filter((l) => txt(l["fornecedor_id"]) === f).map((l) => txt(l["dt_inicio_faturamento"]).slice(0, 10)).filter(Boolean).sort()[0];
+    setTerc(Object.fromEntries(fornecedores.map(([f]) => [f, { parcelas: salvo[f]?.parcelas || "1", primeiro: salvo[f]?.primeira || inicioDe(f) || hojeISO() }])));
+  }, [open, fornecedores, oferta, itens]);
 
   const confirmar = async () => {
     const c = cartoes.find((x) => txt(rowId(x)) === cartaoId);

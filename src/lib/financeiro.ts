@@ -1,3 +1,4 @@
+import { servicoSeparado } from "@/lib/oferta-cronogramas";
 import { addMonthsISO, categoriaDespesaLabel, condicaoCompraFromValue, cronogramaCompra, despesasFromValue, num, parcelasFromValue, round2, type Parcela } from "@/lib/orcamentos";
 
 export type ModoLancamento = "unico" | "parcelado" | "recorrente";
@@ -157,9 +158,20 @@ export function titulosDaOferta(orc: Row, itens: Row[] = [], opcoes: OpcoesFinan
   if (!parcelas.length && num(orc["total_liquido"]) > 0)
     parcelas = [{ numero: 1, vencimento: iso(orc["data"] ?? orc["created_at"]) || hojeISO(), valor: num(orc["total_liquido"]) }];
   const total = parcelas.length;
-  const pesosImpl = pesosPorPagador(itens, chaveCliente, false);
+  // Serviços avulsos com início próprio têm cronograma separado (parcelas_servicos).
+  const sepServ = Array.isArray(orc["parcelas_servicos"]) ? (orc["parcelas_servicos"] as Row[]) : [];
+  const pesosImpl = pesosPorPagador(sepServ.length ? itens.filter((it) => !servicoSeparado(it)) : itens, chaveCliente, false);
   const out: NovoTitulo[] = [];
   let seqN = 0;
+  for (const p of sepServ) {
+    const v = round2(num(p["valor"]));
+    if (v <= 0) continue;
+    const k = String(p["pagador"] ?? "") || chaveCliente;
+    const n = num(p["total_parcelas"]) || 1;
+    out.push({ tipo: "receber", descricao: `Oferta ${numero} — ${String(p["descricao"] ?? "Serviço avulso")} ${num(p["numero"])}/${n}`,
+      categoria: "Serviço avulso", vencimento: iso(p["vencimento"]) || hojeISO(), valor: v, parceiro_id: pagadorDe(k),
+      origem_tipo: "oferta", origem_id: id, parcela_n: ++seqN, ...atendido(k) });
+  }
   // Peso de produtos dentro da implantação de cada pagador (para boletos separados).
   const naoRec = itens.filter((it) => String(it["natureza"] ?? "") !== "recorrente");
   const pesoProd = new Map<string, number>();
@@ -251,7 +263,11 @@ export function titulosDaOferta(orc: Row, itens: Row[] = [], opcoes: OpcoesFinan
   for (const [f, v] of somaPor(false)) {
     if (v <= 0) continue;
     const cfg = opcoes.terceiros?.[f];
-    const ps = parcelasManuais({ modo: "parcelado", valor: v, quantidade: cfg?.parcelas ?? 1, primeira: cfg?.primeiro || vencTerc });
+    const salvo = condicaoCompraFromValue(orc["compra_condicao"]).terceiros?.[f];
+    const inicioServ = terceiros.filter((l) => String(l["fornecedor_id"]) === f && String(l["natureza"] ?? "") === "servico")
+      .map((l) => iso(l["dt_inicio_faturamento"])).filter(Boolean).sort()[0];
+    const ps = parcelasManuais({ modo: "parcelado", valor: v, quantidade: cfg?.parcelas ?? (num(salvo?.parcelas) || 1),
+      primeira: cfg?.primeiro || salvo?.primeira || inicioServ || vencTerc });
     ps.forEach((p, i) => out.push({ tipo: "pagar", descricao: ps.length > 1 ? `Oferta ${numero} — Serviço terceirizado ${i + 1}/${ps.length}` : `Oferta ${numero} — Serviço terceirizado`,
       categoria: "Serviços de terceiros", vencimento: p.vencimento, valor: p.valor, parceiro_id: f, origem_tipo: "oferta", origem_id: id, parcela_n: ++seqN }));
   }
