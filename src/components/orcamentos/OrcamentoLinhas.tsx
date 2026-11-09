@@ -1,6 +1,6 @@
 import { tx } from "@/lib/i18n-termos";
 import { useEffect, useRef, useState } from "react";
-import { Check, ChevronUp, Eye, MapPin, Pencil, Plus, Trash2, X } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Eye, MapPin, Pencil, Plus, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { InputMoeda } from "@/components/ui/input-moeda";
@@ -74,6 +74,8 @@ type Props = {
   pagadorOptions?: SearchOption[];
   /** Esconde custo e lucro (dados estratégicos). */
   ocultarCusto?: boolean;
+  /** Conteúdo exibido ao final de cada ambiente (ex.: quadros de pagamento). */
+  rodapeSecao?: (bloco: string) => import("react").ReactNode;
 };
 
 /** Editor das linhas do orçamento: tabela compacta com edição por linha. */
@@ -91,6 +93,7 @@ export function OrcamentoLinhas({
   onItemSalvo,
   pagadorOptions = [],
   ocultarCusto = false,
+  rodapeSecao,
 }: Props) {
   const { data: parceirosTodos = [] } = useTableRows("parceiros");
   const fornecedorOptions: SearchOption[] = parceirosTodos
@@ -105,6 +108,7 @@ export function OrcamentoLinhas({
   const [criando, setCriando] = useState(false);
   const [novoNome, setNovoNome] = useState("");
   const [renomeando, setRenomeando] = useState<{ bloco: string; valor: string } | null>(null);
+  const [fechados, setFechados] = useState<Set<string>>(() => new Set());
 
   // Estado da linha no momento em que a edição abriu, usado pelo "Cancelar".
   const linhasRef = useRef(linhas);
@@ -616,9 +620,16 @@ export function OrcamentoLinhas({
   const renderSecao = (bloco: string, rows: Linha[]) => {
     const subtotal = rows.reduce((s, x) => s + calcLinha(x).total_linha, 0);
     const editandoNome = renomeando?.bloco === bloco;
+    const fechado = fechados.has(bloco);
+    const rodape = rodapeSecao?.(bloco);
     return (
       <div key={bloco || "__geral__"} className="overflow-hidden rounded-lg border">
-        <div className="bg-muted/60 flex flex-wrap items-center gap-2 border-b px-3 py-2">
+        <div className={cn("bg-muted/60 flex flex-wrap items-center gap-2 px-3 py-2", !fechado && "border-b")}>
+          <Button type="button" variant="ghost" size="icon" className="h-7 w-7" aria-expanded={!fechado}
+            title={fechado ? "Abrir ambiente" : "Fechar ambiente"} aria-label={fechado ? "Abrir ambiente" : "Fechar ambiente"}
+            onClick={() => setFechados((f) => { const n = new Set(f); if (n.has(bloco)) n.delete(bloco); else n.add(bloco); return n; })}>
+            <ChevronDown className={cn("h-4 w-4 transition-transform", fechado && "-rotate-90")} />
+          </Button>
           {editandoNome ? (
             <Input
               autoFocus
@@ -667,6 +678,7 @@ export function OrcamentoLinhas({
           )}
           <span className={cn("text-sm font-semibold tabular-nums", rows.length === 0 && "ml-auto")}>Subtotal: {formatBRL(subtotal)}</span>
         </div>
+        {!fechado && (<>
         {!readOnly && (
           <div className="border-b p-2">
             <Button type="button" variant="ghost" size="sm" className="text-primary w-full" onClick={() => onAdd(bloco)}>
@@ -681,6 +693,8 @@ export function OrcamentoLinhas({
         {[...rows.filter((l) => novas.current.has(l.key)), ...rows.filter((l) => !novas.current.has(l.key))].map((l) =>
           renderLinha(l, numero.get(l.key) ?? 0),
         )}
+        {rodape && <div className="bg-muted/10 border-t p-3">{rodape}</div>}
+        </>)}
       </div>
     );
   };

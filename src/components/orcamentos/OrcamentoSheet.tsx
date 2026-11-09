@@ -42,6 +42,7 @@ import {
 } from "@/components/ui/select";
 import { SearchSelect, type SearchOption } from "@/components/data-table/SearchSelect";
 import { OrcamentoLinhas } from "@/components/orcamentos/OrcamentoLinhas";
+import { ServicosCobranca } from "@/components/orcamentos/ServicosCobranca";
 import { OrcamentoTotais } from "@/components/orcamentos/OrcamentoTotais";
 import { OrcamentoComissoes } from "@/components/orcamentos/OrcamentoComissoes";
 import { PainelAprovacaoOferta, useEhAprovadorOferta } from "@/components/orcamentos/AprovacaoOfertas";
@@ -991,6 +992,14 @@ export function OrcamentoSheet({
             onItemSalvo={() => submit(true)}
             pagadorOptions={pagadorOptions}
             ocultarCusto={ocultarCusto}
+            rodapeSecao={(bloco) => {
+              const ps = parcelasServicos.filter((p) => (p.bloco ?? "") === bloco.trim());
+              return ps.length ? (
+                <ServicosCobranca parcelas={ps} readOnly={readOnly}
+                  onCond={(sid, patch) => setH((p) => ({ ...p, servicos_cfg: { ...p.servicos_cfg, [sid]: { ...(p.servicos_cfg[sid] ?? condServicoVazia()), ...patch } } }))}
+                  onLinha={(key, patch) => updateLinha(key, patch)} />
+              ) : null;
+            }}
           />
 
           {/* -------------------------- totais ------------------------- */}
@@ -1181,7 +1190,7 @@ export function OrcamentoSheet({
           <OrcamentoPagamento
             value={h}
             parcelas={parcelas}
-            parcelasServicos={parcelasServicos}
+            parcelasServicos={[]}
             onServicoCond={(sid, patch) => setH((p) => ({ ...p, servicos_cfg: { ...p.servicos_cfg, [sid]: { ...(p.servicos_cfg[sid] ?? condServicoVazia()), ...patch } } }))}
             onServicoLinha={(key, patch) => updateLinha(key, patch)}
             totalLiquido={ehAvista ? round2(Math.max(0, avista.total - totalSeparado)) : baseGeral}
