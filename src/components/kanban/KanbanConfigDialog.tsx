@@ -856,7 +856,7 @@ export function KanbanConfigDialog({
         <SheetFooter className="shrink-0 border-t bg-background p-4 sm:items-center">
           {tab === "dados" && canDelete && kanbanId && <Button variant="destructive" className="sm:mr-auto" disabled={delKanban.isPending || transfer} onClick={() => void pedirExclusao()}><Trash2 className="mr-1 h-4 w-4" />Excluir quadro</Button>}
           <Button variant="outline" onClick={() => onOpenChange(false)}>{tab === "dados" || tab === "integracao" ? "Cancelar" : "Fechar"}</Button>
-          {tab === "dados" && <Button disabled={!form.nome.trim() || saveDados.isPending} onClick={() => saveDados.mutate()}>Salvar</Button>}
+          {tab === "dados" && <Button disabled={!form.nome.trim() || saveDados.isPending || (form.jornada.modo === "comercial" && form.jornada.fim <= form.jornada.inicio)} onClick={() => saveDados.mutate()}>Salvar</Button>}
           {tab === "integracao" && <Button disabled={!funcaoId || saveIntegracao.isPending} onClick={() => saveIntegracao.mutate()}>Salvar</Button>}
         </SheetFooter>
       </SheetContent>
