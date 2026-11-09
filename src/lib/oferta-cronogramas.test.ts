@@ -42,3 +42,14 @@ describe("modos do serviço avulso", () => {
     expect(c.reduce((s, p) => s + p.valor, 0)).toBe(300);
   });
 });
+
+describe("produtos de ambiente com pagamento próprio", () => {
+  it("guarda parcelas e 1º vencimento do bloco de produtos para recarregar", () => {
+    const cond = { forma: "Boleto", entrada_tipo: "percentual" as const, entrada: "", fixas: {}, datas: {}, parcelas: "4", inicio: "2026-12-10" };
+    const r = cronogramaServicos([{ linha: "prod:Ambiente 2", sid: "prod:Ambiente 2", descricao: "Produtos", pagador: "", valor: 1000, inicio: cond.inicio, parcelas: 4, cond }]);
+    expect(r.map((p) => p.valor)).toEqual([250, 250, 250, 250]);
+    const back = condicoesDoCronograma(r)["prod:Ambiente 2"]!;
+    expect(back.parcelas).toBe("4");
+    expect(back.inicio).toBe("2026-12-10");
+  });
+});

@@ -40,7 +40,14 @@ export type CondServico = {
   entrada: string;
   fixas: Record<number, number>;
   datas: Record<number, string>;
+  /** Só nos blocos de produtos de ambiente extra: quantidade de parcelas e 1º vencimento. */
+  parcelas?: string;
+  inicio?: string;
 };
+
+/** Prefixo do bloco de produtos de um ambiente com pagamento próprio. */
+export const PROD_SID = "prod:";
+export const ehBlocoProduto = (sid: string | undefined) => String(sid ?? "").startsWith(PROD_SID);
 
 export const condServicoVazia = (): CondServico => ({ forma: "", entrada_tipo: "percentual", entrada: "", fixas: {}, datas: {} });
 
@@ -106,7 +113,9 @@ export function condicoesDoCronograma(v: unknown): Record<string, CondServico> {
       taxa_instalacao: String(p["taxa_instalacao"] ?? ""),
       taxa_isenta: p["taxa_isenta"] === true,
       fixas: {}, datas: {},
+      ...(ehBlocoProduto(sid) ? { parcelas: String(Math.max(1, Math.floor(num(p["total_parcelas"])) || 1)) } : {}),
     });
+    if (ehBlocoProduto(sid) && Math.floor(num(p["numero"])) === 1 && p["data_manual"] !== true) c.inicio = toISODate(p["vencimento"]);
     const n = Math.floor(num(p["numero"]));
     if (p["fixa"] === true) c.fixas[n] = num(p["valor"]);
     if (p["data_manual"] === true && toISODate(p["vencimento"])) c.datas[n] = toISODate(p["vencimento"]);
