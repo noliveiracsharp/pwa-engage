@@ -52,7 +52,7 @@ export function OrcamentoModalidade({
       <div className="bg-card space-y-4 rounded-lg border p-4">
         <div className="flex items-center gap-2 text-sm font-semibold">
           <HandCoins className="text-muted-foreground h-4 w-4" />
-          {tx("Implantação: condição comercial")}
+          {tx("Produtos e equipamentos: forma de pagamento")}
         </div>
         <ToggleGroup
           type="single"

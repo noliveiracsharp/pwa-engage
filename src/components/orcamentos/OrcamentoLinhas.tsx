@@ -48,6 +48,7 @@ function NaturezaBadge({ n }: { n: Natureza }) {
 import { pick, type Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
 import { confirmar } from "@/components/layout/DialogoGlobal";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const NONE = "__none__";
 
@@ -187,7 +188,7 @@ export function OrcamentoLinhas({
             const aberta = Boolean(readOnly) || abertas.has(l.key);
 
             const acoes = (
-              <div className="flex items-center justify-end gap-0.5">
+              <div className="flex items-center justify-end gap-0.5" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
                 {!readOnly && (
                   <Button
                     type="button"
@@ -219,8 +220,8 @@ export function OrcamentoLinhas({
             );
 
             if (aberta) {
-              return (
-                <div key={l.key} className="bg-card space-y-3 border-b p-3 last:border-b-0">
+              const editor = (
+                <div key={l.key} className={cn("bg-card space-y-3 p-3", readOnly && "border-b last:border-b-0")}>
                   <div className="flex items-start gap-2">
                     <span className="text-muted-foreground mt-2.5 w-5 shrink-0 text-right text-xs tabular-nums">
                       {index + 1}.
@@ -475,10 +476,36 @@ export function OrcamentoLinhas({
                   )}
                 </div>
               );
+              if (readOnly) return editor;
+              return (
+                <Dialog key={l.key} open onOpenChange={(o) => { if (!o) cancelar(l.key); }}>
+                  <DialogContent
+                    className="max-h-[90vh] w-full max-w-[95vw] overflow-y-auto p-4 lg:max-w-5xl"
+                    onPointerDownOutside={(e) => e.preventDefault()}
+                    onInteractOutside={(e) => e.preventDefault()}
+                  >
+                    <DialogHeader>
+                      <DialogTitle>{nomeItem ? tx("Editar item") : tx("Novo item")}</DialogTitle>
+                      <DialogDescription>{l.bloco.trim() || tx("Itens gerais")}</DialogDescription>
+                    </DialogHeader>
+                    {editor}
+                  </DialogContent>
+                </Dialog>
+              );
             }
 
             return (
-              <div key={l.key} className="border-b last:border-b-0">
+              <div
+                key={l.key}
+                className={cn("border-b last:border-b-0", !readOnly && "hover:bg-muted/50 cursor-pointer transition-colors")}
+                role={readOnly ? undefined : "button"}
+                tabIndex={readOnly ? undefined : 0}
+                aria-label={readOnly ? undefined : `${tx("Editar item")}: ${nomeItem || index + 1}`}
+                onClick={readOnly ? undefined : () => toggleAberta(l.key)}
+                onKeyDown={readOnly ? undefined : (e) => {
+                  if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); toggleAberta(l.key); }
+                }}
+              >
                 {/* Linha compacta — mobile */}
                 <div className="flex items-start gap-2 p-3 sm:hidden">
                   <span className="text-muted-foreground mt-0.5 w-5 shrink-0 text-right text-xs tabular-nums">
@@ -588,7 +615,7 @@ export function OrcamentoLinhas({
 
   const renderSecao = (bloco: string, rows: Linha[]) => {
     const subtotal = rows.reduce((s, x) => s + calcLinha(x).total_linha, 0);
-    const editandoNome = renomeando?.bloco === bloco && bloco !== "";
+    const editandoNome = renomeando?.bloco === bloco;
     return (
       <div key={bloco || "__geral__"} className="overflow-hidden rounded-lg border">
         <div className="bg-muted/60 flex flex-wrap items-center gap-2 border-b px-3 py-2">
@@ -609,6 +636,11 @@ export function OrcamentoLinhas({
               {bloco ? <><MapPin className="text-primary mr-1 inline h-4 w-4 align-text-bottom" />{bloco}</> : "Itens gerais"}{" "}
               <span className="text-muted-foreground text-xs font-normal">({rows.length})</span>
             </span>
+          )}
+          {!readOnly && !editandoNome && rows.length > 0 && !bloco && (
+            <Button type="button" variant="ghost" size="icon" className="h-7 w-7" title={tx("Renomear ambiente")} aria-label={tx("Renomear ambiente")} onClick={() => setRenomeando({ bloco, valor: "" })}>
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
           )}
           {!readOnly && bloco && !editandoNome && (
             <>
