@@ -4,7 +4,7 @@ import { agruparServicos, type CondServico, type ParcelaServico } from "@/lib/of
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { SearchSelect } from "@/components/ui/search-select";
+import { SearchSelect } from "@/components/data-table/SearchSelect";
 
 type Props = {
   parcelas: ParcelaServico[];
