@@ -22,8 +22,8 @@ export function ServicosCobranca({ parcelas, readOnly, onCond, onLinha }: Props)
   return (
     <div className="space-y-3">
       <div>
-        <p className="text-sm font-medium">Serviços avulsos — cobrança separada</p>
-        <p className="text-muted-foreground text-xs">Cada serviço tem forma, entrada e parcelas próprias, fora do parcelamento acima.</p>
+        <p className="text-sm font-medium">Como o cliente vai pagar cada serviço</p>
+        <p className="text-muted-foreground text-xs">Cada serviço tem seu próprio pagamento, separado dos produtos. Escolha a forma, em quantas vezes e quando começa.</p>
       </div>
       {grupos.map(({ linha, parcelas: ps }) => {
         const p0 = ps[0]!;
@@ -33,33 +33,41 @@ export function ServicosCobranca({ parcelas, readOnly, onCond, onLinha }: Props)
         const entradaValor = n >= 2 && num(p0.entrada) > 0 ? p0.valor : 0;
         const fixas = Object.fromEntries(ps.filter((p) => p.fixa).map((p) => [p.numero, p.valor]));
         const datas = Object.fromEntries(ps.filter((p) => p.data_manual).map((p) => [p.numero, p.vencimento]));
-        const titulo = p0.bloco ? `${p0.bloco} — ${p0.descricao}` : p0.descricao;
+        const titulo = p0.descricao;
         return (
           <div key={linha} className="bg-muted/20 space-y-3 rounded-lg border p-3">
             <div className="flex flex-wrap items-center gap-2">
               <CalendarClock className="text-primary h-4 w-4" aria-hidden />
               <p className="text-sm font-semibold">{titulo}</p>
+              {p0.bloco && <span className="bg-muted rounded px-2 py-0.5 text-xs">{p0.bloco}</span>}
               <span className="text-muted-foreground ml-auto text-sm font-semibold tabular-nums">{formatBRL(total)}</span>
             </div>
+            <p className="text-sm">
+              <strong>Resumo para o cliente:</strong>{" "}
+              {n === 1 ? `à vista, ${formatBRL(total)} em ${formatDate(p0.vencimento)}`
+                : entradaValor > 0 ? `entrada de ${formatBRL(entradaValor)} + ${n - 1}x de ${formatBRL(ps[1]!.valor)}`
+                : `${n}x de ${formatBRL(p0.valor)}`}
+              {n > 1 && `, começando em ${formatDate(p0.vencimento)}`}
+            </p>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <div className="space-y-1.5">
                 <Label className="block text-xs font-medium">Forma de pagamento</Label>
                 <SearchSelect value={p0.forma ?? ""} onChange={(v) => onCond(sid, { forma: v })} options={formaOptions}
-                  placeholder="Mesma da Oferta" searchPlaceholder="Pesquisar…" disabled={Boolean(readOnly)} />
+                  placeholder="Igual à dos produtos" searchPlaceholder="Pesquisar…" disabled={Boolean(readOnly)} />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor={`sp-n-${linha}`} className="block text-xs font-medium">Parcelas</Label>
+                <Label htmlFor={`sp-n-${linha}`} className="block text-xs font-medium">Em quantas vezes?</Label>
                 <Input id={`sp-n-${linha}`} type="number" min={1} max={120} inputMode="numeric" disabled={Boolean(readOnly)}
                   value={String(n)} onChange={(e) => { onLinha(linha, { parcelas_faturamento: e.target.value }); onCond(sid, { fixas: {}, datas: {} }); }} />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor={`sp-d-${linha}`} className="block text-xs font-medium">1ª parcela (início da cobrança)</Label>
+                <Label htmlFor={`sp-d-${linha}`} className="block text-xs font-medium">Quando vence a 1ª?</Label>
                 <Input id={`sp-d-${linha}`} type="date" disabled={Boolean(readOnly)} value={p0.vencimento}
                   onChange={(e) => { if (e.target.value) { onLinha(linha, { dt_inicio_faturamento: e.target.value }); onCond(sid, { datas: {} }); } }} />
               </div>
               {n >= 2 && (
                 <div className="space-y-1.5">
-                  <Label htmlFor={`sp-e-${linha}`} className="block text-xs font-medium">Entrada (1ª parcela)</Label>
+                  <Label htmlFor={`sp-e-${linha}`} className="block text-xs font-medium">Tem entrada? (opcional)</Label>
                   <div className="flex gap-2">
                     <ToggleGroup type="single" variant="outline" size="sm" value={p0.entrada_tipo ?? "percentual"} disabled={Boolean(readOnly)}
                       onValueChange={(v) => v && onCond(sid, { entrada_tipo: v as "percentual" | "valor" })}>
@@ -119,7 +127,7 @@ export function ServicosCobranca({ parcelas, readOnly, onCond, onLinha }: Props)
             </div>
             {!readOnly && (Object.keys(fixas).length > 0 || Object.keys(datas).length > 0) && (
               <button type="button" className="text-primary text-xs underline underline-offset-2" onClick={() => onCond(sid, { fixas: {}, datas: {} })}>
-                Recalcular parcelas iguais e datas mensais
+                Voltar para parcelas iguais, uma por mês
               </button>
             )}
           </div>

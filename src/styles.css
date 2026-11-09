@@ -795,3 +795,4 @@ table img { cursor: zoom-in; }
 input[type="date"], input[type="datetime-local"], input[type="month"], input[type="time"] { color-scheme: light; cursor: pointer; }
 .dark input[type="date"], .dark input[type="datetime-local"], .dark input[type="month"], .dark input[type="time"] { color-scheme: dark; }
 input[type="date"]::-webkit-calendar-picker-indicator, input[type="datetime-local"]::-webkit-calendar-picker-indicator, input[type="month"]::-webkit-calendar-picker-indicator { cursor: pointer; opacity: 0.8; }
+.orc-amb-pag { padding: 10px 14px; display: grid; gap: 10px; }
