@@ -995,11 +995,33 @@ export function OrcamentoSheet({
             ocultarCusto={ocultarCusto}
             rodapeSecao={(bloco) => {
               const ps = parcelasServicos.filter((p) => (p.bloco ?? "") === bloco.trim());
-              return ps.length ? (
+              const blocosProd = [...new Set(linhasValidas.filter((l) => l.natureza === "produto" || (l.natureza !== "recorrente" && !servicoSeparado(l))).map((l) => l.bloco.trim()))];
+              const prodAqui = blocosProd.length > 0 && blocosProd[blocosProd.length - 1] === bloco.trim();
+              const servicos = ps.length ? (
                 <ServicosCobranca parcelas={ps} readOnly={readOnly}
                   onCond={(sid, patch) => setH((p) => ({ ...p, servicos_cfg: { ...p.servicos_cfg, [sid]: { ...(p.servicos_cfg[sid] ?? condServicoVazia()), ...patch } } }))}
                   onLinha={(key, patch) => updateLinha(key, patch)} />
               ) : null;
+              if (!prodAqui && !servicos) return null;
+              return (
+                <div className="space-y-4">
+                  {prodAqui && (
+                    <div className="space-y-4">
+                      {blocosProd.length > 1 && (
+                        <p className="text-muted-foreground text-xs">Este pagamento vale para os produtos de: {blocosProd.map((b) => b || "Itens gerais").join(", ")}.</p>
+                      )}
+                      <OrcamentoModalidade parte="produtos" value={h} totalImplantacao={round2(totais.total_liquido - baseSeparada)}
+                        totalAvista={round2(avista.total - baseSeparada)} totalRecorrente={totalRecorrente} readOnly={readOnly}
+                        onChange={(patch) => patchHeader(patch)} />
+                      <OrcamentoPagamento value={h} parcelas={parcelas}
+                        totalLiquido={ehAvista ? round2(Math.max(0, avista.total - baseSeparada)) : baseGeral}
+                        entradaValor={entradaValor} modalidade={h.modalidade} readOnly={readOnly}
+                        onChange={(patch) => patchHeader(patch)} />
+                    </div>
+                  )}
+                  {servicos}
+                </div>
+              );
             }}
           />
 
@@ -1177,29 +1199,11 @@ export function OrcamentoSheet({
           </fieldset>
 
           <div hidden={aba !== "oferta"} className="space-y-6">
-          {/* ------------- modalidade e serviços recorrentes ------------- */}
-          <OrcamentoModalidade
-            value={h}
-            totalImplantacao={totais.total_liquido}
-            totalAvista={avista.total}
-            totalRecorrente={totalRecorrente}
-            readOnly={readOnly}
-            onChange={(patch) => patchHeader(patch)}
-          />
-
-          {/* ---------------- pagamento e nota fiscal ------------------ */}
-          <OrcamentoPagamento
-            value={h}
-            parcelas={parcelas}
-            parcelasServicos={[]}
-            onServicoCond={(sid, patch) => setH((p) => ({ ...p, servicos_cfg: { ...p.servicos_cfg, [sid]: { ...(p.servicos_cfg[sid] ?? condServicoVazia()), ...patch } } }))}
-            onServicoLinha={(key, patch) => updateLinha(key, patch)}
-            totalLiquido={ehAvista ? round2(Math.max(0, avista.total - baseSeparada)) : baseGeral}
-            entradaValor={entradaValor}
-            modalidade={h.modalidade}
-            readOnly={readOnly}
-            onChange={(patch) => patchHeader(patch)}
-          />
+          {/* ------------- mensalidades (produtos e serviços ficam em cada ambiente) ------------- */}
+          {totalRecorrente > 0 && (
+            <OrcamentoModalidade parte="recorrente" value={h} totalImplantacao={totais.total_liquido} totalAvista={avista.total}
+              totalRecorrente={totalRecorrente} readOnly={readOnly} onChange={(patch) => patchHeader(patch)} />
+          )}
           </div>
         </fieldset>
 

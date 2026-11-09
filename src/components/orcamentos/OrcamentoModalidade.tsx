@@ -33,6 +33,8 @@ type Props = {
   totalRecorrente: number;
   readOnly?: boolean | undefined;
   onChange: (patch: Partial<ModalidadeState>) => void;
+  /** Mostrar só o quadro dos produtos, só o das mensalidades, ou ambos. */
+  parte?: "produtos" | "recorrente" | "ambos";
 };
 
 /** Condição comercial da implantação e dados dos serviços recorrentes mensais. */
@@ -43,12 +45,14 @@ export function OrcamentoModalidade({
   totalRecorrente,
   readOnly,
   onChange,
+  parte = "ambos",
 }: Props) {
   const economia = totalImplantacao - totalAvista;
   const meses = Math.max(1, Math.floor(Number(value.vigencia_meses) || 36));
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    <div className={parte === "ambos" ? "grid gap-4 lg:grid-cols-2" : "space-y-4"}>
+      {parte !== "recorrente" && (
       <div className="bg-card space-y-4 rounded-lg border p-4">
         <div className="flex items-center gap-2 text-sm font-semibold">
           <HandCoins className="text-muted-foreground h-4 w-4" />
@@ -159,7 +163,9 @@ export function OrcamentoModalidade({
           </div>
         )}
       </div>
+      )}
 
+      {parte !== "produtos" && (
       <div className="bg-card space-y-4 rounded-lg border p-4">
         <div className="flex items-center gap-2 text-sm font-semibold">
           <Repeat className="text-muted-foreground h-4 w-4" />
@@ -222,6 +228,7 @@ export function OrcamentoModalidade({
           </p>
         )}
       </div>
+      )}
     </div>
   );
 }
