@@ -128,6 +128,8 @@ function AtendimentosPage() {
   const [painel, setPainel] = useState(true);
   const [listaAberta, setLista] = useState(true);
   const [novoAberto, setNovoAberto] = useState(false);
+  const [bloqAberto, setBloqAberto] = useState(false);
+  const empresaBloq = empresaId;
   const { novo: novoSearch } = Route.useSearch();
   const navAt = Route.useNavigate();
   useEffect(() => {
