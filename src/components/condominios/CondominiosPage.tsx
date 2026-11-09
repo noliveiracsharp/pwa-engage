@@ -35,7 +35,7 @@ import { AlertaMandato } from "./AlertaMandato";
 import { ExcluirBlocoDialog } from "./ExcluirBlocoDialog";
 import { TransferenciaDialog } from "./TransferenciaDialog";
 import { X } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const DESCRICAO_SECAO: Record<string, string> = {
   painel: "Visão geral do condomínio: unidades, pessoas, vagas e alertas.",
@@ -338,7 +338,7 @@ export function CondominiosPage() {
                               <span className="text-[10px] font-medium uppercase tracking-wide opacity-80">{o.curto}</span>
                             </button>
                             {permsUnid.canDelete && (
-                              <Tooltip>
+                              <TooltipProvider delayDuration={100}><Tooltip>
                                 <TooltipTrigger asChild>
                                   <button type="button" aria-label={`Excluir unidade ${s(u["numero"])}`} onClick={() => setUnidadeExcluir(u)}
                                     className="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground opacity-0 shadow transition focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-hover:opacity-100">
@@ -346,7 +346,7 @@ export function CondominiosPage() {
                                   </button>
                                 </TooltipTrigger>
                                 <TooltipContent>Excluir unidade</TooltipContent>
-                              </Tooltip>
+                              </Tooltip></TooltipProvider>
                             )}
                             </div>
                           );
