@@ -6,6 +6,12 @@ export function podeAtivarVeiculo(ativosAtuais: number, limite: number | null | 
   return ativosAtuais < limite;
 }
 
+/** Limite que vale para a unidade: o próprio dela; se vazio, o padrão do condomínio; se ambos vazios, sem limite. */
+export function limiteVeiculosUnidade(daUnidade: unknown, padrao: unknown): number | null {
+  const n = (v: unknown) => (v === null || v === undefined || v === "" || !Number.isFinite(Number(v)) ? null : Number(v));
+  return n(daUnidade) ?? n(padrao);
+}
+
 /** Números de unidade que já existem no bloco de destino (comparação sem maiúsculas). */
 export function numerosEmConflito(origem: string[], destino: string[]): string[] {
   const d = new Set(destino.map((n) => n.trim().toLowerCase()));
