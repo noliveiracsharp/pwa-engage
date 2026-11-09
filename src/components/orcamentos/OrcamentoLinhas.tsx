@@ -1,6 +1,6 @@
 import { tx } from "@/lib/i18n-termos";
 import { useEffect, useRef, useState } from "react";
-import { Check, ChevronUp, Eye, MapPin, Pencil, Plus, Trash2, X } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Eye, MapPin, Pencil, Plus, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { InputMoeda } from "@/components/ui/input-moeda";
@@ -74,6 +74,8 @@ type Props = {
   pagadorOptions?: SearchOption[];
   /** Esconde custo e lucro (dados estratégicos). */
   ocultarCusto?: boolean;
+  /** Conteúdo exibido ao final de cada ambiente (ex.: quadros de pagamento). */
+  rodapeSecao?: (bloco: string) => import("react").ReactNode;
 };
 
 /** Editor das linhas do orçamento: tabela compacta com edição por linha. */
