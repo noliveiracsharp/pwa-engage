@@ -11,7 +11,7 @@ import { TEMPERATURAS } from "@/lib/temperatura";
 import { MOTIVOS_PERDA, ORIGENS_LEAD, TIPOS_ACAO, negocioPerdido } from "@/lib/crm";
 import { OrcamentoDespesas } from "@/components/orcamentos/OrcamentoDespesas";
 import { OrcamentoCompra } from "@/components/orcamentos/OrcamentoCompra";
-import { condicoesDoCronograma, cronogramaServicos, cronogramaTerceiro, condServicoVazia, servicoSeparado, sidsServicos, terceirosAvulsos, type CondServico } from "@/lib/oferta-cronogramas";
+import { condicoesDoCronograma, cronogramaServicos, cronogramaTerceiro, condServicoVazia, servicoSeparado, sidsServicos, PROD_SID, ehBlocoProduto, terceirosAvulsos, type CondServico } from "@/lib/oferta-cronogramas";
 import { condicaoCompraFromValue, condicaoCompraPadrao, condicaoCompraToValue, cronogramaCompra, type CondicaoCompra } from "@/lib/orcamentos";
 import {
   despesasFromValue,
@@ -77,6 +77,7 @@ import {
   novaLinha,
   num,
   parcelasFromValue,
+  agruparPorBloco,
   situacaoOf,
   SITUACOES,
   toISODate,
@@ -589,20 +590,34 @@ export function OrcamentoSheet({
   // Serviços avulsos com início próprio saem do parcelamento geral (cronograma separado).
   const fatorDesc = totais.total_itens > 0 ? (totais.total_itens - totais.desconto_valor) / totais.total_itens : 1;
   const fatorAvista = ehAvista && totais.total_liquido > 0 ? avista.total / totais.total_liquido : 1;
+  // Ambientes: o 1º com produtos usa o pagamento geral; os demais com produtos ganham pagamento próprio.
+  const { blocoProdPrincipal, blocosProdExtra } = useMemo(() => {
+    const gs = agruparPorBloco(linhasValidas, (l) => l.bloco.trim()).filter((g) => g.rows.some((l) => l.natureza === "produto"));
+    return { blocoProdPrincipal: gs[0]?.bloco ?? null, blocosProdExtra: gs.slice(1).map((g) => g.bloco) };
+  }, [linhasValidas]);
   const { parcelasServicos, baseSeparada } = useMemo(() => {
     const sep = linhasValidas.map((l, i) => ({ l, i })).filter(({ l }) => servicoSeparado(l) && !l.incluso);
     const sids = sidsServicos(sep.map(({ l }) => l));
-    // Valor original dos serviços separados (sai da base dos produtos mesmo se tiver juros/comodato).
-    const baseSeparada = round2(sep.reduce((acc, { i }) => acc + round2(calcs[i]!.total_linha * fatorDesc * fatorAvista), 0));
-    return { baseSeparada, parcelasServicos: cronogramaServicos(
-      sep.map(({ l, i }, k) => ({
+    const vl = (i: number) => round2(calcs[i]!.total_linha * fatorDesc * fatorAvista);
+    const prods = blocosProdExtra.map((b) => {
+      const idx = linhasValidas.map((l, i) => ({ l, i })).filter(({ l }) => l.bloco.trim() === b && !l.incluso && l.natureza !== "recorrente" && !servicoSeparado(l));
+      const sid = `${PROD_SID}${b}`;
+      const cond = h.servicos_cfg[sid];
+      return { linha: sid, sid, bloco: b, cond, descricao: "Produtos e equipamentos", pagador: "",
+        valor: round2(idx.reduce((a, { i }) => a + vl(i), 0)), inicio: cond?.inicio || h.primeira_parcela, parcelas: num(cond?.parcelas) || 1 };
+    });
+    // Valor original dos blocos separados (sai da base geral mesmo se tiver juros/comodato).
+    const baseSeparada = round2(sep.reduce((acc, { i }) => acc + vl(i), 0) + prods.reduce((a, p) => a + p.valor, 0));
+    return { baseSeparada, parcelasServicos: cronogramaServicos([
+      ...prods,
+      ...sep.map(({ l, i }, k) => ({
         linha: l.key, sid: sids[k]!, bloco: l.bloco.trim(), cond: h.servicos_cfg[sids[k]!],
         descricao: String(itemById.get(l.item_id)?.["descricao"] ?? itemById.get(l.item_id)?.["nome"] ?? "") || "Serviço avulso",
         pagador: l.faturar_para_id && l.faturar_para_id !== h.parceiro_id ? l.faturar_para_id : "",
-        valor: round2(calcs[i]!.total_linha * fatorDesc * fatorAvista), inicio: l.dt_inicio_faturamento, parcelas: num(l.parcelas_faturamento) || 1,
+        valor: vl(i), inicio: l.dt_inicio_faturamento, parcelas: num(l.parcelas_faturamento) || 1,
       })),
-    ) };
-  }, [linhasValidas, calcs, fatorDesc, fatorAvista, itemById, h.parceiro_id, h.servicos_cfg]);
+    ]) };
+  }, [linhasValidas, calcs, fatorDesc, fatorAvista, itemById, h.parceiro_id, h.servicos_cfg, h.primeira_parcela, blocosProdExtra]);
   const baseGeral = round2(Math.max(0, totais.total_liquido - (ehAvista ? 0 : baseSeparada)));
   const qtdNum = Math.floor(num(h.qtd_parcelas) || 1);
   const entradaValor =
@@ -995,21 +1010,23 @@ export function OrcamentoSheet({
             ocultarCusto={ocultarCusto}
             rodapeSecao={(bloco) => {
               const ps = parcelasServicos.filter((p) => (p.bloco ?? "") === bloco.trim());
-              const blocosProd = [...new Set(linhasValidas.filter((l) => l.natureza === "produto" || (l.natureza !== "recorrente" && !servicoSeparado(l))).map((l) => l.bloco.trim()))];
-              const prodAqui = blocosProd.length > 0 && blocosProd[blocosProd.length - 1] === bloco.trim();
+              const prodAqui = blocoProdPrincipal !== null && blocoProdPrincipal === bloco.trim();
               const servicos = ps.length ? (
                 <ServicosCobranca parcelas={ps} readOnly={readOnly}
                   onCond={(sid, patch) => setH((p) => ({ ...p, servicos_cfg: { ...p.servicos_cfg, [sid]: { ...(p.servicos_cfg[sid] ?? condServicoVazia()), ...patch } } }))}
-                  onLinha={(key, patch) => updateLinha(key, patch)} />
+                  onLinha={(key, patch) => {
+                    if (!ehBlocoProduto(key)) return updateLinha(key, patch);
+                    const c: Partial<CondServico> = {};
+                    if (patch.parcelas_faturamento !== undefined) c.parcelas = patch.parcelas_faturamento;
+                    if (patch.dt_inicio_faturamento !== undefined) c.inicio = patch.dt_inicio_faturamento;
+                    setH((p) => ({ ...p, servicos_cfg: { ...p.servicos_cfg, [key]: { ...(p.servicos_cfg[key] ?? condServicoVazia()), ...c } } }));
+                  }} />
               ) : null;
               if (!prodAqui && !servicos) return null;
               return (
                 <div className="space-y-4">
                   {prodAqui && (
                     <div className="space-y-4">
-                      {blocosProd.length > 1 && (
-                        <p className="text-muted-foreground text-xs">Este pagamento vale para os produtos de: {blocosProd.map((b) => b || "Itens gerais").join(", ")}.</p>
-                      )}
                       <OrcamentoModalidade parte="produtos" value={h} totalImplantacao={round2(totais.total_liquido - baseSeparada)}
                         totalAvista={round2(avista.total - baseSeparada)} totalRecorrente={totalRecorrente} readOnly={readOnly}
                         onChange={(patch) => patchHeader(patch)} />
