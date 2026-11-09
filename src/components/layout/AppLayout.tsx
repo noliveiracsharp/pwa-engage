@@ -11,6 +11,7 @@ import { useNotificacoesChat } from "@/hooks/useNotificacoesChat";
 import { useWhiteLabel } from "@/hooks/useWhiteLabel";
 import { lerAmbiente } from "@/hooks/useAmbientes";
 import { emModoUnidade } from "@/lib/ambientes";
+import { BannerOffline, ConexaoProvider } from "./Conexao";
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
@@ -49,8 +50,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
   }, [pathname]);
 
   return (
+    <ConexaoProvider>
     <div id="app-layout-raiz" className="fixed inset-0 flex w-full flex-col overflow-hidden bg-background">
       <AppHeader onToggleSidebar={() => setOpen((v) => !v)} />
+      <BannerOffline />
       {!modoUnidade && <BarraAprovacaoCotacao />}
       <div className="relative flex min-h-0 flex-1">
         {modoUnidade ? null : isMobile ? (
@@ -80,5 +83,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
         <div id="chat-dock-direita" className="hidden shrink-0 md:flex empty:hidden" />
       </div>
     </div>
+    </ConexaoProvider>
   );
 }
