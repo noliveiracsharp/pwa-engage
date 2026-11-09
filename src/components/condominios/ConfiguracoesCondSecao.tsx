@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { s, useCondRows } from "./cond-data";
+import { GerenciarUnidadesDialog } from "./GerenciarUnidadesDialog";
 
 type Props = { condominioId: string; podeEditar: boolean };
 const VAZIO = { limite_veiculos_ativos: "", morador_edita_dados: false, morador_escolhe_veiculo: true, aprovacao_reserva: false, horario_correspondencia: "", dados_wifi: "", texto_lgpd: "" };
@@ -19,6 +20,7 @@ export function ConfiguracoesCondSecao({ condominioId, podeEditar }: Props) {
   const { data: rows = [] } = useCondRows("cond_config", "condominio_id", condominioId);
   const [v, setV] = useState(VAZIO);
   const [salvando, setSalvando] = useState(false);
+  const [gerenciar, setGerenciar] = useState(false);
   useEffect(() => {
     const r = rows[0];
     setV(r ? {
@@ -66,7 +68,9 @@ export function ConfiguracoesCondSecao({ condominioId, podeEditar }: Props) {
         <div className="rounded-lg border p-3">
           <Label htmlFor="cfg-lim" className="mb-1 block text-sm font-medium">Limite padrão de veículos por unidade</Label>
           <Input id="cfg-lim" inputMode="numeric" disabled={ro} placeholder="Sem limite" value={v.limite_veiculos_ativos} onChange={(e) => setV({ ...v, limite_veiculos_ativos: e.target.value })} />
-          <p className="mt-1 text-xs text-muted-foreground">Vale para unidades sem limite próprio (definido na ficha da unidade, em Dados → Vagas de garagem). Vazio = sem limite.</p>
+          <p className="mt-1 text-xs text-muted-foreground">Vale para unidades sem limite próprio. Vazio = sem limite.</p>
+          <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => setGerenciar(true)}>Vagas e pessoas por unidade…</Button>
+          <GerenciarUnidadesDialog open={gerenciar} onOpenChange={setGerenciar} condominioId={condominioId} podeEditar={!ro} />
         </div>
         <Chave k="morador_escolhe_veiculo" l="Morador escolhe o veículo liberado" d="O próprio morador liga e desliga qual veículo usa a garagem." />
         <Chave k="morador_edita_dados" l="Morador edita os próprios dados" d="Permite alterar nome, telefone e foto pelo portal." />

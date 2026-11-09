@@ -12,7 +12,16 @@ export function horasSla(v: unknown): number | null {
 }
 
 /** Jornada do departamento: 24h corridas ou dias/horário comercial (hora de Brasília). */
-export type Jornada = { modo: "24h" } | { modo: "comercial"; dias: number[]; inicio: string; fim: string };
+export type HorarioDia = { inicio: string; fim: string };
+/** `horarios` (opcional) define início/fim por dia da semana (0=Dom); sem entrada usa inicio/fim padrão. */
+export type Jornada = { modo: "24h" } | { modo: "comercial"; dias: number[]; inicio: string; fim: string; horarios?: Record<string, HorarioDia> };
+
+const HORA_RE = /^\d{2}:\d{2}$/;
+/** Horário efetivo de um dia na jornada comercial. */
+export function horarioDoDia(j: Extract<Jornada, { modo: "comercial" }>, dia: number): HorarioDia {
+  const h = j.horarios?.[String(dia)];
+  return h && HORA_RE.test(h.inicio) && HORA_RE.test(h.fim) && h.fim > h.inicio ? h : { inicio: j.inicio, fim: j.fim };
+}
 export const JORNADA_24H: Jornada = { modo: "24h" };
 export const JORNADA_COMERCIAL_PADRAO: Jornada = { modo: "comercial", dias: [1, 2, 3, 4, 5], inicio: "09:00", fim: "18:00" };
 /** Fuso fixo de Brasília (sem horário de verão desde 2019). */
@@ -29,21 +38,30 @@ export function lerJornada(v: unknown): Jornada {
   const dias = Array.isArray(r["dias"]) ? (r["dias"] as unknown[]).map(Number).filter((d) => d >= 0 && d <= 6) : [];
   const inicio = String(r["inicio"] ?? ""), fim = String(r["fim"] ?? "");
   if (!dias.length || !/^\d{2}:\d{2}$/.test(inicio) || !/^\d{2}:\d{2}$/.test(fim) || hm(fim) <= hm(inicio)) return JORNADA_24H;
-  return { modo: "comercial", dias, inicio, fim };
+  const horarios: Record<string, HorarioDia> = {};
+  const hr = r["horarios"] as Record<string, unknown> | undefined;
+  if (hr && typeof hr === "object") for (const [k, x] of Object.entries(hr)) {
+    const o2 = x as Record<string, unknown> | null;
+    const i2 = String(o2?.["inicio"] ?? ""), f2 = String(o2?.["fim"] ?? "");
+    if (/^[0-6]$/.test(k) && HORA_RE.test(i2) && HORA_RE.test(f2) && hm(f2) > hm(i2)) horarios[k] = { inicio: i2, fim: f2 };
+  }
+  return Object.keys(horarios).length ? { modo: "comercial", dias, inicio, fim, horarios } : { modo: "comercial", dias, inicio, fim };
 }
 
 /** Minutos de trabalho entre dois instantes, respeitando a jornada. */
 export function minutosUteis(de: number, ate: number, j: Jornada): number {
   if (ate <= de) return 0;
   if (j.modo === "24h") return (ate - de) / 60000;
-  const ini = hm(j.inicio), fim = hm(j.fim);
   const off = FUSO_MIN * 60000;
   // Trabalha em "hora local" deslocando os instantes pelo fuso.
   const a = de + off, b = ate + off;
   const DIA = 86400000;
   let total = 0;
   for (let d = Math.floor(a / DIA) * DIA; d < b; d += DIA) {
-    if (!j.dias.includes(new Date(d).getUTCDay())) continue;
+    const wd = new Date(d).getUTCDay();
+    if (!j.dias.includes(wd)) continue;
+    const hd = horarioDoDia(j, wd);
+    const ini = hm(hd.inicio), fim = hm(hd.fim);
     const s = Math.max(a, d + ini * 60000), e = Math.min(b, d + fim * 60000);
     if (e > s) total += (e - s) / 60000;
   }

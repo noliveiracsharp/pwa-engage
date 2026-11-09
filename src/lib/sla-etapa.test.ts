@@ -23,3 +23,18 @@ describe("SLA em horário comercial", () => {
   it("24h conta direto o fim de semana", () => expect(statusSla(sexta17, 4, new Date("2026-11-07T00:00:00Z")).estado).toBe("estourado"));
   it("jornada inválida vira 24h", () => expect(lerJornada({ modo: "comercial", dias: [], inicio: "09:00", fim: "18:00" })).toEqual({ modo: "24h" }));
 });
+
+describe("horário por dia da semana", () => {
+  it("sábado 09-13 conta só 4h, mesmo com padrão 09-18", async () => {
+    const { minutosUteis } = await import("./sla-etapa");
+    const j = { modo: "comercial" as const, dias: [1, 2, 3, 4, 5, 6], inicio: "09:00", fim: "18:00", horarios: { "6": { inicio: "09:00", fim: "13:00" } } };
+    // Sábado 2026-11-14 00:00 a 23:59 Brasília
+    const de = Date.parse("2026-11-14T03:00:00Z"), ate = Date.parse("2026-11-15T02:59:00Z");
+    expect(minutosUteis(de, ate, j)).toBe(240);
+  });
+  it("lerJornada preserva horários válidos e ignora inválidos", async () => {
+    const { lerJornada } = await import("./sla-etapa");
+    const j = lerJornada({ modo: "comercial", dias: [5], inicio: "09:00", fim: "18:00", horarios: { "5": { inicio: "09:00", fim: "17:00" }, "2": { inicio: "18:00", fim: "09:00" } } });
+    expect(j).toEqual({ modo: "comercial", dias: [5], inicio: "09:00", fim: "18:00", horarios: { "5": { inicio: "09:00", fim: "17:00" } } });
+  });
+});
