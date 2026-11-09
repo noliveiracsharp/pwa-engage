@@ -11,13 +11,52 @@ export function horasSla(v: unknown): number | null {
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
-/** Situação do card: desde = quando entrou na etapa. */
-export function statusSla(desde: unknown, slaHoras: unknown, agora: Date = new Date()): { estado: EstadoSla; restanteMin: number } {
+/** Jornada do departamento: 24h corridas ou dias/horário comercial (hora de Brasília). */
+export type Jornada = { modo: "24h" } | { modo: "comercial"; dias: number[]; inicio: string; fim: string };
+export const JORNADA_24H: Jornada = { modo: "24h" };
+export const JORNADA_COMERCIAL_PADRAO: Jornada = { modo: "comercial", dias: [1, 2, 3, 4, 5], inicio: "09:00", fim: "18:00" };
+/** Fuso fixo de Brasília (sem horário de verão desde 2019). */
+const FUSO_MIN = -180;
+
+const hm = (v: string) => { const [h, m] = v.split(":").map(Number); return (h || 0) * 60 + (m || 0); };
+
+/** Lê a jornada salva no quadro; inválida ou ausente = 24h corridas. */
+export function lerJornada(v: unknown): Jornada {
+  let o = v;
+  if (typeof o === "string") { try { o = JSON.parse(o); } catch { return JORNADA_24H; } }
+  const r = o as Record<string, unknown> | null;
+  if (!r || r["modo"] !== "comercial") return JORNADA_24H;
+  const dias = Array.isArray(r["dias"]) ? (r["dias"] as unknown[]).map(Number).filter((d) => d >= 0 && d <= 6) : [];
+  const inicio = String(r["inicio"] ?? ""), fim = String(r["fim"] ?? "");
+  if (!dias.length || !/^\d{2}:\d{2}$/.test(inicio) || !/^\d{2}:\d{2}$/.test(fim) || hm(fim) <= hm(inicio)) return JORNADA_24H;
+  return { modo: "comercial", dias, inicio, fim };
+}
+
+/** Minutos de trabalho entre dois instantes, respeitando a jornada. */
+export function minutosUteis(de: number, ate: number, j: Jornada): number {
+  if (ate <= de) return 0;
+  if (j.modo === "24h") return (ate - de) / 60000;
+  const ini = hm(j.inicio), fim = hm(j.fim);
+  const off = FUSO_MIN * 60000;
+  // Trabalha em "hora local" deslocando os instantes pelo fuso.
+  const a = de + off, b = ate + off;
+  const DIA = 86400000;
+  let total = 0;
+  for (let d = Math.floor(a / DIA) * DIA; d < b; d += DIA) {
+    if (!j.dias.includes(new Date(d).getUTCDay())) continue;
+    const s = Math.max(a, d + ini * 60000), e = Math.min(b, d + fim * 60000);
+    if (e > s) total += (e - s) / 60000;
+  }
+  return total;
+}
+
+/** Situação do card: desde = quando entrou na etapa; jornada do departamento (padrão 24h). */
+export function statusSla(desde: unknown, slaHoras: unknown, agora: Date = new Date(), jornada: Jornada = JORNADA_24H): { estado: EstadoSla; restanteMin: number } {
   const h = horasSla(slaHoras);
   const t = desde ? new Date(String(desde)).getTime() : NaN;
   if (h === null || !Number.isFinite(t)) return { estado: "sem_sla", restanteMin: 0 };
   const prazoMin = h * 60;
-  const passadoMin = Math.max(0, (agora.getTime() - t) / 60000);
+  const passadoMin = Math.max(0, minutosUteis(t, agora.getTime(), jornada));
   const restanteMin = Math.round(prazoMin - passadoMin);
   if (passadoMin >= prazoMin) return { estado: "estourado", restanteMin };
   if (passadoMin >= prazoMin * SLA_ATENCAO) return { estado: "atencao", restanteMin };
