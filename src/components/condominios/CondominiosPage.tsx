@@ -361,6 +361,8 @@ export function CondominiosPage() {
         </>
       )}
 
+      {blocoExcluir && <ExcluirBlocoDialog bloco={blocoExcluir} blocos={blocos} unidades={unidades} onClose={() => setBlocoExcluir(null)} />}
+      {unidadeExcluir && condId && <TransferenciaDialog modo="excluir" unidade={unidadeExcluir} condominioId={condId} onClose={() => setUnidadeExcluir(null)} />}
       {gerar && blocoAtual && (
         <GerarUnidadesDialog
           existentes={new Set(unidadesBloco.map((u) => s(u["numero"])))}
