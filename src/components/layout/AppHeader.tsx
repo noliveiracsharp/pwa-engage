@@ -37,6 +37,7 @@ import { Star } from "lucide-react";
 import { SearchSelect } from "@/components/data-table/SearchSelect";
 import { useCondSeletor } from "@/components/condominios/cond-seletor";
 import { cn } from "@/lib/utils";
+import { SemaforoConexao } from "@/components/layout/Conexao";
 
 export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) {
   const { usuario, empresa, user, isMaster, empresaContextoId, setEmpresaContexto } = useAuth();
@@ -157,6 +158,7 @@ export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) 
         </Button>
         <CentralAjuda />
         {!modoUnidade && <AvisosButton />}
+        <SemaforoConexao />
         <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Alternar tema">
           {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
         </Button>
