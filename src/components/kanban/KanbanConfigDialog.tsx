@@ -508,10 +508,28 @@ export function KanbanConfigDialog({
                       })}
                     </div>
                     <div className="flex flex-wrap items-end gap-3">
-                      <div><Label htmlFor="kb-j-ini" className="mb-1 block text-xs">Início</Label><Input id="kb-j-ini" type="time" className="w-32" value={j.inicio} onChange={(e) => setForm({ ...form, jornada: { ...j, inicio: e.target.value } })} /></div>
-                      <div><Label htmlFor="kb-j-fim" className="mb-1 block text-xs">Fim</Label><Input id="kb-j-fim" type="time" className="w-32" value={j.fim} onChange={(e) => setForm({ ...form, jornada: { ...j, fim: e.target.value } })} /></div>
+                      <div><Label htmlFor="kb-j-ini" className="mb-1 block text-xs">Início padrão</Label><Input id="kb-j-ini" type="time" className="w-32" value={j.inicio} onChange={(e) => setForm({ ...form, jornada: { ...j, inicio: e.target.value } })} /></div>
+                      <div><Label htmlFor="kb-j-fim" className="mb-1 block text-xs">Fim padrão</Label><Input id="kb-j-fim" type="time" className="w-32" value={j.fim} onChange={(e) => setForm({ ...form, jornada: { ...j, fim: e.target.value } })} /></div>
                     </div>
                     {j.fim <= j.inicio && <p className="text-xs text-destructive">O fim precisa ser depois do início.</p>}
+                    <div className="space-y-1.5">
+                      <p className="text-xs text-muted-foreground">Horário de cada dia (deixe igual ao padrão ou ajuste o dia que for diferente, ex.: sábado só de manhã).</p>
+                      {[...j.dias].sort().map((i) => {
+                        const h = j.horarios?.[String(i)] ?? { inicio: j.inicio, fim: j.fim };
+                        const muda = (k: "inicio" | "fim", val: string) => setForm({ ...form, jornada: { ...j, horarios: { ...(j.horarios ?? {}), [String(i)]: { ...h, [k]: val } } } });
+                        const proprio = !!j.horarios?.[String(i)];
+                        return (
+                          <div key={i} className="flex flex-wrap items-center gap-2">
+                            <span className="w-10 text-sm font-medium">{DIAS[i]}</span>
+                            <Input aria-label={`Início ${DIAS[i]}`} type="time" className="w-28" value={h.inicio} onChange={(e) => muda("inicio", e.target.value)} />
+                            <span className="text-xs text-muted-foreground">às</span>
+                            <Input aria-label={`Fim ${DIAS[i]}`} type="time" className="w-28" value={h.fim} onChange={(e) => muda("fim", e.target.value)} />
+                            {proprio && <Button type="button" size="sm" variant="ghost" onClick={() => { const n = { ...(j.horarios ?? {}) }; delete n[String(i)]; setForm({ ...form, jornada: { ...j, horarios: n } }); }}>Usar padrão</Button>}
+                            {h.fim <= h.inicio && <span className="text-xs text-destructive">Fim antes do início</span>}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 );
               })()}
