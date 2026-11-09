@@ -120,6 +120,13 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
         if (body.fromMe || body.isGroup || !body.phone) return ok({ ignorada: true });
         if (/delivery|connected|disconnected/.test(tipoEvt)) return ok({ ignorada: true });
 
+        // Lista de bloqueio (spam): descarta sem abrir atendimento. Sem o script, segue normal.
+        {
+          const { data: bloq, error: eB } = await db.rpc("atendimento_contato_bloqueado" as never, { p_token: k, p_telefone: body.phone } as never);
+          if (eB && !/function|schema cache/i.test(eB.message)) console.error("zapi-webhook bloqueio", eB.message);
+          if (bloq === true) return ok({ ignorada: true, bloqueado: true });
+        }
+
         let texto = body.text?.message ?? "";
         // Resposta da lista interativa: o id da linha é o número da opção.
         const lr = (body as Record<string, unknown>)["listResponseMessage"] as { selectedRowId?: string; title?: string } | undefined;

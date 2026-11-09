@@ -17,6 +17,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChatPainel } from "@/components/atendimentos/ChatPainel";
 import { ContatoPainel } from "@/components/atendimentos/ContatoPainel";
+import { BloqueiosDialog } from "@/components/atendimentos/Bloqueios";
+import { Ban } from "lucide-react";
 import {
   A, M, corEtiqueta, dataDe, fotoPessoa, horaCurta, iniciais, isCliente, isEncerrado, isIA, nomePessoa, telefonePessoa,
 } from "@/lib/atendimentos";
@@ -186,6 +188,10 @@ function AtendimentosPage() {
             <Button className="flex-1" onClick={() => setNovoAberto(true)}>
               <Plus className="mr-1 h-4 w-4" /> Iniciar Atendimento
             </Button>
+            <Button variant="outline" size="icon" className="shrink-0" onClick={() => setBloqAberto(true)} aria-label="Contatos bloqueados" title="Contatos bloqueados">
+              <Ban className="h-4 w-4" />
+            </Button>
+            <BloqueiosDialog open={bloqAberto} onOpenChange={setBloqAberto} empresaId={empresaBloq} />
             {ativo && (
               <Button variant="outline" size="icon" className="hidden shrink-0 md:inline-flex" onClick={() => setLista(false)} aria-label="Ocultar conversas" title="Ocultar conversas">
                 <PanelLeftClose className="h-4 w-4" />
