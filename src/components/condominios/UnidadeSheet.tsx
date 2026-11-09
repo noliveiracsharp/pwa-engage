@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { PainelUnidade } from "./PainelUnidade";
+import { podeAtivarVeiculo } from "@/lib/cond-unidade";
+import { LayoutDashboard } from "lucide-react";
 import { ArrowRightLeft, Car, DoorOpen, FileText, KeyRound, Loader2, Mail, PawPrint, Phone, Pencil, Plus, Search, Settings2, ShieldOff, Trash2, UserRound, Users, Wrench } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -48,7 +51,9 @@ function usePessoas(unidadeId: string) {
 export function UnidadeSheet({ unidade, condominioId, blocoNome, perms, onClose }: Props) {
   const id = s(unidade["id"]);
   const [ocupacao, setOcupacao] = useState(s(unidade["ocupacao"]) || "vazia");
+  const [aba, setAba] = useState("painel");
   const abas = [
+    { v: "painel", l: "Painel", i: LayoutDashboard },
     { v: "dados", l: "Dados", i: DoorOpen },
     { v: "proprietario", l: "Proprietário", i: UserRound },
     ...(ocupacao === "alugada" ? [{ v: "inquilino", l: "Inquilino", i: KeyRound }] : []),
@@ -66,11 +71,12 @@ export function UnidadeSheet({ unidade, condominioId, blocoNome, perms, onClose 
         <SheetHeader className="border-b p-4">
           <SheetTitle className="flex items-center gap-2"><DoorOpen className="size-5" /> {blocoNome} · Unidade {s(unidade["numero"])}</SheetTitle>
         </SheetHeader>
-        <Tabs defaultValue="dados" className="flex min-h-0 flex-1 flex-col">
+        <Tabs value={aba} onValueChange={setAba} className="flex min-h-0 flex-1 flex-col">
           <TabsList className="mx-4 mt-3 h-auto w-fit flex-wrap justify-start">
             {abas.map((a) => <TabsTrigger key={a.v} value={a.v}><a.i className="mr-1 size-4" /> {a.l}</TabsTrigger>)}
           </TabsList>
           <div className="min-h-0 flex-1 overflow-y-auto p-4">
+            <TabsContent value="painel"><PainelUnidade unidadeId={id} condominioId={condominioId} ocupacao={ocupacao} perms={perms} onOcupacao={setOcupacao} onIr={setAba} /></TabsContent>
             <TabsContent value="dados"><DadosUnidade unidade={unidade} condominioId={condominioId} perms={perms} onClose={onClose} onOcupacao={setOcupacao} /></TabsContent>
             <TabsContent value="proprietario"><Pessoas unidadeId={id} condominioId={condominioId} perms={perms} lado="proprietario" papeis={["proprietario", "preposto"]} titulo="Proprietários e procuradores" /></TabsContent>
             <TabsContent value="inquilino"><Pessoas unidadeId={id} condominioId={condominioId} perms={perms} lado="inquilino" papeis={["inquilino"]} titulo="Inquilinos (locatários)" /></TabsContent>
@@ -278,13 +284,14 @@ function Pessoas({ unidadeId, condominioId, perms, lado, papeis, titulo }: { uni
         const ativas = PERMISSOES.filter((x) => v[x.k] === true);
         const st = s(v["status_conexao"]);
         return (
-          <div key={s(v["id"])} className="flex flex-wrap items-center gap-3 rounded-lg border p-3 transition hover:bg-muted/40">
+          <div key={s(v["id"])} className={cn("flex flex-wrap items-center gap-3 rounded-lg border p-3 transition hover:bg-muted/40", v["arquivado"] === true && "border-dashed opacity-60")}>
             <FotoCond rosto tamanho="sm" disabled value={p?.foto_url ?? ""} onChange={() => {}} alt={p?.nome ?? "Foto"} />
             <div className="min-w-0 flex-1">
               <p className="flex flex-wrap items-center gap-1 font-medium">{p?.nome ?? "—"} <Badge variant="secondary">{papelLabel(s(v["papel"]))}</Badge>
                 <Badge variant={p?.tem_acesso ? "default" : "outline"}>{p?.tem_acesso ? "Acesso ativo" : "Sem acesso"}</Badge>
                 {(st === "inativo" || st === "bloqueado") && <Badge variant="destructive">{st === "inativo" ? "Inativo" : "Bloqueado"}</Badge>}
-                {v["controle_acesso"] === false && <Badge variant="outline">Fora da catraca</Badge>}</p>
+                {v["controle_acesso"] === false && <Badge variant="outline">Fora da catraca</Badge>}
+                {v["arquivado"] === true && <Badge variant="outline">Guardado (locação)</Badge>}</p>
               <p className="truncate text-xs text-muted-foreground">{[p?.email, p?.celular, p?.cpf ? formatCpfCnpj(p.cpf) : "", s(v["parentesco"]) || s(v["prestador_funcao"])].filter(Boolean).join(" · ")}</p>
               {ativas.length > 0 && <p className="mt-1 text-xs text-muted-foreground">{ativas.map((x) => x.l).join(" · ")}</p>}
             </div>
@@ -349,6 +356,10 @@ function Veiculos({ unidadeId, condominioId, perms }: { unidadeId: string; condo
   const achar = (rs: Row[], txt?: string) => (txt ? s(rs.find((r) => s(r["descricao"]).toLowerCase() === txt.toLowerCase())?.["id"]) : "");
   const vagasUnidade = vagas.filter((v) => s(v["cond_unidade_id"]) === unidadeId).map((v) => ({ value: s(v["id"]), label: s(v["identificacao"]) }));
   const placaOk = normalizarPlaca(n.placa);
+  const { data: cfg = [] } = useCondRows("cond_config", "condominio_id", condominioId);
+  const limRaw = cfg[0]?.["limite_veiculos_ativos"];
+  const limite = limRaw === null || limRaw === undefined || limRaw === "" ? null : Number(limRaw);
+  const ativos = veiculos.filter((v) => v["status"] !== false && v["arquivado"] !== true).length;
 
   async function buscarPlaca() {
     if (!placaOk) return;
@@ -376,6 +387,10 @@ function Veiculos({ unidadeId, condominioId, perms }: { unidadeId: string; condo
   return (
     <div className="space-y-3">
       <Cabecalho titulo="Veículos" total={veiculos.length} podeCriar={perms.canCreate} onNovo={() => { setN(vazio); setAberto(""); }} />
+      <p className="text-xs text-muted-foreground">
+        Cadastre quantos veículos quiser. Só os liberados passam na portaria e garagem
+        {limite !== null ? ` (${ativos} de ${limite} liberados).` : ` (${ativos} liberados, sem limite).`}
+      </p>
       {veiculos.length === 0 ? <Vazio texto="Nenhum veículo cadastrado." /> : veiculos.map((v) => (
         <div key={s(v["id"])} className="flex flex-wrap items-center gap-3 rounded-lg border p-3 text-sm transition hover:bg-muted/40">
           <FotoCond tamanho="sm" disabled value={s(v["foto_url"])} onChange={() => {}} alt={`Foto ${s(v["placa"])}`} />
@@ -385,6 +400,16 @@ function Veiculos({ unidadeId, condominioId, perms }: { unidadeId: string; condo
           </div>
           {v["usuario_id"] ? <Badge variant="secondary">{pessoas.find((p) => p.usuario_id === s(v["usuario_id"]))?.nome ?? "Morador"}</Badge> : null}
           {v["cond_vaga_id"] ? <Badge variant="outline">Vaga {s(vagas.find((x) => s(x["id"]) === s(v["cond_vaga_id"]))?.["identificacao"])}</Badge> : null}
+          {v["arquivado"] === true ? <Badge variant="outline">Guardado (locação)</Badge> : (
+            <label className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Switch aria-label={`Liberado na portaria e garagem: ${s(v["placa"])}`} disabled={!perms.canUpdate} checked={v["status"] !== false}
+                onCheckedChange={async (c) => {
+                  if (c && !podeAtivarVeiculo(ativos, limite)) { toast.error(`Limite de ${limite} veículo(s) ativo(s) atingido. Desative outro veículo para liberar este.`); return; }
+                  await salvar.mutateAsync({ id: s(v["id"]), valores: { status: c } });
+                }} />
+              {v["status"] !== false ? "Liberado" : "Bloqueado"}
+            </label>
+          )}
           {perms.canUpdate && <AcaoIcone titulo="Editar veículo" destaque onClick={() => editar(v)}><Pencil className="size-4" /></AcaoIcone>}
           {perms.canDelete && <AcaoIcone titulo="Excluir veículo" destrutivo onClick={async () => {
             if (await confirmar({ title: `Excluir ${s(v["placa"])}?`, destructive: true, confirmText: "Excluir" })) await salvar.mutateAsync({ id: s(v["id"]), excluir: true });
