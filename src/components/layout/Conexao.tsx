@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useRef, type ReactNode } from "re
 import { RotateCw, Wifi, WifiOff } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useConexao } from "@/hooks/useConexao";
 import { ROTULO_CONEXAO, type EstadoConexao } from "@/lib/conexao";
 import { cn } from "@/lib/utils";
@@ -30,6 +30,7 @@ export function SemaforoConexao() {
   const { estado, reconectar } = useContext(Ctx);
   const Icone = estado === "offline" ? WifiOff : estado === "verificando" ? RotateCw : Wifi;
   return (
+    <TooltipProvider delayDuration={100}>
     <Tooltip>
       <TooltipTrigger asChild>
         <Button variant="ghost" size="icon" onClick={reconectar} aria-label={`${ROTULO_CONEXAO[estado]}. Verificar novamente`} className="relative">
@@ -39,6 +40,7 @@ export function SemaforoConexao() {
       </TooltipTrigger>
       <TooltipContent>{ROTULO_CONEXAO[estado]}</TooltipContent>
     </Tooltip>
+    </TooltipProvider>
   );
 }
 

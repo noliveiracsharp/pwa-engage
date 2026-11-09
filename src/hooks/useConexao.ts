@@ -9,7 +9,8 @@ async function ping(): Promise<boolean> {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
   try {
-    const url = import.meta.env.VITE_SUPABASE_URL ? `${import.meta.env.VITE_SUPABASE_URL}/auth/v1/health` : "/";
+    const base = import.meta.env["VITE_SUPABASE_URL"] as string | undefined;
+    const url = base ? `${base}/auth/v1/health` : "/";
     await fetch(`${url}${url.includes("?") ? "&" : "?"}_=${Date.now()}`, {
       method: "GET", cache: "no-store", signal: ctrl.signal, mode: "no-cors",
     });
