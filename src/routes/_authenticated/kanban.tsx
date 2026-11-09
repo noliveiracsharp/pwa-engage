@@ -1,7 +1,21 @@
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { useKanbansPermitidos } from "@/hooks/useKanbansPermitidos";
-import { CalendarClock, FileText, Search, Settings2, X } from "lucide-react";
+import { CalendarClock, FileText, Search, Settings2, Timer, X } from "lucide-react";
 import { ROTULO_STATUS_ACAO, TIPOS_ACAO, statusProximaAcao } from "@/lib/crm";
+import { rotuloSla, statusSla } from "@/lib/sla-etapa";
+
+/** Selo de SLA do card: usa a hora em que entrou na etapa (etapa_desde), com fallback para a criação. */
+function SeloSla({ card, etapa }: { card: Record<string, unknown>; etapa: Record<string, unknown> }) {
+  if (etapa["is_default_encerrado"] === true || etapa["etapa_ganha"] === true) return null;
+  const st = statusSla(card["etapa_desde"] ?? card["updated_at"] ?? card["created_at"], etapa["sla_horas"]);
+  if (st.estado === "sem_sla") return null;
+  return (
+    <span className={cn("mt-1 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium",
+      st.estado === "ok" ? "border-success/30 bg-success/10 text-success" : st.estado === "atencao" ? "border-warning/30 bg-warning/10 text-warning" : "border-destructive/30 bg-destructive/10 text-destructive")}>
+      <Timer className="h-3 w-3" /> {rotuloSla(st)}
+    </span>
+  );
+}
 import { EtapaCorPicker } from "@/components/kanban/EtapaCorPicker";
 import { corEtapa } from "@/lib/kanban-cores";
 import { KanbanConfigDialog } from "@/components/kanban/KanbanConfigDialog";
@@ -744,6 +758,7 @@ function KanbanPage() {
                                 </p>
                               );
                             })()}
+                            <SeloSla card={card} etapa={etapa} />
                           </div>
                         </button>
                       );
@@ -779,6 +794,7 @@ function KanbanPage() {
                           <div className="mt-1">
                             <AvaliacaoSelo atendimento={card} encerrado={etapa["is_default_encerrado"] === true} />
                           </div>
+                          <SeloSla card={card} etapa={etapa} />
                         </div>
                       </button>
                     );
