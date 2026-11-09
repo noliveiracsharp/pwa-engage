@@ -23,8 +23,8 @@ export function ServicosCobranca({ parcelas, readOnly, onCond, onLinha }: Props)
   return (
     <div className="space-y-3">
       <div>
-        <p className="text-sm font-medium">Como o cliente vai pagar cada serviço</p>
-        <p className="text-muted-foreground text-xs">Cada serviço tem seu próprio pagamento, separado dos produtos. Escolha a forma, em quantas vezes e quando começa.</p>
+        <p className="text-sm font-medium">Outras formas de pagamento deste ambiente</p>
+        <p className="text-muted-foreground text-xs">Cada bloco tem seu próprio pagamento. Escolha a forma, em quantas vezes e quando começa.</p>
       </div>
       {grupos.map(({ linha, parcelas: ps }) => {
         const p0 = ps[0]!;
@@ -69,7 +69,7 @@ export function ServicosCobranca({ parcelas, readOnly, onCond, onLinha }: Props)
                   <Label htmlFor={`sp-t-${linha}`} className="block text-xs font-medium">Taxa de instalação (R$)</Label>
                   <Input id={`sp-t-${linha}`} inputMode="decimal" placeholder="Ex.: 500,00" disabled={Boolean(readOnly) || Boolean(p0.taxa_isenta)} value={p0.taxa_instalacao ?? ""}
                     onChange={(e) => onCond(sid, { taxa_instalacao: e.target.value, fixas: {} })} />
-                  <p className="text-muted-foreground text-xs">No comodato o cliente paga só esta taxa; o serviço fica embutido no contrato.</p>
+                  <p className="text-muted-foreground text-xs">No comodato o cliente paga só esta taxa; o restante fica embutido no contrato.</p>
                 </div>
                 <div className="flex items-start justify-between gap-3 rounded-md border p-3">
                   <Label htmlFor={`sp-i-${linha}`} className="text-sm">Isentar taxa de instalação</Label>
