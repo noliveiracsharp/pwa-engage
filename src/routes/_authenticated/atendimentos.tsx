@@ -104,6 +104,16 @@ function AtendimentosPage() {
     return allKanbans.filter((k) => acessoKb.pode(rowId(k)));
   }, [isMaster, allKanbans, acessoKb]);
 
+  // Transferência: qualquer atendente pode enviar a conversa para outro departamento ativo da empresa (ex.: Suporte).
+  const kanbansDestino = useMemo(
+    () =>
+      allKanbans
+        .filter((k) => k["status"] !== false)
+        .filter((k) => { const e = pick(k, ["empresa_id", "id_empresa"]); return !empresaId || e === undefined || e === null || text(e) === empresaId; })
+        .sort((a, b) => text(pick(a, ["nome", "descricao"])).localeCompare(text(pick(b, ["nome", "descricao"])), "pt-BR")),
+    [allKanbans, empresaId],
+  );
+
   const instanciasAtivas = useMemo(
     () => instancias.filter((i) => i["status"] !== false && (!empresaId || !("empresa_id" in i) || text(i["empresa_id"]) === empresaId)),
     [instancias, empresaId],
@@ -328,7 +338,7 @@ function AtendimentosPage() {
           atendimento={ativo}
           pessoa={pessoasMap.get(text(pick(ativo, A.pessoa)))}
           instancia={instMap.get(text(pick(ativo, A.instancia)))}
-          kanbans={kanbans}
+          kanbans={kanbansDestino}
           etapas={etapas}
           notas={notas}
           painelAberto={painel}

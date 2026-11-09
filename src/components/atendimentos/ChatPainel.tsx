@@ -714,8 +714,21 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
         kanbans={kanbans}
         etapas={etapas}
         onSalvar={(kanbanId, etapaId) => {
-          const executar = () =>
-            atualizarAtendimento({ kanban_nome_id: kanbanId, ...etapaPayload(etapaId || null, etapas) }, "Atendimento movido.");
+          const trocouDep = kanbanId !== text(pick(atendimento, A.kanban));
+          const executar = async () => {
+            const ok = await atualizarAtendimento(
+              { kanban_nome_id: kanbanId, ...etapaPayload(etapaId || null, etapas), ...(trocouDep ? { usuario_responsavel_id: null } : {}) },
+              trocouDep ? "Atendimento transferido de departamento." : "Atendimento movido.",
+            );
+            if (ok && trocouDep && usuarioId !== undefined) {
+              // Quem transferiu continua acompanhando como participante; a nova equipe assume pela fila.
+              await supabase.from("atendimentos_participantes").insert({ atendimento_id: id, usuario_id: usuarioId });
+              qc.invalidateQueries({ queryKey: ["table", "atendimentos_participantes"] });
+              const destino = text(pick(kanbans.find((k) => text(rowId(k)) === kanbanId), ["nome", "descricao"]));
+              await registrarInterna(`↪️ ${autores.get(text(usuarioId)) || "Atendente"} transferiu o atendimento para ${destino}.`);
+            }
+            return ok;
+          };
           const alvo = etapas.find((e) => text(rowId(e)) === etapaId);
           const vaiEncerrar = alvo?.["is_default_encerrado"] === true && !encerrado;
           const mover = () => (vaiEncerrar ? pesquisa.pedir({ atendimento, pessoa, instancia, executar }) : executar());
