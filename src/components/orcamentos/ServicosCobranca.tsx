@@ -1,6 +1,6 @@
 import { CalendarClock } from "lucide-react";
 import { FORMAS_PAGAMENTO, formatBRL, formatDate, num, somaParcelas, type Linha } from "@/lib/orcamentos";
-import { agruparServicos, type CondServico, type ParcelaServico } from "@/lib/oferta-cronogramas";
+import { agruparServicos, type ModoServico, type CondServico, type ParcelaServico } from "@/lib/oferta-cronogramas";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -51,7 +51,7 @@ export function ServicosCobranca({ parcelas, readOnly, onCond, onLinha }: Props)
               {total > 0 && n > 1 && `, começando em ${formatDate(p0.vencimento)}`}
             </p>
             <ToggleGroup type="single" variant="outline" className="w-full" value={p0.modo ?? "sem_juros"} disabled={Boolean(readOnly)}
-              onValueChange={(v) => v && onCond(sid, { modo: v as CondServico["modo"], fixas: {} })} aria-label="Condição do serviço">
+              onValueChange={(v) => v && onCond(sid, { modo: v as ModoServico, fixas: {} })} aria-label="Condição do serviço">
               <ToggleGroupItem value="sem_juros" className="flex-1">Sem juros</ToggleGroupItem>
               <ToggleGroupItem value="com_juros" className="flex-1">Com juros</ToggleGroupItem>
               <ToggleGroupItem value="comodato" className="flex-1">Comodato</ToggleGroupItem>
