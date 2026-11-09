@@ -31,6 +31,7 @@ export type LinhaPayload = {
   incluso?: boolean;
   desconto_linha?: number;
   dt_inicio_faturamento?: string | null;
+  parcelas_faturamento?: number | null;
 };
 
 /**

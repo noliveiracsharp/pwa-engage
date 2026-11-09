@@ -44,12 +44,14 @@ export function lancamentosOferta(orc: Row, l: DreLinha) {
   const dataBase = toISODate(orc["dt_orcamento"]) || new Date().toISOString().slice(0, 10);
   let cli = parcelasFromValue(orc["parcelas"]).filter((p) => p.vencimento);
   if (!cli.length && l.liquido > 0) cli = [{ numero: 1, vencimento: dataBase, valor: l.liquido }];
+  // Serviços avulsos com cronograma próprio também entram como recebimento.
+  const serv = parcelasFromValue(orc["parcelas_servicos"]).filter((p) => p.vencimento);
   let forn = parcelasFromValue(orc["compra_parcelas"]).filter((p) => p.vencimento);
   if (!forn.length) {
     forn = cronogramaCompra({ custo: l.custo, condicao: condicaoCompraFromValue(orc["compra_condicao"]), parcelasCliente: cli, dataPadrao: dataBase });
   }
   const out: Array<{ mes: string; k: "entradas" | "fornecedores" | "impostos" | "comissoes" | "despesas"; v: number }> = [];
-  for (const p of cli) out.push({ mes: mesDe(p.vencimento), k: "entradas", v: p.valor });
+  for (const p of [...cli, ...serv]) out.push({ mes: mesDe(p.vencimento), k: "entradas", v: p.valor });
   for (const p of forn) out.push({ mes: mesDe(p.vencimento), k: "fornecedores", v: p.valor });
   for (const [mes, v] of ratear(l.imposto, cli, 1)) out.push({ mes, k: "impostos", v });
   for (const [mes, v] of ratear(l.comissoes, cli)) out.push({ mes, k: "comissoes", v });

@@ -397,11 +397,20 @@ export function OrcamentoLinhas({
                       <Label htmlFor={`desc-${l.key}`} className="block text-xs font-medium">Desconto (R$)</Label>
                       <InputMoeda id={`desc-${l.key}`} value={l.desconto_linha} onChange={(val) => onChange(l.key, { desconto_linha: val })} />
                     </div>
-                    {l.natureza === "recorrente" && (
+                    {(l.natureza === "recorrente" || l.natureza === "servico") && (
                       <div className="space-y-1.5 sm:col-span-2">
                         <Label htmlFor={`ini-${l.key}`} className="block text-xs font-medium">Início da cobrança</Label>
-                        <Input id={`ini-${l.key}`} type="date" value={l.dt_inicio_faturamento} title="Vazio = início geral da Oferta"
+                        <Input id={`ini-${l.key}`} type="date" value={l.dt_inicio_faturamento}
+                          title={l.natureza === "servico" ? "Vazio = segue o parcelamento geral da Oferta" : "Vazio = início geral da Oferta"}
                           onChange={(e) => onChange(l.key, { dt_inicio_faturamento: e.target.value })} />
+                      </div>
+                    )}
+                    {l.natureza === "servico" && l.dt_inicio_faturamento && (
+                      <div className="space-y-1.5 sm:col-span-2">
+                        <Label htmlFor={`parc-${l.key}`} className="block text-xs font-medium">Parcelas do cliente</Label>
+                        <Input id={`parc-${l.key}`} type="number" min={1} max={120} inputMode="numeric" value={l.parcelas_faturamento}
+                          title="Cronograma próprio de recebimento deste serviço"
+                          onChange={(e) => onChange(l.key, { parcelas_faturamento: e.target.value })} />
                       </div>
                     )}
                     <div className="space-y-1.5 sm:col-span-2">
