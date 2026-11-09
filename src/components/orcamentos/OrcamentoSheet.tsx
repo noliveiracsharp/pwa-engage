@@ -603,7 +603,6 @@ export function OrcamentoSheet({
       })),
     ) };
   }, [linhasValidas, calcs, fatorDesc, fatorAvista, itemById, h.parceiro_id, h.servicos_cfg]);
-  const totalSeparado = round2(parcelasServicos.reduce((s, p) => s + p.valor, 0));
   const baseGeral = round2(Math.max(0, totais.total_liquido - (ehAvista ? 0 : baseSeparada)));
   const qtdNum = Math.floor(num(h.qtd_parcelas) || 1);
   const entradaValor =
@@ -612,7 +611,7 @@ export function OrcamentoSheet({
   const parcelas = useMemo(
     () =>
       gerarParcelas({
-        total: ehAvista ? round2(Math.max(0, avista.total - totalSeparado)) : baseGeral,
+        total: ehAvista ? round2(Math.max(0, avista.total - baseSeparada)) : baseGeral,
         quantidade: ehAvista ? 1 : num(h.qtd_parcelas) || 1,
         primeiraData: h.primeira_parcela,
         comJuros: !ehAvista && h.tem_juros,
@@ -621,7 +620,7 @@ export function OrcamentoSheet({
         fixas: ehAvista ? {} : h.fixas,
         datas: h.datas,
       }),
-    [h.datas, ehAvista, avista.total, baseGeral, totalSeparado, h.qtd_parcelas, h.primeira_parcela, h.tem_juros, h.coeficiente_juros, entradaValor, h.fixas],
+    [h.datas, ehAvista, avista.total, baseGeral, baseSeparada, h.qtd_parcelas, h.primeira_parcela, h.tem_juros, h.coeficiente_juros, entradaValor, h.fixas],
   );
 
   // Acréscimo financeiro quando o parcelamento é "Com juros".
