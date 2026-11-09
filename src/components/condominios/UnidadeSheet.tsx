@@ -443,8 +443,11 @@ function Veiculos({ unidadeId, condominioId, perms }: { unidadeId: string; condo
             <Button variant="outline" onClick={() => setAberto(null)}>Cancelar</Button>
             <Button disabled={!placaOk || salvar.isPending} onClick={async () => {
               const valores = { cond_unidade_id: unidadeId, foto_url: n.foto_url || null, placa: placaOk, marca_id: n.marca_id || null, modelo_id: n.modelo_id || null, cor_id: n.cor_id || null, cond_vaga_id: n.cond_vaga_id || null, usuario_id: n.usuario_id || null, ano: n.ano || null, descricao_livre: n.descricao_livre || null };
-              await salvar.mutateAsync(aberto ? { id: aberto, valores } : { valores });
-              setN(vazio); setAberto(null); toast.success(aberto ? "Veículo atualizado." : "Veículo cadastrado.");
+              // Cadastro livre: acima do limite, o veículo novo entra bloqueado na portaria.
+              const bloqueado = !aberto && !podeAtivarVeiculo(ativos, limite);
+              await salvar.mutateAsync(aberto ? { id: aberto, valores } : { valores: bloqueado ? { ...valores, status: false } : valores });
+              setN(vazio); setAberto(null);
+              toast.success(aberto ? "Veículo atualizado." : bloqueado ? "Veículo cadastrado como bloqueado: o limite de liberados foi atingido." : "Veículo cadastrado.");
             }}>Salvar</Button>
           </DialogFooter>
         </DialogContent>
