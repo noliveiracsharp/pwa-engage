@@ -589,13 +589,13 @@ export function OrcamentoSheet({
       cronogramaServicos(
         linhasValidas.flatMap((l, i) =>
           servicoSeparado(l) && !l.incluso
-            ? [{ linha: l.key, descricao: (itens.find((x) => String(rowId(x)) === l.item_id)?.["nome"] as string) || textoDetalhe(l.detalhe) || "Serviço avulso",
+            ? [{ linha: l.key, descricao: String(itemById.get(l.item_id)?.["descricao"] ?? itemById.get(l.item_id)?.["nome"] ?? "") || "Serviço avulso",
                 pagador: l.faturar_para_id && l.faturar_para_id !== h.parceiro_id ? l.faturar_para_id : "",
                 valor: round2(calcs[i]!.total_linha * fatorDesc * fatorAvista), inicio: l.dt_inicio_faturamento, parcelas: num(l.parcelas_faturamento) || 1 }]
             : [],
         ),
       ),
-    [linhasValidas, calcs, fatorDesc, fatorAvista, itens, h.parceiro_id],
+    [linhasValidas, calcs, fatorDesc, fatorAvista, itemById, h.parceiro_id],
   );
   const totalSeparado = round2(parcelasServicos.reduce((s, p) => s + p.valor, 0));
   const baseGeral = round2(Math.max(0, totais.total_liquido - (ehAvista ? 0 : totalSeparado)));
@@ -1034,7 +1034,6 @@ export function OrcamentoSheet({
             custo={Math.max(0, totais.total_custo - custoTerceirosAvulsos)}
             cronograma={compraParcelas}
             terceiros={cronogramasTerceiros}
-            nomeFornecedor={nomeFornecedor}
             readOnly={readOnly}
             onChange={(compra) => patchHeader({ compra })}
           />
