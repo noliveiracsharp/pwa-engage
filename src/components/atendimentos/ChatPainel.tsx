@@ -10,7 +10,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-  ArrowLeft, Bot, CornerUpLeft, Link2, Check, CheckCheck, FileText, Hand, Lock, MoreVertical, MoveRight, Paperclip, PanelRightClose, PanelRightOpen, Send, Smile, CheckCircle2, Loader2, Trash2, Users, Video, Phone, Wrench,
+  ArrowLeft, Ban, Bot, CornerUpLeft, Link2, Check, CheckCheck, FileText, Hand, Lock, MoreVertical, MoveRight, Paperclip, PanelRightClose, PanelRightOpen, Send, Smile, CheckCircle2, Loader2, Trash2, Users, Video, Phone, Wrench,
 } from "lucide-react";
 import { CitacaoNoBalao, FaixaResposta, lerCitacao, type Citacao } from "@/components/chat/Citacao";
 import { ChamadaFlutuante, duracao, linkConvite, novaSala, type Chamada } from "./ChamadaFlutuante";
@@ -42,6 +42,8 @@ import { SinoBotao, SinoTarja, desarmarSino } from "./SinoAtendimento";
 import { TranscricaoAudio } from "./TranscricaoAudio";
 import { transcreverChamada } from "@/lib/chamada-transcricao.functions";
 import { ProtocoloBadge } from "./ProtocoloBadge";
+import { bloquearContato } from "./Bloqueios";
+import { perguntar } from "@/components/layout/DialogoGlobal";
 import { ManutencaoSheet } from "@/components/manutencoes/ManutencaoSheet";
 import { AvaliacaoSelo, usePesquisaSatisfacao } from "./Pesquisa";
 import { ChecklistEventoCard, dataChecklist, useChecklistsAtendimento } from "./ChecklistRespostas";
@@ -385,6 +387,18 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
     });
   }
 
+  /** Spam: bloqueia o número e encerra sem pesquisa de satisfação. */
+  async function bloquearSpam() {
+    const tel = telefonePessoa(pessoa);
+    const motivo = await perguntar({ title: "Bloquear contato", description: "Mensagens deste número passam a ser ignoradas e o atendimento é encerrado.", defaultValue: "Spam", placeholder: "Motivo", confirmText: "Bloquear" });
+    if (motivo === null) return;
+    const ok = await bloquearContato({ empresaId, telefone: tel, nome: text(pick(pessoa ?? {}, ["nome", "razao_social"])), motivo, usuarioId });
+    if (!ok) return;
+    const et = etapaEncerrado(etapas, text(pick(atendimento, A.kanban)));
+    if (et && !encerrado) await atualizarAtendimento(etapaPayload(rowId(et), etapas), "Contato bloqueado e atendimento encerrado.");
+    else toast.success("Contato bloqueado.");
+  }
+
   async function reabrir() {
     const et = etapaHumano(etapas, text(pick(atendimento, A.kanban)));
     if (!et) { setMoverAberto(true); return; }
@@ -506,6 +520,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
             {!encerrado && (
               <DropdownMenuItem onSelect={() => void encerrar()}><CheckCircle2 className="mr-2 h-4 w-4" /> Encerrar atendimento</DropdownMenuItem>
             )}
+            <DropdownMenuItem onSelect={() => void bloquearSpam()} disabled={!telefonePessoa(pessoa)} className="text-destructive focus:text-destructive"><Ban className="mr-2 h-4 w-4" /> Bloquear contato (spam)</DropdownMenuItem>
             {perms.canDelete && (
               <DropdownMenuItem onSelect={() => setExcluirAberto(true)} className="text-destructive focus:text-destructive">
                 <Trash2 className="mr-2 h-4 w-4" /> Excluir atendimento
