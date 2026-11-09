@@ -785,7 +785,11 @@ export function OrcamentoSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-[92vw] lg:max-w-5xl xl:max-w-6xl">
+      <SheetContent
+        className="w-full overflow-y-auto sm:max-w-[92vw] lg:max-w-5xl xl:max-w-6xl"
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+      >
         <SheetHeader className="px-6 pb-4">
           <SheetTitle className="flex flex-wrap items-center gap-2">
             {record ? `Oferta ${numero || ""}`.trim() : "Nova oferta"}

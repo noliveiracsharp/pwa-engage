@@ -48,6 +48,7 @@ function NaturezaBadge({ n }: { n: Natureza }) {
 import { pick, type Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
 import { confirmar } from "@/components/layout/DialogoGlobal";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const NONE = "__none__";
 
@@ -187,7 +188,7 @@ export function OrcamentoLinhas({
             const aberta = Boolean(readOnly) || abertas.has(l.key);
 
             const acoes = (
-              <div className="flex items-center justify-end gap-0.5">
+              <div className="flex items-center justify-end gap-0.5" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
                 {!readOnly && (
                   <Button
                     type="button"
@@ -614,7 +615,7 @@ export function OrcamentoLinhas({
 
   const renderSecao = (bloco: string, rows: Linha[]) => {
     const subtotal = rows.reduce((s, x) => s + calcLinha(x).total_linha, 0);
-    const editandoNome = renomeando?.bloco === bloco && bloco !== "";
+    const editandoNome = renomeando?.bloco === bloco;
     return (
       <div key={bloco || "__geral__"} className="overflow-hidden rounded-lg border">
         <div className="bg-muted/60 flex flex-wrap items-center gap-2 border-b px-3 py-2">
@@ -635,6 +636,11 @@ export function OrcamentoLinhas({
               {bloco ? <><MapPin className="text-primary mr-1 inline h-4 w-4 align-text-bottom" />{bloco}</> : "Itens gerais"}{" "}
               <span className="text-muted-foreground text-xs font-normal">({rows.length})</span>
             </span>
+          )}
+          {!readOnly && !editandoNome && rows.length > 0 && !bloco && (
+            <Button type="button" variant="ghost" size="icon" className="h-7 w-7" title={tx("Renomear ambiente")} aria-label={tx("Renomear ambiente")} onClick={() => setRenomeando({ bloco, valor: "" })}>
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
           )}
           {!readOnly && bloco && !editandoNome && (
             <>
