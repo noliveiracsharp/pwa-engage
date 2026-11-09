@@ -731,7 +731,8 @@ export function OrcamentoSheet({
         incluso: l.incluso,
         // Colunas novas só vão quando usadas (gravação tolera script ainda não executado).
         ...(c.desconto_linha > 0 || l.id ? { desconto_linha: c.desconto_linha } : {}),
-        ...(l.natureza === "recorrente" && l.dt_inicio_faturamento ? { dt_inicio_faturamento: l.dt_inicio_faturamento } : l.id ? { dt_inicio_faturamento: null } : {}),
+        ...(l.natureza !== "produto" && l.dt_inicio_faturamento ? { dt_inicio_faturamento: l.dt_inicio_faturamento } : l.id ? { dt_inicio_faturamento: null } : {}),
+        ...(servicoSeparado(l) ? { parcelas_faturamento: Math.max(1, Math.floor(num(l.parcelas_faturamento)) || 1) } : l.id ? { parcelas_faturamento: null } : {}),
       };
     });
     header["faturamento_misto"] = payloadLinhas.some((l) => l.faturar_para_id);
