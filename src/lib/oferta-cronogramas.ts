@@ -46,7 +46,7 @@ export function sidsServicos(linhas: Array<{ item_id: string }>): string[] {
 
 /** Cronograma de recebimento de cada serviço avulso separado: N parcelas a partir do início, com entrada e ajustes próprios. */
 export function cronogramaServicos(
-  linhas: Array<{ linha: string; descricao: string; pagador: string; valor: number; inicio: string; parcelas: number; sid?: string; bloco?: string; cond?: CondServico }>,
+  linhas: Array<{ linha: string; descricao: string; pagador: string; valor: number; inicio: string; parcelas: number; sid?: string; bloco?: string; cond?: CondServico | undefined }>,
 ): ParcelaServico[] {
   const out: ParcelaServico[] = [];
   for (const l of linhas) {
