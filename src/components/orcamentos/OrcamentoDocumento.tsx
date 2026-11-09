@@ -103,6 +103,120 @@ export function OrcamentoDocumento({ id, orcamento, linhas, empresa, cliente, ve
   const datasItens = linhasRec.map((l) => txt(l["dt_inicio_faturamento"]).slice(0, 10)).filter(Boolean).sort();
   const primeiroFat = txt(orcamento["dt_primeiro_faturamento"]).slice(0, 10) || datasItens[0] || "";
 
+
+  const temProdPag = !!(txt(orcamento["forma_pagamento"]) || parcelas.length > 0 || modalidade !== "prazo");
+  const blocoProdutos = () => (
+    <Bloco titulo={`Forma de pagamento · Produtos e equipamentos · ${modalidadeLabel(modalidade)}`}>
+                  {modalidade === "avista" && (
+                    <div className="orc-avista">
+                      {descontoAvista > 0 ? (
+                        <>De <s>{formatBRL(totalLiquido)}</s> por <strong>{formatBRL(totalAvista)}</strong> à vista</>
+                      ) : (
+                        <>Pagamento à vista: <strong>{formatBRL(totalAvista)}</strong></>
+                      )}
+                    </div>
+                  )}
+                  {modalidade === "comodato" && (
+                    <div className="orc-texto">
+                      Equipamentos cedidos em <strong>regime de comodato</strong>, permanecendo propriedade da contratada.
+                      {taxaInstalacao > 0 && (
+                        <div>
+                          Taxa de instalação: {isenta ? (
+                            <><s>{formatBRL(taxaInstalacao)}</s> <strong>isenta</strong> mediante permanência de {vigencia} meses (cobrada integralmente em caso de cancelamento antecipado).</>
+                          ) : (
+                            <strong>{formatBRL(taxaInstalacao)}</strong>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {txt(orcamento["forma_pagamento"]) && (
+                    <div>
+                      <strong>{txt(orcamento["forma_pagamento"])}</strong>
+                      {parcelas.length > 1 && <> · {parcelas.length}x</>}
+                    </div>
+                  )}
+                  {txt(orcamento["forma_pagamento_obs"]) && (
+                    <p className="orc-texto">{txt(orcamento["forma_pagamento_obs"])}</p>
+                  )}
+                  {parcelas.length > 1 && (
+                    <table className="orc-parcelas">
+                      <thead>
+                        <tr>
+                          <th>Parcela</th>
+                          <th>Vencimento</th>
+                          <th className="orc-right">Valor</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {parcelas.map((p) => (
+                          <tr key={p.numero}>
+                            <td>
+                              {p.numero}/{parcelas.length}
+                            </td>
+                            <td>{formatDate(p.vencimento)}</td>
+                            <td className="orc-right">{formatBRL(p.valor)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </Bloco>
+  );
+  const blocoServico = ({ linha, parcelas: ps }: { linha: string; parcelas: ParcelaServico[] }) => {
+    const p0 = ps[0]!;
+                const total = ps.reduce((s, p) => s + p.valor, 0);
+                return (
+                  <Bloco key={linha} titulo={`Forma de pagamento · ${p0.descricao}`}>
+                    <div>
+                      <strong>{p0.forma || txt(orcamento["forma_pagamento"]) || "Pagamento"}</strong>
+                      {ps.length > 1 && <> · {ps.length}x</>} · total {formatBRL(total)}
+                    </div>
+                    <table className="orc-parcelas">
+                      <thead>
+                        <tr><th>Parcela</th><th>Vencimento</th><th className="orc-right">Valor</th></tr>
+                      </thead>
+                      <tbody>
+                        {ps.map((p) => (
+                          <tr key={p.numero}>
+                            <td>{p.numero}/{ps.length}{p.numero === 1 && ps.length > 1 && num(p0.entrada) > 0 ? " (entrada)" : ""}</td>
+                            <td>{formatDate(p.vencimento)}</td>
+                            <td className="orc-right">{formatBRL(p.valor)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </Bloco>
+                );
+              
+  };
+  const blocosAmb = new Map<string, string[]>();
+  {
+    const gs = agruparPorBloco(linhasImpl, (l) => String(l["bloco"] ?? ""));
+    const comProd = gs.find((g) => g.rows.some((l) => natDe(l) === "produto"));
+    const nomes = new Set(gs.map((g) => g.bloco));
+    if (gs.some((g) => g.bloco)) {
+      if (comProd && temProdPag) blocosAmb.set(comProd.bloco, ["__prod"]);
+      for (const sv of servicosSep) {
+        const b = sv.parcelas[0]?.bloco ?? "";
+        if (nomes.has(b)) blocosAmb.set(b, [...(blocosAmb.get(b) ?? []), sv.linha]);
+      }
+    }
+  }
+  const usados = new Set([...blocosAmb.values()].flat());
+  const pagamentosDo = (bloco: string) => {
+    const ids = blocosAmb.get(bloco) ?? [];
+    if (!ids.length) return null;
+    return (
+      <div className="orc-condicoes orc-amb-pag">
+        {ids.map((id) => id === "__prod" ? <div key="__prod">{blocoProdutos()}</div> : (() => { const sv = servicosSep.find((x) => x.linha === id); return sv ? blocoServico(sv) : null; })())}
+      </div>
+    );
+  };
+
+  const ambDe = (rows: Row[]) => agruparPorBloco(rows, (l) => String(l["bloco"] ?? "")).map((g) => ({ nome: g.bloco || "Itens gerais", total: g.rows.reduce((t, l) => t + num(l["total_linha"]), 0) }));
+  const ambImpl = ambDe(linhasImpl);
+  const ambRec = ambDe(linhasRec);
   const tabela = (rows: Row[], mensal: boolean) => {
     const grupos = agruparPorBloco(rows, (l) => String(l["bloco"] ?? ""));
     if (!grupos.some((g) => g.bloco)) return tabelaSimples(rows, mensal);
@@ -127,6 +241,7 @@ export function OrcamentoDocumento({ id, orcamento, linhas, empresa, cliente, ve
                 <span>Subtotal · {nome}{mensal ? " (mensal)" : ""}</span>
                 <strong>{formatBRL(sub)}</strong>
               </div>
+              {!mensal && pagamentosDo(g.bloco)}
             </div>
           );
         })}
@@ -320,90 +435,8 @@ export function OrcamentoDocumento({ id, orcamento, linhas, empresa, cliente, ve
 
           <div className="orc-fechamento">
             <div className="orc-condicoes">
-              {(txt(orcamento["forma_pagamento"]) || parcelas.length > 0 || modalidade !== "prazo") && (
-                <Bloco titulo={`Condição comercial · ${modalidadeLabel(modalidade)}`}>
-                  {modalidade === "avista" && (
-                    <div className="orc-avista">
-                      {descontoAvista > 0 ? (
-                        <>De <s>{formatBRL(totalLiquido)}</s> por <strong>{formatBRL(totalAvista)}</strong> à vista</>
-                      ) : (
-                        <>Pagamento à vista: <strong>{formatBRL(totalAvista)}</strong></>
-                      )}
-                    </div>
-                  )}
-                  {modalidade === "comodato" && (
-                    <div className="orc-texto">
-                      Equipamentos cedidos em <strong>regime de comodato</strong>, permanecendo propriedade da contratada.
-                      {taxaInstalacao > 0 && (
-                        <div>
-                          Taxa de instalação: {isenta ? (
-                            <><s>{formatBRL(taxaInstalacao)}</s> <strong>isenta</strong> mediante permanência de {vigencia} meses (cobrada integralmente em caso de cancelamento antecipado).</>
-                          ) : (
-                            <strong>{formatBRL(taxaInstalacao)}</strong>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  {txt(orcamento["forma_pagamento"]) && (
-                    <div>
-                      <strong>{txt(orcamento["forma_pagamento"])}</strong>
-                      {parcelas.length > 1 && <> · {parcelas.length}x</>}
-                    </div>
-                  )}
-                  {txt(orcamento["forma_pagamento_obs"]) && (
-                    <p className="orc-texto">{txt(orcamento["forma_pagamento_obs"])}</p>
-                  )}
-                  {parcelas.length > 1 && (
-                    <table className="orc-parcelas">
-                      <thead>
-                        <tr>
-                          <th>Parcela</th>
-                          <th>Vencimento</th>
-                          <th className="orc-right">Valor</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {parcelas.map((p) => (
-                          <tr key={p.numero}>
-                            <td>
-                              {p.numero}/{parcelas.length}
-                            </td>
-                            <td>{formatDate(p.vencimento)}</td>
-                            <td className="orc-right">{formatBRL(p.valor)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
-                </Bloco>
-              )}
-              {servicosSep.map(({ linha, parcelas: ps }) => {
-                const p0 = ps[0]!;
-                const total = ps.reduce((s, p) => s + p.valor, 0);
-                return (
-                  <Bloco key={linha} titulo={`Serviço · ${p0.bloco ? `${p0.bloco} — ` : ""}${p0.descricao}`}>
-                    <div>
-                      <strong>{p0.forma || txt(orcamento["forma_pagamento"]) || "Pagamento"}</strong>
-                      {ps.length > 1 && <> · {ps.length}x</>} · total {formatBRL(total)}
-                    </div>
-                    <table className="orc-parcelas">
-                      <thead>
-                        <tr><th>Parcela</th><th>Vencimento</th><th className="orc-right">Valor</th></tr>
-                      </thead>
-                      <tbody>
-                        {ps.map((p) => (
-                          <tr key={p.numero}>
-                            <td>{p.numero}/{ps.length}{p.numero === 1 && ps.length > 1 && num(p0.entrada) > 0 ? " (entrada)" : ""}</td>
-                            <td>{formatDate(p.vencimento)}</td>
-                            <td className="orc-right">{formatBRL(p.valor)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </Bloco>
-                );
-              })}
+              {temProdPag && !usados.has("__prod") && blocoProdutos()}
+              {servicosSep.filter((sv) => !usados.has(sv.linha)).map(blocoServico)}
             </div>
 
             {temImpl && <div className="orc-totais">
@@ -459,16 +492,18 @@ export function OrcamentoDocumento({ id, orcamento, linhas, empresa, cliente, ve
 
               <Bloco titulo="Resumo do investimento">
                 <div className="orc-resumo">
+                  {temImpl && ambImpl.length > 1 && ambImpl.map((a, i) => (
+                    <div key={`i${i}`}><span>Investimento inicial · Ambiente {i + 1} · {a.nome}</span><strong>{formatBRL(a.total)}</strong></div>
+                  ))}
                   {temImpl && <div>
-                    <span>Investimento inicial / implantação</span>
-                    <strong>
-                      {formatBRL(modalidade === "avista" ? totalAvista : totalLiquido)}
-                      {modalidade !== "avista" && parcelas.length > 1 && ` (${parcelas.length}x de ${formatBRL(parcelas[0]!.valor)})`}
-                      {modalidade === "comodato" && " · comodato"}
-                    </strong>
+                    <span>{ambImpl.length > 1 ? "Total do investimento inicial" : "Investimento inicial / implantação"}</span>
+                    <strong>{formatBRL(modalidade === "avista" ? totalAvista : totalLiquido)}{modalidade === "comodato" && " · comodato"}</strong>
                   </div>}
+                  {ambRec.length > 1 && ambRec.map((a, i) => (
+                    <div key={`r${i}`}><span>Serviços mensais · Ambiente {i + 1} · {a.nome}</span><strong>{formatBRL(a.total)}/mês</strong></div>
+                  ))}
                   <div>
-                    <span>Mensalidade dos serviços</span>
+                    <span>{ambRec.length > 1 ? "Total mensal dos serviços" : "Mensalidade dos serviços"}</span>
                     <strong>{formatBRL(totalRecorrente)}/mês</strong>
                   </div>
                 </div>
