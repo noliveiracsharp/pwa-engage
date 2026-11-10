@@ -42,7 +42,7 @@ import { SinoBotao, SinoTarja, desarmarSino } from "./SinoAtendimento";
 import { TranscricaoAudio } from "./TranscricaoAudio";
 import { transcreverChamada } from "@/lib/chamada-transcricao.functions";
 import { ProtocoloBadge } from "./ProtocoloBadge";
-import { bloquearContato } from "./Bloqueios";
+import { bloquearContato, SeloBloqueado, useBloqueados } from "./Bloqueios";
 import { perguntar } from "@/components/layout/DialogoGlobal";
 import { ManutencaoSheet } from "@/components/manutencoes/ManutencaoSheet";
 import { AvaliacaoSelo, usePesquisaSatisfacao } from "./Pesquisa";
@@ -67,6 +67,8 @@ const RASCUNHOS = new Map<string, string>();
 export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, notas, painelAberto, onTogglePainel, onVoltar }: Props) {
   const qc = useQueryClient();
   const { usuarioId, empresaId } = useAudit();
+  const bloqueioDe = useBloqueados(empresaId);
+  const bloqueio = bloqueioDe(telefonePessoa(pessoa));
   const id = text(rowId(atendimento));
   const { data: colsMsg } = useCols("atendimentos_mensagem");
   const { data: colsAt } = useCols("atendimentos");
@@ -394,6 +396,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
     if (motivo === null) return;
     const ok = await bloquearContato({ empresaId, telefone: tel, nome: text(pick(pessoa ?? {}, ["nome", "razao_social"])), motivo, usuarioId });
     if (!ok) return;
+    void qc.invalidateQueries({ queryKey: ["atendimentos-bloqueios"] });
     const et = etapaEncerrado(etapas, text(pick(atendimento, A.kanban)));
     if (et && !encerrado) await atualizarAtendimento(etapaPayload(rowId(et), etapas), "Contato bloqueado e atendimento encerrado.");
     else toast.success("Contato bloqueado.");
@@ -472,6 +475,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
               {status}
             </Badge>
             <AvaliacaoSelo atendimento={atendimento} encerrado={encerrado} />
+            {bloqueio && <SeloBloqueado motivo={bloqueio.motivo} />}
             {ia && !encerrado && (
               <span className="inline-flex shrink-0 items-center gap-1 text-primary"><Bot className="h-3 w-3" /> IA</span>
             )}
@@ -520,7 +524,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
             {!encerrado && (
               <DropdownMenuItem onSelect={() => void encerrar()}><CheckCircle2 className="mr-2 h-4 w-4" /> Encerrar atendimento</DropdownMenuItem>
             )}
-            <DropdownMenuItem onSelect={() => void bloquearSpam()} disabled={!telefonePessoa(pessoa)} className="text-destructive focus:text-destructive"><Ban className="mr-2 h-4 w-4" /> Bloquear contato (spam)</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => void bloquearSpam()} disabled={!telefonePessoa(pessoa) || !!bloqueio} className="text-destructive focus:text-destructive"><Ban className="mr-2 h-4 w-4" /> Bloquear contato (spam)</DropdownMenuItem>
             {perms.canDelete && (
               <DropdownMenuItem onSelect={() => setExcluirAberto(true)} className="text-destructive focus:text-destructive">
                 <Trash2 className="mr-2 h-4 w-4" /> Excluir atendimento
