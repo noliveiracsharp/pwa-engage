@@ -961,11 +961,16 @@ function Propriedades({ no, atualizar, quadros, etapas, campos, fluxos }: {
           <Campo label="Departamento"><Input value={s("departamento")} onChange={(e) => atualizar({ departamento: e.target.value })} placeholder="Ex.: Suporte" /></Campo>
         </>
       );
-    case "campo":
+    case "campo": {
+      const filtrados = campos.filter((c) => !s("template") || s("template") === "todos" || String(c["template"] ?? "geral") === s("template")).sort((x, y) => String(x["label"] || x["chave"]).localeCompare(String(y["label"] || y["chave"])));
+      const modo = s("modo") || "linhas";
+      const linhas: { chave: string; valor: string }[] = Array.isArray(d["linhas"]) ? (d["linhas"] as { chave: string; valor: string }[]) : s("chave") ? [{ chave: s("chave"), valor: s("valor") }] : [];
+      const setLinhas = (ls: { chave: string; valor: string }[]) => atualizar({ linhas: ls, chave: "", valor: "" });
+      const origem = s("origem").replace(/^\{\{\s*|\s*\}\}$/g, "") || "item_escolhido";
       return (
         <>
-          <Campo label="Grupo de campos" ajuda="Filtra os campos pelo modelo (ex.: do Kanban Oferta). O valor fica gravado no contato da conversa.">
-            <Select value={s("template") || "todos"} onValueChange={(v) => atualizar({ template: v, chave: "" })}>
+          <Campo label="Grupo de campos" ajuda="Filtra os campos pelo modelo (ex.: do Kanban Oferta). Os valores ficam gravados no contato da conversa.">
+            <Select value={s("template") || "todos"} onValueChange={(v) => atualizar({ template: v, ...(modo === "json" ? { chaves: campos.filter((c) => v === "todos" || String(c["template"] ?? "geral") === v).map((c) => String(c["chave"])) } : {}) })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="todos">Todos</SelectItem>
@@ -973,17 +978,66 @@ function Propriedades({ no, atualizar, quadros, etapas, campos, fluxos }: {
               </SelectContent>
             </Select>
           </Campo>
-          <Campo label="Campo personalizado">
-            <Select value={s("chave")} onValueChange={(v) => atualizar({ chave: v })}>
-              <SelectTrigger><SelectValue placeholder="Escolha o campo" /></SelectTrigger>
+          <Campo label="Como preencher">
+            <Select value={modo} onValueChange={(v) => atualizar(v === "json" ? { modo: v, chaves: filtrados.map((c) => String(c["chave"])) } : { modo: v })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {campos.filter((c) => !s("template") || s("template") === "todos" || String(c["template"] ?? "geral") === s("template")).sort((a, b) => String(a["label"] || a["chave"]).localeCompare(String(b["label"] || b["chave"]))).map((c) => <SelectItem key={String(c["id"])} value={String(c["chave"])}>{String(c["label"] || c["chave"])}</SelectItem>)}
+                <SelectItem value="json">Automático: todos os dados de uma variável (JSON)</SelectItem>
+                <SelectItem value="linhas">Escolher campo por campo</SelectItem>
               </SelectContent>
             </Select>
           </Campo>
-          <Campo label="Valor" ajuda="Use {{variavel}} para gravar uma resposta do cliente"><CampoFluxo linha value={s("valor")} onChange={(v) => atualizar({ valor: v })} /></Campo>
+          {modo === "json" ? (
+            <>
+              <Campo label="Variável com os dados" ajuda="Ex.: item_escolhido (a unidade escolhida no menu). Cada informação com o mesmo nome de um campo personalizado é gravada.">
+                <Input value={s("origem")} onChange={(e) => atualizar({ origem: e.target.value })} placeholder="item_escolhido" />
+              </Campo>
+              <div className="rounded-md border p-3 text-sm space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-medium">{filtrados.filter((c) => (d["chaves"] as string[] | undefined)?.includes(String(c["chave"]))).length} de {filtrados.length} campos serão gravados</span>
+                  <Button type="button" size="sm" variant="outline" onClick={() => atualizar({ chaves: filtrados.map((c) => String(c["chave"])) })}>Marcar todos</Button>
+                </div>
+                <div className="max-h-56 overflow-auto space-y-1">
+                  {filtrados.map((c) => {
+                    const k = String(c["chave"]);
+                    const lista = Array.isArray(d["chaves"]) ? (d["chaves"] as string[]) : [];
+                    const on = lista.includes(k);
+                    return (
+                      <label key={k} className="flex items-center justify-between gap-2 py-0.5">
+                        <span>{String(c["label"] || k)} <span className="text-muted-foreground text-xs">({`{{${origem}.${k}}}`})</span></span>
+                        <Switch checked={on} onCheckedChange={(v) => atualizar({ chaves: v ? [...lista, k] : lista.filter((x) => x !== k) })} />
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="space-y-2">
+              {linhas.map((l, i) => (
+                <div key={i} className="flex items-start gap-2">
+                  <div className="w-1/2">
+                    <Select value={l.chave} onValueChange={(v) => setLinhas(linhas.map((x, j) => (j === i ? { ...x, chave: v } : x)))}>
+                      <SelectTrigger><SelectValue placeholder="Escolha o campo" /></SelectTrigger>
+                      <SelectContent>
+                        {filtrados.map((c) => <SelectItem key={String(c["id"])} value={String(c["chave"])}>{String(c["label"] || c["chave"])}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex-1"><CampoFluxo linha value={l.valor} onChange={(v) => setLinhas(linhas.map((x, j) => (j === i ? { ...x, valor: v } : x)))} /></div>
+                  <Button type="button" size="icon" variant="ghost" aria-label="Remover campo" onClick={() => setLinhas(linhas.filter((_, j) => j !== i))}><X className="h-4 w-4" /></Button>
+                </div>
+              ))}
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" size="sm" variant="outline" onClick={() => setLinhas([...linhas, { chave: "", valor: "" }])}>+ Adicionar campo</Button>
+                <Button type="button" size="sm" variant="outline" onClick={() => setLinhas(filtrados.map((c) => ({ chave: String(c["chave"]), valor: `{{${origem}.${String(c["chave"])}}}` })))}>Preencher todos a partir de {`{{${origem}}}`}</Button>
+              </div>
+              <p className="text-xs text-muted-foreground">Use {"{{variavel}}"} ou {"{{item_escolhido.unidade}}"} para gravar dados do cliente ou da API.</p>
+            </div>
+          )}
         </>
       );
+    }
     case "subfluxo":
       return (
         <Campo label="Fluxo a executar" ajuda="A conversa continua a partir do início do fluxo escolhido, mantendo as respostas já coletadas.">

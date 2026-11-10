@@ -137,7 +137,10 @@ export function resumoNo(tipo: TipoNo, d: DadosNo, nomes: { etapa?: string | und
       return tags.length ? `${base} · ${tags.map((t) => `#${t}`).join(" ")}` : base;
     }
     case "atribuir": return d["modo"] === "roleta" ? "Roleta entre atendentes" : "Fila do departamento";
-    case "campo": return `${d["template"] && d["template"] !== "todos" ? `[${d["template"]}] ` : ""}${d["chave"] || "?"} = ${d["valor"] ?? ""}`;
+    case "campo":
+      if (d["modo"] === "json") return `Todos os campos de ${d["origem"] || "?"}${Array.isArray(d["chaves"]) ? ` (${(d["chaves"] as unknown[]).length} campos)` : ""}`;
+      if (Array.isArray(d["linhas"]) && (d["linhas"] as unknown[]).length) return `${(d["linhas"] as unknown[]).length} campo(s)`;
+      return `${d["template"] && d["template"] !== "todos" ? `[${d["template"]}] ` : ""}${d["chave"] || "?"} = ${d["valor"] ?? ""}`;
     case "http": return `${d["metodo"] ?? "GET"} ${d["url"] ?? ""} → {{${d["variavel"] || "resposta"}}}`;
     case "codigo": return String(d["codigo"] ?? "").split("\n").find((l) => l.trim() && !l.trim().startsWith("//")) ?? "Código";
     case "ia": return `${MODELOS_IA.find((m) => m.id === d["modelo"])?.nome.split(" (")[0] ?? "IA"} · ${String(d["instrucoes"] ?? "")}`;
