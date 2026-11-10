@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Trash2, Check, CheckCircle2, Download, FileText, HelpCircle, Loader2, Maximize2, Paperclip, Plus, X } from "lucide-react";
+import { Trash2, Check, CheckCircle2, Download, FileText, HelpCircle, Loader2, Maximize2, MessageSquare, Paperclip, Plus, X } from "lucide-react";
 import { PlannerPainel, ItemLinha, usePlannerItens } from "@/components/chat-interno/PlannerPainel";
 import { TarefaDetalhe, registrarEvento } from "@/components/chat-interno/TarefaDetalhe";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { diaDoItem, ordenar, PRIORIDADES, FAIXAS_PROGRESSO, type Prioridade, type PlannerItem } from "@/lib/planner";
+import { diaDoItem, lerEventos, ordenar, PRIORIDADES, FAIXAS_PROGRESSO, type Prioridade, type PlannerItem } from "@/lib/planner";
 import { progressoCor } from "@/lib/projetos";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
