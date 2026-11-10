@@ -143,8 +143,8 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
         if (String(fin ?? "") === "notificacoes") return ok({ ignorada: true, motivo: "notificacoes" });
 
         // Resposta à pesquisa de satisfação: grava a nota no atendimento encerrado, agradece e NÃO abre novo atendimento.
-        const notaCsat = tipo === "texto" ? (lr?.selectedRowId && /^[1-5]$/.test(texto) && /⭐/.test(String(lr.title ?? "")) ? notaDaLinha(texto) : detectarNota(texto)) : null;
-        if (notaCsat) {
+        const notaCsat = tipo === "texto" ? (lr?.selectedRowId && /^[0-5]$/.test(texto) && /⭐/.test(String(lr.title ?? "")) ? notaDaLinha(texto) : detectarNota(texto)) : null;
+        if (notaCsat !== null) {
           const { data: av, error: eAv } = await db.rpc("csat_webhook_avaliar" as never, {
             p_token: k, p_telefone: body.phone, p_nota: notaCsat, p_texto: lr?.title || texto, p_externo: body.messageId ?? null,
           } as never);

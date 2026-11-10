@@ -11,14 +11,14 @@ export const CSAT_OPCOES = [
 /** A lista devolve o id da linha; em ordem crescente, linha N = nota N (também vale para o texto numerado de reserva). */
 export const notaDaLinha = (id: string): number | null => {
   const i = Number(id);
-  return Number.isInteger(i) && i >= 1 && i <= CSAT_OPCOES.length ? i : null;
+  return Number.isInteger(i) && i >= 0 && i <= CSAT_OPCOES.length ? i : null;
 };
 
 export const CSAT_AGRADECIMENTO_PADRAO =
   "Muito obrigado pela sua avaliação! Registramos sua nota com sucesso. Se precisar de um novo atendimento, estamos à sua disposição. 👋";
 
 /**
- * Reconhece uma nota de 1 a 5 em respostas curtas: "5", "nota 4", "5 estrelas", "⭐⭐⭐", "5 ⭐⭐⭐⭐⭐ Excelente".
+ * Reconhece uma nota de 0 a 5 em respostas curtas: "5", "nota 4", "5 estrelas", "⭐⭐⭐", "5 ⭐⭐⭐⭐⭐ Excelente".
  * Mensagens longas ou sem nota clara retornam null (seguem como conversa nova).
  */
 export function detectarNota(texto: string): number | null {
@@ -31,7 +31,7 @@ export function detectarNota(texto: string): number | null {
     const n = Number(nums[0]);
     const resto = t.replace(/\d+/g, "").replace(/[⭐★✨!.,:\-\s]/g, "").toLowerCase();
     const palavras = /^(nota|estrelas?|excelente|otimo|ótimo|muitobom|bom|regular|ruim|pessimo|péssimo)*$/;
-    if (n >= 1 && n <= 5 && palavras.test(resto)) return n;
+    if (n >= 0 && n <= 5 && palavras.test(resto)) return n;
     return null;
   }
   if (nums.length === 0) {
