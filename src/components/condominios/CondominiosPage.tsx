@@ -189,6 +189,7 @@ export function CondominiosPage() {
       secoes={secoes}
       ativa={secao}
       onChange={irSecao}
+      chatCondominioId={modoUnidade && condId ? condId : undefined}
       direto={modoUnidade ? {
         nome: condominios.find((c) => c.value === condId)?.label ?? "Condomínio",
         logo: ativa.logoAtivo ?? null,
