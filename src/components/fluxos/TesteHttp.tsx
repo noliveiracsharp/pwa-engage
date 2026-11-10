@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { lerDadosTeste, salvarDadosTeste } from "@/components/fluxos/dados-teste";
 import { Copy, Loader2, Play } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
@@ -42,7 +43,9 @@ export function TesteHttp({ d, variavel }: { d: Record<string, unknown>; variave
   const testar = useServerFn(testarHttpFluxo);
   const [carregando, setCarregando] = useState(false);
   const [res, setRes] = useState<Resultado | null>(null);
-  const [vals, setVals] = useState<Record<string, string>>({});
+  const [vals, setValsRaw] = useState<Record<string, string>>({});
+  useEffect(() => { setValsRaw(lerDadosTeste()); }, []);
+  const setVals = (f: (p: Record<string, string>) => Record<string, string>) => setValsRaw((p) => { const n = f(p); salvarDadosTeste({ ...lerDadosTeste(), ...n }); return n; });
   const texto = `${d["url"] ?? ""}\n${d["cabecalhos"] ?? ""}\n${d["corpo"] ?? ""}`;
   const vars = useMemo(() => [...new Set([...texto.matchAll(/\{\{\s*([\w.]+)\s*\}\}/g)].map((m) => m[1]!.split(".")[0]!))], [texto]);
   const json = useMemo(() => { try { return res?.corpo ? (JSON.parse(res.corpo) as unknown) : undefined; } catch { return undefined; } }, [res]);
@@ -68,7 +71,7 @@ export function TesteHttp({ d, variavel }: { d: Record<string, unknown>; variave
       </div>
       {vars.length > 0 && (
         <div className="space-y-1.5">
-          <p className="text-xs text-muted-foreground">Valores de teste para as variáveis:</p>
+          <p className="text-xs text-muted-foreground">Valores de teste (ficam salvos para os próximos testes e nunca são usados nas conversas reais):</p>
           {vars.map((v) => (
             <div key={v} className="flex items-center gap-2">
               <span className="w-28 shrink-0 truncate font-mono text-xs">{`{{${v}}}`}</span>

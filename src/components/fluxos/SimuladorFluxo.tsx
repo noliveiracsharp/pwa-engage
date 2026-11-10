@@ -9,6 +9,7 @@ import { detectarComando, mensagemComando } from "@/lib/comandos-fluxo";
 import { executarCodigo, executarHttp } from "@/lib/fluxos-externo";
 import { nomeTipo, type TipoNo } from "@/lib/fluxos";
 import { cn } from "@/lib/utils";
+import { lerDadosTeste, salvarDadosTeste } from "@/components/fluxos/dados-teste";
 
 type Balao = { de: "cliente" | "robo" | "sistema"; texto: string; midiaUrl?: string | undefined; midiaTipo?: string | undefined };
 export type PassoTrilha = { id: string; titulo: string };
@@ -28,6 +29,10 @@ export function SimuladorFluxo({ open, onOpenChange, nos, conexoes, onTrilha, on
   const [rodando, setRodando] = useState(false);
   const [erroNo, setErroNo] = useState<{ id: string; msg: string } | null>(null);
   const fimRef = useRef<HTMLDivElement>(null);
+  const [teste, setTeste] = useState<Record<string, string>>({});
+  useEffect(() => { setTeste(lerDadosTeste()); }, []);
+  const mudarTeste = (k: string, v: string) => setTeste((p) => { const n = { ...p, [k]: v }; salvarDadosTeste(n); return n; });
+  const [novaChave, setNovaChave] = useState("");
   const nomeNo = (id: string) => {
     const n = nos.find((x) => x.id === id);
     return n ? String(n.data.titulo || nomeTipo((n.data.tipo ?? n.type) as TipoNo)) : id;
@@ -71,7 +76,7 @@ export function SimuladorFluxo({ open, onOpenChange, nos, conexoes, onTrilha, on
     setTexto("");
     const novos: Balao[] = [{ de: "cliente", texto: msg }];
     if (reinicio) novos.push({ de: "sistema", texto: "Comando global: voltando ao início do fluxo" });
-    const base = { protocolo: "2026-000123", nome: "Cliente Teste", telefone: "5511999999999" };
+    const base = Object.fromEntries(Object.entries(teste).filter(([, v]) => v !== ""));
     const ini: EstadoExec = reinicio
       ? { no_atual: null, status: "ativo", variaveis: { ...base, ...(estado?.variaveis ?? {}) } }
       : estado ?? { no_atual: null, status: "ativo", variaveis: base };
@@ -164,7 +169,21 @@ export function SimuladorFluxo({ open, onOpenChange, nos, conexoes, onTrilha, on
           <TabsList className="w-fit">
             <TabsTrigger value="etapas">Etapas ({trilha.length})</TabsTrigger>
             <TabsTrigger value="dados">Dados ({vars.length})</TabsTrigger>
+            <TabsTrigger value="teste">Dados de teste</TabsTrigger>
           </TabsList>
+          <TabsContent value="teste" className="min-h-0 flex-1 space-y-1.5 overflow-y-auto">
+            <p className="text-xs text-muted-foreground">Usados só aqui no teste (ex.: seu telefone e e-mail). Nas conversas reais do WhatsApp valem os dados de quem está falando. Clique em Reiniciar após alterar.</p>
+            {Object.keys(teste).map((k) => (
+              <div key={k} className="flex items-center gap-2">
+                <span className="w-32 shrink-0 truncate font-mono text-xs">{`{{${k}}}`}</span>
+                <Input className="h-8" value={teste[k] ?? ""} onChange={(e) => mudarTeste(k, e.target.value)} />
+              </div>
+            ))}
+            <form className="flex gap-2 pt-1" onSubmit={(e) => { e.preventDefault(); const k = novaChave.trim().replace(/[^\w.]/g, ""); if (k && !(k in teste)) mudarTeste(k, ""); setNovaChave(""); }}>
+              <Input className="h-8 font-mono" value={novaChave} placeholder="nova variável (ex.: cpf)" onChange={(e) => setNovaChave(e.target.value)} />
+              <Button type="submit" size="sm" variant="outline">Adicionar</Button>
+            </form>
+          </TabsContent>
           <TabsContent value="etapas" className="min-h-0 flex-1 overflow-y-auto">
             {trilha.length === 0 ? <p className="text-sm text-muted-foreground">Os blocos percorridos aparecem aqui. Clique em um para ver o que chegou nele.</p> : (
               <ol className="space-y-1 text-sm">
