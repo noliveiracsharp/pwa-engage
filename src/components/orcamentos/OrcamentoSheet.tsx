@@ -593,7 +593,11 @@ export function OrcamentoSheet({
   // Ambientes: o 1º com produtos usa o pagamento geral; os demais com produtos ganham pagamento próprio.
   const { blocoProdPrincipal, blocosProdExtra } = useMemo(() => {
     const gs = agruparPorBloco(linhasValidas, (l) => l.bloco.trim()).filter((g) => g.rows.some((l) => l.natureza === "produto"));
-    return { blocoProdPrincipal: gs[0]?.bloco ?? null, blocosProdExtra: gs.slice(1).map((g) => g.bloco) };
+    // Sem produtos (ex.: oferta só de serviços), o pagamento geral fica no 1º ambiente com itens não recorrentes.
+    const geral = gs[0]?.bloco ?? agruparPorBloco(linhasValidas, (l) => l.bloco.trim())
+      .find((g) => g.rows.some((l) => l.natureza !== "recorrente" && !servicoSeparado(l)))?.bloco ?? null;
+    return { blocoProdPrincipal: geral, blocosProdExtra: gs.slice(1).map((g) => g.bloco) };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [linhasValidas]);
   const { parcelasServicos, baseSeparada } = useMemo(() => {
     const sep = linhasValidas.map((l, i) => ({ l, i })).filter(({ l }) => servicoSeparado(l));
