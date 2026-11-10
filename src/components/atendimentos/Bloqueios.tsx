@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { confirmar } from "@/components/layout/DialogoGlobal";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -52,14 +52,14 @@ export function useBloqueados(empresaId: unknown) {
 /** Selo vermelho "Bloqueado" com o motivo no tooltip. */
 export function SeloBloqueado({ motivo, compacto }: { motivo?: string | null; compacto?: boolean }) {
   return (
-    <Tooltip>
+    <TooltipProvider delayDuration={150}><Tooltip>
       <TooltipTrigger asChild>
-        <span className="inline-flex h-5 shrink-0 items-center gap-1 rounded-full border border-destructive/40 bg-destructive/10 px-1.5 text-[10px] font-medium text-destructive">
+        <span title={`Contato bloqueado${motivo ? `: ${motivo}` : ""}`} className="inline-flex h-5 shrink-0 items-center gap-1 rounded-full border border-destructive/40 bg-destructive/10 px-1.5 text-[10px] font-medium text-destructive">
           <Ban className="h-3 w-3" />{!compacto && "Bloqueado"}
         </span>
       </TooltipTrigger>
       <TooltipContent>Contato bloqueado{motivo ? `: ${motivo}` : ""}</TooltipContent>
-    </Tooltip>
+    </Tooltip></TooltipProvider>
   );
 }
 
@@ -108,12 +108,12 @@ export function BloqueiosDialog({ open, onOpenChange, empresaId }: { open: boole
                 <p className="truncate text-sm font-medium">{b.nome || b.telefone}</p>
                 <p className="truncate text-xs text-muted-foreground">{b.telefone} · {b.motivo || "Spam"} · {new Date(b.created_at).toLocaleDateString("pt-BR")}</p>
               </div>
-              <Tooltip>
+              <TooltipProvider><Tooltip>
                 <TooltipTrigger asChild>
                   <Button size="icon" variant="ghost" aria-label="Desbloquear" onClick={() => void desbloquear(b)}><Unlock className="h-4 w-4" /></Button>
                 </TooltipTrigger>
                 <TooltipContent>Desbloquear</TooltipContent>
-              </Tooltip>
+              </Tooltip></TooltipProvider>
             </div>
           ))}
         </div>
