@@ -140,6 +140,7 @@ function MembroDialog({ inicial, empresaOpts, unidadeOpts, onClose, onSalvar }: 
 }) {
   const [v, setV] = useState<Record<string, string>>(() => Object.fromEntries(CAMPOS.map((c) => [c, inicial[c] == null ? "" : String(inicial[c])])));
   const [ativo, setAtivo] = useState(inicial["status"] !== false);
+  const [chatOptin, setChatOptin] = useState(inicial["chat_optin"] === true);
   const [salvando, setSalvando] = useState(false);
   const set = (k: string, x: string) => setV((o) => ({ ...o, [k]: x }));
 
@@ -147,7 +148,7 @@ function MembroDialog({ inicial, empresaOpts, unidadeOpts, onClose, onSalvar }: 
     const erro = validarMembro(v);
     if (erro) { toast.error(erro); return; }
     setSalvando(true);
-    const valores: Row = { status: ativo };
+    const valores: Row = { status: ativo, chat_optin: chatOptin };
     for (const c of CAMPOS) valores[c] = v[c]?.trim() ? v[c]!.trim() : null;
     if (!valores["vinculo"]) valores["vinculo"] = "proprio";
     try { await onSalvar(valores); } finally { setSalvando(false); }
@@ -186,6 +187,7 @@ function MembroDialog({ inicial, empresaOpts, unidadeOpts, onClose, onSalvar }: 
           <div><Label className="mb-1.5 block">Fim</Label><CampoData value={v["fim"] ?? ""} onChange={(x) => set("fim", x)} inicio={2000} /></div>
           <div className="sm:col-span-2"><Label className="mb-1.5 block">Observações</Label><Textarea value={v["observacoes"]} onChange={(e) => set("observacoes", e.target.value)} rows={2} /></div>
           <label className="flex items-center gap-2 text-sm sm:col-span-2"><Switch checked={ativo} onCheckedChange={setAtivo} /> Ativo</label>
+          <label className="flex items-center gap-2 text-sm sm:col-span-2"><Switch checked={chatOptin} onCheckedChange={setChatOptin} /> Participar do chat do condomínio <span className="text-xs text-muted-foreground">(precisa ter login com o mesmo e-mail)</span></label>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>

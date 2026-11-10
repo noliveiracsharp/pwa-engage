@@ -25,6 +25,8 @@ import { CalendarClock, Copy, ScanFace } from "lucide-react";
 import { FotoCond } from "./FotoCond";
 import { PAPEIS, s } from "./cond-data";
 
+/** Só moradores participam do chat; prestadores e visitantes ficam de fora. */
+const PAPEIS_CHAT = ["proprietario", "inquilino", "familiar", "preposto"];
 export type Pessoa = {
   usuario_id: string; nome: string; email: string; celular: string | null; cpf: string | null; foto_url?: string | null; tem_acesso: boolean;
   genero?: string | null; data_nascimento?: string | null; profissao?: string | null; rg?: string | null; rg_orgao?: string | null;
@@ -80,6 +82,7 @@ export function PessoaDialog({ unidadeId, lado, papeis, gestor, pessoa, vinculo,
     papel: s(vinculo?.["papel"]) || papeis[0]!,
     extra: s(vinculo?.["parentesco"]) || s(vinculo?.["prestador_funcao"]),
     controle_acesso: vinculo ? vinculo["controle_acesso"] !== false : true,
+    chat_optin: vinculo?.["chat_optin"] === true,
     status_conexao: s(vinculo?.["status_conexao"]) || "ativo",
     funcao_condominio: funcaoPadrao(s(vinculo?.["papel"]) || papeis[0]!, s(vinculo?.["funcao_condominio"])),
     sindico_delegado: vinculo?.["sindico_delegado"] === true,
@@ -142,6 +145,7 @@ export function PessoaDialog({ unidadeId, lado, papeis, gestor, pessoa, vinculo,
           parentesco: vi.papel === "prestador" ? null : vi.extra || null,
           prestador_funcao: vi.papel === "prestador" ? vi.extra || null : null,
           controle_acesso: vi.controle_acesso,
+          chat_optin: PAPEIS_CHAT.includes(vi.papel) && vi.chat_optin,
           preferencias: { ...salvas, ...prefsAtuais },
         };
         if (temAgenda) Object.assign(valores, {
@@ -212,6 +216,12 @@ export function PessoaDialog({ unidadeId, lado, papeis, gestor, pessoa, vinculo,
                 <span><span className="block text-sm font-medium">Liberado no controle de acesso</span><span className="text-xs text-muted-foreground">Envia foto e documentos para o leitor facial e a catraca da portaria.</span></span>
                 <Switch checked={vi.controle_acesso} onCheckedChange={(c) => setVi({ ...vi, controle_acesso: c })} />
               </label>
+              {PAPEIS_CHAT.includes(vi.papel) && (
+                <label className="flex items-center justify-between gap-3 rounded-lg border p-3">
+                  <span><span className="block text-sm font-medium">Participar do chat do condomínio</span><span className="text-xs text-muted-foreground">Permite conversar com vizinhos e com a equipe. Sem esta opção, a pessoa não aparece para ninguém no chat.</span></span>
+                  <Switch checked={vi.chat_optin} onCheckedChange={(c) => setVi({ ...vi, chat_optin: c })} />
+                </label>
+              )}
             </TabsContent>
 
             {temAgenda && (
