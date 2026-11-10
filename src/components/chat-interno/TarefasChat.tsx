@@ -266,7 +266,14 @@ export function NovaTarefa({ me, empresaId, usuarios, onCancel, onSaved, respons
 }) {
   const [titulo, setTitulo] = useState("");
   const [descricao, setDescricao] = useState("");
-  const [resp, setResp] = useState(responsavelInicial ?? me);
+  const [resps, setResps] = useState<string[]>([responsavelInicial ?? me]);
+  const [buscaResp, setBuscaResp] = useState("");
+  const [abrirResp, setAbrirResp] = useState(false);
+  const resp = resps.length === 1 ? resps[0]! : "";
+  const nomeUsu = (id: string) => id === me ? "Eu mesmo" : String(pick(usuarios.find((u) => String(u["id"]) === id) ?? {}, ["nome"], "Usuário"));
+  const opcoesResp = [{ id: me, nome: "Eu mesmo" }, ...usuarios.filter((u) => String(u["id"]) !== me).map((u) => ({ id: String(u["id"]), nome: String(pick(u, ["nome"], "Usuário")) })).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))]
+    .filter((o) => o.nome.toLowerCase().includes(buscaResp.toLowerCase()));
+  const alternarResp = (id: string) => setResps((r) => r.includes(id) ? r.filter((x) => x !== id) : [...r, id]);
   const [entrega, setEntrega] = useState(dataInicial ?? "");
   const [prioridade, setPrioridade] = useState<Prioridade>("media");
   const [estimativa, setEstimativa] = useState("");
@@ -292,17 +299,19 @@ export function NovaTarefa({ me, empresaId, usuarios, onCancel, onSaved, respons
   const salvar = async () => {
     if (!titulo.trim()) { toast.error("Informe o título da tarefa."); return; }
     setEnviando(true);
-    const { error } = await tb().insert({
-      empresa_id: empresaId, criado_por: me, responsavel_id: resp, titulo: titulo.trim(),
+    if (!resps.length) { toast.error("Escolha ao menos um responsável."); return; }
+    const linhas = resps.map((r) => ({
+      empresa_id: empresaId, criado_por: me, responsavel_id: r, titulo: titulo.trim(),
       descricao: htmlParaTexto(descricao).trim() ? descricao : null, data_solicitacao: hoje(), data_entrega: entrega || null, anexos,
-      status: resp === me ? "andamento" : "aguardando",
+      status: r === me ? "andamento" : "aguardando",
       prioridade, estimativa_min: estimativa ? Math.max(1, Math.round(Number(estimativa))) : null,
-      data_planejada: resp === me ? planejada || null : null,
-    } as never);
+      data_planejada: r === me ? planejada || null : null,
+    }));
+    const { error } = await tb().insert(linhas as never);
     setEnviando(false);
     if (error) { toast.error(error.message); return; }
-    toast.success(resp === me ? "Tarefa criada." : "Tarefa enviada. Aguardando aceite.");
-    await onSaved(resp, titulo.trim());
+    toast.success(resps.length > 1 ? `${resps.length} tarefas criadas.` : resp === me ? "Tarefa criada." : "Tarefa enviada. Aguardando aceite.");
+    for (const r of resps) await onSaved(r, titulo.trim());
   };
 
   return (
@@ -312,13 +321,33 @@ export function NovaTarefa({ me, empresaId, usuarios, onCancel, onSaved, respons
           <div className="space-y-1"><Label>Título</Label><Input value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="O que precisa ser feito?" /></div>
           <div className="space-y-1">
             <Label>Responsável</Label>
-            <Select value={resp} onValueChange={setResp}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value={me}>Eu mesmo</SelectItem>
-                {usuarios.map((u) => <SelectItem key={String(u["id"])} value={String(u["id"])}>{String(pick(u, ["nome"], "Usuário"))}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <div className="flex flex-wrap gap-1">
+              {resps.map((id) => (
+                <span key={id} className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs text-secondary-foreground">
+                  {nomeUsu(id)}
+                  <button type="button" aria-label={`Remover ${nomeUsu(id)}`} onClick={() => alternarResp(id)}><X className="h-3 w-3" /></button>
+                </span>
+              ))}
+            </div>
+            <div className="rounded-md border">
+              <div className="flex items-center gap-2 p-1">
+                <Input value={buscaResp} onFocus={() => setAbrirResp(true)} onChange={(e) => { setBuscaResp(e.target.value); setAbrirResp(true); }} placeholder="Buscar pessoas…" className="h-8 border-0 shadow-none focus-visible:ring-0" />
+                <Button type="button" size="sm" variant="ghost" onClick={() => setResps([me, ...usuarios.map((u) => String(u["id"])).filter((id) => id !== me)])}>Todos</Button>
+                <Button type="button" size="sm" variant="ghost" onClick={() => setAbrirResp((v) => !v)}>{abrirResp ? "Fechar" : "Escolher"}</Button>
+              </div>
+              {abrirResp && (
+                <div className="max-h-48 overflow-y-auto border-t p-1">
+                  {opcoesResp.map((o) => (
+                    <button type="button" key={o.id} onClick={() => alternarResp(o.id)} className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm hover:bg-accent">
+                      <span className={cn("flex h-4 w-4 items-center justify-center rounded border", resps.includes(o.id) && "bg-primary text-primary-foreground")}>{resps.includes(o.id) && <Check className="h-3 w-3" />}</span>
+                      {o.nome}
+                    </button>
+                  ))}
+                  {!opcoesResp.length && <p className="px-2 py-1.5 text-sm text-muted-foreground">Ninguém encontrado.</p>}
+                </div>
+              )}
+            </div>
+            {resps.length > 1 && <p className="text-xs text-muted-foreground">Será criada uma tarefa separada para cada pessoa ({resps.length}).</p>}
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1"><Label>Solicitação</Label><Input type="date" value={hoje()} disabled /></div>
