@@ -29,6 +29,40 @@ export async function bloquearContato(p: { empresaId: unknown; telefone: string;
   return true;
 }
 
+/** Compara telefones ignorando o 55 do Brasil. */
+const chaveTel = (t: string) => { const d = soDigitos(t); return d.length > 11 && d.startsWith("55") ? d.slice(2) : d; };
+
+/** Mapa telefone → bloqueio da empresa; vazio se a tabela ainda não existe. */
+export function useBloqueados(empresaId: unknown) {
+  const q = useQuery({
+    queryKey: ["atendimentos-bloqueios", empresaId, "mapa"], enabled: !!empresaId, staleTime: 60_000,
+    queryFn: async () => {
+      const r = await tb("atendimentos_bloqueios").select("*").eq("empresa_id", empresaId).limit(5000);
+      if (r.error) return [] as Bloq[];
+      return r.data as Bloq[];
+    },
+  });
+  return useMemo(() => {
+    const m = new Map<string, Bloq>();
+    for (const b of q.data ?? []) m.set(chaveTel(b.telefone), b);
+    return (tel: unknown) => { const k = chaveTel(String(tel ?? "")); return k ? m.get(k) : undefined; };
+  }, [q.data]);
+}
+
+/** Selo vermelho "Bloqueado" com o motivo no tooltip. */
+export function SeloBloqueado({ motivo, compacto }: { motivo?: string | null; compacto?: boolean }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="inline-flex h-5 shrink-0 items-center gap-1 rounded-full border border-destructive/40 bg-destructive/10 px-1.5 text-[10px] font-medium text-destructive">
+          <Ban className="h-3 w-3" />{!compacto && "Bloqueado"}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent>Contato bloqueado{motivo ? `: ${motivo}` : ""}</TooltipContent>
+    </Tooltip>
+  );
+}
+
 type Bloq = { id: string; telefone: string; nome: string | null; motivo: string | null; created_at: string };
 
 export function BloqueiosDialog({ open, onOpenChange, empresaId }: { open: boolean; onOpenChange: (v: boolean) => void; empresaId: unknown }) {
