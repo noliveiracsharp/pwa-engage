@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChatPainel } from "@/components/atendimentos/ChatPainel";
 import { ContatoPainel } from "@/components/atendimentos/ContatoPainel";
-import { BloqueiosDialog } from "@/components/atendimentos/Bloqueios";
+import { BloqueiosDialog, SeloBloqueado, useBloqueados } from "@/components/atendimentos/Bloqueios";
 import { Ban } from "lucide-react";
 import {
   A, M, corEtiqueta, dataDe, fotoPessoa, horaCurta, iniciais, isCliente, isEncerrado, isIA, nomePessoa, telefonePessoa,
@@ -130,6 +130,7 @@ function AtendimentosPage() {
   const [novoAberto, setNovoAberto] = useState(false);
   const [bloqAberto, setBloqAberto] = useState(false);
   const empresaBloq = empresaId;
+  const bloqueioDe = useBloqueados(empresaId);
   const { novo: novoSearch } = Route.useSearch();
   const navAt = Route.useNavigate();
   useEffect(() => {
@@ -317,6 +318,7 @@ function AtendimentosPage() {
                   </div>
                   <div className="mt-1 flex flex-wrap items-center gap-1">
                     {inst && <Badge variant="outline" className="h-5 px-1.5 text-[10px]">{text(pick(inst, ["nome", "descricao"]))}</Badge>}
+                    {(() => { const b = bloqueioDe(telefonePessoa(p)); return b ? <SeloBloqueado motivo={b.motivo} /> : null; })()}
                     {enc && <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">Encerrado</Badge>}
                     {enc && <AvaliacaoSelo atendimento={a} encerrado />}
                     {ets.map((e) => (
