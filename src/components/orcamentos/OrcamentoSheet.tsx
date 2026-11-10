@@ -596,11 +596,11 @@ export function OrcamentoSheet({
     return { blocoProdPrincipal: gs[0]?.bloco ?? null, blocosProdExtra: gs.slice(1).map((g) => g.bloco) };
   }, [linhasValidas]);
   const { parcelasServicos, baseSeparada } = useMemo(() => {
-    const sep = linhasValidas.map((l, i) => ({ l, i })).filter(({ l }) => servicoSeparado(l) && !l.incluso);
+    const sep = linhasValidas.map((l, i) => ({ l, i })).filter(({ l }) => servicoSeparado(l));
     const sids = sidsServicos(sep.map(({ l }) => l));
     const vl = (i: number) => round2(calcs[i]!.total_linha * fatorDesc * fatorAvista);
     const prods = blocosProdExtra.map((b) => {
-      const idx = linhasValidas.map((l, i) => ({ l, i })).filter(({ l }) => l.bloco.trim() === b && !l.incluso && l.natureza !== "recorrente" && !servicoSeparado(l));
+      const idx = linhasValidas.map((l, i) => ({ l, i })).filter(({ l }) => l.bloco.trim() === b && l.natureza !== "recorrente" && !servicoSeparado(l));
       const sid = `${PROD_SID}${b}`;
       const cond = h.servicos_cfg[sid];
       return { linha: sid, sid, bloco: b, cond, descricao: "Produtos e equipamentos", pagador: "",
