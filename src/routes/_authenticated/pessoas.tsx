@@ -24,6 +24,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { pick, type Row } from "@/lib/row";
+import { useAudit } from "@/lib/audit";
+import { SeloBloqueado, useBloqueados } from "@/components/atendimentos/Bloqueios";
 import { usePagePermissions, subtabKind } from "@/hooks/usePagePermissions";
 import { formatCpfCnpj, formatPhoneDisplay, matchesAny } from "@/lib/input-masks";
 
@@ -62,6 +64,8 @@ function PessoasPage() {
   const save = useSaveRecord("pessoas");
   const perms = usePagePermissions("/pessoas");
   const queryClient = useQueryClient();
+  const { empresaId } = useAudit();
+  const bloqueioDe = useBloqueados(empresaId);
   const [toDelete, setToDelete] = useState<Row | null>(null);
   const [removing, setRemoving] = useState(false);
   const inativar = async () => {
@@ -160,6 +164,7 @@ function PessoasPage() {
               </span>
             )}
             <span>{nome}</span>
+            {(() => { const b = bloqueioDe(pick(row, ["telefone"])); return b ? <SeloBloqueado motivo={b.motivo} /> : null; })()}
           </div>
         );
       },
