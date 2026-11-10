@@ -379,7 +379,7 @@ export function NovaTarefa({ me, empresaId, usuarios, onCancel, onSaved, respons
       </div>
       <div className="flex justify-end gap-2 border-t border-border p-3">
         <Button variant="outline" size="sm" onClick={onCancel}>Cancelar</Button>
-        <Button size="sm" onClick={() => void salvar()} disabled={enviando}>{enviando && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}Salvar</Button>
+        <Button size="sm" onClick={() => void salvar()} disabled={enviando}>{enviando && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}{resps.length > 1 ? `Salvar (${resps.length} tarefas)` : "Salvar"}</Button>
       </div>
     </div>
   );
