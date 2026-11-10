@@ -722,7 +722,7 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack, onModoMeet, 
         </div>
         {!semTarefas && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setNovaTarefa(true)} aria-label="Nova tarefa" title={sel.tipo === "direto" ? `Nova tarefa para ${nome}` : "Nova tarefa"}>
           <ClipboardList className="h-4 w-4" />
-        </Button>
+        </Button>}
         <Button variant="ghost" size="icon" className="h-8 w-8" disabled={!canalId || !!chamada} onClick={() => void iniciarChamada(false)} aria-label="Chamada de áudio">
           <Phone className="h-4 w-4" />
         </Button>
