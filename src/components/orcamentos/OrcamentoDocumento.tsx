@@ -80,8 +80,10 @@ export function OrcamentoDocumento({ id, orcamento, linhas, empresa, cliente, ve
     naturezaOf(l["natureza"], itemById.get(String(pick(l, ["item_id"]) ?? ""))?.["tipo"]);
   // Com "mostrar valores", os inclusos viram itens normais; sem, ficam só na lista de conferência
   // e saem do total exibido ao cliente (o total interno segue completo para compras/financeiro).
-  const linhasInclusas = mostrarInclusos ? [] : linhasOrdenadas.filter((l) => l["incluso"] === true);
-  const linhasCobradas = mostrarInclusos ? linhasOrdenadas : linhasOrdenadas.filter((l) => l["incluso"] !== true);
+  // Inclusos ficam no próprio ambiente; só o preço unitário vira "Incluso". Totais seguem completos.
+  const linhasInclusas: Row[] = [];
+  const linhasCobradas = linhasOrdenadas;
+  const ocultaValor = (l: Row) => !mostrarInclusos && l["incluso"] === true;
   const valorInclusos = linhasInclusas
     .filter((l) => natDe(l) !== "recorrente")
     .reduce((s, l) => s + num(l["total_linha"]), 0);
@@ -98,7 +100,7 @@ export function OrcamentoDocumento({ id, orcamento, linhas, empresa, cliente, ve
   const vigencia = num(orcamento["vigencia_meses"]) || 36;
   const reajuste = txt(orcamento["reajuste_indice"]) || "IPCA";
   const totalRecorrente =
-    (mostrarInclusos ? 0 : num(orcamento["total_recorrente"]) - linhasOrdenadas.filter((l) => l["incluso"] === true && natDe(l) === "recorrente").reduce((s, l) => s + num(l["total_linha"]), 0)) || linhasRec.reduce((s, l) => s + num(l["total_linha"]), 0);
+    num(orcamento["total_recorrente"]) || linhasRec.reduce((s, l) => s + num(l["total_linha"]), 0);
 
   const datasItens = linhasRec.map((l) => txt(l["dt_inicio_faturamento"]).slice(0, 10)).filter(Boolean).sort();
   const primeiroFat = txt(orcamento["dt_primeiro_faturamento"]).slice(0, 10) || datasItens[0] || "";
@@ -282,8 +284,8 @@ export function OrcamentoDocumento({ id, orcamento, linhas, empresa, cliente, ve
               </td>
               <td className="orc-right">{formatQtd(l["quantidade"])}</td>
               <td>{txt(pick(unidade ?? {}, ["sigla", "descricao"])) || "—"}</td>
-              <td className="orc-right">{formatBRL(l["valor_unitario"])}</td>
-              <td className="orc-right">{formatBRL(l["total_linha"])}</td>
+              <td className="orc-right">{ocultaValor(l) ? "Incluso" : formatBRL(l["valor_unitario"])}</td>
+              <td className="orc-right">{ocultaValor(l) ? "Incluso" : formatBRL(l["total_linha"])}</td>
             </tr>
           );
         })}
