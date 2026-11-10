@@ -250,7 +250,7 @@ export function executarFluxo(p: {
         atual = proximo(atual.id);
         break;
       case "campo":
-        if (str(d["chave"])) acoes.push({ tipo: "campo", chave: str(d["chave"]), valor: interpolar(str(d["valor"]), vars) });
+        acoes.push(...acoesCampo(d, vars));
         atual = proximo(atual.id);
         break;
       case "transbordo":
@@ -275,4 +275,26 @@ export function executarFluxo(p: {
     }
   }
   return fim("finalizado");
+}
+
+/** Ações do bloco "Preencher campo": campo único, várias linhas ou objeto JSON inteiro. */
+export function acoesCampo(d: DadosNo, vars: Record<string, string>): Acao[] {
+  const out: Acao[] = [];
+  const modo = str(d["modo"]) || "linhas";
+  if (modo === "json") {
+    const obj = lerCaminho(vars, str(d["origem"]).trim().replace(/^\{\{\s*|\s*\}\}$/g, ""));
+    const alvo = obj && typeof obj === "object" && !Array.isArray(obj) ? (obj as Record<string, unknown>) : null;
+    if (alvo) {
+      const permitidas = Array.isArray(d["chaves"]) ? new Set((d["chaves"] as unknown[]).map(String)) : null;
+      for (const [k, v] of Object.entries(alvo)) {
+        if (permitidas && !permitidas.has(k)) continue;
+        out.push({ tipo: "campo", chave: k, valor: paraTexto(v) });
+      }
+    }
+    return out;
+  }
+  const linhas = Array.isArray(d["linhas"]) ? (d["linhas"] as { chave?: unknown; valor?: unknown }[]) : [];
+  for (const l of linhas) if (str(l?.chave)) out.push({ tipo: "campo", chave: str(l.chave), valor: interpolar(str(l.valor), vars) });
+  if (!linhas.length && str(d["chave"])) out.push({ tipo: "campo", chave: str(d["chave"]), valor: interpolar(str(d["valor"]), vars) });
+  return out;
 }
