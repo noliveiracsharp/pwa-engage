@@ -4,14 +4,14 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ReactFlow, Background, Controls, MiniMap, Handle, Position, addEdge,
   useNodesState, useEdgesState, ReactFlowProvider, useReactFlow,
-  BaseEdge, EdgeLabelRenderer, getBezierPath,
+  BaseEdge, EdgeLabelRenderer, getBezierPath, NodeResizer, Panel, SelectionMode,
   type Node, type Edge, type Connection, type NodeProps, type EdgeProps,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import {
   Bot, Clock, GitBranch, Hourglass, KanbanSquare, ListOrdered, MessageSquare,
   MessageCircleQuestion, PhoneForwarded, Plus, Save, Trash2, UserPlus, Workflow, Zap, PenLine, CircleStop, Globe, Code2, X, FlaskConical, Upload, Copy, Play,
-  Split, FileText, PanelLeftClose, PanelLeftOpen, Search,
+  Split, FileText, PanelLeftClose, PanelLeftOpen, Search, StickyNote, BoxSelect, Hand,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -108,6 +108,7 @@ const COR_CATEGORIA: Record<CategoriaNo, string> = {
 
 type NoData = DadosNo & { tipo: TipoNo; resumo?: string };
 type FluxoNode = Node<NoData>;
+const ehNota = (n: { data?: { tipo?: unknown } }) => n.data?.tipo === "nota";
 
 function BlocoNo({ id, data, selected }: NodeProps<FluxoNode>) {
   const { deleteElements } = useReactFlow();
@@ -195,7 +196,53 @@ function LigacaoEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, t
     </>
   );
 }
-const nodeTypes = { bloco: BlocoNo };
+/** Cores das anotações (sticks): tokens do tema, nunca cores fixas. */
+const CORES_NOTA: Record<string, { fundo: string; borda: string; rotulo: string }> = {
+  amarelo: { fundo: "bg-warning/25", borda: "border-warning", rotulo: "Amarelo" },
+  verde: { fundo: "bg-success/20", borda: "border-success", rotulo: "Verde" },
+  azul: { fundo: "bg-stage-cyan/20", borda: "border-stage-cyan", rotulo: "Azul" },
+  roxo: { fundo: "bg-stage-violet/20", borda: "border-stage-violet", rotulo: "Roxo" },
+  rosa: { fundo: "bg-stage-pink/20", borda: "border-stage-pink", rotulo: "Rosa" },
+  vermelho: { fundo: "bg-destructive/15", borda: "border-destructive", rotulo: "Vermelho" },
+};
+
+/** Anotação livre no quadro: não participa da execução do fluxo. */
+function NotaNo({ id, data, selected }: NodeProps<FluxoNode>) {
+  const { setNodes, deleteElements } = useReactFlow();
+  const cor = CORES_NOTA[String(data["cor"] ?? "amarelo")] ?? CORES_NOTA["amarelo"]!;
+  const patch = (p: Record<string, unknown>) => setNodes((ns) => ns.map((n) => (n.id === id ? { ...n, data: { ...n.data, ...p } } : n)));
+  return (
+    <>
+      <NodeResizer isVisible={!!selected} minWidth={160} minHeight={100} lineClassName="!border-primary" handleClassName="!size-2.5 !bg-primary" />
+      <div className={cn("flex h-full w-full flex-col rounded-lg border-2 shadow-sm", cor.fundo, cor.borda)}>
+        <div className="flex items-center gap-1 px-2 pt-1.5">
+          <input
+            className="nodrag min-w-0 flex-1 bg-transparent text-sm font-semibold text-foreground outline-none placeholder:text-muted-foreground"
+            value={String(data.titulo ?? "")} placeholder="Título da anotação"
+            onChange={(e) => patch({ titulo: e.target.value })} aria-label="Título da anotação"
+          />
+          {selected && Object.entries(CORES_NOTA).map(([k, c]) => (
+            <button key={k} type="button" title={c.rotulo} aria-label={`Cor ${c.rotulo}`}
+              className={cn("nodrag size-3.5 shrink-0 rounded-full border-2", c.borda, c.fundo, data["cor"] === k && "ring-2 ring-foreground/40")}
+              onClick={() => patch({ cor: k })} />
+          ))}
+          <button type="button" aria-label="Excluir anotação" title="Excluir anotação"
+            className="nodrag flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-destructive hover:text-destructive-foreground"
+            onClick={() => void deleteElements({ nodes: [{ id }] })}>
+            <X className="size-3.5" />
+          </button>
+        </div>
+        <textarea
+          className="nodrag nowheel min-h-0 flex-1 resize-none bg-transparent px-2 pb-2 pt-1 text-xs text-foreground outline-none placeholder:text-muted-foreground"
+          value={String(data["texto"] ?? "")} placeholder="Escreva aqui…"
+          onChange={(e) => patch({ texto: e.target.value })} aria-label="Texto da anotação"
+        />
+      </div>
+    </>
+  );
+}
+
+const nodeTypes = { bloco: BlocoNo, nota: NotaNo };
 const edgeTypes = { ligacao: LigacaoEdge };
 
 function useRows(table: string) {
@@ -266,7 +313,9 @@ function FluxosPage() {
     setNome(String(fluxo["nome"] ?? ""));
     setAtivo(Boolean(fluxo["ativo"]));
     setInstanciaId(fluxo["instancia_id"] ? String(fluxo["instancia_id"]) : "todas");
-    const ns = ((fluxo["nos"] as FluxoNode[]) ?? []).map((n) => ({ ...n, type: "bloco", data: comResumo(n.data) }));
+    const ns = ((fluxo["nos"] as FluxoNode[]) ?? []).map((n) => (ehNota(n)
+      ? { ...n, type: "nota", zIndex: -1, style: { width: n.width ?? 260, height: n.height ?? 180 } }
+      : { ...n, type: "bloco", data: comResumo(n.data) }));
     setNodes(ns);
     setEdges(((fluxo["conexoes"] as Edge[]) ?? []).map((e) => ({ ...e, type: "ligacao" })));
     setSelId(null);
@@ -291,9 +340,10 @@ function FluxosPage() {
   const salvar = async () => {
     if (!fluxo) return;
     setSalvando(true);
-    const nos = nodes.map(({ id, position, data }) => {
-      const { resumo: _r, ...d } = data;
-      return { id, position, data: d };
+    const nos = nodes.map((n) => {
+      const { resumo: _r, ...d } = n.data;
+      if (ehNota(n)) return { id: n.id, position: n.position, data: d, width: n.measured?.width ?? n.width ?? 260, height: n.measured?.height ?? n.height ?? 180 };
+      return { id: n.id, position: n.position, data: d };
     });
     const conexoes = edges.map(({ id, source, target, sourceHandle, targetHandle }) => ({ id, source, target, sourceHandle, targetHandle }));
     const gat = nodes.find((n) => n.data.tipo === "gatilho")?.data;
@@ -326,13 +376,21 @@ function FluxosPage() {
     setSelId(id);
   };
 
+  const adicionarNota = () => {
+    if (!fluxo) { toast.info("Crie ou selecione um fluxo primeiro"); return; }
+    const id = `nota-${Date.now().toString(36)}`;
+    const position = screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+    setNodes((ns) => [...ns.map((n) => ({ ...n, selected: false })), { id, type: "nota", position, zIndex: -1, selected: true, style: { width: 260, height: 180 }, data: { tipo: "nota" as TipoNo, cor: "amarelo", titulo: "", texto: "" } }]);
+  };
+  const [modoSelecao, setModoSelecao] = useState(false);
+
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
     const tipo = e.dataTransfer.getData("application/fluxo-no") as TipoNo;
     if (tipo) adicionar(tipo, screenToFlowPosition({ x: e.clientX, y: e.clientY }));
   };
 
-  const sel = nodes.find((n) => n.id === selId);
+  const sel = nodes.find((n) => n.id === selId && !ehNota(n));
   const atualizarSel = (patch: DadosNo) =>
     setNodes((ns) => ns.map((n) => (n.id === selId ? { ...n, data: comResumo({ ...n.data, ...patch } as NoData) } : n)));
   const duplicarNo = useCallback((id: string) => {
@@ -463,12 +521,19 @@ function FluxosPage() {
                 defaultEdgeOptions={{ type: "ligacao" }}
                 onBeforeDelete={async ({ nodes: ns, edges: es }) => ({ nodes: ns.filter((n) => (n.data as NoData).tipo !== "gatilho"), edges: es })}
                 onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect}
-                onNodeClick={(_, n) => setSelId(n.id)} onPaneClick={() => setSelId(null)}
+                onNodeClick={(e, n) => { if (ehNota(n) || e.shiftKey || e.ctrlKey || e.metaKey) return; setSelId(n.id); }} onPaneClick={() => setSelId(null)}
+                selectionOnDrag={modoSelecao} panOnDrag={modoSelecao ? [1, 2] : true} selectionMode={SelectionMode.Partial}
+                multiSelectionKeyCode={["Shift", "Control", "Meta"]}
                 fitView deleteKeyCode={["Delete", "Backspace"]} proOptions={{ hideAttribution: true }}
               >
                 <Background gap={18} />
                 <Controls />
                 <MiniMap pannable zoomable className="!bg-card" />
+                <Panel position="top-right" className="flex gap-1 rounded-lg border bg-card p-1 shadow-sm">
+                  <Button size="sm" variant={modoSelecao ? "ghost" : "secondary"} onClick={() => setModoSelecao(false)} title="Arrastar o quadro" aria-pressed={!modoSelecao}><Hand className="size-4" /> Mover</Button>
+                  <Button size="sm" variant={modoSelecao ? "secondary" : "ghost"} onClick={() => setModoSelecao(true)} title="Arraste para marcar vários blocos (ou segure Shift)" aria-pressed={modoSelecao}><BoxSelect className="size-4" /> Selecionar</Button>
+                  <Button size="sm" variant="ghost" onClick={adicionarNota} title="Adicionar anotação colorida"><StickyNote className="size-4" /> Anotação</Button>
+                </Panel>
               </ReactFlow>
               </DuplicarCtx.Provider>
             ) : (

@@ -100,10 +100,12 @@ function hora(v: unknown) {
 }
 
 /** Chat interno da equipe: botão no menu lateral + janela flutuante. */
-export function ChatInterno({ sidebarOpen, onAbrir }: { sidebarOpen: boolean; onAbrir?: (() => void) | undefined }) {
+export function ChatInterno({ sidebarOpen, onAbrir, condominioId }: { sidebarOpen: boolean; onAbrir?: (() => void) | undefined; condominioId?: string | undefined }) {
   const { usuario } = useAuth();
   const me = String(pick(usuario, ["id"]) ?? "");
-  const empresaId = String(pick(usuario, ["empresa_id", "id_empresa"]) ?? "");
+  // Chat do condomínio: conversas ficam no condomínio, sem tarefas, só moradores e equipe com opt-in.
+  const condo = !!condominioId;
+  const empresaId = condominioId || String(pick(usuario, ["empresa_id", "id_empresa"]) ?? "");
   const [open, setOpen] = useState(false);
   // Modo acoplado: o chat vira coluna lateral e empurra o conteúdo (só desktop).
   const [expanded, setExpanded] = useState(false);
@@ -148,9 +150,14 @@ export function ChatInterno({ sidebarOpen, onAbrir }: { sidebarOpen: boolean; on
   }, [me, empresaId]);
 
   const { data: usuarios = [] } = useQuery({
-    queryKey: ["chat-interno-usuarios", empresaId],
+    queryKey: ["chat-interno-usuarios", empresaId, condo],
     enabled: !!empresaId,
     queryFn: async () => {
+      if (condo) {
+        const { data, error } = await (supabase as any).rpc("cond_chat_participantes", { p_condominio: empresaId });
+        if (error) throw error;
+        return ((data ?? []) as Row[]).filter((u) => String(u["id"]) !== me);
+      }
       const { data, error } = await supabase.from("usuarios").select("*").eq("empresa_id", empresaId);
       if (error) throw error;
       return ((data ?? []) as Row[]).filter((u) => String(u["id"]) !== me && u["status"] !== false);
@@ -158,12 +165,12 @@ export function ChatInterno({ sidebarOpen, onAbrir }: { sidebarOpen: boolean; on
   });
 
   const { data: grupos = [] } = useQuery({
-    queryKey: ["chat-interno-grupos", me],
+    queryKey: ["chat-interno-grupos", me, empresaId],
     enabled: !!me,
     queryFn: async () => {
       const ids = await meusCanais(me);
       if (!ids.length) return [] as Row[];
-      const { data, error } = await supabase.from("chat_interno_canais").select("*").eq("tipo", "grupo").in("id", ids).order("nome");
+      const { data, error } = await supabase.from("chat_interno_canais").select("*").eq("tipo", "grupo").eq("empresa_id", empresaId).in("id", ids).order("nome");
       if (error) throw error;
       return (data ?? []) as Row[];
     },
@@ -397,6 +404,7 @@ export function ChatInterno({ sidebarOpen, onAbrir }: { sidebarOpen: boolean; on
                 key={sel.tipo === "direto" ? `d${sel.outro["id"]}` : `g${sel.canal["id"]}`}
                 me={me}
                 empresaId={empresaId}
+                semTarefas={condo}
                 sel={sel}
                 usuarios={usuarios}
                 isOnline={sel.tipo === "direto" && online.has(String(sel.outro["id"]))}
@@ -406,15 +414,15 @@ export function ChatInterno({ sidebarOpen, onAbrir }: { sidebarOpen: boolean; on
             </div>
           ) : (
             <Tabs defaultValue="atendentes" className="flex min-h-0 flex-1 flex-col animate-in fade-in">
-              <TabsList className="mx-4 mt-3 grid grid-cols-3">
-                <TabsTrigger value="atendentes" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Atendentes</TabsTrigger>
+              <TabsList className={cn("mx-4 mt-3 grid", condo ? "grid-cols-2" : "grid-cols-3")}>
+                <TabsTrigger value="atendentes" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">{condo ? "Pessoas" : "Atendentes"}</TabsTrigger>
                 <TabsTrigger value="grupos" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Grupos</TabsTrigger>
-                <TabsTrigger value="tarefas" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Tarefas</TabsTrigger>
+                {!condo && <TabsTrigger value="tarefas" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Tarefas</TabsTrigger>}
               </TabsList>
               <TabsContent value="atendentes" className="flex min-h-0 flex-1 flex-col">
                 <div className="relative mx-4 my-3">
                   <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Pesquise entre os atendentes..." className="pl-9" />
+                  <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder={condo ? "Pesquise moradores e equipe..." : "Pesquise entre os atendentes..."} className="pl-9" />
                 </div>
                 <ScrollArea className="min-h-0 flex-1">
                   <div className="space-y-0.5 px-2 pb-3">
@@ -493,9 +501,9 @@ export function ChatInterno({ sidebarOpen, onAbrir }: { sidebarOpen: boolean; on
                   </>
                 )}
               </TabsContent>
-              <TabsContent value="tarefas" className="flex min-h-0 flex-1 flex-col">
+              {!condo && <TabsContent value="tarefas" className="flex min-h-0 flex-1 flex-col">
                 <TarefasChat me={me} empresaId={empresaId} usuarios={usuarios} onAvisar={avisar} />
-              </TabsContent>
+              </TabsContent>}
             </Tabs>
           )}
         </div>,
@@ -507,7 +515,7 @@ export function ChatInterno({ sidebarOpen, onAbrir }: { sidebarOpen: boolean; on
 
 type Anexo = { url: string; nome: string; tipo: string };
 
-function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack, onModoMeet }: { me: string; empresaId: string; sel: Sel; usuarios: Row[]; isOnline: boolean; onBack: () => void; onModoMeet?: (modo: "off" | "chat" | "oculto") => void }) {
+function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack, onModoMeet, semTarefas }: { semTarefas?: boolean; me: string; empresaId: string; sel: Sel; usuarios: Row[]; isOnline: boolean; onBack: () => void; onModoMeet?: (modo: "off" | "chat" | "oculto") => void }) {
   const qc = useQueryClient();
   const nome = sel.tipo === "direto" ? String(pick(sel.outro, ["nome"], "Usuário")) : String(sel.canal["nome"] ?? "Grupo");
   const [canalId, setCanalId] = useState<string>(sel.tipo === "grupo" ? String(sel.canal["id"]) : "");
@@ -712,9 +720,9 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack, onModoMeet }
             <p className="text-xs text-muted-foreground">Grupo</p>
           )}
         </div>
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setNovaTarefa(true)} aria-label="Nova tarefa" title={sel.tipo === "direto" ? `Nova tarefa para ${nome}` : "Nova tarefa"}>
+        {!semTarefas && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setNovaTarefa(true)} aria-label="Nova tarefa" title={sel.tipo === "direto" ? `Nova tarefa para ${nome}` : "Nova tarefa"}>
           <ClipboardList className="h-4 w-4" />
-        </Button>
+        </Button>}
         <Button variant="ghost" size="icon" className="h-8 w-8" disabled={!canalId || !!chamada} onClick={() => void iniciarChamada(false)} aria-label="Chamada de áudio">
           <Phone className="h-4 w-4" />
         </Button>

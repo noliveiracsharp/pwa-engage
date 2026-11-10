@@ -5,6 +5,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { useTableRows } from "@/lib/crud";
 import { cn } from "@/lib/utils";
+import { ChatInterno } from "@/components/chat-interno/ChatInterno";
+import { VersaoSidebar } from "@/components/layout/NovidadesDialog";
 
 type P = { canRead: boolean; canCreate: boolean; canUpdate: boolean; canDelete: boolean };
 export type Secao = P & { key: string; label: string; icon: LucideIcon };
@@ -42,7 +44,7 @@ export function useSecoesCondominio(pagina: P): Secao[] {
   }, [funcoes, u, v, s, e, g, dc, av, pagina]);
 }
 
-export function CondominiosSidebar({ secoes, ativa, onChange, topo, direto }: { secoes: Secao[]; ativa: string; onChange: (k: string) => void; topo?: ReactNode; direto?: { nome: string; logo?: string | null; cargo?: string | null } | undefined }) {
+export function CondominiosSidebar({ secoes, ativa, onChange, topo, direto, chatCondominioId }: { chatCondominioId?: string | undefined; secoes: Secao[]; ativa: string; onChange: (k: string) => void; topo?: ReactNode; direto?: { nome: string; logo?: string | null; cargo?: string | null } | undefined }) {
   const [aberto, setAberto] = useState(false);
   // No acesso direto do condomínio, o botão de menu do cabeçalho abre/recolhe este menu.
   useEffect(() => {
@@ -129,6 +131,13 @@ export function CondominiosSidebar({ secoes, ativa, onChange, topo, direto }: { 
           </Button>
         )}
       </div>
+      {/* Só quando este é o menu único (morador/síndico no acesso direto): o menu da empresa, que já tem chat e versão, fica oculto. */}
+      {chatCondominioId && (
+        <div className="mt-auto hidden flex-col gap-1 border-t border-sidebar-border p-2 md:sticky md:bottom-0 md:flex">
+          <ChatInterno sidebarOpen={aberto} condominioId={chatCondominioId} />
+          <VersaoSidebar open={aberto} />
+        </div>
+      )}
     </aside>
     </TooltipProvider>
   );
