@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Trash2, Check, CheckCircle2, Download, FileText, HelpCircle, Loader2, Maximize2, Paperclip, Plus, X } from "lucide-react";
+import { Trash2, Check, CheckCircle2, Download, FileText, HelpCircle, Loader2, Maximize2, MessageSquare, Paperclip, Plus, X } from "lucide-react";
 import { PlannerPainel, ItemLinha, usePlannerItens } from "@/components/chat-interno/PlannerPainel";
 import { TarefaDetalhe, registrarEvento } from "@/components/chat-interno/TarefaDetalhe";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { diaDoItem, ordenar, PRIORIDADES, FAIXAS_PROGRESSO, type Prioridade, type PlannerItem } from "@/lib/planner";
+import { diaDoItem, lerEventos, ordenar, PRIORIDADES, FAIXAS_PROGRESSO, type Prioridade, type PlannerItem } from "@/lib/planner";
 import { progressoCor } from "@/lib/projetos";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -152,7 +152,7 @@ export function TarefasChat({ me, empresaId, usuarios, onAvisar }: {
         <div className="space-y-2 px-3 pb-3">
           {isLoading && <Loader2 className="mx-auto my-6 h-5 w-5 animate-spin text-muted-foreground" />}
           {aba === "minhas" && lista.length > 0 && <p className="pt-1 text-[11px] font-semibold text-warning">Aguardando seu aceite</p>}
-          {lista.map((t) => <CardTarefa key={String(t["id"])} t={t} me={me} nome={nome} onAtualizar={atualizar} onApagar={apagarTarefa} onPerguntar={perguntar} />)}
+          {lista.map((t) => <CardTarefa key={String(t["id"])} t={t} me={me} nome={nome} onAtualizar={atualizar} onApagar={apagarTarefa} onPerguntar={perguntar} onAbrir={() => setAberta(String(t["id"]))} />)}
           {!isLoading && lista.length === 0 && <p className="py-6 text-center text-sm text-muted-foreground">{aba === "minhas" ? "Nada aguardando seu aceite. As tarefas aceitas ficam na Agenda e no Quadro semanal." : "Nenhuma tarefa delegada."}</p>}
         </div>
       </div>
@@ -160,8 +160,8 @@ export function TarefasChat({ me, empresaId, usuarios, onAvisar }: {
   );
 }
 
-function CardTarefa({ t, me, nome, onAtualizar, onApagar, onPerguntar }: {
-  t: Row; me: string; nome: (id: unknown) => string; onApagar: (id: string, titulo: string) => Promise<void>;
+function CardTarefa({ t, me, nome, onAtualizar, onApagar, onPerguntar, onAbrir }: {
+  t: Row; onAbrir: () => void; me: string; nome: (id: unknown) => string; onApagar: (id: string, titulo: string) => Promise<void>;
   onAtualizar: (t: Row, patch: Record<string, unknown>, aviso: string) => Promise<void>;
   onPerguntar: (t: Row, pergunta: string) => Promise<void>;
 }) {
@@ -199,6 +199,22 @@ function CardTarefa({ t, me, nome, onAtualizar, onApagar, onPerguntar }: {
             : <a key={i} href={a.url} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-xs underline"><FileText className="h-3 w-3" />{a.nome}</a>)}
         </div>
       )}
+      {(() => {
+        const coms = lerEventos(t["comentarios"]).filter((e) => e.tipo === "comentario").slice(-3);
+        return (
+          <div className="mt-2 space-y-1.5">
+            {coms.map((e) => (
+              <div key={e.id} className="rounded-md border border-border bg-muted/50 p-2 text-xs">
+                <p className="text-[10px] text-muted-foreground"><b className="text-foreground">{nome(e.autor_id)}</b> • {new Date(e.em).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</p>
+                <p className="mt-0.5 whitespace-pre-wrap">{e.texto}</p>
+              </div>
+            ))}
+            <Button size="sm" variant="outline" className="w-full" onClick={onAbrir}>
+              <MessageSquare className="mr-1 h-4 w-4" /> {coms.length ? "Responder / ver histórico" : "Comentar / ver detalhes"}
+            </Button>
+          </div>
+        );
+      })()}
       {t["status"] === "recusada" && t["motivo_recusa"] ? <p className="mt-2 rounded bg-destructive/10 p-2 text-xs text-destructive">Motivo: {String(t["motivo_recusa"])}</p> : null}
 
       {souResp && t["status"] === "aguardando" && modo === null && (
