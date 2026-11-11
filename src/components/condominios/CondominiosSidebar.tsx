@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { Briefcase, FolderOpen, Users, Building2, LayoutDashboard, Megaphone, ChevronLeft, ChevronRight, ParkingSquare, Shuffle, Vote, BellRing, PackageSearch, type LucideIcon } from "lucide-react";
+import { Briefcase, FolderOpen, Users, Building2, LayoutDashboard, Megaphone, ChevronLeft, ChevronRight, ParkingSquare, Shuffle, Vote, BellRing, PackageSearch, Trees, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
@@ -22,6 +22,7 @@ const DEF = [
   { key: "enquetes", label: "Enquetes & Pesquisas", path: "/condominios/enquetes", icon: Vote },
   { key: "interfone", label: "Interfone Virtual", path: "/condominios/interfone", icon: BellRing },
   { key: "achados", label: "Achados & Perdidos", path: "/condominios/achados", icon: PackageSearch },
+  { key: "espacos", label: "Espaços & Reservas", path: "/condominios/espacos", icon: Trees },
 ] as const;
 
 /**
@@ -40,14 +41,15 @@ export function useSecoesCondominio(pagina: P): Secao[] {
   const eq = usePagePermissions(DEF[7].path);
   const it = usePagePermissions(DEF[8].path);
   const ap = usePagePermissions(DEF[9].path);
+  const es = usePagePermissions(DEF[10].path);
   return useMemo(() => {
     const existe = (path: string) => funcoes.some((f) => String(f["path"] ?? "") === path);
     const painel: Secao = { key: "painel", label: "Painel", icon: LayoutDashboard, canRead: pagina.canRead, canCreate: false, canUpdate: pagina.canUpdate, canDelete: false };
     return [painel, ...DEF.map((d, i) => {
-      const p = existe(d.path) ? [u, v, s, e, g, dc, av, eq, it, ap][i]! : pagina;
+      const p = existe(d.path) ? [u, v, s, e, g, dc, av, eq, it, ap, es][i]! : pagina;
       return { key: d.key, label: d.label, icon: d.icon, canRead: p.canRead, canCreate: p.canCreate, canUpdate: p.canUpdate, canDelete: p.canDelete };
     })].filter((x) => x.canRead);
-  }, [funcoes, u, v, s, e, g, dc, av, eq, it, ap, pagina]);
+  }, [funcoes, u, v, s, e, g, dc, av, eq, it, ap, es, pagina]);
 }
 
 export function CondominiosSidebar({ secoes, ativa, onChange, topo, direto, chatCondominioId }: { chatCondominioId?: string | undefined; secoes: Secao[]; ativa: string; onChange: (k: string) => void; topo?: ReactNode; direto?: { nome: string; logo?: string | null; cargo?: string | null } | undefined }) {

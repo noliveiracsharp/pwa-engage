@@ -46,7 +46,7 @@ export function EspacosPanel({ condominioId, perms }: { condominioId: string; pe
   }, [rows, busca]);
 
   const excluir = async (r: Row) => {
-    if (!(await confirmar({ titulo: "Excluir espaço", mensagem: `Excluir "${s(r["nome"])}"? Prefira inativar se ele já tiver histórico.`, destrutivo: true, confirmar: "Excluir" }))) return;
+    if (!(await confirmar({ title: "Excluir espaço", description: `Excluir "${s(r["nome"])}"? Prefira inativar se ele já tiver histórico.`, destructive: true }))) return;
     salvar.mutate({ id: s(r["id"]), excluir: true }, { onSuccess: () => toast.success("Espaço excluído.") });
   };
 
