@@ -606,16 +606,16 @@ function VotarDialog({ enquete, onClose, onVotou }: { enquete: Minha; onClose: (
                 <legend className="mb-2 font-medium">{q.texto}{q.obrigatoria ? <span className="text-destructive"> *</span> : <span className="text-xs text-muted-foreground"> (opcional)</span>}</legend>
                 {q.tipo === "unica" && q.opcoes.map((o) => {
                   const on = r?.opcoes?.[0] === o.id;
-                  return <button key={o.id} type="button" role="radio" aria-checked={on} onClick={() => set(q.id, { opcoes: [o.id] })}
+                  return <div key={o.id} className="space-y-2"><button type="button" role="radio" aria-checked={on} onClick={() => set(q.id, { opcoes: [o.id] })}
                     className={cn("flex w-full items-center gap-3 rounded-md border p-3 text-left text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", on ? "border-primary bg-primary/10 font-medium" : "hover:bg-muted")}>
                     <span className={cn("flex size-4 shrink-0 items-center justify-center rounded-full border", on && "border-primary")}>{on && <span className="size-2 rounded-full bg-primary" />}</span>{o.texto}
-                  </button>;
+                  </button>{(o.imagem || o.arquivo) && <div className="-mt-1 pl-10"><AnexosOpcao o={o} grande /></div>}</div>;
                 })}
                 {q.tipo === "multipla" && q.opcoes.map((o) => {
                   const on = !!r?.opcoes?.includes(o.id);
-                  return <label key={o.id} className={cn("flex cursor-pointer items-center gap-3 rounded-md border p-3 text-sm", on ? "border-primary bg-primary/10" : "hover:bg-muted")}>
+                  return <div key={o.id} className="space-y-2"><label className={cn("flex cursor-pointer items-center gap-3 rounded-md border p-3 text-sm", on ? "border-primary bg-primary/10" : "hover:bg-muted")}>
                     <Checkbox checked={on} onCheckedChange={(v) => set(q.id, { opcoes: v ? [...(r?.opcoes ?? []), o.id] : (r?.opcoes ?? []).filter((x) => x !== o.id) })} />{o.texto}
-                  </label>;
+                  </label>{(o.imagem || o.arquivo) && <div className="-mt-1 pl-10"><AnexosOpcao o={o} grande /></div>}</div>;
                 })}
                 {q.tipo === "escala" && <div className="flex gap-2" role="radiogroup" aria-label="Nota de 1 a 5">{[1, 2, 3, 4, 5].map((n) => (
                   <button key={n} type="button" role="radio" aria-checked={r?.nota === n} onClick={() => set(q.id, { nota: n })}
