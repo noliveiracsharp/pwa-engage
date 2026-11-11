@@ -28,6 +28,8 @@ import { CampoData } from "./CampoData";
 import { ordemNatural, s, useCondRows } from "./cond-data";
 import { buscarTodos, enfileirarAviso, inserirEmLotes, quandoConcluirEnvio, useFilaAvisos } from "./avisos-fila";
 import { AcaoIcone } from "./AcaoIcone";
+import { AssistenteAvisoIA } from "./AssistenteAvisoIA";
+import { Wand2 } from "lucide-react";
 
 type Opt = { value: string; label: string };
 type Perms = { canCreate: boolean; canUpdate?: boolean; canDelete?: boolean };
@@ -451,6 +453,7 @@ export function AvisoEditorDialog({ base, documento, condominioId, condominios, 
   const [tipo, setTipo] = useState(s(base?.["tipo"]) || "geral");
   const [titulo, setTitulo] = useState(s(base?.["titulo"]) || (documento ? documento.titulo.slice(0, 40) : ""));
   const [mensagem, setMensagem] = useState(s(base?.["mensagem"]) || (documento ? `<p>Um novo documento está disponível: <b>${documento.titulo}</b>.</p><p>Abra o anexo para consultar.</p>` : ""));
+  const [assistente, setAssistente] = useState(false);
   const [expira, setExpira] = useState(s(base?.["expira_em"]).slice(0, 10));
   const canaisBase = (base?.["canais"] as string[] | undefined) ?? ["whatsapp", "email"];
   const [whats, setWhats] = useState(canaisBase.includes("whatsapp"));
@@ -593,8 +596,12 @@ export function AvisoEditorDialog({ base, documento, condominioId, condominios, 
               <p className="mt-1 text-xs text-muted-foreground">Em branco, o aviso não expira. Depois dessa data ele deixa de aparecer como vigente, mas não é excluído.</p>
             </div>
             <div>
-              <Label className="mb-1.5 block">Texto</Label>
+              <div className="mb-1.5 flex items-center justify-between gap-2"><Label>Texto</Label><Button type="button" size="sm" variant="outline" onClick={() => setAssistente(true)} disabled={salvando} aria-label="Assistente de IA para redigir o comunicado" title="Redigir com IA"><Wand2 className="size-4 text-primary" aria-hidden /> Redigir com IA</Button></div>
               <TextoRico value={mensagem} onChange={setMensagem} minHeight={140} placeholder="Escreva o comunicado, cole ou arraste uma imagem…" enviarImagem={uploadAnexo} />
+              <AssistenteAvisoIA open={assistente} onOpenChange={setAssistente} condominio={condominios.find((c) => c.value === condominioId)?.label ?? ""} onAplicar={async (sg) => {
+                if ((titulo.trim() || htmlParaTexto(mensagem).trim()) && !(await confirmar({ title: "Substituir texto", description: "O título e o texto atuais serão trocados pela sugestão. Continuar?" }))) return;
+                setTitulo(sg.titulo); setMensagem(sg.html); if (sg.tipo) setTipo(sg.tipo); toast.success("Sugestão aplicada. Revise antes de enviar.");
+              }} />
               <p className="mt-1 text-xs text-muted-foreground">Use {"{{nome}}"}, {"{{unidade}}"} e {"{{condominio}}"} para personalizar. Imagens no texto vão como foto no WhatsApp; a formatação vira texto simples.</p>
             </div>
             <div>
