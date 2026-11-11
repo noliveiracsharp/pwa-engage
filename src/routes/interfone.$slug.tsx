@@ -30,7 +30,7 @@ export const Route = createFileRoute("/interfone/$slug")({
 const db = supabase as any;
 type Unid = { id: string; numero: string };
 type Bloco = { id: string; nome: string; unidades: Unid[] };
-type Dados = { nome: string; logo: string; administracao: boolean; blocos: Bloco[] };
+type Dados = { nome: string; logo: string; administracao: boolean; geo?: boolean; blocos: Bloco[] };
 type Alvo = { destino: "unidade" | "portaria" | "administracao"; unidade?: string; rotulo: string };
 type Status = { status: string; etapa?: number; total?: number; central?: boolean; sala?: string };
 
@@ -82,7 +82,7 @@ function Interfone() {
       {!alvo ? (
         <Escolher dados={dados} onEscolher={setAlvo} />
       ) : !chamada ? (
-        <Identificar slug={slug} alvo={alvo} onVoltar={() => setAlvo(null)} onChamou={(c) => { setChamada(c); setSt({ status: "chamando", etapa: 1 }); }} />
+        <Identificar slug={slug} exigeGeo={dados.geo === true} alvo={alvo} onVoltar={() => setAlvo(null)} onChamou={(c) => { setChamada(c); setSt({ status: "chamando", etapa: 1 }); }} />
       ) : st?.status === "chamando" ? (
         <div className="space-y-6 text-center" aria-live="polite">
           <div className="mx-auto flex size-24 items-center justify-center rounded-full bg-primary/15">
@@ -173,7 +173,7 @@ function Escolher({ dados, onEscolher }: { dados: Dados; onEscolher: (a: Alvo) =
   );
 }
 
-function Identificar({ slug, alvo, onVoltar, onChamou }: { slug: string; alvo: Alvo; onVoltar: () => void; onChamou: (c: { id: string; token: string }) => void }) {
+function Identificar({ slug, exigeGeo, alvo, onVoltar, onChamou }: { slug: string; exigeGeo: boolean; alvo: Alvo; onVoltar: () => void; onChamou: (c: { id: string; token: string }) => void }) {
   const [nome, setNome] = useState("");
   const [motivo, setMotivo] = useState("");
   const [cam, setCam] = useState<MediaStream | null>(null);
@@ -201,7 +201,15 @@ function Identificar({ slug, alvo, onVoltar, onChamou }: { slug: string; alvo: A
   const chamar = async () => {
     if (nome.trim().length < 2) return setErro("Informe seu nome.");
     setEnviando(true); setErro("");
-    const { data, error } = await db.rpc("cond_interfone_chamar", { p_slug: slug, p_destino: alvo.destino, p_unidade: alvo.unidade ?? null, p_nome: nome, p_motivo: motivo, p_foto: foto() });
+    let pos: { lat: number; lng: number } | null = null;
+    if (exigeGeo) {
+      pos = await new Promise((ok) => {
+        if (!navigator.geolocation) return ok(null);
+        navigator.geolocation.getCurrentPosition((p) => ok({ lat: p.coords.latitude, lng: p.coords.longitude }), () => ok(null), { enableHighAccuracy: true, timeout: 15000 });
+      });
+      if (!pos) { setEnviando(false); return setErro("Permita a localização: este interfone só funciona no portão do condomínio."); }
+    }
+    const { data, error } = await db.rpc("cond_interfone_chamar", { p_slug: slug, p_destino: alvo.destino, p_unidade: alvo.unidade ?? null, p_nome: nome, p_motivo: motivo, p_foto: foto(), p_lat: pos?.lat ?? null, p_lng: pos?.lng ?? null });
     setEnviando(false);
     if (error) return setErro(error.message || "Não foi possível chamar agora.");
     cam?.getTracks().forEach((t) => t.stop());
