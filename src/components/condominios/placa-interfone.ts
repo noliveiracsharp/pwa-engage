@@ -69,3 +69,22 @@ export async function gerarPlacaInterfone(nome: string, qrDataUrl: string): Prom
 
   return cv.toDataURL("image/png");
 }
+
+// Folha A4 (300 DPI) com 4 placas em grade 2×2 e linhas tracejadas de corte — igual à impressão.
+export async function gerarFolhaA4Placas(placaPng: string): Promise<string> {
+  const FW = 2480, FH = 3508, cw = FW / 2, ch = FH / 2;
+  const pw = Math.round((95 / 210) * FW), ph = Math.round((142.5 / 297) * FH);
+  const cv = document.createElement("canvas"); cv.width = FW; cv.height = FH;
+  const c = cv.getContext("2d")!;
+  c.fillStyle = "#ffffff"; c.fillRect(0, 0, FW, FH);
+  const img = await carregar(placaPng);
+  for (let i = 0; i < 4; i++) {
+    const x = (i % 2) * cw + (cw - pw) / 2, y = Math.floor(i / 2) * ch + (ch - ph) / 2;
+    c.drawImage(img, x, y, pw, ph);
+  }
+  c.strokeStyle = "#999999"; c.lineWidth = 4; c.setLineDash([24, 18]);
+  c.beginPath(); c.moveTo(cw, 0); c.lineTo(cw, FH); c.moveTo(0, ch); c.lineTo(FW, ch); c.stroke();
+  c.setLineDash([]); c.fillStyle = "#999999"; c.font = "400 28px system-ui, sans-serif"; c.textAlign = "left"; c.textBaseline = "top";
+  c.fillText("✂ recorte nas linhas tracejadas", cw + 24, 24);
+  return cv.toDataURL("image/png");
+}
