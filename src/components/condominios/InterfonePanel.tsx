@@ -13,6 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Row } from "@/lib/row";
 import { s } from "./cond-data";
+import { gerarPlacaInterfone } from "./placa-interfone";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabase as any;
@@ -55,7 +56,7 @@ export function InterfonePanel({ condominioId, nomeCondominio, blocos, unidades,
   }, [cfgQ.data, cfgQ.isLoading, nomeCondominio, condominioId]);
 
   const link = typeof window !== "undefined" && f.slug ? `${window.location.origin}/interfone/${f.slug}` : "";
-  useEffect(() => { if (link) void QRCode.toDataURL(link, { width: 480, margin: 2 }).then(setQr); }, [link]);
+  useEffect(() => { if (link) void QRCode.toDataURL(link, { width: 900, margin: 1, errorCorrectionLevel: "H" }).then(setQr); }, [link]);
 
   const salvar = async (): Promise<void> => {
     if (!/^[a-z0-9-]{3,60}$/.test(f.slug)) { toast.error("Endereço: use de 3 a 60 letras minúsculas, números ou hífen."); return; }
@@ -82,15 +83,22 @@ export function InterfonePanel({ condominioId, nomeCondominio, blocos, unidades,
     );
   };
 
-  const imprimir = () => {
+  const baixar = async () => {
+    const png = await gerarPlacaInterfone(nomeCondominio, qr);
+    const a = document.createElement("a"); a.href = png; a.download = `placa-interfone-${f.slug}.png`; a.click();
+  };
+  const imprimir = async () => {
+    const png = await gerarPlacaInterfone(nomeCondominio, qr);
     const w = document.createElement("iframe");
     w.style.position = "fixed"; w.style.width = "0"; w.style.height = "0"; w.style.border = "0";
     document.body.appendChild(w);
     const d = w.contentDocument!;
     d.open();
-    d.write(`<html><head><title>Interfone</title></head><body style="font-family:sans-serif;text-align:center;padding:40px"><h1 style="margin:0">${nomeCondominio.replace(/</g, "")}</h1><p style="font-size:20px">Interfone virtual — aponte a câmera do celular</p><img src="${qr}" style="width:320px;height:320px"/><p style="font-size:14px;color:#555">Chame a unidade, a portaria ou a administração por vídeo.<br/>Nenhum dado de morador é exibido.</p></body></html>`);
+    d.write(`<html><head><title>Interfone</title><style>@page{size:100mm 150mm;margin:0}html,body{margin:0}img{width:100mm;height:150mm;display:block}</style></head><body><img src="${png}"/></body></html>`);
     d.close();
-    setTimeout(() => { w.contentWindow?.print(); setTimeout(() => w.remove(), 1000); }, 300);
+    const img = d.querySelector("img")!;
+    const go = () => { w.contentWindow?.print(); setTimeout(() => w.remove(), 1000); };
+    if (img.complete) setTimeout(go, 100); else img.onload = go;
   };
 
   const rotUnid = (id: unknown) => {
@@ -164,8 +172,8 @@ export function InterfonePanel({ condominioId, nomeCondominio, blocos, unidades,
             {!f.ativo && <p className="text-xs text-warning">Ligue e salve para o QR Code funcionar.</p>}
             <div className="flex flex-wrap justify-center gap-2">
               <Button size="sm" variant="outline" onClick={() => { void navigator.clipboard.writeText(link); toast.success("Link copiado."); }}><Copy className="size-4" /> Copiar</Button>
-              <Button size="sm" variant="outline" asChild><a href={qr} download={`interfone-${f.slug}.png`}><Download className="size-4" /> Baixar</a></Button>
-              <Button size="sm" variant="outline" onClick={imprimir} disabled={!qr}><Printer className="size-4" /> Imprimir</Button>
+              <Button size="sm" variant="outline" onClick={() => void baixar()} disabled={!qr}><Download className="size-4" /> Baixar placa</Button>
+              <Button size="sm" variant="outline" onClick={() => void imprimir()} disabled={!qr}><Printer className="size-4" /> Imprimir placa</Button>
               <Button size="sm" variant="outline" asChild><a href={link} target="_blank" rel="noreferrer"><ExternalLink className="size-4" /> Testar</a></Button>
             </div>
           </div>
