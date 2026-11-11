@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Camera, Images, Pencil, Plus, Search, Star, Trash2, Trees, Users } from "lucide-react";
+import { BadgeCheck, Briefcase, Camera, Hammer, Images, Luggage, Pencil, Plus, Search, Settings2, Star, Trash2, Trees, Truck, Users, type LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +22,29 @@ type Perms = { canCreate: boolean; canUpdate: boolean; canDelete: boolean };
 type Foto = { url: string; legenda?: string };
 const fotosDe = (r: Row | null): Foto[] => (Array.isArray(r?.["fotos"]) ? (r!["fotos"] as Foto[]).filter((f) => f?.url) : []);
 
+type Tipo = "social" | "operacional";
+type Icone = "mudanca" | "reforma" | "locacao" | "prestador" | "visitante" | "outro";
+const ICONES: Record<Icone, { label: string; Icon: LucideIcon; cor: string }> = {
+  locacao: { label: "Locação temporária", Icon: Luggage, cor: "text-chart-1" },
+  mudanca: { label: "Mudança", Icon: Truck, cor: "text-chart-2" },
+  outro: { label: "Outro", Icon: Settings2, cor: "text-muted-foreground" },
+  prestador: { label: "Prestador de serviço", Icon: Briefcase, cor: "text-chart-3" },
+  reforma: { label: "Reforma", Icon: Hammer, cor: "text-chart-4" },
+  visitante: { label: "Visitante", Icon: BadgeCheck, cor: "text-chart-5" },
+};
+/** Registros antigos sem tipo: deduz pelo nome. */
+function inferir(nome: string): { tipo: Tipo; icone: Icone } | null {
+  const n = nome.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  if (/mudan/.test(n)) return { tipo: "operacional", icone: "mudanca" };
+  if (/reform|obra/.test(n)) return { tipo: "operacional", icone: "reforma" };
+  if (/loca|short|hosped|temporar/.test(n)) return { tipo: "operacional", icone: "locacao" };
+  if (/prestador|servico/.test(n)) return { tipo: "operacional", icone: "prestador" };
+  if (/visit/.test(n)) return { tipo: "operacional", icone: "visitante" };
+  return null;
+}
+const tipoDe = (r: Row | null): Tipo => (r?.["tipo"] === "operacional" || r?.["tipo"] === "social" ? (r["tipo"] as Tipo) : inferir(s(r?.["nome"]))?.tipo ?? "social");
+const iconeDe = (r: Row | null): Icone => (s(r?.["icone"]) in ICONES ? (s(r?.["icone"]) as Icone) : inferir(s(r?.["nome"]))?.icone ?? "outro");
+
 async function enviarFoto(original: File): Promise<string | null> {
   const file = await comprimirImagem(original, "chat");
   const path = `espacos/${crypto.randomUUID()}.${(original.name.split(".").pop() || "jpg").toLowerCase()}`;
@@ -37,13 +60,15 @@ export function EspacosPanel({ condominioId, perms }: { condominioId: string; pe
   const [busca, setBusca] = useState("");
   const [editar, setEditar] = useState<Row | "novo" | null>(null);
   const [galeria, setGaleria] = useState<Foto[] | null>(null);
+  const [aba, setAba] = useState<"todos" | Tipo>("todos");
+  const contagem = useMemo(() => ({ todos: rows.length, social: rows.filter((r) => tipoDe(r) === "social").length, operacional: rows.filter((r) => tipoDe(r) === "operacional").length }), [rows]);
 
   const lista = useMemo(() => {
     const t = busca.trim().toLowerCase();
     return rows
-      .filter((r) => !t || s(r["nome"]).toLowerCase().includes(t))
+      .filter((r) => (aba === "todos" || tipoDe(r) === aba) && (!t || s(r["nome"]).toLowerCase().includes(t)))
       .sort((a, b) => Number(a["ordem"] ?? 0) - Number(b["ordem"] ?? 0) || ordemNatural(s(a["nome"]), s(b["nome"])));
-  }, [rows, busca]);
+  }, [rows, busca, aba]);
 
   const excluir = async (r: Row) => {
     if (!(await confirmar({ title: "Excluir espaço", description: `Excluir "${s(r["nome"])}"? Prefira inativar se ele já tiver histórico.`, destructive: true }))) return;
@@ -57,7 +82,16 @@ export function EspacosPanel({ condominioId, perms }: { condominioId: string; pe
           <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar espaço..." className="pl-8" aria-label="Buscar espaço" />
         </div>
-        {perms.canCreate && <Button onClick={() => setEditar("novo")}><Plus className="size-4" /> Novo espaço</Button>}
+        {perms.canCreate && <Button onClick={() => setEditar("novo")}><Plus className="size-4" /> Novo cadastro</Button>}
+      </div>
+
+      <div role="tablist" aria-label="Tipo" className="inline-flex flex-wrap gap-1 rounded-lg bg-muted p-1">
+        {([["todos", "Todos"], ["social", "Espaços sociais"], ["operacional", "Operacionais"]] as const).map(([k, l]) => (
+          <button key={k} type="button" role="tab" aria-selected={aba === k} onClick={() => setAba(k)}
+            className={cn("rounded-md px-3 py-1.5 text-sm transition-colors", aba === k ? "bg-background font-medium shadow-sm" : "text-muted-foreground hover:text-foreground")}>
+            {l} <span className="ml-1 text-xs text-muted-foreground">{contagem[k]}</span>
+          </button>
+        ))}
       </div>
 
       {isLoading ? (
@@ -72,10 +106,14 @@ export function EspacosPanel({ condominioId, perms }: { condominioId: string; pe
           {lista.map((r) => {
             const fotos = fotosDe(r);
             const ativo = r["ativo"] !== false;
+            const tipo = tipoDe(r);
+            const ic = ICONES[iconeDe(r)];
             return (
               <div key={s(r["id"])} className={cn("overflow-hidden rounded-lg border bg-card", !ativo && "opacity-60")}>
                 <button type="button" className="relative block aspect-video w-full bg-muted" onClick={() => fotos.length && setGaleria(fotos)} aria-label="Ver fotos">
-                  {fotos[0] ? <img src={fotos[0].url} alt={s(r["nome"])} loading="lazy" className="size-full object-cover" /> : <Trees className="absolute inset-0 m-auto size-10 text-muted-foreground opacity-40" />}
+                  {fotos[0] ? <img src={fotos[0].url} alt={s(r["nome"])} loading="lazy" className="size-full object-cover" /> : tipo === "operacional"
+                    ? <span className="absolute inset-0 flex flex-col items-center justify-center gap-2"><ic.Icon className={cn("size-12", ic.cor)} /><span className="text-xs text-muted-foreground">{ic.label}</span></span>
+                    : <Trees className="absolute inset-0 m-auto size-10 text-muted-foreground opacity-40" />}
                   {fotos.length > 1 && <span className="absolute bottom-2 right-2 flex items-center gap-1 rounded bg-background/85 px-1.5 py-0.5 text-xs"><Images className="size-3" />{fotos.length}</span>}
                 </button>
                 <div className="space-y-2 p-3">
@@ -88,6 +126,7 @@ export function EspacosPanel({ condominioId, perms }: { condominioId: string; pe
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     <Badge variant={ativo ? "default" : "secondary"}>{ativo ? "Ativo" : "Inativo"}</Badge>
+                    <Badge variant="secondary">{tipo === "social" ? "Espaço social" : "Operacional"}</Badge>
                     <Badge variant="outline">{r["permite_agendamento"] !== false ? "Permite reserva" : "Uso livre"}</Badge>
                     {r["capacidade_pessoas"] ? <Badge variant="outline" className="gap-1"><Users className="size-3" />{s(r["capacidade_pessoas"])}</Badge> : null}
                   </div>
@@ -130,6 +169,8 @@ function EspacoSheet({ registro, proximaOrdem, onClose, onSalvar, salvando }: {
   onSalvar: (valores: Row, id?: string) => void;
 }) {
   const [nome, setNome] = useState(s(registro?.["nome"]));
+  const [tipo, setTipo] = useState<Tipo>(tipoDe(registro));
+  const [icone, setIcone] = useState<Icone>(iconeDe(registro));
   const [ativo, setAtivo] = useState(registro?.["ativo"] !== false);
   const [reserva, setReserva] = useState(registro?.["permite_agendamento"] !== false);
   const [capacidade, setCapacidade] = useState(s(registro?.["capacidade_pessoas"]));
@@ -150,7 +191,8 @@ function EspacoSheet({ registro, proximaOrdem, onClose, onSalvar, salvando }: {
     if (!nome.trim()) { toast.error("Informe o nome do espaço."); return; }
     const cap = capacidade.trim() ? Math.max(1, Math.round(Number(capacidade))) : null;
     onSalvar({
-      nome: nome.trim(), ativo, permite_agendamento: reserva, capacidade_pessoas: Number.isFinite(cap) ? cap : null,
+      nome: nome.trim(), tipo, icone: tipo === "operacional" ? icone : null, ativo, permite_agendamento: reserva,
+      capacidade_pessoas: tipo === "social" && Number.isFinite(cap) ? cap : null,
       descricao: descricao.trim() || null, fotos, updated_at: new Date().toISOString(),
       ...(registro ? {} : { ordem: proximaOrdem }),
     }, registro ? s(registro["id"]) : undefined);
@@ -159,8 +201,35 @@ function EspacoSheet({ registro, proximaOrdem, onClose, onSalvar, salvando }: {
   return (
     <Sheet open onOpenChange={(o) => !o && onClose()}>
       <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-full lg:w-[60vw] lg:max-w-[60vw]" onInteractOutside={(e) => e.preventDefault()}>
-        <SheetHeader className="border-b p-4"><SheetTitle>{registro ? "Editar espaço" : "Novo espaço"}</SheetTitle></SheetHeader>
+        <SheetHeader className="border-b p-4"><SheetTitle>{registro ? "Editar cadastro" : "Novo cadastro"}</SheetTitle></SheetHeader>
         <div className="flex-1 space-y-4 overflow-y-auto p-4">
+          <div className="space-y-1.5">
+            <Label>Tipo *</Label>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {([["social", "Espaço social / lazer", "Salão, churrasqueira, academia, piscina...", Trees], ["operacional", "Operacional / serviços", "Mudança, reforma, locação temporária, visitantes...", Settings2]] as const).map(([k, t, d, I]) => (
+                <button key={k} type="button" aria-pressed={tipo === k} onClick={() => setTipo(k)}
+                  className={cn("flex items-start gap-3 rounded-md border p-3 text-left text-sm transition-colors", tipo === k ? "border-primary bg-primary/5" : "hover:bg-muted")}>
+                  <I className="mt-0.5 size-5 shrink-0" /><span><span className="font-medium">{t}</span><span className="block text-xs text-muted-foreground">{d}</span></span>
+                </button>
+              ))}
+            </div>
+          </div>
+          {tipo === "operacional" && (
+            <div className="space-y-1.5">
+              <Label>Natureza</Label>
+              <div className="flex flex-wrap gap-2">
+                {(Object.keys(ICONES) as Icone[]).sort((a, b) => ICONES[a].label.localeCompare(ICONES[b].label, "pt-BR")).map((k) => {
+                  const it = ICONES[k];
+                  return (
+                    <button key={k} type="button" aria-pressed={icone === k} onClick={() => setIcone(k)}
+                      className={cn("flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm", icone === k ? "border-primary bg-primary/5" : "hover:bg-muted")}>
+                      <it.Icon className={cn("size-4", it.cor)} />{it.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           <div className="space-y-1.5">
             <Label htmlFor="esp-nome">Nome *</Label>
             <Input id="esp-nome" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex.: Salão de Festas, Churrasqueira 1" />
@@ -175,17 +244,17 @@ function EspacoSheet({ registro, proximaOrdem, onClose, onSalvar, salvando }: {
               <Switch checked={reserva} onCheckedChange={setReserva} />
             </label>
           </div>
-          <div className="space-y-1.5">
+          {tipo === "social" && <div className="space-y-1.5">
             <Label htmlFor="esp-cap">Capacidade (pessoas)</Label>
             <Input id="esp-cap" type="number" min={1} value={capacidade} onChange={(e) => setCapacidade(e.target.value)} placeholder="Opcional" className="max-w-40" />
-          </div>
+          </div>}
           <div className="space-y-1.5">
             <Label htmlFor="esp-desc">Descrição / orientações</Label>
             <Textarea id="esp-desc" rows={3} value={descricao} onChange={(e) => setDescricao(e.target.value)} placeholder="Ex.: fica no térreo da Torre A, possui geladeira e 10 mesas." />
           </div>
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <Label>Fotos do local</Label>
+              <Label>{tipo === "social" ? "Fotos do local" : "Imagens (opcional)"}</Label>
               <UploadInfo perfil="chat" />
             </div>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
