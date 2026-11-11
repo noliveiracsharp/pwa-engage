@@ -37,3 +37,15 @@ describe("interfone", () => {
     expect(lerDiscagem("abc")).toBeNull();
   });
 });
+
+import { mensagemInterfoneWhats } from "../interfone";
+describe("aviso do interfone por WhatsApp", () => {
+  it("leva unidade, visitante, motivo e link", () => {
+    const t = mensagemInterfoneWhats({ nome: "Ana", condominio: "Res. Flores", unidade: "Torre A · Unidade 302", visitante: "Carlos", motivo: "Entrega", link: "https://x.co" });
+    expect(t).toContain("Res. Flores");
+    expect(t).toContain("Torre A · Unidade 302");
+    expect(t).toContain("Visitante: Carlos");
+    expect(t).toContain("Motivo: Entrega");
+    expect(t).toContain("https://x.co");
+  });
+});

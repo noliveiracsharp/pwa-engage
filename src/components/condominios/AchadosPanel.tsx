@@ -95,13 +95,13 @@ function Gestao({ condominioId, perms }: { condominioId: string; perms: Perms })
   }, [q.data, busca, status]);
 
   const marcarDoado = async (a: Row) => {
-    if (!(await confirmar({ titulo: "Marcar como doado/descartado?", descricao: "Use depois do prazo de guarda definido no regimento." }))) return;
+    if (!(await confirmar({ title: "Marcar como doado/descartado?", description: "Use depois do prazo de guarda definido no regimento." }))) return;
     const r = await db.from("cond_achados").update({ status: "doado" }).eq("id", a["id"]);
     if (r.error) return void toast.error(r.error.message);
     recarregar();
   };
   const excluir = async (a: Row) => {
-    if (!(await confirmar({ titulo: "Excluir este item?", descricao: "O registro some do histórico.", destrutivo: true }))) return;
+    if (!(await confirmar({ title: "Excluir este item?", description: "O registro some do histórico.", destructive: true }))) return;
     const r = await db.from("cond_achados").delete().eq("id", a["id"]);
     if (r.error) return void toast.error(r.error.message);
     recarregar();
