@@ -166,3 +166,63 @@ async function modeloIA(a: Autorizacao) {
   }
   return { model, providerOptions };
 }
+
+/** Assistente de IA para redigir avisos de condomínio (título, tipo e texto HTML). */
+export const redigirAvisoIA = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({
+    ideia: z.string().min(5).max(3000),
+    tom: z.enum(["informativo", "cordial", "firme", "urgente"]),
+    condominio: z.string().max(200),
+    token: z.string().min(10).max(5000),
+  }).parse(d))
+  .handler(async ({ data }): Promise<{ titulo: string; tipo: string; html: string; erro?: string }> => {
+    const vazio = { titulo: "", tipo: "geral", html: "" };
+    const { createClient } = await import("@supabase/supabase-js");
+    const { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } = await import("@/integrations/supabase/client");
+    const db = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, { auth: { persistSession: false, autoRefreshToken: false }, global: { headers: { Authorization: `Bearer ${data.token}` } } });
+    const { data: u, error: ue } = await db.auth.getUser(data.token);
+    if (ue || !u.user) return { ...vazio, erro: "Sessão expirada. Entre novamente." };
+    let a: Autorizacao = { permitido: true, origem: "plataforma" };
+    const { data: auth, error } = await db.rpc("ia_autorizar" as never, { _recurso: "controller" } as never);
+    if (!error && auth) a = auth as unknown as Autorizacao;
+    if (!a.permitido) return { ...vazio, erro: a.motivo === "cota" ? `Limite de ${a.cota} usos de IA no mês atingido.` : "A IA está nos planos Pro e Enterprise ou com a chave própria da empresa." };
+
+    const TONS = {
+      informativo: "informativo e neutro: claro, direto e profissional",
+      cordial: "cordial e educativo: gentil, explica o porquê da regra",
+      firme: "firme, de notificação: respeitoso, sem ofensas, cita a regra e as consequências sem expor ninguém",
+      urgente: "urgente, de alerta: frases curtas, a ação esperada logo no início",
+    } as const;
+    const system = "Você é redator de comunicados de uma administradora de condomínios no Brasil. Escreva em português do Brasil, linguagem simples para todos os moradores. Use somente os fatos fornecidos: não invente datas, horários, nomes, valores ou empresas; se faltar algo importante, deixe um marcador como [informar horário]. Nunca exponha nomes ou unidades de moradores em casos de reclamação (LGPD). Responda somente com json válido.";
+    const prompt = `Condomínio: ${data.condominio || "(não informado)"}
+Tom: ${TONS[data.tom]}
+O que o síndico quer comunicar: ${data.ideia}
+
+Monte o aviso:
+- titulo: até 80 caracteres, objetivo.
+- tipo: um destes valores: geral, emergencia, assembleia, obras, financeiro.
+- html: corpo em HTML simples (apenas <p>, <b>, <i>, <ul>, <li>, <br>), começando com "Prezados moradores," ou saudação adequada ao tom, parágrafos curtos, lista para datas/horários/orientações quando houver, e encerrando com "Atenciosamente,<br>Administração do {{condominio}}". Até 180 palavras.
+
+Formato json: {"titulo":"...","tipo":"...","html":"..."}`;
+
+    const { streamText } = await import("ai");
+    try {
+      const { model, providerOptions } = await modeloIA(a);
+      if (!model) return { ...vazio, erro: "Provedor de IA indisponível." };
+      const r = streamText({ model, maxRetries: 0, system, prompt, ...(providerOptions ? { providerOptions: providerOptions as never } : {}) });
+      const bruto = (await r.text).trim();
+      const m = bruto.match(/\{[\s\S]*\}/);
+      const j = m ? (JSON.parse(m[0]) as { titulo?: unknown; tipo?: unknown; html?: unknown }) : null;
+      const tipos = ["geral", "emergencia", "assembleia", "obras", "financeiro"];
+      const tipo = tipos.includes(String(j?.tipo)) ? String(j?.tipo) : "geral";
+      const html = String(j?.html ?? "").replace(/<(script|style|iframe)[\s\S]*?<\/\1>/gi, "").replace(/\son\w+="[^"]*"/gi, "").slice(0, 8000);
+      if (!html) return { ...vazio, erro: "A IA não retornou o texto. Tente novamente." };
+      return { titulo: String(j?.titulo ?? "").slice(0, 150), tipo, html };
+    } catch (e) {
+      const status = (e as { statusCode?: number }).statusCode;
+      console.error("redigirAvisoIA", e);
+      if (status === 402) return { ...vazio, erro: "Créditos de IA esgotados. Tente novamente mais tarde." };
+      if (status === 429) return { ...vazio, erro: "Muitas solicitações. Tente novamente em instantes." };
+      return { ...vazio, erro: "Não foi possível redigir o aviso agora." };
+    }
+  });
