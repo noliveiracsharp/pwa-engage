@@ -423,6 +423,9 @@ export function PlannerPainel({ me, empresaId, usuarios, onFechar, embutido, aco
                   </div>
                 </div>
               )}
+            </PopoverContent>
+          </Popover>
+            )}
           </div>
 
           <div>
