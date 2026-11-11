@@ -600,7 +600,12 @@ export function AvisoEditorDialog({ base, documento, condominioId, condominios, 
               <TextoRico value={mensagem} onChange={setMensagem} minHeight={140} placeholder="Escreva o comunicado, cole ou arraste uma imagem…" enviarImagem={uploadAnexo} />
               <AssistenteAvisoIA open={assistente} onOpenChange={setAssistente} condominio={condominios.find((c) => c.value === condominioId)?.label ?? ""} onAplicar={async (sg) => {
                 if ((titulo.trim() || htmlParaTexto(mensagem).trim()) && !(await confirmar({ title: "Substituir texto", description: "O título e o texto atuais serão trocados pela sugestão. Continuar?" }))) return;
-                setTitulo(sg.titulo); setMensagem(sg.html); if (sg.tipo) setTipo(sg.tipo); toast.success("Sugestão aplicada. Revise antes de enviar.");
+                let html = sg.html;
+                if (sg.imagem) {
+                  try { const b = await (await fetch(sg.imagem)).blob(); const url = await uploadAnexo(new File([b], "aviso-ia.png", { type: b.type || "image/png" })); if (url) html = `<p><img src="${url}" alt="Ilustração do aviso"></p>` + html; }
+                  catch { toast.error("Não foi possível salvar a imagem; o texto foi aplicado."); }
+                }
+                setTitulo(sg.titulo); setMensagem(html); if (sg.tipo) setTipo(sg.tipo); toast.success("Sugestão aplicada. Revise antes de enviar.");
               }} />
               <p className="mt-1 text-xs text-muted-foreground">Use {"{{nome}}"}, {"{{unidade}}"} e {"{{condominio}}"} para personalizar. Imagens no texto vão como foto no WhatsApp; a formatação vira texto simples.</p>
             </div>

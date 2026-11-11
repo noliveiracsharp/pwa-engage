@@ -226,3 +226,33 @@ Formato json: {"titulo":"...","tipo":"...","html":"..."}`;
       return { ...vazio, erro: "Não foi possível redigir o aviso agora." };
     }
   });
+
+/** IA: gera uma imagem ilustrativa (sem texto) para um aviso de condomínio. Devolve data URL. */
+export const gerarImagemAvisoIA = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ ideia: z.string().min(5).max(3000), token: z.string().min(10).max(5000) }).parse(d))
+  .handler(async ({ data }): Promise<{ imagem: string; erro?: string }> => {
+    const { createClient } = await import("@supabase/supabase-js");
+    const { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } = await import("@/integrations/supabase/client");
+    const db = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, { auth: { persistSession: false, autoRefreshToken: false }, global: { headers: { Authorization: `Bearer ${data.token}` } } });
+    const { data: u, error: ue } = await db.auth.getUser(data.token);
+    if (ue || !u.user) return { imagem: "", erro: "Sessão expirada. Entre novamente." };
+    const { data: auth, error } = await db.rpc("ia_autorizar" as never, { _recurso: "controller" } as never);
+    const a = (!error && auth ? auth : { permitido: true }) as Autorizacao;
+    if (!a.permitido) return { imagem: "", erro: a.motivo === "cota" ? `Limite de ${a.cota} usos de IA no mês atingido.` : "A IA está nos planos Pro e Enterprise." };
+    const chave = process.env["LOVABLE_API_KEY"];
+    if (!chave) return { imagem: "", erro: "Geração de imagem indisponível no momento." };
+    const prompt = `Ilustração horizontal moderna, limpa e profissional para um comunicado de condomínio residencial no Brasil sobre: ${data.ideia}. Estilo vetorial/3D suave, cores agradáveis, fundo claro. NÃO escreva nenhum texto, letra ou número na imagem. Não mostre rostos identificáveis.`;
+    try {
+      const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${chave}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ model: "google/gemini-2.5-flash-image", messages: [{ role: "user", content: prompt }], modalities: ["image", "text"] }),
+      });
+      if (r.status === 402) return { imagem: "", erro: "Créditos de IA esgotados. Tente novamente mais tarde." };
+      if (r.status === 429) return { imagem: "", erro: "Muitas solicitações. Tente novamente em instantes." };
+      if (!r.ok) { console.error("gerarImagemAvisoIA", r.status, await r.text()); return { imagem: "", erro: "Não foi possível gerar a imagem agora." }; }
+      const j = (await r.json()) as { choices?: { message?: { images?: { image_url?: { url?: string } }[] } }[] };
+      const url = j.choices?.[0]?.message?.images?.[0]?.image_url?.url ?? "";
+      return url.startsWith("data:image/") ? { imagem: url } : { imagem: "", erro: "A IA não retornou a imagem. Tente novamente." };
+    } catch (e) { console.error("gerarImagemAvisoIA", e); return { imagem: "", erro: "Não foi possível gerar a imagem agora." }; }
+  });
