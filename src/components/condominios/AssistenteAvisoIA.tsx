@@ -37,7 +37,7 @@ export function AssistenteAvisoIA({ open, onOpenChange, condominio, onAplicar }:
       const im = await gerarImagemAvisoIA({ data: { ideia: ideia.trim(), token: data.session?.access_token ?? "" } });
       if (im.erro) toast.error(im.erro);
       else if (im.imagem) setSug((s) => (s ? { ...s, imagem: im.imagem } : s));
-    } catch { toast.error("Não foi possível criar a imagem agora. O texto foi mantido; clique em Tentar gerar imagem."); }
+    } catch (e) { console.error("gerarImagemAvisoIA", e); toast.error("Não foi possível criar a imagem agora. O texto foi mantido; clique em Tentar gerar imagem."); }
     setGerandoImg(false);
   }
 
