@@ -201,7 +201,15 @@ function Identificar({ slug, alvo, onVoltar, onChamou }: { slug: string; alvo: A
   const chamar = async () => {
     if (nome.trim().length < 2) return setErro("Informe seu nome.");
     setEnviando(true); setErro("");
-    const { data, error } = await db.rpc("cond_interfone_chamar", { p_slug: slug, p_destino: alvo.destino, p_unidade: alvo.unidade ?? null, p_nome: nome, p_motivo: motivo, p_foto: foto() });
+    let pos: { lat: number; lng: number } | null = null;
+    if (exigeGeo) {
+      pos = await new Promise((ok) => {
+        if (!navigator.geolocation) return ok(null);
+        navigator.geolocation.getCurrentPosition((p) => ok({ lat: p.coords.latitude, lng: p.coords.longitude }), () => ok(null), { enableHighAccuracy: true, timeout: 15000 });
+      });
+      if (!pos) { setEnviando(false); return setErro("Permita a localização: este interfone só funciona no portão do condomínio."); }
+    }
+    const { data, error } = await db.rpc("cond_interfone_chamar", { p_slug: slug, p_destino: alvo.destino, p_unidade: alvo.unidade ?? null, p_nome: nome, p_motivo: motivo, p_foto: foto(), p_lat: pos?.lat ?? null, p_lng: pos?.lng ?? null });
     setEnviando(false);
     if (error) return setErro(error.message || "Não foi possível chamar agora.");
     cam?.getTracks().forEach((t) => t.stop());

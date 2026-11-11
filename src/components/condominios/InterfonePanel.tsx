@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import QRCode from "qrcode";
-import { Copy, Download, ExternalLink, Printer, ShieldCheck } from "lucide-react";
+import { Building2, Copy, Download, ExternalLink, KeyRound, LocateFixed, MapPin, Printer, ShieldCheck } from "lucide-react";
+import { confirmar } from "@/components/layout/DialogoGlobal";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
@@ -11,12 +12,17 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Row } from "@/lib/row";
-import { slugAgenda } from "@/lib/agendamento";
 import { s } from "./cond-data";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabase as any;
 type Perms = { canUpdate: boolean };
+// Endereço opaco: 16 caracteres aleatórios, sem o nome do condomínio, impossível de adivinhar.
+function codigoAleatorio(): string {
+  const abc = "abcdefghijkmnpqrstuvwxyz23456789";
+  const b = new Uint8Array(16); crypto.getRandomValues(b);
+  return Array.from(b, (x) => abc[x % abc.length]).join("");
+}
 const STATUS: Record<string, { l: string; c: string }> = {
   chamando: { l: "Chamando", c: "bg-primary/15 text-primary" },
   atendida: { l: "Atendida", c: "bg-success/15 text-success" },
@@ -36,15 +42,16 @@ export function InterfonePanel({ condominioId, nomeCondominio, blocos, unidades,
     queryFn: async () => { const r = await db.from("cond_interfone_chamadas").select("id,destino,cond_unidade_id,visitante_nome,motivo,status,atendido_por,created_at,porta_aberta_em,foto").eq("condominio_id", condominioId).order("created_at", { ascending: false }).limit(100); if (r.error) throw r.error; return (r.data ?? []) as Row[]; },
     refetchInterval: 15000,
   });
-  const [f, setF] = useState({ ativo: false, slug: "", toque_segundos: 20, menores_recebem: false, central_ativa: true, mostrar_administracao: true });
+  const [f, setF] = useState({ ativo: false, slug: "", toque_segundos: 20, menores_recebem: false, central_ativa: true, mostrar_administracao: true, geo_ativo: false, geo_lat: null as number | null, geo_lng: null as number | null, geo_raio_m: 150 });
+  const [localizando, setLocalizando] = useState(false);
   const [qr, setQr] = useState("");
   const [salvando, setSalvando] = useState(false);
 
   useEffect(() => {
     const c = cfgQ.data;
     if (cfgQ.isLoading) return;
-    setF(c ? { ativo: c["ativo"] === true, slug: s(c["slug"]), toque_segundos: Number(c["toque_segundos"] ?? 20), menores_recebem: c["menores_recebem"] === true, central_ativa: c["central_ativa"] !== false, mostrar_administracao: c["mostrar_administracao"] !== false }
-      : (x) => ({ ...x, slug: slugAgenda(nomeCondominio).slice(0, 50) || `cond-${condominioId.slice(0, 8)}` }) as never);
+    setF(c ? { ativo: c["ativo"] === true, slug: s(c["slug"]), toque_segundos: Number(c["toque_segundos"] ?? 20), menores_recebem: c["menores_recebem"] === true, central_ativa: c["central_ativa"] !== false, mostrar_administracao: c["mostrar_administracao"] !== false, geo_ativo: c["geo_ativo"] === true, geo_lat: c["geo_lat"] == null ? null : Number(c["geo_lat"]), geo_lng: c["geo_lng"] == null ? null : Number(c["geo_lng"]), geo_raio_m: Number(c["geo_raio_m"] ?? 150) }
+      : (x) => ({ ...x, slug: codigoAleatorio() }));
   }, [cfgQ.data, cfgQ.isLoading, nomeCondominio, condominioId]);
 
   const link = typeof window !== "undefined" && f.slug ? `${window.location.origin}/interfone/${f.slug}` : "";
@@ -52,12 +59,27 @@ export function InterfonePanel({ condominioId, nomeCondominio, blocos, unidades,
 
   const salvar = async (): Promise<void> => {
     if (!/^[a-z0-9-]{3,60}$/.test(f.slug)) { toast.error("Endereço: use de 3 a 60 letras minúsculas, números ou hífen."); return; }
+    if (f.geo_ativo && (f.geo_lat == null || f.geo_lng == null)) { toast.error("Marque a localização do portão antes de ligar a cerca virtual."); return; }
     setSalvando(true);
     const { error } = await db.from("cond_interfone_config").upsert({ condominio_id: condominioId, ...f, updated_at: new Date().toISOString() });
     setSalvando(false);
     if (error) { toast.error(error.message.includes("duplicate") ? "Este endereço já está em uso por outro condomínio." : error.message); return; }
     toast.success("Interfone salvo.");
     void qc.invalidateQueries({ queryKey: ["cond", "interfone_config", condominioId] });
+  };
+
+  const novoLink = async () => {
+    const ok = await confirmar({ title: "Gerar novo link?", description: "O QR Code atual deixa de funcionar na hora. Você precisará imprimir e colar o novo no portão.", confirmText: "Gerar novo link" });
+    if (ok) { setF((x) => ({ ...x, slug: codigoAleatorio() })); toast.info("Novo link gerado. Clique em Salvar para valer."); }
+  };
+  const marcarLocal = () => {
+    if (!navigator.geolocation) { toast.error("Este aparelho não informa localização."); return; }
+    setLocalizando(true);
+    navigator.geolocation.getCurrentPosition(
+      (p) => { setLocalizando(false); setF((x) => ({ ...x, geo_lat: p.coords.latitude, geo_lng: p.coords.longitude })); toast.success(`Local marcado (precisão de ${Math.round(p.coords.accuracy)} m). Clique em Salvar.`); },
+      () => { setLocalizando(false); toast.error("Não foi possível obter a localização. Permita o acesso no navegador."); },
+      { enableHighAccuracy: true, timeout: 15000 },
+    );
   };
 
   const imprimir = () => {
@@ -90,15 +112,44 @@ export function InterfonePanel({ condominioId, nomeCondominio, blocos, unidades,
       <TabsContent value="config">
         <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
           <div className="space-y-3">
+            <div className="flex items-center gap-2 rounded-md border border-primary/30 bg-primary/5 p-3 text-sm"><Building2 className="size-4 text-primary" /> Configurando o interfone do condomínio <b>{nomeCondominio || "—"}</b></div>
             {sw("ativo", "Interfone ligado", "Quando desligado, o QR Code mostra que o interfone está indisponível.")}
             <div className="space-y-1.5">
               <Label htmlFor="if-slug">Endereço do interfone</Label>
-              <Input id="if-slug" disabled={!perms.canUpdate} value={f.slug} onChange={(e) => setF((x) => ({ ...x, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") }))} />
+              <div className="flex gap-2">
+                <Input id="if-slug" readOnly value={f.slug} className="font-mono" />
+                {perms.canUpdate && <Button type="button" variant="outline" onClick={() => void novoLink()}><KeyRound className="size-4" /> Gerar novo link</Button>}
+              </div>
+              <p className="text-xs text-muted-foreground">Código aleatório, sem o nome do condomínio. Se o QR Code vazar ou for arrancado, gere um novo e o antigo para de funcionar.</p>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="if-toque">Segundos tocando antes de passar para o próximo</Label>
               <Input id="if-toque" type="number" min={10} max={120} disabled={!perms.canUpdate} value={f.toque_segundos} onChange={(e) => setF((x) => ({ ...x, toque_segundos: Math.min(120, Math.max(10, Number(e.target.value) || 20)) }))} />
               <p className="text-xs text-muted-foreground">Ordem: titular → demais moradores → prestadores marcados → central. Quem já foi chamado continua tocando.</p>
+            </div>
+            <div className="space-y-3 rounded-md border p-3">
+              <label className="flex items-center justify-between gap-3 text-sm">
+                <span className="flex items-start gap-2"><MapPin className="mt-0.5 size-4 text-primary" /><span>Cerca virtual (só chama quem está no portão)<span className="block text-xs text-muted-foreground">O visitante precisa permitir a localização e estar perto do condomínio. Evita trotes e ataques à distância.</span></span></span>
+                <Switch disabled={!perms.canUpdate} checked={f.geo_ativo} onCheckedChange={(c) => setF((x) => ({ ...x, geo_ativo: c }))} />
+              </label>
+              {f.geo_ativo && (
+                <div className="grid gap-3 sm:grid-cols-[1fr_180px]">
+                  <div className="space-y-1.5">
+                    <Label>Local do portão</Label>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button type="button" variant="outline" size="sm" disabled={!perms.canUpdate || localizando} onClick={marcarLocal}><LocateFixed className="size-4" /> {localizando ? "Localizando..." : "Usar minha localização atual"}</Button>
+                      {f.geo_lat != null && f.geo_lng != null
+                        ? <a className="text-xs text-primary underline" target="_blank" rel="noreferrer" href={`https://www.google.com/maps?q=${f.geo_lat},${f.geo_lng}`}>Ver no mapa</a>
+                        : <span className="text-xs text-warning">Ainda não marcado</span>}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Faça isso em pé, ao lado do portão, com o celular.</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="if-raio">Distância máxima (metros)</Label>
+                    <Input id="if-raio" type="number" min={30} max={2000} disabled={!perms.canUpdate} value={f.geo_raio_m} onChange={(e) => setF((x) => ({ ...x, geo_raio_m: Math.min(2000, Math.max(30, Number(e.target.value) || 150)) }))} />
+                  </div>
+                </div>
+              )}
             </div>
             {sw("menores_recebem", "Menores de idade recebem chamadas", "Desligado: só toca para maiores de 18 anos.")}
             {sw("central_ativa", "Encaminhar para a central", "Se ninguém da unidade atender, toca para a equipe da gestão.")}
@@ -107,6 +158,7 @@ export function InterfonePanel({ condominioId, nomeCondominio, blocos, unidades,
             {perms.canUpdate && <div className="flex justify-end"><Button disabled={salvando} onClick={() => void salvar()}>Salvar</Button></div>}
           </div>
           <div className="space-y-3 rounded-lg border bg-card p-4 text-center">
+            <p className="text-sm font-semibold">{nomeCondominio}</p>
             {qr ? <img src={qr} alt="QR Code do interfone" className="mx-auto w-56" /> : <div className="mx-auto size-56 rounded bg-muted" />}
             <p className="break-all text-xs text-muted-foreground">{link}</p>
             {!f.ativo && <p className="text-xs text-warning">Ligue e salve para o QR Code funcionar.</p>}
