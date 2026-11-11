@@ -50,12 +50,12 @@ export function InterfonePanel({ condominioId, nomeCondominio, blocos, unidades,
   const link = typeof window !== "undefined" && f.slug ? `${window.location.origin}/interfone/${f.slug}` : "";
   useEffect(() => { if (link) void QRCode.toDataURL(link, { width: 480, margin: 2 }).then(setQr); }, [link]);
 
-  const salvar = async () => {
-    if (!/^[a-z0-9-]{3,60}$/.test(f.slug)) return toast.error("Endereço: use de 3 a 60 letras minúsculas, números ou hífen.");
+  const salvar = async (): Promise<void> => {
+    if (!/^[a-z0-9-]{3,60}$/.test(f.slug)) { toast.error("Endereço: use de 3 a 60 letras minúsculas, números ou hífen."); return; }
     setSalvando(true);
     const { error } = await db.from("cond_interfone_config").upsert({ condominio_id: condominioId, ...f, updated_at: new Date().toISOString() });
     setSalvando(false);
-    if (error) return toast.error(error.message.includes("duplicate") ? "Este endereço já está em uso por outro condomínio." : error.message);
+    if (error) { toast.error(error.message.includes("duplicate") ? "Este endereço já está em uso por outro condomínio." : error.message); return; }
     toast.success("Interfone salvo.");
     void qc.invalidateQueries({ queryKey: ["cond", "interfone_config", condominioId] });
   };

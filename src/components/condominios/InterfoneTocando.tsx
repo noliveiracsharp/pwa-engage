@@ -62,7 +62,7 @@ export function InterfoneTocando({ nome }: { nome: string }) {
     if (!ativa) return;
     if (!(await confirmar({ title: "Liberar a entrada?", description: `Libera a entrada de ${ativa.toque.visitante_nome}. Fica registrado no histórico.`, confirmText: "Liberar" }))) return;
     const { data, error } = await db.rpc("cond_interfone_responder", { p_id: ativa.id, p_acao: "abrir_porta" });
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     setAberta(true);
     toast.success(data?.acionado ? "Entrada liberada." : "Liberação registrada. A abertura automática da porta será ligada em breve.");
   };
