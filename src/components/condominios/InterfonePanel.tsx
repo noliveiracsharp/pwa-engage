@@ -94,7 +94,13 @@ export function InterfonePanel({ condominioId, nomeCondominio, blocos, unidades,
     document.body.appendChild(w);
     const d = w.contentDocument!;
     d.open();
-    d.write(`<html><head><title>Interfone</title><style>@page{size:100mm 150mm;margin:0}html,body{margin:0}img{width:100mm;height:150mm;display:block}</style></head><body><img src="${png}"/></body></html>`);
+    // Folha A4 com 4 placas (1/4 da folha cada, 95×142 mm) e linhas tracejadas de corte.
+    const cel = `<div class="c"><img src="${png}"/></div>`;
+    d.write(`<html><head><title>Interfone</title><style>@page{size:A4;margin:0}html,body{margin:0}
+.f{width:210mm;height:297mm;display:grid;grid-template-columns:105mm 105mm;grid-template-rows:148.5mm 148.5mm;position:relative}
+.c{display:flex;align-items:center;justify-content:center}.c img{width:95mm;height:142.5mm;display:block}
+.v{position:absolute;left:105mm;top:0;bottom:0;border-left:0.3mm dashed #999}.h{position:absolute;top:148.5mm;left:0;right:0;border-top:0.3mm dashed #999}
+.t{position:absolute;font:7pt sans-serif;color:#999;left:107mm;top:2mm}</style></head><body><div class="f">${cel}${cel}${cel}${cel}<div class="v"></div><div class="h"></div><span class="t">✂ recorte nas linhas tracejadas</span></div></body></html>`);
     d.close();
     const img = d.querySelector("img")!;
     const go = () => { w.contentWindow?.print(); setTimeout(() => w.remove(), 1000); };
