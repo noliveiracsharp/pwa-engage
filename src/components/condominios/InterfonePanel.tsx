@@ -13,7 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Row } from "@/lib/row";
 import { s } from "./cond-data";
-import { gerarPlacaInterfone } from "./placa-interfone";
+import { gerarFolhaA4Placas, gerarPlacaInterfone } from "./placa-interfone";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabase as any;
@@ -84,8 +84,8 @@ export function InterfonePanel({ condominioId, nomeCondominio, blocos, unidades,
   };
 
   const baixar = async () => {
-    const png = await gerarPlacaInterfone(nomeCondominio, qr);
-    const a = document.createElement("a"); a.href = png; a.download = `placa-interfone-${f.slug}.png`; a.click();
+    const png = await gerarFolhaA4Placas(await gerarPlacaInterfone(nomeCondominio, qr));
+    const a = document.createElement("a"); a.href = png; a.download = `placas-interfone-A4-${f.slug}.png`; a.click();
   };
   const imprimir = async () => {
     const png = await gerarPlacaInterfone(nomeCondominio, qr);
@@ -178,7 +178,7 @@ export function InterfonePanel({ condominioId, nomeCondominio, blocos, unidades,
             {!f.ativo && <p className="text-xs text-warning">Ligue e salve para o QR Code funcionar.</p>}
             <div className="flex flex-wrap justify-center gap-2">
               <Button size="sm" variant="outline" onClick={() => { void navigator.clipboard.writeText(link); toast.success("Link copiado."); }}><Copy className="size-4" /> Copiar</Button>
-              <Button size="sm" variant="outline" onClick={() => void baixar()} disabled={!qr}><Download className="size-4" /> Baixar placa</Button>
+              <Button size="sm" variant="outline" onClick={() => void baixar()} disabled={!qr}><Download className="size-4" /> Baixar 4 placas (A4)</Button>
               <Button size="sm" variant="outline" onClick={() => void imprimir()} disabled={!qr}><Printer className="size-4" /> Imprimir 4 placas (A4)</Button>
               <Button size="sm" variant="outline" asChild><a href={link} target="_blank" rel="noreferrer"><ExternalLink className="size-4" /> Testar</a></Button>
             </div>
