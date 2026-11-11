@@ -159,7 +159,14 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
             return ok({ avaliacao: notaCsat });
           }
           // Resposta da pesquisa (lista de estrelas ou texto com ⭐): nunca reinicia o robô nem reabre atendimento.
-          if (/⭐/.test(String(lr?.title ?? "")) || /⭐/.test(texto)) return ok({ avaliacao: notaCsat, registrada: false });
+          if (/⭐/.test(String(lr?.title ?? "")) || /⭐/.test(texto)) {
+            // Mesmo sem achar o chamado, agradece para o cliente não ficar sem resposta.
+            if (a?.mensagem && a.instancia) {
+              try { await dispararMensagem({ instancia: a.instancia, telefone: a.telefone ?? body.phone, texto: a.mensagem } as never); }
+              catch (e) { console.error("zapi-webhook csat envio", e); }
+            }
+            return ok({ avaliacao: notaCsat, registrada: false });
+          }
         }
 
         const { data, error } = await db.rpc("fluxo_webhook_receber", {
