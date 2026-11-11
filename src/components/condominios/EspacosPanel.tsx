@@ -105,7 +105,7 @@ export function EspacosPanel({ condominioId, perms }: { condominioId: string; pe
           proximaOrdem={rows.length}
           onClose={() => setEditar(null)}
           onSalvar={(valores, id) =>
-            salvar.mutate({ id, valores: id ? valores : { ...valores, condominio_id: condominioId } }, {
+            salvar.mutate(id ? { id, valores } : { valores: { ...valores, condominio_id: condominioId } }, {
               onSuccess: () => { toast.success("Espaço salvo."); setEditar(null); },
             })
           }
