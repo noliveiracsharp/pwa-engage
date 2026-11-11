@@ -335,6 +335,16 @@ function Pessoas({ unidadeId, condominioId, perms, lado, papeis, titulo }: { uni
                 <Switch disabled={!perms.canUpdate} checked={vAtual[x.k] === true} onCheckedChange={(c) => salvar.mutate({ id: s(vAtual["id"]), valores: { [x.k]: c } })} />
               </label>
             ))}
+            {vAtual && (() => {
+              const prest = s(vAtual["papel"]) === "prestador";
+              const marcado = prest ? vAtual["interfone_recebe"] === true : vAtual["interfone_recebe"] !== false;
+              return (
+                <label className="flex items-center justify-between gap-2 rounded-md border p-2 text-sm">
+                  <span>Recebe chamadas do interfone<span className="block text-xs text-muted-foreground">{prest ? "Entra no transbordo depois dos moradores." : "Desligue para não tocar para esta pessoa."}</span></span>
+                  <Switch disabled={!perms.canUpdate} checked={marcado} onCheckedChange={(c) => salvar.mutate({ id: s(vAtual["id"]), valores: { interfone_recebe: c } })} />
+                </label>
+              );
+            })()}
           </div>
           <DialogFooter><Button onClick={() => setPermsDe(null)}>Concluir</Button></DialogFooter>
         </DialogContent>
