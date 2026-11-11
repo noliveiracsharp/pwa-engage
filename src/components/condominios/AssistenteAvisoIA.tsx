@@ -1,12 +1,13 @@
 import { useState } from "react";
-import { Loader2, RotateCcw, Wand2 } from "lucide-react";
+import { ImageIcon, Loader2, RotateCcw, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
-import { redigirAvisoIA } from "@/lib/marketing-consultor.functions";
+import { Switch } from "@/components/ui/switch";
+import { gerarImagemAvisoIA, redigirAvisoIA } from "@/lib/marketing-consultor.functions";
 import { TIPOS_AVISO } from "@/lib/cond-avisos";
 import { cn } from "@/lib/utils";
 
@@ -17,21 +18,27 @@ const TONS: { value: Tom; label: string; dica: string }[] = [
   { value: "firme", label: "Firme", dica: "Infrações e notificações" },
   { value: "urgente", label: "Urgente", dica: "Imprevistos e alertas" },
 ];
-export type SugestaoAviso = { titulo: string; tipo: string; html: string };
+export type SugestaoAviso = { titulo: string; tipo: string; html: string; imagem?: string };
 
 export function AssistenteAvisoIA({ open, onOpenChange, condominio, onAplicar }: { open: boolean; onOpenChange: (o: boolean) => void; condominio: string; onAplicar: (s: SugestaoAviso) => void }) {
   const [ideia, setIdeia] = useState("");
   const [tom, setTom] = useState<Tom>("informativo");
   const [gerando, setGerando] = useState(false);
   const [sug, setSug] = useState<SugestaoAviso | null>(null);
+  const [comImagem, setComImagem] = useState(false);
 
   async function gerar() {
     if (ideia.trim().length < 5) { toast.error("Conte um pouco mais sobre o que precisa comunicar."); return; }
     setGerando(true);
     const { data } = await supabase.auth.getSession();
     try {
-      const r = await redigirAvisoIA({ data: { ideia: ideia.trim(), tom, condominio, token: data.session?.access_token ?? "" } });
-      if (r.erro) toast.error(r.erro); else setSug(r);
+      const token = data.session?.access_token ?? "";
+      const [r, im] = await Promise.all([
+        redigirAvisoIA({ data: { ideia: ideia.trim(), tom, condominio, token } }),
+        comImagem ? gerarImagemAvisoIA({ data: { ideia: ideia.trim(), token } }).catch(() => ({ imagem: "", erro: "Não foi possível gerar a imagem agora." })) : Promise.resolve(null),
+      ]);
+      if (im?.erro) toast.error(im.erro);
+      if (r.erro) toast.error(r.erro); else setSug({ ...r, ...(im?.imagem ? { imagem: im.imagem } : {}) });
     } catch { toast.error("Não foi possível redigir o aviso agora."); }
     setGerando(false);
   }
@@ -64,11 +71,16 @@ export function AssistenteAvisoIA({ open, onOpenChange, condominio, onAplicar }:
               ))}
             </div>
           </fieldset>
+          <label className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border p-3">
+            <span className="flex items-center gap-2 text-sm"><ImageIcon className="size-4 text-primary" aria-hidden /><span><span className="block font-medium">Gerar imagem ilustrativa</span><span className="text-xs text-muted-foreground">A IA cria uma ilustração sem texto para o topo do aviso</span></span></span>
+            <Switch checked={comImagem} onCheckedChange={setComImagem} disabled={gerando} aria-label="Gerar imagem ilustrativa" />
+          </label>
           <div aria-live="polite">
-            {gerando && <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" aria-hidden /> Redigindo o comunicado…</p>}
+            {gerando && <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" aria-hidden /> {comImagem ? "Redigindo o comunicado e criando a imagem…" : "Redigindo o comunicado…"}</p>}
             {sug && !gerando && (
               <div className="space-y-2 rounded-lg border bg-muted/30 p-3">
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">Sugestão{tipoLabel ? ` · ${tipoLabel}` : ""}</p>
+                {sug.imagem && <img src={sug.imagem} alt="Imagem ilustrativa sugerida pela IA" className="w-full rounded-md border object-cover" />}
                 <p className="font-semibold">{sug.titulo}</p>
                 <div className="prose prose-sm max-w-none text-sm text-foreground [&_ul]:list-disc [&_ul]:pl-5" dangerouslySetInnerHTML={{ __html: sug.html }} />
               </div>
