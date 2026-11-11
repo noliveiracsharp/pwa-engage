@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { BarChart3, CheckCircle2, Copy, Lock, Pencil, Plus, Send, Square, Trash2, Users, Vote, X } from "lucide-react";
+import { BarChart3, FileText, ImagePlus, Paperclip, CheckCircle2, Copy, Lock, Pencil, Plus, Send, Square, Trash2, Users, Vote, X } from "lucide-react";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip as RTooltip } from "recharts";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,6 +23,7 @@ import {
 } from "@/lib/enquetes";
 import type { Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
+import { comprimirImagem } from "@/lib/image-compress";
 import { AcaoIcone } from "./AcaoIcone";
 import { CampoData } from "./CampoData";
 import { s, useCondRows } from "./cond-data";
@@ -183,6 +184,66 @@ function resumoPublico(p: Publico, blocos: Row[]) {
   return partes.length ? `Público: ${partes.join(" · ")}` : "Público: todos os moradores";
 }
 
+/* ------------------------------- Anexos ------------------------------- */
+
+async function enviarAnexo(original: File): Promise<string | null> {
+  const img = original.type.startsWith("image/");
+  const file = img ? await comprimirImagem(original, "chat") : original;
+  const ext = (original.name.split(".").pop() || "bin").toLowerCase();
+  const path = `enquetes/${novoId()}.${ext}`;
+  const up = await supabase.storage.from("chat_media").upload(path, file, file.type ? { contentType: file.type } : undefined);
+  if (up.error) { toast.error(`Falha no envio: ${up.error.message}`); return null; }
+  return supabase.storage.from("chat_media").getPublicUrl(path).data.publicUrl;
+}
+
+function BotaoAnexo({ tipo, onArquivo }: { tipo: "imagem" | "arquivo"; onArquivo: (url: string, nome: string) => void }) {
+  const [enviando, setEnviando] = useState(false);
+  return (
+    <label title={tipo === "imagem" ? "Adicionar foto (otimizada automaticamente antes do envio)" : "Anexar arquivo (PDF, orçamento…)"}
+      className={cn("inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus-within:ring-2 focus-within:ring-ring", enviando && "opacity-50")}>
+      <span className="sr-only">{tipo === "imagem" ? "Adicionar foto" : "Anexar arquivo"}</span>
+      {tipo === "imagem" ? <ImagePlus className="size-4" /> : <Paperclip className="size-4" />}
+      <input type="file" className="sr-only" disabled={enviando} accept={tipo === "imagem" ? "image/*" : ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,image/*"}
+        onChange={async (e) => { const f = e.target.files?.[0]; e.target.value = ""; if (!f) return; setEnviando(true); const url = await enviarAnexo(f); setEnviando(false); if (url) onArquivo(url, f.name); }} />
+    </label>
+  );
+}
+
+/** Foto e/ou arquivo da opção (editor, votação e resultado). */
+function AnexosOpcao({ o, onRemover, grande }: { o: { imagem?: string | null; arquivo?: string | null; arquivo_nome?: string | null; texto: string }; onRemover?: (c: "imagem" | "arquivo") => void; grande?: boolean }) {
+  const [zoom, setZoom] = useState(false);
+  if (!o.imagem && !o.arquivo) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {o.imagem && (
+        <span className="relative">
+          <button type="button" onClick={(e) => { e.stopPropagation(); setZoom(true); }} aria-label={`Ampliar foto de ${o.texto}`}
+            className="block overflow-hidden rounded-md border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <img src={o.imagem} alt={o.texto} className={cn("object-cover", grande ? "h-28 w-40" : "h-12 w-16")} loading="lazy" />
+          </button>
+          {onRemover && <button type="button" aria-label="Remover foto" onClick={() => onRemover("imagem")} className="absolute -right-1.5 -top-1.5 rounded-full border bg-background p-0.5"><X className="size-3" /></button>}
+        </span>
+      )}
+      {o.arquivo && (
+        <span className="inline-flex items-center gap-1 rounded-md border bg-background px-2 py-1 text-xs">
+          <a href={o.arquivo} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 text-primary hover:underline">
+            <FileText className="size-3.5" />{o.arquivo_nome || "Ver anexo"}
+          </a>
+          {onRemover && <button type="button" aria-label="Remover arquivo" onClick={() => onRemover("arquivo")}><X className="size-3" /></button>}
+        </span>
+      )}
+      {zoom && o.imagem && (
+        <Dialog open onOpenChange={setZoom}>
+          <DialogContent className="max-w-3xl p-2">
+            <DialogHeader className="sr-only"><DialogTitle>{o.texto}</DialogTitle><DialogDescription>Foto da opção</DialogDescription></DialogHeader>
+            <img src={o.imagem} alt={o.texto} className="max-h-[80vh] w-full rounded object-contain" />
+          </DialogContent>
+        </Dialog>
+      )}
+    </div>
+  );
+}
+
 /* ------------------------------- Editor ------------------------------- */
 
 function Chips<T extends string>({ opcoes, valor, onChange, rotulo }: { opcoes: { value: T; label: string }[]; valor: T[]; onChange: (v: T[]) => void; rotulo: string }) {
@@ -317,10 +378,15 @@ function EnqueteEditor({ condominioId, blocos, enquete, onClose, onSalvo }: { co
                 {(q.tipo === "unica" || q.tipo === "multipla") && (
                   <div className="space-y-1.5 pl-4">
                     {q.opcoes.map((o, k) => (
-                      <div key={o.id} className="flex items-center gap-2">
+                      <div key={o.id} className="space-y-1">
+                      <div className="flex items-center gap-2">
                         <span className={cn("size-3 shrink-0 border", q.tipo === "unica" ? "rounded-full" : "rounded-sm")} style={{ background: CORES[k % CORES.length] }} />
                         <Input aria-label={`Opção ${k + 1}`} className="h-8" value={o.texto} onChange={(e) => setQ(i, { opcoes: q.opcoes.map((x) => (x.id === o.id ? { ...x, texto: e.target.value } : x)) })} placeholder={`Opção ${k + 1}`} />
+                        <BotaoAnexo tipo="imagem" onArquivo={(url) => setQ(i, { opcoes: q.opcoes.map((x) => (x.id === o.id ? { ...x, imagem: url } : x)) })} />
+                        <BotaoAnexo tipo="arquivo" onArquivo={(url, nome) => setQ(i, { opcoes: q.opcoes.map((x) => (x.id === o.id ? { ...x, arquivo: url, arquivo_nome: nome } : x)) })} />
                         {q.opcoes.length > 2 && <AcaoIcone titulo="Remover opção" onClick={() => setQ(i, { opcoes: q.opcoes.filter((x) => x.id !== o.id) })}><X className="size-4" /></AcaoIcone>}
+                      </div>
+                      <div className="pl-5"><AnexosOpcao o={o} onRemover={(c) => setQ(i, { opcoes: q.opcoes.map((x) => (x.id === o.id ? (c === "imagem" ? { ...x, imagem: null } : { ...x, arquivo: null, arquivo_nome: null }) : x)) })} /></div>
                       </div>
                     ))}
                     <Button type="button" size="sm" variant="ghost" onClick={() => setQ(i, { opcoes: [...q.opcoes, { id: novoId(), texto: "" }] })}><Plus className="mr-1 size-3" /> Opção</Button>
@@ -540,16 +606,16 @@ function VotarDialog({ enquete, onClose, onVotou }: { enquete: Minha; onClose: (
                 <legend className="mb-2 font-medium">{q.texto}{q.obrigatoria ? <span className="text-destructive"> *</span> : <span className="text-xs text-muted-foreground"> (opcional)</span>}</legend>
                 {q.tipo === "unica" && q.opcoes.map((o) => {
                   const on = r?.opcoes?.[0] === o.id;
-                  return <button key={o.id} type="button" role="radio" aria-checked={on} onClick={() => set(q.id, { opcoes: [o.id] })}
+                  return <div key={o.id} className="space-y-2"><button type="button" role="radio" aria-checked={on} onClick={() => set(q.id, { opcoes: [o.id] })}
                     className={cn("flex w-full items-center gap-3 rounded-md border p-3 text-left text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", on ? "border-primary bg-primary/10 font-medium" : "hover:bg-muted")}>
                     <span className={cn("flex size-4 shrink-0 items-center justify-center rounded-full border", on && "border-primary")}>{on && <span className="size-2 rounded-full bg-primary" />}</span>{o.texto}
-                  </button>;
+                  </button>{(o.imagem || o.arquivo) && <div className="-mt-1 pl-10"><AnexosOpcao o={o} grande /></div>}</div>;
                 })}
                 {q.tipo === "multipla" && q.opcoes.map((o) => {
                   const on = !!r?.opcoes?.includes(o.id);
-                  return <label key={o.id} className={cn("flex cursor-pointer items-center gap-3 rounded-md border p-3 text-sm", on ? "border-primary bg-primary/10" : "hover:bg-muted")}>
+                  return <div key={o.id} className="space-y-2"><label className={cn("flex cursor-pointer items-center gap-3 rounded-md border p-3 text-sm", on ? "border-primary bg-primary/10" : "hover:bg-muted")}>
                     <Checkbox checked={on} onCheckedChange={(v) => set(q.id, { opcoes: v ? [...(r?.opcoes ?? []), o.id] : (r?.opcoes ?? []).filter((x) => x !== o.id) })} />{o.texto}
-                  </label>;
+                  </label>{(o.imagem || o.arquivo) && <div className="-mt-1 pl-10"><AnexosOpcao o={o} grande /></div>}</div>;
                 })}
                 {q.tipo === "escala" && <div className="flex gap-2" role="radiogroup" aria-label="Nota de 1 a 5">{[1, 2, 3, 4, 5].map((n) => (
                   <button key={n} type="button" role="radio" aria-checked={r?.nota === n} onClick={() => set(q.id, { nota: n })}

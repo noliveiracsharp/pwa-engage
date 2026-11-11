@@ -2,7 +2,7 @@
 
 export type StatusEnquete = "rascunho" | "ativa" | "encerrada" | "cancelada";
 export type TipoPergunta = "unica" | "multipla" | "escala" | "texto";
-export type Opcao = { id: string; texto: string };
+export type Opcao = { id: string; texto: string; imagem?: string | null; arquivo?: string | null; arquivo_nome?: string | null };
 export type Pergunta = { id: string; ordem: number; texto: string; tipo: TipoPergunta; obrigatoria: boolean; opcoes: Opcao[] };
 export type Publico = {
   blocos?: string[];        // vazio = todas as torres
