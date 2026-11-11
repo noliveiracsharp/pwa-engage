@@ -29,6 +29,8 @@ import {
   progressoTarefaPatch,
 } from "@/lib/planner";
 import { ProgressoTarefa } from "@/components/chat-interno/ProgressoTarefa";
+import { LinkAgendamentoDialog } from "@/components/chat-interno/LinkAgendamentoDialog";
+import { Link2 } from "lucide-react";
 
 const hoje = () => new Date().toISOString().slice(0, 10);
 const dataBR = (s: string) => { const [a, m, d] = s.slice(0, 10).split("-"); return `${d}/${m}/${a}`; };
@@ -183,6 +185,7 @@ export function PlannerPainel({ me, empresaId, usuarios, onFechar, embutido, aco
   const [arrastando, setArrastando] = useState<string | null>(null);
   const [aberta, setAberta] = useState<string | null>(null);
   const [reunioesAberto, setReunioesAberto] = useState(false);
+  const [linkAberto, setLinkAberto] = useState(false);
   const [modo, setModo] = useState<"agenda" | "quadro">("agenda");
   const [editarReuniao, setEditarReuniao] = useState<Reuniao | null>(null);
   const qcReuniao = useQueryClient();
@@ -385,6 +388,8 @@ export function PlannerPainel({ me, empresaId, usuarios, onFechar, embutido, aco
           </Button>
         )}
         <Button size="sm" variant="outline" onClick={() => setReunioesAberto(true)}><CalendarClock className="mr-1 h-4 w-4" /> Reuniões</Button>
+        {proprio && <Button size="sm" variant="outline" onClick={() => setLinkAberto(true)}><Link2 className="mr-1 h-4 w-4" /> Link de agendamento</Button>}
+        <LinkAgendamentoDialog open={linkAberto} onOpenChange={setLinkAberto} me={me} empresaId={empresaId} nome={String(pick(usuario, ["nome"], ""))} />
         {acoes}
         {!embutido && onFechar && <Button size="sm" variant="ghost" aria-label="Fechar planner" onClick={onFechar}><X className="h-5 w-5" /></Button>}
       </div>

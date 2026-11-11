@@ -9,6 +9,7 @@ const CHAVE = "atendeai-slug";
 const DOMINIO_BASE = "atendeai.co";
 /** Caminhos do sistema que nunca podem ser usados como endereço de empresa. */
 export const SLUGS_RESERVADOS = new Set([
+  "agendar",
   "login", "dashboard", "api", "portal", "fornecedor", "checkout", "reset-password", "widget", "chamada",
   "proposta", "minuta", "cotacao", "compartilhado", "sitemap", "www", "app", "admin", "orcamentos",
   "financeiro", "relatorios", "projetos", "atendimentos", "empresas", "usuarios", "pessoas", "itens",

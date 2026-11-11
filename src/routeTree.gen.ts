@@ -58,6 +58,7 @@ import { Route as AuthenticatedSemAcessoRouteImport } from './routes/_authentica
 import { Route as AuthenticatedUnid_medidaRouteImport } from './routes/_authenticated/unid_medida'
 import { Route as AuthenticatedUsuariosRouteImport } from './routes/_authenticated/usuarios'
 import { Route as AuthenticatedVeiculosRouteImport } from './routes/_authenticated/veiculos'
+import { Route as AgendarSlugRouteImport } from './routes/agendar.$slug'
 import { Route as AtivoTokenRouteImport } from './routes/ativo.$token'
 import { Route as AvisoIdRouteImport } from './routes/aviso.$id'
 import { Route as ChamadaSalaRouteImport } from './routes/chamada.$sala'
@@ -343,6 +344,11 @@ const AuthenticatedVeiculosRoute = AuthenticatedVeiculosRouteImport.update({
   path: '/veiculos',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AgendarSlugRoute = AgendarSlugRouteImport.update({
+  id: '/agendar/$slug',
+  path: '/agendar/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AtivoTokenRoute = AtivoTokenRouteImport.update({
   id: '/ativo/$token',
   path: '/ativo/$token',
@@ -560,6 +566,7 @@ export interface FileRoutesByFullPath {
   '/unid_medida': typeof AuthenticatedUnid_medidaRoute
   '/usuarios': typeof AuthenticatedUsuariosRoute
   '/veiculos': typeof AuthenticatedVeiculosRoute
+  '/agendar/$slug': typeof AgendarSlugRoute
   '/ativo/$token': typeof AtivoTokenRoute
   '/aviso/$id': typeof AvisoIdRoute
   '/chamada/$sala': typeof ChamadaSalaRoute
@@ -641,6 +648,7 @@ export interface FileRoutesByTo {
   '/unid_medida': typeof AuthenticatedUnid_medidaRoute
   '/usuarios': typeof AuthenticatedUsuariosRoute
   '/veiculos': typeof AuthenticatedVeiculosRoute
+  '/agendar/$slug': typeof AgendarSlugRoute
   '/ativo/$token': typeof AtivoTokenRoute
   '/aviso/$id': typeof AvisoIdRoute
   '/chamada/$sala': typeof ChamadaSalaRoute
@@ -724,6 +732,7 @@ export interface FileRoutesById {
   '/_authenticated/unid_medida': typeof AuthenticatedUnid_medidaRoute
   '/_authenticated/usuarios': typeof AuthenticatedUsuariosRoute
   '/_authenticated/veiculos': typeof AuthenticatedVeiculosRoute
+  '/agendar/$slug': typeof AgendarSlugRoute
   '/ativo/$token': typeof AtivoTokenRoute
   '/aviso/$id': typeof AvisoIdRoute
   '/chamada/$sala': typeof ChamadaSalaRoute
@@ -807,6 +816,7 @@ export interface FileRouteTypes {
     | '/unid_medida'
     | '/usuarios'
     | '/veiculos'
+    | '/agendar/$slug'
     | '/ativo/$token'
     | '/aviso/$id'
     | '/chamada/$sala'
@@ -888,6 +898,7 @@ export interface FileRouteTypes {
     | '/unid_medida'
     | '/usuarios'
     | '/veiculos'
+    | '/agendar/$slug'
     | '/ativo/$token'
     | '/aviso/$id'
     | '/chamada/$sala'
@@ -970,6 +981,7 @@ export interface FileRouteTypes {
     | '/_authenticated/unid_medida'
     | '/_authenticated/usuarios'
     | '/_authenticated/veiculos'
+    | '/agendar/$slug'
     | '/ativo/$token'
     | '/aviso/$id'
     | '/chamada/$sala'
@@ -1016,6 +1028,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermosRoute: typeof TermosRoute
+  AgendarSlugRoute: typeof AgendarSlugRoute
   AtivoTokenRoute: typeof AtivoTokenRoute
   AvisoIdRoute: typeof AvisoIdRoute
   ChamadaSalaRoute: typeof ChamadaSalaRoute
@@ -1382,6 +1395,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedVeiculosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/agendar/$slug': {
+      id: '/agendar/$slug'
+      path: '/agendar/$slug'
+      fullPath: '/agendar/$slug'
+      preLoaderRoute: typeof AgendarSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/ativo/$token': {
       id: '/ativo/$token'
       path: '/ativo/$token'
@@ -1725,6 +1745,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermosRoute: TermosRoute,
+  AgendarSlugRoute: AgendarSlugRoute,
   AtivoTokenRoute: AtivoTokenRoute,
   AvisoIdRoute: AvisoIdRoute,
   ChamadaSalaRoute: ChamadaSalaRoute,
