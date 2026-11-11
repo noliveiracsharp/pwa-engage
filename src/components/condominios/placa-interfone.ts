@@ -45,12 +45,12 @@ export async function gerarPlacaInterfone(nome: string, qrDataUrl: string): Prom
   c.drawImage(await carregar(qrDataUrl), qx, qy, q, q);
   c.strokeStyle = cor; c.lineWidth = 14; c.lineCap = "round";
   const L = 80, o = qx - 30, p = qy - 30, e = q + 60;
-  for (const [x, y, dx, dy] of [[o, p, 1, 1], [o + e, p, -1, 1], [o, p + e, 1, -1], [o + e, p + e, -1, -1]]) {
+  for (const [x, y, dx, dy] of [[o, p, 1, 1], [o + e, p, -1, 1], [o, p + e, 1, -1], [o + e, p + e, -1, -1]] as const) {
     c.beginPath(); c.moveTo(x + dx * L, y); c.lineTo(x, y); c.lineTo(x, y + dy * L); c.stroke();
   }
 
   // 3 passos
-  const passos = [["Escaneie", "com a câmera"], ["Escolha", "unidade ou portaria"], ["Fale", "por vídeo ou voz"]];
+  const passos: [string, string][] = [["Escaneie", "com a câmera"], ["Escolha", "unidade ou portaria"], ["Fale", "por vídeo ou voz"]];
   const py = 1390, col = W / 3;
   passos.forEach(([t, d], i) => {
     const cx = col * i + col / 2;
