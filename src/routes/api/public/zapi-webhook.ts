@@ -158,6 +158,8 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
             }
             return ok({ avaliacao: notaCsat });
           }
+          // Resposta da pesquisa (lista de estrelas ou texto com ⭐): nunca reinicia o robô nem reabre atendimento.
+          if (/⭐/.test(String(lr?.title ?? "")) || /⭐/.test(texto)) return ok({ avaliacao: notaCsat, registrada: false });
         }
 
         const { data, error } = await db.rpc("fluxo_webhook_receber", {
