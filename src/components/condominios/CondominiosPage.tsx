@@ -25,6 +25,7 @@ import { EquipePanel } from "./EquipePanel";
 import { GestaoTerceirosPanel } from "./GestaoTerceirosPanel";
 import { DocumentosPanel } from "./DocumentosPanel";
 import { AvisosPanel } from "./AvisosPanel";
+import { EnquetesPanel } from "./EnquetesPanel";
 import { useNavigate } from "@tanstack/react-router";
 import { Home } from "lucide-react";
 import { lerAmbiente, useAmbientes } from "@/hooks/useAmbientes";
@@ -46,6 +47,7 @@ const DESCRICAO_SECAO: Record<string, string> = {
   gestao: "Administradora, portaria, sindicatura, diretoria e configurações do condomínio.",
   documentos: "Atas, regimento, laudos, apólices e contratos em uma pasta digital.",
   avisos: "Envie por WhatsApp e e-mail para a carteira, o condomínio, torres ou unidades.",
+  enquetes: "Enquetes rápidas e pesquisas para todo o condomínio ou só para um público escolhido.",
   "minha-unidade": "As unidades em que você mora ou é proprietário.",
 };
 
@@ -225,6 +227,8 @@ export function CondominiosPage() {
         <DocumentosPanel condominioId={condId} perms={secAtual} condominios={condominios} blocos={blocos} unidades={unidades} />
       ) : secao === "avisos" && secAtual ? (
         <AvisosPanel condominioId={condId} condominios={condominios} blocos={blocos} unidades={unidades} perms={secAtual} />
+      ) : secao === "enquetes" && secAtual ? (
+        <EnquetesPanel condominioId={condId} blocos={blocos} perms={secAtual} />
       ) : secao === "gestao" && secAtual ? (
         <GestaoTerceirosPanel condominioId={condId} podeEditar={secAtual.canUpdate} />
       ) : secao === "minha-unidade" ? (
