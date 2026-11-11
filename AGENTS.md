@@ -35,3 +35,4 @@
 - Condo notices send through the module-level queue in src/components/condominios/avisos-fila.ts, which processes 'pendente' rows from the database; new, resend, scheduled and cancellation sends all reuse it so a single path owns delivery and progress.
 - Password recovery validates callback evidence and the server-confirmed user before enabling edits; release signout skips the reset page so it cannot destroy a recovery session.
 - Unit lease cycle archives (never deletes) the leaving side's vínculos/vehicles via cond_unidade_locacao (arquivado flag); occupancy and vehicle limits ignore archived rows so owners can return with their data intact.
+- Condo polls (Enquetes): moradores vote and read results only through SECURITY DEFINER RPCs cond_enquete_* (eligibility mirrored in src/lib/enquetes.ts); secret votes store no user/unit so anonymity holds even for the gestão.
