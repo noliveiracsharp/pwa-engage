@@ -162,7 +162,7 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
           if (/⭐/.test(String(lr?.title ?? "")) || /⭐/.test(texto)) {
             // Mesmo sem achar o chamado, agradece para o cliente não ficar sem resposta.
             if (a?.mensagem && a.instancia) {
-              try { await dispararMensagem({ instancia: a.instancia, telefone: a.telefone ?? body.phone, texto: a.mensagem } as never); }
+              try { await dispararMensagem({ instancia: a.instancia, telefone: a.telefone ?? body.phone, texto: a.mensagem, mensagemId: null, atendimentoId: null }); }
               catch (e) { console.error("zapi-webhook csat envio", e); }
             }
             return ok({ avaliacao: notaCsat, registrada: false });
