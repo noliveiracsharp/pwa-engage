@@ -14,7 +14,6 @@ describe("horários do link de agendamento", () => {
   });
   it("esconde horários que batem com reuniões ou bloqueios", () => {
     const r = horariosLivres(cfg, "2026-11-10", [{ inicio: "2026-11-10T14:15:00-03:00", fim: "2026-11-10T14:45:00-03:00" }], agora);
-    expect(r.map((d) => d.toISOString())).toEqual(["2026-11-10T18:00:00.000Z", "2026-11-10T18:30:00.000Z"].slice(0, 0).concat(["2026-11-10T18:00:00.000Z", "2026-11-10T18:30:00.000Z"].map(() => "")).filter(Boolean).concat(["2026-11-10T18:00:00.000Z".replace("18:00", "18:00")]).slice(0, 0).concat(r.map((d) => d.toISOString())));
     expect(r).toHaveLength(2);
     expect(r[0]!.toISOString()).toBe("2026-11-10T18:00:00.000Z");
   });
