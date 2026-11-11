@@ -179,7 +179,7 @@ export function InterfonePanel({ condominioId, nomeCondominio, blocos, unidades,
             <div className="flex flex-wrap justify-center gap-2">
               <Button size="sm" variant="outline" onClick={() => { void navigator.clipboard.writeText(link); toast.success("Link copiado."); }}><Copy className="size-4" /> Copiar</Button>
               <Button size="sm" variant="outline" onClick={() => void baixar()} disabled={!qr}><Download className="size-4" /> Baixar placa</Button>
-              <Button size="sm" variant="outline" onClick={() => void imprimir()} disabled={!qr}><Printer className="size-4" /> Imprimir placa</Button>
+              <Button size="sm" variant="outline" onClick={() => void imprimir()} disabled={!qr}><Printer className="size-4" /> Imprimir 4 placas (A4)</Button>
               <Button size="sm" variant="outline" asChild><a href={link} target="_blank" rel="noreferrer"><ExternalLink className="size-4" /> Testar</a></Button>
             </div>
           </div>
