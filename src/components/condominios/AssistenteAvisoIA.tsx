@@ -35,7 +35,7 @@ export function AssistenteAvisoIA({ open, onOpenChange, condominio, onAplicar }:
       const token = data.session?.access_token ?? "";
       const [r, im] = await Promise.all([
         redigirAvisoIA({ data: { ideia: ideia.trim(), tom, condominio, token } }),
-        comImagem ? gerarImagemAvisoIA({ data: { ideia: ideia.trim(), token } }).catch(() => ({ imagem: "", erro: "Não foi possível gerar a imagem agora." })) : Promise.resolve(null),
+        comImagem ? gerarImagemAvisoIA({ data: { ideia: ideia.trim(), token } }).catch(() => ({ imagem: "", erro: "A imagem não ficou pronta a tempo. O texto foi gerado; clique em Gerar de novo para tentar a imagem." })) : Promise.resolve(null),
       ]);
       if (im?.erro) toast.error(im.erro);
       if (r.erro) toast.error(r.erro); else setSug({ ...r, ...(im?.imagem ? { imagem: im.imagem } : {}) });
