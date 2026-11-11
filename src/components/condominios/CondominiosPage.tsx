@@ -26,6 +26,8 @@ import { GestaoTerceirosPanel } from "./GestaoTerceirosPanel";
 import { DocumentosPanel } from "./DocumentosPanel";
 import { AvisosPanel } from "./AvisosPanel";
 import { EnquetesPanel } from "./EnquetesPanel";
+import { InterfonePanel } from "./InterfonePanel";
+import { InterfoneTocando } from "./InterfoneTocando";
 import { useNavigate } from "@tanstack/react-router";
 import { Home } from "lucide-react";
 import { lerAmbiente, useAmbientes } from "@/hooks/useAmbientes";
@@ -47,6 +49,7 @@ const DESCRICAO_SECAO: Record<string, string> = {
   gestao: "Administradora, portaria, sindicatura, diretoria e configurações do condomínio.",
   documentos: "Atas, regimento, laudos, apólices e contratos em uma pasta digital.",
   avisos: "Envie por WhatsApp e e-mail para a carteira, o condomínio, torres ou unidades.",
+  interfone: "QR Code no portão para chamar a unidade por vídeo, com transbordo até a central.",
   enquetes: "Enquetes rápidas e pesquisas para todo o condomínio ou só para um público escolhido.",
   "minha-unidade": "As unidades em que você mora ou é proprietário.",
 };
@@ -199,6 +202,7 @@ export function CondominiosPage() {
       } : undefined}
     />
     <div className="min-w-0 flex-1 space-y-4 p-4 sm:p-6">
+      <InterfoneTocando nome={String(user?.user_metadata?.["nome"] ?? user?.email ?? "Morador")} />
       {(() => {
         const I = secAtual?.icon ?? Building2;
         return (
@@ -229,6 +233,8 @@ export function CondominiosPage() {
         <AvisosPanel condominioId={condId} condominios={condominios} blocos={blocos} unidades={unidades} perms={secAtual} />
       ) : secao === "enquetes" && secAtual ? (
         <EnquetesPanel condominioId={condId} blocos={blocos} perms={secAtual} />
+      ) : secao === "interfone" && secAtual ? (
+        <InterfonePanel condominioId={condId} nomeCondominio={String(condominios.find((c) => c.value === condId)?.label ?? "")} blocos={blocos} unidades={unidades} perms={secAtual} />
       ) : secao === "gestao" && secAtual ? (
         <GestaoTerceirosPanel condominioId={condId} podeEditar={secAtual.canUpdate} />
       ) : secao === "minha-unidade" ? (
