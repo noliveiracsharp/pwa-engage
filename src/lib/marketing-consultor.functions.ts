@@ -248,7 +248,7 @@ export const gerarImagemAvisoIA = createServerFn({ method: "POST" })
       if (!b64) return { imagem: "", erro: "A IA não retornou a imagem. Tente novamente." };
       const bin = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
       const jpg = bin[0] === 0xff && bin[1] === 0xd8;
-      const path = `avisos-ia/${crypto.randomUUID()}.${jpg ? "jpg" : "png"}`;
+      const path = `manutencoes/aviso-ia-${crypto.randomUUID()}.${jpg ? "jpg" : "png"}`;
       const { error: upErr } = await db.storage.from("chat_media").upload(path, bin, { contentType: jpg ? "image/jpeg" : "image/png", upsert: false });
       if (upErr) { console.error("gerarImagemAvisoIA upload", upErr); return { imagem: "", erro: "A imagem foi criada, mas não pôde ser salva. Tente novamente." }; }
       return { imagem: db.storage.from("chat_media").getPublicUrl(path).data.publicUrl };
