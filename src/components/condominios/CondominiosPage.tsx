@@ -1,3 +1,4 @@
+import { AchadosPanel } from "./AchadosPanel";
 import { useEffect, useMemo, useState } from "react";
 import { Building, Building2, DoorOpen, Layers, Pencil, Plus, Search, Star, Trash2, Wand2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -51,6 +52,7 @@ const DESCRICAO_SECAO: Record<string, string> = {
   avisos: "Envie por WhatsApp e e-mail para a carteira, o condomínio, torres ou unidades.",
   interfone: "QR Code no portão para chamar a unidade por vídeo, com transbordo até a central.",
   enquetes: "Enquetes rápidas e pesquisas para todo o condomínio ou só para um público escolhido.",
+  achados: "Itens achados no condomínio com foto, local e registro de devolução.",
   "minha-unidade": "As unidades em que você mora ou é proprietário.",
 };
 
@@ -235,6 +237,8 @@ export function CondominiosPage() {
         <EnquetesPanel condominioId={condId} blocos={blocos} perms={secAtual} />
       ) : secao === "interfone" && secAtual ? (
         <InterfonePanel condominioId={condId} nomeCondominio={String(condominios.find((c) => c.value === condId)?.label ?? "")} blocos={blocos} unidades={unidades} perms={secAtual} />
+      ) : secao === "achados" && secAtual ? (
+        <AchadosPanel condominioId={condId} perms={secAtual} />
       ) : secao === "gestao" && secAtual ? (
         <GestaoTerceirosPanel condominioId={condId} podeEditar={secAtual.canUpdate} />
       ) : secao === "minha-unidade" ? (
