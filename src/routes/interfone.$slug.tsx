@@ -30,7 +30,7 @@ export const Route = createFileRoute("/interfone/$slug")({
 const db = supabase as any;
 type Unid = { id: string; numero: string };
 type Bloco = { id: string; nome: string; unidades: Unid[] };
-type Dados = { nome: string; logo: string; administracao: boolean; blocos: Bloco[] };
+type Dados = { nome: string; logo: string; administracao: boolean; geo?: boolean; blocos: Bloco[] };
 type Alvo = { destino: "unidade" | "portaria" | "administracao"; unidade?: string; rotulo: string };
 type Status = { status: string; etapa?: number; total?: number; central?: boolean; sala?: string };
 
@@ -82,7 +82,7 @@ function Interfone() {
       {!alvo ? (
         <Escolher dados={dados} onEscolher={setAlvo} />
       ) : !chamada ? (
-        <Identificar slug={slug} alvo={alvo} onVoltar={() => setAlvo(null)} onChamou={(c) => { setChamada(c); setSt({ status: "chamando", etapa: 1 }); }} />
+        <Identificar slug={slug} exigeGeo={dados.geo === true} alvo={alvo} onVoltar={() => setAlvo(null)} onChamou={(c) => { setChamada(c); setSt({ status: "chamando", etapa: 1 }); }} />
       ) : st?.status === "chamando" ? (
         <div className="space-y-6 text-center" aria-live="polite">
           <div className="mx-auto flex size-24 items-center justify-center rounded-full bg-primary/15">
@@ -173,7 +173,7 @@ function Escolher({ dados, onEscolher }: { dados: Dados; onEscolher: (a: Alvo) =
   );
 }
 
-function Identificar({ slug, alvo, onVoltar, onChamou }: { slug: string; alvo: Alvo; onVoltar: () => void; onChamou: (c: { id: string; token: string }) => void }) {
+function Identificar({ slug, exigeGeo, alvo, onVoltar, onChamou }: { slug: string; exigeGeo: boolean; alvo: Alvo; onVoltar: () => void; onChamou: (c: { id: string; token: string }) => void }) {
   const [nome, setNome] = useState("");
   const [motivo, setMotivo] = useState("");
   const [cam, setCam] = useState<MediaStream | null>(null);
