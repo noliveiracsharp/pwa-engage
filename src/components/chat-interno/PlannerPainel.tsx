@@ -30,7 +30,7 @@ import {
 } from "@/lib/planner";
 import { ProgressoTarefa } from "@/components/chat-interno/ProgressoTarefa";
 import { LinkAgendamentoDialog } from "@/components/chat-interno/LinkAgendamentoDialog";
-import { Link2 } from "lucide-react";
+import { Link2, Plus, PanelLeft, CalendarDays, LayoutGrid, ListTodo } from "lucide-react";
 
 const hoje = () => new Date().toISOString().slice(0, 10);
 const dataBR = (s: string) => { const [a, m, d] = s.slice(0, 10).split("-"); return `${d}/${m}/${a}`; };
@@ -186,7 +186,9 @@ export function PlannerPainel({ me, empresaId, usuarios, onFechar, embutido, aco
   const [aberta, setAberta] = useState<string | null>(null);
   const [reunioesAberto, setReunioesAberto] = useState(false);
   const [linkAberto, setLinkAberto] = useState(false);
-  const [modo, setModo] = useState<"agenda" | "quadro">("agenda");
+  const [modo, setModo] = useState<"agenda" | "quadro" | "tarefas">("agenda");
+  const [lateral, setLateral] = useState(true);
+  const [filtroT, setFiltroT] = useState<"hoje" | "atrasadas" | "semana" | "semdata" | "concluidas">("hoje");
   const [editarReuniao, setEditarReuniao] = useState<Reuniao | null>(null);
   const qcReuniao = useQueryClient();
   const cancelarReuniao = async (r: Reuniao) => {
@@ -279,6 +281,40 @@ export function PlannerPainel({ me, empresaId, usuarios, onFechar, embutido, aco
   const detalhes = ordenar(itens.filter((i) => { const d = diaDoItem(i); return i.status !== "recusada" && i.status !== "aguardando" && d && d >= desde && d <= ate; }));
   const farol = perf.classificacao === "Excelente" ? "text-success" : perf.classificacao === "Bom" ? "text-warning" : "text-destructive";
 
+  const abertasT = ativos.filter((i) => i.status !== "concluida");
+  const fimSemana = somarDias(hoje(), 6);
+  const gruposT = {
+    hoje: ordenar(abertasT.filter((i) => diaDoItem(i) === hoje())),
+    atrasadas: ordenar(atrasadas),
+    semana: ordenar(abertasT.filter((i) => { const d = diaDoItem(i); return !!d && d >= hoje() && d <= fimSemana; })),
+    semdata: backlog,
+    concluidas: ativos.filter((i) => i.status === "concluida").sort((x, y) => String(y.concluidoEm ?? "").localeCompare(String(x.concluidoEm ?? ""))).slice(0, 100),
+  };
+  const ROT_T = { hoje: "Hoje", atrasadas: "Atrasadas", semana: "Próximos 7 dias", semdata: "Sem data", concluidas: "Concluídas" } as const;
+  const visaoTarefas = (
+    <div className="mx-auto max-w-3xl">
+      <div className="mb-3 flex flex-wrap gap-1.5">
+        {(Object.keys(ROT_T) as (keyof typeof ROT_T)[]).map((k) => (
+          <button key={k} type="button" onClick={() => setFiltroT(k)} aria-pressed={filtroT === k}
+            className={cn("inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium", filtroT === k ? "border-primary bg-primary text-primary-foreground" : "border-border hover:bg-muted", k === "atrasadas" && gruposT.atrasadas.length > 0 && filtroT !== k && "border-destructive text-destructive")}>
+            {ROT_T[k]} <span className="rounded-full bg-background/20 px-1.5">{gruposT[k].length}</span>
+          </button>
+        ))}
+      </div>
+      <div className="space-y-1.5">
+        {gruposT[filtroT].length === 0 && <p className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">Nenhuma tarefa em “{ROT_T[filtroT]}”.</p>}
+        {gruposT[filtroT].map((i) => (
+          <div key={i.id} className="flex items-start gap-2">
+            <div className="min-w-0 flex-1"><ItemLinha i={i} nome={nomeDe} editavel={proprio} onCheck={(f) => void concluir(i, f)} onAbrir={() => setAberta(i.id)} onProgresso={(p) => void progredir(i, p)} /></div>
+            {proprio && i.origem === "tarefa" && i.status !== "concluida" && (
+              <Input type="date" aria-label="Planejar para o dia" className="h-8 w-36 text-xs" value={i.planejada ?? ""} onChange={(e) => void planejar(i, e.target.value || null)} />
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
   const soltar = (dia: string | null) => {
     const i = itens.find((x) => x.id === arrastando);
     setArrastando(null);
@@ -324,42 +360,50 @@ export function PlannerPainel({ me, empresaId, usuarios, onFechar, embutido, aco
   return (
     <div className={cn("flex flex-col bg-background", embutido ? "min-h-full rounded-xl border border-border" : "fixed inset-0 z-[70]")}>
       <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-3">
+        <Button size="icon" variant="ghost" aria-label={lateral ? "Ocultar painel lateral" : "Mostrar painel lateral"} onClick={() => setLateral((v) => !v)}><PanelLeft className="h-5 w-5" /></Button>
         <h2 className="mr-auto text-lg font-semibold">Planner — {nomeAlvo}</h2>
-        {gestor && (
-          <Select value={alvo} onValueChange={setAlvo}>
-            <SelectTrigger className="w-56"><SelectValue /></SelectTrigger>
-            <SelectContent className="z-[80]">
-              <SelectItem value={me}>Meu planner</SelectItem>
-              {pessoas.map((u) => <SelectItem key={String(u["id"])} value={String(u["id"])}>{String(pick(u, ["nome"], "Usuário"))}</SelectItem>)}
-            </SelectContent>
-          </Select>
+        <div role="tablist" aria-label="Visualização" className="flex rounded-lg border border-border p-0.5">
+          {([["agenda", "Agenda", CalendarDays], ["quadro", "Quadro semanal", LayoutGrid], ["tarefas", "Tarefas", ListTodo]] as const).map(([v, t, I]) => (
+            <button key={v} role="tab" aria-selected={modo === v} type="button" onClick={() => setModo(v)}
+              className={cn("inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium", modo === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}>
+              <I className="h-3.5 w-3.5" /><span className="hidden sm:inline">{t}</span>
+            </button>
+          ))}
+        </div>
+        {proprio && atrasadas.length > 0 && (
+          <Button size="sm" variant="outline" onClick={() => void Promise.all(atrasadas.filter((i) => i.origem === "tarefa").map((i) => planejar(i, hoje())))}>
+            Trazer {atrasadas.length} pendência(s) para hoje
+          </Button>
         )}
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button size="sm" variant="outline"><Users className="mr-1 h-4 w-4" /> Outras agendas{extras.length ? ` (${extras.length})` : ""}</Button>
-          </PopoverTrigger>
-          <PopoverContent className="z-[80] w-64 p-2" align="end">
-            <Input placeholder="Pesquisar pessoa" value={buscaAg} onChange={(e) => setBuscaAg(e.target.value)} className="mb-2 h-8" />
-            <div className="max-h-72 space-y-0.5 overflow-y-auto">
-              {pessoas.filter((u) => String(u["id"]) !== alvo && String(pick(u, ["nome"], "")).toLowerCase().includes(buscaAg.toLowerCase())).map((u) => {
-                const id = String(u["id"]); const on = extras.includes(id);
-                const cor = on ? agendaDe([id])?.cor : null;
-                return (
-                  <label key={id} className="flex cursor-pointer items-center gap-2 rounded px-1 py-1 text-sm hover:bg-muted">
-                    <Checkbox checked={on} onCheckedChange={(v) => setExtras((x) => v ? [...x, id] : x.filter((y) => y !== id))} />
-                    <span className="flex-1 truncate">{id === me ? "Meu planner" : String(pick(u, ["nome"], "Usuário"))}</span>
-                    {cor && <span className={cn("h-2.5 w-2.5 rounded-full", BOLINHA_COR[cor])} />}
-                  </label>
-                );
-              })}
-            </div>
-            {extras.length > 0 && <Button size="sm" variant="ghost" className="mt-1 w-full" onClick={() => setExtras([])}>Limpar seleção</Button>}
-          </PopoverContent>
-        </Popover>
-        {proprio && (
+        {acoes}
+        {!embutido && onFechar && <Button size="sm" variant="ghost" aria-label="Fechar planner" onClick={onFechar}><X className="h-5 w-5" /></Button>}
+      </div>
+      <LinkAgendamentoDialog open={linkAberto} onOpenChange={setLinkAberto} me={me} empresaId={empresaId} nome={String(pick(usuario, ["nome"], ""))} />
+      {reunioesAberto && <ReunioesPainel key={editarReuniao ? editarReuniao.id || editarReuniao.sala : "lista"} me={me} empresaId={empresaId} usuarios={usuarios} editar={editarReuniao} onFechar={() => { setReunioesAberto(false); setEditarReuniao(null); }} />}
+      <TarefaDetalhe id={aberta} me={me} usuarios={usuarios} onFechar={() => setAberta(null)} onAvisar={onAvisar} />
+
+      <div className="flex min-h-0 flex-1 flex-col md:flex-row">
+      {lateral && (
+        <aside className="w-full shrink-0 space-y-4 overflow-y-auto border-b border-border p-3 md:w-64 md:border-b-0 md:border-r">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button className="w-full justify-start rounded-full shadow-sm" size="lg"><Plus className="mr-2 h-5 w-5" /> Criar</Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="z-[80] w-56">
+              <DropdownMenuItem onClick={() => onNovaTarefa ? onNovaTarefa(hoje()) : toast.info("Abra o Planner pelo menu para criar tarefas.")}><ListTodo className="mr-2 h-4 w-4" /> Tarefa</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => { const d = new Date(); d.setMinutes(0, 0, 0); d.setHours(d.getHours() + 1); setEditarReuniao(novaReuniao(me, d)); setReunioesAberto(true); }}><Video className="mr-2 h-4 w-4" /> Reunião</DropdownMenuItem>
+              {proprio && <DropdownMenuItem onClick={() => setLinkAberto(true)}><Link2 className="mr-2 h-4 w-4" /> Link de agendamento</DropdownMenuItem>}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <div className="space-y-0.5">
+            <p className="px-1 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Atalhos</p>
+            <Button size="sm" variant="ghost" className="w-full justify-start" onClick={() => setReunioesAberto(true)}><CalendarClock className="mr-1 h-4 w-4" /> Reuniões</Button>
+            {proprio && <Button size="sm" variant="ghost" className="w-full justify-start" onClick={() => setLinkAberto(true)}><Link2 className="mr-1 h-4 w-4" /> Link de agendamento</Button>}
+            {proprio && (
           <Popover open={!!expEdit} onOpenChange={(o) => setExpEdit(o ? expediente : null)}>
-            <PopoverTrigger asChild><Button size="sm" variant="outline"><Clock className="mr-1 h-4 w-4" /> Horário de trabalho</Button></PopoverTrigger>
-            <PopoverContent className="z-[80] w-72" align="end">
+            <PopoverTrigger asChild><Button size="sm" variant="ghost" className="w-full justify-start"><Clock className="mr-1 h-4 w-4" /> Horário de trabalho</Button></PopoverTrigger>
+            <PopoverContent className="z-[80] w-72" align="start">
               {expEdit && (
                 <div className="space-y-3">
                   <Label>Dias de trabalho</Label>
@@ -381,27 +425,37 @@ export function PlannerPainel({ me, empresaId, usuarios, onFechar, embutido, aco
               )}
             </PopoverContent>
           </Popover>
-        )}
-        {proprio && atrasadas.length > 0 && (
-          <Button size="sm" variant="outline" onClick={() => void Promise.all(atrasadas.filter((i) => i.origem === "tarefa").map((i) => planejar(i, hoje())))}>
-            Trazer {atrasadas.length} pendência(s) para hoje
-          </Button>
-        )}
-        <Button size="sm" variant="outline" onClick={() => setReunioesAberto(true)}><CalendarClock className="mr-1 h-4 w-4" /> Reuniões</Button>
-        {proprio && <Button size="sm" variant="outline" onClick={() => setLinkAberto(true)}><Link2 className="mr-1 h-4 w-4" /> Link de agendamento</Button>}
-        <LinkAgendamentoDialog open={linkAberto} onOpenChange={setLinkAberto} me={me} empresaId={empresaId} nome={String(pick(usuario, ["nome"], ""))} />
-        {acoes}
-        {!embutido && onFechar && <Button size="sm" variant="ghost" aria-label="Fechar planner" onClick={onFechar}><X className="h-5 w-5" /></Button>}
-      </div>
-      {reunioesAberto && <ReunioesPainel key={editarReuniao ? editarReuniao.id || editarReuniao.sala : "lista"} me={me} empresaId={empresaId} usuarios={usuarios} editar={editarReuniao} onFechar={() => { setReunioesAberto(false); setEditarReuniao(null); }} />}
-      <TarefaDetalhe id={aberta} me={me} usuarios={usuarios} onFechar={() => setAberta(null)} onAvisar={onAvisar} />
+            )}
+          </div>
 
+          <div>
+            <p className="px-1 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Agendas</p>
+            {alvo !== me && <Button size="sm" variant="outline" className="mb-2 w-full" onClick={() => setAlvo(me)}>Voltar para minha agenda</Button>}
+            <div className="mb-1 flex items-center gap-2 rounded px-1 py-1 text-sm">
+              <span className={cn("h-2.5 w-2.5 rounded-full", BOLINHA_COR[CORES_AGENDA[0]!])} />
+              <span className="flex-1 truncate font-medium">{proprio ? "Minha agenda" : nomeAlvo}</span>
+            </div>
+            <Input placeholder="Pesquisar pessoa" value={buscaAg} onChange={(e) => setBuscaAg(e.target.value)} className="mb-1 h-8" />
+            <div className="max-h-80 space-y-0.5 overflow-y-auto">
+              {pessoas.filter((u) => String(u["id"]) !== alvo && String(pick(u, ["nome"], "")).toLowerCase().includes(buscaAg.toLowerCase())).map((u) => {
+                const id = String(u["id"]); const on = extras.includes(id);
+                const cor = on ? agendaDe([id])?.cor : null;
+                return (
+                  <div key={id} className="group flex items-center gap-2 rounded px-1 py-1 text-sm hover:bg-muted">
+                    <Checkbox id={`ag-${id}`} checked={on} onCheckedChange={(v) => setExtras((x) => v ? [...x, id] : x.filter((y) => y !== id))} aria-label={`Sobrepor agenda de ${String(pick(u, ["nome"], "Usuário"))}`} />
+                    <label htmlFor={`ag-${id}`} className="flex-1 cursor-pointer truncate">{String(pick(u, ["nome"], "Usuário"))}</label>
+                    {cor && <span className={cn("h-2.5 w-2.5 rounded-full", BOLINHA_COR[cor])} />}
+                    {gestor && <button type="button" title="Abrir como agenda principal" aria-label="Abrir como agenda principal" onClick={() => setAlvo(id)} className="text-[10px] text-primary opacity-0 hover:underline focus:opacity-100 group-hover:opacity-100">Abrir</button>}
+                  </div>
+                );
+              })}
+            </div>
+            {extras.length > 0 && <Button size="sm" variant="ghost" className="mt-1 w-full" onClick={() => setExtras([])}>Limpar seleção</Button>}
+          </div>
+        </aside>
+      )}
       <div className="min-h-0 flex-1 overflow-auto p-4">
-        <div className="mb-3 flex gap-1">
-          <Button size="sm" variant={modo === "agenda" ? "default" : "outline"} onClick={() => setModo("agenda")}>Agenda</Button>
-          <Button size="sm" variant={modo === "quadro" ? "default" : "outline"} onClick={() => setModo("quadro")}>Quadro semanal (arrastar)</Button>
-        </div>
-        {modo === "agenda" ? (
+        {modo === "tarefas" ? visaoTarefas : modo === "agenda" ? (
           <CalendarioPlanner me={me} proprio={proprio}
             reunioes={reunioes.filter((r) => !r.cancelada && agendas.some((a) => r.criado_por === a || r.participantes.includes(a)))}
             itens={ativos}
@@ -475,6 +529,7 @@ export function PlannerPainel({ me, empresaId, usuarios, onFechar, embutido, aco
         </section>
       </div>
 
+      </div>
       <div className="dre-print-src" aria-hidden>
         <div id="planner-print" className="dre-doc">
           <header className="dre-head">

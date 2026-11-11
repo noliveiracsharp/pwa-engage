@@ -41,7 +41,9 @@
 - [x] Dashboard por perfil (Meu trabalho, Projetos, Comercial, Compras, Atendimento) + aviso WhatsApp ao atribuir tarefa/atividade. (Aguarda `atendeai-dashboard-eventos.sql`.)
 
 - [x] Fluxos: motor de execução no WhatsApp (aguarda atendeai-fluxos-motor.sql e "Ativar recebimento"); widget do site pendente
-- [ ] Fluxos: base de conhecimento + nó de IA
+- [x] Fluxos: base de conhecimento + nó de IA (já existia)
+- [ ] Fluxos: widget de chat para o site — aguarda definição do usuário
+- [x] Planner Etapa 2: barra lateral com Criar, agendas unificadas, visão de Tarefas
 
 - [x] Manutenções Fase 2: relatório público /os/token, assinatura e aviso WhatsApp (aguarda atendeai-manutencoes-fase2.sql)
 - [x] Manutenções Fase 3: cadastro de ativos, preventivas recorrentes e QR Code (atendeai-manutencoes-fase3.sql)
