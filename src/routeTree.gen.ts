@@ -67,6 +67,7 @@ import { Route as CompartilhadoTokenRouteImport } from './routes/compartilhado.$
 import { Route as CotacaoTokenRouteImport } from './routes/cotacao.$token'
 import { Route as DocTokenRouteImport } from './routes/doc.$token'
 import { Route as FiscalTokenRouteImport } from './routes/fiscal.$token'
+import { Route as InterfoneSlugRouteImport } from './routes/interfone.$slug'
 import { Route as MinutaTokenRouteImport } from './routes/minuta.$token'
 import { Route as OsTokenRouteImport } from './routes/os.$token'
 import { Route as PedidoTokenRouteImport } from './routes/pedido.$token'
@@ -389,6 +390,11 @@ const FiscalTokenRoute = FiscalTokenRouteImport.update({
   path: '/fiscal/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const InterfoneSlugRoute = InterfoneSlugRouteImport.update({
+  id: '/interfone/$slug',
+  path: '/interfone/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MinutaTokenRoute = MinutaTokenRouteImport.update({
   id: '/minuta/$token',
   path: '/minuta/$token',
@@ -575,6 +581,7 @@ export interface FileRoutesByFullPath {
   '/cotacao/$token': typeof CotacaoTokenRoute
   '/doc/$token': typeof DocTokenRoute
   '/fiscal/$token': typeof FiscalTokenRoute
+  '/interfone/$slug': typeof InterfoneSlugRoute
   '/minuta/$token': typeof MinutaTokenRoute
   '/os/$token': typeof OsTokenRoute
   '/pedido/$token': typeof PedidoTokenRoute
@@ -657,6 +664,7 @@ export interface FileRoutesByTo {
   '/cotacao/$token': typeof CotacaoTokenRoute
   '/doc/$token': typeof DocTokenRoute
   '/fiscal/$token': typeof FiscalTokenRoute
+  '/interfone/$slug': typeof InterfoneSlugRoute
   '/minuta/$token': typeof MinutaTokenRoute
   '/os/$token': typeof OsTokenRoute
   '/pedido/$token': typeof PedidoTokenRoute
@@ -741,6 +749,7 @@ export interface FileRoutesById {
   '/cotacao/$token': typeof CotacaoTokenRoute
   '/doc/$token': typeof DocTokenRoute
   '/fiscal/$token': typeof FiscalTokenRoute
+  '/interfone/$slug': typeof InterfoneSlugRoute
   '/minuta/$token': typeof MinutaTokenRoute
   '/os/$token': typeof OsTokenRoute
   '/pedido/$token': typeof PedidoTokenRoute
@@ -825,6 +834,7 @@ export interface FileRouteTypes {
     | '/cotacao/$token'
     | '/doc/$token'
     | '/fiscal/$token'
+    | '/interfone/$slug'
     | '/minuta/$token'
     | '/os/$token'
     | '/pedido/$token'
@@ -907,6 +917,7 @@ export interface FileRouteTypes {
     | '/cotacao/$token'
     | '/doc/$token'
     | '/fiscal/$token'
+    | '/interfone/$slug'
     | '/minuta/$token'
     | '/os/$token'
     | '/pedido/$token'
@@ -990,6 +1001,7 @@ export interface FileRouteTypes {
     | '/cotacao/$token'
     | '/doc/$token'
     | '/fiscal/$token'
+    | '/interfone/$slug'
     | '/minuta/$token'
     | '/os/$token'
     | '/pedido/$token'
@@ -1037,6 +1049,7 @@ export interface RootRouteChildren {
   CotacaoTokenRoute: typeof CotacaoTokenRoute
   DocTokenRoute: typeof DocTokenRoute
   FiscalTokenRoute: typeof FiscalTokenRoute
+  InterfoneSlugRoute: typeof InterfoneSlugRoute
   MinutaTokenRoute: typeof MinutaTokenRoute
   OsTokenRoute: typeof OsTokenRoute
   PedidoTokenRoute: typeof PedidoTokenRoute
@@ -1458,6 +1471,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FiscalTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/interfone/$slug': {
+      id: '/interfone/$slug'
+      path: '/interfone/$slug'
+      fullPath: '/interfone/$slug'
+      preLoaderRoute: typeof InterfoneSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/minuta/$token': {
       id: '/minuta/$token'
       path: '/minuta/$token'
@@ -1754,6 +1774,7 @@ const rootRouteChildren: RootRouteChildren = {
   CotacaoTokenRoute: CotacaoTokenRoute,
   DocTokenRoute: DocTokenRoute,
   FiscalTokenRoute: FiscalTokenRoute,
+  InterfoneSlugRoute: InterfoneSlugRoute,
   MinutaTokenRoute: MinutaTokenRoute,
   OsTokenRoute: OsTokenRoute,
   PedidoTokenRoute: PedidoTokenRoute,
