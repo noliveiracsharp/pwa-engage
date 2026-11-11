@@ -71,9 +71,9 @@ function AgendarPublico() {
   };
 
   if (!d && !erro) return <div className="flex min-h-screen items-center justify-center bg-muted/40"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
-  if (d && (!d.encontrado)) return (
+  if (!d || !d.encontrado) return (
     <div className="flex min-h-screen items-center justify-center bg-muted/40 p-6 text-center">
-      <div className="max-w-sm rounded-2xl border border-border bg-card p-8 shadow-sm"><CalendarCheck className="mx-auto mb-3 h-10 w-10 text-muted-foreground" /><h1 className="text-lg font-semibold">Agenda fechada</h1><p className="mt-1 text-sm text-muted-foreground">Este link de agendamento não está disponível no momento.</p></div>
+      <div className="max-w-sm rounded-2xl border border-border bg-card p-8 shadow-sm"><CalendarCheck className="mx-auto mb-3 h-10 w-10 text-muted-foreground" /><h1 className="text-lg font-semibold">{d ? "Agenda fechada" : "Agenda indisponível"}</h1><p className="mt-1 text-sm text-muted-foreground">{d ? "Este link de agendamento não está disponível no momento." : erro}</p></div>
     </div>
   );
   const c = d?.config;
