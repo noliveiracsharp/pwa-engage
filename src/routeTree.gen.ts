@@ -86,6 +86,7 @@ import { Route as AuthenticatedRelatoriosDreOfertasRouteImport } from './routes/
 import { Route as AuthenticatedRelatoriosEnviosRouteImport } from './routes/_authenticated/relatorios_.envios'
 import { Route as AuthenticatedRelatoriosKpisRouteImport } from './routes/_authenticated/relatorios_.kpis'
 import { Route as ApiPublicIconeRouteImport } from './routes/api/public/icone'
+import { Route as ApiPublicInterfoneWhatsRouteImport } from './routes/api/public/interfone-whats'
 import { Route as ApiPublicLeadsRouteImport } from './routes/api/public/leads'
 import { Route as ApiPublicManifestRouteImport } from './routes/api/public/manifest'
 import { Route as ApiPublicVersaoRouteImport } from './routes/api/public/versao'
@@ -497,6 +498,11 @@ const ApiPublicIconeRoute = ApiPublicIconeRouteImport.update({
   path: '/api/public/icone',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicInterfoneWhatsRoute = ApiPublicInterfoneWhatsRouteImport.update({
+  id: '/api/public/interfone-whats',
+  path: '/api/public/interfone-whats',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicLeadsRoute = ApiPublicLeadsRouteImport.update({
   id: '/api/public/leads',
   path: '/api/public/leads',
@@ -600,6 +606,7 @@ export interface FileRoutesByFullPath {
   '/relatorios/envios': typeof AuthenticatedRelatoriosEnviosRoute
   '/relatorios/kpis': typeof AuthenticatedRelatoriosKpisRoute
   '/api/public/icone': typeof ApiPublicIconeRoute
+  '/api/public/interfone-whats': typeof ApiPublicInterfoneWhatsRoute
   '/api/public/leads': typeof ApiPublicLeadsRoute
   '/api/public/manifest': typeof ApiPublicManifestRoute
   '/api/public/versao': typeof ApiPublicVersaoRoute
@@ -683,6 +690,7 @@ export interface FileRoutesByTo {
   '/relatorios/envios': typeof AuthenticatedRelatoriosEnviosRoute
   '/relatorios/kpis': typeof AuthenticatedRelatoriosKpisRoute
   '/api/public/icone': typeof ApiPublicIconeRoute
+  '/api/public/interfone-whats': typeof ApiPublicInterfoneWhatsRoute
   '/api/public/leads': typeof ApiPublicLeadsRoute
   '/api/public/manifest': typeof ApiPublicManifestRoute
   '/api/public/versao': typeof ApiPublicVersaoRoute
@@ -768,6 +776,7 @@ export interface FileRoutesById {
   '/_authenticated/relatorios_/envios': typeof AuthenticatedRelatoriosEnviosRoute
   '/_authenticated/relatorios_/kpis': typeof AuthenticatedRelatoriosKpisRoute
   '/api/public/icone': typeof ApiPublicIconeRoute
+  '/api/public/interfone-whats': typeof ApiPublicInterfoneWhatsRoute
   '/api/public/leads': typeof ApiPublicLeadsRoute
   '/api/public/manifest': typeof ApiPublicManifestRoute
   '/api/public/versao': typeof ApiPublicVersaoRoute
@@ -853,6 +862,7 @@ export interface FileRouteTypes {
     | '/relatorios/envios'
     | '/relatorios/kpis'
     | '/api/public/icone'
+    | '/api/public/interfone-whats'
     | '/api/public/leads'
     | '/api/public/manifest'
     | '/api/public/versao'
@@ -936,6 +946,7 @@ export interface FileRouteTypes {
     | '/relatorios/envios'
     | '/relatorios/kpis'
     | '/api/public/icone'
+    | '/api/public/interfone-whats'
     | '/api/public/leads'
     | '/api/public/manifest'
     | '/api/public/versao'
@@ -1020,6 +1031,7 @@ export interface FileRouteTypes {
     | '/_authenticated/relatorios_/envios'
     | '/_authenticated/relatorios_/kpis'
     | '/api/public/icone'
+    | '/api/public/interfone-whats'
     | '/api/public/leads'
     | '/api/public/manifest'
     | '/api/public/versao'
@@ -1056,6 +1068,7 @@ export interface RootRouteChildren {
   PropostaTokenRoute: typeof PropostaTokenRoute
   WidgetInstanciaIdRoute: typeof WidgetInstanciaIdRoute
   ApiPublicIconeRoute: typeof ApiPublicIconeRoute
+  ApiPublicInterfoneWhatsRoute: typeof ApiPublicInterfoneWhatsRoute
   ApiPublicLeadsRoute: typeof ApiPublicLeadsRoute
   ApiPublicManifestRoute: typeof ApiPublicManifestRoute
   ApiPublicVersaoRoute: typeof ApiPublicVersaoRoute
@@ -1604,6 +1617,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicIconeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/interfone-whats': {
+      id: '/api/public/interfone-whats'
+      path: '/api/public/interfone-whats'
+      fullPath: '/api/public/interfone-whats'
+      preLoaderRoute: typeof ApiPublicInterfoneWhatsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/leads': {
       id: '/api/public/leads'
       path: '/api/public/leads'
@@ -1781,6 +1801,7 @@ const rootRouteChildren: RootRouteChildren = {
   PropostaTokenRoute: PropostaTokenRoute,
   WidgetInstanciaIdRoute: WidgetInstanciaIdRoute,
   ApiPublicIconeRoute: ApiPublicIconeRoute,
+  ApiPublicInterfoneWhatsRoute: ApiPublicInterfoneWhatsRoute,
   ApiPublicLeadsRoute: ApiPublicLeadsRoute,
   ApiPublicManifestRoute: ApiPublicManifestRoute,
   ApiPublicVersaoRoute: ApiPublicVersaoRoute,

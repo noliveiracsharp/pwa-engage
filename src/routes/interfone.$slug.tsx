@@ -54,6 +54,13 @@ function Interfone() {
     return () => clearInterval(t);
   }, [chamada, st]);
 
+  // Avisa por WhatsApp a cada nova etapa do transbordo (o servidor só envia para quem ainda não recebeu).
+  const etapa = st?.status === "chamando" ? (st.etapa ?? 0) : -1;
+  useEffect(() => {
+    if (!chamada || etapa < 0) return;
+    void fetch("/api/public/interfone-whats", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(chamada) }).catch(() => undefined);
+  }, [chamada, etapa]);
+
   const encerrar = async () => {
     if (chamada) await db.rpc("cond_interfone_visitante", { p_id: chamada.id, p_token: chamada.token, p_cancelar: true });
     setSt({ status: st?.status === "atendida" ? "encerrada" : "cancelada" });

@@ -40,3 +40,16 @@ export function lerDiscagem(txt: string): { bloco: string; numero: string } | nu
   const m = txt.trim().toUpperCase().match(/^([A-Z]+)?[\s-]*(\d{1,5}[A-Z]?)$/);
   return m ? { bloco: m[1] ?? "", numero: m[2]! } : null;
 }
+
+/** Texto do aviso de interfone por WhatsApp (sem foto: a imagem do visitante só aparece logado). */
+export function mensagemInterfoneWhats(d: { nome: string; condominio: string; unidade: string | null; visitante: string; motivo: string | null; link: string }): string {
+  return [
+    `🔔 *Interfone — ${d.condominio}*`,
+    `${d.nome ? `Olá ${d.nome}, tem` : "Tem"} alguém chamando${d.unidade ? ` na *${d.unidade}*` : ""}.`,
+    `👤 Visitante: ${d.visitante}`,
+    d.motivo ? `📝 Motivo: ${d.motivo}` : "",
+    "",
+    `👉 Entre no sistema para ver a câmera e atender: ${d.link}`,
+    "_A chamada fica tocando por alguns segundos._",
+  ].filter((l) => l !== "").join("\n").replace("\n👉", "\n\n👉");
+}
