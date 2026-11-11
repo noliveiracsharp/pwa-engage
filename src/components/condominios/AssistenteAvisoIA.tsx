@@ -27,20 +27,31 @@ export function AssistenteAvisoIA({ open, onOpenChange, condominio, onAplicar }:
   const [sug, setSug] = useState<SugestaoAviso | null>(null);
   const [comImagem, setComImagem] = useState(false);
 
+  const [gerandoImg, setGerandoImg] = useState(false);
+
+  async function gerarImagem() {
+    if (ideia.trim().length < 5) return;
+    setGerandoImg(true);
+    try {
+      const { data } = await supabase.auth.getSession();
+      const im = await gerarImagemAvisoIA({ data: { ideia: ideia.trim(), token: data.session?.access_token ?? "" } });
+      if (im.erro) toast.error(im.erro);
+      else if (im.imagem) setSug((s) => (s ? { ...s, imagem: im.imagem } : s));
+    } catch { toast.error("Não foi possível criar a imagem agora. O texto foi mantido; clique em Tentar gerar imagem."); }
+    setGerandoImg(false);
+  }
+
   async function gerar() {
     if (ideia.trim().length < 5) { toast.error("Conte um pouco mais sobre o que precisa comunicar."); return; }
     setGerando(true);
-    const { data } = await supabase.auth.getSession();
+    let ok = false;
     try {
-      const token = data.session?.access_token ?? "";
-      const [r, im] = await Promise.all([
-        redigirAvisoIA({ data: { ideia: ideia.trim(), tom, condominio, token } }),
-        comImagem ? gerarImagemAvisoIA({ data: { ideia: ideia.trim(), token } }).catch(() => ({ imagem: "", erro: "A imagem não ficou pronta a tempo. O texto foi gerado; clique em Gerar de novo para tentar a imagem." })) : Promise.resolve(null),
-      ]);
-      if (im?.erro) toast.error(im.erro);
-      if (r.erro) toast.error(r.erro); else setSug({ ...r, ...(im?.imagem ? { imagem: im.imagem } : {}) });
+      const { data } = await supabase.auth.getSession();
+      const r = await redigirAvisoIA({ data: { ideia: ideia.trim(), tom, condominio, token: data.session?.access_token ?? "" } });
+      if (r.erro) toast.error(r.erro); else { setSug({ titulo: r.titulo, tipo: r.tipo, html: r.html }); ok = true; }
     } catch { toast.error("Não foi possível redigir o aviso agora."); }
     setGerando(false);
+    if (ok && comImagem) void gerarImagem();
   }
 
   const tipoLabel = TIPOS_AVISO.find((t) => t.value === sug?.tipo)?.label;
@@ -76,11 +87,13 @@ export function AssistenteAvisoIA({ open, onOpenChange, condominio, onAplicar }:
             <Switch checked={comImagem} onCheckedChange={setComImagem} disabled={gerando} aria-label="Gerar imagem ilustrativa" />
           </label>
           <div aria-live="polite">
-            {gerando && <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" aria-hidden /> {comImagem ? "Redigindo o comunicado e criando a imagem…" : "Redigindo o comunicado…"}</p>}
+            {gerando && <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" aria-hidden /> Redigindo o comunicado…</p>}
             {sug && !gerando && (
               <div className="space-y-2 rounded-lg border bg-muted/30 p-3">
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">Sugestão{tipoLabel ? ` · ${tipoLabel}` : ""}</p>
-                {sug.imagem && <img src={sug.imagem} alt="Imagem ilustrativa sugerida pela IA" className="w-full rounded-md border object-cover" />}
+                {gerandoImg && <div role="status" className="flex aspect-square w-full items-center justify-center gap-2 rounded-md border bg-muted text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" aria-hidden /> Criando ilustração…</div>}
+                {!gerandoImg && comImagem && <Button type="button" variant="outline" size="sm" onClick={gerarImagem}><ImageIcon className="size-4" aria-hidden /> {sug.imagem ? "Gerar outra imagem" : "Tentar gerar imagem"}</Button>}
+                {!gerandoImg && sug.imagem && <img src={sug.imagem} alt="Imagem ilustrativa sugerida pela IA" className="w-full rounded-md border object-cover" />}
                 <p className="font-semibold">{sug.titulo}</p>
                 <div className="prose prose-sm max-w-none text-sm text-foreground [&_ul]:list-disc [&_ul]:pl-5" dangerouslySetInnerHTML={{ __html: sug.html }} />
               </div>
@@ -92,7 +105,7 @@ export function AssistenteAvisoIA({ open, onOpenChange, condominio, onAplicar }:
           {sug ? (
             <>
               <Button variant="outline" onClick={gerar} disabled={gerando}><RotateCcw className="size-4" aria-hidden /> Gerar de novo</Button>
-              <Button onClick={() => { onAplicar(sug); onOpenChange(false); setSug(null); setIdeia(""); }} disabled={gerando}>Usar no aviso</Button>
+              <Button disabled={gerando || gerandoImg} onClick={() => { onAplicar(sug); onOpenChange(false); setSug(null); setIdeia(""); }}>Usar no aviso</Button>
             </>
           ) : (
             <Button onClick={gerar} disabled={gerando || ideia.trim().length < 5}>{gerando ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <Wand2 className="size-4" aria-hidden />} Gerar comunicado</Button>

@@ -243,7 +243,7 @@ export const gerarImagemAvisoIA = createServerFn({ method: "POST" })
     const prompt = `Ilustração moderna, limpa e profissional para um comunicado de condomínio residencial no Brasil. Tema (use apenas como inspiração visual, sem reproduzir datas, horários, nomes ou sites): ${ideia}. Estilo vetorial/3D suave, cores agradáveis, fundo claro. NÃO escreva nenhum texto, letra ou número na imagem. Não mostre rostos identificáveis.`;
     try {
       const { generateImage } = await import("@lovable.dev/ai-gateway");
-      const r = await generateImage({ model: "openai/gpt-image-2.5-sunburst", prompt, size: "1024x1024", n: 1 });
+      const r = await generateImage({ model: "google/gemini-3.1-flash-lite-image", prompt });
       const b64 = r.data?.[0]?.b64_json ?? "";
       return b64 ? { imagem: `data:image/png;base64,${b64}` } : { imagem: "", erro: "A IA não retornou a imagem. Tente novamente." };
     } catch (e) {
@@ -251,6 +251,6 @@ export const gerarImagemAvisoIA = createServerFn({ method: "POST" })
       const st = (e as { httpStatus?: number }).httpStatus;
       if (st === 402) return { imagem: "", erro: "Créditos de IA esgotados. Tente novamente mais tarde." };
       if (st === 429) return { imagem: "", erro: "Muitas solicitações. Tente novamente em instantes." };
-      return { imagem: "", erro: "A imagem demorou demais para ficar pronta. O texto foi gerado; tente gerar a imagem de novo." };
+      return { imagem: "", erro: "Não foi possível criar a imagem agora. O texto foi mantido; clique em Tentar gerar imagem." };
     }
   });
