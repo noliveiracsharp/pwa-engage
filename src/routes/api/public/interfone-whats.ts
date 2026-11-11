@@ -11,6 +11,7 @@ type Resp = { destinos?: { nome: string; telefone: string | null }[]; visitante?
 
 /** Avisa por WhatsApp quem entrou no toque da chamada. Só funciona com o token da chamada + chave do servidor. */
 export const Route = createFileRoute("/api/public/interfone-whats")({
+  staticData: { sitemap: false },
   server: {
     handlers: {
       POST: async ({ request }) => {
