@@ -11,6 +11,15 @@ import { VersaoSidebar } from "./NovidadesDialog";
 import { useEmpresaAtiva } from "@/hooks/useEmpresaAtiva";
 import { useIdioma } from "@/lib/i18n";
 import { rotuloMenu } from "@/lib/i18n-menu";
+import { useTableRows } from "@/lib/crud";
+import { A } from "@/lib/atendimentos";
+
+/** Conversas com mensagens novas ainda não lidas (selo no menu Atendimentos). */
+function useNovasConversas(ativo: boolean) {
+  const { data = [] } = useTableRows("atendimentos", { enabled: ativo } as never);
+  if (!ativo) return 0;
+  return data.filter((a) => { const c = A.naoLidas.find((k) => k in a); return c ? Number(a[c]) > 0 : false; }).length;
+}
 
 type Props = {
   open: boolean;
@@ -81,6 +90,10 @@ function SidebarEntry({
   const rotulo = rotuloMenu(idioma, item.path, item.label);
   const Icon = getIcon(item.icon);
   const children = item.children ?? [];
+  const novas = useNovasConversas(item.path === "/atendimentos");
+  const selo = novas > 0 ? (
+    <span className={cn("rounded-full bg-destructive px-1.5 text-[10px] font-semibold leading-4 text-destructive-foreground", open ? "ml-auto" : "absolute right-1 top-1")} aria-label={`${novas} conversas novas`}>{novas > 99 ? "99+" : novas}</span>
+  ) : null;
   const childActive = hasActiveChild(item, pathname);
   const [expanded, setExpanded] = useState(childActive);
   useEffect(() => { if (childActive) setExpanded(true); }, [childActive]);
@@ -91,11 +104,12 @@ function SidebarEntry({
         to={item.path as "/dashboard"}
         onClick={onNavigate}
         aria-label={open ? undefined : rotulo}
-        className={cn(linkCls, isActive(item, pathname) && activeCls, !open && "justify-center px-0")}
+        className={cn(linkCls, "relative", isActive(item, pathname) && activeCls, !open && "justify-center px-0")}
         style={open && depth > 0 ? { paddingLeft: 12 + depth * 16 } : undefined}
       >
         <Icon className={cn("shrink-0", depth > 0 ? "h-4 w-4" : "h-5 w-5")} />
         {open && <span className="truncate">{rotulo}</span>}
+        {selo}
       </Link>
     );
     if (open) return link;
