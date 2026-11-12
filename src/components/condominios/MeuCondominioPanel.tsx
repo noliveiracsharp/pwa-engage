@@ -166,7 +166,7 @@ function ContatosUteis({ condominioId, perms }: { condominioId: string; perms: P
   const semTabela = !!error && /relation|schema cache|does not exist/i.test(String((error as Error).message));
 
   const excluir = async (r: Row) => {
-    if (!(await confirmar({ title: "Excluir contato?", description: `“${s(r["titulo"])}” deixará de aparecer para todos.`, confirmText: "Excluir", destructive: true } as never))) return;
+    if (!(await confirmar({ title: "Excluir contato?", description: `“${s(r["titulo"])}” deixará de aparecer para todos.`, confirmText: "Excluir", destructive: true }))) return;
     salvar.mutate({ id: s(r["id"]), excluir: true }, { onSuccess: () => toast.success("Contato excluído.") });
   };
 

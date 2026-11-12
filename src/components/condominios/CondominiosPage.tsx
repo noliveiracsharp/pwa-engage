@@ -1,6 +1,7 @@
 import { AchadosPanel } from "./AchadosPanel";
 import { EspacosPanel } from "./EspacosPanel";
 import { ChavesPanel } from "./ChavesPanel";
+import { MeuCondominioPanel } from "./MeuCondominioPanel";
 import { useEffect, useMemo, useState } from "react";
 import { Building, Building2, DoorOpen, Layers, Pencil, Plus, Search, Star, Trash2, Wand2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -56,6 +57,7 @@ const DESCRICAO_SECAO: Record<string, string> = {
   enquetes: "Enquetes rápidas e pesquisas para todo o condomínio ou só para um público escolhido.",
   achados: "Itens achados no condomínio com foto, local e registro de devolução.",
   espacos: "Áreas comuns do condomínio com fotos, status e se permitem reserva.",
+  meu: "Endereço, mapa, administradora, facilities e contatos úteis do condomínio.",
   chaves: "Claviculário: entrega e devolução de chaves com prazo e alerta de atraso.",
   "minha-unidade": "As unidades em que você mora ou é proprietário.",
 };
@@ -245,6 +247,8 @@ export function CondominiosPage() {
         <AchadosPanel condominioId={condId} perms={secAtual} />
       ) : secao === "espacos" && secAtual ? (
         <EspacosPanel condominioId={condId} perms={secAtual} />
+      ) : secao === "meu" && secAtual ? (
+        <MeuCondominioPanel condominioId={condId} perms={secAtual} />
       ) : secao === "chaves" && secAtual ? (
         <ChavesPanel condominioId={condId} blocos={blocos} unidades={unidades} perms={secAtual} />
       ) : secao === "gestao" && secAtual ? (
