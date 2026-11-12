@@ -404,6 +404,37 @@ function FluxosPage() {
     });
     toast.success("Bloco duplicado");
   }, [setNodes]);
+  const duplicarSelecionados = useCallback(() => {
+    const marcados = nodes.filter((n) => n.selected && n.data.tipo !== "gatilho");
+    if (!marcados.length) { toast.info("Marque um ou mais blocos para duplicar"); return; }
+    const base = Date.now().toString(36);
+    const mapa = new Map<string, string>();
+    marcados.forEach((n, i) => mapa.set(n.id, `copia-${base}-${i}`));
+    const novos = marcados.map((o) => {
+      const data = JSON.parse(JSON.stringify(o.data)) as NoData;
+      const { measured: _m, ...resto } = o;
+      return { ...resto, id: mapa.get(o.id)!, position: { x: o.position.x + 50, y: o.position.y + 50 }, data, selected: true } as FluxoNode;
+    });
+    const novasLig = edges
+      .filter((e) => mapa.has(e.source) && mapa.has(e.target))
+      .map((e, i) => ({ ...e, id: `lig-${base}-${i}`, source: mapa.get(e.source)!, target: mapa.get(e.target)!, selected: false }));
+    setNodes((ns) => [...ns.map((n) => ({ ...n, selected: false })), ...novos]);
+    if (novasLig.length) setEdges((es) => [...es, ...novasLig]);
+    setSelId(null);
+    toast.success(novos.length === 1 ? "Bloco duplicado" : `${novos.length} blocos duplicados`);
+  }, [nodes, edges, setNodes, setEdges]);
+  const qtdMarcados = nodes.filter((n) => n.selected && n.data.tipo !== "gatilho").length;
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== "d") return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+      e.preventDefault();
+      duplicarSelecionados();
+    };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, [duplicarSelecionados]);
   const removerSel = () => {
     if (!sel || sel.data.tipo === "gatilho") return;
     setNodes((ns) => ns.filter((n) => n.id !== selId));
@@ -533,6 +564,7 @@ function FluxosPage() {
                   <Button size="sm" variant={modoSelecao ? "ghost" : "secondary"} onClick={() => setModoSelecao(false)} title="Arrastar o quadro" aria-pressed={!modoSelecao}><Hand className="size-4" /> Mover</Button>
                   <Button size="sm" variant={modoSelecao ? "secondary" : "ghost"} onClick={() => setModoSelecao(true)} title="Arraste para marcar vários blocos (ou segure Shift)" aria-pressed={modoSelecao}><BoxSelect className="size-4" /> Selecionar</Button>
                   <Button size="sm" variant="ghost" onClick={adicionarNota} title="Adicionar anotação colorida"><StickyNote className="size-4" /> Anotação</Button>
+                  {qtdMarcados > 0 && <Button size="sm" onClick={duplicarSelecionados} title="Duplicar os blocos marcados (Ctrl+D)"><Copy className="size-4" /> Duplicar ({qtdMarcados})</Button>}
                 </Panel>
               </ReactFlow>
               </DuplicarCtx.Provider>
