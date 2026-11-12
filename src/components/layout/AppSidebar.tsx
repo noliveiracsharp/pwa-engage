@@ -16,7 +16,7 @@ import { A } from "@/lib/atendimentos";
 
 /** Conversas com mensagens novas ainda não lidas (selo no menu Atendimentos). */
 function useNovasConversas(ativo: boolean) {
-  const { data = [] } = useTableRows("atendimentos", { enabled: ativo } as never);
+  const { data = [] } = useTableRows("atendimentos", ativo);
   if (!ativo) return 0;
   return data.filter((a) => { const c = A.naoLidas.find((k) => k in a); return c ? Number(a[c]) > 0 : false; }).length;
 }
