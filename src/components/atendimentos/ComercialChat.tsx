@@ -21,6 +21,8 @@ import { dispararMensagem, marcarEnvio } from "@/lib/atendimentos-envio";
 import { A, telefonePessoa } from "@/lib/atendimentos";
 import { linhaOfertaDoItem, mensagemOfertaChat } from "@/lib/comercial-chat";
 import { NovoParceiroRapido } from "@/components/parceiros/NovoParceiroRapido";
+import { usePagePermissions } from "@/hooks/usePagePermissions";
+import { Textarea } from "@/components/ui/textarea";
 
 type Props = { atendimento: Row; pessoa: Row | undefined; instancia: Row | undefined; usuarios: Row[]; orcamentos: Row[] };
 
@@ -35,6 +37,11 @@ export function ComercialChat({ atendimento, pessoa, instancia, usuarios, orcame
   const { data: colsLaudo } = useCols("laudos_tecnicos");
   const { data: colsMsg } = useCols("atendimentos_mensagem");
   const salvarOferta = useSaveOrcamento();
+  // Quem não pode criar Ofertas (ex.: Suporte) encaminha uma solicitação ao Comercial.
+  const permOferta = usePagePermissions("/orcamentos");
+  const podeCriarOferta = permOferta.canCreate;
+  const [solAberta, setSolAberta] = useState(false);
+  const [sol, setSol] = useState({ vendedor: "", texto: "", urgente: false });
   const atId = text(rowId(atendimento));
   const [parceiroLocal, setParceiroLocal] = useState("");
   const parceiroId = parceiroLocal || text(pessoa?.["parceiro_id"]);
@@ -133,6 +140,32 @@ export function ComercialChat({ atendimento, pessoa, instancia, usuarios, orcame
     }
   }
 
+  async function solicitarOferta() {
+    if (!sol.vendedor) return void toast.error("Escolha quem do Comercial vai preparar a Oferta.");
+    if (!sol.texto.trim()) return void toast.error("Descreva o que o cliente precisa.");
+    setSalvando(true);
+    try {
+      const vend = usuarios.find((u) => text(rowId(u)) === sol.vendedor);
+      const tel = telefonePessoa(pessoa) ?? "—";
+      const { error } = await (supabase.from("tarefas_usuarios" as never) as unknown as ReturnType<typeof supabase.from>).insert({
+        empresa_id: empresaId, criado_por: usuarioId, responsavel_id: sol.vendedor,
+        titulo: `Preparar Oferta: ${nomeCliente}`,
+        descricao: `Solicitado pelo atendimento #${text(pick(atendimento, ["protocolo", "numero"]) ?? atId)}\nTelefone: ${tel}\n\nO que o cliente precisa:\n${sol.texto.trim()}`,
+        data_solicitacao: todayISO(), data_entrega: todayISO(), status: "aguardando",
+        prioridade: sol.urgente ? "alta" : "media", anexos: [],
+      } as never);
+      if (error) throw error;
+      await notaInterna(`🔔 Oferta solicitada ao Comercial (${vend ? nomeU(vend) : "vendedor"}${sol.urgente ? ", urgente" : ""}): ${sol.texto.trim()}`);
+      void qc.invalidateQueries({ queryKey: ["planner"] });
+      toast.success("Solicitação enviada ao Comercial.");
+      setSolAberta(false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível enviar a solicitação.");
+    } finally {
+      setSalvando(false);
+    }
+  }
+
   async function solicitar() {
     if (!parceiroId) return void toast.error("Vincule este contato a um cliente (Clientes e Fornecedores) antes de solicitar o laudo.");
     if (!f.tecnico) return void toast.error("Selecione o técnico responsável.");
@@ -187,7 +220,9 @@ export function ComercialChat({ atendimento, pessoa, instancia, usuarios, orcame
       <h3 className="text-xs font-semibold uppercase text-muted-foreground">Comercial</h3>
       <div className="flex flex-wrap gap-2">
         <Button size="sm" variant="outline" onClick={() => setAberto(true)}><ClipboardCheck className="mr-1 h-4 w-4" /> Solicitar laudo</Button>
-        <Button size="sm" variant="outline" onClick={() => { setOf({ descricao: "", itens: [] }); setOfAberta(true); }}><FileText className="mr-1 h-4 w-4" /> Criar oferta</Button>
+        {podeCriarOferta
+          ? <Button size="sm" variant="outline" onClick={() => { setOf({ descricao: "", itens: [] }); setOfAberta(true); }}><FileText className="mr-1 h-4 w-4" /> Criar oferta</Button>
+          : <Button size="sm" variant="outline" onClick={() => { setSol({ vendedor: "", texto: "", urgente: false }); setSolAberta(true); }}><FileText className="mr-1 h-4 w-4" /> Solicitar oferta</Button>}
       </div>
       {meusLaudos.map((l) => (
         <p key={text(rowId(l))} className="text-sm text-muted-foreground">Laudo {text(l["numero"])} · {text(l["status"])}</p>
@@ -213,10 +248,10 @@ export function ComercialChat({ atendimento, pessoa, instancia, usuarios, orcame
               <div className="space-y-1"><Label>Data da visita</Label><Input type="date" value={f.data} onChange={(e) => setF({ ...f, data: e.target.value })} /></div>
               <div className="space-y-1"><Label>Horário</Label><Input type="time" value={f.hora} onChange={(e) => setF({ ...f, hora: e.target.value })} /></div>
             </div>
-            <div className="flex items-center justify-between rounded-md border border-border p-3">
+            {podeCriarOferta ? <div className="flex items-center justify-between rounded-md border border-border p-3">
               <div><p className="text-sm font-medium">Visita com custo</p><p className="text-xs text-muted-foreground">Gera uma Oferta com o item do catálogo para o cliente aprovar.</p></div>
               <Switch checked={f.comCusto} onCheckedChange={(v) => setF({ ...f, comCusto: v })} />
-            </div>
+            </div> : <p className="text-xs text-muted-foreground">Se a visita tiver custo, o Comercial prepara a cobrança depois.</p>}
             {f.comCusto && (
               <div className="space-y-1"><Label>Item da taxa (catálogo)</Label><SearchSelect value={f.itemId} onChange={(v) => setF({ ...f, itemId: v })} options={itemOpts} placeholder="Ex.: Taxa de vistoria" /></div>
             )}
@@ -233,6 +268,24 @@ export function ComercialChat({ atendimento, pessoa, instancia, usuarios, orcame
           <DialogFooter>
             <Button variant="outline" disabled={salvando} onClick={() => setAberto(false)}>Cancelar</Button>
             <Button disabled={salvando} onClick={() => void solicitar()}>{salvando && <Loader2 className="mr-1 h-4 w-4 animate-spin" />} Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={solAberta} onOpenChange={(o) => !salvando && setSolAberta(o)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Solicitar Oferta ao Comercial</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">Conte o que {nomeCliente} precisa. O Comercial recebe uma tarefa no Planner, monta os valores e envia a Oferta.</p>
+            <div className="space-y-1"><Label>Quem do Comercial vai atender</Label><SearchSelect value={sol.vendedor} onChange={(v) => setSol({ ...sol, vendedor: v })} options={tecOpts} placeholder="Selecione o vendedor" /></div>
+            <div className="space-y-1"><Label htmlFor="sol-texto">O que o cliente precisa</Label><Textarea id="sol-texto" rows={5} value={sol.texto} onChange={(e) => setSol({ ...sol, texto: e.target.value })} placeholder="Ex.: trocar switch da portaria e incluir mais 2 câmeras na garagem" /></div>
+            <div className="flex items-center justify-between rounded-md border border-border p-3">
+              <div><p className="text-sm font-medium">Urgente</p><p className="text-xs text-muted-foreground">A tarefa chega com prioridade alta.</p></div>
+              <Switch checked={sol.urgente} onCheckedChange={(v) => setSol({ ...sol, urgente: v })} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" disabled={salvando} onClick={() => setSolAberta(false)}>Cancelar</Button>
+            <Button disabled={salvando} onClick={() => void solicitarOferta()}>{salvando && <Loader2 className="mr-1 h-4 w-4 animate-spin" />} Enviar ao Comercial</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
