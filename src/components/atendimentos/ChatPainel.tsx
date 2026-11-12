@@ -36,7 +36,8 @@ import {
   A, M, dataDe, fotoPessoa, iniciais, isCliente, isIA, nomePessoa, tipoMidia,
   telefonePessoa, etapaHumano, etapaEncerrado, etapaPayload, isEncerrado, nomeEtapa,
 } from "@/lib/atendimentos";
-import { dispararMensagem, marcarEnvio } from "@/lib/atendimentos-envio";
+import { dispararMensagem, editarMensagemZapi, marcarEnvio } from "@/lib/atendimentos-envio";
+import { X, Pencil } from "lucide-react";
 import { GravadorAudio } from "./GravadorAudio";
 import { SinoBotao, SinoTarja, desarmarSino } from "./SinoAtendimento";
 import { TranscricaoAudio } from "./TranscricaoAudio";
@@ -63,6 +64,9 @@ type Props = {
 };
 
 const RASCUNHOS = new Map<string, string>();
+/** Mensagens apagadas nesta sessão: o refetch nunca as traz de volta. */
+const APAGADAS = new Set<string>();
+const EDITADAS = new Map<string, string>();
 
 export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, notas, painelAberto, onTogglePainel, onVoltar }: Props) {
   const qc = useQueryClient();
@@ -89,6 +93,18 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
   const [respondendo, setRespondendo] = useState<Citacao | null>(null);
   const [interna, setInterna] = useState(false);
   const [enviando, setEnviando] = useState(false);
+  const [pendentes, setPendentes] = useState<{ file: File; url: string }[]>([]);
+  useEffect(() => () => pendentes.forEach((p) => URL.revokeObjectURL(p.url)), [pendentes]);
+  useEffect(() => { setPendentes([]); }, [id]);
+  const adicionarPendentes = (files: File[]) =>
+    setPendentes((atual) => [...atual, ...files.map((file) => ({ file, url: URL.createObjectURL(file) }))].slice(0, 10));
+  async function enviarTudo() {
+    if (!pendentes.length) { await enviar(texto); return; }
+    const lista = pendentes; const legenda = texto.trim();
+    setPendentes([]);
+    for (let i = 0; i < lista.length; i++) await anexar(lista[i]!.file, i === 0 ? legenda : "");
+    setTexto("");
+  }
   const [moverAberto, setMoverAberto] = useState(false);
   const [chamada, setChamada] = useState<Chamada | null>(null);
   const participantesRef = useRef<Set<string>>(new Set());
@@ -134,7 +150,10 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
         .eq("atendimento_id", id)
         .eq("oculta_para_atendente", false);
       if (error) throw error;
-      return ((data ?? []) as Row[]).sort(
+      return ((data ?? []) as Row[])
+        .filter((m) => m["apagada_para_todos"] !== true && !APAGADAS.has(text(rowId(m))))
+        .map((m) => { const e = EDITADAS.get(text(rowId(m))); return e === undefined ? m : { ...m, mensagem: e, conteudo: e, texto: e }; })
+        .sort(
         (a, b) => (dataDe(a, M.data)?.getTime() ?? 0) - (dataDe(b, M.data)?.getTime() ?? 0),
       );
     },
@@ -266,7 +285,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
           mensagemId: mid,
           atendimentoId: id,
           telefone: telefonePessoa(pessoa),
-          texto: conteudo,
+          texto: comAssinatura(conteudo),
           midiaUrl: extra["midia_url"] as string | undefined,
           tipo: extra["tipo"] as string | undefined,
           nomeArquivo: extra["nome_arquivo"] as string | undefined,
@@ -280,6 +299,12 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
     }
     setEnviando(false);
     qc.invalidateQueries({ queryKey: ["table", "atendimentos_mensagem"] });
+  }
+
+  /** Nome do atendente em negrito no início da mensagem do WhatsApp. */
+  function comAssinatura(c: string) {
+    const quem = autores.get(text(usuarioId));
+    return quem && c.trim() ? `*${quem}:*\n${c}` : c;
   }
 
   async function registrarInterna(conteudo: string) {
@@ -360,7 +385,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
     await registrarInterna(linhas.join("\n"));
   }
 
-  async function anexar(original: File) {
+  async function anexar(original: File, legenda = "") {
     const file = await comprimirImagem(original, "chat");
     setEnviando(true);
     const path = `${empresaId ?? "geral"}/${id}/${Date.now()}-${file.name.replace(/[^\w.-]/g, "_")}`;
@@ -372,7 +397,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
     }
     const url = supabase.storage.from("chat_media").getPublicUrl(path).data.publicUrl;
     const tipo = file.type.startsWith("image/") ? "imagem" : file.type.startsWith("audio/") ? "audio" : file.type.startsWith("video/") ? "video" : "documento";
-    await enviar(texto.trim() || file.name, {
+    await enviar(legenda, {
       url_midia: url, midia_url: url, tipo_midia: tipo, tipo, nome_arquivo: file.name,
     });
   }
@@ -633,6 +658,22 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
             ))}
           </div>
         )}
+        {pendentes.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-2 rounded-md border border-border bg-muted/40 p-2" aria-label="Arquivos para enviar">
+            {pendentes.map((p, i) => (
+              <div key={p.url} className="relative h-20 w-20 overflow-hidden rounded-md border border-border bg-background">
+                {p.file.type.startsWith("image/") ? (
+                  <img src={p.url} alt={`Prévia ${i + 1}`} className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full flex-col items-center justify-center gap-1 p-1 text-center text-[10px] text-muted-foreground"><FileText className="h-5 w-5" /><span className="line-clamp-2 break-all">{p.file.name}</span></div>
+                )}
+                <button type="button" aria-label="Remover arquivo" onClick={() => setPendentes((a) => a.filter((x) => x.url !== p.url))}
+                  className="absolute right-0.5 top-0.5 rounded-full bg-background/90 p-0.5 text-foreground shadow"><X className="h-3 w-3" /></button>
+              </div>
+            ))}
+            <p className="w-full text-xs text-muted-foreground">Escreva uma legenda (opcional) e clique em Enviar. A legenda vai na primeira imagem.</p>
+          </div>
+        )}
         {respondendo && <FaixaResposta citacao={respondendo} onCancelar={() => setRespondendo(null)} />}
         <div className={cn("flex items-end gap-2 rounded-lg p-1", interna && "bg-warning/15")}>
           <Popover>
@@ -654,11 +695,12 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
           <input
             ref={fileRef}
             type="file"
+            multiple
             hidden
             accept="image/*,audio/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
             onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) void anexar(f);
+              const fs = Array.from(e.target.files ?? []);
+              if (fs.length) adicionarPendentes(fs);
               e.target.value = "";
             }}
           />
@@ -672,17 +714,12 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
                 .filter((f): f is File => !!f);
               if (!arquivos.length || enviando) return;
               e.preventDefault();
-              void (async () => {
-                for (const f of arquivos) {
-                  const nome = f.name && f.name !== "image.png" ? f.name : `imagem-colada-${Date.now()}.${f.type.split("/")[1] || "png"}`;
-                  await anexar(new File([f], nome, { type: f.type }));
-                }
-              })();
+              adicionarPendentes(arquivos.map((f, i) => new File([f], `imagem-${Date.now()}-${i}.${f.type.split("/")[1] || "png"}`, { type: f.type })));
             }}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
-                void enviar(texto);
+                void enviarTudo();
               }
             }}
             rows={1}
@@ -690,7 +727,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
             className="max-h-32 min-h-10 flex-1 resize-none"
           />
           <GravadorAudio disabled={enviando} onGravado={(f) => void anexar(f)} />
-          <Button size="icon" onClick={() => enviar(texto)} disabled={enviando || !texto.trim()} aria-label="Enviar">
+          <Button size="icon" onClick={() => void enviarTudo()} disabled={enviando || (!texto.trim() && !pendentes.length)} aria-label="Enviar">
             {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </Button>
         </div>
@@ -786,6 +823,7 @@ function Balao({ m, autores, onResponder }: { m: Row; autores: Map<string, strin
   const [apagando, setApagando] = useState(false);
   const mid = rowId(m);
   const tirarDaTela = () => {
+    APAGADAS.add(text(mid));
     qc.setQueriesData<Row[]>({ queryKey: ["table", "atendimentos_mensagem", "at"] }, (old) =>
       Array.isArray(old) ? old.filter((x) => text(rowId(x)) !== text(mid)) : old,
     );
@@ -809,6 +847,22 @@ function Balao({ m, autores, onResponder }: { m: Row; autores: Map<string, strin
     if (falha) { toast.error(`Não foi possível apagar para todos: ${falha}`); return; }
     tirarDaTela();
     toast.success("Mensagem apagada para todos.");
+  }
+  async function editar() {
+    const novo = await perguntar({ title: "Editar mensagem", description: "O texto será corrigido aqui e no WhatsApp do cliente.", defaultValue: corpo, placeholder: "Mensagem", confirmText: "Salvar" });
+    if (novo === null || !novo.trim() || novo === corpo) return;
+    setApagando(true);
+    const { error } = await supabase.from("atendimentos_mensagem").update({ mensagem: novo, conteudo: novo, texto: novo } as never).eq("id", mid as string);
+    if (error) console.error(error);
+    EDITADAS.set(text(mid), novo);
+    qc.setQueriesData<Row[]>({ queryKey: ["table", "atendimentos_mensagem", "at"] }, (old) =>
+      Array.isArray(old) ? old.map((x) => (text(rowId(x)) === text(mid) ? { ...x, mensagem: novo, conteudo: novo, texto: novo } : x)) : old);
+    const zid = text(m["message_id_zapi"]);
+    if (!interna && zid && onEditarWhats) {
+      try { await onEditarWhats(zid, novo); } catch (e) { toast.error(`Corrigido aqui, mas o WhatsApp recusou a edição: ${(e as Error).message}`); setApagando(false); return; }
+    }
+    setApagando(false);
+    toast.success("Mensagem editada.");
   }
   const equipe = !cliente;
   const citacao = lerCitacao(m["citacao"]);
@@ -845,6 +899,7 @@ function Balao({ m, autores, onResponder }: { m: Row; autores: Map<string, strin
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              {(!url || !tipo || tipo === "texto") && corpo && <DropdownMenuItem onSelect={() => void editar()}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>}
               <DropdownMenuItem onSelect={apagarParaMim}><Trash2 className="mr-2 h-4 w-4" /> Apagar para mim</DropdownMenuItem>
               {!interna && (
                 <DropdownMenuItem onSelect={apagarParaTodos} className="text-destructive focus:text-destructive">

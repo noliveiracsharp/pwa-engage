@@ -110,7 +110,10 @@ export function etapaHumano(etapas: Row[], kanbanId: string) {
 }
 /** Etapa de encerramento (is_default_encerrado) do kanban. */
 export function etapaEncerrado(etapas: Row[], kanbanId: string) {
-  return etapasDoKanban(etapas, kanbanId).find((e) => e["is_default_encerrado"] === true);
+  const lista = etapasDoKanban(etapas, kanbanId);
+  // Sem marcação explícita, usa a etapa cujo nome indica encerramento.
+  return lista.find((e) => e["is_default_encerrado"] === true)
+    ?? lista.find((e) => /encerr|finaliz|conclu|fechad|resolvid/i.test(text(pick(e, ["nome", "descricao", "titulo"]))));
 }
 /** Etapa atual do atendimento. */
 export function etapaDe(a: Row | undefined, etapas: Row[]) {

@@ -137,6 +137,22 @@ export async function dispararMensagem(e: Envio): Promise<string | true> {
   return (await idZapi(r)) ?? true;
 }
 
+/** Edita no WhatsApp uma mensagem de texto já enviada (Z-API send-text com editMessageId). */
+export async function editarMensagemZapi(inst: Row | undefined, telefone: string, messageId: string, novoTexto: string) {
+  if (!inst || text(pick(inst, ["tipo"])) === "chat") return true;
+  const instanceId = text(pick(inst, ["instance_id"]));
+  const token = text(pick(inst, ["token"]));
+  if (!instanceId || !token) throw new Error("Instance ID ou token da Z-API não configurados.");
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const clientToken = text(pick(inst, ["client_token"]));
+  if (clientToken) headers["Client-Token"] = clientToken;
+  const r = await fetch(`https://api.z-api.io/instances/${instanceId}/token/${token}/send-text`, {
+    method: "POST", headers, body: JSON.stringify({ phone: sanitizarTelefone(telefone), message: novoTexto, editMessageId: messageId }),
+  });
+  if (!r.ok) throw new Error(`Z-API respondeu ${r.status}`);
+  return true;
+}
+
 /** Atualiza status_envio da mensagem e guarda o ID da Z-API para receber entregue/lido. */
 export async function marcarEnvio(mensagemId: unknown, status: "enviado" | "falha", idWhatsApp?: string | true | null) {
   if (mensagemId == null) return;

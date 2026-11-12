@@ -36,6 +36,7 @@ import { DocumentInput } from "@/components/data-table/DocumentInput";
 import { IconPicker } from "@/components/data-table/IconPicker";
 import { getIcon } from "@/components/layout/icon-map";
 import { supabase } from "@/integrations/supabase/client";
+import { TextoWhatsApp } from "@/components/atendimentos/TextoWhatsApp";
 import { idColumn, text } from "@/lib/crud";
 import { SortableList, useSortableRow, salvarOrdem, proximaOrdem } from "@/lib/reorder";
 import { pick, type Row } from "@/lib/row";
@@ -133,7 +134,7 @@ export const EMPRESA_FIELDS: EmpresaField[] = [
   { key: "numero_nfse_atual", label: "Último número NFS-e", fiscal: true, numeric: true },
 ];
 
-type ChildColumn = { key: string; label: string; type?: "text" | "boolean" | "select" | "tel" | "icon" | "color"; options?: string[]; optionLabels?: Record<string, string>; showIf?: (d: Record<string, string>) => boolean; required?: boolean; numeric?: boolean; nullable?: boolean };
+type ChildColumn = { key: string; label: string; type?: "text" | "boolean" | "select" | "tel" | "icon" | "color" | "whatsapp"; options?: string[]; optionLabels?: Record<string, string>; showIf?: (d: Record<string, string>) => boolean; required?: boolean; numeric?: boolean; nullable?: boolean };
 
 type ChildConfig = {
   table: string;
@@ -241,7 +242,7 @@ const NOTAS: ChildConfig = {
   table: "empresas_notasrapidas",
   title: "Notas rápidas",
   empty: "Nenhuma nota rápida cadastrada.",
-  columns: [{ key: "atalho", label: "Atalho" }, { key: "descricao", label: "Descrição" }],
+  columns: [{ key: "atalho", label: "Atalho" }, { key: "descricao", label: "Descrição", type: "whatsapp" }],
 };
 
 type ChildPerms = { canCreate: boolean; canUpdate: boolean; canDelete: boolean };
@@ -559,7 +560,7 @@ export function ChildTable({ config, empresa, perms = FULL }: { config: ChildCon
       <>
       <div className="grid gap-3 sm:grid-cols-2">
         {config.columns.filter((col) => !col.showIf || col.showIf(draft)).map((col) => (
-          <div key={col.key} className={col.type === "tel" ? "min-w-0 sm:col-span-2" : "min-w-0"}>
+          <div key={col.key} className={col.type === "tel" || col.type === "whatsapp" ? "min-w-0 sm:col-span-2" : "min-w-0"}>
             <Label className="mb-1.5 block text-xs">{col.label}</Label>
             {col.type === "boolean" ? (
               <div className="flex h-10 items-center justify-between gap-3 rounded-md border bg-background px-3 py-2">
@@ -590,6 +591,12 @@ export function ChildTable({ config, empresa, perms = FULL }: { config: ChildCon
                   ))}
                 </SelectContent>
               </Select>
+            ) : col.type === "whatsapp" ? (
+              <TextoWhatsApp
+                value={draft[col.key] ?? ""}
+                onChange={(v) => setDraft((d) => ({ ...d, [col.key]: v }))}
+                pasta={`notas/${text(empresaId)}`}
+              />
             ) : col.type === "tel" ? (
               <PhoneInput
                 value={draft[col.key] ?? ""}
