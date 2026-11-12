@@ -176,14 +176,14 @@ export function ChavesPanel({ condominioId, blocos, unidades, perms }: { condomi
                     <td className="p-2">{PRAZOS_CHAVE.find((p) => p.minutos === Number(c["prazo_padrao_minutos"]))?.label ?? (c["prazo_padrao_minutos"] ? `${c["prazo_padrao_minutos"]} min` : "Sem prazo")}</td>
                     <td className="p-2">{c["ativo"] === false ? "Inativa" : "Ativa"}</td>
                     <td className="p-2 text-right">
-                      {perms.canUpdate && <AcaoIcone rotulo="Editar chave" icone={Pencil} onClick={() => setEditar(c)} />}
-                      {perms.canDelete && <AcaoIcone rotulo="Excluir chave" icone={Trash2} destrutivo onClick={async () => {
+                      {perms.canUpdate && <AcaoIcone titulo="Editar chave" onClick={() => setEditar(c)}><Pencil className="size-4" /></AcaoIcone>}
+                      {perms.canDelete && <AcaoIcone titulo="Excluir chave" destrutivo onClick={async () => {
                         if (abertas.has(s(c["id"]))) return void toast.error("Esta chave está em uso. Registre a devolução antes.");
                         if (!(await confirmar({ title: `Excluir "${s(c["nome"])}"?`, description: "O histórico desta chave também será apagado. Para manter, prefira inativar.", destructive: true }))) return;
                         const r = await db.from("cond_chaves").delete().eq("id", c["id"]);
                         if (r.error) return void toast.error(r.error.message);
                         recarregar();
-                      }} />}
+                      }}><Trash2 className="size-4" /></AcaoIcone>}
                     </td>
                   </tr>
                 ))}
