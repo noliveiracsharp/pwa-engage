@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { perguntar } from "@/components/layout/DialogoGlobal";
 import { filterPayload } from "@/lib/projetos";
 import type { Row } from "@/lib/row";
 import {
@@ -22,7 +24,12 @@ type Props = {
   /** Envia ao cliente pelo WhatsApp e grava no histórico. */
   enviar: (conteudo: string) => Promise<void>;
   onChange: () => void;
+  /** Notas rápidas da empresa, usadas como modelos de mensagem. */
+  notas?: Row[];
+  empresaId?: unknown;
 };
+
+const rotuloIntervalo = (m: number) => (m >= 60 ? `${m / 60}h` : `${m} min`);
 
 const temColunas = (cols?: string[]) => !cols || cols.includes("sino_ativo");
 
@@ -49,6 +56,21 @@ export function SinoBotao(p: Props) {
     if (aberto) { setIntervalo(s.intervaloMin); setMax(s.maxEnvios); setMsg(s.mensagem); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [aberto]);
+
+  const [extras, setExtras] = useState<Row[]>([]);
+  const modelos = [...(p.notas ?? []), ...extras]
+    .filter((n) => String(n["descricao"] ?? "").trim())
+    .sort((a, b) => String(a["atalho"] ?? "").localeCompare(String(b["atalho"] ?? ""), "pt-BR"));
+
+  async function salvarModelo() {
+    const atalho = await perguntar({ title: "Salvar modelo", description: "Dê um atalho curto. O modelo também fica disponível nas Notas rápidas (digite / no chat).", placeholder: "ex.: espera", confirmText: "Salvar" });
+    if (!atalho?.trim()) return;
+    const linha = { empresa_id: p.empresaId, atalho: atalho.trim().replace(/^\//, ""), descricao: msg.trim() };
+    const { data, error } = await supabase.from("empresas_notasrapidas").insert(linha as never).select().single();
+    if (error) { toast.error(error.message); return; }
+    setExtras((e) => [...e, data as Row]);
+    toast.success("Modelo salvo.");
+  }
 
   if (p.encerrado) return null;
 
@@ -86,9 +108,9 @@ export function SinoBotao(p: Props) {
         </div>
         <div className="space-y-1">
           <Label>Enviar a cada</Label>
-          <div className="flex gap-1">
+          <div className="flex flex-wrap gap-1">
             {SINO_INTERVALOS.map((m) => (
-              <Button key={m} type="button" size="sm" variant={intervalo === m ? "default" : "outline"} onClick={() => setIntervalo(m)}>{m} min</Button>
+              <Button key={m} type="button" size="sm" variant={intervalo === m ? "default" : "outline"} onClick={() => setIntervalo(m)}>{rotuloIntervalo(m)}</Button>
             ))}
           </div>
         </div>
@@ -101,7 +123,20 @@ export function SinoBotao(p: Props) {
           </div>
         </div>
         <div className="space-y-1">
-          <Label>Mensagem</Label>
+          <div className="flex items-center justify-between gap-2">
+            <Label>Mensagem</Label>
+            <Button type="button" variant="link" size="sm" className="h-auto p-0 text-xs" disabled={!msg.trim()} onClick={() => void salvarModelo()}>
+              Salvar como modelo
+            </Button>
+          </div>
+          {modelos.length > 0 && (
+            <Select onValueChange={(v) => { const n = modelos.find((x) => String(x["id"]) === v); if (n) setMsg(String(n["descricao"] ?? "")); }}>
+              <SelectTrigger className="h-8 text-xs" aria-label="Escolher modelo de mensagem"><SelectValue placeholder="Escolher um modelo…" /></SelectTrigger>
+              <SelectContent>
+                {modelos.map((n) => <SelectItem key={String(n["id"])} value={String(n["id"])}>/{String(n["atalho"] ?? "")}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
           <Textarea rows={4} value={msg} onChange={(e) => setMsg(e.target.value)} />
           <p className="text-[11px] text-muted-foreground">Use {"{nome}"} para o primeiro nome do cliente. Prévia: {textoSino(msg, p.nomeCliente)}</p>
         </div>

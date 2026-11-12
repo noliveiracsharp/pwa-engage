@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { TextoRico } from "@/components/ui/texto-rico";
 import { htmlParaTexto } from "@/lib/html-texto";
-import { confirmar } from "@/components/layout/DialogoGlobal";
+import { confirmar, perguntar } from "@/components/layout/DialogoGlobal";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const T = "tarefas_usuarios";
@@ -363,6 +363,7 @@ export function NovaTarefa({ me, empresaId, usuarios, onCancel, onSaved, respons
                 </div>
               )}
             </div>
+            <GruposTarefa me={me} empresaId={empresaId} selecionados={resps} onAplicar={(ids) => setResps((r) => [...new Set([...r, ...ids])])} />
             {resps.length > 1 && <p className="text-xs text-muted-foreground">Será criada uma tarefa separada para cada pessoa ({resps.length}).</p>}
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -397,6 +398,52 @@ export function NovaTarefa({ me, empresaId, usuarios, onCancel, onSaved, respons
         <Button variant="outline" size="sm" onClick={onCancel}>Cancelar</Button>
         <Button size="sm" onClick={() => void salvar()} disabled={enviando}>{enviando && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}{resps.length > 1 ? `Salvar (${resps.length} tarefas)` : "Salvar"}</Button>
       </div>
+    </div>
+  );
+}
+
+/** Grupos de pessoas (os mesmos grupos do Chat da equipe) para atribuir uma tarefa a todos de uma vez. */
+function GruposTarefa({ me, empresaId, selecionados, onAplicar }: {
+  me: string; empresaId: string; selecionados: string[]; onAplicar: (ids: string[]) => void;
+}) {
+  const qc = useQueryClient();
+  const key = ["tarefas-grupos", me, empresaId];
+  const { data: grupos = [] } = useQuery({
+    queryKey: key, enabled: !!me,
+    queryFn: async () => {
+      const { data: meus } = await supabase.from("chat_interno_participantes").select("canal_id").eq("usuario_id", me);
+      const ids = ((meus ?? []) as Row[]).map((m) => String(m["canal_id"]));
+      if (!ids.length) return [] as { id: string; nome: string; membros: string[] }[];
+      const { data: canais } = await supabase.from("chat_interno_canais").select("id,nome,tipo,empresa_id").in("id", ids).eq("tipo", "grupo");
+      const lista = ((canais ?? []) as Row[]).filter((c) => !empresaId || String(c["empresa_id"]) === empresaId);
+      if (!lista.length) return [];
+      const { data: parts } = await supabase.from("chat_interno_participantes").select("canal_id,usuario_id").in("canal_id", lista.map((c) => String(c["id"])));
+      return lista.map((c) => ({
+        id: String(c["id"]), nome: String(c["nome"] ?? "Grupo"),
+        membros: ((parts ?? []) as Row[]).filter((x) => String(x["canal_id"]) === String(c["id"])).map((x) => String(x["usuario_id"])),
+      })).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+    },
+  });
+  const criar = async () => {
+    if (selecionados.length < 2) { toast.info("Escolha ao menos duas pessoas acima para salvar como grupo."); return; }
+    const nome = await perguntar({ title: "Novo grupo", description: `Salvar as ${selecionados.length} pessoas escolhidas como um grupo. Ele também aparece no Chat da equipe.`, placeholder: "Ex.: Equipe Suporte", confirmText: "Criar grupo" });
+    if (!nome?.trim()) return;
+    const id = crypto.randomUUID();
+    const { error } = await supabase.from("chat_interno_canais").insert({ id, empresa_id: empresaId, tipo: "grupo", nome: nome.trim() });
+    if (error) { toast.error(error.message); return; }
+    const p = await supabase.from("chat_interno_participantes").insert([...new Set([me, ...selecionados])].map((u) => ({ canal_id: id, usuario_id: u })));
+    if (p.error) { toast.error(p.error.message); return; }
+    toast.success("Grupo criado.");
+    void qc.invalidateQueries({ queryKey: key });
+  };
+  return (
+    <div className="flex flex-wrap items-center gap-1">
+      <span className="text-xs text-muted-foreground">Grupos:</span>
+      {grupos.map((g) => (
+        <Button key={g.id} type="button" size="sm" variant="outline" className="h-7 text-xs" title={`Adicionar ${g.membros.length} pessoas`}
+          onClick={() => onAplicar(g.membros)}>{g.nome} ({g.membros.length})</Button>
+      ))}
+      <Button type="button" size="sm" variant="ghost" className="h-7 text-xs" onClick={() => void criar()}><Plus className="mr-1 h-3 w-3" /> Salvar escolhidos como grupo</Button>
     </div>
   );
 }

@@ -77,6 +77,7 @@ import { Route as AuthenticatedAdminClientesRouteImport } from './routes/_authen
 import { Route as AuthenticatedAdminModulosRouteImport } from './routes/_authenticated/admin.modulos'
 import { Route as AuthenticatedAdminPlanosRouteImport } from './routes/_authenticated/admin.planos'
 import { Route as AuthenticatedAdminVersoesRouteImport } from './routes/_authenticated/admin.versoes'
+import { Route as AuthenticatedAtendimentosDashboardRouteImport } from './routes/_authenticated/atendimentos_.dashboard'
 import { Route as AuthenticatedProjetosTemplatesRouteImport } from './routes/_authenticated/projetos_.templates'
 import { Route as AuthenticatedRelatoriosAtendimentosRouteImport } from './routes/_authenticated/relatorios_.atendimentos'
 import { Route as AuthenticatedRelatoriosBoardRouteImport } from './routes/_authenticated/relatorios_.board'
@@ -445,6 +446,12 @@ const AuthenticatedAdminVersoesRoute =
     path: '/admin/versoes',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAtendimentosDashboardRoute =
+  AuthenticatedAtendimentosDashboardRouteImport.update({
+    id: '/atendimentos_/dashboard',
+    path: '/atendimentos/dashboard',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedProjetosTemplatesRoute =
   AuthenticatedProjetosTemplatesRouteImport.update({
     id: '/projetos_/templates',
@@ -597,6 +604,7 @@ export interface FileRoutesByFullPath {
   '/admin/modulos': typeof AuthenticatedAdminModulosRoute
   '/admin/planos': typeof AuthenticatedAdminPlanosRoute
   '/admin/versoes': typeof AuthenticatedAdminVersoesRoute
+  '/atendimentos/dashboard': typeof AuthenticatedAtendimentosDashboardRoute
   '/projetos/templates': typeof AuthenticatedProjetosTemplatesRoute
   '/relatorios/atendimentos': typeof AuthenticatedRelatoriosAtendimentosRoute
   '/relatorios/board': typeof AuthenticatedRelatoriosBoardRoute
@@ -681,6 +689,7 @@ export interface FileRoutesByTo {
   '/admin/modulos': typeof AuthenticatedAdminModulosRoute
   '/admin/planos': typeof AuthenticatedAdminPlanosRoute
   '/admin/versoes': typeof AuthenticatedAdminVersoesRoute
+  '/atendimentos/dashboard': typeof AuthenticatedAtendimentosDashboardRoute
   '/projetos/templates': typeof AuthenticatedProjetosTemplatesRoute
   '/relatorios/atendimentos': typeof AuthenticatedRelatoriosAtendimentosRoute
   '/relatorios/board': typeof AuthenticatedRelatoriosBoardRoute
@@ -767,6 +776,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/modulos': typeof AuthenticatedAdminModulosRoute
   '/_authenticated/admin/planos': typeof AuthenticatedAdminPlanosRoute
   '/_authenticated/admin/versoes': typeof AuthenticatedAdminVersoesRoute
+  '/_authenticated/atendimentos_/dashboard': typeof AuthenticatedAtendimentosDashboardRoute
   '/_authenticated/projetos_/templates': typeof AuthenticatedProjetosTemplatesRoute
   '/_authenticated/relatorios_/atendimentos': typeof AuthenticatedRelatoriosAtendimentosRoute
   '/_authenticated/relatorios_/board': typeof AuthenticatedRelatoriosBoardRoute
@@ -853,6 +863,7 @@ export interface FileRouteTypes {
     | '/admin/modulos'
     | '/admin/planos'
     | '/admin/versoes'
+    | '/atendimentos/dashboard'
     | '/projetos/templates'
     | '/relatorios/atendimentos'
     | '/relatorios/board'
@@ -937,6 +948,7 @@ export interface FileRouteTypes {
     | '/admin/modulos'
     | '/admin/planos'
     | '/admin/versoes'
+    | '/atendimentos/dashboard'
     | '/projetos/templates'
     | '/relatorios/atendimentos'
     | '/relatorios/board'
@@ -1022,6 +1034,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/modulos'
     | '/_authenticated/admin/planos'
     | '/_authenticated/admin/versoes'
+    | '/_authenticated/atendimentos_/dashboard'
     | '/_authenticated/projetos_/templates'
     | '/_authenticated/relatorios_/atendimentos'
     | '/_authenticated/relatorios_/board'
@@ -1554,6 +1567,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminVersoesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/atendimentos_/dashboard': {
+      id: '/_authenticated/atendimentos_/dashboard'
+      path: '/atendimentos/dashboard'
+      fullPath: '/atendimentos/dashboard'
+      preLoaderRoute: typeof AuthenticatedAtendimentosDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/projetos_/templates': {
       id: '/_authenticated/projetos_/templates'
       path: '/projetos/templates'
@@ -1704,6 +1724,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminModulosRoute: typeof AuthenticatedAdminModulosRoute
   AuthenticatedAdminPlanosRoute: typeof AuthenticatedAdminPlanosRoute
   AuthenticatedAdminVersoesRoute: typeof AuthenticatedAdminVersoesRoute
+  AuthenticatedAtendimentosDashboardRoute: typeof AuthenticatedAtendimentosDashboardRoute
   AuthenticatedProjetosTemplatesRoute: typeof AuthenticatedProjetosTemplatesRoute
   AuthenticatedRelatoriosAtendimentosRoute: typeof AuthenticatedRelatoriosAtendimentosRoute
   AuthenticatedRelatoriosBoardRoute: typeof AuthenticatedRelatoriosBoardRoute
@@ -1756,6 +1777,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminModulosRoute: AuthenticatedAdminModulosRoute,
   AuthenticatedAdminPlanosRoute: AuthenticatedAdminPlanosRoute,
   AuthenticatedAdminVersoesRoute: AuthenticatedAdminVersoesRoute,
+  AuthenticatedAtendimentosDashboardRoute:
+    AuthenticatedAtendimentosDashboardRoute,
   AuthenticatedProjetosTemplatesRoute: AuthenticatedProjetosTemplatesRoute,
   AuthenticatedRelatoriosAtendimentosRoute:
     AuthenticatedRelatoriosAtendimentosRoute,

@@ -1,7 +1,8 @@
+import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { useKanbansPermitidos } from "@/hooks/useKanbansPermitidos";
 import { ProtocoloBadge } from "@/components/atendimentos/ProtocoloBadge";
 import { useEffect, useMemo, useState } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Bot, MessageSquare, PanelLeftClose, PanelLeftOpen, Plus, Search, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,7 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ChatPainel } from "@/components/atendimentos/ChatPainel";
 import { ContatoPainel } from "@/components/atendimentos/ContatoPainel";
 import { BloqueiosDialog, SeloBloqueado, useBloqueados } from "@/components/atendimentos/Bloqueios";
-import { Ban } from "lucide-react";
+import { Ban, BarChart3 } from "lucide-react";
 import {
   A, M, corEtiqueta, dataDe, fotoPessoa, horaCurta, iniciais, isCliente, isEncerrado, isIA, nomePessoa, telefonePessoa,
 } from "@/lib/atendimentos";
@@ -43,14 +44,14 @@ export const Route = createFileRoute("/_authenticated/atendimentos")({
   component: AtendimentosPage,
 });
 
-type Rapido = "todos" | "minhas" | "aguardando" | "ia" | "encerrados";
-const RAPIDOS: { key: Rapido; label: string }[] = [
-  { key: "todos", label: "Todos" },
+type Rapido = "todos" | "historico" | "minhas" | "aguardando" | "ia" | "encerrados";
+const RAPIDOS_BASE: { key: Rapido; label: string }[] = [
   { key: "minhas", label: "Minhas conversas" },
   { key: "aguardando", label: "Aguardando" },
   { key: "ia", label: "Pela IA" },
   { key: "encerrados", label: "Encerrados" },
 ];
+const naoLidasDe = (a: Row) => { const c = A.naoLidas.find((k) => k in a); return c ? Number(a[c]) || 0 : 0; };
 
 const byId = (rows: Row[]) => new Map(rows.map((r) => [text(rowId(r)), r]));
 
@@ -123,7 +124,10 @@ function AtendimentosPage() {
 
   const [instFiltro, setInstFiltro] = useState("todas");
   const [depFiltro, setDepFiltro] = useState("todos");
-  const [rapido, setRapido] = useState<Rapido>("todos");
+  const gerencial = usePagePermissions("/atendimentos/gerencial").canRead || isMaster;
+  const RAPIDOS = useMemo(() => [...RAPIDOS_BASE, gerencial ? { key: "todos" as Rapido, label: "Todos" } : { key: "historico" as Rapido, label: "Histórico" }], [gerencial]);
+  const [rapido, setRapido] = useState<Rapido>("minhas");
+  useEffect(() => { if (!gerencial && rapido === "todos") setRapido("historico"); if (gerencial && rapido === "historico") setRapido("todos"); }, [gerencial, rapido]);
   const [busca, setBusca] = useState("");
   const [painel, setPainel] = useState(true);
   const [listaAberta, setLista] = useState(true);
@@ -147,34 +151,52 @@ function AtendimentosPage() {
     [usuarios],
   );
 
-  const lista = useMemo(() => {
+  const meuParticipa = useMemo(() => new Set(participantes.filter((x) => text(x["usuario_id"]) === usuarioId).map((x) => text(x["atendimento_id"]))), [participantes, usuarioId]);
+  const visiveis = useMemo(() => {
     const permitidos = new Set(kanbans.map((k) => text(rowId(k))));
+    return atendimentos.filter((a) => isMaster || permitidos.has(text(pick(a, A.kanban))) || text(pick(a, A.responsavel)) === usuarioId);
+  }, [atendimentos, kanbans, isMaster, usuarioId]);
+  function naAba(a: Row, aba: Rapido) {
+    const enc = isEncerrado(a, etapas);
+    if (aba === "encerrados") return enc;
+    if (aba === "historico") return text(pick(a, A.responsavel)) === usuarioId || meuParticipa.has(text(rowId(a)));
+    if (enc) return false; // Encerrados só aparecem nas abas "Encerrados"/"Histórico".
+    if (aba === "minhas") return !!usuarioId && text(pick(a, A.responsavel)) === usuarioId;
+    if (aba === "aguardando") return !isIA(a) && !text(pick(a, A.responsavel));
+    if (aba === "ia") return isIA(a);
+    return true;
+  }
+  // Selos: conversas com mensagens novas (não lidas) em cada aba; em "Aguardando", toda conversa sem atendente.
+  const selos = useMemo(() => {
+    const m = new Map<Rapido, number>();
+    for (const r of RAPIDOS) {
+      if (r.key === "encerrados" || r.key === "historico") continue;
+      m.set(r.key, visiveis.filter((a) => naAba(a, r.key) && (r.key === "aguardando" || naoLidasDe(a) > 0)).length);
+    }
+    return m;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visiveis, etapas, RAPIDOS, usuarioId, meuParticipa]);
+
+  const lista = useMemo(() => {
     const termo = busca.trim().toLowerCase();
-    return atendimentos
-      .filter((a) => isMaster || permitidos.has(text(pick(a, A.kanban))) || text(pick(a, A.responsavel)) === usuarioId)
+    return visiveis
       .filter((a) => instFiltro === "todas" || text(pick(a, A.instancia)) === instFiltro)
       .filter((a) => depFiltro === "todos" || text(pick(a, A.kanban)) === depFiltro)
       .filter((a) => parcFiltro === "todos" || text(pessoasMap.get(text(pick(a, A.pessoa)))?.["parceiro_id"]) === parcFiltro)
-      .filter((a) => {
-        const enc = isEncerrado(a, etapas);
-        if (rapido === "encerrados") return enc;
-        if (enc) return false; // Encerrados só aparecem na aba "Encerrados".
-        if (rapido === "minhas") return !!usuarioId && text(pick(a, A.responsavel)) === usuarioId;
-        if (rapido === "aguardando") return !isIA(a) && !text(pick(a, A.responsavel));
-        if (rapido === "ia") return isIA(a);
-        return true;
-      })
+      .filter((a) => naAba(a, rapido))
       .filter((a) => {
         if (!termo) return true;
         const p = pessoasMap.get(text(pick(a, A.pessoa)));
-        return `${nomePessoa(p)} ${telefonePessoa(p)}`.toLowerCase().includes(termo);
+        const digitos = termo.replace(/\D/g, "");
+        const alvo = `${nomePessoa(p)} ${telefonePessoa(p)} ${text(a["protocolo"])}`.toLowerCase();
+        return alvo.includes(termo) || (digitos.length >= 3 && alvo.replace(/\D/g, "").includes(digitos));
       })
       .map((a) => {
         const ult = ultimas.get(text(rowId(a)));
         return { a, ult, quando: dataDe(ult, M.data) ?? dataDe(a, A.data) };
       })
       .sort((x, y) => (y.quando?.getTime() ?? 0) - (x.quando?.getTime() ?? 0));
-  }, [atendimentos, etapas, kanbans, isMaster, usuarioId, instFiltro, depFiltro, parcFiltro, rapido, busca, pessoasMap, participantes, ultimas]);
+  }, [atendimentos, etapas, kanbans, isMaster, usuarioId, instFiltro, depFiltro, parcFiltro, rapido, busca, pessoasMap, participantes, ultimas, visiveis, meuParticipa]);
 
   const ativo = atendimentos.find((a) => text(rowId(a)) === id);
   useEffect(() => {
@@ -194,6 +216,11 @@ function AtendimentosPage() {
             <Button variant="outline" size="icon" className="shrink-0" onClick={() => setBloqAberto(true)} aria-label="Contatos bloqueados" title="Contatos bloqueados">
               <Ban className="h-4 w-4" />
             </Button>
+            {gerencial && (
+              <Button asChild variant="outline" size="icon" className="shrink-0" aria-label="Dashboard gerencial" title="Dashboard gerencial">
+                <Link to="/atendimentos/dashboard"><BarChart3 className="h-4 w-4" /></Link>
+              </Button>
+            )}
             <BloqueiosDialog open={bloqAberto} onOpenChange={setBloqAberto} empresaId={empresaBloq} />
             {ativo && (
               <Button variant="outline" size="icon" className="hidden shrink-0 md:inline-flex" onClick={() => setLista(false)} aria-label="Ocultar conversas" title="Ocultar conversas">
@@ -248,7 +275,7 @@ function AtendimentosPage() {
           )}
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar por nome ou telefone" className="h-9 pl-8" />
+            <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar por nome, telefone ou protocolo" className="h-9 pl-8" />
           </div>
           <div className="flex gap-1 overflow-x-auto pb-1">
             {RAPIDOS.map((r) => (
@@ -262,6 +289,11 @@ function AtendimentosPage() {
                 )}
               >
                 {r.label}
+                {(selos.get(r.key) ?? 0) > 0 && (
+                  <span className="ml-1.5 inline-flex min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold leading-4 text-destructive-foreground" aria-label={`${selos.get(r.key)} novas`}>
+                    {selos.get(r.key)}
+                  </span>
+                )}
               </button>
             ))}
           </div>

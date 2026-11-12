@@ -326,11 +326,11 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
     await enviarConvite(`${video ? "📹" : "📞"} ${quem} iniciou uma chamada ${video ? "de vídeo" : "de áudio"}. Toque no link para entrar:\n${link}`);
   }
 
-  async function enviarConvite(conteudo: string, ok = "Convite da chamada enviado ao cliente") {
+  async function enviarConvite(conteudo: string, ok = "Convite da chamada enviado ao cliente", autorId?: unknown) {
     // Convite sempre vai para o cliente, mesmo se o modo nota interna estiver ligado.
     const payload: Row = {
       atendimento_id: id, mensagem: conteudo, conteudo, texto: conteudo, tipo: "texto", msg_interna: false,
-      usuario_id: usuarioId, empresa_id: empresaId, instancia_id: pick(atendimento, A.instancia), status_envio: "pendente",
+      usuario_id: autorId ?? usuarioId, empresa_id: empresaId, instancia_id: pick(atendimento, A.instancia), status_envio: "pendente",
     };
     const { data: salva, error } = await supabase.from("atendimentos_mensagem").insert(filterPayload(payload, colsMsg)).select().single();
     if (error) { toast.error(error.message); return; }
@@ -348,7 +348,13 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
 
   const sinoProps = {
     atendimentoId: id, atendimento, colsAt, nomeCliente: nome, encerrado,
-    enviar: (c: string) => enviarConvite(c, "Aviso de espera enviado ao cliente"),
+    // Sino sai em nome do atendente responsável pela conversa (não de quem está com a tela aberta).
+    enviar: (c: string) => {
+      const resp = text(pick(atendimento, A.responsavel)) || text(usuarioId);
+      const quem = autores.get(resp);
+      return enviarConvite(quem ? `*${quem}:*\n${c}` : c, "Aviso de espera enviado ao cliente", resp || usuarioId);
+    },
+    notas, empresaId,
     onChange: () => void qc.invalidateQueries({ queryKey: ["table", "atendimentos"] }),
   };
 
