@@ -2,7 +2,7 @@ import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { useKanbansPermitidos } from "@/hooks/useKanbansPermitidos";
 import { ProtocoloBadge } from "@/components/atendimentos/ProtocoloBadge";
 import { useEffect, useMemo, useState } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Bot, MessageSquare, PanelLeftClose, PanelLeftOpen, Plus, Search, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ChatPainel } from "@/components/atendimentos/ChatPainel";
 import { ContatoPainel } from "@/components/atendimentos/ContatoPainel";
 import { BloqueiosDialog, SeloBloqueado, useBloqueados } from "@/components/atendimentos/Bloqueios";
-import { Ban } from "lucide-react";
+import { Ban, BarChart3 } from "lucide-react";
 import {
   A, M, corEtiqueta, dataDe, fotoPessoa, horaCurta, iniciais, isCliente, isEncerrado, isIA, nomePessoa, telefonePessoa,
 } from "@/lib/atendimentos";
@@ -216,6 +216,11 @@ function AtendimentosPage() {
             <Button variant="outline" size="icon" className="shrink-0" onClick={() => setBloqAberto(true)} aria-label="Contatos bloqueados" title="Contatos bloqueados">
               <Ban className="h-4 w-4" />
             </Button>
+            {gerencial && (
+              <Button asChild variant="outline" size="icon" className="shrink-0" aria-label="Dashboard gerencial" title="Dashboard gerencial">
+                <Link to="/atendimentos/dashboard"><BarChart3 className="h-4 w-4" /></Link>
+              </Button>
+            )}
             <BloqueiosDialog open={bloqAberto} onOpenChange={setBloqAberto} empresaId={empresaBloq} />
             {ativo && (
               <Button variant="outline" size="icon" className="hidden shrink-0 md:inline-flex" onClick={() => setLista(false)} aria-label="Ocultar conversas" title="Ocultar conversas">
