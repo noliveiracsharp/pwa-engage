@@ -91,7 +91,7 @@ export function MeuCondominioPanel({ condominioId, perms }: { condominioId: stri
   );
 }
 
-function CardEmpresa({ titulo, icone: Icone, empresa, vazio, extra, telExtra }: { titulo: string; icone: typeof Building; empresa?: Row; vazio: string; extra?: string; telExtra?: string }) {
+function CardEmpresa({ titulo, icone: Icone, empresa, vazio, extra, telExtra }: { titulo: string; icone: typeof Building; empresa?: Row | undefined; vazio: string; extra?: string | undefined; telExtra?: string | undefined }) {
   const end = enderecoDe(empresa);
   const logo = s(empresa?.["logo"]);
   return (
