@@ -1,5 +1,5 @@
 /** Sino de tranquilização: regras puras do aviso periódico ao cliente em espera. */
-export const SINO_INTERVALOS = [2, 3, 5, 10] as const;
+export const SINO_INTERVALOS = [2, 3, 5, 10, 30, 60, 120] as const;
 export const SINO_MAX_LIMITE = 5;
 export const SINO_MENSAGEM_PADRAO =
   "Olá {nome}, ainda estamos analisando o seu caso com atenção. Por favor, aguarde só mais um momento que já te retorno! 🙏";
