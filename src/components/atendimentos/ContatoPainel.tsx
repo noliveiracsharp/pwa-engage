@@ -3,7 +3,8 @@ import { etiquetasDoQuadro } from "@/lib/etiquetas";
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Tag, X, KanbanSquare } from "lucide-react";
+import { Plus, Tag, X, KanbanSquare, Pencil } from "lucide-react";
+import { perguntar } from "@/components/layout/DialogoGlobal";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -122,7 +123,21 @@ export function ContatoPainel({ atendimento, pessoa, usuarios, participantes, et
             {fotoPessoa(pessoa) && <AvatarImage src={fotoPessoa(pessoa)} alt={nome} />}
             <AvatarFallback className="text-xl">{iniciais(nome)}</AvatarFallback>
           </Avatar>
-          <p className="font-semibold text-foreground">{nome}</p>
+          <div className="flex items-center gap-1">
+            <p className="font-semibold text-foreground">{nome}</p>
+            {pessoa && (
+              <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Editar nome do contato" title="Editar nome do contato"
+                onClick={async () => {
+                  const novo = await perguntar({ title: "Nome do contato", description: "O nome fica gravado no cadastro e passa a aparecer em todas as conversas.", defaultValue: nome, confirmText: "Salvar" });
+                  if (!novo?.trim() || novo.trim() === nome) return;
+                  const col = ["nome", "razao_social"].find((k) => k in pessoa) ?? "nome";
+                  await salvarPessoa({ [col]: novo.trim(), ...("nome_editado" in pessoa ? { nome_editado: true } : {}) });
+                  toast.success("Nome atualizado.");
+                }}>
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+            )}
+          </div>
           <p className="text-sm text-muted-foreground">{telefonePessoa(pessoa) || "Sem telefone"}</p>
           {pick(pessoa, ["email"]) && <p className="text-sm text-muted-foreground">{text(pessoa?.["email"])}</p>}
           {pessoa && <StarRating value={Number(pessoa[avCol] ?? 0)} onChange={(v) => salvarPessoa({ [avCol]: v })} />}
