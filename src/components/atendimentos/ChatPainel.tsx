@@ -605,7 +605,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
         {linhaTempo.map((it) =>
           it.tipo === "ck"
             ? <ChecklistEventoCard key={`ck-${text(rowId(it.row))}`} c={it.row} />
-            : <Balao key={text(rowId(it.row))} m={it.row} autores={autores} onResponder={(c) => setRespondendo(c)} />,
+            : <Balao key={text(rowId(it.row))} m={it.row} autores={autores} onResponder={(c) => setRespondendo(c)} onEditarWhats={(zid, t) => editarMensagemZapi(instancia, telefonePessoa(pessoa), zid, comAssinatura(t))} />,
         )}
         <div ref={fimRef} />
       </div>
@@ -805,7 +805,7 @@ function VistoLeitura({ status }: { status: string }) {
   return null;
 }
 
-function Balao({ m, autores, onResponder }: { m: Row; autores: Map<string, string>; onResponder: (c: Citacao) => void }) {
+function Balao({ m, autores, onResponder, onEditarWhats }: { m: Row; autores: Map<string, string>; onResponder: (c: Citacao) => void; onEditarWhats?: (zid: string, t: string) => Promise<unknown> }) {
   const pNome = text(m["participante_grupo_nome"]);
   const pTel = text(m["participante_grupo_telefone"]);
   const participante = pNome && pTel ? `${pNome} · ${pTel}` : pNome || pTel;
