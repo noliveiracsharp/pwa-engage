@@ -25,7 +25,8 @@ export function useNotificacoesChat() {
         if (String(m["remetente_tipo"] ?? "").toLowerCase() !== "cliente" || m["msg_interna"] === true) return;
         let nome = "Cliente";
         const atId = pick(m, M.atendimento);
-        if (atId) {
+        if (!atId) return;
+        {
           const { data: at } = await supabase.from("atendimentos").select("*").eq("id", atId).maybeSingle();
           if (!at) return; // sem acesso a esse atendimento (outra empresa/equipe)
           const { usuario: u, isMaster: master } = ctx.current;
