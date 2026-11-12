@@ -66,7 +66,7 @@ function DashboardAtendimentos() {
     });
   }, [atendimentos, usuarios, kanbans, etapas, desde, ate]);
 
-  if (!perm.isLoading && !perm.canRead && !isMaster) {
+  if (!perm.loading && !perm.canRead && !isMaster) {
     return <p className="p-6 text-sm text-muted-foreground">Este painel é exclusivo do perfil gerencial.</p>;
   }
   const geral = calcularMetricas(itens);
