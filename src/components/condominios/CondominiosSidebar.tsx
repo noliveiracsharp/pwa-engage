@@ -76,11 +76,11 @@ export function CondominiosSidebar({ secoes, ativa, onChange, topo, direto, chat
     <aside
       aria-label="Menu de condomínios"
       className={cn(
-        "flex shrink-0 flex-col border-b border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200 md:self-stretch md:border-b-0 md:border-r",
+        "flex shrink-0 flex-col border-b border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200 md:sticky md:top-0 md:h-[calc(100dvh-4rem)] md:overflow-hidden md:border-b-0 md:border-r",
         aberto ? "w-full md:w-60" : "w-full md:w-16",
       )}
     >
-      <div className="flex flex-col md:sticky md:top-0">
+      <div className="flex min-h-0 flex-1 flex-col">
         {direto && !aberto && <div className="h-2" />}
         {direto ? (
           aberto ? (
@@ -114,7 +114,7 @@ export function CondominiosSidebar({ secoes, ativa, onChange, topo, direto, chat
         </div>
         )}
         {aberto && topo && !direto && <div className="px-3 pb-3 text-foreground">{topo}</div>}
-        <nav className={cn("flex flex-col gap-0.5 pb-3", aberto ? "px-3" : "hidden md:flex md:px-2")}>
+        <nav className={cn("flex min-h-0 flex-col gap-0.5 pb-3 md:flex-1 md:overflow-y-auto", aberto ? "px-3" : "hidden md:flex md:px-2")}>
           {secoes.map((x) => {
             const ativo = ativa === x.key;
             const btn = (
@@ -151,7 +151,7 @@ export function CondominiosSidebar({ secoes, ativa, onChange, topo, direto, chat
       </div>
       {/* Só quando este é o menu único (morador/síndico no acesso direto): o menu da empresa, que já tem chat e versão, fica oculto. */}
       {chatCondominioId && (
-        <div className="mt-auto hidden flex-col gap-1 border-t border-sidebar-border p-2 md:sticky md:bottom-0 md:flex">
+        <div className="hidden shrink-0 flex-col gap-1 border-t border-sidebar-border p-2 md:flex">
           <ChatInterno sidebarOpen={aberto} condominioId={chatCondominioId} />
           <VersaoSidebar open={aberto} />
         </div>
