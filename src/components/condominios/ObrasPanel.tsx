@@ -455,7 +455,7 @@ function ObraDialog({ condominioId, obra, onClose, onCriada }: { condominioId: s
     if (!f.titulo.trim()) return void toast.error("Informe o nome da obra.");
     if (f.data_inicio && f.data_fim && f.data_fim < f.data_inicio) return void toast.error("A data final não pode ser antes do início.");
     const id = await salvar(obra?.id ?? null, {
-      condominio_id: condominioId, titulo: f.titulo.trim(), observacao: f.observacao.trim() || null, aviso: f.aviso.trim() || null, status: f.status,
+      condominio_id: condominioId, titulo: f.titulo.trim(), observacao: f.observacao.trim() || null, aviso: f.aviso.trim() || null, status: STATUS_OBRA.some((s) => s.value === f.status) ? f.status : "planejada",
       data_inicio: f.data_inicio || null, data_fim: f.data_fim || null, custo_previsto: moedaParaNum(f.custo),
       visivel_moradores: f.visivel_moradores, mostrar_custo: f.visivel_moradores && f.mostrar_custo,
     });
@@ -470,7 +470,7 @@ function ObraDialog({ condominioId, obra, onClose, onCriada }: { condominioId: s
           <div className="space-y-1 sm:col-span-2"><Label htmlFor="o-obs">Descrição</Label><Textarea id="o-obs" rows={2} value={f.observacao} onChange={(e) => set({ observacao: e.target.value })} placeholder="Ex.: Muro junto à quadra de esportes" /></div>
           <div className="space-y-1"><Label htmlFor="o-ini">Início</Label><CampoData id="o-ini" value={f.data_inicio} inicio={2000} onChange={(v) => set({ data_inicio: v })} /></div>
           <div className="space-y-1"><Label htmlFor="o-fim">Previsão de término</Label><CampoData id="o-fim" value={f.data_fim} inicio={2000} onChange={(v) => set({ data_fim: v })} /></div>
-          <div className="space-y-1"><Label>Situação</Label><SearchSelect value={f.status} onChange={(v) => set({ status: v })} options={STATUS_OBRA} /></div>
+          <div className="space-y-1"><Label>Situação</Label><SearchSelect value={f.status} allowClear={false} onChange={(v) => set({ status: v || "planejada" })} options={STATUS_OBRA} /></div>
           <div className="space-y-1"><Label htmlFor="o-custo">Custo previsto (R$)</Label><Input id="o-custo" inputMode="decimal" value={f.custo} onChange={(e) => set({ custo: e.target.value })} onBlur={() => set({ custo: numParaMoeda(moedaParaNum(f.custo)) })} placeholder="0,00" /></div>
           <div className="space-y-1 sm:col-span-2"><Label htmlFor="o-aviso">Recado para os moradores</Label><Textarea id="o-aviso" rows={2} value={f.aviso} onChange={(e) => set({ aviso: e.target.value })} placeholder="Ex.: Na terça, o estacionamento do bloco B ficará interditado." /></div>
           <div className="flex items-center justify-between gap-3 rounded-lg border p-3 sm:col-span-2">
@@ -523,7 +523,7 @@ function AtividadeDialog({ condominioId, fase, atividade, onClose }: { condomini
     if (!f.descricao.trim()) return void toast.error("Informe a atividade.");
     const perc = f.status === "concluida" ? 100 : Math.max(0, Math.min(100, f.percentual));
     void salvar(atividade?.id ?? null, {
-      fase_id: fase.id, condominio_id: condominioId, descricao: f.descricao.trim(), status: perc >= 100 ? "concluida" : f.status, responsavel: f.responsavel.trim() || null,
+      fase_id: fase.id, condominio_id: condominioId, descricao: f.descricao.trim(), status: perc >= 100 ? "concluida" : STATUS_ATIVIDADE.some((s) => s.value === f.status) ? f.status : "pendente", responsavel: f.responsavel.trim() || null,
       data_inicio: f.data_inicio || null, data_fim: f.data_fim || null, percentual: perc, custo: moedaParaNum(f.custo), ordem: atividade?.ordem ?? fase.atividades.length + 1,
     });
   };
@@ -533,7 +533,7 @@ function AtividadeDialog({ condominioId, fase, atividade, onClose }: { condomini
         <DialogHeader><DialogTitle>{atividade ? "Editar atividade" : "Nova atividade"}</DialogTitle><DialogDescription>Fase: {fase.nome}</DialogDescription></DialogHeader>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1 sm:col-span-2"><Label htmlFor="a-desc">Atividade *</Label><Input id="a-desc" value={f.descricao} onChange={(e) => set({ descricao: e.target.value })} placeholder="Ex.: Cotar cimento" /></div>
-          <div className="space-y-1"><Label>Situação</Label><SearchSelect value={f.status} onChange={(v) => set({ status: v, percentual: v === "concluida" ? 100 : f.percentual })} options={STATUS_ATIVIDADE} /></div>
+          <div className="space-y-1"><Label>Situação</Label><SearchSelect value={f.status} allowClear={false} onChange={(v) => set({ status: v || "pendente", percentual: v === "concluida" ? 100 : f.percentual })} options={STATUS_ATIVIDADE} /></div>
           <div className="space-y-1"><Label htmlFor="a-resp">Responsável</Label><Input id="a-resp" value={f.responsavel} onChange={(e) => set({ responsavel: e.target.value })} placeholder="Ex.: Zelador, engenheiro" /></div>
           <fieldset className="space-y-2 sm:col-span-2">
             <legend className="text-sm font-medium">Quanto já foi feito: <strong>{f.percentual}%</strong></legend>
