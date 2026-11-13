@@ -236,7 +236,7 @@ function Devolver({ item, onFechar, onSalvo }: { item: Row; onFechar: () => void
   };
   return (
     <Dialog open onOpenChange={(o) => !o && onFechar()}>
-      <DialogContent className="z-[100]">
+      <DialogContent className="max-h-[92dvh] overflow-y-auto z-[100]">
         <DialogHeader><DialogTitle>Registrar devolução</DialogTitle><DialogDescription>{s(item["titulo"])}</DialogDescription></DialogHeader>
         <div className="space-y-3">
           <div className="space-y-1"><Label htmlFor="dv-nome">Quem retirou</Label><Input id="dv-nome" value={f.devolvido_para} onChange={(e) => setF({ ...f, devolvido_para: e.target.value })} /></div>
@@ -308,7 +308,7 @@ function Vitrine({ condominioId }: { condominioId: string }) {
         ))}
       </div>
       <Dialog open={!!reivindicar} onOpenChange={(o) => !o && setReivindicar(null)}>
-        <DialogContent className="z-[100]">
+        <DialogContent className="max-h-[92dvh] overflow-y-auto z-[100]">
           <DialogHeader><DialogTitle>Este item é seu?</DialogTitle><DialogDescription>Conte um detalhe que só o dono sabe. A portaria confere na retirada.</DialogDescription></DialogHeader>
           <Textarea rows={3} placeholder="Ex.: tem um adesivo do Corinthians atrás" value={obs} onChange={(e) => setObs(e.target.value)} />
           <DialogFooter>

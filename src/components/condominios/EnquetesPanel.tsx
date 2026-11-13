@@ -234,7 +234,7 @@ function AnexosOpcao({ o, onRemover, grande }: { o: { imagem?: string | null; ar
       )}
       {zoom && o.imagem && (
         <Dialog open onOpenChange={setZoom}>
-          <DialogContent className="max-w-3xl p-2">
+          <DialogContent className="max-h-[92dvh] overflow-y-auto max-w-3xl p-2">
             <DialogHeader className="sr-only"><DialogTitle>{o.texto}</DialogTitle><DialogDescription>Foto da opção</DialogDescription></DialogHeader>
             <img src={o.imagem} alt={o.texto} className="max-h-[80vh] w-full rounded object-contain" />
           </DialogContent>
@@ -331,8 +331,8 @@ function EnqueteEditor({ condominioId, blocos, enquete, onClose, onSalvo }: { co
 
           <section className="space-y-3 rounded-lg border p-3">
             <h3 className="text-sm font-semibold">Como funciona o voto</h3>
-            <label className="flex items-center justify-between gap-3 text-sm"><span><strong>Voto secreto</strong><br /><span className="text-xs text-muted-foreground">Ninguém, nem a gestão, vê em quem cada pessoa votou.</span></span><Switch checked={secreto} onCheckedChange={setSecreto} /></label>
-            <label className="flex items-center justify-between gap-3 text-sm"><span><strong>Um voto por unidade</strong><br /><span className="text-xs text-muted-foreground">Desligado: cada pessoa do público vota.</span></span><Switch checked={porUnidade} onCheckedChange={setPorUnidade} /></label>
+            <label className="flex flex-wrap items-center justify-between gap-3 text-sm"><span><strong>Voto secreto</strong><br /><span className="text-xs text-muted-foreground">Ninguém, nem a gestão, vê em quem cada pessoa votou.</span></span><Switch checked={secreto} onCheckedChange={setSecreto} /></label>
+            <label className="flex flex-wrap items-center justify-between gap-3 text-sm"><span><strong>Um voto por unidade</strong><br /><span className="text-xs text-muted-foreground">Desligado: cada pessoa do público vota.</span></span><Switch checked={porUnidade} onCheckedChange={setPorUnidade} /></label>
             <div><Label className="mb-1.5 block">O morador vê o resultado</Label>
               <SearchSelect value={mostrar} onChange={(v) => setMostrar(v || "apos_votar")} options={[
                 { value: "apos_encerrar", label: "Só depois de encerrada" },
@@ -358,7 +358,7 @@ function EnqueteEditor({ condominioId, blocos, enquete, onClose, onSalvo }: { co
               <div><Label htmlFor="enq-imax" className="mb-1.5 block">Idade máxima</Label><Input id="enq-imax" type="number" min={0} value={pub.idade_max ?? ""} onChange={(e) => setPub({ ...pub, idade_max: e.target.value === "" ? null : Number(e.target.value) })} /></div>
             </div>
             {(pub.idade_min != null || pub.idade_max != null) && <p className="text-xs text-muted-foreground">Pessoas sem data de nascimento no cadastro ficam fora quando há filtro de idade.</p>}
-            <label className="flex items-center justify-between gap-3 text-sm"><span>Somente quem mora na unidade</span><Switch checked={pub.apenas_residentes === true} onCheckedChange={(v) => setPub({ ...pub, apenas_residentes: v })} /></label>
+            <label className="flex flex-wrap items-center justify-between gap-3 text-sm"><span>Somente quem mora na unidade</span><Switch checked={pub.apenas_residentes === true} onCheckedChange={(v) => setPub({ ...pub, apenas_residentes: v })} /></label>
             <p className="text-xs text-muted-foreground">Prestadores, colaboradores e visitantes nunca votam.</p>
           </section>
 

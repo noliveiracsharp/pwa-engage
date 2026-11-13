@@ -1,14 +1,14 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FileText, Home, Loader2, Megaphone } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CondominiosSidebar, type Secao } from "@/components/condominios/CondominiosSidebar";
 import { supabase } from "@/integrations/supabase/client";
-import { lerAmbiente, useAmbientes } from "@/hooks/useAmbientes";
-import { rotuloCargo } from "@/lib/ambientes";
+import { gravarAmbiente, lerAmbiente, useAmbientes } from "@/hooks/useAmbientes";
+import { ehGestor, rotuloCargo } from "@/lib/ambientes";
 import { htmlParaTexto } from "@/lib/html-texto";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 
@@ -57,6 +57,15 @@ function MinhaUnidade() {
     },
   });
   const gestao = usePagePermissions("/condominios");
+  const navigate = useNavigate();
+  // Síndico/gestor entra direto no painel do condomínio (o "Minha unidade" fica como seção de lá).
+  useEffect(() => {
+    if (!atual || !v) return;
+    if (ehGestor(v) || gestao.canRead) {
+      gravarAmbiente(atual.id, "/condominios");
+      navigate({ to: "/condominios", replace: true });
+    }
+  }, [atual, v, gestao.canRead, navigate]);
   const [secao, setSecao] = useState("unidade");
   const ler = { canRead: true, canCreate: false, canUpdate: false, canDelete: false };
   const secoes: Secao[] = [

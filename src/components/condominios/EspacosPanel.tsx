@@ -153,7 +153,7 @@ export function EspacosPanel({ condominioId, perms }: { condominioId: string; pe
       )}
 
       <Dialog open={!!galeria} onOpenChange={(o) => !o && setGaleria(null)}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-h-[92dvh] overflow-y-auto max-w-3xl">
           <DialogHeader><DialogTitle>Fotos do espaço</DialogTitle></DialogHeader>
           <div className="grid max-h-[70vh] gap-2 overflow-y-auto sm:grid-cols-2">
             {galeria?.map((f) => <img key={f.url} src={f.url} alt={f.legenda || "Foto do espaço"} className="w-full rounded-md object-cover" />)}
@@ -235,11 +235,11 @@ function EspacoSheet({ registro, proximaOrdem, onClose, onSalvar, salvando }: {
             <Input id="esp-nome" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex.: Salão de Festas, Churrasqueira 1" />
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
-            <label className="flex items-center justify-between gap-3 rounded-md border p-3 text-sm">
+            <label className="flex flex-wrap items-center justify-between gap-3 rounded-md border p-3 text-sm">
               <span><span className="font-medium">Ativo</span><span className="block text-xs text-muted-foreground">Inativo some para os moradores.</span></span>
               <Switch checked={ativo} onCheckedChange={setAtivo} />
             </label>
-            <label className="flex items-center justify-between gap-3 rounded-md border p-3 text-sm">
+            <label className="flex flex-wrap items-center justify-between gap-3 rounded-md border p-3 text-sm">
               <span><span className="font-medium">Permite reserva</span><span className="block text-xs text-muted-foreground">Desligado = uso livre, sem agendamento.</span></span>
               <Switch checked={reserva} onCheckedChange={setReserva} />
             </label>
