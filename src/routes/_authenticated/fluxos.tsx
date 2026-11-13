@@ -802,7 +802,7 @@ function Propriedades({ no, atualizar, quadros, etapas, campos, fluxos }: {
           </Campo>
           <div className="flex items-center justify-between gap-3 rounded-md border p-3">
             <Label htmlFor="cnpj-salvar" className="text-sm font-normal">Salvar no cadastro do contato<span className="block text-xs text-muted-foreground">Grava CNPJ, razão social, cidade, UF e demais dados nos campos do contato</span></Label>
-            <Switch id="cnpj-salvar" checked={sel_cnpj_salvar(atualizar, s)} onCheckedChange={(v) => atualizar({ salvar_contato: v })} />
+            <Switch id="cnpj-salvar" checked={d["salvar_contato"] === true} onCheckedChange={(v) => atualizar({ salvar_contato: v })} />
           </div>
           <p className="text-xs text-muted-foreground">Mesma consulta da tela de Empresas. Saída <strong>Encontrado</strong> quando o CNPJ existe; senão segue por <strong>Não encontrado / inválido</strong>.</p>
         </>

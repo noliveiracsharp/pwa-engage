@@ -24,3 +24,13 @@ describe("bloco Consultar CNPJ", () => {
     expect(r.saida).toBe("nao_encontrado");
   });
 });
+
+describe("salvar no contato", () => {
+  it("só grava campos quando a opção está ligada", async () => {
+    const f = async () => new Response(JSON.stringify({ cnpj: "14167063000141", razao_social: "ACME" }), { status: 200 });
+    const lig = await executarCnpj({ salvar_contato: true }, { cnpj: "14167063000141" }, f);
+    expect(lig.campos).toContainEqual({ chave: "razao_social", valor: "ACME" });
+    const des = await executarCnpj({}, { cnpj: "14167063000141" }, f);
+    expect(des.campos).toBeUndefined();
+  });
+});
