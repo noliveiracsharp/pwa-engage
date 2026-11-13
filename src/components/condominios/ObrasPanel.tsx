@@ -274,7 +274,7 @@ function DetalheObra({ obra, condominioId, perms, onClose, onEditar }: { obra: O
   const est = estadosFases(obra.fases);
 
   const excluir = async (tabela: string, id: string, oque: string) => {
-    if (!(await confirmar({ titulo: `Excluir ${oque}?`, descricao: "Esta ação não pode ser desfeita.", confirmar: "Excluir", destrutivo: true }))) return;
+    if (!(await confirmar({ title: `Excluir ${oque}?`, description: "Esta ação não pode ser desfeita.", destructive: true }))) return;
     const r = await db.from(tabela).delete().eq("id", id);
     if (r.error) return void toast.error(r.error.message);
     toast.success("Excluído."); void recarregar();
