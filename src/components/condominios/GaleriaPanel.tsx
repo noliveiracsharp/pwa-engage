@@ -217,7 +217,7 @@ function AlbumView({ album, gestor, perms, onVoltar, onEditar, onMudou, editar, 
                 {reac.length > 0 && <span>❤️ {reac.length}</span>}{com > 0 && <span className="flex items-center gap-0.5"><MessageSquare className="size-3" aria-hidden />{com}</span>}
               </div>
               {gestor && (
-                <div className="absolute right-1 top-1 flex gap-1 rounded bg-background/90 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+                <div className="absolute right-1 top-1 flex gap-1 rounded bg-background/90 md:opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
                   {perms.canUpdate && <AcaoIcone titulo="Usar como capa" onClick={() => void definirCapa(f)}><Star className="size-4" /></AcaoIcone>}
                   {perms.canDelete && <AcaoIcone titulo="Excluir foto" onClick={() => void excluirFoto(f)} destrutivo><Trash2 className="size-4" /></AcaoIcone>}
                 </div>

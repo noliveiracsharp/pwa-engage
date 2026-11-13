@@ -27,4 +27,9 @@ export function useAmbientes() {
 }
 
 export const lerAmbiente = () => (typeof window === "undefined" ? null : localStorage.getItem(AMBIENTE_KEY));
-export const gravarAmbiente = (id: string) => localStorage.setItem(AMBIENTE_KEY, id);
+export const gravarAmbiente = (id: string, destino?: string) => {
+  localStorage.setItem(AMBIENTE_KEY, id);
+  if (destino) localStorage.setItem(AMBIENTE_KEY + ".destino", destino); else localStorage.removeItem(AMBIENTE_KEY + ".destino");
+};
+/** Tela inicial do ambiente gravado (síndico → painel do condomínio; morador → minha unidade). */
+export const lerDestinoAmbiente = () => (typeof window === "undefined" ? null : localStorage.getItem(AMBIENTE_KEY + ".destino"));

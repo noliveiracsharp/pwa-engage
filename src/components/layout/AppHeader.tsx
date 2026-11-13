@@ -1,6 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Languages, LogOut, Menu, Moon, RotateCw, Sun, User } from "lucide-react";
+import { HelpCircle, Languages, LogOut, Menu, Moon, RotateCw, Sun, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -107,7 +107,7 @@ export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) 
       </div>
 
       <div className="flex shrink-0 items-center gap-1">
-        {!modoUnidade && <BuscaFuncoes />}
+        <BuscaFuncoes />
         {isMaster && !modoUnidade && (
           <Select
             value={empresaContextoId ?? String(empresa ? rowId(empresa) ?? "" : "")}
@@ -132,6 +132,7 @@ export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) 
         <Button
           variant="ghost"
           size="icon"
+          className="hidden sm:inline-flex"
           aria-label="Recarregar aplicação"
           title="Recarregar aplicação (Ctrl+F5)"
           disabled={recarregando}
@@ -157,9 +158,9 @@ export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) 
           <RotateCw className={`h-5 w-5 ${recarregando ? "animate-spin" : ""}`} />
         </Button>
         <CentralAjuda />
-        {!modoUnidade && <AvisosButton />}
+        {!modoUnidade && <div className="hidden sm:block"><AvisosButton /></div>}
         <SemaforoConexao />
-        <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Alternar tema">
+        <Button variant="ghost" size="icon" className="hidden sm:inline-flex" onClick={toggleTheme} aria-label="Alternar tema">
           {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
         </Button>
         <DropdownMenu>
@@ -185,6 +186,15 @@ export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) 
                 <ArrowLeftRight className="mr-2 h-4 w-4" /> Trocar acesso
               </DropdownMenuItem>
             )}
+            <DropdownMenuItem className="sm:hidden" onSelect={toggleTheme}>
+              {theme === "dark" ? <Sun className="mr-2 h-4 w-4" /> : <Moon className="mr-2 h-4 w-4" />} {theme === "dark" ? "Tema claro" : "Tema escuro"}
+            </DropdownMenuItem>
+            <DropdownMenuItem className="sm:hidden" onSelect={() => window.dispatchEvent(new Event("abrir-ajuda"))}>
+              <HelpCircle className="mr-2 h-4 w-4" /> Ajuda e suporte
+            </DropdownMenuItem>
+            <DropdownMenuItem className="sm:hidden" onSelect={() => { queryClient.clear(); const u = new URL(window.location.href); u.searchParams.set("_r", String(Date.now())); window.location.replace(u.toString()); }}>
+              <RotateCw className="mr-2 h-4 w-4" /> Recarregar aplicação
+            </DropdownMenuItem>
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>
                 <Languages className="mr-2 h-4 w-4" /> {t("menu.idioma")}

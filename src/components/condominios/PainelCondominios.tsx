@@ -34,8 +34,8 @@ function Kpi({ icone: I, rotulo, valor, sub, i }: { icone: typeof Building; rotu
   const c = CORES[i % CORES.length];
   return (
     <div className="overflow-hidden rounded-xl border bg-card shadow-sm" style={{ borderTop: `4px solid ${c}` }}>
-      <div className="p-4">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+      <div className="p-3 sm:p-4">
+        <div className="flex min-w-0 items-center gap-2 text-xs sm:text-sm text-muted-foreground">
           <span className="size-2.5 rounded-full" style={{ background: c }} />
           {rotulo}
           <I className="ml-auto size-4 opacity-60" />
@@ -139,7 +139,7 @@ export function PainelCondominios({ condominios, condId, podeConfigurar, onAbrir
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-8">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4 2xl:grid-cols-8">
         <Kpi i={0} icone={Building2} rotulo="Condomínios" valor={condominios.length} sub="instalados" />
         <Kpi i={1} icone={DoorOpen} rotulo="Unidades" valor={unidades.length} sub={`${d.blocos.filter((b) => ids.has(s(b["condominio_id"]))).length} blocos/torres`} />
         <Kpi i={2} icone={Users} rotulo="Pessoas" valor={pessoas} sub={`${vinculos.filter((v) => v["is_residente"] === true).length} residentes`} />

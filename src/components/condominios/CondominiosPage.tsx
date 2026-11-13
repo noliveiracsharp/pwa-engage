@@ -309,7 +309,7 @@ export function CondominiosPage() {
                         <p className="text-xs text-muted-foreground">{qtd} {qtd === 1 ? "unidade" : "unidades"}</p>
                       </button>
                       {(permsUnid.canUpdate || permsUnid.canDelete) && (
-                        <div className="absolute right-1 top-1 flex opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
+                        <div className="absolute right-1 top-1 flex md:opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
                           {permsUnid.canUpdate && <Button size="icon" variant="ghost" className="size-7" aria-label="Renomear bloco" onClick={() => renomearBloco(b)}><Pencil className="size-3.5" /></Button>}
                           {permsUnid.canDelete && <Button size="icon" variant="ghost" className="size-7 text-destructive" aria-label="Excluir bloco" onClick={() => excluirBloco(b)}><Trash2 className="size-3.5" /></Button>}
                         </div>
@@ -380,7 +380,7 @@ export function CondominiosPage() {
                               <TooltipProvider delayDuration={100}><Tooltip>
                                 <TooltipTrigger asChild>
                                   <button type="button" aria-label={`Excluir unidade ${s(u["numero"])}`} onClick={() => setUnidadeExcluir(u)}
-                                    className="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground opacity-0 shadow transition focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-hover:opacity-100">
+                                    className="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground md:opacity-0 shadow transition focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-hover:opacity-100">
                                     <X className="size-3" />
                                   </button>
                                 </TooltipTrigger>
