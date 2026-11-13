@@ -1,13 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Building2, Camera, Delete, DoorOpen, Headset, Loader2, Phone, PhoneOff, ShieldCheck, Video } from "lucide-react";
+import { Building2, Camera, Delete, DoorOpen, Headset, Loader2, MapPin, Phone, PhoneOff, ShieldAlert, ShieldCheck, Video } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SalaWebRTC } from "@/components/atendimentos/SalaWebRTC";
-import { lerDiscagem } from "@/lib/interfone";
+import { lerDiscagem, ramalDiscado, type RamalPublico } from "@/lib/interfone";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/interfone/$slug")({
@@ -30,8 +30,8 @@ export const Route = createFileRoute("/interfone/$slug")({
 const db = supabase as any;
 type Unid = { id: string; numero: string };
 type Bloco = { id: string; nome: string; unidades: Unid[] };
-type Dados = { nome: string; logo: string; administracao: boolean; geo?: boolean; blocos: Bloco[] };
-type Alvo = { destino: "unidade" | "portaria" | "administracao"; unidade?: string; rotulo: string };
+type Dados = { nome: string; logo: string; administracao: boolean; geo?: boolean; blocos: Bloco[]; ramais?: RamalPublico[]; ponto?: { nome: string; tipo: "portao" | "espaco" | "sos" } | null };
+type Alvo = { destino: "unidade" | "portaria" | "administracao" | "ramal"; unidade?: string; ramal?: string; rotulo: string };
 type Status = { status: string; etapa?: number; total?: number; central?: boolean; sala?: string };
 
 function Interfone() {
@@ -84,6 +84,7 @@ function Interfone() {
         {dados.logo ? <img src={dados.logo} alt={dados.nome} className="h-12 max-w-[180px] object-contain" /> : <Building2 className="size-10 text-primary" />}
         <h1 className="text-xl font-semibold">{dados.nome}</h1>
         <p className="text-sm text-muted-foreground">Interfone virtual</p>
+        {dados.ponto && <p className="flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary"><MapPin className="size-3.5" aria-hidden /> Você está em: {dados.ponto.nome}</p>}
       </header>
 
       {!alvo ? (
@@ -129,8 +130,14 @@ function Escolher({ dados, onEscolher }: { dados: Dados; onEscolher: (a: Alvo) =
   const [bloco, setBloco] = useState(dados.blocos[0]?.id ?? "");
   const [erro, setErro] = useState("");
   const multi = dados.blocos.length > 1;
+  const ramais = dados.ramais ?? [];
+  const temUnid = dados.blocos.some((b) => b.unidades.length > 0);
+  const sos = dados.ponto?.tipo === "sos";
   const tecla = (k: string) => { setErro(""); setDigito((d) => (d + k).slice(0, 8)); };
   const discar = () => {
+    const rm = ramalDiscado(digito, ramais);
+    if (rm) return onEscolher({ destino: "ramal", ramal: rm.id, rotulo: `${rm.nome} (ramal ${rm.ramal})` });
+    if (!temUnid) return setErro("Ramal não encontrado. Confira o número.");
     const l = lerDiscagem(digito);
     const achados = l ? dados.blocos.flatMap((b) => b.unidades.filter((u) => u.numero.toUpperCase() === l.numero && (!l.bloco || b.nome.toUpperCase().includes(l.bloco))).map((u) => ({ b, u }))) : [];
     if (achados.length === 1) return onEscolher({ destino: "unidade", unidade: achados[0]!.u.id, rotulo: `${multi ? achados[0]!.b.nome + " · " : ""}unidade ${achados[0]!.u.numero}` });
@@ -139,21 +146,41 @@ function Escolher({ dados, onEscolher }: { dados: Dados; onEscolher: (a: Alvo) =
   const unidades = dados.blocos.find((b) => b.id === bloco)?.unidades ?? [];
   return (
     <div className="space-y-5">
+      {sos && (
+        <Button size="lg" variant="destructive" className="h-20 w-full text-lg" onClick={() => onEscolher({ destino: "portaria", rotulo: "a portaria (emergência)" })}>
+          <ShieldAlert className="size-6" aria-hidden /> Emergência · chamar portaria
+        </Button>
+      )}
       <div className="grid grid-cols-2 gap-3">
         <Button size="lg" variant="outline" className="h-16 flex-col gap-1" onClick={() => onEscolher({ destino: "portaria", rotulo: "a portaria" })}><DoorOpen className="size-5" /> Portaria</Button>
         {dados.administracao && <Button size="lg" variant="outline" className="h-16 flex-col gap-1" onClick={() => onEscolher({ destino: "administracao", rotulo: "a administração" })}><Headset className="size-5" /> Administração</Button>}
       </div>
+      {ramais.some((x) => x.atalho !== false) && (
+        <section aria-labelledby="if-ramais" className="space-y-2">
+          <h2 id="if-ramais" className="text-sm font-medium">Ramais</h2>
+          <ul className="grid gap-2 sm:grid-cols-2">
+            {ramais.filter((x) => x.atalho !== false).map((x) => (
+              <li key={x.id}>
+                <Button variant="outline" className="h-auto w-full justify-between py-2" onClick={() => onEscolher({ destino: "ramal", ramal: x.id, rotulo: `${x.nome} (ramal ${x.ramal})` })} aria-label={`Chamar ${x.nome}, ramal ${x.ramal}`}>
+                  <span className="truncate text-left">{x.nome}</span><span className="font-mono text-xs text-muted-foreground">{x.ramal}</span>
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       <Tabs defaultValue="teclado">
-        <TabsList className="grid w-full grid-cols-2"><TabsTrigger value="teclado">Digitar número</TabsTrigger><TabsTrigger value="torres">Torres</TabsTrigger></TabsList>
+        <TabsList className={cn("grid w-full", temUnid ? "grid-cols-2" : "grid-cols-1")}><TabsTrigger value="teclado">{temUnid ? "Digitar número" : "Digitar ramal"}</TabsTrigger>{temUnid && <TabsTrigger value="torres">Torres</TabsTrigger>}</TabsList>
         <TabsContent value="teclado" className="space-y-3 pt-2">
-          <div className="flex h-14 items-center justify-center rounded-lg border bg-muted/50 text-3xl font-semibold tracking-widest" aria-live="polite">{digito || <span className="text-base font-normal text-muted-foreground">{multi ? "Ex.: B-102" : "Ex.: 102"}</span>}</div>
+          <div className="flex h-14 items-center justify-center rounded-lg border bg-muted/50 text-3xl font-semibold tracking-widest" aria-live="polite">{digito || <span className="text-base font-normal text-muted-foreground">{!temUnid ? "Ex.: 15" : multi ? "Ex.: B-102 ou ramal" : "Ex.: 102 ou ramal"}</span>}</div>
           {erro && <p className="text-center text-sm text-destructive">{erro}</p>}
           <div className="grid grid-cols-3 gap-2">
             {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((k) => <Button key={k} variant="secondary" className="h-14 text-xl" onClick={() => tecla(k)}>{k}</Button>)}
-            <Button variant="ghost" className="h-14" onClick={() => setDigito("")} aria-label="Limpar">C</Button>
+            <Button variant="secondary" className="h-14 text-xl" onClick={() => tecla("*")} aria-label="Asterisco">*</Button>
             <Button variant="secondary" className="h-14 text-xl" onClick={() => tecla("0")}>0</Button>
             <Button variant="ghost" className="h-14" onClick={() => setDigito((d) => d.slice(0, -1))} aria-label="Apagar"><Delete className="size-5" /></Button>
           </div>
+          {digito && <Button variant="ghost" size="sm" className="w-full" onClick={() => setDigito("")}>Limpar</Button>}
           {multi && (
             <div className="flex flex-wrap justify-center gap-1">
               {[...new Set(dados.blocos.map((b) => (b.nome.match(/[A-Za-z]+\s*$/)?.[0] ?? "").trim().toUpperCase()).filter((x) => x.length === 1))].map((l) => <Button key={l} size="sm" variant="outline" onClick={() => setDigito((d) => `${l}-${d.replace(/^[A-Z]+-?/, "")}`)}>{l}</Button>)}
@@ -161,7 +188,7 @@ function Escolher({ dados, onEscolher }: { dados: Dados; onEscolher: (a: Alvo) =
           )}
           <Button size="lg" className="w-full" disabled={!digito} onClick={discar}><Phone className="size-5" /> Chamar</Button>
         </TabsContent>
-        <TabsContent value="torres" className="space-y-3 pt-2">
+        {temUnid && <TabsContent value="torres" className="space-y-3 pt-2">
           {multi && (
             <div className="flex flex-wrap gap-2">
               {dados.blocos.map((b) => <Button key={b.id} size="sm" variant={b.id === bloco ? "default" : "outline"} onClick={() => setBloco(b.id)}>{b.nome}</Button>)}
@@ -174,7 +201,7 @@ function Escolher({ dados, onEscolher }: { dados: Dados; onEscolher: (a: Alvo) =
             })}
             {!unidades.length && <p className="col-span-4 py-6 text-center text-sm text-muted-foreground">Nenhuma unidade nesta torre.</p>}
           </div>
-        </TabsContent>
+        </TabsContent>}
       </Tabs>
     </div>
   );
@@ -216,7 +243,7 @@ function Identificar({ slug, exigeGeo, alvo, onVoltar, onChamou }: { slug: strin
       });
       if (!pos) { setEnviando(false); return setErro("Permita a localização: este interfone só funciona no portão do condomínio."); }
     }
-    const { data, error } = await db.rpc("cond_interfone_chamar", { p_slug: slug, p_destino: alvo.destino, p_unidade: alvo.unidade ?? null, p_nome: nome, p_motivo: motivo, p_foto: foto(), p_lat: pos?.lat ?? null, p_lng: pos?.lng ?? null });
+    const { data, error } = await db.rpc("cond_interfone_chamar_v2", { p_slug: slug, p_destino: alvo.destino, p_unidade: alvo.unidade ?? null, p_ramal: alvo.ramal ?? null, p_nome: nome, p_motivo: motivo, p_foto: foto(), p_lat: pos?.lat ?? null, p_lng: pos?.lng ?? null });
     setEnviando(false);
     if (error) return setErro(error.message || "Não foi possível chamar agora.");
     cam?.getTracks().forEach((t) => t.stop());

@@ -53,3 +53,25 @@ export function mensagemInterfoneWhats(d: { nome: string; condominio: string; un
     "_A chamada fica tocando por alguns segundos._",
   ].filter((l) => l !== "").join("\n").replace("\n👉", "\n\n👉");
 }
+
+export type RamalPublico = { id: string; nome: string; ramal: string; categoria: string; atalho?: boolean };
+
+/** Normaliza um ramal: só dígitos e um "*" opcional no início (ex.: " *106 " → "*106"). */
+export function normalizarRamal(txt: string): string {
+  const t = txt.trim();
+  return (t.startsWith("*") ? "*" : "") + t.replace(/\D/g, "");
+}
+
+/** Discagem pelo teclado: um ramal cadastrado tem prioridade sobre o número de uma unidade. */
+export function ramalDiscado(txt: string, ramais: RamalPublico[]): RamalPublico | null {
+  const n = normalizarRamal(txt);
+  if (!n || n === "*") return null;
+  return ramais.find((r) => normalizarRamal(r.ramal) === n) ?? null;
+}
+
+/** Ramais duplicados na lista (mesmo número para locais diferentes). */
+export function ramaisDuplicados(ramais: { ramal: string }[]): string[] {
+  const c = new Map<string, number>();
+  ramais.forEach((r) => { const k = normalizarRamal(r.ramal); c.set(k, (c.get(k) ?? 0) + 1); });
+  return [...c].filter(([, v]) => v > 1).map(([k]) => k);
+}

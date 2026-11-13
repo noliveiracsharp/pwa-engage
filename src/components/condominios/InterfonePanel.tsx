@@ -14,6 +14,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Row } from "@/lib/row";
 import { s } from "./cond-data";
 import { gerarFolhaA4Placas, gerarPlacaInterfone } from "./placa-interfone";
+import { InterfoneRamais } from "./InterfoneRamais";
+import { InterfonePontos } from "./InterfonePontos";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabase as any;
@@ -122,7 +124,9 @@ export function InterfonePanel({ condominioId, nomeCondominio, blocos, unidades,
 
   return (
     <Tabs defaultValue="config" className="space-y-4">
-      <TabsList><TabsTrigger value="config">Configuração e QR Code</TabsTrigger><TabsTrigger value="historico">Histórico</TabsTrigger></TabsList>
+      <TabsList><TabsTrigger value="config">Configuração e QR Code</TabsTrigger><TabsTrigger value="pontos">Pontos de QR Code</TabsTrigger><TabsTrigger value="ramais">Ramais</TabsTrigger><TabsTrigger value="historico">Histórico</TabsTrigger></TabsList>
+      <TabsContent value="pontos"><InterfonePontos condominioId={condominioId} nomeCondominio={nomeCondominio} canUpdate={perms.canUpdate} /></TabsContent>
+      <TabsContent value="ramais"><InterfoneRamais condominioId={condominioId} canUpdate={perms.canUpdate} /></TabsContent>
       <TabsContent value="config">
         <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
           <div className="space-y-3">
