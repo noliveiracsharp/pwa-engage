@@ -292,8 +292,8 @@ export function PlannerPainel({ me, empresaId, usuarios, onFechar, embutido, aco
   };
   const ROT_T = { hoje: "Hoje", atrasadas: "Atrasadas", semana: "Próximos 7 dias", semdata: "Sem data", concluidas: "Concluídas" } as const;
   const visaoTarefas = (
-    <div className="mx-auto max-w-3xl">
-      <div className="mb-3 flex flex-wrap gap-1.5">
+    <div className="w-full">
+      <div role="group" aria-label="Filtrar tarefas" className="mb-3 flex flex-wrap gap-1.5">
         {(Object.keys(ROT_T) as (keyof typeof ROT_T)[]).map((k) => (
           <button key={k} type="button" onClick={() => setFiltroT(k)} aria-pressed={filtroT === k}
             className={cn("inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium", filtroT === k ? "border-primary bg-primary text-primary-foreground" : "border-border hover:bg-muted", k === "atrasadas" && gruposT.atrasadas.length > 0 && filtroT !== k && "border-destructive text-destructive")}>
@@ -358,25 +358,43 @@ export function PlannerPainel({ me, empresaId, usuarios, onFechar, embutido, aco
   };
 
   return (
-    <div className={cn("flex flex-col bg-background", embutido ? "min-h-full rounded-xl border border-border" : "fixed inset-0 z-[70]")}>
-      <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-3">
-        <Button size="icon" variant="ghost" aria-label={lateral ? "Ocultar painel lateral" : "Mostrar painel lateral"} onClick={() => setLateral((v) => !v)}><PanelLeft className="h-5 w-5" /></Button>
-        <h2 className="mr-auto text-lg font-semibold">Planner — {nomeAlvo}</h2>
+    <div className={cn("flex flex-col bg-background", embutido ? "min-h-full" : "fixed inset-0 z-[70]")}>
+      <div className={cn("space-y-2", embutido ? "pb-3" : "border-b border-border px-4 py-3")}>
+        <div className="flex flex-wrap items-center justify-between gap-2">
         <div role="tablist" aria-label="Visualização" className="flex rounded-lg border border-border p-0.5">
           {([["agenda", "Agenda", CalendarDays], ["quadro", "Quadro semanal", LayoutGrid], ["tarefas", "Tarefas", ListTodo]] as const).map(([v, t, I]) => (
             <button key={v} role="tab" aria-selected={modo === v} type="button" onClick={() => setModo(v)}
-              className={cn("inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium", modo === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}>
-              <I className="h-3.5 w-3.5" /><span className="hidden sm:inline">{t}</span>
+              className={cn("inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium", modo === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}>
+              <I className="h-3.5 w-3.5" /><span className="sr-only sm:not-sr-only">{t}</span>
             </button>
           ))}
         </div>
+          <div className="flex flex-wrap items-center gap-2">
         {proprio && atrasadas.length > 0 && (
           <Button size="sm" variant="outline" onClick={() => void Promise.all(atrasadas.filter((i) => i.origem === "tarefa").map((i) => planejar(i, hoje())))}>
             Trazer {atrasadas.length} pendência(s) para hoje
           </Button>
         )}
-        {acoes}
-        {!embutido && onFechar && <Button size="sm" variant="ghost" aria-label="Fechar planner" onClick={onFechar}><X className="h-5 w-5" /></Button>}
+            {acoes}
+            {!embutido && onFechar && <Button size="sm" variant="ghost" aria-label="Fechar planner" onClick={onFechar}><X className="h-5 w-5" /></Button>}
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-1">
+            <Button size="icon" variant="ghost" aria-expanded={lateral} aria-label={lateral ? "Ocultar painel lateral" : "Mostrar painel lateral"} onClick={() => setLateral((v) => !v)}><PanelLeft className="h-5 w-5" /></Button>
+            <h1 className="truncate text-2xl font-bold text-foreground">Planner — {nomeAlvo}</h1>
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button ><Plus className="mr-1 h-4 w-4" aria-hidden="true" /> Criar</Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="z-[80] w-56">
+              <DropdownMenuItem onClick={() => onNovaTarefa ? onNovaTarefa(hoje()) : toast.info("Abra o Planner pelo menu para criar tarefas.")}><ListTodo className="mr-2 h-4 w-4" /> Tarefa</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => { const d = new Date(); d.setMinutes(0, 0, 0); d.setHours(d.getHours() + 1); setEditarReuniao(novaReuniao(me, d)); setReunioesAberto(true); }}><Video className="mr-2 h-4 w-4" /> Reunião</DropdownMenuItem>
+              {proprio && <DropdownMenuItem onClick={() => setLinkAberto(true)}><Link2 className="mr-2 h-4 w-4" /> Link de agendamento</DropdownMenuItem>}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
       <LinkAgendamentoDialog open={linkAberto} onOpenChange={setLinkAberto} me={me} empresaId={empresaId} nome={String(pick(usuario, ["nome"], ""))} />
       {reunioesAberto && <ReunioesPainel key={editarReuniao ? editarReuniao.id || editarReuniao.sala : "lista"} me={me} empresaId={empresaId} usuarios={usuarios} editar={editarReuniao} onFechar={() => { setReunioesAberto(false); setEditarReuniao(null); }} />}
@@ -384,17 +402,7 @@ export function PlannerPainel({ me, empresaId, usuarios, onFechar, embutido, aco
 
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
       {lateral && (
-        <aside className="w-full shrink-0 space-y-4 overflow-y-auto border-b border-border p-3 md:w-64 md:border-b-0 md:border-r">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button className="w-full justify-start rounded-full shadow-sm" size="lg"><Plus className="mr-2 h-5 w-5" /> Criar</Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="z-[80] w-56">
-              <DropdownMenuItem onClick={() => onNovaTarefa ? onNovaTarefa(hoje()) : toast.info("Abra o Planner pelo menu para criar tarefas.")}><ListTodo className="mr-2 h-4 w-4" /> Tarefa</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => { const d = new Date(); d.setMinutes(0, 0, 0); d.setHours(d.getHours() + 1); setEditarReuniao(novaReuniao(me, d)); setReunioesAberto(true); }}><Video className="mr-2 h-4 w-4" /> Reunião</DropdownMenuItem>
-              {proprio && <DropdownMenuItem onClick={() => setLinkAberto(true)}><Link2 className="mr-2 h-4 w-4" /> Link de agendamento</DropdownMenuItem>}
-            </DropdownMenuContent>
-          </DropdownMenu>
+        <aside aria-label="Atalhos e agendas" className="w-full shrink-0 space-y-4 overflow-y-auto rounded-lg border border-border bg-card p-3 md:mr-4 md:w-60">
 
           <div className="space-y-0.5">
             <p className="px-1 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Atalhos</p>
@@ -454,7 +462,7 @@ export function PlannerPainel({ me, empresaId, usuarios, onFechar, embutido, aco
           </div>
         </aside>
       )}
-      <div className="min-h-0 flex-1 overflow-auto p-4">
+      <div className="min-h-0 min-w-0 flex-1 overflow-auto pt-3 md:pt-0">
         {modo === "tarefas" ? visaoTarefas : modo === "agenda" ? (
           <CalendarioPlanner me={me} proprio={proprio}
             reunioes={reunioes.filter((r) => !r.cancelada && agendas.some((a) => r.criado_por === a || r.participantes.includes(a)))}
