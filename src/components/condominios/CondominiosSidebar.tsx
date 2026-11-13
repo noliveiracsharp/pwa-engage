@@ -55,10 +55,17 @@ export function useSecoesCondominio(pagina: P): Secao[] {
   return useMemo(() => {
     const existe = (path: string) => funcoes.some((f) => String(f["path"] ?? "") === path);
     const painel: Secao = { key: "painel", label: "Painel", icon: LayoutDashboard, canRead: pagina.canRead, canCreate: false, canUpdate: pagina.canUpdate, canDelete: false };
-    return [painel, ...DEF.map((d, i) => {
+    // Ordem: a definida em Funções; empate ou sem cadastro → ordem alfabética. Painel sempre primeiro.
+    const ordemDe = (path: string) => {
+      const f = funcoes.find((x) => String(x["path"] ?? "") === path);
+      const n = Number(f?.["ordem"]);
+      return f && Number.isFinite(n) ? n : Number.MAX_SAFE_INTEGER;
+    };
+    const itens = DEF.map((d, i) => {
       const p = existe(d.path) ? [mc, u, v, s, e, g, dc, av, eq, it, ap, es, ch, ob, pt, ga][i]! : pagina;
-      return { key: d.key, label: d.label, icon: d.icon, canRead: p.canRead, canCreate: p.canCreate, canUpdate: p.canUpdate, canDelete: p.canDelete };
-    })].filter((x) => x.canRead);
+      return { ordem: ordemDe(d.path), secao: { key: d.key, label: d.label, icon: d.icon, canRead: p.canRead, canCreate: p.canCreate, canUpdate: p.canUpdate, canDelete: p.canDelete } as Secao };
+    }).sort((a, b) => a.ordem - b.ordem || a.secao.label.localeCompare(b.secao.label, "pt-BR")).map((x) => x.secao);
+    return [painel, ...itens].filter((x) => x.canRead);
   }, [funcoes, mc, u, v, s, e, g, dc, av, eq, it, ap, es, ch, ob, pt, ga, pagina]);
 }
 
