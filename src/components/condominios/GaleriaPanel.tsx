@@ -115,7 +115,7 @@ function AlbumDialog({ condominioId, album, onClose, onOk }: { condominioId: str
         <DialogHeader><DialogTitle>{album ? "Editar álbum" : "Novo álbum"}</DialogTitle><DialogDescription>Ex.: Festa Junina 2026, Natal, Inauguração da academia.</DialogDescription></DialogHeader>
         <div className="space-y-3">
           <div className="space-y-1"><Label htmlFor="alb-t">Nome do álbum</Label><Input id="alb-t" value={f.titulo} onChange={(e) => setF({ ...f, titulo: e.target.value })} /></div>
-          <div className="space-y-1"><Label>Data do evento</Label><CampoData value={f.data_evento} onChange={(v: string) => setF({ ...f, data_evento: v })} /></div>
+          <div className="space-y-1"><Label>Data do evento</Label><CampoData inicio={2000} value={f.data_evento} onChange={(v: string) => setF({ ...f, data_evento: v })} /></div>
           <div className="space-y-1"><Label htmlFor="alb-d">Descrição</Label><Textarea id="alb-d" value={f.descricao} onChange={(e) => setF({ ...f, descricao: e.target.value })} /></div>
           <label className="flex items-center justify-between gap-2 text-sm">Publicado para os moradores<Switch checked={f.publicado} onCheckedChange={(v) => setF({ ...f, publicado: v })} /></label>
           <label className="flex items-center justify-between gap-2 text-sm">Permitir reações<Switch checked={f.permite_reacoes} onCheckedChange={(v) => setF({ ...f, permite_reacoes: v })} /></label>
@@ -192,8 +192,8 @@ function AlbumView({ album, gestor, perms, onVoltar, onEditar, onMudou, editar, 
         </div>
         {gestor && (
           <div className="flex items-center gap-1">
-            {perms.canUpdate && <AcaoIcone icon={Pencil} label="Editar álbum" onClick={onEditar} />}
-            {perms.canDelete && <AcaoIcone icon={Trash2} label="Excluir álbum" onClick={() => void excluirAlbum()} destrutivo />}
+            {perms.canUpdate && <AcaoIcone titulo="Editar álbum" onClick={onEditar}><Pencil className="size-4" /></AcaoIcone>}
+            {perms.canDelete && <AcaoIcone titulo="Excluir álbum" onClick={() => void excluirAlbum()} destrutivo><Trash2 className="size-4" /></AcaoIcone>}
             <input ref={ref} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { void enviar(e.target.files); e.target.value = ""; }} />
             <Button onClick={() => ref.current?.click()} disabled={enviando > 0}>
               {enviando > 0 ? <Loader2 className="mr-1 size-4 animate-spin" aria-hidden /> : <Upload className="mr-1 size-4" aria-hidden />}
@@ -218,8 +218,8 @@ function AlbumView({ album, gestor, perms, onVoltar, onEditar, onMudou, editar, 
               </div>
               {gestor && (
                 <div className="absolute right-1 top-1 flex gap-1 rounded bg-background/90 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
-                  {perms.canUpdate && <AcaoIcone icon={Star} label="Usar como capa" onClick={() => void definirCapa(f)} />}
-                  {perms.canDelete && <AcaoIcone icon={Trash2} label="Excluir foto" onClick={() => void excluirFoto(f)} destrutivo />}
+                  {perms.canUpdate && <AcaoIcone titulo="Usar como capa" onClick={() => void definirCapa(f)}><Star className="size-4" /></AcaoIcone>}
+                  {perms.canDelete && <AcaoIcone titulo="Excluir foto" onClick={() => void excluirFoto(f)} destrutivo><Trash2 className="size-4" /></AcaoIcone>}
                 </div>
               )}
             </li>
