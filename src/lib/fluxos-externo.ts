@@ -7,7 +7,7 @@ import { fetchCnpj } from "@/lib/cnpj";
 import Sval from "sval";
 import { interpolar, paraTexto, valorVar, type NoFluxo } from "@/lib/fluxos-motor";
 
-export type ResultadoExterno = { saida: string; variaveis: Record<string, string>; erro?: string; mensagem?: string };
+export type ResultadoExterno = { saida: string; variaveis: Record<string, string>; erro?: string; mensagem?: string; campos?: { chave: string; valor: string }[] };
 
 const HOST_BLOQUEADO = /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|0\.|\[?::1\]?$)/i;
 
@@ -121,7 +121,10 @@ export async function executarCnpj(d: Record<string, unknown>, vars: Record<stri
     const j = (await r.json()) as Record<string, unknown>;
     Object.assign(novas, variaveisCnpj(j, prefixo));
     novas[`${prefixo}_erro`] = "";
-    return { saida: "encontrado", variaveis: novas };
+    const campos = d["salvar_contato"] === true
+      ? CAMPOS_CNPJ.map((c) => ({ chave: c, valor: novas[`${prefixo}_${c}`] ?? "" })).filter((c) => c.valor)
+      : undefined;
+    return { saida: "encontrado", variaveis: novas, ...(campos ? { campos } : {}) };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     novas[`${prefixo}_erro`] = msg;
