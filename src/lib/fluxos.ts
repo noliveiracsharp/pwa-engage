@@ -19,6 +19,9 @@ export type TipoNo =
   | "codigo"
   | "cnpj";
 
+/** Campos que o bloco "Consultar CNPJ" cria (sufixos após o prefixo). */
+export const CAMPOS_CNPJ = ["cnpj", "razao_social", "nome_fantasia", "situacao", "cidade", "uf", "endereco", "bairro", "cep", "telefone", "email", "atividade"] as const;
+
 export type DadosNo = Record<string, unknown> & { titulo?: string };
 
 export type CategoriaNo = "Gatilhos" | "Mensagens" | "Lógica" | "Kanban / CRM" | "Integrações" | "IA" | "Fim";

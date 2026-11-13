@@ -34,6 +34,7 @@ import { PainelEntrada } from "@/components/fluxos/PainelEntrada";
 import {
   CATALOGO, dadosPadrao, nomeTipo, resumoNo, saidasDoNo, temEntrada,
   type CategoriaNo, type DadosNo, type TipoNo,
+  CAMPOS_CNPJ,
 } from "@/lib/fluxos";
 import { confirmar } from "@/components/layout/DialogoGlobal";
 import { createContext, useContext } from "react";

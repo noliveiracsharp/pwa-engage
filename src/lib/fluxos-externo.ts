@@ -1,3 +1,4 @@
+import { CAMPOS_CNPJ } from "@/lib/fluxos";
 import { fetchCnpj } from "@/lib/cnpj";
 /**
  * Blocos que o motor puro não executa: Requisição HTTP e JavaScript.
@@ -80,8 +81,6 @@ export async function executarIA(d: Record<string, unknown>, vars: Record<string
   }
 }
 
-/** Campos que o bloco "Consultar CNPJ" cria (sufixos após o prefixo). */
-export const CAMPOS_CNPJ = ["cnpj", "razao_social", "nome_fantasia", "situacao", "cidade", "uf", "endereco", "bairro", "cep", "telefone", "email", "atividade"] as const;
 
 /** Lê a resposta da BrasilAPI/Minha Receita e devolve variáveis com prefixo. */
 export function variaveisCnpj(j: Record<string, unknown>, prefixo: string): Record<string, string> {
