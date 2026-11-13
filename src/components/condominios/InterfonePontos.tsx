@@ -49,25 +49,25 @@ export function InterfonePontos({ condominioId, nomeCondominio, canUpdate }: { c
 
   const salvar = async () => {
     if (!f) return;
-    if (f.nome.trim().length < 2) return toast.error("Informe o nome do ponto.");
-    if (f.geo_ativo && (f.geo_lat == null || f.geo_lng == null)) return toast.error("Marque a localização do ponto antes de ligar a cerca virtual.");
+    if (f.nome.trim().length < 2) { toast.error("Informe o nome do ponto."); return; }
+    if (f.geo_ativo && (f.geo_lat == null || f.geo_lng == null)) { toast.error("Marque a localização do ponto antes de ligar a cerca virtual."); return; }
     setSalvando(true);
     const { id, ...resto } = f;
     const dados = { ...resto, nome: f.nome.trim(), condominio_id: condominioId, slug: f.slug || codigo(), mostrar_unidades: f.tipo === "portao" ? f.mostrar_unidades : false };
     const { error } = id ? await db.from("cond_interfone_pontos").update(dados).eq("id", id) : await db.from("cond_interfone_pontos").insert(dados);
     setSalvando(false);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success("Ponto salvo."); setF(null);
     void qc.invalidateQueries({ queryKey: chave });
   };
   const excluir = async (r: Row) => {
     if (!(await confirmar({ title: "Excluir ponto?", description: `O QR Code de "${s(r["nome"])}" para de funcionar.`, confirmText: "Excluir", destructive: true }))) return;
     const { error } = await db.from("cond_interfone_pontos").delete().eq("id", s(r["id"]));
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     void qc.invalidateQueries({ queryKey: chave });
   };
   const marcar = () => {
-    if (!navigator.geolocation || !f) return toast.error("Este aparelho não informa localização.");
+    if (!navigator.geolocation || !f) { toast.error("Este aparelho não informa localização."); return; }
     navigator.geolocation.getCurrentPosition(
       (p) => { setF((x) => x && ({ ...x, geo_lat: p.coords.latitude, geo_lng: p.coords.longitude })); toast.success(`Local marcado (precisão de ${Math.round(p.coords.accuracy)} m).`); },
       () => toast.error("Não foi possível obter a localização."), { enableHighAccuracy: true, timeout: 15000 });

@@ -42,7 +42,7 @@ export function InterfonePanel({ condominioId, nomeCondominio, blocos, unidades,
   });
   const histQ = useQuery({
     queryKey: ["cond", "interfone_hist", condominioId],
-    queryFn: async () => { const r = await db.from("cond_interfone_chamadas").select("id,destino,cond_unidade_id,ramal_id,ponto_id,visitante_nome,motivo,status,atendido_por,created_at,porta_aberta_em,foto").eq("condominio_id", condominioId).order("created_at", { ascending: false }).limit(100); if (r.error) throw r.error; return (r.data ?? []) as Row[]; },
+    queryFn: async () => { const r = await db.from("cond_interfone_chamadas").select("id,destino,cond_unidade_id,visitante_nome,motivo,status,atendido_por,created_at,porta_aberta_em,foto").eq("condominio_id", condominioId).order("created_at", { ascending: false }).limit(100); if (r.error) throw r.error; return (r.data ?? []) as Row[]; },
     refetchInterval: 15000,
   });
   const [f, setF] = useState({ ativo: false, slug: "", toque_segundos: 20, menores_recebem: false, central_ativa: true, mostrar_administracao: true, geo_ativo: false, geo_lat: null as number | null, geo_lng: null as number | null, geo_raio_m: 150 });

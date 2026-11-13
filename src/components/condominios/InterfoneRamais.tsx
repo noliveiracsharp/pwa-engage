@@ -43,21 +43,21 @@ export function InterfoneRamais({ condominioId, canUpdate }: { condominioId: str
   const salvar = async () => {
     if (!f) return;
     const ramal = normalizarRamal(f.ramal);
-    if (f.nome.trim().length < 2) return toast.error("Informe o local do ramal.");
-    if (!/^\*?\d{1,6}$/.test(ramal)) return toast.error("Ramal: até 6 números, com * opcional no início.");
-    if ((q.data ?? []).some((r) => normalizarRamal(s(r["ramal"])) === ramal && s(r["id"]) !== f.id)) return toast.error(`O ramal ${ramal} já está cadastrado para outro local.`);
+    if (f.nome.trim().length < 2) { toast.error("Informe o local do ramal."); return; }
+    if (!/^\*?\d{1,6}$/.test(ramal)) { toast.error("Ramal: até 6 números, com * opcional no início."); return; }
+    if ((q.data ?? []).some((r) => normalizarRamal(s(r["ramal"])) === ramal && s(r["id"]) !== f.id)) { toast.error(`O ramal ${ramal} já está cadastrado para outro local.`); return; }
     setSalvando(true);
     const dados = { condominio_id: condominioId, nome: f.nome.trim(), ramal, categoria: f.categoria || "operacional", cond_espaco_id: f.cond_espaco_id || null, no_qrcode: f.no_qrcode, ativo: f.ativo };
     const { error } = f.id ? await db.from("cond_interfone_ramais").update(dados).eq("id", f.id) : await db.from("cond_interfone_ramais").insert(dados);
     setSalvando(false);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success("Ramal salvo."); setF(null);
     void qc.invalidateQueries({ queryKey: chave });
   };
   const excluir = async (r: Row) => {
     if (!(await confirmar({ title: "Excluir ramal?", description: `${s(r["nome"])} · ${s(r["ramal"])}`, confirmText: "Excluir", destructive: true }))) return;
     const { error } = await db.from("cond_interfone_ramais").delete().eq("id", s(r["id"]));
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     void qc.invalidateQueries({ queryKey: chave });
   };
 
