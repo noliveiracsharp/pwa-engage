@@ -314,8 +314,8 @@ export function NovaTarefa({ me, empresaId, usuarios, onCancel, onSaved, respons
 
   const salvar = async () => {
     if (!titulo.trim()) { toast.error("Informe o título da tarefa."); return; }
-    setEnviando(true);
     if (!resps.length) { toast.error("Escolha ao menos um responsável."); return; }
+    setEnviando(true);
     const linhas = resps.map((r) => ({
       empresa_id: empresaId, criado_por: me, responsavel_id: r, titulo: titulo.trim(),
       descricao: htmlParaTexto(descricao).trim() ? descricao : null, data_solicitacao: hoje(), data_entrega: entrega || null, anexos,
