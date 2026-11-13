@@ -225,7 +225,7 @@ export function CondominiosPage() {
       {secao === "painel" && condId && <AlertaMandato condominioId={condId} />}
 
       {secao === "painel" ? (
-        <PainelCondominios escopoSindico={modoUnidade} condominios={condominios} condId={condId} podeConfigurar={perms.canUpdate} onAbrir={(id) => { setCondId(id); setSecao("unidades"); }} padrao={padrao} onPadrao={alternarPadrao} />
+        <PainelCondominios onDocumentos={(id) => { setCondId(id); setSecao("documentos"); }} escopoSindico={modoUnidade} condominios={condominios} condId={condId} podeConfigurar={perms.canUpdate} onAbrir={(id) => { setCondId(id); setSecao("unidades"); }} padrao={padrao} onPadrao={alternarPadrao} />
       ) : !condId ? (
         <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
           <Building className="mx-auto mb-2 size-8 opacity-60" />

@@ -11,13 +11,13 @@ export const CATEGORIAS_DOC = [
   { value: "outros", label: "Outros", vence: false },
 ] as const;
 
-export type CategoriaDoc = { value: string; label: string; vence: boolean; id?: string };
+export type CategoriaDoc = { value: string; label: string; vence: boolean; id?: string; dias?: number };
 
 /** Categorias do condomínio; sem linhas próprias, usa a lista padrão. Ordem alfabética, "Outros" no fim. */
-export function categoriasEfetivas(rows: { id?: unknown; codigo?: unknown; descricao?: unknown; controla_vencimento?: unknown }[]): CategoriaDoc[] {
+export function categoriasEfetivas(rows: { id?: unknown; codigo?: unknown; descricao?: unknown; controla_vencimento?: unknown; dias_alerta_padrao?: unknown }[]): CategoriaDoc[] {
   const base: CategoriaDoc[] = rows.length
-    ? rows.map((r) => ({ id: String(r.id ?? ""), value: String(r.codigo ?? ""), label: String(r.descricao ?? ""), vence: !!r.controla_vencimento }))
-    : CATEGORIAS_DOC.map((c) => ({ value: c.value, label: c.label, vence: c.vence }));
+    ? rows.map((r) => ({ id: String(r.id ?? ""), value: String(r.codigo ?? ""), label: String(r.descricao ?? ""), vence: !!r.controla_vencimento, dias: antecedencia(r.dias_alerta_padrao) }))
+    : CATEGORIAS_DOC.map((c) => ({ value: c.value, label: c.label, vence: c.vence, dias: c.value === "laudos" ? 90 : c.value === "apolices" ? 45 : DIAS_ALERTA }));
   return base.sort((a, b) => (a.value === "outros" ? 1 : b.value === "outros" ? -1 : a.label.localeCompare(b.label, "pt-BR")));
 }
 

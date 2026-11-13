@@ -374,7 +374,7 @@ function CategoriasDialog({ condominioId, rows, contagem, onClose }: { condomini
     <Dialog open onOpenChange={(o) => !o && !ocupado && onClose()}>
       <DialogContent className="max-w-lg">
         <DialogHeader><DialogTitle>Categorias de documentos</DialogTitle></DialogHeader>
-        <p className="text-sm text-muted-foreground">Estas categorias valem só para este condomínio.</p>
+        <p className="text-sm text-muted-foreground">Estas categorias valem só para este condomínio. Nas que vencem, o número ao lado é a antecedência padrão do aviso, em dias; cada documento pode ter a sua.</p>
         <ul className="max-h-[50vh] divide-y overflow-y-auto rounded-md border">
           {lista.map((c) => (
             <li key={c.value} className="flex items-center gap-2 p-2">
@@ -383,6 +383,8 @@ function CategoriasDialog({ condominioId, rows, contagem, onClose }: { condomini
               <label className="flex items-center gap-1.5 text-xs text-muted-foreground" title="Controla data de vencimento">
                 <Switch checked={c.vence} disabled={ocupado} onCheckedChange={(v) => alterar(c, { controla_vencimento: v })} /> Vence
               </label>
+              {c.vence && <Input type="number" min={0} max={3650} defaultValue={c.dias ?? 30} className="h-8 w-20" disabled={ocupado} aria-label={`Dias de antecedência padrão de ${c.label}`} title="Dias de antecedência padrão (pode mudar em cada documento)"
+                onBlur={(e) => { const n = antecedencia(e.target.value); if (n !== c.dias) alterar(c, { dias_alerta_padrao: n }); e.target.value = String(n); }} />}
               <span className="w-6 text-center text-xs text-muted-foreground">{contagem.get(c.value) ?? 0}</span>
               <Button size="icon" variant="ghost" className="size-8 text-destructive" aria-label={`Excluir ${c.label}`} disabled={ocupado} onClick={() => excluir(c)}><Trash2 className="size-4" /></Button>
             </li>
