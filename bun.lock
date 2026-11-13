@@ -82,7 +82,7 @@
       },
       "devDependencies": {
         "@eslint/js": "^9.32.0",
-        "@lovable.dev/vite-tanstack-config": "2.26.5",
+        "@lovable.dev/vite-tanstack-config": "2.27.1",
         "@types/node": "^22.16.5",
         "@types/pngjs": "^6.0.5",
         "@types/react": "^19.2.0",
@@ -235,7 +235,7 @@
 
     "@lovable.dev/ai-gateway": ["@lovable.dev/ai-gateway@0.1.11", "", { "dependencies": { "commander": "14.0.3", "openapi-typescript": "7.10.1", "typescript": "npm:@typescript/typescript6@6.0.2", "ws": "^8.18.3" }, "bin": { "ai-gateway": "./dist/cli/index.js" } }, "sha512-2lrGVJNgB/GE0WqQ7Io/Abdqs5w6brpMbus3d8xhuFm4Gyjk2Iam/2/zCpfw2giq5skcaFrp0KK2efDc9Z94Uw=="],
 
-    "@lovable.dev/vite-tanstack-config": ["@lovable.dev/vite-tanstack-config@2.26.5", "https://europe-west1-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/@lovable.dev/vite-tanstack-config/-/vite-tanstack-config-2.26.5.tgz", { "dependencies": { "@tanstack/devtools-vite": "^0.8.1", "lightningcss": "^1.30.0" }, "peerDependencies": { "@tailwindcss/vite": ">=4.0.0", "@tanstack/react-start": ">=1.100.0", "@vitejs/plugin-react": ">=4.0.0", "nitro": ">=3.0.260603-beta", "vite": ">=5.0.0 <9.0.0", "vite-tsconfig-paths": ">=6.0.0" }, "optionalPeers": ["nitro"] }, "sha512-nRaztSS5BDM/d6oW/h2ev9l7RcjULxvWZtmrAwvI7rVQ9dPfNCBjNGmtiy8/THyYfFlcq+R2oLb4yaUBfneB6w=="],
+    "@lovable.dev/vite-tanstack-config": ["@lovable.dev/vite-tanstack-config@2.27.1", "", { "dependencies": { "@tanstack/devtools-vite": "^0.8.1", "lightningcss": "^1.30.0" }, "peerDependencies": { "@tailwindcss/vite": ">=4.0.0", "@tanstack/react-start": ">=1.100.0", "@vitejs/plugin-react": ">=4.0.0", "nitro": ">=3.0.260603-beta", "vite": ">=5.0.0 <9.0.0", "vite-tsconfig-paths": ">=6.0.0" }, "optionalPeers": ["nitro"] }, "sha512-200v7wa1/YeE5mrI+Q4dFNcYkCZQxp6o1jKzUVQQBXyZ3BHLPJ0+ghVSmneFGmpKAAGWpCmDLklTpoM6PZ6utw=="],
 
     "@mediapipe/tasks-vision": ["@mediapipe/tasks-vision@1.2.0", "", {}, "sha512-7+dr9GbGyTtcuLh11wE5TOn4dNFRncIT9oAWs72620WX99KW5FfzF6rFJ/ChTgXG9vJ6dCiE9FrEEY4CnwPWKQ=="],
 
