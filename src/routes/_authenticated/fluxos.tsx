@@ -990,7 +990,41 @@ function Propriedades({ no, atualizar, quadros, etapas, campos, fluxos }: {
               </SelectContent>
             </Select>
           </Campo>
-          <Campo label="Departamento"><Input value={s("departamento")} onChange={(e) => atualizar({ departamento: e.target.value })} placeholder="Ex.: Suporte" /></Campo>
+          <Campo label="Departamento (quadro do Kanban)" ajuda="Escolha o quadro e a etapa onde o card cai ao passar para a equipe.">
+            <Select value={s("quadro_id")} onValueChange={(v) => atualizar({ quadro_id: v, etapa_id: "", departamento: pick<string>(quadros.find((q) => String(q["id"]) === v) ?? {}, ["nome", "descricao", "titulo"]) ?? "" })}>
+              <SelectTrigger><SelectValue placeholder="Escolha o quadro" /></SelectTrigger>
+              <SelectContent>
+                {[...quadros].sort((a, b) => String(pick(a, ["nome", "descricao", "titulo"]) ?? "").localeCompare(String(pick(b, ["nome", "descricao", "titulo"]) ?? ""))).map((q) => <SelectItem key={String(q["id"])} value={String(q["id"])}>{pick<string>(q, ["nome", "descricao", "titulo"])}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </Campo>
+          <Campo label="Etapa de destino">
+            <Select value={s("etapa_id")} onValueChange={(v) => atualizar({ etapa_id: v })} disabled={!s("quadro_id")}>
+              <SelectTrigger><SelectValue placeholder="Escolha a etapa" /></SelectTrigger>
+              <SelectContent>
+                {etapas
+                  .filter((e) => String(pick(e, ["kanban_nome_id", "kanban_id"]) ?? "") === s("quadro_id"))
+                  .sort((a, b) => Number(a["ordem"] ?? 0) - Number(b["ordem"] ?? 0))
+                  .map((e) => (
+                    <SelectItem key={String(e["id"])} value={String(e["id"])}>
+                      <span className="flex items-center gap-2">
+                        <span className={cn("size-2.5 rounded-full", corEtapa(e["cor"]).className)} />
+                        {pick<string>(e, ["descricao", "nome", "titulo"])}
+                      </span>
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </Campo>
+          <Campo label="Prioridade">
+            <Select value={s("prioridade") || "normal"} onValueChange={(v) => atualizar({ prioridade: v })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="alta">Alta</SelectItem>
+                <SelectItem value="normal">Normal</SelectItem>
+              </SelectContent>
+            </Select>
+          </Campo>
         </>
       );
     case "campo": {

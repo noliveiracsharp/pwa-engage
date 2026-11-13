@@ -246,6 +246,7 @@ export function executarFluxo(p: {
         atual = proximo(atual.id);
         break;
       case "atribuir":
+        if (str(d["etapa_id"])) acoes.push({ tipo: "etapa", etapa_id: str(d["etapa_id"]), prioridade: str(d["prioridade"]) || undefined });
         acoes.push({ tipo: "modo", modo: "Humano" });
         atual = proximo(atual.id);
         break;
