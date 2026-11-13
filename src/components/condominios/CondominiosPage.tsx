@@ -1,3 +1,4 @@
+import { ObrasPanel } from "./ObrasPanel";
 import { AchadosPanel } from "./AchadosPanel";
 import { EspacosPanel } from "./EspacosPanel";
 import { ChavesPanel } from "./ChavesPanel";
@@ -59,6 +60,7 @@ const DESCRICAO_SECAO: Record<string, string> = {
   espacos: "Áreas comuns do condomínio com fotos, status e se permitem reserva.",
   meu: "Endereço, mapa, administradora, facilities e contatos úteis do condomínio.",
   chaves: "Claviculário: entrega e devolução de chaves com prazo e alerta de atraso.",
+  obras: "Obras do condomínio por fases, com andamento, prazos, custos e fotos.",
   "minha-unidade": "As unidades em que você mora ou é proprietário.",
 };
 
@@ -251,6 +253,8 @@ export function CondominiosPage() {
         <MeuCondominioPanel condominioId={condId} perms={secAtual} />
       ) : secao === "chaves" && secAtual ? (
         <ChavesPanel condominioId={condId} blocos={blocos} unidades={unidades} perms={secAtual} />
+      ) : secao === "obras" && secAtual ? (
+        <ObrasPanel condominioId={condId} perms={secAtual} />
       ) : secao === "gestao" && secAtual ? (
         <GestaoTerceirosPanel condominioId={condId} podeEditar={secAtual.canUpdate} />
       ) : secao === "minha-unidade" ? (
