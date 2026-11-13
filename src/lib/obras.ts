@@ -67,7 +67,7 @@ export function prazoObra(o: Pick<Obra, "status" | "data_fim" | "fases">, hoje: 
   if (o.status === "concluida" || percObra(o) >= 100) return { prazo: "concluida", dias: 0 };
   if (!o.data_fim) return { prazo: "sem_prazo", dias: 0 };
   const fim = new Date(`${o.data_fim}T23:59:59`);
-  const dias = Math.ceil((fim.getTime() - hoje.getTime()) / 86_400_000);
+  const dias = Math.floor((fim.getTime() - hoje.getTime()) / 86_400_000);
   if (dias < 0) return { prazo: "atrasada", dias: -dias };
   if (dias <= 7 && percObra(o) < 90) return { prazo: "atencao", dias };
   return { prazo: "no_prazo", dias };
