@@ -96,7 +96,7 @@ function Gestao({ condominioId, perms }: { condominioId: string; perms: Perms })
   const [editar, setEditar] = useState<Obra | "nova" | null>(null);
   const hoje = new Date();
   if (q.data === "sem_script") return <SemScript />;
-  const obras = q.data ?? [];
+  const obras: Obra[] = Array.isArray(q.data) ? q.data : [];
   const filtradas = obras.filter((o) => (!status || o.status === status) && (!busca.trim() || norm(`${o.titulo} ${o.observacao}`).includes(norm(busca.trim()))));
   const ativas = obras.filter((o) => o.status === "andamento");
   const atrasadas = obras.filter((o) => prazoObra(o, hoje).prazo === "atrasada").length;
@@ -147,7 +147,7 @@ function VisaoMorador({ condominioId }: { condominioId: string }) {
   });
   const [abertaId, setAbertaId] = useState<string | null>(null);
   if (q.data === "sem_script") return <SemScript />;
-  const obras = q.data ?? [];
+  const obras: Obra[] = Array.isArray(q.data) ? q.data : [];
   const aberta = obras.find((o) => o.id === abertaId) ?? null;
   return (
     <div className="space-y-3">
