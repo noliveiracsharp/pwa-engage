@@ -155,24 +155,27 @@ export function DocumentosPanel({ condominioId, perms, condominios, blocos, unid
           ) : (
             <ul className="divide-y">
               {lista.map((d) => (
-                <li key={s(d["id"])} className="flex flex-wrap items-center gap-3 py-3">
+                <li key={s(d["id"])} className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3 gap-y-2 py-3 md:flex md:items-center">
                   <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"><FileText className="size-5" /></div>
-                  <button type="button" className="min-w-0 flex-1 text-left" onClick={() => abrir(d)}>
+                  <button type="button" className="min-w-0 text-left md:flex-1" onClick={() => abrir(d)}>
                     <p className="truncate font-medium hover:underline">{s(d["titulo"])}</p>
-                    <p className="truncate text-xs text-muted-foreground">
+                    <p className="line-clamp-2 text-xs text-muted-foreground md:truncate">
                       {catLabel(s(d["categoria"]))}{s(d["emissor"]) ? ` · ${s(d["emissor"])}` : ""}{s(d["numero_registro"]) ? ` · nº ${s(d["numero_registro"])}` : ""} · {dataBR(d["data_documento"] || d["created_at"])} · {visLabel(s(d["visibilidade"]))}
                     </p>
                   </button>
-                  {s(d["data_vencimento"]) && <BadgeValidade venc={s(d["data_vencimento"])} dias={d["dias_antecedencia"]} />}
+                  <div className="col-span-2 flex flex-wrap items-center justify-between gap-2 md:contents">
+                  <div className="flex flex-wrap items-center gap-2">{s(d["data_vencimento"]) && <BadgeValidade venc={s(d["data_vencimento"])} dias={d["dias_antecedencia"]} />}
                   {(() => { const ult = avisosDoDoc(s(d["id"]))[0]; if (!ult) return null; const st = statusDoAviso(ult["status"]); return <Badge variant="outline">{STATUS_AVISO[st].label}{st === "agendado" && ult["agendado_para"] ? ` · ${new Date(s(ult["agendado_para"])).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}` : ""}</Badge>; })()}
-                  <div className="flex">
-                    <Button size="icon" variant="ghost" className="size-8" aria-label="Quem visualizou" onClick={() => verLeituras(d)}><Eye className="size-4" /></Button>
-                    <Button size="icon" variant="ghost" className="size-8" aria-label="Abrir documento" onClick={() => abrir(d)}><ExternalLink className="size-4" /></Button>
-                    {perms.canCreate && <Button size="icon" variant="ghost" className="size-8" aria-label="Enviar ou agendar para moradores" onClick={() => prepararEnvio(d)}><Megaphone className="size-4" /></Button>}
-                    {avisosDoDoc(s(d["id"]))[0] && <Button size="icon" variant="ghost" className="size-8" aria-label="Status do envio" onClick={() => setStatus(avisosDoDoc(s(d["id"]))[0]!)}><Activity className="size-4" /></Button>}
-                    {perms.canCreate && avisosDoDoc(s(d["id"]))[0] && <Button size="icon" variant="ghost" className="size-8" aria-label="Reenviar" onClick={() => setReenviar(avisosDoDoc(s(d["id"]))[0]!)}><Send className="size-4" /></Button>}
-                    {perms.canUpdate && <Button size="icon" variant="ghost" className="size-8" aria-label="Editar" onClick={() => setEditando(d)}><Pencil className="size-4" /></Button>}
-                    {perms.canDelete && <Button size="icon" variant="ghost" className="size-8 text-destructive" aria-label="Excluir" onClick={() => excluir(d)}><Trash2 className="size-4" /></Button>}
+                  </div>
+                  <div className="ml-auto flex flex-wrap justify-end">
+                    <Button size="icon" variant="ghost" className="size-10 md:size-8" aria-label="Quem visualizou" onClick={() => verLeituras(d)}><Eye className="size-4" /></Button>
+                    <Button size="icon" variant="ghost" className="size-10 md:size-8" aria-label="Abrir documento" onClick={() => abrir(d)}><ExternalLink className="size-4" /></Button>
+                    {perms.canCreate && <Button size="icon" variant="ghost" className="size-10 md:size-8" aria-label="Enviar ou agendar para moradores" onClick={() => prepararEnvio(d)}><Megaphone className="size-4" /></Button>}
+                    {avisosDoDoc(s(d["id"]))[0] && <Button size="icon" variant="ghost" className="size-10 md:size-8" aria-label="Status do envio" onClick={() => setStatus(avisosDoDoc(s(d["id"]))[0]!)}><Activity className="size-4" /></Button>}
+                    {perms.canCreate && avisosDoDoc(s(d["id"]))[0] && <Button size="icon" variant="ghost" className="size-10 md:size-8" aria-label="Reenviar" onClick={() => setReenviar(avisosDoDoc(s(d["id"]))[0]!)}><Send className="size-4" /></Button>}
+                    {perms.canUpdate && <Button size="icon" variant="ghost" className="size-10 md:size-8" aria-label="Editar" onClick={() => setEditando(d)}><Pencil className="size-4" /></Button>}
+                    {perms.canDelete && <Button size="icon" variant="ghost" className="size-10 md:size-8 text-destructive" aria-label="Excluir" onClick={() => excluir(d)}><Trash2 className="size-4" /></Button>}
+                  </div>
                   </div>
                 </li>
               ))}
@@ -386,7 +389,7 @@ function CategoriasDialog({ condominioId, rows, contagem, onClose }: { condomini
               {c.vence && <Input type="number" min={0} max={3650} defaultValue={c.dias ?? 30} className="h-8 w-20" disabled={ocupado} aria-label={`Dias de antecedência padrão de ${c.label}`} title="Dias de antecedência padrão (pode mudar em cada documento)"
                 onBlur={(e) => { const n = antecedencia(e.target.value); if (n !== c.dias) alterar(c, { dias_alerta_padrao: n }); e.target.value = String(n); }} />}
               <span className="w-6 text-center text-xs text-muted-foreground">{contagem.get(c.value) ?? 0}</span>
-              <Button size="icon" variant="ghost" className="size-8 text-destructive" aria-label={`Excluir ${c.label}`} disabled={ocupado} onClick={() => excluir(c)}><Trash2 className="size-4" /></Button>
+              <Button size="icon" variant="ghost" className="size-10 md:size-8 text-destructive" aria-label={`Excluir ${c.label}`} disabled={ocupado} onClick={() => excluir(c)}><Trash2 className="size-4" /></Button>
             </li>
           ))}
         </ul>
