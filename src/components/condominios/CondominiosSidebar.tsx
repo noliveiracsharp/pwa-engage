@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { Briefcase, FolderOpen, Users, Building2, LayoutDashboard, Megaphone, ChevronLeft, ChevronRight, ParkingSquare, Shuffle, Vote, BellRing, PackageSearch, Trees, KeyRound, MapPinned, HardHat, PawPrint, Images, type LucideIcon } from "lucide-react";
+import { Briefcase, FolderOpen, Users, Building2, LayoutDashboard, Megaphone, ChevronLeft, ChevronRight, ParkingSquare, Shuffle, Vote, BellRing, PackageSearch, Trees, KeyRound, MapPinned, HardHat, PawPrint, Images, Menu, X, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
@@ -71,16 +71,34 @@ export function CondominiosSidebar({ secoes, ativa, onChange, topo, direto, chat
     window.addEventListener("cond-menu-toggle", alternar);
     return () => window.removeEventListener("cond-menu-toggle", alternar);
   }, [direto]);
+  // Celular: gaveta lateral. Esc fecha; clicar num item fecha.
+  const ehMobile = () => typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches;
+  useEffect(() => {
+    if (!aberto) return;
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape" && ehMobile()) setAberto(false); };
+    window.addEventListener("keydown", esc);
+    return () => window.removeEventListener("keydown", esc);
+  }, [aberto]);
+  const atual = secoes.find((x) => x.key === ativa);
   return (
     <TooltipProvider delayDuration={100}>
+    {!direto && (
+      <button type="button" onClick={() => setAberto(true)} aria-label="Abrir menu do condomínio" className="flex w-full items-center gap-2 border-b border-sidebar-border bg-sidebar px-4 py-2.5 text-sm font-medium text-sidebar-foreground md:hidden">
+        <Menu className="size-4" /> {atual ? <><atual.icon className="size-4" /> {atual.label}</> : "Menu"}
+      </button>
+    )}
+    {aberto && <div aria-hidden className="fixed inset-0 z-[89] bg-background/70 backdrop-blur-sm md:hidden" onClick={() => setAberto(false)} />}
     <aside
       aria-label="Menu de condomínios"
       className={cn(
-        "flex shrink-0 flex-col border-b border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200 md:sticky md:top-0 md:h-[calc(100dvh-4rem)] md:overflow-hidden md:border-b-0 md:border-r",
-        aberto ? "w-full md:w-60" : "w-full md:w-16",
+        "fixed inset-y-0 left-0 z-[90] flex w-72 max-w-[85vw] shrink-0 flex-col overflow-y-auto border-r border-sidebar-border bg-sidebar text-sidebar-foreground shadow-xl transition-[transform,width] duration-200 md:sticky md:top-0 md:z-auto md:h-[calc(100dvh-4rem)] md:max-w-none md:translate-x-0 md:overflow-hidden md:shadow-none",
+        aberto ? "translate-x-0 md:w-60" : "-translate-x-full md:w-16",
       )}
     >
       <div className="flex min-h-0 flex-1 flex-col">
+        <div className="flex justify-end px-2 pt-2 md:hidden">
+          <Button size="icon" variant="ghost" className="size-8 text-sidebar-foreground" onClick={() => setAberto(false)} aria-label="Fechar menu"><X className="size-4" /></Button>
+        </div>
         {direto && !aberto && <div className="h-2" />}
         {direto ? (
           aberto ? (
@@ -121,7 +139,7 @@ export function CondominiosSidebar({ secoes, ativa, onChange, topo, direto, chat
                 type="button"
                 aria-label={x.label}
                 aria-current={ativo ? "page" : undefined}
-                onClick={() => onChange(x.key)}
+                onClick={() => { onChange(x.key); if (ehMobile()) setAberto(false); }}
                 className={cn(
                   "flex w-full items-center gap-3 py-2.5 text-left text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring",
                   aberto ? "rounded-lg px-3" : "justify-center rounded-lg px-0",
