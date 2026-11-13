@@ -855,7 +855,7 @@ function Balao({ m, autores, onResponder, onEditarWhats }: { m: Row; autores: Ma
     toast.success("Mensagem apagada para todos.");
   }
   async function editar() {
-    const novo = await perguntar({ title: "Editar mensagem", description: "O texto será corrigido aqui e no WhatsApp do cliente.", defaultValue: corpo, placeholder: "Mensagem", confirmText: "Salvar" });
+    const novo = await perguntar({ title: "Editar mensagem", description: "O texto será corrigido aqui e no WhatsApp do cliente.", defaultValue: corpo, placeholder: "Mensagem", confirmText: "Salvar", multiline: true });
     if (novo === null || !novo.trim() || novo === corpo) return;
     setApagando(true);
     const { error } = await supabase.from("atendimentos_mensagem").update({ mensagem: novo, conteudo: novo, texto: novo } as never).eq("id", mid as string);

@@ -29,6 +29,8 @@ export function useNotificacoesChat() {
         {
           const { data: at } = await supabase.from("atendimentos").select("*").eq("id", atId).maybeSingle();
           if (!at) return; // sem acesso a esse atendimento (outra empresa/equipe)
+          // Conversa ainda com o robô/IA: ninguém da equipe precisa ser avisado.
+          if (String(pick(at as Row, A.modo) ?? "").toUpperCase() === "IA") return;
           const { usuario: u, isMaster: master } = ctx.current;
           if (!master && vinculos.current === null) {
             const { data: vs } = await supabase.from("perfil_kanban" as never).select("kanban_nome_id, perfil_id");
