@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { Row } from "@/lib/row";
 import { s } from "./cond-data";
+import { QuadroVencimentos } from "./QuadroVencimentos";
 
 const norm = (v: string) => v.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase(); // faixa U+0300–U+036F (acentos combinantes)
 
@@ -67,7 +68,7 @@ function GrupoCard({ icone: I, titulo, g, extra, nomeEmp, nomeCond }: { icone: t
   );
 }
 
-export function PainelCondominios({ condominios, condId, podeConfigurar, onAbrir, padrao, onPadrao, escopoSindico }: { escopoSindico?: boolean; condominios: Cond[]; condId: string; podeConfigurar: boolean; onAbrir: (id: string) => void; padrao?: string; onPadrao?: (id: string) => void }) {
+export function PainelCondominios({ condominios, condId, podeConfigurar, onAbrir, padrao, onPadrao, escopoSindico, onDocumentos }: { onDocumentos?: (id: string) => void; escopoSindico?: boolean; condominios: Cond[]; condId: string; podeConfigurar: boolean; onAbrir: (id: string) => void; padrao?: string; onPadrao?: (id: string) => void }) {
   const qc = useQueryClient();
   const [busca, setBuscaRaw] = useState("");
   const [page, setPage] = useState(1);
@@ -148,6 +149,8 @@ export function PainelCondominios({ condominios, condId, podeConfigurar, onAbrir
         <Kpi i={6} icone={PawPrint} rotulo="Pets" valor={daUnid(d.pets).length} sub="cadastrados" />
         <Kpi i={7} icone={Users} rotulo="Média/unidade" valor={unidades.length ? (vinculos.length / unidades.length).toFixed(1) : "—"} sub="pessoas vinculadas" />
       </div>
+
+      {podeConfigurar && onDocumentos && <QuadroVencimentos condominios={condominios} onAbrir={onDocumentos} />}
 
       {!escopoSindico && <div>
         <h2 className="mb-3 text-2xl font-bold">Gestão da carteira</h2>
