@@ -136,7 +136,10 @@ export function resumoNo(tipo: TipoNo, d: DadosNo, nomes: { etapa?: string | und
       const tags = String(d["atalho"] ?? "").split(",").map((t) => t.trim().replace(/^#/, "")).filter(Boolean);
       return tags.length ? `${base} · ${tags.map((t) => `#${t}`).join(" ")}` : base;
     }
-    case "atribuir": return d["modo"] === "roleta" ? "Roleta entre atendentes" : "Fila do departamento";
+    case "atribuir": {
+      const m = d["modo"] === "roleta" ? "Roleta" : "Fila";
+      return nomes.quadro ? `${m} · ${nomes.quadro} → ${nomes.etapa ?? "?"}` : `${m} · ${d["departamento"] || "sem quadro"}`;
+    }
     case "campo":
       if (d["modo"] === "json") return `Todos os campos de ${d["origem"] || "?"}${Array.isArray(d["chaves"]) ? ` (${(d["chaves"] as unknown[]).length} campos)` : ""}`;
       if (Array.isArray(d["linhas"]) && (d["linhas"] as unknown[]).length) return `${(d["linhas"] as unknown[]).length} campo(s)`;
