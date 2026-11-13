@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
@@ -101,6 +101,7 @@ function ArtigoView({ a, voltar, fechar }: { a: ArtigoAjuda; voltar: () => void;
 
 export function CentralAjuda() {
   const [aberto, setAberto] = useState(false);
+  useEffect(() => { const f = () => setAberto(true); window.addEventListener("abrir-ajuda", f); return () => window.removeEventListener("abrir-ajuda", f); }, []);
   const artigos = useArtigos();
   const [busca, setBusca] = useState("");
   const [modulo, setModulo] = useState<string>("");
@@ -140,7 +141,7 @@ export function CentralAjuda() {
 
   return (
     <>
-      <Button variant="ghost" size="icon" onClick={() => setAberto(true)} aria-label="Ajuda e suporte" title="Ajuda e suporte">
+      <Button variant="ghost" size="icon" className="hidden sm:inline-flex" onClick={() => setAberto(true)} aria-label="Ajuda e suporte" title="Ajuda e suporte">
         <CircleHelp className="h-5 w-5" />
       </Button>
       <Sheet open={aberto} onOpenChange={setAberto}>

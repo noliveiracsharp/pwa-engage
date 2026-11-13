@@ -393,7 +393,7 @@ function DetalheObra({ obra, condominioId, perms, onClose, onEditar }: { obra: O
                             <img src={f.url} alt={f.legenda || `Foto ${m.label}`} className="aspect-square w-full object-cover transition group-hover:scale-105" loading="lazy" />
                           </button>
                           {perms?.canDelete && <button type="button" aria-label="Excluir foto" onClick={() => excluir("cond_obras_fotos", f.id, "a foto")}
-                            className="absolute right-1 top-1 rounded-full bg-background/90 p-1 text-destructive opacity-0 transition focus:opacity-100 group-hover:opacity-100"><X className="size-3.5" /></button>}
+                            className="absolute right-1 top-1 rounded-full bg-background/90 p-1 text-destructive md:opacity-0 transition focus:opacity-100 group-hover:opacity-100"><X className="size-3.5" /></button>}
                         </div>
                       ))}
                     </div>

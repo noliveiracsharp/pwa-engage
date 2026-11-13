@@ -5,7 +5,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { SubmenuTabs } from "@/components/layout/SubmenuTabs";
 import { useRealtimeRefresh } from "@/hooks/useRealtime";
 import { FilaEnvioFlutuante } from "@/components/condominios/FilaEnvioFlutuante";
-import { lerAmbiente } from "@/hooks/useAmbientes";
+import { lerAmbiente, lerDestinoAmbiente } from "@/hooks/useAmbientes";
 import { emModoUnidade, ROTAS_UNIDADE } from "@/lib/ambientes";
 import { firstAllowedPath, getAllowedPathsCached, isPathAllowed } from "@/lib/access";
 
@@ -19,7 +19,7 @@ export const Route = createFileRoute("/_authenticated")({
     if (!data.user) throw redirect({ to: "/login" });
     // Dentro de uma unidade, só as telas do morador (o menu da empresa fica oculto).
     if (emModoUnidade(lerAmbiente()) && !ROTAS_UNIDADE.some((r) => location.pathname.startsWith(r))) {
-      throw redirect({ to: "/minha-unidade" });
+      throw redirect({ to: (lerDestinoAmbiente() === "/condominios" ? "/condominios" : "/minha-unidade") as "/minha-unidade" });
     }
     // Bloqueia acesso direto pela URL a telas não liberadas no menu
     // (vw_menu_usuario_perfil, perfil do usuário logado).

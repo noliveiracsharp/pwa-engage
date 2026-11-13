@@ -47,6 +47,12 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
   const router = useRouter();
   useEffect(() => {
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
+    // Versão nova publicada: o celular guardou arquivos antigos. Recarrega uma vez sozinho.
+    const msg = String((error as Error)?.message ?? error);
+    if (/dynamically imported module|Importing a module script failed|Failed to fetch|Loading chunk|error loading dynamically/i.test(msg) && !sessionStorage.getItem("recarregou-versao")) {
+      sessionStorage.setItem("recarregou-versao", "1");
+      window.location.reload();
+    }
   }, [error]);
 
   return (

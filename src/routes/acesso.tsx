@@ -35,7 +35,7 @@ function AcessoPage() {
   const lista = useMemo(() => filtrarAmbientes(ambientes ?? [], busca), [ambientes, busca]);
 
   const entrar = (a: Ambiente) => {
-    gravarAmbiente(a.id);
+    gravarAmbiente(a.id, destinoDoAmbiente(a));
     navigate({ to: destinoDoAmbiente(a) as "/dashboard", replace: true });
   };
 
