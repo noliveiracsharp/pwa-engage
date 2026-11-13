@@ -365,7 +365,7 @@ export function StatusEnvioDialog({ aviso, onClose }: { aviso: Row; onClose: () 
   ];
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-h-[92dvh] overflow-y-auto max-w-2xl">
         <DialogHeader><DialogTitle>Status de envio</DialogTitle></DialogHeader>
         <Table><TableBody>{linhas.map(([k, v]) => <TableRow key={k}><TableCell className="w-40 text-muted-foreground">{k}</TableCell><TableCell>{v}</TableCell></TableRow>)}</TableBody></Table>
         <div className="space-y-1"><Progress value={percentualEnvio(feito, total)} className="h-4" /><p className="text-right text-xs text-muted-foreground">{feito} / {total} ({percentualEnvio(feito, total)}%)</p></div>
@@ -422,7 +422,7 @@ export function ReenviarDialog({ aviso, empresaId, nomeCondominio, onClose }: { 
   }
   return (
     <Dialog open onOpenChange={(o) => !o && !salvando && onClose()}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-h-[92dvh] overflow-y-auto max-w-lg">
         <DialogHeader><DialogTitle className="flex items-center gap-2"><Send className="size-5" /> Reenviar aviso</DialogTitle></DialogHeader>
         <p className="text-sm text-muted-foreground">{s(aviso["titulo"])}</p>
         <div><Label className="mb-1.5 block">Para quem</Label>

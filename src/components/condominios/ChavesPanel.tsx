@@ -258,7 +258,7 @@ function RetirarDialog({ chave, condominioId, unidades, onClose, onOk }: { chave
   };
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-lg" onInteractOutside={(e) => e.preventDefault()}>
+      <DialogContent className="max-h-[92dvh] overflow-y-auto max-w-lg" onInteractOutside={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>Entregar chave · {s(chave["nome"])}</DialogTitle>
           <DialogDescription>Registre quem está retirando e até quando deve devolver.</DialogDescription>
@@ -321,7 +321,7 @@ function DevolverDialog({ mov, chave, unidades, rotuloUnidade, onClose, onOk }: 
   };
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-lg" onInteractOutside={(e) => e.preventDefault()}>
+      <DialogContent className="max-h-[92dvh] overflow-y-auto max-w-lg" onInteractOutside={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>Registrar devolução · {s(chave?.["nome"])}</DialogTitle>
           <DialogDescription>
@@ -329,7 +329,7 @@ function DevolverDialog({ mov, chave, unidades, rotuloUnidade, onClose, onOk }: 
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
-          <div className="flex items-center justify-between gap-3 rounded-md border p-3">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border p-3">
             <Label htmlFor="dev-mesma" className="cursor-pointer">Devolvida pela mesma pessoa que retirou</Label>
             <Switch id="dev-mesma" checked={mesma} onCheckedChange={setMesma} />
           </div>
@@ -365,7 +365,7 @@ function ChaveDialog({ chave, condominioId, onClose, onOk }: { chave: Row | null
   };
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-lg" onInteractOutside={(e) => e.preventDefault()}>
+      <DialogContent className="max-h-[92dvh] overflow-y-auto max-w-lg" onInteractOutside={(e) => e.preventDefault()}>
         <DialogHeader><DialogTitle>{chave ? "Editar chave" : "Nova chave"}</DialogTitle><DialogDescription>Ex.: Academia, Área técnica, Salão de festas.</DialogDescription></DialogHeader>
         <div className="space-y-3">
           <div className="grid grid-cols-3 gap-3">
