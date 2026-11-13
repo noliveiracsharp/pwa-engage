@@ -263,6 +263,7 @@ export function executarFluxo(p: {
         acoes.push({ tipo: "encerrar" });
         return fim("finalizado");
       case "http":
+      case "cnpj":
       case "codigo":
       case "ia":
         // Executado fora do motor (precisa de rede/sandbox/IA); o servidor retoma depois.

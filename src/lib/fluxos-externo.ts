@@ -1,3 +1,4 @@
+import { fetchCnpj } from "@/lib/cnpj";
 /**
  * Blocos que o motor puro não executa: Requisição HTTP e JavaScript.
  * Roda no servidor (webhook). JavaScript usa o interpretador Sval (sem eval, isolado).
@@ -79,9 +80,60 @@ export async function executarIA(d: Record<string, unknown>, vars: Record<string
   }
 }
 
+/** Campos que o bloco "Consultar CNPJ" cria (sufixos após o prefixo). */
+export const CAMPOS_CNPJ = ["cnpj", "razao_social", "nome_fantasia", "situacao", "cidade", "uf", "endereco", "bairro", "cep", "telefone", "email", "atividade"] as const;
+
+/** Lê a resposta da BrasilAPI/Minha Receita e devolve variáveis com prefixo. */
+export function variaveisCnpj(j: Record<string, unknown>, prefixo: string): Record<string, string> {
+  const t = (v: unknown) => (v == null ? "" : String(v).trim());
+  const end = [t(j["descricao_tipo_de_logradouro"]), t(j["logradouro"])].filter(Boolean).join(" ");
+  const tel = t(j["ddd_telefone_1"]).replace(/\D/g, "");
+  const v: Record<(typeof CAMPOS_CNPJ)[number], string> = {
+    cnpj: t(j["cnpj"]).replace(/\D/g, ""),
+    razao_social: t(j["razao_social"]),
+    nome_fantasia: t(j["nome_fantasia"]) || t(j["razao_social"]),
+    situacao: t(j["descricao_situacao_cadastral"]),
+    cidade: t(j["municipio"]),
+    uf: t(j["uf"]),
+    endereco: [end, t(j["numero"]), t(j["complemento"])].filter(Boolean).join(", "),
+    bairro: t(j["bairro"]),
+    cep: t(j["cep"]).replace(/\D/g, ""),
+    telefone: tel,
+    email: t(j["email"]).toLowerCase(),
+    atividade: t(j["cnae_fiscal_descricao"]),
+  };
+  const out: Record<string, string> = {};
+  for (const [k, val] of Object.entries(v)) out[`${prefixo}_${k}`] = val;
+  return out;
+}
+
+export async function executarCnpj(d: Record<string, unknown>, vars: Record<string, string>, consultar: (cnpj: string) => Promise<Response> = fetchCnpj): Promise<ResultadoExterno> {
+  const origem = String(d["origem"] || "cnpj").replace(/[{}\s]/g, "");
+  const prefixo = String(d["prefixo"] || "empresa").replace(/[^a-zA-Z0-9_]/g, "") || "empresa";
+  const novas = { ...vars };
+  const digitos = String(vars[origem] ?? "").replace(/\D/g, "");
+  if (digitos.length !== 14) {
+    novas[`${prefixo}_erro`] = "CNPJ deve ter 14 dígitos";
+    return { saida: "nao_encontrado", variaveis: novas };
+  }
+  try {
+    const r = await consultar(digitos);
+    if (!r.ok) { novas[`${prefixo}_erro`] = `CNPJ não encontrado (${r.status})`; return { saida: "nao_encontrado", variaveis: novas }; }
+    const j = (await r.json()) as Record<string, unknown>;
+    Object.assign(novas, variaveisCnpj(j, prefixo));
+    novas[`${prefixo}_erro`] = "";
+    return { saida: "encontrado", variaveis: novas };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    novas[`${prefixo}_erro`] = msg;
+    return { saida: "nao_encontrado", variaveis: novas, erro: msg };
+  }
+}
+
 export function executarExterno(no: NoFluxo, vars: Record<string, string>) {
   const tipo = no.data?.tipo ?? no.type;
   if (tipo === "http") return executarHttp(no.data, vars);
+  if (tipo === "cnpj") return executarCnpj(no.data, vars);
   if (tipo === "ia") return executarIA(no.data, vars);
   return Promise.resolve(executarCodigo(no.data, vars));
 }
