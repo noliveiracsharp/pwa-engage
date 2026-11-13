@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { SearchSelect } from "@/components/data-table/SearchSelect";
 import { confirmar } from "@/components/layout/DialogoGlobal";
 import { supabase } from "@/integrations/supabase/client";
-import { CATEGORIAS_DOC, categoriasEfetivas, codigoCategoria, type CategoriaDoc, TAMANHO_MAX_DOC, VISIBILIDADES_DOC, diasParaVencer, nomeArquivoSeguro, statusValidade, type StatusValidade } from "@/lib/cond-documentos";
+import { antecedencia, CATEGORIAS_DOC, categoriasEfetivas, codigoCategoria, type CategoriaDoc, TAMANHO_MAX_DOC, VISIBILIDADES_DOC, diasParaVencer, nomeArquivoSeguro, statusValidade, type StatusValidade } from "@/lib/cond-documentos";
 import type { Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
@@ -31,8 +31,8 @@ const visLabel = (v: string) => VISIBILIDADES_DOC.find((c) => c.value === v)?.la
 const norm = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 const dataBR = (iso: unknown) => (iso ? new Date(`${s(iso).slice(0, 10)}T00:00:00`).toLocaleDateString("pt-BR") : "—");
 
-function BadgeValidade({ venc }: { venc: string }) {
-  const st = statusValidade(venc);
+function BadgeValidade({ venc, dias }: { venc: string; dias?: unknown }) {
+  const st = statusValidade(venc, new Date(), antecedencia(dias));
   if (st === "sem") return null;
   const d = diasParaVencer(venc);
   const cls: Record<Exclude<StatusValidade, "sem">, string> = {
@@ -80,12 +80,12 @@ export function DocumentosPanel({ condominioId, perms, condominios, blocos, unid
     for (const d of docs) m.set(s(d["categoria"]), (m.get(s(d["categoria"])) ?? 0) + 1);
     return m;
   }, [docs]);
-  const alertas = useMemo(() => docs.filter((d) => ["vencido", "a_vencer"].includes(statusValidade(s(d["data_vencimento"]) || null))), [docs]);
+  const alertas = useMemo(() => docs.filter((d) => ["vencido", "a_vencer"].includes(statusValidade(s(d["data_vencimento"]) || null, new Date(), antecedencia(d["dias_antecedencia"])))), [docs]);
   const lista = useMemo(() => {
     const t = norm(busca.trim());
     return docs
       .filter((d) => cat === "todas" || (cat === "alertas" ? alertas.includes(d) : s(d["categoria"]) === cat))
-      .filter((d) => !t || norm(`${s(d["titulo"])} ${s(d["descricao"])} ${s(d["arquivo_nome"])}`).includes(t))
+      .filter((d) => !t || norm(`${s(d["titulo"])} ${s(d["descricao"])} ${s(d["arquivo_nome"])} ${s(d["emissor"])} ${s(d["numero_registro"])}`).includes(t))
       .sort((a, b) => s(b["data_documento"] || b["created_at"]).localeCompare(s(a["data_documento"] || a["created_at"])));
   }, [docs, cat, busca, alertas]);
 
@@ -160,10 +160,10 @@ export function DocumentosPanel({ condominioId, perms, condominios, blocos, unid
                   <button type="button" className="min-w-0 flex-1 text-left" onClick={() => abrir(d)}>
                     <p className="truncate font-medium hover:underline">{s(d["titulo"])}</p>
                     <p className="truncate text-xs text-muted-foreground">
-                      {catLabel(s(d["categoria"]))} · {dataBR(d["data_documento"] || d["created_at"])} · {visLabel(s(d["visibilidade"]))}
+                      {catLabel(s(d["categoria"]))}{s(d["emissor"]) ? ` · ${s(d["emissor"])}` : ""}{s(d["numero_registro"]) ? ` · nº ${s(d["numero_registro"])}` : ""} · {dataBR(d["data_documento"] || d["created_at"])} · {visLabel(s(d["visibilidade"]))}
                     </p>
                   </button>
-                  {s(d["data_vencimento"]) && <BadgeValidade venc={s(d["data_vencimento"])} />}
+                  {s(d["data_vencimento"]) && <BadgeValidade venc={s(d["data_vencimento"])} dias={d["dias_antecedencia"]} />}
                   {(() => { const ult = avisosDoDoc(s(d["id"]))[0]; if (!ult) return null; const st = statusDoAviso(ult["status"]); return <Badge variant="outline">{STATUS_AVISO[st].label}{st === "agendado" && ult["agendado_para"] ? ` · ${new Date(s(ult["agendado_para"])).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}` : ""}</Badge>; })()}
                   <div className="flex">
                     <Button size="icon" variant="ghost" className="size-8" aria-label="Quem visualizou" onClick={() => verLeituras(d)}><Eye className="size-4" /></Button>
@@ -218,6 +218,10 @@ function DocumentoDialog({ categorias, condominioId, doc, categoriaInicial, onCl
   const [visibilidade, setVisibilidade] = useState(s(doc?.["visibilidade"]) || "moradores");
   const [dataDoc, setDataDoc] = useState(s(doc?.["data_documento"]).slice(0, 10));
   const [venc, setVenc] = useState(s(doc?.["data_vencimento"]).slice(0, 10));
+  const padraoCat = (c: string) => antecedencia(categorias.find((x) => x.value === c)?.dias);
+  const [diasAviso, setDiasAviso] = useState(String(doc?.["dias_antecedencia"] ?? padraoCat(inicialCat)));
+  const [emissor, setEmissor] = useState(s(doc?.["emissor"]));
+  const [numero, setNumero] = useState(s(doc?.["numero_registro"]));
   const [arquivo, setArquivo] = useState<File | null>(null);
   const previa = useMemo(() => (arquivo?.type.startsWith("image/") ? URL.createObjectURL(arquivo) : ""), [arquivo]);
   useEffect(() => () => { if (previa) URL.revokeObjectURL(previa); }, [previa]);
@@ -232,7 +236,7 @@ function DocumentoDialog({ categorias, condominioId, doc, categoriaInicial, onCl
     try {
       const valores: Row = {
         condominio_id: condominioId, categoria, titulo: titulo.trim(), descricao: descricao.trim() || null,
-        visibilidade, data_documento: dataDoc || null, data_vencimento: venc || null, updated_at: new Date().toISOString(),
+        visibilidade, data_documento: dataDoc || null, data_vencimento: venc || null, dias_antecedencia: venc ? antecedencia(diasAviso) : null, emissor: emissor.trim() || null, numero_registro: numero.trim() || null, updated_at: new Date().toISOString(),
       };
       if (arquivo) {
         const path = `condominio/${condominioId}/${categoria}/${Date.now()}-${nomeArquivoSeguro(arquivo.name)}`;
@@ -261,13 +265,20 @@ function DocumentoDialog({ categorias, condominioId, doc, categoriaInicial, onCl
         <DialogHeader><DialogTitle>{doc ? "Editar documento" : "Enviar documento"}</DialogTitle></DialogHeader>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="sm:col-span-2"><Label htmlFor="doc-tit">Título *</Label><Input id="doc-tit" value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ex.: Ata da AGO 2026" /></div>
-          <div><Label className="mb-1.5 block">Categoria</Label><SearchSelect value={categoria} allowClear={false} options={categorias.map((c) => ({ value: c.value, label: c.label }))} onChange={setCategoria} /></div>
+          <div><Label className="mb-1.5 block">Categoria</Label><SearchSelect value={categoria} allowClear={false} options={categorias.map((c) => ({ value: c.value, label: c.label }))} onChange={(v) => { setCategoria(v); if (!doc) setDiasAviso(String(padraoCat(v))); }} /></div>
           <div><Label className="mb-1.5 block">Quem pode ver</Label><SearchSelect value={visibilidade} allowClear={false} options={[...VISIBILIDADES_DOC]} onChange={setVisibilidade} /></div>
           <div><Label htmlFor="doc-data" className="mb-1.5 flex h-5 items-center gap-1">Data do documento</Label><CampoData id="doc-data" value={dataDoc} onChange={setDataDoc} inicio={1970} /></div>
           <div>
             <Label htmlFor="doc-venc" className="mb-1.5 flex h-5 items-center gap-1"><CalendarClock className="size-3.5" /> Vencimento {pedeVenc && <span className="text-xs text-muted-foreground">(recomendado)</span>}</Label>
             <CampoData id="doc-venc" value={venc} onChange={setVenc} inicio={2000} />
           </div>
+          {venc && <div className="sm:col-span-2">
+            <Label htmlFor="doc-dias">Avisar com quantos dias de antecedência?</Label>
+            <Input id="doc-dias" type="number" min={0} max={3650} inputMode="numeric" className="w-32" value={diasAviso} onChange={(e) => setDiasAviso(e.target.value)} aria-describedby="doc-dias-ajuda" />
+            <p id="doc-dias-ajuda" className="mt-1 text-xs text-muted-foreground">O documento aparece como "A vencer" e entra no quadro de avisos a partir dessa data. Ex.: AVCB 90 dias, seguro 45.</p>
+          </div>}
+          <div><Label htmlFor="doc-emissor">Emissor / órgão / fornecedor</Label><Input id="doc-emissor" value={emissor} onChange={(e) => setEmissor(e.target.value)} placeholder="Ex.: Corpo de Bombeiros" /></div>
+          <div><Label htmlFor="doc-num">Nº do documento / apólice</Label><Input id="doc-num" value={numero} onChange={(e) => setNumero(e.target.value)} /></div>
           <div className="sm:col-span-2"><Label htmlFor="doc-desc">Descrição</Label><Textarea id="doc-desc" rows={3} value={descricao} onChange={(e) => setDescricao(e.target.value)} /></div>
           <div className="sm:col-span-2">
             <Label className="mb-1.5 block">{doc ? "Substituir arquivo (opcional)" : "Arquivo *"}{doc && !arquivo ? ` — atual: ${s(doc["arquivo_nome"]) || "arquivo enviado"}` : ""}</Label>

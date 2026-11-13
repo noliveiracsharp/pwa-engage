@@ -42,14 +42,14 @@ export type StatusValidade = "sem" | "valido" | "a_vencer" | "vencido";
 export const DIAS_ALERTA = 30;
 
 /** Situação do documento em relação ao vencimento (datas ISO yyyy-mm-dd). */
-export function statusValidade(vencimento: string | null | undefined, hoje: Date = new Date()): StatusValidade {
+export function statusValidade(vencimento: string | null | undefined, hoje: Date = new Date(), diasAlerta: number = DIAS_ALERTA): StatusValidade {
   if (!vencimento) return "sem";
   const v = new Date(`${vencimento.slice(0, 10)}T00:00:00`);
   if (Number.isNaN(v.getTime())) return "sem";
   const h = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
   const dias = Math.round((v.getTime() - h.getTime()) / 86_400_000);
   if (dias < 0) return "vencido";
-  if (dias <= DIAS_ALERTA) return "a_vencer";
+  if (dias <= antecedencia(diasAlerta)) return "a_vencer";
   return "valido";
 }
 
@@ -63,4 +63,26 @@ export const TAMANHO_MAX_DOC = 20 * 1024 * 1024;
 
 export function nomeArquivoSeguro(nome: string): string {
   return nome.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\w.-]/g, "_");
+}
+
+/** Antecedência válida (0–3650 dias); vazio ou inválido usa o padrão de 30. */
+export function antecedencia(v: unknown): number {
+  const n = Number(v);
+  if (v === null || v === undefined || v === "" || !Number.isFinite(n) || n < 0) return DIAS_ALERTA;
+  return Math.min(3650, Math.round(n));
+}
+
+export type AlertaDoc = { id: string; condominioId: string; titulo: string; vencimento: string; dias: number; status: "vencido" | "a_vencer" };
+
+/** Documentos vencidos ou dentro da antecedência própria, do mais urgente ao menos urgente. */
+export function quadroVencimentos(docs: { id?: unknown; condominio_id?: unknown; titulo?: unknown; data_vencimento?: unknown; dias_antecedencia?: unknown }[], hoje: Date = new Date()): AlertaDoc[] {
+  const out: AlertaDoc[] = [];
+  for (const d of docs) {
+    const v = String(d.data_vencimento ?? "").slice(0, 10);
+    if (!v) continue;
+    const st = statusValidade(v, hoje, antecedencia(d.dias_antecedencia));
+    if (st !== "vencido" && st !== "a_vencer") continue;
+    out.push({ id: String(d.id ?? ""), condominioId: String(d.condominio_id ?? ""), titulo: String(d.titulo ?? ""), vencimento: v, dias: diasParaVencer(v, hoje), status: st });
+  }
+  return out.sort((a, b) => a.dias - b.dias);
 }
