@@ -49,3 +49,13 @@ describe("aviso do interfone por WhatsApp", () => {
     expect(t).toContain("https://x.co");
   });
 });
+
+import { normalizarRamal, ramalDiscado, ramaisDuplicados } from "../interfone";
+describe("ramais do interfone", () => {
+  const ramais = [{ id: "a", nome: "Portaria", ramal: "15", categoria: "portaria" }, { id: "b", nome: "Churrasqueira", ramal: "*106", categoria: "lazer" }];
+  it("normaliza o asterisco", () => expect(normalizarRamal(" *10-6 ")).toBe("*106"));
+  it("acha ramal com asterisco", () => expect(ramalDiscado("*106", ramais)?.id).toBe("b"));
+  it("não confunde 106 com *106", () => expect(ramalDiscado("106", ramais)).toBeNull());
+  it("acha ramal simples", () => expect(ramalDiscado("15", ramais)?.nome).toBe("Portaria"));
+  it("aponta duplicados", () => expect(ramaisDuplicados([{ ramal: "52" }, { ramal: "52" }, { ramal: "15" }])).toEqual(["52"]));
+});
