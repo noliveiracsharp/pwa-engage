@@ -14,6 +14,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Row } from "@/lib/row";
 import { s } from "./cond-data";
 import { gerarFolhaA4Placas, gerarPlacaInterfone } from "./placa-interfone";
+import { InterfoneRamais } from "./InterfoneRamais";
+import { InterfonePontos } from "./InterfonePontos";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabase as any;
@@ -40,7 +42,7 @@ export function InterfonePanel({ condominioId, nomeCondominio, blocos, unidades,
   });
   const histQ = useQuery({
     queryKey: ["cond", "interfone_hist", condominioId],
-    queryFn: async () => { const r = await db.from("cond_interfone_chamadas").select("id,destino,cond_unidade_id,visitante_nome,motivo,status,atendido_por,created_at,porta_aberta_em,foto").eq("condominio_id", condominioId).order("created_at", { ascending: false }).limit(100); if (r.error) throw r.error; return (r.data ?? []) as Row[]; },
+    queryFn: async () => { const r = await db.from("cond_interfone_chamadas").select("id,destino,cond_unidade_id,ramal_id,ponto_id,visitante_nome,motivo,status,atendido_por,created_at,porta_aberta_em,foto").eq("condominio_id", condominioId).order("created_at", { ascending: false }).limit(100); if (r.error) throw r.error; return (r.data ?? []) as Row[]; },
     refetchInterval: 15000,
   });
   const [f, setF] = useState({ ativo: false, slug: "", toque_segundos: 20, menores_recebem: false, central_ativa: true, mostrar_administracao: true, geo_ativo: false, geo_lat: null as number | null, geo_lng: null as number | null, geo_raio_m: 150 });
@@ -122,7 +124,9 @@ export function InterfonePanel({ condominioId, nomeCondominio, blocos, unidades,
 
   return (
     <Tabs defaultValue="config" className="space-y-4">
-      <TabsList><TabsTrigger value="config">Configuração e QR Code</TabsTrigger><TabsTrigger value="historico">Histórico</TabsTrigger></TabsList>
+      <TabsList><TabsTrigger value="config">Configuração e QR Code</TabsTrigger><TabsTrigger value="pontos">Pontos de QR Code</TabsTrigger><TabsTrigger value="ramais">Ramais</TabsTrigger><TabsTrigger value="historico">Histórico</TabsTrigger></TabsList>
+      <TabsContent value="pontos"><InterfonePontos condominioId={condominioId} nomeCondominio={nomeCondominio} canUpdate={perms.canUpdate} /></TabsContent>
+      <TabsContent value="ramais"><InterfoneRamais condominioId={condominioId} canUpdate={perms.canUpdate} /></TabsContent>
       <TabsContent value="config">
         <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
           <div className="space-y-3">
