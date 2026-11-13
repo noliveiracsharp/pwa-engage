@@ -10,7 +10,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import {
   Bot, Clock, GitBranch, Hourglass, KanbanSquare, ListOrdered, MessageSquare,
-  MessageCircleQuestion, PhoneForwarded, Plus, Save, Trash2, UserPlus, Workflow, Zap, PenLine, CircleStop, Globe, Code2, X, FlaskConical, Upload, Copy, Play,
+  MessageCircleQuestion, PhoneForwarded, Plus, Save, Trash2, UserPlus, Workflow, Zap, PenLine, CircleStop, Globe, Code2, Building2, X, FlaskConical, Upload, Copy, Play,
   Split, FileText, PanelLeftClose, PanelLeftOpen, Search, StickyNote, BoxSelect, Hand,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -34,6 +34,7 @@ import { PainelEntrada } from "@/components/fluxos/PainelEntrada";
 import {
   CATALOGO, dadosPadrao, nomeTipo, resumoNo, saidasDoNo, temEntrada,
   type CategoriaNo, type DadosNo, type TipoNo,
+  CAMPOS_CNPJ,
 } from "@/lib/fluxos";
 import { confirmar } from "@/components/layout/DialogoGlobal";
 import { createContext, useContext } from "react";
@@ -60,6 +61,10 @@ function variaveisDoFluxo(nos: FluxoNode[]): VariavelDef[] {
     if (t === "http") {
       const b = v || "resposta";
       out.push({ chave: b, descricao: "Resposta da API (use .campo)" }, { chave: `${b}_status`, descricao: "Status HTTP" }, { chave: `${b}_erro`, descricao: "Erro da chamada" });
+    } else if (t === "cnpj") {
+      const p = String(n.data["prefixo"] || "empresa");
+      for (const c of CAMPOS_CNPJ) out.push({ chave: `${p}_${c}`, descricao: `CNPJ consultado: ${c.replace("_", " ")}` });
+      out.push({ chave: `${p}_erro`, descricao: "Motivo quando não encontrou" });
     } else if (v) out.push({ chave: v, descricao: `Criada no bloco ${nomeTipo(t)}` });
   }
   const m = new Map(out.map((x) => [x.chave, x]));
@@ -94,7 +99,7 @@ export const Route = createFileRoute("/_authenticated/fluxos")({
 const ICONES: Record<TipoNo, typeof Zap> = {
   gatilho: Zap, mensagem: MessageSquare, menu: ListOrdered, pergunta: MessageCircleQuestion,
   condicao: GitBranch, switch: Split, horario: Clock, atraso: Hourglass, kanban: KanbanSquare, atribuir: UserPlus,
-  campo: PenLine, ia: Bot, transbordo: PhoneForwarded, encerrar: CircleStop, subfluxo: Workflow, http: Globe, codigo: Code2,
+  campo: PenLine, ia: Bot, transbordo: PhoneForwarded, encerrar: CircleStop, subfluxo: Workflow, http: Globe, codigo: Code2, cnpj: Building2,
 };
 const COR_CATEGORIA: Record<CategoriaNo, string> = {
   Gatilhos: "bg-warning text-warning-foreground",
@@ -784,6 +789,18 @@ function Propriedades({ no, atualizar, quadros, etapas, campos, fluxos }: {
             <Campo label="Palavras extras para encerrar" ajuda="Opcional"><Input value={s("cmd_sair")} onChange={(e) => atualizar({ cmd_sair: e.target.value })} /></Campo>
             <Campo label="Mensagem ao encerrar"><Textarea rows={2} placeholder={MENSAGENS_PADRAO.sair} value={s("msg_sair")} onChange={(e) => atualizar({ msg_sair: e.target.value })} /></Campo>
           </div>
+        </>
+      );
+    case "cnpj":
+      return (
+        <>
+          <Campo label="Variável com o CNPJ" ajuda="Nome da variável criada na Pergunta anterior (ex.: cnpj). Aceita pontos, barra e traço.">
+            <Input value={s("origem")} placeholder="cnpj" onChange={(e) => atualizar({ origem: e.target.value.replace(/[{}\s]/g, "") })} />
+          </Campo>
+          <Campo label="Prefixo das variáveis" ajuda={`Cria {{${s("prefixo") || "empresa"}_razao_social}}, _nome_fantasia, _cidade, _uf, _situacao, _endereco, _bairro, _cep, _telefone, _email, _atividade`}>
+            <Input value={s("prefixo")} placeholder="empresa" onChange={(e) => atualizar({ prefixo: e.target.value.replace(/[^a-zA-Z0-9_]/g, "") })} />
+          </Campo>
+          <p className="text-xs text-muted-foreground">Mesma consulta da tela de Empresas. Saída <strong>Encontrado</strong> quando o CNPJ existe; senão segue por <strong>Não encontrado / inválido</strong>.</p>
         </>
       );
     case "http":
