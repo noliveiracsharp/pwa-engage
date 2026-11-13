@@ -7,7 +7,7 @@ import { z } from "zod";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/integrations/supabase/client";
 import { dispararMensagem } from "@/lib/atendimentos-envio";
 import { executarExterno } from "@/lib/fluxos-externo";
-import { detectarNota, notaDaLinha } from "@/lib/csat";
+import { detectarNota, ehCortesia, notaDaLinha } from "@/lib/csat";
 import { executarFluxo, proximoNoId, type ConexaoFluxo, type EstadoExec, type NoFluxo } from "@/lib/fluxos-motor";
 
 // Recebe as mensagens da Z-API ("Ao receber"). A chave ?k= identifica a instância.
@@ -167,6 +167,15 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
             }
             return ok({ avaliacao: notaCsat, registrada: false });
           }
+        }
+
+        // Cortesia logo após o encerramento ("igualmente", "obrigado"): registra no chamado encerrado, sem abrir outro nem acionar o robô.
+        if (tipo === "texto" && ehCortesia(texto)) {
+          const { data: cz, error: eC } = await db.rpc("atendimento_cortesia_pos_encerramento" as never, {
+            p_token: k, p_telefone: body.phone, p_texto: texto, p_externo: body.messageId ?? null,
+          } as never);
+          if (eC && !/function|schema cache/i.test(eC.message)) console.error("zapi-webhook cortesia", eC.message);
+          if (cz === true) return ok({ cortesia: true });
         }
 
         const { data, error } = await db.rpc("fluxo_webhook_receber", {

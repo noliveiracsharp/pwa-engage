@@ -41,3 +41,11 @@ export function detectarNota(texto: string): number | null {
   }
   return null;
 }
+
+/** Resposta curta de cortesia ("obrigado", "igualmente", "tchau") que não deve abrir novo atendimento logo após o encerramento. */
+export function ehCortesia(texto: string): boolean {
+  const t = (texto ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z\s]/g, " ").replace(/\s+/g, " ").trim();
+  if (!t || t.length > 60) return false;
+  const ok = /^(e )?(muito )?(obrigad[oa]s?|obg|brigad[oa]|vlw|valeu|igualmente|tchau|ate (mais|logo|breve)|bom dia|boa tarde|boa noite|ok|okay|blz|beleza|show|top|otimo|perfeito|certo|combinado|de nada|disponha|abracos?|abs|amem|tmj|tamo junto|vc tambem|voce tambem|pra voce tambem|para voce tambem|(e )?igualmente|sim|ta bom|ta|ok obrigad[oa])( (e|pra|para|voce|vc|tambem|igualmente|muito|obrigad[oa]|tchau|bom dia|boa tarde|boa noite|ate mais|valeu|abracos?|ok|ta bom|um|uma|otimo|dia|tarde|noite|semana|bom|boa|ate|mais))*$/;
+  return ok.test(t) || t === "";
+}
