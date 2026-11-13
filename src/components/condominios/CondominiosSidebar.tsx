@@ -98,9 +98,7 @@ export function CondominiosSidebar({ secoes, ativa, onChange, topo, direto, chat
             </div>
           ) : null
         ) : (
-        <div className={cn("flex items-center gap-2 px-3 pb-2 pt-4", !aberto && "md:justify-center md:px-0")}>
-          <Building2 className="size-5 shrink-0" />
-          {aberto && <span className="truncate text-base font-semibold">Condomínio</span>}
+        <div className={cn("flex items-center gap-2 px-3 pb-1 pt-2", !aberto && "md:justify-center md:px-0")}>
           <Button
             size="icon"
             variant="ghost"
