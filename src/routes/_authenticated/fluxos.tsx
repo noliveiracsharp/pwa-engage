@@ -428,6 +428,52 @@ function FluxosPage() {
     setSelId(null);
     toast.success(novos.length === 1 ? "Bloco duplicado" : `${novos.length} blocos duplicados`);
   }, [nodes, edges, setNodes, setEdges]);
+  const extrairSelecionados = useCallback(async () => {
+    if (!fluxo) return;
+    const marcados = nodes.filter((n) => n.selected && n.data.tipo === "bloco" ? false : n.selected && n.data.tipo !== "gatilho" && !ehNota(n));
+    if (!marcados.length) { toast.info("Marque um ou mais blocos para extrair"); return; }
+    const ids = new Set(marcados.map((n) => n.id));
+    const entrando = edges.filter((e) => !ids.has(e.source) && ids.has(e.target));
+    const saindo = edges.filter((e) => ids.has(e.source) && !ids.has(e.target));
+    const topo = [...marcados].sort((a, b) => a.position.y - b.position.y || a.position.x - b.position.x)[0]!;
+    const entradaId = entrando[0]?.target ?? topo.id;
+    const entrada = marcados.find((n) => n.id === entradaId) ?? topo;
+    const nomeNovo = await perguntar("Nome do novo fluxo", { valorInicial: `${nome} — parte` } as never);
+    if (!nomeNovo || !String(nomeNovo).trim()) return;
+    if (saindo.length && !await confirmar(`${saindo.length} ligação(ões) dos blocos marcados apontam para blocos que ficam neste fluxo e serão removidas, pois o novo fluxo continua a conversa por conta própria. Continuar?`)) return;
+    const minX = Math.min(...marcados.map((n) => n.position.x));
+    const minY = Math.min(...marcados.map((n) => n.position.y));
+    const inicio = { id: "inicio", position: { x: 80, y: 160 }, data: { tipo: "gatilho", ...dadosPadrao("gatilho") } };
+    const nosNovos = marcados.map((n) => {
+      const { resumo: _r, ...d } = n.data;
+      return { id: n.id, position: { x: n.position.x - minX + 400, y: n.position.y - minY + 160 }, data: d };
+    });
+    const ligNovas = [
+      { id: `lig-inicio-${entrada.id}`, source: "inicio", target: entrada.id, sourceHandle: "saida", targetHandle: null },
+      ...edges.filter((e) => ids.has(e.source) && ids.has(e.target))
+        .map(({ id, source, target, sourceHandle, targetHandle }) => ({ id, source, target, sourceHandle, targetHandle })),
+    ];
+    const { data, error } = await supabase.from("fluxos_atendimento")
+      .insert({ nome: String(nomeNovo).trim(), empresa_id: empresaId, nos: [inicio, ...nosNovos], conexoes: ligNovas, ativo: false })
+      .select().single();
+    if (error) { toast.error("Não foi possível criar o fluxo", { description: error.message }); return; }
+    const novoId = String((data as Row)["id"]);
+    const subId = `subfluxo-${Date.now().toString(36)}`;
+    const subData = comResumo({ tipo: "subfluxo", ...dadosPadrao("subfluxo"), titulo: `Ir para ${String(nomeNovo).trim()}`, fluxo_id: novoId } as NoData);
+    setNodes((ns) => [
+      ...ns.filter((n) => !ids.has(n.id)).map((n) => ({ ...n, selected: false })),
+      { id: subId, type: "bloco", position: entrada.position, data: subData, selected: true },
+    ]);
+    setEdges((es) => [
+      ...es.filter((e) => !ids.has(e.source) && !ids.has(e.target)),
+      ...entrando.map((e) => ({ ...e, id: `${e.id}-sub`, target: subId, targetHandle: null })),
+    ]);
+    setSelId(null);
+    await qc.invalidateQueries({ queryKey: ["fluxos_atendimento"] });
+    toast.success(`Fluxo "${String(nomeNovo).trim()}" criado e ligado`, {
+      description: "Clique em Salvar para gravar este fluxo. O novo fluxo foi criado inativo (ele é chamado por este).",
+    });
+  }, [fluxo, nodes, edges, nome, empresaId, comResumo, setNodes, setEdges, qc]);
   const qtdMarcados = nodes.filter((n) => n.selected && n.data.tipo !== "gatilho").length;
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
@@ -570,6 +616,7 @@ function FluxosPage() {
                   <Button size="sm" variant={modoSelecao ? "secondary" : "ghost"} onClick={() => setModoSelecao(true)} title="Arraste para marcar vários blocos (ou segure Shift)" aria-pressed={modoSelecao}><BoxSelect className="size-4" /> Selecionar</Button>
                   <Button size="sm" variant="ghost" onClick={adicionarNota} title="Adicionar anotação colorida"><StickyNote className="size-4" /> Anotação</Button>
                   {qtdMarcados > 0 && <Button size="sm" onClick={duplicarSelecionados} title="Duplicar os blocos marcados (Ctrl+D)"><Copy className="size-4" /> Duplicar ({qtdMarcados})</Button>}
+                  {qtdMarcados > 0 && <Button size="sm" variant="outline" onClick={() => void extrairSelecionados()} title="Mover os blocos marcados para um novo fluxo ligado a este"><Workflow className="size-4" /> Extrair para novo fluxo ({qtdMarcados})</Button>}
                 </Panel>
               </ReactFlow>
               </DuplicarCtx.Provider>
