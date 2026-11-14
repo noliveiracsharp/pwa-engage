@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { Briefcase, FolderOpen, Users, Building2, LayoutDashboard, Megaphone, ParkingSquare, Shuffle, Vote, BellRing, PackageSearch, Trees, KeyRound, MapPinned, HardHat, PawPrint, Images, Menu, X, Gavel, type LucideIcon } from "lucide-react";
+import { Briefcase, FolderOpen, Users, Building2, LayoutDashboard, Megaphone, ParkingSquare, Shuffle, Vote, BellRing, PackageSearch, Trees, KeyRound, MapPinned, HardHat, PawPrint, Images, Menu, X, Gavel, ChevronLeft, ChevronRight, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
@@ -123,7 +123,13 @@ export function CondominiosSidebar({ secoes, ativa, onChange, topo, direto, chat
               )}
             </div>
           ) : null
-        ) : <div className="h-2" />}
+        ) : (
+          <div className={cn("hidden px-2 pt-2 md:flex", aberto ? "justify-end" : "justify-center")}>
+            <Button size="icon" variant="ghost" className="size-8 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" onClick={() => setAberto((v) => !v)} aria-label={aberto ? "Recolher menu do condomínio" : "Expandir menu do condomínio"} aria-expanded={aberto} title={aberto ? "Recolher menu" : "Expandir menu"}>
+              {aberto ? <ChevronLeft className="size-4" /> : <ChevronRight className="size-4" />}
+            </Button>
+          </div>
+        )}
         {aberto && topo && !direto && <div className="px-3 pb-3 text-foreground">{topo}</div>}
         <nav className={cn("flex min-h-0 flex-col gap-0.5 pb-3 md:flex-1 md:overflow-y-auto", aberto ? "px-3" : "hidden md:flex md:px-2")}>
           {secoes.map((x) => {
