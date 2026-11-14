@@ -36,7 +36,7 @@ import {
   type CategoriaNo, type DadosNo, type TipoNo,
   CAMPOS_CNPJ,
 } from "@/lib/fluxos";
-import { confirmar } from "@/components/layout/DialogoGlobal";
+import { confirmar, perguntar } from "@/components/layout/DialogoGlobal";
 import { createContext, useContext } from "react";
 import { CampoVariaveis } from "@/components/ui/campo-variaveis";
 import type { VariavelDef } from "@/lib/variaveis";
@@ -430,7 +430,7 @@ function FluxosPage() {
   }, [nodes, edges, setNodes, setEdges]);
   const extrairSelecionados = useCallback(async () => {
     if (!fluxo) return;
-    const marcados = nodes.filter((n) => n.selected && n.data.tipo === "bloco" ? false : n.selected && n.data.tipo !== "gatilho" && !ehNota(n));
+    const marcados = nodes.filter((n) => n.selected && n.data.tipo !== "gatilho" && !ehNota(n));
     if (!marcados.length) { toast.info("Marque um ou mais blocos para extrair"); return; }
     const ids = new Set(marcados.map((n) => n.id));
     const entrando = edges.filter((e) => !ids.has(e.source) && ids.has(e.target));
