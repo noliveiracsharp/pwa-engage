@@ -438,7 +438,7 @@ function FluxosPage() {
     const topo = [...marcados].sort((a, b) => a.position.y - b.position.y || a.position.x - b.position.x)[0]!;
     const entradaId = entrando[0]?.target ?? topo.id;
     const entrada = marcados.find((n) => n.id === entradaId) ?? topo;
-    const nomeNovo = await perguntar("Nome do novo fluxo", { valorInicial: `${nome} — parte` } as never);
+    const nomeNovo = await perguntar({ title: "Nome do novo fluxo", defaultValue: `${nome} — parte`, required: true });
     if (!nomeNovo || !String(nomeNovo).trim()) return;
     if (saindo.length && !await confirmar(`${saindo.length} ligação(ões) dos blocos marcados apontam para blocos que ficam neste fluxo e serão removidas, pois o novo fluxo continua a conversa por conta própria. Continuar?`)) return;
     const minX = Math.min(...marcados.map((n) => n.position.x));
