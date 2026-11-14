@@ -61,8 +61,8 @@ export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) 
   const [recarregando, setRecarregando] = useState(false);
   const modoUnidade = emModoUnidade(lerAmbiente());
   const rotaAtual = useRouterState({ select: (st) => st.location.pathname });
-  // Nas telas do condomínio, o hambúrguer abre/fecha o menu do condomínio.
-  const menuCondominio = modoUnidade || rotaAtual.startsWith("/condominios") || rotaAtual.startsWith("/minha-unidade");
+  // Acesso direto do condomínio: o hambúrguer controla o menu do condomínio; na administradora, o menu principal.
+  const menuCondominio = modoUnidade; void rotaAtual;
   const condSel = useCondSeletor();
   const ambAtual = modoUnidade ? ambientes?.find((a) => a.id === lerAmbiente()) : undefined;
 

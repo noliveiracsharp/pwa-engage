@@ -46,7 +46,10 @@ import { AlertaMandato } from "./AlertaMandato";
 import { ExcluirBlocoDialog } from "./ExcluirBlocoDialog";
 import { TransferenciaDialog } from "./TransferenciaDialog";
 import { X } from "lucide-react";
+import { Tabs as AbasRaiz, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
+const ABA_PAI: Record<string, string> = { sorteio: "vagas", galeria: "meu" };
 
 const DESCRICAO_SECAO: Record<string, string> = {
   painel: "Visão geral do condomínio: unidades, pessoas, vagas e alertas.",
@@ -148,6 +151,12 @@ export function CondominiosPage() {
     if (secoes.length && !secoes.some((x) => x.key === secao)) setSecao(secoes[0]!.key);
   }, [secoes, secao]);
   const secAtual = secoes.find((x) => x.key === secao);
+  // Sorteio é aba de Garagem & Vagas; Galeria é aba de Meu Condomínio (some do menu se o pai estiver visível).
+  const secoesMenu = useMemo(() => secoes.filter((x) => !(ABA_PAI[x.key] && secoes.some((y) => y.key === ABA_PAI[x.key]))), [secoes]);
+  const filhaDe = (pai: string) => secoes.find((x) => ABA_PAI[x.key] === pai);
+  const grupo = ABA_PAI[secao] ?? secao;
+  const abaFilha = filhaDe(grupo);
+  const abaPai = secoes.find((x) => x.key === grupo);
   const permsUnid = secoes.find((x) => x.key === "unidades") ?? { canCreate: false, canUpdate: false, canDelete: false };
   const [busca, setBusca] = useState("");
   const [unidadeAberta, setUnidadeAberta] = useState<Row | null>(null);
@@ -205,10 +214,10 @@ export function CondominiosPage() {
   if (!perms.loading && !perms.canRead) return <p className="p-6 text-sm text-muted-foreground">Você não tem acesso a esta tela.</p>;
 
   return (
-    <div className="-m-4 flex min-h-[calc(100%+2rem)] flex-col sm:-m-6 sm:min-h-[calc(100%+3rem)] md:flex-row">
+    <div className="flex min-h-full flex-col md:flex-row">
     <CondominiosSidebar
-      secoes={secoes}
-      ativa={secao}
+      secoes={secoesMenu}
+      ativa={ABA_PAI[secao] && secoesMenu.some((x) => x.key === ABA_PAI[secao]) ? ABA_PAI[secao]! : secao}
       onChange={irSecao}
       chatCondominioId={modoUnidade && condId ? condId : undefined}
       direto={modoUnidade ? {
@@ -220,14 +229,24 @@ export function CondominiosPage() {
     <div className="min-w-0 flex-1 space-y-4 p-4 sm:p-6">
       <InterfoneTocando nome={String(user?.user_metadata?.["nome"] ?? user?.email ?? "Morador")} />
       {(() => {
-        const I = secAtual?.icon ?? Building2;
+        const sAt = abaPai ?? secAtual;
+        const I = sAt?.icon ?? Building2;
         return (
           <div className="min-w-0">
-            <h1 className="flex items-center gap-2 text-2xl font-semibold"><I className="size-6 text-primary" /> {secAtual?.label ?? "Painel"}</h1>
+            <h1 className="flex items-center gap-2 text-2xl font-semibold"><I className="size-6 text-primary" /> {sAt?.label ?? "Painel"}</h1>
             {DESCRICAO_SECAO[secao] && <p className="text-sm text-muted-foreground">{DESCRICAO_SECAO[secao]}</p>}
           </div>
         );
       })()}
+      {abaPai && abaFilha && (
+        <div className="min-w-0 overflow-x-auto">
+          <TabsList className="h-9 w-max justify-start">
+            {[abaPai, abaFilha].map((x) => (
+              <TabsTrigger key={x.key} value={x.key} data-state={secao === x.key ? "active" : "inactive"} aria-selected={secao === x.key} onClick={() => setSecao(x.key)} className="px-3 text-sm">{x.label}</TabsTrigger>
+            ))}
+          </TabsList>
+        </div>
+      )}
       {secao === "painel" && condId && <AlertaMandato condominioId={condId} />}
 
       {secao === "painel" ? (
