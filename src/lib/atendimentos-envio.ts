@@ -98,7 +98,7 @@ export async function dispararMensagem(e: Envio): Promise<string | true> {
     else {
       const ext = (e.nomeArquivo ?? e.midiaUrl).split(".").pop()?.split("?")[0] || "pdf";
       endpoint = `send-document/${ext}`; // a Z-API exige a extensão no caminho
-      body = { phone, document: e.midiaUrl, fileName: e.nomeArquivo };
+      body = { phone, document: e.midiaUrl, ...(e.nomeArquivo ? { fileName: e.nomeArquivo } : {}), ...(e.texto?.trim() ? { caption: e.texto } : {}) };
     }
     if (e.responderA) body["messageId"] = e.responderA;
   } else if (e.lista?.opcoes.length) {
