@@ -255,12 +255,12 @@ function Detalhe({ assembleia: a, blocos, unidades, perms, onVoltar, onEditar, o
     toast.success(msg ?? `Assembleia: ${rotuloStatus(status)}.`); onAtualizar();
   };
   const finalizar = async () => {
-    if (!(await confirmar({ titulo: "Finalizar assembleia?", descricao: "As pautas em votação serão encerradas e ninguém poderá votar mais.", confirmar: "Finalizar" }))) return;
+    if (!(await confirmar({ title: "Finalizar assembleia?", description: "As pautas em votação serão encerradas e ninguém poderá votar mais.", confirmText: "Finalizar" }))) return;
     await db.from("cond_assembleia_pautas").update({ status: "encerrada", encerrada_em: new Date().toISOString() }).eq("assembleia_id", id).eq("status", "em_votacao");
     await mudar("finalizada", { finalizada_em: new Date().toISOString() }, "Assembleia finalizada. Gere a ata na aba Ata.");
   };
   const excluir = async () => {
-    if (!(await confirmar({ titulo: "Excluir assembleia?", descricao: "Só rascunhos podem ser excluídos.", confirmar: "Excluir", destrutivo: true }))) return;
+    if (!(await confirmar({ title: "Excluir assembleia?", description: "Só rascunhos podem ser excluídos.", confirmText: "Excluir", destructive: true }))) return;
     const { error } = await db.from("cond_assembleias").delete().eq("id", id);
     if (error) toast.error(erroMsg(error)); else { toast.success("Assembleia excluída."); onAtualizar(); onVoltar(); }
   };
@@ -378,13 +378,13 @@ function Pautas({ assembleia: a, unidades, blocos, pode }: { assembleia: Row; un
   };
   const mudarPauta = async (p: Row, status: string) => {
     if (status === "em_votacao" && !emSessao(st)) { toast.error("Abra a sessão da assembleia antes de iniciar a votação."); return; }
-    if (status === "encerrada" && !(await confirmar({ titulo: "Encerrar votação?", descricao: "Depois de encerrada, a pauta não recebe mais votos.", confirmar: "Encerrar" }))) return;
+    if (status === "encerrada" && !(await confirmar({ title: "Encerrar votação?", description: "Depois de encerrada, a pauta não recebe mais votos.", confirmText: "Encerrar" }))) return;
     const extra = status === "em_votacao" ? { aberta_em: new Date().toISOString() } : { encerrada_em: new Date().toISOString() };
     const { error } = await db.from("cond_assembleia_pautas").update({ status, ...extra }).eq("id", s(p["id"]));
     if (error) toast.error(erroMsg(error)); else { toast.success(status === "em_votacao" ? "Votação aberta." : "Votação encerrada."); recarregar(); }
   };
   const excluir = async (p: Row) => {
-    if (!(await confirmar({ titulo: "Excluir pauta?", descricao: s(p["titulo"]), confirmar: "Excluir", destrutivo: true }))) return;
+    if (!(await confirmar({ title: "Excluir pauta?", description: s(p["titulo"]), confirmText: "Excluir", destructive: true }))) return;
     const { error } = await db.from("cond_assembleia_pautas").delete().eq("id", s(p["id"]));
     if (error) toast.error(erroMsg(error)); else recarregar();
   };
@@ -471,7 +471,7 @@ function PautaDialog({ assembleiaId, pauta, proxima, onClose, onSalvo }: { assem
     if (quorum === "eleicao" && nomes.length < 2) { toast.error("Informe pelo menos duas opções (chapas, candidatos ou orçamentos)."); return; }
     setSalvando(true);
     try {
-      const valores = { assembleia_id: assembleiaId, titulo: titulo.trim(), descricao: descricao || null, quorum };
+      const valores = { assembleia_id: assembleiaId, titulo: titulo.trim(), description: descricao || null, quorum };
       let pid = s(p["id"]);
       if (pauta) { const r = await db.from("cond_assembleia_pautas").update(valores).eq("id", pid); if (r.error) throw r.error; }
       else { const r = await db.from("cond_assembleia_pautas").insert({ ...valores, ordem: proxima }).select("id").single(); if (r.error) throw r.error; pid = s(r.data.id); }
@@ -479,8 +479,8 @@ function PautaDialog({ assembleiaId, pauta, proxima, onClose, onSalvo }: { assem
       if (mudouOpcoes) {
         const d = await db.from("cond_assembleia_opcoes_voto").delete().eq("pauta_id", pid); if (d.error) throw d.error;
         const linhas = quorum === "eleicao"
-          ? [...nomes.map((nm, i) => ({ pauta_id: pid, ordem: i + 1, descricao: nm, tipo: "outro" })), { pauta_id: pid, ordem: nomes.length + 1, descricao: "Abstenção", tipo: "abstencao" }]
-          : OPCOES_PADRAO.map((o, i) => ({ pauta_id: pid, ordem: i + 1, descricao: o.descricao, tipo: o.tipo }));
+          ? [...nomes.map((nm, i) => ({ pauta_id: pid, ordem: i + 1, description: nm, tipo: "outro" })), { pauta_id: pid, ordem: nomes.length + 1, description: "Abstenção", tipo: "abstencao" }]
+          : OPCOES_PADRAO.map((o, i) => ({ pauta_id: pid, ordem: i + 1, description: o.descricao, tipo: o.tipo }));
         const r = await db.from("cond_assembleia_opcoes_voto").insert(linhas); if (r.error) throw r.error;
       }
       toast.success("Pauta salva."); onSalvo();
@@ -577,7 +577,7 @@ function Recepcao({ assembleia: a, unidades, blocos, pode }: { assembleia: Row; 
     .sort((x, y) => ordemNatural(x.rot, y.rot));
   const comVoto = presencas.filter((p) => p["direito_voto"]).length;
   const remover = async (p: Row) => {
-    if (!(await confirmar({ titulo: "Desfazer check-in?", descricao: "Os votos já registrados desta unidade continuam válidos.", confirmar: "Desfazer", destrutivo: true }))) return;
+    if (!(await confirmar({ title: "Desfazer check-in?", description: "Os votos já registrados desta unidade continuam válidos.", confirmText: "Desfazer", destructive: true }))) return;
     const { error } = await db.from("cond_assembleia_presencas").delete().eq("id", s(p["id"]));
     if (error) toast.error(erroMsg(error)); else qc.invalidateQueries({ queryKey: ["cond", "cond_assembleia_presencas"] });
   };
@@ -633,7 +633,7 @@ function CheckinDialog({ assembleia: a, dados, presencas, onClose, onSalvo }: { 
     try {
       let url = s(dados["procuracao_url"]) || null;
       if (procurador && foto) {
-        const f = foto.type.startsWith("image/") ? await comprimirImagem(foto, "documento") : foto;
+        const f = foto.type.startsWith("image/") ? await comprimirImagem(foto, "laudo") : foto;
         const path = `${s(dados["unidade_id"])}/assembleia-${s(a["id"])}-${Date.now()}-${f.name.replace(/[^\w.-]/g, "_")}`;
         const up = await supabase.storage.from("cond-documentos").upload(path, f);
         if (up.error) throw up.error;
@@ -765,7 +765,7 @@ function Ata({ assembleia: a, unidades, blocos, pode, onAtualizar }: { assemblei
   const cond = String(emp.nome ?? "");
   const gerar = async () => {
     if (!res) return;
-    if (html.trim() && !(await confirmar({ titulo: "Gerar a ata de novo?", descricao: "O texto atual será substituído pela minuta com os resultados.", confirmar: "Gerar" }))) return;
+    if (html.trim() && !(await confirmar({ title: "Gerar a ata de novo?", description: "O texto atual será substituído pela minuta com os resultados.", confirmText: "Gerar" }))) return;
     setHtml(montarAta(a, res, presencas, unidades, blocos, cond));
   };
   const salvar = async () => {
@@ -879,7 +879,7 @@ export function AssembleiasMorador({ condominioId }: { condominioId: string }) {
     if (error) toast.error(erroMsg(error)); else { toast.success("Presença confirmada."); recarregar(); }
   };
   const votar = async (pautaId: string, opcaoId: string, unidadeId: string, rotulo: string) => {
-    if (!(await confirmar({ titulo: "Confirmar voto?", descricao: `Seu voto: ${rotulo}. Depois de confirmado não pode ser alterado.`, confirmar: "Votar" }))) return;
+    if (!(await confirmar({ title: "Confirmar voto?", description: `Seu voto: ${rotulo}. Depois de confirmado não pode ser alterado.`, confirmText: "Votar" }))) return;
     setOcupado(pautaId + unidadeId);
     const { error } = await db.rpc("cond_assembleia_votar", { p_pauta: pautaId, p_opcao: opcaoId, p_unidade: unidadeId, p_user_agent: navigator.userAgent });
     setOcupado("");
