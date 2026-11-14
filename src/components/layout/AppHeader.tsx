@@ -1,4 +1,4 @@
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { HelpCircle, Languages, LogOut, Menu, Moon, RotateCw, Sun, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -60,6 +60,9 @@ export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) 
   const { data: ambientes } = useAmbientes();
   const [recarregando, setRecarregando] = useState(false);
   const modoUnidade = emModoUnidade(lerAmbiente());
+  const rotaAtual = useRouterState({ select: (st) => st.location.pathname });
+  // Nas telas do condomínio, o hambúrguer abre/fecha o menu do condomínio.
+  const menuCondominio = modoUnidade || rotaAtual.startsWith("/condominios") || rotaAtual.startsWith("/minha-unidade");
   const condSel = useCondSeletor();
   const ambAtual = modoUnidade ? ambientes?.find((a) => a.id === lerAmbiente()) : undefined;
 
@@ -89,7 +92,7 @@ export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) 
   return (
     <header className="flex h-16 w-full shrink-0 items-center justify-between gap-2 overflow-hidden border-b border-border bg-card px-2 sm:gap-3 sm:px-4">
       <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-        <Button variant="ghost" size="icon" className="shrink-0" onClick={() => (modoUnidade ? window.dispatchEvent(new Event("cond-menu-toggle")) : onToggleSidebar())} aria-label="Abrir menu">
+        <Button variant="ghost" size="icon" className="shrink-0" onClick={() => (menuCondominio ? window.dispatchEvent(new Event("cond-menu-toggle")) : onToggleSidebar())} aria-label="Abrir menu">
           <Menu className="h-5 w-5" />
         </Button>
         {condSel && (!modoUnidade || condSel.opcoes.length > 1) ? (

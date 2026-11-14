@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { Briefcase, FolderOpen, Users, Building2, LayoutDashboard, Megaphone, ChevronLeft, ChevronRight, ParkingSquare, Shuffle, Vote, BellRing, PackageSearch, Trees, KeyRound, MapPinned, HardHat, PawPrint, Images, Menu, X, Gavel, type LucideIcon } from "lucide-react";
+import { Briefcase, FolderOpen, Users, Building2, LayoutDashboard, Megaphone, ParkingSquare, Shuffle, Vote, BellRing, PackageSearch, Trees, KeyRound, MapPinned, HardHat, PawPrint, Images, Menu, X, Gavel, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
@@ -73,13 +73,12 @@ export function useSecoesCondominio(pagina: P): Secao[] {
 
 export function CondominiosSidebar({ secoes, ativa, onChange, topo, direto, chatCondominioId }: { chatCondominioId?: string | undefined; secoes: Secao[]; ativa: string; onChange: (k: string) => void; topo?: ReactNode; direto?: { nome: string; logo?: string | null; cargo?: string | null } | undefined }) {
   const [aberto, setAberto] = useState(false);
-  // No acesso direto do condomínio, o botão de menu do cabeçalho abre/recolhe este menu.
+  // Sempre inicia fechado; o hambúrguer do cabeçalho abre/fecha este menu.
   useEffect(() => {
-    if (!direto) return;
     const alternar = () => setAberto((v) => !v);
     window.addEventListener("cond-menu-toggle", alternar);
     return () => window.removeEventListener("cond-menu-toggle", alternar);
-  }, [direto]);
+  }, []);
   // Celular: gaveta lateral. Esc fecha; clicar num item fecha.
   const ehMobile = () => typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches;
   useEffect(() => {
@@ -124,20 +123,7 @@ export function CondominiosSidebar({ secoes, ativa, onChange, topo, direto, chat
               )}
             </div>
           ) : null
-        ) : (
-        <div className={cn("flex items-center gap-2 px-3 pb-1 pt-2", !aberto && "md:justify-center md:px-0")}>
-          <Button
-            size="icon"
-            variant="ghost"
-            className={cn("ml-auto size-7 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground", !aberto && "md:hidden")}
-            onClick={() => setAberto((v) => !v)}
-            aria-label={aberto ? "Recolher menu" : "Mostrar menu"}
-            title={aberto ? "Recolher menu" : "Mostrar menu"}
-          >
-            {aberto ? <ChevronLeft className="size-4" /> : <ChevronRight className="size-4" />}
-          </Button>
-        </div>
-        )}
+        ) : <div className="h-2" />}
         {aberto && topo && !direto && <div className="px-3 pb-3 text-foreground">{topo}</div>}
         <nav className={cn("flex min-h-0 flex-col gap-0.5 pb-3 md:flex-1 md:overflow-y-auto", aberto ? "px-3" : "hidden md:flex md:px-2")}>
           {secoes.map((x) => {
@@ -168,11 +154,6 @@ export function CondominiosSidebar({ secoes, ativa, onChange, topo, direto, chat
             );
           })}
         </nav>
-        {!aberto && !direto && (
-          <Button size="icon" variant="ghost" className="mx-auto mb-3 hidden size-8 text-sidebar-foreground hover:bg-sidebar-accent md:inline-flex" onClick={() => setAberto(true)} aria-label="Mostrar menu" title="Mostrar menu">
-            <ChevronRight className="size-4" />
-          </Button>
-        )}
       </div>
       {/* Só quando este é o menu único (morador/síndico no acesso direto): o menu da empresa, que já tem chat e versão, fica oculto. */}
       {chatCondominioId && (
