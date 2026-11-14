@@ -239,13 +239,13 @@ export function CondominiosPage() {
         );
       })()}
       {abaPai && abaFilha && (
-        <div className="min-w-0 overflow-x-auto">
+        <AbasRaiz value={secao} onValueChange={setSecao} className="min-w-0 overflow-x-auto">
           <TabsList className="h-9 w-max justify-start">
             {[abaPai, abaFilha].map((x) => (
-              <TabsTrigger key={x.key} value={x.key} data-state={secao === x.key ? "active" : "inactive"} aria-selected={secao === x.key} onClick={() => setSecao(x.key)} className="px-3 text-sm">{x.label}</TabsTrigger>
+              <TabsTrigger key={x.key} value={x.key} className="px-3 text-sm">{x.label}</TabsTrigger>
             ))}
           </TabsList>
-        </div>
+        </AbasRaiz>
       )}
       {secao === "painel" && condId && <AlertaMandato condominioId={condId} />}
 
