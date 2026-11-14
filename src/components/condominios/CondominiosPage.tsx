@@ -1,6 +1,7 @@
 import { ObrasPanel } from "./ObrasPanel";
 import { PetsPanel } from "./PetsPanel";
 import { GaleriaPanel } from "./GaleriaPanel";
+import { AssembleiasPanel } from "./AssembleiasPanel";
 import { AchadosPanel } from "./AchadosPanel";
 import { EspacosPanel } from "./EspacosPanel";
 import { ChavesPanel } from "./ChavesPanel";
@@ -64,6 +65,7 @@ const DESCRICAO_SECAO: Record<string, string> = {
   chaves: "Claviculário: entrega e devolução de chaves com prazo e alerta de atraso.",
   pets: "Todos os pets do condomínio, com alerta de desaparecido e aviso ao tutor pelo WhatsApp.",
   galeria: "Álbuns de fotos dos eventos do condomínio, com reações e comentários.",
+  assembleias: "AGO/AGE presencial, online ou mista: pautas, check-in, votação auditada, telão e ata.",
   obras: "Obras do condomínio por fases, com andamento, prazos, custos e fotos.",
   "minha-unidade": "As unidades em que você mora ou é proprietário.",
 };
@@ -263,6 +265,8 @@ export function CondominiosPage() {
         <PetsPanel condominioId={condId} perms={secAtual} />
       ) : secao === "galeria" && secAtual ? (
         <GaleriaPanel condominioId={condId} perms={secAtual} />
+      ) : secao === "assembleias" && secAtual ? (
+        <AssembleiasPanel condominioId={condId} blocos={blocos} unidades={unidades} perms={secAtual} />
       ) : secao === "gestao" && secAtual ? (
         <GestaoTerceirosPanel condominioId={condId} podeEditar={secAtual.canUpdate} />
       ) : secao === "minha-unidade" ? (
