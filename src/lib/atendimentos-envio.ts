@@ -93,7 +93,7 @@ export async function dispararMensagem(e: Envio): Promise<string | true> {
   if (e.midiaUrl) {
     const t = e.tipo ?? "documento";
     if (t === "imagem") { endpoint = "send-image"; body = { phone, image: e.midiaUrl, caption: e.texto }; }
-    else if (t === "audio") { endpoint = "send-audio"; body = { phone, audio: e.midiaUrl }; }
+    else if (t === "audio") { endpoint = "send-audio"; body = { phone, audio: e.midiaUrl, waveform: true, delayTyping: 3 }; }
     else if (t === "video") { endpoint = "send-video"; body = { phone, video: e.midiaUrl, caption: e.texto }; }
     else {
       const ext = (e.nomeArquivo ?? e.midiaUrl).split(".").pop()?.split("?")[0] || "pdf";
@@ -129,6 +129,8 @@ export async function dispararMensagem(e: Envio): Promise<string | true> {
       body = { phone, message: `${mensagem}\n\n${url}` };
     }
   }
+  // "digitando..." no WhatsApp do cliente antes do texto (1 a 4 s conforme o tamanho); áudio já mostra "gravando áudio...".
+  if (endpoint === "send-text" && body["delayTyping"] === undefined) body["delayTyping"] = Math.min(4, Math.max(1, Math.round(String(body["message"] ?? "").length / 60)));
   const r = await fetch(`${base}/${endpoint}`, { method: "POST", headers, body: JSON.stringify(body) });
   if (!r.ok) {
     const detalhe = await r.text().catch(() => "");
