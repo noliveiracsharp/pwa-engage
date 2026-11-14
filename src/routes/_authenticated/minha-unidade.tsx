@@ -1,7 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { FileText, Home, Loader2, Megaphone } from "lucide-react";
+import { FileText, Gavel, Home, Loader2, Megaphone } from "lucide-react";
+import { AssembleiasMorador } from "@/components/condominios/AssembleiasPanel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -71,6 +72,7 @@ function MinhaUnidade() {
   const secoes: Secao[] = [
     { key: "unidade", label: "Minha unidade", icon: Home, ...ler },
     { key: "avisos", label: "Avisos & Comunicados", icon: Megaphone, ...ler },
+    { key: "assembleias", label: "Assembleias", icon: Gavel, ...ler },
     { key: "docs", label: "Documentos", icon: FileText, ...ler },
   ];
   const [abrindo, setAbrindo] = useState<string | null>(null);
@@ -108,6 +110,7 @@ function MinhaUnidade() {
             </CardContent>
           </Card>
         </div>)}
+        {secao === "assembleias" && condId && <AssembleiasMorador condominioId={condId} />}
         {secao === "avisos" && (<div className="space-y-2">
           {avisos.isLoading ? <Loader2 className="mx-auto h-5 w-5 animate-spin" /> : (avisos.data ?? []).length === 0
             ? <p className="py-8 text-center text-sm text-muted-foreground">Nenhum aviso ativo.</p>

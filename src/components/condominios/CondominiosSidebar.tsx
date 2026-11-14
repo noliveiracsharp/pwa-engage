@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { Briefcase, FolderOpen, Users, Building2, LayoutDashboard, Megaphone, ChevronLeft, ChevronRight, ParkingSquare, Shuffle, Vote, BellRing, PackageSearch, Trees, KeyRound, MapPinned, HardHat, PawPrint, Images, Menu, X, type LucideIcon } from "lucide-react";
+import { Briefcase, FolderOpen, Users, Building2, LayoutDashboard, Megaphone, ChevronLeft, ChevronRight, ParkingSquare, Shuffle, Vote, BellRing, PackageSearch, Trees, KeyRound, MapPinned, HardHat, PawPrint, Images, Menu, X, Gavel, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
@@ -28,6 +28,7 @@ const DEF = [
   { key: "obras", label: "Obras", path: "/condominios/obras", icon: HardHat },
   { key: "pets", label: "Pets", path: "/condominios/pets", icon: PawPrint },
   { key: "galeria", label: "Galeria de Fotos", path: "/condominios/galeria", icon: Images },
+  { key: "assembleias", label: "Assembleias", path: "/condominios/assembleias", icon: Gavel },
 ] as const;
 
 /**
@@ -52,6 +53,7 @@ export function useSecoesCondominio(pagina: P): Secao[] {
   const ob = usePagePermissions(DEF[13].path);
   const pt = usePagePermissions(DEF[14].path);
   const ga = usePagePermissions(DEF[15].path);
+  const asb = usePagePermissions(DEF[16].path);
   return useMemo(() => {
     const existe = (path: string) => funcoes.some((f) => String(f["path"] ?? "") === path);
     const painel: Secao = { key: "painel", label: "Painel", icon: LayoutDashboard, canRead: pagina.canRead, canCreate: false, canUpdate: pagina.canUpdate, canDelete: false };
@@ -62,11 +64,11 @@ export function useSecoesCondominio(pagina: P): Secao[] {
       return f && Number.isFinite(n) ? n : Number.MAX_SAFE_INTEGER;
     };
     const itens = DEF.map((d, i) => {
-      const p = existe(d.path) ? [mc, u, v, s, e, g, dc, av, eq, it, ap, es, ch, ob, pt, ga][i]! : pagina;
+      const p = existe(d.path) ? [mc, u, v, s, e, g, dc, av, eq, it, ap, es, ch, ob, pt, ga, asb][i]! : pagina;
       return { ordem: ordemDe(d.path), secao: { key: d.key, label: d.label, icon: d.icon, canRead: p.canRead, canCreate: p.canCreate, canUpdate: p.canUpdate, canDelete: p.canDelete } as Secao };
     }).sort((a, b) => a.ordem - b.ordem || a.secao.label.localeCompare(b.secao.label, "pt-BR")).map((x) => x.secao);
     return [painel, ...itens].filter((x) => x.canRead);
-  }, [funcoes, mc, u, v, s, e, g, dc, av, eq, it, ap, es, ch, ob, pt, ga, pagina]);
+  }, [funcoes, mc, u, v, s, e, g, dc, av, eq, it, ap, es, ch, ob, pt, ga, asb, pagina]);
 }
 
 export function CondominiosSidebar({ secoes, ativa, onChange, topo, direto, chatCondominioId }: { chatCondominioId?: string | undefined; secoes: Secao[]; ativa: string; onChange: (k: string) => void; topo?: ReactNode; direto?: { nome: string; logo?: string | null; cargo?: string | null } | undefined }) {
