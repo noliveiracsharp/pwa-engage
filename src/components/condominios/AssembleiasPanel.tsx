@@ -5,7 +5,7 @@ import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, v
 import { CSS } from "@dnd-kit/utilities";
 import {
   ArrowLeft, CheckCircle2, ClipboardCheck, FileSignature, Gavel, GripVertical, Lock, Maximize2, Megaphone, Pencil, Play, Plus, Printer,
-  Search, ShieldCheck, Square, Timer, Trash2, UserCheck, Video, Vote, X,
+  MessageSquare, Search, ShieldCheck, Square, Timer, Trash2, UserCheck, Video, Vote, X,
 } from "lucide-react";
 import { Bar, BarChart, Cell, ResponsiveContainer, XAxis, YAxis, LabelList } from "recharts";
 import { toast } from "sonner";
@@ -33,6 +33,7 @@ import {
 import type { Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
 import { AcaoIcone } from "./AcaoIcone";
+import { DebatePauta } from "./DebatePauta";
 import { CampoData } from "./CampoData";
 import { ordemNatural, s, useCondRows } from "./cond-data";
 
@@ -392,6 +393,7 @@ function Pautas({ assembleia: a, unidades, blocos, pode }: { assembleia: Row; un
   const { data: res } = useResultado(id, emSessao(st));
   const [editar, setEditar] = useState<Row | "nova" | null>(null);
   const [mesa, setMesa] = useState<Row | null>(null);
+  const [debate, setDebate] = useState<Row | null>(null);
   const [ordem, setOrdem] = useState<string[]>([]);
   useEffect(() => { setOrdem(pautas.map((p) => s(p["id"]))); }, [pautas]);
   const porId = useMemo(() => new Map(pautas.map((p) => [s(p["id"]), p])), [pautas]);
@@ -439,6 +441,7 @@ function Pautas({ assembleia: a, unidades, blocos, pode }: { assembleia: Row; un
                     {pode && s(p["status"]) === "aguardando" && emSessao(st) && <Button size="sm" onClick={() => mudarPauta(p, "em_votacao")}><Play className="size-4" /> Abrir votação</Button>}
                     {pode && s(p["status"]) === "em_votacao" && <Button size="sm" variant="outline" onClick={() => setMesa(p)}><ClipboardCheck className="size-4" /> Voto da mesa</Button>}
                     {pode && s(p["status"]) === "em_votacao" && <Button size="sm" variant="destructive" onClick={() => mudarPauta(p, "encerrada")}><Lock className="size-4" /> Encerrar</Button>}
+                    {p["debate_ativo"] !== false && <AcaoIcone titulo="Debate da pauta" onClick={() => setDebate(p)}><MessageSquare className="size-4" /></AcaoIcone>}
                     {editavel && s(p["status"]) === "aguardando" && <AcaoIcone titulo="Editar pauta" onClick={() => setEditar(p)}><Pencil className="size-4" /></AcaoIcone>}
                     {editavel && s(p["status"]) === "aguardando" && <AcaoIcone titulo="Excluir pauta" destrutivo onClick={() => excluir(p)}><Trash2 className="size-4" /></AcaoIcone>}
                   </PautaItem>
@@ -449,6 +452,14 @@ function Pautas({ assembleia: a, unidades, blocos, pode }: { assembleia: Row; un
         </DndContext>
       )}
       {editar && <PautaDialog assembleiaId={id} pauta={editar === "nova" ? null : editar} proxima={pautas.length + 1} onClose={() => setEditar(null)} onSalvo={() => { setEditar(null); recarregar(); }} />}
+      {debate && (
+        <Dialog open onOpenChange={(o) => !o && setDebate(null)}>
+          <DialogContent className="max-h-[92dvh] max-w-2xl overflow-y-auto">
+            <DialogHeader><DialogTitle>Debate: {s(debate["titulo"])}</DialogTitle><DialogDescription>Aprove, rejeite ou fixe mensagens. Para ligar/desligar a mediação ou fechar o debate, edite a pauta.</DialogDescription></DialogHeader>
+            <DebatePauta pautaId={s(debate["id"])} assembleiaId={id} />
+          </DialogContent>
+        </Dialog>
+      )}
       {mesa && <VotoMesaDialog assembleia={a} pauta={mesa} unidades={unidades} blocos={blocos} onClose={() => setMesa(null)} onSalvo={recarregar} />}
     </div>
   );
@@ -491,6 +502,9 @@ function PautaDialog({ assembleiaId, pauta, proxima, onClose, onSalvo }: { assem
   const [titulo, setTitulo] = useState(s(p["titulo"]));
   const [descricao, setDescricao] = useState(s(p["descricao"]));
   const [quorum, setQuorum] = useState<Quorum>((s(p["quorum"]) as Quorum) || "simples");
+  const [debAtivo, setDebAtivo] = useState(p["debate_ativo"] !== false);
+  const [debModerado, setDebModerado] = useState(p["debate_moderado"] === true);
+  const [debFechado, setDebFechado] = useState(p["debate_encerrado"] === true);
   const { data: opcoesAtuais = [] } = useCondRows("cond_assembleia_opcoes_voto", "pauta_id", pauta ? s(p["id"]) : undefined, "ordem");
   const [chapas, setChapas] = useState<string[]>(["", ""]);
   useEffect(() => { if (pauta && s(p["quorum"]) === "eleicao" && opcoesAtuais.length) setChapas(opcoesAtuais.filter((o) => s(o["tipo"]) === "outro").map((o) => s(o["descricao"]))); }, [opcoesAtuais]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -501,7 +515,7 @@ function PautaDialog({ assembleiaId, pauta, proxima, onClose, onSalvo }: { assem
     if (quorum === "eleicao" && nomes.length < 2) { toast.error("Informe pelo menos duas opções (chapas, candidatos ou orçamentos)."); return; }
     setSalvando(true);
     try {
-      const valores = { assembleia_id: assembleiaId, titulo: titulo.trim(), descricao: descricao || null, quorum };
+      const valores = { assembleia_id: assembleiaId, titulo: titulo.trim(), descricao: descricao || null, quorum, debate_ativo: debAtivo, debate_moderado: debModerado, debate_encerrado: debFechado };
       let pid = s(p["id"]);
       if (pauta) { const r = await db.from("cond_assembleia_pautas").update(valores).eq("id", pid); if (r.error) throw r.error; }
       else { const r = await db.from("cond_assembleia_pautas").insert({ ...valores, ordem: proxima }).select("id").single(); if (r.error) throw r.error; pid = s(r.data.id); }
@@ -528,6 +542,14 @@ function PautaDialog({ assembleiaId, pauta, proxima, onClose, onSalvo }: { assem
             <SearchSelect value={quorum} onChange={(x) => setQuorum((x || "simples") as Quorum)} options={QUORUNS.map((q) => ({ value: q.value, label: q.label })).sort((x, y) => x.label.localeCompare(y.label, "pt-BR"))} />
             <p className="mt-1 text-xs text-muted-foreground">{QUORUNS.find((q) => q.value === quorum)?.ajuda}</p>
           </div>
+          <fieldset className="space-y-2 rounded-md border p-3">
+            <legend className="px-1 text-sm font-medium">Fórum de debate</legend>
+            <div className="flex items-center justify-between gap-3"><Label htmlFor="pa-deb">Permitir debate entre os condôminos</Label><Switch id="pa-deb" checked={debAtivo} onCheckedChange={setDebAtivo} /></div>
+            {debAtivo && <>
+              <div className="flex items-center justify-between gap-3"><div><Label htmlFor="pa-med">Com mediação</Label><p className="text-xs text-muted-foreground">Mensagens só aparecem depois que a mesa aprovar.</p></div><Switch id="pa-med" checked={debModerado} onCheckedChange={setDebModerado} /></div>
+              <div className="flex items-center justify-between gap-3"><Label htmlFor="pa-fec">Debate fechado (ninguém envia mais)</Label><Switch id="pa-fec" checked={debFechado} onCheckedChange={setDebFechado} /></div>
+            </>}
+          </fieldset>
           {quorum === "eleicao" ? (
             <fieldset className="space-y-2">
               <legend className="mb-1 text-sm font-medium">Opções de voto</legend>
@@ -943,6 +965,7 @@ export function AssembleiasMorador({ condominioId }: { condominioId: string }) {
                   <div className="flex flex-wrap items-center gap-2"><span className="font-medium">{i + 1}. {p.titulo}</span>
                     <Badge variant="outline">{p.status === "em_votacao" ? "Em votação" : p.status === "encerrada" ? "Encerrada" : "Aguardando"}</Badge></div>
                   {p.descricao && <details className="mt-1 text-sm"><summary className="cursor-pointer text-xs text-primary">Ver detalhes</summary><div className="prose prose-sm mt-1 max-w-none dark:prose-invert" dangerouslySetInnerHTML={{ __html: p.descricao }} /></details>}
+                  {p.debate_ativo !== false && <details className="mt-1 text-sm"><summary className="cursor-pointer text-xs text-primary"><MessageSquare className="mr-1 inline size-3" aria-hidden />Debate da pauta</summary><div className="mt-2"><DebatePauta pautaId={p.id} assembleiaId={a.id} /></div></details>}
                   {p.status === "em_votacao" && sessao && a.unidades.map((u) => {
                     const meu = p.meus_votos.find((v) => v.unidade_id === u.id);
                     return (
