@@ -147,7 +147,7 @@ function Bens({ condominioId, perms, ativos, espacos, invalidar }: Ctx) {
   const excluir = async (a: Row) => {
     if (!(await confirmar({ title: "Excluir bem", description: `Excluir "${s(a["nome"])}"? O histórico de ordens é mantido.`, destructive: true }))) return;
     const { error } = await db.from("manutencao_ativos").delete().eq("id", a["id"]);
-    if (error) return toast.error(error.message);
+    if (error) return void toast.error(error.message);
     toast.success("Bem excluído."); invalidar();
   };
   return (
@@ -207,7 +207,7 @@ function BemSheet({ registro, condominioId, espacos, onClose, onSaved }: { regis
   const set = (k: string) => (x: string) => setV((o) => ({ ...o, [k]: x }));
   const salvar = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!v["nome"]?.trim()) return toast.error("Informe o patrimônio.");
+    if (!v["nome"]?.trim()) return void toast.error("Informe o patrimônio.");
     setSalvando(true);
     const payload = {
       ...Object.fromEntries(CAMPOS.map((c) => [c, v[c]?.trim() ? v[c]!.trim() : null])),
@@ -218,7 +218,7 @@ function BemSheet({ registro, condominioId, espacos, onClose, onSaved }: { regis
       ? await db.from("manutencao_ativos").update(payload).eq("id", registro["id"])
       : await db.from("manutencao_ativos").insert({ ...payload, empresa_id: condominioId, condominio_id: condominioId });
     setSalvando(false);
-    if (r.error) return toast.error(r.error.message);
+    if (r.error) return void toast.error(r.error.message);
     toast.success("Bem salvo."); onSaved(); onClose();
   };
   const restam = 500 - (v["observacoes"]?.length ?? 0);
@@ -324,14 +324,14 @@ function OsSheet({ condominioId, nomeCondominio, perms, ativos, modelos, invalid
 
   const salvar = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!v.descricao.trim() && !v.ativo_id) return toast.error("Escolha o bem ou descreva o problema.");
+    if (!v.descricao.trim() && !v.ativo_id) return void toast.error("Escolha o bem ou descreva o problema.");
     setSalvando(true);
     try { await gravar(); toast.success("Ordem salva."); invalidar(); onClose(); } catch (err) { toast.error((err as Error).message); } finally { setSalvando(false); }
   };
   const iniciar = async () => { setSalvando(true); try { await gravar({ status: "em_execucao", iniciado_em: new Date().toISOString() }); invalidar(); toast.success("Execução iniciada."); onClose(); } catch (err) { toast.error((err as Error).message); } finally { setSalvando(false); } };
 
   const concluir = async () => {
-    if (r.total && r.respondidos < r.total) return toast.error(`Responda todos os itens do checklist (${r.respondidos}/${r.total}).`);
+    if (r.total && r.respondidos < r.total) return void toast.error(`Responda todos os itens do checklist (${r.respondidos}/${r.total}).`);
     if (!(await confirmar({ title: "Concluir manutenção", description: "Concluir e avisar síndico, subsíndico e gerente predial pelo WhatsApp?" }))) return;
     setSalvando(true);
     try {
@@ -416,7 +416,7 @@ function Planos({ condominioId, perms, planos, ativos, modelos, invalidar }: Ctx
   const excluir = async (p: Row) => {
     if (!(await confirmar({ title: "Excluir plano", description: `Excluir o plano "${s(p["nome"])}"? Ordens já geradas continuam.`, destructive: true }))) return;
     const { error } = await db.from("manutencao_planos").delete().eq("id", p["id"]);
-    if (error) return toast.error(error.message);
+    if (error) return void toast.error(error.message);
     invalidar();
   };
   return (
@@ -449,12 +449,12 @@ function PlanoSheet({ registro, condominioId, ativos, modelos, onClose, onSaved 
   const [salvando, setSalvando] = useState(false);
   const salvar = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!v.nome.trim()) return toast.error("Informe o nome do plano.");
+    if (!v.nome.trim()) return void toast.error("Informe o nome do plano.");
     setSalvando(true);
     const payload = { ...v, ativo_id: v.ativo_id || null, modelo_id: v.modelo_id || null, frequencia_meses: Number(v.frequencia_meses), antecedencia_dias: Number(v.antecedencia_dias || 0) };
     const r = registro["id"] ? await db.from("manutencao_planos").update(payload).eq("id", registro["id"]) : await db.from("manutencao_planos").insert({ ...payload, empresa_id: condominioId, condominio_id: condominioId });
     setSalvando(false);
-    if (r.error) return toast.error(r.error.message);
+    if (r.error) return void toast.error(r.error.message);
     toast.success("Plano salvo."); onSaved(); onClose();
   };
   return (
@@ -548,15 +548,15 @@ function Modelos({ condominioId, perms, modelos, invalidar }: Ctx) {
     const base = [...MODELOS_CONDOMINIO.map((m) => ({ ...m, itens: m.itens.map((t) => ({ texto: t, tipo: "cnc" })) })), ...MODELOS_PADRAO.filter((m) => m.categoria !== "Geral" || true)];
     const existentes = new Set(modelos.map((m) => s(m["nome"])));
     const novos = base.filter((m) => !existentes.has(m.nome)).map((m) => ({ ...m, empresa_id: condominioId, condominio_id: condominioId, padrao: true }));
-    if (!novos.length) return toast.info("Os modelos padrão já estão carregados.");
+    if (!novos.length) return void toast.info("Os modelos padrão já estão carregados.");
     const { error } = await db.from("manutencao_modelos").insert(novos);
-    if (error) return toast.error(error.message);
+    if (error) return void toast.error(error.message);
     toast.success(`${novos.length} modelo(s) carregado(s).`); invalidar();
   };
   const excluir = async (m: Row) => {
     if (!(await confirmar({ title: "Excluir modelo", description: `Excluir "${s(m["nome"])}"?`, destructive: true }))) return;
     const { error } = await db.from("manutencao_modelos").delete().eq("id", m["id"]);
-    if (error) return toast.error(error.message);
+    if (error) return void toast.error(error.message);
     invalidar();
   };
   return (
@@ -588,12 +588,12 @@ function ModeloSheet({ registro, condominioId, onClose, onSaved }: { registro: R
   const salvar = async (e: React.FormEvent) => {
     e.preventDefault();
     const itens = texto.split("\n").map((l) => l.trim()).filter(Boolean).map((l) => { const m = l.match(/^(.*)\[(.*)\]$/); return m ? { texto: m[1]!.trim(), tipo: "numero", unidade: m[2]!.trim() } : { texto: l, tipo: "cnc" }; });
-    if (!nome.trim() || !itens.length) return toast.error("Informe o nome e ao menos um item.");
+    if (!nome.trim() || !itens.length) return void toast.error("Informe o nome e ao menos um item.");
     setSalvando(true);
     const payload = { nome: nome.trim(), categoria: categoria.trim() || null, itens };
     const r = registro["id"] ? await db.from("manutencao_modelos").update(payload).eq("id", registro["id"]) : await db.from("manutencao_modelos").insert({ ...payload, empresa_id: condominioId, condominio_id: condominioId });
     setSalvando(false);
-    if (r.error) return toast.error(r.error.message);
+    if (r.error) return void toast.error(r.error.message);
     toast.success("Modelo salvo."); onSaved(); onClose();
   };
   return (
