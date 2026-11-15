@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { Briefcase, FolderOpen, Users, Building2, LayoutDashboard, Megaphone, ParkingSquare, Shuffle, Vote, BellRing, PackageSearch, Trees, KeyRound, MapPinned, HardHat, PawPrint, Images, Menu, X, Gavel, ChevronLeft, ChevronRight, type LucideIcon } from "lucide-react";
+import { Briefcase, FolderOpen, Users, Building2, LayoutDashboard, Megaphone, ParkingSquare, Shuffle, Vote, BellRing, PackageSearch, Trees, KeyRound, MapPinned, HardHat, PawPrint, Images, Menu, X, Gavel, Wrench, ChevronLeft, ChevronRight, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
@@ -28,6 +28,7 @@ const DEF = [
   { key: "obras", label: "Obras", path: "/condominios/obras", icon: HardHat },
   { key: "pets", label: "Pets", path: "/condominios/pets", icon: PawPrint },
   { key: "galeria", label: "Galeria de Fotos", path: "/condominios/galeria", icon: Images },
+  { key: "manutencoes", label: "Manutenções & Patrimônio", path: "/condominios/manutencoes", icon: Wrench },
   { key: "assembleias", label: "Assembleias", path: "/condominios/assembleias", icon: Gavel },
 ] as const;
 

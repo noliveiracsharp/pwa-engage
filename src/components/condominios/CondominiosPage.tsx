@@ -1,4 +1,5 @@
 import { ObrasPanel } from "./ObrasPanel";
+import { ManutencoesCondPanel } from "./ManutencoesCondPanel";
 import { PetsPanel } from "./PetsPanel";
 import { GaleriaPanel } from "./GaleriaPanel";
 import { AssembleiasPanel } from "./AssembleiasPanel";
@@ -71,6 +72,7 @@ const DESCRICAO_SECAO: Record<string, string> = {
   pets: "Todos os pets do condomínio, com alerta de desaparecido e aviso ao tutor pelo WhatsApp.",
   galeria: "Álbuns de fotos dos eventos do condomínio, com reações e comentários.",
   assembleias: "AGO/AGE presencial, online ou mista: pautas, check-in, votação auditada, telão e ata.",
+  manutencoes: "Bens patrimoniais com QR Code, preventivas com calendário, corretivas, checklists e relatório.",
   obras: "Obras do condomínio por fases, com andamento, prazos, custos e fotos.",
   "minha-unidade": "As unidades em que você mora ou é proprietário.",
 };
@@ -281,6 +283,8 @@ export function CondominiosPage() {
         <MeuCondominioPanel condominioId={condId} perms={secAtual} />
       ) : secao === "chaves" && secAtual ? (
         <ChavesPanel condominioId={condId} blocos={blocos} unidades={unidades} perms={secAtual} />
+      ) : secao === "manutencoes" && secAtual ? (
+        <ManutencoesCondPanel condominioId={condId} nomeCondominio={String(condominios.find((c) => c.value === condId)?.label ?? "")} perms={secAtual} />
       ) : secao === "obras" && secAtual ? (
         <ObrasPanel condominioId={condId} perms={secAtual} />
       ) : secao === "pets" && secAtual ? (
