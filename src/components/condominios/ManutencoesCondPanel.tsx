@@ -145,7 +145,7 @@ function Bens({ condominioId, perms, ativos, espacos, invalidar }: Ctx) {
     setTimeout(() => imprimirElemento("cond-etiquetas-qr"), 80);
   };
   const excluir = async (a: Row) => {
-    if (!(await confirmar({ titulo: "Excluir bem", mensagem: `Excluir "${s(a["nome"])}"? O histórico de ordens é mantido.`, destrutivo: true } as never))) return;
+    if (!(await confirmar({ title: "Excluir bem", description: `Excluir "${s(a["nome"])}"? O histórico de ordens é mantido.`, destructive: true }))) return;
     const { error } = await db.from("manutencao_ativos").delete().eq("id", a["id"]);
     if (error) return toast.error(error.message);
     toast.success("Bem excluído."); invalidar();
@@ -332,7 +332,7 @@ function OsSheet({ condominioId, nomeCondominio, perms, ativos, modelos, invalid
 
   const concluir = async () => {
     if (r.total && r.respondidos < r.total) return toast.error(`Responda todos os itens do checklist (${r.respondidos}/${r.total}).`);
-    if (!(await confirmar({ titulo: "Concluir manutenção", mensagem: "Concluir e avisar síndico, subsíndico e gerente predial pelo WhatsApp?" } as never))) return;
+    if (!(await confirmar({ title: "Concluir manutenção", description: "Concluir e avisar síndico, subsíndico e gerente predial pelo WhatsApp?" }))) return;
     setSalvando(true);
     try {
       const salvo = await gravar({ status: "concluida", concluido_em: new Date().toISOString() });
@@ -414,7 +414,7 @@ function Planos({ condominioId, perms, planos, ativos, modelos, invalidar }: Ctx
   const nomeA = new Map(ativos.map((a) => [s(a["id"]), s(a["nome"])]));
   const lista = [...planos].sort((a, b) => s(a["proxima_data"]).localeCompare(s(b["proxima_data"])));
   const excluir = async (p: Row) => {
-    if (!(await confirmar({ titulo: "Excluir plano", mensagem: `Excluir o plano "${s(p["nome"])}"? Ordens já geradas continuam.`, destrutivo: true } as never))) return;
+    if (!(await confirmar({ title: "Excluir plano", description: `Excluir o plano "${s(p["nome"])}"? Ordens já geradas continuam.`, destructive: true }))) return;
     const { error } = await db.from("manutencao_planos").delete().eq("id", p["id"]);
     if (error) return toast.error(error.message);
     invalidar();
@@ -554,7 +554,7 @@ function Modelos({ condominioId, perms, modelos, invalidar }: Ctx) {
     toast.success(`${novos.length} modelo(s) carregado(s).`); invalidar();
   };
   const excluir = async (m: Row) => {
-    if (!(await confirmar({ titulo: "Excluir modelo", mensagem: `Excluir "${s(m["nome"])}"?`, destrutivo: true } as never))) return;
+    if (!(await confirmar({ title: "Excluir modelo", description: `Excluir "${s(m["nome"])}"?`, destructive: true }))) return;
     const { error } = await db.from("manutencao_modelos").delete().eq("id", m["id"]);
     if (error) return toast.error(error.message);
     invalidar();
