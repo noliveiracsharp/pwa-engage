@@ -119,7 +119,13 @@ function Gestao({ condominioId, blocos, unidades, perms }: { condominioId: strin
     .filter((a) => !termo || `${s(a["titulo"])} ${s(a["tipo"])} ${rotuloStatus(s(a["status"]))}`.toLowerCase().includes(termo));
   const recarregar = () => qc.invalidateQueries({ queryKey: ["cond", "cond_assembleias"] });
 
-  if (aberta) return <Detalhe assembleia={aberta} blocos={blocos} unidades={unidades} perms={perms} onVoltar={() => setAbertaId(null)} onEditar={() => setEditar(aberta)} onAtualizar={recarregar} />;
+  if (aberta) return (
+    <>
+      <Detalhe assembleia={aberta} blocos={blocos} unidades={unidades} perms={perms} onVoltar={() => setAbertaId(null)} onEditar={() => setEditar(aberta)} onAtualizar={recarregar} />
+      {editar && <AssembleiaSheet key={editar === "nova" ? "nova" : s(editar["id"])} condominioId={condominioId} assembleia={editar === "nova" ? null : editar} onClose={() => setEditar(null)}
+        onSalvo={() => { recarregar(); setEditar(null); }} />}
+    </>
+  );
 
   return (
     <div className="space-y-3">
