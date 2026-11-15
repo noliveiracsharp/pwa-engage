@@ -965,7 +965,7 @@ export function AssembleiasMorador({ condominioId }: { condominioId: string }) {
                   <div className="flex flex-wrap items-center gap-2"><span className="font-medium">{i + 1}. {p.titulo}</span>
                     <Badge variant="outline">{p.status === "em_votacao" ? "Em votação" : p.status === "encerrada" ? "Encerrada" : "Aguardando"}</Badge></div>
                   {p.descricao && <details className="mt-1 text-sm"><summary className="cursor-pointer text-xs text-primary">Ver detalhes</summary><div className="prose prose-sm mt-1 max-w-none dark:prose-invert" dangerouslySetInnerHTML={{ __html: p.descricao }} /></details>}
-                  {p.debate_ativo !== false && <details className="mt-1 text-sm"><summary className="cursor-pointer text-xs text-primary"><MessageSquare className="mr-1 inline size-3" aria-hidden />Debate da pauta</summary><div className="mt-2"><DebatePauta pautaId={p.id} assembleiaId={a.id} /></div></details>}
+                  {<details className="mt-1 text-sm"><summary className="cursor-pointer text-xs text-primary"><MessageSquare className="mr-1 inline size-3" aria-hidden />Debate da pauta</summary><div className="mt-2"><DebatePauta pautaId={p.id} assembleiaId={a.id} /></div></details>}
                   {p.status === "em_votacao" && sessao && a.unidades.map((u) => {
                     const meu = p.meus_votos.find((v) => v.unidade_id === u.id);
                     return (
