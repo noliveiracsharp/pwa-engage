@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TextoRico } from "@/components/ui/texto-rico";
 import { SearchSelect } from "@/components/data-table/SearchSelect";
@@ -26,7 +27,7 @@ import { htmlParaTexto } from "@/lib/html-texto";
 import { comprimirImagem } from "@/lib/image-compress";
 import { imprimirElemento } from "@/lib/propostas";
 import {
-  OPCOES_PADRAO, QUORUNS, STATUS_ASSEMBLEIA, emSessao, segundaConvocacao, vereditoPauta,
+  OPCOES_PADRAO, QUORUNS, STATUS_ASSEMBLEIA, emSessao, segundaConvocacao, validarAntecedencia, vereditoPauta,
   type OpcaoTotal, type Quorum, type StatusAssembleia,
 } from "@/lib/assembleias";
 import type { Row } from "@/lib/row";
@@ -94,9 +95,11 @@ export function AssembleiasPanel({ condominioId, blocos, unidades, perms }: { co
       <TabsList>
         <TabsTrigger value="gestao">Gestão</TabsTrigger>
         <TabsTrigger value="participar">Participar</TabsTrigger>
+        <TabsTrigger value="config">Configurações</TabsTrigger>
       </TabsList>
       <TabsContent value="gestao"><Gestao condominioId={condominioId} blocos={blocos} unidades={unidades} perms={perms} /></TabsContent>
       <TabsContent value="participar"><AssembleiasMorador condominioId={condominioId} /></TabsContent>
+      <TabsContent value="config"><ConfigAssembleias condominioId={condominioId} podeEditar={perms.canUpdate} /></TabsContent>
     </Tabs>
   );
 }
@@ -184,6 +187,7 @@ function AssembleiaSheet({ condominioId, assembleia, onClose, onSalvo }: { condo
     titulo: s(a["titulo"]), tipo: s(a["tipo"]) || "AGE", formato: s(a["formato"]) || "mista", local: s(a["local"]), link_video: s(a["link_video"]),
     edital: s(a["edital"]), criterio_peso: s(a["criterio_peso"]) || "fracao_ideal", limite_procuracoes: String(a["limite_procuracoes"] ?? 0),
     presidente: s(a["presidente"]), secretario: s(a["secretario"]),
+    emergencial: a["emergencial"] === true, justificativa_emergencia: s(a["justificativa_emergencia"]),
   });
   const [d1, setD1] = useState(isoLocal(a["data_hora"]));
   const [d2, setD2] = useState(isoLocal(a["data_hora_2a"]));
@@ -195,12 +199,14 @@ function AssembleiaSheet({ condominioId, assembleia, onClose, onSalvo }: { condo
     const p1 = juntar(d1.data, d1.hora);
     const p2 = juntar(d2.data, d2.hora) ?? (p1 ? segundaConvocacao(p1) : null);
     if (p1 && p2 && new Date(p2) <= new Date(p1)) { toast.error("A 2ª convocação deve ser depois da 1ª."); return; }
+    if (v.emergencial && !v.justificativa_emergencia.trim()) { toast.error("Informe a justificativa da convocação emergencial."); return; }
     setSalvando(true);
     const valores = {
       condominio_id: condominioId, titulo: v.titulo.trim(), tipo: v.tipo, formato: v.formato, local: v.local.trim() || null,
       link_video: online ? v.link_video.trim() || null : null, edital: v.edital || null, criterio_peso: v.criterio_peso,
       limite_procuracoes: Math.max(0, Number(v.limite_procuracoes) || 0), presidente: v.presidente.trim() || null, secretario: v.secretario.trim() || null,
-      data_hora: p1, data_hora_2a: p2, updated_at: new Date().toISOString(),
+      data_hora: p1, data_hora_2a: p2, emergencial: v.emergencial,
+      justificativa_emergencia: v.emergencial ? v.justificativa_emergencia.trim() || null : null, updated_at: new Date().toISOString(),
     };
     const r = assembleia ? await db.from("cond_assembleias").update(valores).eq("id", s(a["id"])).select("id").single()
       : await db.from("cond_assembleias").insert(valores).select("id").single();
@@ -229,6 +235,15 @@ function AssembleiaSheet({ condominioId, assembleia, onClose, onSalvo }: { condo
             <div><Label htmlFor="as-lim" className="mb-1.5 block">Limite de procurações por pessoa (0 = sem limite)</Label><Input id="as-lim" type="number" min={0} value={v.limite_procuracoes} onChange={(e) => setV({ ...v, limite_procuracoes: e.target.value })} /></div>
             <div><Label htmlFor="as-pres" className="mb-1.5 block">Presidente da mesa</Label><Input id="as-pres" value={v.presidente} onChange={(e) => setV({ ...v, presidente: e.target.value })} /></div>
             <div><Label htmlFor="as-sec" className="mb-1.5 block">Secretário(a)</Label><Input id="as-sec" value={v.secretario} onChange={(e) => setV({ ...v, secretario: e.target.value })} /></div>
+          </div>
+          <div className="rounded-lg border p-3">
+            <div className="flex items-center justify-between gap-3">
+              <Label htmlFor="as-emerg" className="font-normal"><span className="block text-sm font-medium">Convocação emergencial</span>
+                <span className="text-xs text-muted-foreground">Dispensa a antecedência mínima da convenção. Exige justificativa, que fica registrada.</span></Label>
+              <Switch id="as-emerg" checked={v.emergencial} onCheckedChange={(c) => setV({ ...v, emergencial: c })} />
+            </div>
+            {v.emergencial && <div className="mt-3"><Label htmlFor="as-just" className="mb-1.5 block">Justificativa *</Label>
+              <Textarea id="as-just" maxLength={1000} value={v.justificativa_emergencia} onChange={(e) => setV({ ...v, justificativa_emergencia: e.target.value })} placeholder="Ex.: rompimento da tubulação principal exige obra imediata" /></div>}
           </div>
           <div><Label className="mb-1.5 block">Edital de convocação</Label><TextoRico value={v.edital} onChange={(h) => setV({ ...v, edital: h })} minHeight={160} placeholder="Texto do edital enviado aos condôminos" /></div>
         </div>
@@ -265,6 +280,15 @@ function Detalhe({ assembleia: a, blocos, unidades, perms, onVoltar, onEditar, o
     if (error) toast.error(erroMsg(error)); else { toast.success("Assembleia excluída."); onAtualizar(); onVoltar(); }
   };
   const pode = perms.canUpdate;
+  const { data: cfgRows = [] } = useCondRows("cond_config", "condominio_id", s(a["condominio_id"]));
+  const convocar = async () => {
+    const c = cfgRows[0] ?? {};
+    const minAgo = Number(c["assembleia_antecedencia_ago"] ?? 8), minAge = Number(c["assembleia_antecedencia_age"] ?? 8);
+    const v = validarAntecedencia({ dataHora: a["data_hora"] ? s(a["data_hora"]) : null, tipo: s(a["tipo"]), minAgo, minAge, emergencial: a["emergencial"] === true, justificativa: s(a["justificativa_emergencia"]) });
+    if (!v.ok) { toast.error(v.motivo); return; }
+    if (!(await confirmar({ title: "Convocar assembleia?", description: a["emergencial"] === true ? "Convocação EMERGENCIAL: o prazo da convenção será dispensado com a justificativa registrada." : "Os condôminos passam a ver a assembleia no portal.", confirmText: "Convocar" }))) return;
+    await mudar("convocada", { convocada_em: new Date().toISOString() }, "Assembleia convocada: os condôminos já a veem no portal.");
+  };
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-start gap-2">
@@ -274,14 +298,14 @@ function Detalhe({ assembleia: a, blocos, unidades, perms, onVoltar, onEditar, o
             <h2 className="text-lg font-semibold leading-tight">{s(a["titulo"])}</h2>
             <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", COR_STATUS[st])}>{rotuloStatus(st)}</span>
           </div>
-          <p className="text-xs text-muted-foreground">{s(a["tipo"])} · 1ª {dtHora(a["data_hora"])} · 2ª {dtHora(a["data_hora_2a"])}{a["local"] ? ` · ${s(a["local"])}` : ""}
+          <p className="text-xs text-muted-foreground">{a["emergencial"] === true && <Badge variant="destructive" className="mr-1">Emergencial</Badge>}{s(a["tipo"])} · 1ª {dtHora(a["data_hora"])} · 2ª {dtHora(a["data_hora_2a"])}{a["local"] ? ` · ${s(a["local"])}` : ""}
             {st === "sessao_permanente" && a["sessao_ate"] ? ` · votação até ${dtHora(a["sessao_ate"])}` : ""}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           {s(a["link_video"]) && <Button variant="outline" asChild><a href={s(a["link_video"])} target="_blank" rel="noreferrer"><Video className="size-4" /> Entrar na sala</a></Button>}
           {pode && st !== "finalizada" && st !== "cancelada" && <AcaoIcone titulo="Editar dados" onClick={onEditar}><Pencil className="size-4" /></AcaoIcone>}
           {perms.canDelete && st === "rascunho" && <AcaoIcone titulo="Excluir rascunho" destrutivo onClick={excluir}><Trash2 className="size-4" /></AcaoIcone>}
-          {pode && st === "rascunho" && <Button onClick={() => mudar("convocada", {}, "Assembleia convocada: os condôminos já a veem no portal.")}><Megaphone className="size-4" /> Convocar</Button>}
+          {pode && st === "rascunho" && <Button onClick={convocar}><Megaphone className="size-4" /> Convocar</Button>}
           {pode && st === "convocada" && <Button onClick={() => mudar("em_andamento", { aberta_em: new Date().toISOString() }, "Sessão aberta.")}><Play className="size-4" /> Abrir sessão</Button>}
           {pode && st === "em_andamento" && <Button variant="outline" onClick={() => setPermanente(true)}><Timer className="size-4" /> Sessão permanente</Button>}
           {pode && emSessao(st) && <Button variant="destructive" onClick={finalizar}><Square className="size-4" /> Finalizar</Button>}
@@ -471,7 +495,7 @@ function PautaDialog({ assembleiaId, pauta, proxima, onClose, onSalvo }: { assem
     if (quorum === "eleicao" && nomes.length < 2) { toast.error("Informe pelo menos duas opções (chapas, candidatos ou orçamentos)."); return; }
     setSalvando(true);
     try {
-      const valores = { assembleia_id: assembleiaId, titulo: titulo.trim(), description: descricao || null, quorum };
+      const valores = { assembleia_id: assembleiaId, titulo: titulo.trim(), descricao: descricao || null, quorum };
       let pid = s(p["id"]);
       if (pauta) { const r = await db.from("cond_assembleia_pautas").update(valores).eq("id", pid); if (r.error) throw r.error; }
       else { const r = await db.from("cond_assembleia_pautas").insert({ ...valores, ordem: proxima }).select("id").single(); if (r.error) throw r.error; pid = s(r.data.id); }
@@ -479,8 +503,8 @@ function PautaDialog({ assembleiaId, pauta, proxima, onClose, onSalvo }: { assem
       if (mudouOpcoes) {
         const d = await db.from("cond_assembleia_opcoes_voto").delete().eq("pauta_id", pid); if (d.error) throw d.error;
         const linhas = quorum === "eleicao"
-          ? [...nomes.map((nm, i) => ({ pauta_id: pid, ordem: i + 1, description: nm, tipo: "outro" })), { pauta_id: pid, ordem: nomes.length + 1, description: "Abstenção", tipo: "abstencao" }]
-          : OPCOES_PADRAO.map((o, i) => ({ pauta_id: pid, ordem: i + 1, description: o.descricao, tipo: o.tipo }));
+          ? [...nomes.map((nm, i) => ({ pauta_id: pid, ordem: i + 1, descricao: nm, tipo: "outro" })), { pauta_id: pid, ordem: nomes.length + 1, descricao: "Abstenção", tipo: "abstencao" }]
+          : OPCOES_PADRAO.map((o, i) => ({ pauta_id: pid, ordem: i + 1, descricao: o.descricao, tipo: o.tipo }));
         const r = await db.from("cond_assembleia_opcoes_voto").insert(linhas); if (r.error) throw r.error;
       }
       toast.success("Pauta salva."); onSalvo();
@@ -933,5 +957,40 @@ export function AssembleiasMorador({ condominioId }: { condominioId: string }) {
         );
       })}
     </div>
+  );
+}
+
+/* --------------------------- Configurações --------------------------- */
+
+function ConfigAssembleias({ condominioId, podeEditar }: { condominioId: string; podeEditar: boolean }) {
+  const qc = useQueryClient();
+  const { data: rows = [] } = useCondRows("cond_config", "condominio_id", condominioId);
+  const [v, setV] = useState({ ago: "8", age: "8" });
+  const [salvando, setSalvando] = useState(false);
+  useEffect(() => {
+    const r = rows[0];
+    setV({ ago: String(r?.["assembleia_antecedencia_ago"] ?? 8), age: String(r?.["assembleia_antecedencia_age"] ?? 8) });
+  }, [rows]);
+  const salvar = async () => {
+    if (!/^\d+$/.test(v.ago) || !/^\d+$/.test(v.age)) { toast.error("Informe os prazos em dias (número inteiro)."); return; }
+    setSalvando(true);
+    const { error } = await db.from("cond_config").upsert({ condominio_id: condominioId, assembleia_antecedencia_ago: Number(v.ago), assembleia_antecedencia_age: Number(v.age), updated_at: new Date().toISOString() });
+    setSalvando(false);
+    if (error) { toast.error(erroMsg(error)); return; }
+    await qc.invalidateQueries({ queryKey: ["cond", "cond_config"] });
+    toast.success("Configurações salvas.");
+  };
+  return (
+    <section className="max-w-2xl space-y-4 rounded-xl border bg-card p-4">
+      <header><h3 className="font-semibold">Antecedência mínima de convocação</h3>
+        <p className="text-xs text-muted-foreground">Prazo da convenção entre a convocação e a data da 1ª chamada. O botão Convocar bloqueia prazos menores, exceto em convocação emergencial com justificativa.</p></header>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div><Label htmlFor="cfg-ago" className="mb-1.5 block">Ordinária (AGO) — dias</Label>
+          <Input id="cfg-ago" inputMode="numeric" disabled={!podeEditar} value={v.ago} onChange={(e) => setV({ ...v, ago: e.target.value })} /></div>
+        <div><Label htmlFor="cfg-age" className="mb-1.5 block">Extraordinária (AGE) — dias</Label>
+          <Input id="cfg-age" inputMode="numeric" disabled={!podeEditar} value={v.age} onChange={(e) => setV({ ...v, age: e.target.value })} /></div>
+      </div>
+      {podeEditar && <div className="flex justify-end"><Button onClick={salvar} disabled={salvando}>{salvando ? "Salvando…" : "Salvar"}</Button></div>}
+    </section>
   );
 }

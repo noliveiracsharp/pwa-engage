@@ -92,3 +92,23 @@ export function segundaConvocacao(primeira: string): string {
 
 /** Status em que o morador pode votar. */
 export const emSessao = (st: string) => st === "em_andamento" || st === "sessao_permanente";
+
+/** Dias corridos entre o envio (agora) e a 1ª convocação. */
+export function diasAteConvocacao(dataHora: string | Date, agora: Date = new Date()): number {
+  const alvo = new Date(dataHora);
+  const ini = Date.UTC(agora.getFullYear(), agora.getMonth(), agora.getDate());
+  const fim = Date.UTC(alvo.getFullYear(), alvo.getMonth(), alvo.getDate());
+  return Math.floor((fim - ini) / 86400000);
+}
+
+/** Valida a antecedência mínima da convenção. Emergencial com justificativa dispensa o prazo. */
+export function validarAntecedencia(p: { dataHora: string | null; tipo: string; minAgo: number; minAge: number; emergencial: boolean; justificativa?: string | null; agora?: Date }):
+  { ok: true } | { ok: false; motivo: string } {
+  if (!p.dataHora) return { ok: false, motivo: "Informe a data da 1ª convocação antes de convocar." };
+  const dias = diasAteConvocacao(p.dataHora, p.agora);
+  if (dias < 0) return { ok: false, motivo: "A data da 1ª convocação já passou." };
+  if (p.emergencial) return p.justificativa?.trim() ? { ok: true } : { ok: false, motivo: "Informe a justificativa da convocação emergencial." };
+  const min = p.tipo === "AGO" ? p.minAgo : p.minAge;
+  if (dias < min) return { ok: false, motivo: `A convenção exige ${min} dia(s) de antecedência para ${p.tipo}; faltam só ${dias}. Ajuste a data ou marque como emergencial.` };
+  return { ok: true };
+}
