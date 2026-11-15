@@ -44,6 +44,8 @@ import { useEmpresaAtiva } from "@/hooks/useEmpresaAtiva";
 import { publicarSeletor } from "./cond-seletor";
 import { AlertaMandato } from "./AlertaMandato";
 import { ExcluirBlocoDialog } from "./ExcluirBlocoDialog";
+import { PlanilhaUnidadesDialog } from "./PlanilhaUnidadesDialog";
+import { FileSpreadsheet } from "lucide-react";
 import { TransferenciaDialog } from "./TransferenciaDialog";
 import { X } from "lucide-react";
 import { Tabs as AbasRaiz, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -161,6 +163,7 @@ export function CondominiosPage() {
   const [busca, setBusca] = useState("");
   const [unidadeAberta, setUnidadeAberta] = useState<Row | null>(null);
   const [gerar, setGerar] = useState(false);
+  const [planilha, setPlanilha] = useState(false);
 
   const blocoAtual = blocos.find((b) => s(b["id"]) === blocoId);
   const unidadesBloco = unidades.filter((u) => s(u["cond_bloco_id"]) === blocoId);
@@ -355,6 +358,7 @@ export function CondominiosPage() {
                 </div>
                 {permsUnid.canCreate && (
                   <>
+                    <Button size="sm" variant="outline" onClick={() => setPlanilha(true)}><FileSpreadsheet className="size-4" /> Planilha</Button>
                     <Button size="sm" variant="outline" onClick={() => setGerar(true)}><Wand2 className="size-4" /> Gerar em lote</Button>
                     <Button size="sm" onClick={novaUnidade}><Plus className="size-4" /> Nova unidade</Button>
                   </>
@@ -425,6 +429,7 @@ export function CondominiosPage() {
 
       {blocoExcluir && <ExcluirBlocoDialog bloco={blocoExcluir} blocos={blocos} unidades={unidades} onClose={() => setBlocoExcluir(null)} />}
       {unidadeExcluir && condId && <TransferenciaDialog modo="excluir" unidade={unidadeExcluir} condominioId={condId} onClose={() => setUnidadeExcluir(null)} />}
+      {planilha && condId && <PlanilhaUnidadesDialog condominioId={condId} blocos={blocos} unidades={unidades} onClose={() => setPlanilha(false)} />}
       {gerar && blocoAtual && (
         <GerarUnidadesDialog
           existentes={new Set(unidadesBloco.map((u) => s(u["numero"])))}
