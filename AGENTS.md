@@ -38,3 +38,4 @@
 - Condo polls (Enquetes): moradores vote and read results only through SECURITY DEFINER RPCs cond_enquete_* (eligibility mirrored in src/lib/enquetes.ts); secret votes store no user/unit so anonymity holds even for the gestão.
 - Interfone points/ramais: extra QR points (cond_interfone_pontos) and ramais reuse the main config's transfer engine via cond_interfone_chamar_v2, so one call path owns ringing, rate limits and LGPD retention.
 - Condo assemblies: votes are insert-only via SECURITY DEFINER cond_assembleia_votar (weight, IP, chained SHA-256); SQL only sums, verdicts come from pure src/lib/assembleias.ts so quorum rules live in one tested place.
+- Condo maintenance reuses manutencao_* tables tagged with condominio_id (empresa_id = condo); pure rules in src/lib/cond-manutencoes.ts — one maintenance engine for ERP and vertical.
