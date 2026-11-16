@@ -397,7 +397,7 @@ function OsSheet({ condominioId, nomeCondominio, perms, ativos, modelos, invalid
             </div>
           )}
           <div className="px-4 pb-4"><Campo id="o-obs" label="Observações da execução"><Textarea id="o-obs" rows={3} value={v.observacoes} disabled={encerrada} onChange={(e) => setV((o) => ({ ...o, observacoes: e.target.value }))} /></Campo></div>
-          {!novo && <MateriaisOs condominioId={condominioId} osId={s(registro["id"])} editavel={perms.canUpdate && !encerrada} />}
+          {!novo && <MateriaisOs condominioId={condominioId} osId={s(registro["id"])} editavel={perms.canUpdate && !encerrada} nomeCondominio={nomeCondominio} osNumero={s(registro["numero"])} />}
           {!novo && (
             <div className="flex flex-wrap gap-2 px-4 pb-4">
               <Button type="button" variant="outline" onClick={() => window.open(linkOs(registro["token"]), "_blank", "noopener")}><ClipboardList className="size-4" /> Relatório da OS</Button>
