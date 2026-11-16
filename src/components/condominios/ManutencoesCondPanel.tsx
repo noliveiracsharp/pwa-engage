@@ -649,7 +649,50 @@ function Relatorio({ condominioId, nomeCondominio, os, planos, ativos }: Ctx) {
         <Campo id="r-ate" label="Data final"><CampoData id="r-ate" value={ate} onChange={setAte} inicio={2020} /></Campo>
         <Button onClick={() => imprimirElemento("cond-manut-relatorio")}><Printer className="size-4" /> Imprimir / PDF</Button>
       </div>
-      <div className="overflow-x-auto rounded-lg border bg-background p-2">
+      {(() => {
+        const pctPrev = prev.length ? Math.round((prevOk / prev.length) * 100) : 0;
+        const kpis: { r: string; v: string; d: string; tom: string; barra?: number }[] = [
+          { r: "Preventivas cumpridas", v: `${pctPrev}%`, d: `${prevOk} de ${prev.length} no período`, tom: "text-primary", barra: pctPrev },
+          { r: "Corretivas resolvidas", v: `${corrOk}/${corr.length}`, d: corr.length ? `${corr.length - corrOk} em aberto` : "Nenhuma aberta", tom: "text-foreground" },
+          { r: "Não conformidades", v: String(nc), d: "Apontadas nos checklists", tom: nc ? "text-destructive" : "text-foreground" },
+          { r: "Planos vencidos", v: String(vencidos), d: vencidos ? "Exigem atenção hoje" : "Tudo em dia", tom: vencidos ? "text-destructive" : "text-foreground" },
+          { r: "Bens cadastrados", v: String(ativos.length), d: "Sob gestão", tom: "text-foreground" },
+          { r: "Materiais usados", v: brl(custoTotal), d: "Baixados do estoque", tom: "text-foreground" },
+        ];
+        return (
+          <>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+              {kpis.map((k) => (
+                <div key={k.r} className="rounded-xl border bg-card p-4 shadow-sm">
+                  <p className="text-xs font-medium text-muted-foreground">{k.r}</p>
+                  <p className={cn("mt-1 text-2xl font-semibold tabular-nums", k.tom)}>{k.v}</p>
+                  {k.barra != null && <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-primary" style={{ width: `${k.barra}%` }} /></div>}
+                  <p className="mt-1 text-xs text-muted-foreground">{k.d}</p>
+                </div>
+              ))}
+            </div>
+            <div className="overflow-x-auto rounded-xl border bg-card">
+              <table className="w-full text-sm">
+                <thead className="border-b bg-muted/40 text-left text-xs text-muted-foreground"><tr>{["OS", "Tipo", "Bem / serviço", "Prevista", "Concluída", "Checklist", "Materiais", "Situação"].map((h) => <th key={h} className="px-3 py-2 font-medium">{h}</th>)}</tr></thead>
+                <tbody>{noPeriodo.map((r) => { const ck = resumoChecklist((r["checklist"] as ItemChecklist[]) ?? []); const c = custoOs(s(r["id"])); return (
+                  <tr key={s(r["id"])} className="border-b last:border-0 hover:bg-muted/30">
+                    <td className="px-3 py-2 font-medium">{s(r["numero"])}</td>
+                    <td className="px-3 py-2"><Pill m={meta(TIPOS, r["tipo"])} /></td>
+                    <td className="px-3 py-2">{s(r["equipamento"]) || s(r["descricao"])}</td>
+                    <td className="px-3 py-2 tabular-nums">{dia(r["data_prevista"])}</td>
+                    <td className="px-3 py-2 tabular-nums">{dia(r["concluido_em"])}</td>
+                    <td className="px-3 py-2">{ck.total ? <span className={cn(ck.naoConformes && "text-destructive")}>{ck.respondidos}/{ck.total}{ck.naoConformes ? ` · ${ck.naoConformes} NC` : ""}</span> : "—"}</td>
+                    <td className="px-3 py-2 tabular-nums">{c ? brl(c) : "—"}</td>
+                    <td className="px-3 py-2"><Pill m={meta(STATUS, r["status"])} /></td>
+                  </tr>); })}
+                  {!noPeriodo.length && <tr><td colSpan={8} className="p-8 text-center text-muted-foreground"><ClipboardList className="mx-auto mb-2 size-6" aria-hidden />Nenhuma ordem de serviço no período selecionado.</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          </>
+        );
+      })()}
+      <div className="dre-print-src" aria-hidden>
         <div id="cond-manut-relatorio" className="dre-doc">
           <header className="dre-head">
             <div className="dre-emp">
