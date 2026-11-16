@@ -15,6 +15,8 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { SearchSelect } from "@/components/data-table/SearchSelect";
 import { confirmar } from "@/components/layout/DialogoGlobal";
 import { useEmpresaAtiva } from "@/hooks/useEmpresaAtiva";
+import { useAuth } from "@/hooks/useAuth";
+import { rowId } from "@/lib/crud";
 import { imprimirElemento } from "@/lib/propostas";
 import { htmlParaTexto } from "@/lib/html-texto";
 import {
@@ -516,8 +518,8 @@ function Assuntos({ condominioId, assuntos, canEdit }: { condominioId: string; a
     queryFn: async (): Promise<Row[]> => ((await db.from("cond_equipe").select("id,nome,cargo,vinculo,status").eq("condominio_id", condominioId)).data ?? []) as Row[],
   });
   // Corpo diretivo vindo das unidades (síndico, subsíndico, conselheiros) e usuários da administradora (empresa ativa).
-  const emp = useEmpresaAtiva();
-  const empId = s((emp as unknown as Row)?.["id"] ?? (emp as unknown as Row)?.["empresaId"] ?? (emp as unknown as Row)?.["empresa"] ?? "");
+  const { empresa, isMaster, empresaContextoId } = useAuth();
+  const empId = s((isMaster && empresaContextoId) || (empresa ? rowId(empresa as Row) : "") || "");
   const { data: extras = [] } = useQuery({
     queryKey: ["cond", "atend-resp-extras", condominioId, empId],
     queryFn: async (): Promise<Row[]> => {
