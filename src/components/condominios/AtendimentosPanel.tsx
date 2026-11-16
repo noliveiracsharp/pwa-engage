@@ -1,4 +1,4 @@
-import { ehDiretoria, podeResponderAtendimento, rotuloCargo } from "@/lib/cond-equipe";
+import { ehDiretoria, FUNCOES_DIRETIVAS_UNIDADE, podeResponderAtendimento, rotuloCargo } from "@/lib/cond-equipe";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -15,6 +15,8 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { SearchSelect } from "@/components/data-table/SearchSelect";
 import { confirmar } from "@/components/layout/DialogoGlobal";
 import { useEmpresaAtiva } from "@/hooks/useEmpresaAtiva";
+import { useAuth } from "@/hooks/useAuth";
+import { rowId } from "@/lib/crud";
 import { imprimirElemento } from "@/lib/propostas";
 import { htmlParaTexto } from "@/lib/html-texto";
 import {
@@ -515,6 +517,39 @@ function Assuntos({ condominioId, assuntos, canEdit }: { condominioId: string; a
     queryKey: ["cond", "cond_equipe", "condominio_id", condominioId],
     queryFn: async (): Promise<Row[]> => ((await db.from("cond_equipe").select("id,nome,cargo,vinculo,status").eq("condominio_id", condominioId)).data ?? []) as Row[],
   });
+  // Corpo diretivo vindo das unidades (síndico, subsíndico, conselheiros) e usuários da administradora (empresa ativa).
+  const { empresa, isMaster, empresaContextoId } = useAuth();
+  const empId = s((isMaster && empresaContextoId) || (empresa ? rowId(empresa as Row) : "") || "");
+  const { data: extras = [] } = useQuery({
+    queryKey: ["cond", "atend-resp-extras", condominioId, empId],
+    queryFn: async (): Promise<Row[]> => {
+      const out: Row[] = [];
+      const { data: us } = await db.from("cond_unidades").select("id,numero,cond_bloco_id").eq("condominio_id", condominioId);
+      const ids = ((us ?? []) as Row[]).map((u) => s(u["id"]));
+      if (ids.length) {
+        const { data: vs } = await db.from("cond_unidades_vinculos").select("cond_unidade_id,usuario_id,funcao_condominio").in("cond_unidade_id", ids).in("funcao_condominio", Object.keys(FUNCOES_DIRETIVAS_UNIDADE));
+        const uids = [...new Set(((vs ?? []) as Row[]).map((v) => s(v["usuario_id"])))];
+        const { data: ps } = uids.length ? await db.from("usuarios").select("id,nome,email,celular").in("id", uids) : { data: [] };
+        for (const v of (vs ?? []) as Row[]) {
+          const pz = ((ps ?? []) as Row[]).find((x) => s(x["id"]) === s(v["usuario_id"]));
+          if (!pz) continue;
+          const f = s(v["funcao_condominio"]);
+          const un = ((us ?? []) as Row[]).find((u) => s(u["id"]) === s(v["cond_unidade_id"]));
+          out.push({ chave: `u:${s(v["usuario_id"])}`, usuario_id: v["usuario_id"], nome: s(pz["nome"]) || s(pz["email"]), email: pz["email"], celular: pz["celular"], cond_unidade_id: v["cond_unidade_id"],
+            cargo: f === "sindico" ? "sindico_morador" : f === "subsindico" ? "subsindico" : "conselheiro", vinculo: "morador",
+            rotulo: `${FUNCOES_DIRETIVAS_UNIDADE[f]?.label ?? f}${un ? ` (unidade ${s(un["numero"])})` : ""}` });
+        }
+      }
+      if (empId) {
+        const { data: adm } = await db.from("usuarios").select("id,nome,email,celular,status").eq("empresa_id", empId);
+        for (const pz of (adm ?? []) as Row[]) {
+          if (pz["status"] === false) continue;
+          out.push({ chave: `a:${s(pz["id"])}`, usuario_id: pz["id"], nome: s(pz["nome"]) || s(pz["email"]), email: pz["email"], celular: pz["celular"], cargo: "assistente", vinculo: "administradora", rotulo: "Administradora" });
+        }
+      }
+      return out;
+    },
+  });
   const [novoNome, setNovoNome] = useState("");
   const [busca, setBusca] = useState("");
   const usados = new Set(assuntos.map((a) => s(a["nome"]).toLowerCase()));
@@ -539,7 +574,26 @@ function Assuntos({ condominioId, assuntos, canEdit }: { condominioId: string; a
     const { error } = await db.from("cond_atend_assuntos").delete().eq("id", a["id"]);
     if (error) toast.error(error.message); else recarregar();
   };
-  const opEquipe = alfa(equipe.filter((e) => e["status"] !== false && podeResponderAtendimento(e)).map((e) => ({ value: s(e["id"]), label: `${s(e["nome"])} — ${s(e["vinculo"]) === "administradora" && !ehDiretoria(s(e["cargo"])) ? `${rotuloCargo(s(e["cargo"]))} (administradora)` : rotuloCargo(s(e["cargo"]))}` })));
+  const equipeApta = equipe.filter((e) => e["status"] !== false && podeResponderAtendimento(e));
+  const naEquipe = (x: Row) => equipe.some((e) => (x["usuario_id"] && s(e["usuario_id"]) === s(x["usuario_id"])) || s(e["nome"]).toLowerCase() === s(x["nome"]).toLowerCase());
+  const extrasLivres = extras.filter((x, i) => !naEquipe(x) && extras.findIndex((y) => s(y["usuario_id"]) === s(x["usuario_id"])) === i);
+  const opEquipe = alfa([
+    ...equipeApta.map((e) => ({ value: s(e["id"]), label: `${s(e["nome"])} — ${s(e["vinculo"]) === "administradora" && !ehDiretoria(s(e["cargo"])) ? `${rotuloCargo(s(e["cargo"]))} (administradora)` : rotuloCargo(s(e["cargo"]))}` })),
+    ...extrasLivres.map((x) => ({ value: s(x["chave"]), label: `${s(x["nome"])} — ${s(x["rotulo"])}` })),
+  ]);
+  // Responsáveis são ids de cond_equipe (as notificações usam essa tabela); pessoas de outras fontes entram na equipe ao serem escolhidas.
+  const adicionarResp = async (a: Row, resp: string[], v: string) => {
+    if (!v) return;
+    let id = v;
+    const x = extras.find((e) => s(e["chave"]) === v);
+    if (x) {
+      const { data, error } = await db.from("cond_equipe").insert({ condominio_id: condominioId, usuario_id: x["usuario_id"], nome: x["nome"], email: x["email"] ?? null, celular: x["celular"] ?? null, cargo: x["cargo"], vinculo: x["vinculo"], cond_unidade_id: x["cond_unidade_id"] ?? null }).select("id").single();
+      if (error || !data) { toast.error(error?.message ?? "Não foi possível incluir."); return; }
+      id = s(data["id"]);
+      await qc.invalidateQueries({ queryKey: ["cond", "cond_equipe", "condominio_id", condominioId] });
+    }
+    if (!resp.includes(id)) await salvar(s(a["id"]), { responsaveis: [...resp, id] });
+  };
 
   return (
     <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
@@ -582,7 +636,7 @@ function Assuntos({ condominioId, assuntos, canEdit }: { condominioId: string; a
                           <span key={r} className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs">{s(equipe.find((e) => s(e["id"]) === r)?.["nome"]) || "—"}
                             {canEdit && <button type="button" aria-label="Remover responsável" onClick={() => salvar(s(a["id"]), { responsaveis: resp.filter((x) => x !== r) })}>×</button>}</span>
                         ))}{!resp.length && <span className="text-xs text-muted-foreground">Síndico e gerente</span>}</div>
-                        {canEdit && <SearchSelect value="" placeholder="Adicionar responsável" onChange={(v) => v && !resp.includes(v) && salvar(s(a["id"]), { responsaveis: [...resp, v] })} options={opEquipe.filter((o) => !resp.includes(o.value))} />}
+                        {canEdit && <SearchSelect value="" placeholder="Adicionar responsável" onChange={(v) => void adicionarResp(a, resp, v)} options={opEquipe.filter((o) => !resp.includes(o.value))} />}
                       </td>
                       <td className="p-2"><Switch checked={a["visivel_morador"] !== false} disabled={!canEdit} onCheckedChange={(c) => salvar(s(a["id"]), { visivel_morador: c })} aria-label="Visível ao morador" /></td>
                       <td className="p-2"><Switch checked={a["status"] !== false} disabled={!canEdit} onCheckedChange={(c) => salvar(s(a["id"]), { status: c })} aria-label="Ativo" /></td>
