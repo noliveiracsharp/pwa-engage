@@ -63,7 +63,7 @@ function LoginPage() {
   }, []);
 
   const nomeMarca = marca?.titulo || marca?.nome || "ConectCon HUB";
-  const logoMarca = (theme === "dark" && marca?.logo_escuro) || marca?.logo || "";
+  const logoMarca = (theme === "dark" && marca?.logo_escuro) || marca?.logo || (theme === "dark" ? "/logo-atendeai-azul.png" : "/logo-atendeai-azulesc.png");
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
