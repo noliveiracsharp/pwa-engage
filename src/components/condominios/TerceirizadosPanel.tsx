@@ -34,16 +34,14 @@ export function TerceirizadosPanel({ condominioId, perms }: { condominioId: stri
   const q = useQuery({
     queryKey: chave,
     queryFn: async () => {
-      const r = await db.from("cond_terceirizados_vinculos")
-        .select("id,ativo,obs_acesso,terceirizado:cond_terceirizados(*,colaboradores:cond_terceirizados_colaboradores(*))")
-        .eq("condominio_id", condominioId);
+      const r = await db.rpc("cond_terc_listar", { p_cond: condominioId });
       if (r.error) throw r.error;
       const lista: Terceirizado[] = []; const colabs: (Colaborador & { empresa: string; empresaAtiva: boolean })[] = [];
-      for (const v of r.data ?? []) {
-        const t = v.terceirizado; if (!t) continue;
-        const cs: Colaborador[] = t.colaboradores ?? [];
-        lista.push({ ...t, vinculo_id: v.id, vinculo_ativo: v.ativo, obs_acesso: v.obs_acesso, colaboradores: cs.filter((c) => c.ativo).length });
-        cs.forEach((c) => colabs.push({ ...c, empresa: t.nome, empresaAtiva: v.ativo }));
+      for (const t of (r.data ?? []) as (Terceirizado & { colaboradores_lista: Colaborador[] })[]) {
+        const cs = t.colaboradores_lista ?? [];
+        const { colaboradores_lista: _x, ...resto } = t;
+        lista.push({ ...resto, colaboradores: cs.filter((c) => c.ativo).length });
+        cs.forEach((c) => colabs.push({ ...c, empresa: t.titulo || t.nome, empresaAtiva: t.vinculo_ativo }));
       }
       return { lista, colabs };
     },
@@ -103,7 +101,7 @@ export function TerceirizadosPanel({ condominioId, perms }: { condominioId: stri
         </div>
       </div>
 
-      {q.error && <p className="text-sm text-destructive">Não foi possível carregar. Rode o script de Terceirizados no banco.</p>}
+      {q.error && <p className="text-sm text-destructive">Não foi possível carregar. Rode o script de Terceirizados (v2) no banco.</p>}
       <div className="overflow-x-auto rounded-lg border">
         <table className="w-full text-sm">
           <thead className="bg-muted/50 text-left text-xs uppercase text-muted-foreground">
@@ -113,11 +111,11 @@ export function TerceirizadosPanel({ condominioId, perms }: { condominioId: stri
             {!q.isLoading && !lista.length && <tr><td colSpan={6} className="p-8 text-center text-muted-foreground">Nenhum terceirizado {aba === "ativos" ? "ativo" : "inativo"}.</td></tr>}
             {lista.map((t) => (
               <tr key={t.id} className="border-t hover:bg-muted/30">
-                <td className="p-2.5"><button type="button" className="font-medium text-primary hover:underline" onClick={() => setEditando(t)}>{t.nome}</button>{t.documento && <p className="text-xs text-muted-foreground">{formatarDocumento(t.documento)}</p>}</td>
+                <td className="p-2.5"><button type="button" className="rounded font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" onClick={() => setEditando(t)}>{t.titulo || t.nome}</button>{t.titulo && t.titulo !== t.nome && <p className="text-xs text-muted-foreground">{t.nome}</p>}{t.documento && <p className="text-xs text-muted-foreground">{formatarDocumento(t.documento)}</p>}</td>
                 <td className="p-2.5">{t.atividade ?? "—"}</td>
-                <td className="p-2.5">{t.telefone ?? "—"}</td>
+                <td className="p-2.5">{t.telefone_contato || t.telefone || "—"}</td>
                 <td className="p-2.5">{t.contato ?? "—"}</td>
-                <td className="p-2.5 text-center"><button type="button" onClick={() => setEditando(t)} className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs"><Users className="size-3" />{t.colaboradores}</button></td>
+                <td className="p-2.5 text-center"><button type="button" aria-label={`${t.colaboradores} funcionários ativos de ${t.titulo || t.nome}`} onClick={() => setEditando(t)} className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs"><Users className="size-3" />{t.colaboradores}</button></td>
                 <td className="p-2.5"><div className="flex justify-end gap-1">
                   {perms.canUpdate && <AcaoIcone titulo="Editar" onClick={() => setEditando(t)}><Pencil className="size-4" /></AcaoIcone>}
                   {perms.canUpdate && <AcaoIcone titulo={t.vinculo_ativo ? "Inativar" : "Reativar"} onClick={() => void alternar(t)}>{(() => { const I = t.vinculo_ativo ? Ban : BadgeCheck; return <I className="size-4" />; })()}</AcaoIcone>}
@@ -130,44 +128,46 @@ export function TerceirizadosPanel({ condominioId, perms }: { condominioId: stri
       </div>
 
       {editando && <TerceirizadoSheet condominioId={condominioId} item={editando === "novo" ? null : editando} podeEditar={editando === "novo" ? perms.canCreate : perms.canUpdate}
-        colaboradores={(q.data?.colabs ?? []).filter((c) => editando !== "novo" && c.terceirizado_id === editando.id)} onClose={() => setEditando(null)} onSalvo={recarregar} />}
+        colaboradores={(q.data?.colabs ?? []).filter((c) => editando !== "novo" && c.empresa_id === editando.id)} onClose={() => setEditando(null)} onSalvo={recarregar} />}
     </div>
   );
 }
 
 function TerceirizadoSheet({ condominioId, item, podeEditar, colaboradores, onClose, onSalvo }: { condominioId: string; item: Terceirizado | null; podeEditar: boolean; colaboradores: Colaborador[]; onClose: () => void; onSalvo: () => void }) {
-  const [f, setF] = useState({ nome: item?.nome ?? "", tipo_pessoa: item?.tipo_pessoa ?? "pj", documento: item?.documento ?? "", atividade: item?.atividade ?? "", contato: item?.contato ?? "", telefone: item?.telefone ?? "", email: item?.email ?? "", observacoes: item?.observacoes ?? "", obs_acesso: item?.obs_acesso ?? "" });
+  const [f, setF] = useState({ nome: item?.nome ?? "", titulo: item?.titulo ?? "", tipo_pessoa: item?.tipo_pessoa === "Física" ? "Física" : "Jurídica", documento: item?.documento ?? "", atividade: item?.atividade ?? "", contato: item?.contato ?? "", telefone: item?.telefone ?? "", telefone_contato: item?.telefone_contato ?? "", email: item?.email ?? "", observacoes: item?.observacoes ?? "", obs_acesso: item?.obs_acesso ?? "" });
   const [id, setId] = useState<string | null>(item?.id ?? null);
+  const [origem, setOrigem] = useState<"existente" | "nova">("existente");
   const [salvando, setSalvando] = useState(false);
   const [colab, setColab] = useState<Partial<Colaborador> | null>(null);
+  const [buscaEmp, setBuscaEmp] = useState("");
   const set = (k: keyof typeof f, v: string) => setF((x) => ({ ...x, [k]: v }));
+  // Empresa operadora do sistema: dados cadastrais só mudam em Empresas.
+  const bloqueada = !!item?.is_tenant || (!item && !!id && origem === "existente");
+  const novo = !item && !id;
+  const buscaQ = useQuery({
+    queryKey: ["cond", "terc-busca", condominioId, buscaEmp],
+    enabled: novo && origem === "existente" && buscaEmp.trim().length >= 2,
+    queryFn: async () => { const r = await db.rpc("cond_terc_buscar_empresas", { p_cond: condominioId, p_q: buscaEmp.trim() }); if (r.error) throw r.error; return (r.data ?? []) as { id: string; nome: string; titulo: string | null; documento: string | null; telefone: string | null; email: string | null }[]; },
+  });
+  const escolher = (e: { id: string; nome: string; titulo: string | null; documento: string | null; telefone: string | null; email: string | null }) => {
+    setId(e.id); setF((x) => ({ ...x, nome: e.nome, titulo: e.titulo ?? "", documento: e.documento ?? "", telefone: e.telefone ?? "", email: e.email ?? "" }));
+  };
 
   const salvar = async () => {
-    if (!f.nome.trim()) return void toast.error("Informe o nome.");
+    if (!id && !f.nome.trim()) return void toast.error("Informe o nome ou escolha uma empresa cadastrada.");
     setSalvando(true);
     try {
-      const dados = { nome: f.nome.trim(), tipo_pessoa: f.tipo_pessoa, documento: f.documento.trim() || null, atividade: f.atividade.trim() || null, contato: f.contato.trim() || null, telefone: f.telefone.trim() || null, email: f.email.trim() || null, observacoes: f.observacoes.trim() || null };
-      if (id) {
-        const r = await db.from("cond_terceirizados").update({ ...dados, updated_at: new Date().toISOString() }).eq("id", id); if (r.error) throw r.error;
-        if (item) { const v = await db.from("cond_terceirizados_vinculos").update({ obs_acesso: f.obs_acesso || null }).eq("id", item.vinculo_id); if (v.error) throw v.error; }
-      } else {
-        // Já existe em outro condomínio? Reaproveita pelo CNPJ/CPF sem duplicar.
-        if (dados.documento) {
-          const ex = await db.rpc("cond_terc_vincular_documento", { p_cond: condominioId, p_doc: dados.documento });
-          if (ex.error) throw ex.error;
-          if (ex.data) { toast.success("Prestador já cadastrado em outro condomínio: vinculado a este."); setId(ex.data); onSalvo(); return; }
-        }
-        const r = await db.from("cond_terceirizados").insert(dados).select("id").single(); if (r.error) throw r.error;
-        const v = await db.from("cond_terceirizados_vinculos").insert({ terceirizado_id: r.data.id, condominio_id: condominioId, obs_acesso: f.obs_acesso || null }); if (v.error) throw v.error;
-        setId(r.data.id);
-      }
-      toast.success("Terceirizado salvo."); onSalvo();
+      const r = await db.rpc("cond_terc_salvar", { p_cond: condominioId, p_empresa: id, p: { ...f, nome: bloqueada ? "" : f.nome.trim() } });
+      if (r.error) throw r.error;
+      setId(r.data.empresa_id);
+      toast.success(r.data.reaproveitada ? "Empresa já cadastrada com este CNPJ/CPF: vinculada ao condomínio." : "Terceirizado salvo.");
+      onSalvo();
     } catch (e) { toast.error((e as Error).message); } finally { setSalvando(false); }
   };
 
   const salvarColab = async () => {
     if (!colab?.nome?.trim() || !id) return void toast.error("Informe o nome do funcionário.");
-    const dados = { terceirizado_id: id, nome: colab.nome.trim(), funcao: colab.funcao || null, rg: colab.rg || null, cpf: colab.cpf || null, celular: colab.celular || null, foto_url: colab.foto_url || null, ativo: colab.ativo ?? true, observacoes: colab.observacoes || null };
+    const dados = { empresa_id: id, nome: colab.nome.trim(), funcao: colab.funcao || null, rg: colab.rg || null, cpf: colab.cpf || null, celular: colab.celular || null, foto_url: colab.foto_url || null, ativo: colab.ativo ?? true, observacoes: colab.observacoes || null };
     const r = colab.id ? await db.from("cond_terceirizados_colaboradores").update(dados).eq("id", colab.id) : await db.from("cond_terceirizados_colaboradores").insert(dados);
     if (r.error) return void toast.error(r.error.message);
     toast.success("Funcionário salvo."); setColab(null); onSalvo();
@@ -183,22 +183,59 @@ function TerceirizadoSheet({ condominioId, item, podeEditar, colaboradores, onCl
   return (
     <Sheet open onOpenChange={(o) => !o && onClose()}>
       <SheetContent className="z-[90] flex w-full flex-col gap-0 p-0 sm:max-w-none md:w-full lg:w-[60vw]">
-        <SheetHeader className="border-b p-4"><SheetTitle>{item ? item.nome : "Novo terceirizado"}</SheetTitle><SheetDescription>Dados da empresa ou pessoa e funcionários autorizados.</SheetDescription></SheetHeader>
+        <SheetHeader className="border-b p-4"><SheetTitle>{item ? item.titulo || item.nome : "Novo terceirizado"}</SheetTitle><SheetDescription>Dados da empresa ou pessoa e funcionários autorizados.</SheetDescription></SheetHeader>
         <Tabs defaultValue="dados" className="flex min-h-0 flex-1 flex-col">
           <TabsList className="mx-4 mt-3 w-fit"><TabsTrigger value="dados">Dados</TabsTrigger><TabsTrigger value="colab" disabled={!id}>Funcionários ({colaboradores.length})</TabsTrigger></TabsList>
           <TabsContent value="dados" className="flex min-h-0 flex-1 flex-col">
-            <fieldset disabled={!podeEditar} className="grid flex-1 gap-3 overflow-y-auto p-4 sm:grid-cols-2">
-              <div className="space-y-1.5"><Label>Tipo</Label><SearchSelect value={f.tipo_pessoa} onChange={(v) => set("tipo_pessoa", v || "pj")} options={[{ value: "pf", label: "Pessoa física (CPF)" }, { value: "pj", label: "Pessoa jurídica (CNPJ)" }]} /></div>
-              <div className="space-y-1.5"><Label htmlFor="t-doc">{f.tipo_pessoa === "pj" ? "CNPJ" : "CPF"}</Label><Input id="t-doc" value={f.documento} onChange={(e) => set("documento", e.target.value)} /></div>
-              <div className="space-y-1.5 sm:col-span-2"><Label htmlFor="t-nome">Nome / Razão social *</Label><Input id="t-nome" value={f.nome} onChange={(e) => set("nome", e.target.value)} /></div>
-              <div className="space-y-1.5"><Label htmlFor="t-at">Atividade</Label><Input id="t-at" placeholder="Ex.: Jardinagem, Elevadores" value={f.atividade} onChange={(e) => set("atividade", e.target.value)} /></div>
-              <div className="space-y-1.5"><Label htmlFor="t-ct">Contato</Label><Input id="t-ct" value={f.contato} onChange={(e) => set("contato", e.target.value)} /></div>
-              <div className="space-y-1.5"><Label htmlFor="t-tel">Telefone</Label><Input id="t-tel" value={f.telefone} onChange={(e) => set("telefone", e.target.value)} /></div>
-              <div className="space-y-1.5"><Label htmlFor="t-em">E-mail</Label><Input id="t-em" type="email" value={f.email} onChange={(e) => set("email", e.target.value)} /></div>
-              <div className="space-y-1.5 sm:col-span-2"><Label htmlFor="t-acc">Orientações para a portaria (neste condomínio)</Label><Textarea id="t-acc" placeholder="Ex.: dias e horários de visita, áreas liberadas" value={f.obs_acesso} onChange={(e) => set("obs_acesso", e.target.value)} /></div>
-              <div className="space-y-1.5 sm:col-span-2"><Label htmlFor="t-obs">Observações</Label><Textarea id="t-obs" value={f.observacoes} onChange={(e) => set("observacoes", e.target.value)} /></div>
-            </fieldset>
-            <div className="flex justify-end gap-2 border-t p-4"><Button variant="outline" onClick={onClose}>Cancelar</Button>{podeEditar && <Button onClick={() => void salvar()} disabled={salvando}>Salvar</Button>}</div>
+            <div className="flex-1 space-y-4 overflow-y-auto p-4">
+              {novo && (
+                <div role="radiogroup" aria-label="Origem do cadastro" className="grid gap-2 sm:grid-cols-2">
+                  {([["existente", "Empresa já cadastrada", "Procure em Empresas por nome ou CNPJ/CPF"], ["nova", "Nova empresa", "Cadastra o prestador em Empresas como fornecedor"]] as const).map(([v, t, d]) => (
+                    <button key={v} type="button" role="radio" aria-checked={origem === v} onClick={() => setOrigem(v)}
+                      className={cn("rounded-lg border-2 p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", origem === v ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40")}>
+                      <span className="block text-sm font-medium">{t}</span><span className="block text-xs text-muted-foreground">{d}</span>
+                    </button>))}
+                </div>
+              )}
+              {novo && origem === "existente" && (
+                <div className="space-y-2">
+                  <Label htmlFor="t-busca-emp">Buscar em Empresas</Label>
+                  <div className="relative"><Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted-foreground" aria-hidden />
+                    <Input id="t-busca-emp" autoFocus className="pl-8" placeholder="Nome, nome fantasia ou CNPJ/CPF…" value={buscaEmp} onChange={(e) => setBuscaEmp(e.target.value)} aria-describedby="t-busca-emp-ajuda" /></div>
+                  <p id="t-busca-emp-ajuda" className="text-xs text-muted-foreground">Digite ao menos 2 caracteres. Não achou? Escolha “Nova empresa”.</p>
+                  {buscaQ.data && (
+                    <ul aria-live="polite" className="max-h-64 divide-y overflow-y-auto rounded-lg border">
+                      {!buscaQ.data.length && <li className="p-3 text-sm text-muted-foreground">Nenhuma empresa encontrada.</li>}
+                      {buscaQ.data.map((e) => (
+                        <li key={e.id}><button type="button" onClick={() => escolher(e)} className="flex w-full items-center justify-between gap-2 p-3 text-left hover:bg-muted/40 focus-visible:bg-muted/40 focus-visible:outline-none">
+                          <span className="min-w-0"><span className="block truncate text-sm font-medium">{e.titulo || e.nome}</span><span className="block truncate text-xs text-muted-foreground">{[e.titulo ? e.nome : null, formatarDocumento(e.documento) || null].filter(Boolean).join(" · ")}</span></span>
+                          <Plus className="size-4 shrink-0 text-primary" aria-hidden /></button></li>))}
+                    </ul>)}
+                </div>
+              )}
+              {(!novo || origem === "nova") && (
+                <fieldset disabled={!podeEditar} className="space-y-3">
+                  <legend className="mb-2 flex w-full items-center justify-between gap-2 text-sm font-semibold">Dados da empresa {bloqueada && <Badge variant="secondary">Editável apenas em Empresas</Badge>}</legend>
+                  <fieldset disabled={bloqueada} className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1.5"><Label>Tipo</Label><SearchSelect value={f.tipo_pessoa} onChange={(v) => set("tipo_pessoa", v || "Jurídica")} options={[{ value: "Física", label: "Pessoa física (CPF)" }, { value: "Jurídica", label: "Pessoa jurídica (CNPJ)" }]} /></div>
+                    <div className="space-y-1.5"><Label htmlFor="t-doc">{f.tipo_pessoa === "Física" ? "CPF" : "CNPJ"}</Label><Input id="t-doc" inputMode="numeric" value={f.documento} onChange={(e) => set("documento", e.target.value)} /></div>
+                    <div className="space-y-1.5"><Label htmlFor="t-nome">{f.tipo_pessoa === "Física" ? "Nome completo" : "Razão social"} *</Label><Input id="t-nome" required aria-required value={f.nome} onChange={(e) => set("nome", e.target.value)} /></div>
+                    <div className="space-y-1.5"><Label htmlFor="t-fant">Nome fantasia</Label><Input id="t-fant" value={f.titulo} onChange={(e) => set("titulo", e.target.value)} /></div>
+                    <div className="space-y-1.5"><Label htmlFor="t-tel">Telefone da empresa</Label><Input id="t-tel" type="tel" value={f.telefone} onChange={(e) => set("telefone", e.target.value)} /></div>
+                    <div className="space-y-1.5"><Label htmlFor="t-em">E-mail</Label><Input id="t-em" type="email" value={f.email} onChange={(e) => set("email", e.target.value)} /></div>
+                    <div className="space-y-1.5 sm:col-span-2"><Label htmlFor="t-obs">Observações</Label><Textarea id="t-obs" value={f.observacoes} onChange={(e) => set("observacoes", e.target.value)} /></div>
+                  </fieldset>
+                  <p className="pt-2 text-sm font-semibold">Neste condomínio</p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1.5"><Label htmlFor="t-at">Atividade</Label><Input id="t-at" placeholder="Ex.: Jardinagem, Elevadores" value={f.atividade} onChange={(e) => set("atividade", e.target.value)} /></div>
+                    <div className="space-y-1.5"><Label htmlFor="t-ct">Contato responsável</Label><Input id="t-ct" value={f.contato} onChange={(e) => set("contato", e.target.value)} /></div>
+                    <div className="space-y-1.5"><Label htmlFor="t-tc">Telefone do contato</Label><Input id="t-tc" type="tel" value={f.telefone_contato} onChange={(e) => set("telefone_contato", e.target.value)} /></div>
+                    <div className="space-y-1.5 sm:col-span-2"><Label htmlFor="t-acc">Orientações para a portaria</Label><Textarea id="t-acc" placeholder="Ex.: dias e horários de visita, áreas liberadas" value={f.obs_acesso} onChange={(e) => set("obs_acesso", e.target.value)} /></div>
+                  </div>
+                </fieldset>
+              )}
+            </div>
+            <div className="flex justify-end gap-2 border-t p-4"><Button variant="outline" onClick={onClose}>Cancelar</Button>{podeEditar && (!novo || origem === "nova") && <Button onClick={() => void salvar()} disabled={salvando}>{salvando ? "Salvando…" : "Salvar"}</Button>}</div>
           </TabsContent>
           <TabsContent value="colab" className="min-h-0 flex-1 overflow-y-auto p-4">
             {colab ? (
