@@ -30,3 +30,9 @@ describe("estoque do condomínio", () => {
     ])).toBe(37.5);
   });
 });
+
+import { faltaParaComprar, mensagemFaltaEstoque } from "./cond-estoque";
+describe("solicitação de compra", () => {
+  it("pede só o que falta", () => { expect(faltaParaComprar(1, 3)).toBe(2); expect(faltaParaComprar(-2, 3)).toBe(3); expect(faltaParaComprar(5, 3)).toBe(0); });
+  it("mensagem cita item e OS", () => { const m = mensagemFaltaEstoque({ condominio: "Manhattan", item: "Lâmpada LED", unidade: "un", quantidade: 2, osNumero: "#2026-45" }); expect(m).toContain("Lâmpada LED · 2 un"); expect(m).toContain("#2026-45"); });
+});

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ArrowLeftRight, Package, Pencil, Plus, Search, Trash2, Warehouse } from "lucide-react";
+import { ShoppingCart, Bell, Check, X, ArrowLeftRight, Package, Pencil, Plus, Search, Trash2, Warehouse } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,13 +10,15 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { SearchSelect } from "@/components/data-table/SearchSelect";
-import { confirmar } from "@/components/layout/DialogoGlobal";
+import { confirmar, perguntar } from "@/components/layout/DialogoGlobal";
 import {
-  CATEGORIAS_ESTOQUE, SITUACAO_ESTOQUE, TIPOS_MOV_COND, UNIDADES_ESTOQUE, custoMateriais, saldoItem, situacaoEstoque, tipoMovCond, validarMovimento,
+  CATEGORIAS_ESTOQUE, SITUACAO_ESTOQUE, faltaParaComprar, mensagemFaltaEstoque, TIPOS_MOV_COND, UNIDADES_ESTOQUE, custoMateriais, saldoItem, situacaoEstoque, tipoMovCond, validarMovimento,
 } from "@/lib/cond-estoque";
 import type { Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
 import { AcaoIcone } from "./AcaoIcone";
+import { enviarWhatsappEmpresa } from "@/lib/manutencoes";
+import { destinatariosAviso } from "@/lib/cond-manutencoes";
 import { s, useCondRows } from "./cond-data";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -60,7 +62,7 @@ function Rodape({ onCancel, salvando }: { onCancel: () => void; salvando: boolea
 export function EstoqueCond({ condominioId, perms }: { condominioId: string; perms: Perms }) {
   const est = useEstoqueCond(condominioId);
   const { itens, locais, movs, invalidar } = est;
-  const [visao, setVisao] = useState<"saldos" | "movs" | "locais">("saldos");
+  const [visao, setVisao] = useState<"saldos" | "movs" | "locais" | "compras">("saldos");
   const [busca, setBusca] = useState("");
   const [local, setLocal] = useState("");
   const [sit, setSit] = useState("");
@@ -90,7 +92,7 @@ export function EstoqueCond({ condominioId, perms }: { condominioId: string; per
         <div className="rounded-lg border bg-card p-3"><p className="text-xs text-muted-foreground">Valor em estoque</p><p className="text-xl font-semibold">{brl(valorTotal)}</p></div>
       </div>
       <div role="tablist" aria-label="Visões do estoque" className="flex flex-wrap gap-1">
-        {([["saldos", "Saldos & itens"], ["movs", "Movimentações"], ["locais", "Locais"]] as const).map(([k, l]) => (
+        {([["saldos", "Saldos & itens"], ["movs", "Movimentações"], ["locais", "Locais"], ["compras", "Compras & avisos"]] as const).map(([k, l]) => (
           <Button key={k} role="tab" aria-selected={visao === k} size="sm" variant={visao === k ? "default" : "outline"} onClick={() => setVisao(k)}>{l}</Button>
         ))}
       </div>
@@ -142,6 +144,7 @@ export function EstoqueCond({ condominioId, perms }: { condominioId: string; per
       )}
       {visao === "movs" && <Movimentacoes {...est} />}
       {visao === "locais" && <Locais condominioId={condominioId} perms={perms} {...est} />}
+      {visao === "compras" && <ComprasEstoque condominioId={condominioId} perms={perms} itens={itens} />}
       {item && <ItemSheet condominioId={condominioId} registro={item} onClose={() => setItem(null)} invalidar={invalidar} perms={perms} />}
       {mov && <MovSheet condominioId={condominioId} registro={mov} onClose={() => setMov(null)} {...est} />}
     </section>
@@ -306,7 +309,7 @@ function MovSheet({ condominioId, registro, onClose, itens, locais, movs, invali
 
 /* ------------------------------- Materiais usados na OS ------------------------------- */
 
-export function MateriaisOs({ condominioId, osId, editavel }: { condominioId: string; osId: string; editavel: boolean }) {
+export function MateriaisOs({ condominioId, osId, editavel, nomeCondominio = "", osNumero = "" }: { condominioId: string; osId: string; editavel: boolean; nomeCondominio?: string; osNumero?: string }) {
   const { itens, locais, movs, invalidar } = useEstoqueCond(condominioId);
   const [v, setV] = useState({ item_id: "", local: locais.length === 1 ? s(locais[0]?.["id"]) : "", qtd: "" });
   const [salvando, setSalvando] = useState(false);
@@ -335,6 +338,27 @@ export function MateriaisOs({ condominioId, osId, editavel }: { condominioId: st
     invalidar();
   };
 
+  const qtdPedida = num(v.qtd);
+  const falta = v.item_id && v.local ? faltaParaComprar(saldo, qtdPedida) : 0;
+  const solicitar = async () => {
+    const it = nItem.get(v.item_id);
+    if (!it) return void toast.error("Escolha o material.");
+    const sugestao = String(falta || qtdPedida || 1).replace(".", ",");
+    const resp = await perguntar({ title: "Solicitar compra", description: `Quantidade de ${s(it["nome"])} (${s(it["unidade"])}) a comprar:`, defaultValue: sugestao });
+    if (resp == null) return;
+    const q = num(String(resp));
+    if (q <= 0) return void toast.error("Informe uma quantidade válida.");
+    setSalvando(true);
+    const { data: u } = await supabase.auth.getUser();
+    const solicitante = s(u.user?.user_metadata?.["nome"] ?? u.user?.email ?? "");
+    const { error } = await db.from("cond_estoque_solicitacoes").insert({ condominio_id: condominioId, item_id: v.item_id, os_id: osId, quantidade: q, solicitante });
+    if (error) { setSalvando(false); return void toast.error(error.message); }
+    const enviados = await avisarCompra(condominioId, mensagemFaltaEstoque({ condominio: nomeCondominio, item: s(it["nome"]), unidade: s(it["unidade"]), quantidade: q, osNumero, solicitante }));
+    setSalvando(false);
+    invalidar();
+    toast.success(enviados ? `Solicitação registrada e ${enviados} responsável(is) avisado(s).` : "Solicitação registrada. Ninguém foi avisado: configure o responsável em Estoque → Compras & avisos.");
+  };
+
   // Saídas já devolvidas não exibem novamente o botão de devolver.
   const devolvidas = new Set<string>();
   const linhas = daOs.filter((m) => m["tipo"] === "saida_os").map((m) => {
@@ -361,10 +385,84 @@ export function MateriaisOs({ condominioId, osId, editavel }: { condominioId: st
           <SearchSelect value={v.item_id} onChange={(x) => setV((o) => ({ ...o, item_id: x }))} placeholder="Material" options={alfa(itens.filter((i) => i["ativo"] !== false).map((i) => ({ value: s(i["id"]), label: `${s(i["nome"])} (${s(i["unidade"])})` })))} />
           <SearchSelect value={v.local} onChange={(x) => setV((o) => ({ ...o, local: x }))} placeholder="Retirado de" options={alfa(locais.map((l) => ({ value: s(l["id"]), label: s(l["nome"]) })))} />
           <Input aria-label="Quantidade" inputMode="decimal" placeholder={v.item_id && v.local ? `Disp. ${qtdBr(saldo)}` : "Qtd."} value={v.qtd} onChange={(e) => setV((o) => ({ ...o, qtd: e.target.value }))} />
-          <Button type="button" variant="outline" disabled={salvando} onClick={() => void lancar("saida_os")}><Plus className="size-4" /> Usar</Button>
+          <Button type="button" variant="outline" disabled={salvando || falta > 0} onClick={() => void lancar("saida_os")}><Plus className="size-4" /> Usar</Button>
+          {falta > 0 && <p role="alert" className="text-xs text-destructive sm:col-span-4">Estoque insuficiente neste local: faltam {qtdBr(falta)}.</p>}
+          {v.item_id && <Button type="button" variant={falta > 0 ? "destructive" : "ghost"} size="sm" className="sm:col-span-4 justify-self-start" disabled={salvando} onClick={() => void solicitar()}><ShoppingCart className="size-4" /> Solicitar compra e avisar responsável</Button>}
         </div>
       ) : <p className="text-xs text-muted-foreground">Cadastre itens e locais na aba Estoque & Insumos para lançar materiais.</p>)}
       {!editavel && !linhas.length && <p className="text-xs text-muted-foreground">Nenhum material lançado.</p>}
+    </div>
+  );
+}
+
+/* ------------------------------- Compras & avisos ------------------------------- */
+
+/** Envia o aviso ao responsável configurado; sem configuração (ou com a chave ligada) avisa também a diretoria. */
+export async function avisarCompra(condominioId: string, texto: string) {
+  const [{ data: cfg }, { data: equipe }] = await Promise.all([
+    db.from("cond_estoque_config").select("*").eq("condominio_id", condominioId).maybeSingle(),
+    db.from("cond_equipe").select("nome,cargo,celular,fim").eq("condominio_id", condominioId),
+  ]);
+  const tel = new Set<string>();
+  if (cfg?.responsavel_celular) tel.add(String(cfg.responsavel_celular).replace(/\D/g, ""));
+  if (!cfg || cfg.avisar_diretoria !== false) destinatariosAviso((equipe ?? []) as Row[], new Date().toLocaleDateString("sv-SE")).forEach((d) => tel.add(d.celular.replace(/\D/g, "")));
+  let ok = 0;
+  for (const t of tel) if (t.length >= 10 && !(await enviarWhatsappEmpresa(condominioId, t, texto))) ok++;
+  return ok;
+}
+
+function ComprasEstoque({ condominioId, perms, itens }: { condominioId: string; perms: Perms; itens: Row[] }) {
+  const qc = useQueryClient();
+  const cfgRows = useCondRows("cond_estoque_config", "condominio_id", condominioId).data ?? [];
+  const sols = useCondRows("cond_estoque_solicitacoes", "condominio_id", condominioId).data ?? [];
+  const cfg = cfgRows[0];
+  const [v, setV] = useState<{ nome: string; cel: string; dir: boolean } | null>(null);
+  const atual = v ?? { nome: s(cfg?.["responsavel_nome"]), cel: s(cfg?.["responsavel_celular"]), dir: cfg ? cfg["avisar_diretoria"] !== false : true };
+  const nItem = new Map(itens.map((i) => [s(i["id"]), i]));
+  const inv = () => ["cond_estoque_config", "cond_estoque_solicitacoes"].forEach((t) => qc.invalidateQueries({ queryKey: ["cond", t] }));
+  const salvar = async () => {
+    const { error } = await db.from("cond_estoque_config").upsert({ condominio_id: condominioId, responsavel_nome: atual.nome || null, responsavel_celular: atual.cel || null, avisar_diretoria: atual.dir, updated_at: new Date().toISOString() });
+    if (error) return void toast.error(error.message);
+    toast.success("Configuração salva."); setV(null); inv();
+  };
+  const mudar = async (id: string, status: "comprada" | "cancelada") => {
+    if (!(await confirmar({ title: status === "comprada" ? "Marcar como comprada" : "Cancelar solicitação", description: status === "comprada" ? "Lance a entrada por compra em Movimentações para atualizar o saldo." : "A solicitação será cancelada." }))) return;
+    const { error } = await db.from("cond_estoque_solicitacoes").update({ status, resolvida_em: new Date().toISOString() }).eq("id", id);
+    if (error) return void toast.error(error.message);
+    inv();
+  };
+  const lista = [...sols].sort((a, b) => (a["status"] === "pendente" ? 0 : 1) - (b["status"] === "pendente" ? 0 : 1) || s(b["created_at"]).localeCompare(s(a["created_at"])));
+  const cor: Record<string, string> = { pendente: "bg-warning/20 text-warning-foreground", comprada: "bg-success/15 text-success", cancelada: "bg-muted text-muted-foreground" };
+  return (
+    <div className="space-y-4">
+      <fieldset className="space-y-3 rounded-lg border p-4">
+        <legend className="flex items-center gap-2 px-1 text-sm font-medium"><Bell className="size-4" aria-hidden /> Quem recebe o aviso de falta / pedido de compra</legend>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1"><Label htmlFor="cfg-nome">Responsável (ex.: gestor)</Label><Input id="cfg-nome" value={atual.nome} disabled={!perms.canUpdate} onChange={(e) => setV({ ...atual, nome: e.target.value })} /></div>
+          <div className="space-y-1"><Label htmlFor="cfg-cel">Celular (WhatsApp)</Label><Input id="cfg-cel" inputMode="tel" placeholder="(11) 99999-9999" value={atual.cel} disabled={!perms.canUpdate} onChange={(e) => setV({ ...atual, cel: e.target.value })} /></div>
+        </div>
+        <div className="flex items-center gap-2"><Switch id="cfg-dir" checked={atual.dir} disabled={!perms.canUpdate} onCheckedChange={(x) => setV({ ...atual, dir: x })} /><Label htmlFor="cfg-dir">Avisar também síndico, subsíndico e gerente (Equipe & Diretoria)</Label></div>
+        {perms.canUpdate && <div className="flex justify-end"><Button type="button" onClick={() => void salvar()}>Salvar</Button></div>}
+      </fieldset>
+      <div className="overflow-x-auto rounded-lg border">
+        <table className="w-full text-sm">
+          <thead className="bg-muted/50 text-left"><tr><th className="p-2">Data</th><th className="p-2">Material</th><th className="p-2">Qtd.</th><th className="p-2">Solicitante</th><th className="p-2">Situação</th><th className="p-2 text-right">Ações</th></tr></thead>
+          <tbody>
+            {!lista.length && <tr><td colSpan={6} className="p-4 text-center text-muted-foreground">Nenhuma solicitação de compra.</td></tr>}
+            {lista.map((r) => { const it = nItem.get(s(r["item_id"])); const st = s(r["status"]); return (
+              <tr key={s(r["id"])} className="border-t">
+                <td className="p-2">{new Date(s(r["created_at"])).toLocaleDateString("pt-BR")}</td>
+                <td className="p-2">{s(it?.["nome"]) || "—"}</td>
+                <td className="p-2 tabular-nums">{qtdBr(Number(r["quantidade"]))} {s(it?.["unidade"])}</td>
+                <td className="p-2">{s(r["solicitante"]) || "—"}</td>
+                <td className="p-2"><span className={cn("rounded px-2 py-0.5 text-xs", cor[st])}>{st === "pendente" ? "Pendente" : st === "comprada" ? "Comprada" : "Cancelada"}</span></td>
+                <td className="p-2"><div className="flex justify-end gap-1">{perms.canUpdate && st === "pendente" && <>
+                  <AcaoIcone titulo="Marcar como comprada" onClick={() => void mudar(s(r["id"]), "comprada")}><Check className="size-4" /></AcaoIcone>
+                  <AcaoIcone titulo="Cancelar solicitação" onClick={() => void mudar(s(r["id"]), "cancelada")}><X className="size-4" /></AcaoIcone></>}</div></td>
+              </tr>); })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

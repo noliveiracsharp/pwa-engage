@@ -78,3 +78,20 @@ export function custoMateriais(movs: { tipo?: unknown; quantidade?: unknown; cus
   }, 0);
   return Math.round(total * 100) / 100;
 }
+
+/** Falta material quando o saldo do local não cobre a quantidade pedida; retorna o que precisa comprar. */
+export function faltaParaComprar(saldo: number, quantidade: number) {
+  return quantidade > 0 && saldo < quantidade ? Math.round((quantidade - Math.max(0, saldo)) * 1000) / 1000 : 0;
+}
+
+export function mensagemFaltaEstoque(p: { condominio: string; item: string; unidade: string; quantidade: number; osNumero?: string; solicitante?: string; observacao?: string }) {
+  const q = p.quantidade.toLocaleString("pt-BR", { maximumFractionDigits: 3 });
+  return [
+    `*[Estoque] Solicitação de compra — ${p.condominio}*`,
+    `Material: ${p.item} · ${q} ${p.unidade}`,
+    p.osNumero ? `Ordem de serviço: ${p.osNumero}` : "",
+    p.solicitante ? `Solicitado por: ${p.solicitante}` : "",
+    p.observacao ? `Obs.: ${p.observacao}` : "",
+    "Favor providenciar a compra.",
+  ].filter(Boolean).join("\n");
+}
