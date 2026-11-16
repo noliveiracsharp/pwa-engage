@@ -16,9 +16,9 @@ export const Route = createFileRoute("/doc/$token")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Assinatura de documento — Atende.ai" },
+      { title: "Assinatura de documento — ConectCon HUB" },
       { name: "description", content: "Leia o documento e assine eletronicamente." },
-      { property: "og:title", content: "Assinatura de documento — Atende.ai" },
+      { property: "og:title", content: "Assinatura de documento — ConectCon HUB" },
       { property: "og:description", content: "Leia o documento e assine eletronicamente." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

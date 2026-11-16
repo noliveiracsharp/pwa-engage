@@ -17,10 +17,10 @@ export const Route = createFileRoute("/login")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Entrar — Atende.ai" },
-      { name: "description", content: "Acesse o Atende.ai, sua central de suporte e atendimento multicanal." },
-      { property: "og:title", content: "Entrar — Atende.ai" },
-      { property: "og:description", content: "Acesse o Atende.ai, sua central de suporte e atendimento multicanal." },
+      { title: "Entrar — ConectCon HUB" },
+      { name: "description", content: "Acesse o ConectCon HUB, sua central de suporte e atendimento multicanal." },
+      { property: "og:title", content: "Entrar — ConectCon HUB" },
+      { property: "og:description", content: "Acesse o ConectCon HUB, sua central de suporte e atendimento multicanal." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -62,8 +62,8 @@ function LoginPage() {
     });
   }, []);
 
-  const nomeMarca = marca?.titulo || marca?.nome || "Atende.ai";
-  const logoMarca = (theme === "dark" && marca?.logo_escuro) || marca?.logo || "";
+  const nomeMarca = marca?.titulo || marca?.nome || "ConectCon HUB";
+  const logoMarca = (theme === "dark" && marca?.logo_escuro) || marca?.logo || (theme === "dark" ? "/logo-atendeai-azul.png" : "/logo-atendeai-azulesc.png");
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {

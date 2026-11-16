@@ -59,9 +59,9 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
   staticData: { sitemap: false },
   head: () => ({
     meta: [
-      { title: "Dashboard — Atende.ai" },
+      { title: "Dashboard — ConectCon HUB" },
       { name: "description", content: "Seu painel com tarefas, atualizações e indicadores das áreas que você acessa." },
-      { property: "og:title", content: "Dashboard — Atende.ai" },
+      { property: "og:title", content: "Dashboard — ConectCon HUB" },
       { property: "og:description", content: "Seu painel com tarefas, atualizações e indicadores das áreas que você acessa." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

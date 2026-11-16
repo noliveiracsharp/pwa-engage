@@ -29,9 +29,9 @@ export const Route = createFileRoute("/_authenticated/documentos")({
   staticData: { sitemap: false },
   head: () => ({
     meta: [
-      { title: "Documentos — Atende.ai" },
+      { title: "Documentos — ConectCon HUB" },
       { name: "description", content: "Contratos e termos de responsabilidade por usuário, cliente, empresa e veículo." },
-      { property: "og:title", content: "Documentos — Atende.ai" },
+      { property: "og:title", content: "Documentos — ConectCon HUB" },
       { property: "og:description", content: "Contratos e termos de responsabilidade por usuário, cliente, empresa e veículo." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

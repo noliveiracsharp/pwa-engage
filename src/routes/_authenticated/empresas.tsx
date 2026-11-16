@@ -16,9 +16,9 @@ export const Route = createFileRoute("/_authenticated/empresas")({
   staticData: { sitemap: false },
   head: () => ({
     meta: [
-      { title: "Empresas — Atende.ai" },
+      { title: "Empresas — ConectCon HUB" },
       { name: "description", content: "Empresas atendidas, instâncias vinculadas e campos personalizados." },
-      { property: "og:title", content: "Empresas — Atende.ai" },
+      { property: "og:title", content: "Empresas — ConectCon HUB" },
       {
         property: "og:description",
         content: "Empresas atendidas, instâncias vinculadas e campos personalizados.",

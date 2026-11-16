@@ -19,9 +19,9 @@ export const Route = createFileRoute("/_authenticated/atendimentos_/dashboard")(
   staticData: { sitemap: false },
   head: () => ({
     meta: [
-      { title: "Dashboard de Atendimentos — Atende.ai" },
+      { title: "Dashboard de Atendimentos — ConectCon HUB" },
       { name: "description", content: "Nota média, tempo médio e cumprimento de SLA por atendente e departamento." },
-      { property: "og:title", content: "Dashboard de Atendimentos — Atende.ai" },
+      { property: "og:title", content: "Dashboard de Atendimentos — ConectCon HUB" },
       { property: "og:description", content: "Indicadores gerenciais do atendimento." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

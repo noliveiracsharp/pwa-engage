@@ -19,9 +19,9 @@ export const Route = createFileRoute("/_authenticated/relatorios_/board")({
   staticData: { sitemap: false },
   head: () => ({
     meta: [
-      { title: "Painel do Board — Atende.ai" },
+      { title: "Painel do Board — ConectCon HUB" },
       { name: "description", content: "Relatório executivo para a diretoria: caixa, receita recorrente, cobrança, ofertas e compras." },
-      { property: "og:title", content: "Painel do Board — Atende.ai" },
+      { property: "og:title", content: "Painel do Board — ConectCon HUB" },
       { property: "og:description", content: "Relatório executivo para a diretoria: caixa, receita recorrente, cobrança, ofertas e compras." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

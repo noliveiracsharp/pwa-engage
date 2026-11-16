@@ -23,7 +23,7 @@ export function LegalPage({
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
-          <Link to="/" className="text-xl font-bold">Atende.ai</Link>
+          <Link to="/" className="text-xl font-bold">ConectCon HUB</Link>
           <Link to="/" className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" /> Voltar ao site
           </Link>

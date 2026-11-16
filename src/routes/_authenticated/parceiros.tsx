@@ -35,9 +35,9 @@ export const Route = createFileRoute("/_authenticated/parceiros")({
   staticData: { sitemap: false },
   head: () => ({
     meta: [
-      { title: "Parceiros de Negócios — Atende.ai" },
+      { title: "Parceiros de Negócios — ConectCon HUB" },
       { name: "description", content: "Cadastro de clientes e fornecedores para financeiro e faturamento." },
-      { property: "og:title", content: "Parceiros de Negócios — Atende.ai" },
+      { property: "og:title", content: "Parceiros de Negócios — ConectCon HUB" },
       { property: "og:description", content: "Cadastro de clientes e fornecedores para financeiro e faturamento." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

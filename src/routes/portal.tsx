@@ -16,9 +16,9 @@ export const Route = createFileRoute("/portal")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Portal do Cliente — Atende.ai" },
+      { title: "Portal do Cliente — ConectCon HUB" },
       { name: "description", content: "Acompanhe seus chamados e o histórico das suas conversas." },
-      { property: "og:title", content: "Portal do Cliente — Atende.ai" },
+      { property: "og:title", content: "Portal do Cliente — ConectCon HUB" },
       { property: "og:description", content: "Acompanhe seus chamados e o histórico das suas conversas." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -51,7 +51,7 @@ function Portal() {
     <div className="min-h-screen bg-muted/40">
       <header className="border-b border-border bg-card">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3">
-          <span className="font-semibold text-primary">Atende.ai · Portal do Cliente</span>
+          <span className="font-semibold text-primary">ConectCon HUB · Portal do Cliente</span>
           {cliente && <Button variant="ghost" size="sm" onClick={sair}><LogOut className="mr-1 h-4 w-4" /> Sair</Button>}
         </div>
       </header>

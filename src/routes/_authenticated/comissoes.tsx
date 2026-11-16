@@ -30,9 +30,9 @@ export const Route = createFileRoute("/_authenticated/comissoes")({
   staticData: { sitemap: false },
   head: () => ({
     meta: [
-      { title: "Comissões — Atende.ai" },
+      { title: "Comissões — ConectCon HUB" },
       { name: "description", content: "Extrato e configuração de comissões de vendas, compras e integradores sobre as ofertas." },
-      { property: "og:title", content: "Comissões — Atende.ai" },
+      { property: "og:title", content: "Comissões — ConectCon HUB" },
       { property: "og:description", content: "Extrato e configuração de comissões de vendas, compras e integradores sobre as ofertas." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

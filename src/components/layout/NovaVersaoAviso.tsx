@@ -127,7 +127,7 @@ export function NovaVersaoAviso() {
         <Sparkles className="h-6 w-6 shrink-0 text-primary" />
         <div className="flex-1 text-sm">
           <p className="font-semibold text-foreground">
-            {nova ? `Nova versão ${nova} do Atende.ai disponível!` : "Nova versão do Atende.ai disponível!"}
+            {nova ? `Nova versão ${nova} do ConectCon HUB disponível!` : "Nova versão do ConectCon HUB disponível!"}
           </p>
           <p className="text-muted-foreground">
             Uma atualização foi publicada. O sistema será atualizado e você fará login novamente em{" "}

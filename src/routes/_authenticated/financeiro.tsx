@@ -130,9 +130,9 @@ export const Route = createFileRoute("/_authenticated/financeiro")({
   staticData: { sitemap: false },
   head: () => ({
     meta: [
-      { title: "Financeiro — Atende.ai" },
+      { title: "Financeiro — ConectCon HUB" },
       { name: "description", content: "Contas a receber, contas a pagar e fluxo de caixa realizado da empresa." },
-      { property: "og:title", content: "Financeiro — Atende.ai" },
+      { property: "og:title", content: "Financeiro — ConectCon HUB" },
       { property: "og:description", content: "Contas a receber, contas a pagar e fluxo de caixa realizado da empresa." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

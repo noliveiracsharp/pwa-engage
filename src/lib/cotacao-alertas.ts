@@ -5,7 +5,7 @@ import { pick, type Row } from "@/lib/row";
 /** Texto do WhatsApp enviado ao aprovador; o link vira o botão "Acesse" no envio. */
 export function mensagemAprovador(d: { nome: string; codigo: string; valor: number; link: string; marca?: string }) {
   const primeiro = d.nome.trim().split(/\s+/)[0] || "aprovador";
-  const marca = d.marca?.trim() || "Atende.ai";
+  const marca = d.marca?.trim() || "ConectCon HUB";
   return `Olá, ${primeiro}! A cotação *${d.codigo}* no valor de *${formatBRL(d.valor)}* aguarda a sua aprovação no ${marca}.\n\n${d.link}`;
 }
 

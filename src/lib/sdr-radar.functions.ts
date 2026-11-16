@@ -36,7 +36,7 @@ export const buscarLeads = createServerFn({ method: "POST" })
     const q = `${data.segmento}, ${data.cidade}`;
     const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&extratags=1&namedetails=1&limit=50&countrycodes=br&q=${encodeURIComponent(q)}`;
     try {
-      const r = await fetch(url, { headers: { "User-Agent": "Atende.ai Radar de Leads (contato@atende.ai)", "Accept-Language": "pt-BR" } });
+      const r = await fetch(url, { headers: { "User-Agent": "ConectCon HUB Radar de Leads (contato@atende.ai)", "Accept-Language": "pt-BR" } });
       if (!r.ok) return { leads: [], erro: "Serviço de busca indisponível no momento. Tente de novo em instantes." };
       const lista = (await r.json()) as Array<Record<string, unknown>>;
       const IGNORAR = new Set(["highway", "boundary", "place", "natural", "waterway", "railway", "route"]);

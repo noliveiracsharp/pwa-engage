@@ -81,9 +81,9 @@ export const Route = createFileRoute("/_authenticated/fluxos")({
   staticData: { sitemap: false },
   head: () => ({
     meta: [
-      { title: "Fluxos de Atendimento — Atende.ai" },
+      { title: "Fluxos de Atendimento — ConectCon HUB" },
       { name: "description", content: "Monte chatbots e fluxos de atendimento visualmente, integrados ao Kanban." },
-      { property: "og:title", content: "Fluxos de Atendimento — Atende.ai" },
+      { property: "og:title", content: "Fluxos de Atendimento — ConectCon HUB" },
       { property: "og:description", content: "Monte chatbots e fluxos de atendimento visualmente, integrados ao Kanban." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

@@ -10,9 +10,9 @@ export const Route = createFileRoute("/_authenticated/instancias")({
   staticData: { sitemap: false },
   head: () => ({
     meta: [
-      { title: "Canais & Instâncias — Atende.ai" },
+      { title: "Canais & Instâncias — ConectCon HUB" },
       { name: "description", content: "Instâncias de WhatsApp, Instagram, Telegram e chat do site da empresa ativa." },
-      { property: "og:title", content: "Canais & Instâncias — Atende.ai" },
+      { property: "og:title", content: "Canais & Instâncias — ConectCon HUB" },
       { property: "og:description", content: "Instâncias de WhatsApp, Instagram, Telegram e chat do site da empresa ativa." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

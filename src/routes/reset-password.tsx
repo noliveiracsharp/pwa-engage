@@ -15,11 +15,11 @@ export const Route = createFileRoute("/reset-password")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Redefinir senha — Atende.ai" },
+      { title: "Redefinir senha — ConectCon HUB" },
       { name: "robots", content: "noindex" },
-      { name: "description", content: "Defina uma nova senha para sua conta no Atende.ai." },
-      { property: "og:title", content: "Redefinir senha — Atende.ai" },
-      { property: "og:description", content: "Defina uma nova senha para sua conta no Atende.ai." },
+      { name: "description", content: "Defina uma nova senha para sua conta no ConectCon HUB." },
+      { property: "og:title", content: "Redefinir senha — ConectCon HUB" },
+      { property: "og:description", content: "Defina uma nova senha para sua conta no ConectCon HUB." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -98,7 +98,7 @@ function ResetPasswordPage() {
     });
   }, []);
 
-  const nomeMarca = marca?.titulo || marca?.nome || "Atende.ai";
+  const nomeMarca = marca?.titulo || marca?.nome || "ConectCon HUB";
   const logo = (theme === "dark" && marca?.logo_escuro) || marca?.logo || "";
   const tamanhoOk = senha.length >= MIN;
   const iguais = senha.length > 0 && senha === repetir;

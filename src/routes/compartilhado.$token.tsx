@@ -18,9 +18,9 @@ export const Route = createFileRoute("/compartilhado/$token")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Cronograma do projeto — Atende.ai" },
+      { title: "Cronograma do projeto — ConectCon HUB" },
       { name: "description", content: "Acompanhe o andamento e o cronograma do seu projeto." },
-      { property: "og:title", content: "Cronograma do projeto — Atende.ai" },
+      { property: "og:title", content: "Cronograma do projeto — ConectCon HUB" },
       { property: "og:description", content: "Acompanhe o andamento e o cronograma do seu projeto." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

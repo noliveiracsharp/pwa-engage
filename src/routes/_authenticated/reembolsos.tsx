@@ -36,9 +36,9 @@ export const Route = createFileRoute("/_authenticated/reembolsos")({
   staticData: { sitemap: false },
   head: () => ({
     meta: [
-      { title: "Reembolsos e Prestação de Contas — Atende.ai" },
+      { title: "Reembolsos e Prestação de Contas — ConectCon HUB" },
       { name: "description", content: "Despesas com leitura automática do comprovante, cartões corporativos e aprovação de reembolsos." },
-      { property: "og:title", content: "Reembolsos e Prestação de Contas — Atende.ai" },
+      { property: "og:title", content: "Reembolsos e Prestação de Contas — ConectCon HUB" },
       { property: "og:description", content: "Despesas com leitura automática do comprovante, cartões corporativos e aprovação de reembolsos." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

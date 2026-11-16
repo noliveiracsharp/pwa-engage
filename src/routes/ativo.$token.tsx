@@ -14,9 +14,9 @@ export const Route = createFileRoute("/ativo/$token")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Ficha do equipamento — Atende.ai" },
+      { title: "Ficha do equipamento — ConectCon HUB" },
       { name: "description", content: "Ficha técnica, histórico de manutenções e abertura de chamado do equipamento." },
-      { property: "og:title", content: "Ficha do equipamento — Atende.ai" },
+      { property: "og:title", content: "Ficha do equipamento — ConectCon HUB" },
       { property: "og:description", content: "Histórico de manutenções e abertura de chamado pelo QR Code." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

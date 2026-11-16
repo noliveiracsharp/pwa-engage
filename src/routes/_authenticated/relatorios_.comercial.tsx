@@ -20,9 +20,9 @@ export const Route = createFileRoute("/_authenticated/relatorios_/comercial")({
   staticData: { sitemap: false },
   head: () => ({
     meta: [
-      { title: "Painel Comercial — Atende.ai" },
+      { title: "Painel Comercial — ConectCon HUB" },
       { name: "description", content: "Metas por vendedor, previsão de vendas ponderada e motivos de perda." },
-      { property: "og:title", content: "Painel Comercial — Atende.ai" },
+      { property: "og:title", content: "Painel Comercial — ConectCon HUB" },
       { property: "og:description", content: "Metas por vendedor, previsão de vendas ponderada e motivos de perda." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

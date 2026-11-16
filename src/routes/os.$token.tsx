@@ -15,9 +15,9 @@ export const Route = createFileRoute("/os/$token")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Relatório de manutenção — Atende.ai" },
+      { title: "Relatório de manutenção — ConectCon HUB" },
       { name: "description", content: "Relatório da manutenção com checklist, fotos e assinatura do cliente." },
-      { property: "og:title", content: "Relatório de manutenção — Atende.ai" },
+      { property: "og:title", content: "Relatório de manutenção — ConectCon HUB" },
       { property: "og:description", content: "Relatório da manutenção com checklist, fotos e assinatura do cliente." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

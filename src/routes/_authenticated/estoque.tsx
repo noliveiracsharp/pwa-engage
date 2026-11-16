@@ -26,9 +26,9 @@ export const Route = createFileRoute("/_authenticated/estoque")({
   staticData: { sitemap: false },
   head: () => ({
     meta: [
-      { title: "Controle de Estoque — Atende.ai" },
+      { title: "Controle de Estoque — ConectCon HUB" },
       { name: "description", content: "Saldos por local, movimentações (Kardex) e locais de estoque da empresa." },
-      { property: "og:title", content: "Controle de Estoque — Atende.ai" },
+      { property: "og:title", content: "Controle de Estoque — ConectCon HUB" },
       { property: "og:description", content: "Saldos por local, movimentações (Kardex) e locais de estoque da empresa." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

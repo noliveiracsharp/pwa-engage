@@ -20,9 +20,9 @@ export const Route = createFileRoute("/_authenticated/relatorios_/envios")({
   staticData: { sitemap: false },
   head: () => ({
     meta: [
-      { title: "Relatório de Envios e Leituras — Atende.ai" },
+      { title: "Relatório de Envios e Leituras — ConectCon HUB" },
       { name: "description", content: "E-mails e mensagens de WhatsApp enviados a clientes e fornecedores, com entrega e leitura." },
-      { property: "og:title", content: "Relatório de Envios e Leituras — Atende.ai" },
+      { property: "og:title", content: "Relatório de Envios e Leituras — ConectCon HUB" },
       { property: "og:description", content: "Envios por e-mail e WhatsApp com status de entrega e leitura." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

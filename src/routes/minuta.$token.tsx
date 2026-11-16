@@ -15,9 +15,9 @@ export const Route = createFileRoute("/minuta/$token")({
   validateSearch: (s: Record<string, unknown>) => ({ a: typeof s["a"] === "string" ? s["a"] : "" }),
   head: () => ({
     meta: [
-      { title: "Minuta de contrato — Atende.ai" },
+      { title: "Minuta de contrato — ConectCon HUB" },
       { name: "description", content: "Leitura da minuta contratual para análise prévia." },
-      { property: "og:title", content: "Minuta de contrato — Atende.ai" },
+      { property: "og:title", content: "Minuta de contrato — ConectCon HUB" },
       { property: "og:description", content: "Leitura da minuta contratual para análise prévia." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

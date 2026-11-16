@@ -33,9 +33,9 @@ export const Route = createFileRoute("/_authenticated/pessoas")({
   staticData: { sitemap: false },
   head: () => ({
     meta: [
-      { title: "Pessoas — Atende.ai" },
+      { title: "Pessoas — ConectCon HUB" },
       { name: "description", content: "Cadastro e gestão das pessoas atendidas pela empresa." },
-      { property: "og:title", content: "Pessoas — Atende.ai" },
+      { property: "og:title", content: "Pessoas — ConectCon HUB" },
       { property: "og:description", content: "Cadastro e gestão das pessoas atendidas pela empresa." },
     ],
   }),

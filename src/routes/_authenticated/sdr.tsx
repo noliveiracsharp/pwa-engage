@@ -28,9 +28,9 @@ export const Route = createFileRoute("/_authenticated/sdr")({
   staticData: { sitemap: false },
   head: () => ({
     meta: [
-      { title: "Radar de Leads (SDR) — Atende.ai" },
+      { title: "Radar de Leads (SDR) — ConectCon HUB" },
       { name: "description", content: "Encontre novos clientes por segmento e cidade e monte a fila de prospecção do SDR." },
-      { property: "og:title", content: "Radar de Leads (SDR) — Atende.ai" },
+      { property: "og:title", content: "Radar de Leads (SDR) — ConectCon HUB" },
       { property: "og:description", content: "Descoberta de empresas por segmento e região com enriquecimento por CNPJ." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

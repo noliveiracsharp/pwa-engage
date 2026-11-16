@@ -12,9 +12,9 @@ export const Route = createFileRoute("/_authenticated/itens_categorias")({
   staticData: { sitemap: false },
   head: () => ({
     meta: [
-      { title: "Categorias de Produtos e Serviços — Atende.ai" },
+      { title: "Categorias de Produtos e Serviços — ConectCon HUB" },
       { name: "description", content: "Categorias do catálogo com centro de custo, conta gerencial e padrão fiscal preenchidos automaticamente." },
-      { property: "og:title", content: "Categorias de Produtos e Serviços — Atende.ai" },
+      { property: "og:title", content: "Categorias de Produtos e Serviços — ConectCon HUB" },
       { property: "og:description", content: "Categorias do catálogo com centro de custo, conta gerencial e padrão fiscal preenchidos automaticamente." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

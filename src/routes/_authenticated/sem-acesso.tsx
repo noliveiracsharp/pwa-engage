@@ -5,9 +5,9 @@ export const Route = createFileRoute("/_authenticated/sem-acesso")({
   staticData: { sitemap: false },
   head: () => ({
     meta: [
-      { title: "Sem acesso — Atende.ai" },
+      { title: "Sem acesso — ConectCon HUB" },
       { name: "description", content: "Seu perfil ainda não possui telas liberadas." },
-      { property: "og:title", content: "Sem acesso — Atende.ai" },
+      { property: "og:title", content: "Sem acesso — ConectCon HUB" },
       { property: "og:description", content: "Seu perfil ainda não possui telas liberadas." },
     ],
   }),

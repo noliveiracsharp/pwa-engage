@@ -99,11 +99,11 @@ export function aplicarManifesto(slug: string, icone?: string) {
   }
 }
 
-/** Mantém o nome da empresa no título da aba, trocando "Atende.ai" a cada navegação. */
+/** Mantém o nome da empresa no título da aba, trocando "ConectCon HUB" a cada navegação. */
 export function observarTitulo(titulo: string) {
   const ajustar = () => {
     const atual = document.title;
-    if (atual.includes("Atende.ai")) {
+    if (atual.includes("ConectCon HUB")) {
       const novo = atual.replace(/Atende\.ai/g, titulo);
       if (novo !== atual) document.title = novo;
     } else if (!atual) document.title = titulo;

@@ -11,9 +11,9 @@ export const Route = createFileRoute("/chamada/$sala")({
   staticData: { sitemap: false },
   head: () => ({
     meta: [
-      { title: "Chamada ao vivo — Atende.ai" },
+      { title: "Chamada ao vivo — ConectCon HUB" },
       { name: "description", content: "Entre na chamada de áudio e vídeo com o atendimento, direto pelo navegador." },
-      { property: "og:title", content: "Chamada ao vivo — Atende.ai" },
+      { property: "og:title", content: "Chamada ao vivo — ConectCon HUB" },
       { property: "og:description", content: "Toque para entrar na chamada com o atendimento, sem instalar nada." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

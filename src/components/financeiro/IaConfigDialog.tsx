@@ -64,7 +64,7 @@ export function IaConfigPainel({ readOnly }: { readOnly?: boolean }) {
           <div className="rounded-md bg-primary/10 p-2 text-primary"><BrainCircuit className="h-5 w-5" /></div>
           <div className="min-w-0 flex-1 space-y-1">
             <div className="flex flex-wrap items-center gap-2">
-              <p className="font-semibold">{ativa ? PROVEDORES[r.provedor] ?? r.provedor : "IA incluída no plano Atende.ai"}</p>
+              <p className="font-semibold">{ativa ? PROVEDORES[r.provedor] ?? r.provedor : "IA incluída no plano ConectCon HUB"}</p>
               <Badge className={ativa ? "bg-success text-success-foreground hover:bg-success" : ""} variant={ativa ? "default" : "secondary"}>
                 {ativa ? "Chave própria ativa" : "Plano"}
               </Badge>
@@ -75,7 +75,7 @@ export function IaConfigPainel({ readOnly }: { readOnly?: boolean }) {
                 <p className="text-sm text-muted-foreground">Modelo: {r.modelo || "padrão do provedor"}</p>
               </>
             ) : (
-              <p className="text-sm text-muted-foreground">Usa a IA da Atende.ai com o limite mensal do plano contratado.</p>
+              <p className="text-sm text-muted-foreground">Usa a IA da ConectCon HUB com o limite mensal do plano contratado.</p>
             )}
           </div>
         </div>
@@ -94,7 +94,7 @@ export function IaConfigPainel({ readOnly }: { readOnly?: boolean }) {
       <div className="flex items-center justify-between gap-3 rounded-md border p-3">
         <div>
           <p className="text-sm font-medium">Usar chave própria da empresa</p>
-          <p className="text-xs text-muted-foreground">Desligado: usa a IA incluída no plano Atende.ai, com limite mensal.</p>
+          <p className="text-xs text-muted-foreground">Desligado: usa a IA incluída no plano ConectCon HUB, com limite mensal.</p>
         </div>
         <Switch checked={propria} onCheckedChange={setPropria} />
       </div>

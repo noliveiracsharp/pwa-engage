@@ -16,9 +16,9 @@ export const Route = createFileRoute("/_authenticated/relatorios_/kpis")({
   staticData: { sitemap: false },
   head: () => ({
     meta: [
-      { title: "Cockpit de KPIs — Atende.ai" },
+      { title: "Cockpit de KPIs — ConectCon HUB" },
       { name: "description", content: "Indicadores de recorrência, vendas e operação de campo: MRR, churn, LTV, CAC, payback, SLA e FCR." },
-      { property: "og:title", content: "Cockpit de KPIs — Atende.ai" },
+      { property: "og:title", content: "Cockpit de KPIs — ConectCon HUB" },
       { property: "og:description", content: "Indicadores de recorrência, vendas e operação de campo." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

@@ -7,9 +7,9 @@ export const Route = createFileRoute("/widget/$instanciaId")({
   staticData: { sitemap: false },
   head: () => ({
     meta: [
-      { title: "Chat de atendimento — Atende.ai" },
+      { title: "Chat de atendimento — ConectCon HUB" },
       { name: "description", content: "Converse com nossa equipe de atendimento em tempo real." },
-      { property: "og:title", content: "Chat de atendimento — Atende.ai" },
+      { property: "og:title", content: "Chat de atendimento — ConectCon HUB" },
       { property: "og:description", content: "Converse com nossa equipe de atendimento em tempo real." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

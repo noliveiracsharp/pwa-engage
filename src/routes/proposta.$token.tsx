@@ -16,9 +16,9 @@ export const Route = createFileRoute("/proposta/$token")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Proposta comercial — Atende.ai" },
+      { title: "Proposta comercial — ConectCon HUB" },
       { name: "description", content: "Confira a proposta comercial e assine eletronicamente." },
-      { property: "og:title", content: "Proposta comercial — Atende.ai" },
+      { property: "og:title", content: "Proposta comercial — ConectCon HUB" },
       { property: "og:description", content: "Confira a proposta comercial e assine eletronicamente." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
