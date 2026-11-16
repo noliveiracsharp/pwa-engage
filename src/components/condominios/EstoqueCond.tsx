@@ -344,7 +344,7 @@ export function MateriaisOs({ condominioId, osId, editavel, nomeCondominio = "",
     const it = nItem.get(v.item_id);
     if (!it) return void toast.error("Escolha o material.");
     const sugestao = String(falta || qtdPedida || 1).replace(".", ",");
-    const resp = await perguntar({ title: "Solicitar compra", description: `Quantidade de ${s(it["nome"])} (${s(it["unidade"])}) a comprar:`, defaultValue: sugestao } as never);
+    const resp = await perguntar({ title: "Solicitar compra", description: `Quantidade de ${s(it["nome"])} (${s(it["unidade"])}) a comprar:`, defaultValue: sugestao });
     if (resp == null) return;
     const q = num(String(resp));
     if (q <= 0) return void toast.error("Informe uma quantidade válida.");
