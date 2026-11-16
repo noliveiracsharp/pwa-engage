@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip as RTooltip, XAxis, YAxis } from "recharts";
-import { Bell, Brain, Clock, Filter, Loader2, MessageSquarePlus, Plus, Printer, RotateCcw, Search, Settings2, Sparkles, Star, Trash2 } from "lucide-react";
+import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip as RTooltip, XAxis, YAxis } from "recharts";
+import { AlertTriangle, BarChart3, CheckCircle2, Gauge, Inbox, Users, Wrench, Bell, Brain, Clock, Filter, Loader2, MessageSquarePlus, Plus, Printer, RotateCcw, Search, Settings2, Sparkles, Star, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -165,26 +165,63 @@ function Painel({ atendimentos, onFiltro }: { atendimentos: Row[]; onFiltro: (f:
   const agora = new Date();
   const conta = (st: string, fora: boolean) => atendimentos.filter((a) => a["status"] === st && (situacaoSla(a as never, agora) === "fora") === fora).length;
   const porStatus = STATUS_ATEND.map((x) => ({ nome: x.label, total: atendimentos.filter((a) => a["status"] === x.value).length }));
+  const ativos = atendimentos.filter((a) => grupos.some((g) => g.status === a["status"]));
+  const atrasados = ativos.filter((a) => situacaoSla(a as never, agora) === "fora").length;
+  const slaPct = ativos.length ? Math.round(((ativos.length - atrasados) / ativos.length) * 100) : null;
+  const icones = { pendente_resposta: Clock, em_analise: Search, em_manutencao: Wrench, ocorrencias: AlertTriangle } as Record<string, typeof Clock>;
+  const kpis = [
+    { rot: "Ativos", val: String(ativos.length), icon: Inbox, tom: "text-foreground" },
+    { rot: "Fora do prazo", val: String(atrasados), icon: AlertTriangle, tom: atrasados ? "text-destructive" : "text-muted-foreground" },
+    { rot: "No prazo", val: String(ativos.length - atrasados), icon: CheckCircle2, tom: "text-success" },
+    { rot: "SLA cumprido", val: slaPct == null ? "—" : `${slaPct}%`, icon: Gauge, tom: "text-primary" },
+  ];
+  const sla = [{ nome: "No prazo", total: ativos.length - atrasados }, { nome: "Fora do prazo", total: atrasados }];
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-2">
-        {grupos.map((g) => [true, false].map((fora) => (
-          <button key={g.status + fora} type="button" onClick={() => onFiltro({ status: g.status, sla: fora ? "fora" : "dentro" })}
-            className={cn("rounded-lg border p-5 text-center transition hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-              fora ? "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200" : "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200")}>
-            <div className="text-4xl font-semibold tabular-nums">{conta(g.status, fora)}</div>
-            <div className="mt-1 text-sm">{g.nome} {fora ? "fora do prazo" : "dentro do prazo"}</div>
-          </button>
-        )))}
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+        {kpis.map((k) => (
+          <div key={k.rot} className="flex items-center gap-3 rounded-xl border bg-card p-4">
+            <div className="grid size-10 place-items-center rounded-lg bg-muted"><k.icon className={cn("size-5", k.tom)} aria-hidden /></div>
+            <div><div className="text-xs text-muted-foreground">{k.rot}</div><div className={cn("text-2xl font-semibold tabular-nums", k.tom)}>{k.val}</div></div>
+          </div>
+        ))}
       </div>
-      <div className="rounded-lg border p-4">
-        <h3 className="mb-2 text-sm font-semibold">Atendimentos por status</h3>
-        <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={porStatus}><CartesianGrid strokeDasharray="3 3" className="stroke-border" /><XAxis dataKey="nome" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} /><YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} /><RTooltip />
-              <Bar dataKey="total" radius={[4, 4, 0, 0]}>{porStatus.map((_, i) => <Cell key={i} fill={["#f59e0b", "#0ea5e9", "#8b5cf6", "#f43f5e", "#f97316", "#10b981"][i]} />)}</Bar>
-            </BarChart>
-          </ResponsiveContainer>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {grupos.map((g) => {
+          const fora = conta(g.status, true), dentro = conta(g.status, false); const I = icones[g.status] ?? Clock;
+          return (
+            <div key={g.status} className={cn("rounded-xl border bg-card p-4 transition", fora > 0 && "border-destructive/40")}>
+              <div className="flex items-center justify-between"><span className="text-sm font-medium">{g.nome}</span><I className="size-4 text-muted-foreground" aria-hidden /></div>
+              <div className="mt-2 text-3xl font-semibold tabular-nums">{fora + dentro}</div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button type="button" onClick={() => onFiltro({ status: g.status, sla: "fora" })} className={cn("rounded-full border px-2.5 py-1 text-xs font-medium transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", fora ? "border-destructive/40 text-destructive" : "text-muted-foreground")}>{fora} fora do prazo</button>
+                <button type="button" onClick={() => onFiltro({ status: g.status, sla: "dentro" })} className="rounded-full border border-success/40 px-2.5 py-1 text-xs font-medium text-success transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{dentro} no prazo</button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div className="grid gap-3 lg:grid-cols-[2fr_1fr]">
+        <div className="rounded-xl border bg-card p-4">
+          <h3 className="mb-2 text-sm font-semibold">Atendimentos por status</h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={porStatus}><CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border" /><XAxis dataKey="nome" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} /><YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} /><RTooltip cursor={{ fill: "var(--muted)" }} contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 8 }} />
+                <Bar dataKey="total" radius={[6, 6, 0, 0]}>{porStatus.map((_, i) => <Cell key={i} fill={["#f59e0b", "#0ea5e9", "#8b5cf6", "#f43f5e", "#f97316", "#10b981"][i]} />)}</Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+        <div className="rounded-xl border bg-card p-4">
+          <h3 className="mb-2 text-sm font-semibold">Cumprimento de SLA</h3>
+          {!ativos.length ? <p className="grid h-64 place-items-center text-sm text-muted-foreground">Nenhum atendimento ativo.</p> : (
+            <div className="relative h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart><Pie data={sla} dataKey="total" nameKey="nome" innerRadius="60%" outerRadius="85%" paddingAngle={2} stroke="none"><Cell fill="var(--success)" /><Cell fill="var(--destructive)" /></Pie><RTooltip contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 8 }} /></PieChart>
+              </ResponsiveContainer>
+              <div className="pointer-events-none absolute inset-0 grid place-items-center"><div className="text-center"><div className="text-2xl font-semibold">{slaPct}%</div><div className="text-xs text-muted-foreground">no prazo</div></div></div>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -286,6 +323,10 @@ function Lista({ ctx, filtroPainel, limparPainel }: { ctx: CtxAtend; filtroPaine
   );
 }
 
+function Vazio({ texto }: { texto: string }) {
+  return <p className="grid h-32 place-items-center rounded-lg border border-dashed text-sm text-muted-foreground">{texto}</p>;
+}
+
 function Campo({ label, children }: { label: string; children: React.ReactNode }) {
   return <div className="space-y-1.5"><Label>{label}</Label>{children}</div>;
 }
@@ -377,48 +418,57 @@ function Desempenho({ ctx }: { ctx: CtxAtend }) {
         <Button onClick={() => imprimirElemento("cond-atend-relatorio")}><Printer className="size-4" /> Imprimir / PDF</Button>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-[260px_1fr]">
-        <div className="rounded-lg border p-4 text-center">
+      <div className="grid gap-3 lg:grid-cols-[300px_1fr]">
+        <div className="rounded-xl border bg-card p-5">
           <div className="text-sm text-muted-foreground">Índice de reputação da gestão</div>
-          <div className={cn("text-6xl font-bold tabular-nums", corRep)}>{rep.indice}</div>
+          <div className="mt-2 flex items-baseline gap-2"><span className={cn("text-5xl font-bold tabular-nums", corRep)}>{rep.indice}</span><span className="text-sm text-muted-foreground">/ 100</span></div>
           <div className={cn("font-semibold", corRep)}>{rep.faixa}</div>
-          <dl className="mt-3 grid grid-cols-2 gap-1 text-left text-xs">
-            <dt className="text-muted-foreground">Satisfação</dt><dd className="text-right">{notas.length ? `${(notas.reduce((a, b) => a + b, 0) / notas.length).toFixed(1).replace(".", ",")} ★ (${notas.length})` : "—"}</dd>
-            <dt className="text-muted-foreground">SLA cumprido</dt><dd className="text-right">{pct(rep.sla)}</dd>
-            <dt className="text-muted-foreground">Resolução</dt><dd className="text-right">{pct(rep.resolucao)}</dd>
-            <dt className="text-muted-foreground">1ª resposta média</dt><dd className="text-right">{formatarDuracao(mediaPrim)}</dd>
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-primary" style={{ width: `${rep.indice}%` }} /></div>
+          <dl className="mt-4 space-y-2 text-sm">
+            {([["Satisfação (40%)", notas.length ? `${(notas.reduce((a, b) => a + b, 0) / notas.length).toFixed(1).replace(".", ",")} ★ (${notas.length})` : "—"], ["SLA cumprido (30%)", pct(rep.sla)], ["Resolução (20%)", pct(rep.resolucao)], ["1ª resposta média (10%)", formatarDuracao(mediaPrim)]] as const).map(([k, v]) => (
+              <div key={k} className="flex justify-between border-b border-border/50 pb-1.5 last:border-0"><dt className="text-muted-foreground">{k}</dt><dd className="font-medium tabular-nums">{v}</dd></div>
+            ))}
           </dl>
-          <p className="mt-2 text-[11px] text-muted-foreground">40% satisfação · 30% SLA · 20% resolução · 10% agilidade</p>
         </div>
-        <div className="rounded-lg border p-4">
-          <h3 className="mb-2 text-sm font-semibold">Desempenho da equipe (respostas e tempo médio em horas úteis)</h3>
-          {!equipe.length ? <p className="text-sm text-muted-foreground">Sem respostas da gestão no período.</p> : (
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={equipe.map((e) => ({ ...e, horas: e.media == null ? 0 : +(e.media / 60).toFixed(1) }))} layout="vertical" margin={{ left: 20 }}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" /><XAxis type="number" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} /><YAxis type="category" dataKey="nome" width={130} tick={{ fontSize: 11, fill: "var(--foreground)" }} /><RTooltip />
-                  <Bar dataKey="respostas" name="Respostas" fill="var(--primary)" radius={[0, 4, 4, 0]} />
-                  <Bar dataKey="horas" name="Tempo médio (h)" fill="#f59e0b" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          )}
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="rounded-xl border bg-card p-5">
+            <h3 className="mb-3 inline-flex items-center gap-2 text-sm font-semibold"><Users className="size-4" aria-hidden /> Desempenho da equipe</h3>
+            {!equipe.length ? <Vazio texto="Sem respostas da gestão no período." /> : (
+              <ul className="space-y-3">{equipe.slice(0, 8).map((e) => (
+                <li key={e.nome} className="flex items-center gap-3">
+                  <div className="grid size-8 shrink-0 place-items-center rounded-full bg-primary/15 text-xs font-semibold text-primary">{e.nome.slice(0, 2).toUpperCase()}</div>
+                  <div className="min-w-0 flex-1"><div className="truncate text-sm font-medium">{e.nome}</div><div className="text-xs text-muted-foreground">{e.respostas} resposta(s) · média {formatarDuracao(e.media)}</div></div>
+                </li>
+              ))}</ul>
+            )}
+          </div>
+          <div className="rounded-xl border bg-card p-5">
+            <h3 className="mb-3 inline-flex items-center gap-2 text-sm font-semibold"><BarChart3 className="size-4" aria-hidden /> Assuntos mais demandados</h3>
+            {!porAssunto.length ? <Vazio texto="Sem atendimentos no período." /> : (
+              <ul className="space-y-2.5">{porAssunto.slice(0, 6).map((x) => (
+                <li key={x.label}><div className="mb-1 flex justify-between text-sm"><span className="truncate">{x.label}</span><span className="tabular-nums text-muted-foreground">{x.total} · {Math.round((x.total / per.length) * 100)}%</span></div>
+                  <div className="h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-primary" style={{ width: `${(x.total / per.length) * 100}%` }} /></div></li>
+              ))}</ul>
+            )}
+          </div>
         </div>
       </div>
 
-      {ia && (
-        <div className="space-y-2 rounded-lg border border-primary/30 bg-primary/5 p-4">
-          <h3 className="inline-flex items-center gap-2 font-semibold"><Brain className="size-4" /> Leitura da IA — sentimento {ia.sentimento}</h3>
+      {ia ? (
+        <div className="space-y-4 rounded-xl border border-primary/30 bg-primary/5 p-5">
+          <div className="flex flex-wrap items-center gap-2"><h3 className="inline-flex items-center gap-2 font-semibold"><Brain className="size-4" /> Diagnóstico da IA</h3><span className="rounded-full border border-primary/40 px-2 py-0.5 text-xs capitalize">Sentimento {ia.sentimento}</span></div>
           <p className="text-sm">{ia.resumo}</p>
           <div className="grid gap-3 text-sm md:grid-cols-3">
-            {([["Pontos fortes", ia.pontosFortes], ["Dores recorrentes", ia.dores], ["Recomendações", ia.recomendacoes]] as const).map(([t, l]) => (
-              <div key={t}><div className="font-medium">{t}</div><ul className="ml-4 list-disc">{l.map((x, i) => <li key={i}>{x}</li>)}</ul></div>
+            {([["Pontos fortes", ia.pontosFortes, "text-success"], ["Dores recorrentes", ia.dores, "text-warning"], ["Recomendações", ia.recomendacoes, "text-primary"]] as const).map(([t, l, c]) => (
+              <div key={t} className="rounded-lg border bg-card p-3"><div className={cn("mb-1.5 font-medium", c)}>{t}</div><ul className="ml-4 list-disc space-y-1 text-muted-foreground">{l.map((x, i) => <li key={i}>{x}</li>)}</ul></div>
             ))}
           </div>
         </div>
+      ) : (
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-dashed p-5 text-sm text-muted-foreground"><Sparkles className="size-5 text-primary" aria-hidden /><span className="flex-1">Clique em <b>Analisar reputação com IA</b> para receber pontos fortes, dores dos moradores e recomendações para o síndico.</span></div>
       )}
 
-      <div className="overflow-x-auto rounded-lg border bg-background p-2">
+      <div className="dre-print-src" aria-hidden>
         <div id="cond-atend-relatorio" className="dre-doc">
           <header className="dre-head">
             <div className="dre-emp">{logo && <img src={logo} alt="" data-no-zoom />}
