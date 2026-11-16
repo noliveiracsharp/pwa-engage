@@ -58,7 +58,7 @@ export function TerceirizadosPanel({ condominioId, perms }: { condominioId: stri
     toast.success(t.vinculo_ativo ? "Terceirizado inativado neste condomínio." : "Terceirizado reativado."); recarregar();
   };
   const desvincular = async (t: Terceirizado) => {
-    if (!(await confirmar({ titulo: "Remover deste condomínio?", mensagem: `${t.nome} deixa de aparecer aqui. O cadastro continua nos outros condomínios.` } as never))) return;
+    if (!(await confirmar({ title: "Remover deste condomínio?", description: `${t.nome} deixa de aparecer aqui. O cadastro continua nos outros condomínios.` }))) return;
     const r = await db.from("cond_terceirizados_vinculos").delete().eq("id", t.vinculo_id);
     if (r.error) return void toast.error(r.error.message);
     toast.success("Removido do condomínio."); recarregar();
@@ -119,9 +119,9 @@ export function TerceirizadosPanel({ condominioId, perms }: { condominioId: stri
                 <td className="p-2.5">{t.contato ?? "—"}</td>
                 <td className="p-2.5 text-center"><button type="button" onClick={() => setEditando(t)} className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs"><Users className="size-3" />{t.colaboradores}</button></td>
                 <td className="p-2.5"><div className="flex justify-end gap-1">
-                  {perms.canUpdate && <AcaoIcone rotulo="Editar" icon={Pencil} onClick={() => setEditando(t)} />}
-                  {perms.canUpdate && <AcaoIcone rotulo={t.vinculo_ativo ? "Inativar" : "Reativar"} icon={t.vinculo_ativo ? Ban : BadgeCheck} onClick={() => void alternar(t)} />}
-                  {perms.canDelete && <AcaoIcone rotulo="Remover do condomínio" icon={Trash2} onClick={() => void desvincular(t)} />}
+                  {perms.canUpdate && <AcaoIcone titulo="Editar" onClick={() => setEditando(t)}>{(() => { const I = Pencil; return <I className="size-4" />; })()}</AcaoIcone>}
+                  {perms.canUpdate && <AcaoIcone titulo={t.vinculo_ativo ? "Inativar" : "Reativar"} onClick={() => void alternar(t)}>{(() => { const I = t.vinculo_ativo ? Ban : BadgeCheck; return <I className="size-4" />; })()}</AcaoIcone>}
+                  {perms.canDelete && <AcaoIcone titulo="Remover do condomínio" destrutivo onClick={() => void desvincular(t)}>{(() => { const I = Trash2; return <I className="size-4" />; })()}</AcaoIcone>}
                 </div></td>
               </tr>
             ))}
@@ -173,7 +173,7 @@ function TerceirizadoSheet({ condominioId, item, podeEditar, colaboradores, onCl
     toast.success("Funcionário salvo."); setColab(null); onSalvo();
   };
   const excluirColab = async (c: Colaborador) => {
-    if (!(await confirmar({ titulo: "Excluir funcionário?", mensagem: `${c.nome} será removido de todos os condomínios atendidos.` } as never))) return;
+    if (!(await confirmar({ title: "Excluir funcionário?", description: `${c.nome} será removido de todos os condomínios atendidos.` }))) return;
     const r = await db.from("cond_terceirizados_colaboradores").delete().eq("id", c.id);
     if (r.error) return void toast.error(r.error.message);
     onSalvo();
@@ -223,7 +223,7 @@ function TerceirizadoSheet({ condominioId, item, podeEditar, colaboradores, onCl
                     <li key={c.id} className={cn("flex items-center gap-3 rounded-lg border bg-card p-3", !c.ativo && "opacity-60")}>
                       {c.foto_url ? <img src={c.foto_url} alt={`Foto de ${c.nome}`} className="size-14 rounded-full object-cover" /> : <div className="flex size-14 items-center justify-center rounded-full bg-muted"><User className="size-6 text-muted-foreground" /></div>}
                       <div className="min-w-0 flex-1"><p className="truncate font-medium">{c.nome}</p><p className="truncate text-xs text-muted-foreground">{c.funcao ?? "—"}{c.cpf ? ` · CPF ${formatarDocumento(c.cpf)}` : ""}</p>{!c.ativo && <Badge variant="secondary">Inativo</Badge>}</div>
-                      {podeEditar && <div className="flex gap-1"><AcaoIcone rotulo="Editar" icon={Pencil} onClick={() => setColab(c)} /><AcaoIcone rotulo="Excluir" icon={Trash2} onClick={() => void excluirColab(c)} /></div>}
+                      {podeEditar && <div className="flex gap-1"><AcaoIcone titulo="Editar" onClick={() => setColab(c)}>{(() => { const I = Pencil; return <I className="size-4" />; })()}</AcaoIcone><AcaoIcone titulo="Excluir" destrutivo onClick={() => void excluirColab(c)}>{(() => { const I = Trash2; return <I className="size-4" />; })()}</AcaoIcone></div>}
                     </li>
                   ))}
                 </ul>

@@ -1,6 +1,7 @@
 import { ObrasPanel } from "./ObrasPanel";
 import { ManutencoesCondPanel } from "./ManutencoesCondPanel";
 import { PetsPanel } from "./PetsPanel";
+import { TerceirizadosPanel } from "./TerceirizadosPanel";
 import { GaleriaPanel } from "./GaleriaPanel";
 import { AssembleiasPanel } from "./AssembleiasPanel";
 import { AtendimentosPanel } from "./AtendimentosPanel";
@@ -70,6 +71,7 @@ const DESCRICAO_SECAO: Record<string, string> = {
   espacos: "Áreas comuns do condomínio com fotos, status e se permitem reserva.",
   meu: "Endereço, mapa, administradora, facilities e contatos úteis do condomínio.",
   chaves: "Claviculário: entrega e devolução de chaves com prazo e alerta de atraso.",
+  terceirizados: "Prestadores de serviço do condomínio e seus funcionários, com consulta rápida para a portaria.",
   pets: "Todos os pets do condomínio, com alerta de desaparecido e aviso ao tutor pelo WhatsApp.",
   galeria: "Álbuns de fotos dos eventos do condomínio, com reações e comentários.",
   assembleias: "AGO/AGE presencial, online ou mista: pautas, check-in, votação auditada, telão e ata.",
@@ -288,6 +290,8 @@ export function CondominiosPage() {
         <ManutencoesCondPanel condominioId={condId} nomeCondominio={String(condominios.find((c) => c.value === condId)?.label ?? "")} perms={secAtual} />
       ) : secao === "obras" && secAtual ? (
         <ObrasPanel condominioId={condId} perms={secAtual} />
+      ) : secao === "terceirizados" && secAtual ? (
+        <TerceirizadosPanel condominioId={condId} perms={secAtual} />
       ) : secao === "pets" && secAtual ? (
         <PetsPanel condominioId={condId} perms={secAtual} />
       ) : secao === "galeria" && secAtual ? (
