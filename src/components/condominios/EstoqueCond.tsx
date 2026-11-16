@@ -193,7 +193,7 @@ function Locais({ condominioId, perms, locais, movs, invalidar }: { condominioId
   };
   const remover = async (l: Row) => {
     if (movs.some((m) => m["local_origem_id"] === l["id"] || m["local_destino_id"] === l["id"])) return void toast.error("Local com movimentações não pode ser excluído.");
-    if (!(await confirmar({ title: "Excluir local", description: `Excluir "${s(l["nome"])}"?`, destructive: true } as never))) return;
+    if (!(await confirmar({ title: "Excluir local", description: `Excluir "${s(l["nome"])}"?`, destructive: true }))) return;
     const { error } = await db.from("cond_estoque_locais").delete().eq("id", l["id"]);
     if (error) return void toast.error(error.message);
     invalidar();
