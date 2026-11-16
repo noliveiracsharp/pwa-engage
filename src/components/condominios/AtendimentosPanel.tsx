@@ -484,7 +484,7 @@ function Assuntos({ condominioId, assuntos, canEdit }: { condominioId: string; a
     if (error) toast.error(error.message); else recarregar();
   };
   const excluir = async (a: Row) => {
-    if (!(await confirmar({ title: `Remover "${s(a["nome"])}"?`, description: "Atendimentos antigos continuam, mas ficam sem assunto.", confirmText: "Remover" }))) return;
+    if (!(await confirmar({ title: `Remover "${s(a["nome"])}"?`, description: "Atendimentos antigos continuam, mas ficam sem assunto.", confirmText: "Remover", destructive: true }))) return;
     const { error } = await db.from("cond_atend_assuntos").delete().eq("id", a["id"]);
     if (error) toast.error(error.message); else recarregar();
   };
