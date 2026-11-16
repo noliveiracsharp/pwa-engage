@@ -53,7 +53,7 @@ import { X } from "lucide-react";
 import { Tabs as AbasRaiz, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-const ABA_PAI: Record<string, string> = { sorteio: "vagas", galeria: "meu" };
+const ABA_PAI: Record<string, string> = { sorteio: "vagas", galeria: "meu", pets: "meu", achados: "meu" };
 
 const DESCRICAO_SECAO: Record<string, string> = {
   painel: "Visão geral do condomínio: unidades, pessoas, vagas e alertas.",
@@ -159,9 +159,8 @@ export function CondominiosPage() {
   const secAtual = secoes.find((x) => x.key === secao);
   // Sorteio é aba de Garagem & Vagas; Galeria é aba de Meu Condomínio (some do menu se o pai estiver visível).
   const secoesMenu = useMemo(() => secoes.filter((x) => !(ABA_PAI[x.key] && secoes.some((y) => y.key === ABA_PAI[x.key]))), [secoes]);
-  const filhaDe = (pai: string) => secoes.find((x) => ABA_PAI[x.key] === pai);
   const grupo = ABA_PAI[secao] ?? secao;
-  const abaFilha = filhaDe(grupo);
+  const abasFilhas = secoes.filter((x) => ABA_PAI[x.key] === grupo);
   const abaPai = secoes.find((x) => x.key === grupo);
   const permsUnid = secoes.find((x) => x.key === "unidades") ?? { canCreate: false, canUpdate: false, canDelete: false };
   const [busca, setBusca] = useState("");
@@ -245,10 +244,10 @@ export function CondominiosPage() {
           </div>
         );
       })()}
-      {abaPai && abaFilha && (
+      {abaPai && abasFilhas.length > 0 && (
         <AbasRaiz value={secao} onValueChange={setSecao} className="min-w-0 overflow-x-auto">
           <TabsList className="h-9 w-max justify-start">
-            {[abaPai, abaFilha].map((x) => (
+            {[abaPai, ...abasFilhas].map((x) => (
               <TabsTrigger key={x.key} value={x.key} className="px-3 text-sm">{x.label}</TabsTrigger>
             ))}
           </TabsList>
