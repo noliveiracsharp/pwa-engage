@@ -25,6 +25,14 @@ export const VINCULOS = [
 export const rotuloCargo = (v: string) => CARGOS.find((c) => c.value === v)?.label ?? v;
 export const ehDiretoria = (cargo: string) => CARGOS.some((c) => c.value === cargo && c.grupo === "diretoria");
 
+/** Cargos administrativos que podem responder chamados (além da diretoria). */
+export const CARGOS_ADMINISTRATIVOS = ["gerente", "assistente"];
+/** Quem pode ser responsável por um assunto de Atendimentos: diretoria, gestão administrativa ou funcionário da administradora. */
+export const podeResponderAtendimento = (m: { cargo?: unknown; vinculo?: unknown }) => {
+  const cargo = String(m.cargo ?? "");
+  return ehDiretoria(cargo) || CARGOS_ADMINISTRATIVOS.includes(cargo) || String(m.vinculo ?? "") === "administradora";
+};
+
 /** Síndico morador precisa de unidade; quem vem de empresa terceira precisa da empresa. */
 export function validarMembro(m: { nome?: string; cargo?: string; vinculo?: string; cond_unidade_id?: string; empresa_id?: string; inicio?: string; fim?: string }): string | null {
   if (!m.nome?.trim()) return "Informe o nome.";
