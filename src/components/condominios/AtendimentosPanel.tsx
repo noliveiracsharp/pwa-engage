@@ -248,7 +248,7 @@ function Lista({ ctx, filtroPainel, limparPainel }: { ctx: CtxAtend; filtroPaine
             {gestao && (
               <div className="space-y-1.5"><Label>SLA</Label>
                 <div className="flex flex-wrap gap-4 text-sm">{(["dentro", "proximo", "fora"] as const).map((k) => (
-                  <label key={k} className="inline-flex items-center gap-1.5"><Checkbox checked={f.sla[k]} onCheckedChange={(c) => setF({ ...f, sla: { ...f.sla, [k]: !!c } })} />{SLA_META[k].label}</label>
+                  <label key={k} className="inline-flex items-center gap-1.5"><Checkbox checked={!!f.sla[k]} onCheckedChange={(c) => setF({ ...f, sla: { ...f.sla, [k]: !!c } })} />{SLA_META[k].label}</label>
                 ))}</div>
               </div>
             )}
@@ -484,7 +484,7 @@ function Assuntos({ condominioId, assuntos, canEdit }: { condominioId: string; a
     if (error) toast.error(error.message); else recarregar();
   };
   const excluir = async (a: Row) => {
-    if (!(await confirmar({ title: `Remover "${s(a["nome"])}"?`, description: "Atendimentos antigos continuam, mas ficam sem assunto.", confirmText: "Remover", variant: "destructive" }))) return;
+    if (!(await confirmar({ title: `Remover "${s(a["nome"])}"?`, description: "Atendimentos antigos continuam, mas ficam sem assunto.", confirmText: "Remover" }))) return;
     const { error } = await db.from("cond_atend_assuntos").delete().eq("id", a["id"]);
     if (error) toast.error(error.message); else recarregar();
   };
