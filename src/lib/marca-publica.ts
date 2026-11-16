@@ -104,7 +104,7 @@ export function observarTitulo(titulo: string) {
   const ajustar = () => {
     const atual = document.title;
     if (atual.includes("ConectCon HUB")) {
-      const novo = atual.replace(/Atende\.ai/g, titulo);
+      const novo = atual.replace(/ConectCon HUB/g, titulo);
       if (novo !== atual) document.title = novo;
     } else if (!atual) document.title = titulo;
   };
