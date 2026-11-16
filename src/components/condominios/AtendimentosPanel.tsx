@@ -15,8 +15,6 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { SearchSelect } from "@/components/data-table/SearchSelect";
 import { confirmar } from "@/components/layout/DialogoGlobal";
 import { useEmpresaAtiva } from "@/hooks/useEmpresaAtiva";
-import { useAuth } from "@/hooks/useAuth";
-import { rowId } from "@/lib/crud";
 import { imprimirElemento } from "@/lib/propostas";
 import { htmlParaTexto } from "@/lib/html-texto";
 import {
