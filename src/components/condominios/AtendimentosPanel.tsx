@@ -518,12 +518,19 @@ function Assuntos({ condominioId, assuntos, canEdit }: { condominioId: string; a
     queryFn: async (): Promise<Row[]> => ((await db.from("cond_equipe").select("id,nome,cargo,vinculo,status").eq("condominio_id", condominioId)).data ?? []) as Row[],
   });
   // Corpo diretivo vindo das unidades (síndico, subsíndico, conselheiros) e usuários da administradora (empresa ativa).
-  const { empresa, isMaster, empresaContextoId } = useAuth();
-  const empId = s((isMaster && empresaContextoId) || (empresa ? rowId(empresa as Row) : "") || "");
+  // A administradora é a vinculada ao condomínio (nunca a empresa da sessão, que pode ser a empresa mãe).
   const { data: extras = [] } = useQuery({
-    queryKey: ["cond", "atend-resp-extras", condominioId, empId],
+    queryKey: ["cond", "atend-resp-extras", condominioId],
     queryFn: async (): Promise<Row[]> => {
       const out: Row[] = [];
+      let cond: Row | null = (await db.from("parceiros").select("tipo_gestao,administradora_id").eq("id", condominioId).maybeSingle()).data as Row | null;
+      if (!cond?.["administradora_id"]) cond = ((await db.from("empresas").select("tipo_gestao,administradora_id").eq("id", condominioId).maybeSingle()).data as Row | null) ?? cond;
+      const empId = cond && s(cond["tipo_gestao"]) !== "autogestao" ? s(cond["administradora_id"]) : "";
+      let admNome = "Administradora";
+      if (empId) {
+        const { data: e } = await db.from("empresas").select("titulo,nome").eq("id", empId).maybeSingle();
+        admNome = s((e as Row | null)?.["titulo"]) || s((e as Row | null)?.["nome"]) || admNome;
+      }
       const { data: us } = await db.from("cond_unidades").select("id,numero,cond_bloco_id").eq("condominio_id", condominioId);
       const ids = ((us ?? []) as Row[]).map((u) => s(u["id"]));
       if (ids.length) {
@@ -541,10 +548,10 @@ function Assuntos({ condominioId, assuntos, canEdit }: { condominioId: string; a
         }
       }
       if (empId) {
-        const { data: adm } = await db.from("usuarios").select("id,nome,email,celular,status").eq("empresa_id", empId);
+        const { data: adm } = await db.from("usuarios").select("id,nome,email,celular,cargo,status").eq("empresa_id", empId);
         for (const pz of (adm ?? []) as Row[]) {
           if (pz["status"] === false) continue;
-          out.push({ chave: `a:${s(pz["id"])}`, usuario_id: pz["id"], nome: s(pz["nome"]) || s(pz["email"]), email: pz["email"], celular: pz["celular"], cargo: "assistente", vinculo: "administradora", rotulo: "Administradora" });
+          out.push({ chave: `a:${s(pz["id"])}`, usuario_id: pz["id"], nome: s(pz["nome"]) || s(pz["email"]), email: pz["email"], celular: pz["celular"], cargo: "assistente", vinculo: "administradora", rotulo: s(pz["cargo"]) ? `${s(pz["cargo"])} (${admNome})` : admNome });
         }
       }
       return out;
