@@ -7,7 +7,7 @@ const TIPOS = {
   ads: "duas campanhas de anúncios: uma no Google Ads (palavras-chave sugeridas, palavras negativas, 3 títulos de até 30 caracteres, 2 descrições de até 90 caracteres) e uma no Meta Ads (público-alvo, 2 textos principais, título e criativo sugerido). Inclua orçamento diário sugerido em R$ e as métricas a acompanhar.",
 } as const;
 
-type Autorizacao = { permitido: boolean; motivo?: string; origem?: "plataforma" | "propria"; provedor?: string; modelo?: string | null; chave?: string; cota?: number | null };
+export type Autorizacao = { permitido: boolean; motivo?: string; origem?: "plataforma" | "propria"; provedor?: string; modelo?: string | null; chave?: string; cota?: number | null };
 
 const PROVEDORES: Record<string, { baseURL: string; modelo: string }> = {
   gemini: { baseURL: "https://generativelanguage.googleapis.com/v1beta/openai", modelo: "gemini-2.5-flash" },
@@ -143,7 +143,7 @@ Formato json: {"passos":[{"assunto":"...","texto":"..."}]} com exatamente ${data
     }
   });
 
-async function modeloIA(a: Autorizacao) {
+export async function modeloIA(a: Autorizacao) {
   let model;
   let providerOptions: Record<string, unknown> | undefined;
   if (a.origem === "propria") {
