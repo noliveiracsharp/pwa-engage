@@ -138,6 +138,7 @@ function TerceirizadoSheet({ condominioId, item, podeEditar, colaboradores, onCl
   const [id, setId] = useState<string | null>(item?.id ?? null);
   const [origem, setOrigem] = useState<"existente" | "nova">("existente");
   const [salvando, setSalvando] = useState(false);
+  const [salvo, setSalvo] = useState(!!item);
   const [colab, setColab] = useState<Partial<Colaborador> | null>(null);
   const [buscaEmp, setBuscaEmp] = useState("");
   const set = (k: keyof typeof f, v: string) => setF((x) => ({ ...x, [k]: v }));
@@ -159,7 +160,7 @@ function TerceirizadoSheet({ condominioId, item, podeEditar, colaboradores, onCl
     try {
       const r = await db.rpc("cond_terc_salvar", { p_cond: condominioId, p_empresa: id, p: { ...f, nome: bloqueada ? "" : f.nome.trim() } });
       if (r.error) throw r.error;
-      setId(r.data.empresa_id);
+      setId(r.data.empresa_id); setSalvo(true);
       toast.success(r.data.reaproveitada ? "Empresa já cadastrada com este CNPJ/CPF: vinculada ao condomínio." : "Terceirizado salvo.");
       onSalvo();
     } catch (e) { toast.error((e as Error).message); } finally { setSalvando(false); }
@@ -185,7 +186,7 @@ function TerceirizadoSheet({ condominioId, item, podeEditar, colaboradores, onCl
       <SheetContent className="z-[90] flex w-full flex-col gap-0 p-0 sm:max-w-none md:w-full lg:w-[60vw]">
         <SheetHeader className="border-b p-4"><SheetTitle>{item ? item.titulo || item.nome : "Novo terceirizado"}</SheetTitle><SheetDescription>Dados da empresa ou pessoa e funcionários autorizados.</SheetDescription></SheetHeader>
         <Tabs defaultValue="dados" className="flex min-h-0 flex-1 flex-col">
-          <TabsList className="mx-4 mt-3 w-fit"><TabsTrigger value="dados">Dados</TabsTrigger><TabsTrigger value="colab" disabled={!id}>Funcionários ({colaboradores.length})</TabsTrigger></TabsList>
+          <TabsList className="mx-4 mt-3 w-fit"><TabsTrigger value="dados">Dados</TabsTrigger><TabsTrigger value="colab" disabled={!salvo} title={salvo ? undefined : "Salve a empresa primeiro"}>Funcionários ({colaboradores.length})</TabsTrigger></TabsList>
           <TabsContent value="dados" className="flex min-h-0 flex-1 flex-col">
             <div className="flex-1 space-y-4 overflow-y-auto p-4">
               {novo && (
