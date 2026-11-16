@@ -1,3 +1,4 @@
+import { ehDiretoria, podeResponderAtendimento, rotuloCargo } from "@/lib/cond-equipe";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -512,7 +513,7 @@ function Assuntos({ condominioId, assuntos, canEdit }: { condominioId: string; a
   });
   const { data: equipe = [] } = useQuery({
     queryKey: ["cond", "cond_equipe", "condominio_id", condominioId],
-    queryFn: async (): Promise<Row[]> => ((await db.from("cond_equipe").select("id,nome,cargo,status").eq("condominio_id", condominioId)).data ?? []) as Row[],
+    queryFn: async (): Promise<Row[]> => ((await db.from("cond_equipe").select("id,nome,cargo,vinculo,status").eq("condominio_id", condominioId)).data ?? []) as Row[],
   });
   const [novoNome, setNovoNome] = useState("");
   const [busca, setBusca] = useState("");
@@ -538,7 +539,7 @@ function Assuntos({ condominioId, assuntos, canEdit }: { condominioId: string; a
     const { error } = await db.from("cond_atend_assuntos").delete().eq("id", a["id"]);
     if (error) toast.error(error.message); else recarregar();
   };
-  const opEquipe = alfa(equipe.filter((e) => e["status"] !== false).map((e) => ({ value: s(e["id"]), label: s(e["nome"]) })));
+  const opEquipe = alfa(equipe.filter((e) => e["status"] !== false && podeResponderAtendimento(e)).map((e) => ({ value: s(e["id"]), label: `${s(e["nome"])} — ${s(e["vinculo"]) === "administradora" && !ehDiretoria(s(e["cargo"])) ? `${rotuloCargo(s(e["cargo"]))} (administradora)` : rotuloCargo(s(e["cargo"]))}` })));
 
   return (
     <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
