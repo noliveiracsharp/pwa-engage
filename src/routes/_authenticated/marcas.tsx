@@ -6,9 +6,9 @@ export const Route = createFileRoute("/_authenticated/marcas")({
   staticData: { sitemap: false },
   head: () => ({
     meta: [
-      { title: "Marcas — Atende.ai" },
+      { title: "Marcas — ConectCon HUB" },
       { name: "description", content: "Cadastro das marcas e fabricantes vinculados aos produtos." },
-      { property: "og:title", content: "Marcas — Atende.ai" },
+      { property: "og:title", content: "Marcas — ConectCon HUB" },
       { property: "og:description", content: "Cadastro das marcas e fabricantes vinculados aos produtos." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

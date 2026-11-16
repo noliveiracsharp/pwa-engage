@@ -72,7 +72,7 @@ export function useWhiteLabel() {
   }, [favicon, logo]);
 
   useEffect(() => {
-    if (!titulo || titulo === "Atende.ai") return;
+    if (!titulo || titulo === "ConectCon HUB") return;
     return observarTitulo(titulo);
   }, [titulo]);
 

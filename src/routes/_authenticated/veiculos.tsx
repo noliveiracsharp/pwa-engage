@@ -31,9 +31,9 @@ export const Route = createFileRoute("/_authenticated/veiculos")({
   staticData: { sitemap: false },
   head: () => ({
     meta: [
-      { title: "Frota e Diário de Bordo — Atende.ai" },
+      { title: "Frota e Diário de Bordo — ConectCon HUB" },
       { name: "description", content: "Cadastro de veículos da frota e diário de bordo com foto do odômetro na saída e na chegada." },
-      { property: "og:title", content: "Frota e Diário de Bordo — Atende.ai" },
+      { property: "og:title", content: "Frota e Diário de Bordo — ConectCon HUB" },
       { property: "og:description", content: "Cadastro de veículos da frota e diário de bordo com foto do odômetro." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

@@ -22,9 +22,9 @@ export const Route = createFileRoute("/_authenticated/relatorios_/atendimentos")
   staticData: { sitemap: false },
   head: () => ({
     meta: [
-      { title: "Relatório de Atendimentos — Atende.ai" },
+      { title: "Relatório de Atendimentos — ConectCon HUB" },
       { name: "description", content: "Todos os chamados de atendimento com protocolo, cliente, atendente, situação, avaliação e conversa." },
-      { property: "og:title", content: "Relatório de Atendimentos — Atende.ai" },
+      { property: "og:title", content: "Relatório de Atendimentos — ConectCon HUB" },
       { property: "og:description", content: "Chamados de atendimento com protocolo, avaliação e conversa." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

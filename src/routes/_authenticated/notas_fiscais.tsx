@@ -26,9 +26,9 @@ export const Route = createFileRoute("/_authenticated/notas_fiscais")({
   staticData: { sitemap: false },
   head: () => ({
     meta: [
-      { title: "Notas Fiscais — Atende.ai" },
+      { title: "Notas Fiscais — ConectCon HUB" },
       { name: "description", content: "Emissão de NF-e para produtos e NFS-e para serviços, com PDF e XML." },
-      { property: "og:title", content: "Notas Fiscais — Atende.ai" },
+      { property: "og:title", content: "Notas Fiscais — ConectCon HUB" },
       { property: "og:description", content: "Emissão de NF-e para produtos e NFS-e para serviços, com PDF e XML." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

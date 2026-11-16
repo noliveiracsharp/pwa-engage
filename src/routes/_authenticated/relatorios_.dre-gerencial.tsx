@@ -19,9 +19,9 @@ export const Route = createFileRoute("/_authenticated/relatorios_/dre-gerencial"
   staticData: { sitemap: false },
   head: () => ({
     meta: [
-      { title: "DRE Gerencial Consolidado — Atende.ai" },
+      { title: "DRE Gerencial Consolidado — ConectCon HUB" },
       { name: "description", content: "Demonstrativo de resultado real por plano de contas, centro de custo e regime." },
-      { property: "og:title", content: "DRE Gerencial Consolidado — Atende.ai" },
+      { property: "og:title", content: "DRE Gerencial Consolidado — ConectCon HUB" },
       { property: "og:description", content: "Demonstrativo de resultado real por plano de contas, centro de custo e regime." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

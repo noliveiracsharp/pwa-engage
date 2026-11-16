@@ -15,9 +15,9 @@ export const Route = createFileRoute("/cotacao/$token")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Cotação de compra — Atende.ai" },
+      { title: "Cotação de compra — ConectCon HUB" },
       { name: "description", content: "Informe preços, prazos e condições para a cotação recebida." },
-      { property: "og:title", content: "Cotação de compra — Atende.ai" },
+      { property: "og:title", content: "Cotação de compra — ConectCon HUB" },
       { property: "og:description", content: "Informe preços, prazos e condições para a cotação recebida." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

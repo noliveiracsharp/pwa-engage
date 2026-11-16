@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { LegalPage } from "@/components/landing/LegalPage";
 
-const TITLE = "Política de Privacidade — Atende.ai";
-const DESC = "Como o Atende.ai coleta, usa e protege seus dados, em linguagem simples e de acordo com a LGPD.";
+const TITLE = "Política de Privacidade — ConectCon HUB";
+const DESC = "Como o ConectCon HUB coleta, usa e protege seus dados, em linguagem simples e de acordo com a LGPD.";
 const URL = "https://pwa-engage.lovable.app/privacidade";
 
 export const Route = createFileRoute("/privacidade")({
@@ -29,7 +29,7 @@ function Privacidade() {
       titulo="Política de Privacidade"
       resumo="Coletamos só o necessário para o sistema funcionar, não vendemos seus dados, registramos quem mexeu em quê e você pode pedir acesso, correção ou exclusão das suas informações."
       secoes={[
-        { titulo: "Quem é responsável pelo quê", resumo: "Sua empresa decide sobre os dados; nós guardamos com segurança.", conteudo: <ul className="list-disc space-y-1 pl-6"><li><strong>Sua empresa (Controladora):</strong> decide quais dados de clientes, colaboradores e parceiros cadastrar.</li><li><strong>Atende.ai (Operador):</strong> oferece o sistema seguro onde esses dados ficam guardados.</li></ul> },
+        { titulo: "Quem é responsável pelo quê", resumo: "Sua empresa decide sobre os dados; nós guardamos com segurança.", conteudo: <ul className="list-disc space-y-1 pl-6"><li><strong>Sua empresa (Controladora):</strong> decide quais dados de clientes, colaboradores e parceiros cadastrar.</li><li><strong>ConectCon HUB (Operador):</strong> oferece o sistema seguro onde esses dados ficam guardados.</li></ul> },
         { titulo: "Quais dados coletamos", conteudo: <ul className="list-disc space-y-1 pl-6"><li><strong>Da sua conta:</strong> nome, e-mail, telefone/WhatsApp, CPF ou CNPJ, cargo e dados de cobrança.</li><li><strong>Do uso do sistema:</strong> o que você cadastra (contatos, mensagens, ofertas, financeiro, tarefas).</li><li><strong>De segurança:</strong> endereço IP, data e hora de acesso e tipo de aparelho.</li></ul> },
         { titulo: "Para que usamos", conteudo: <ul className="list-disc space-y-1 pl-6"><li>Permitir seu acesso com as permissões certas;</li><li>Cobrar a assinatura e emitir faturas;</li><li>Enviar as mensagens e automações que você configurou;</li><li>Cumprir a lei (Marco Civil da Internet e LGPD).</li></ul> },
         { titulo: "Segurança e registro de ações", resumo: "Tudo fica anotado: quem fez, o quê e quando.", conteudo: <p>Criações, alterações e exclusões importantes ficam registradas com data, hora e usuário, em um histórico que ninguém consegue apagar. Isso protege sua empresa em caso de dúvidas ou disputas.</p> },

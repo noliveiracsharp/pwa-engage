@@ -33,9 +33,9 @@ export const Route = createFileRoute("/_authenticated/atendimentos")({
   }),
   head: () => ({
     meta: [
-      { title: "Atendimentos — Atende.ai" },
+      { title: "Atendimentos — ConectCon HUB" },
       { name: "description", content: "Converse com as pessoas em um chat multicanal." },
-      { property: "og:title", content: "Atendimentos — Atende.ai" },
+      { property: "og:title", content: "Atendimentos — ConectCon HUB" },
       { property: "og:description", content: "Converse com as pessoas em um chat multicanal." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

@@ -100,12 +100,12 @@ export const Route = createFileRoute("/_authenticated/relatorios")({
   staticData: { sitemap: false },
   head: () => ({
     meta: [
-      { title: "Relatórios — Atende.ai" },
+      { title: "Relatórios — ConectCon HUB" },
       {
         name: "description",
         content: "Crie, visualize e exporte relatórios dinâmicos de qualquer tabela do sistema.",
       },
-      { property: "og:title", content: "Relatórios — Atende.ai" },
+      { property: "og:title", content: "Relatórios — ConectCon HUB" },
       {
         property: "og:description",
         content: "Crie, visualize e exporte relatórios dinâmicos de qualquer tabela do sistema.",

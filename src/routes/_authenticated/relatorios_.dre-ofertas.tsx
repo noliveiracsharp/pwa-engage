@@ -38,9 +38,9 @@ export const Route = createFileRoute("/_authenticated/relatorios_/dre-ofertas")(
   staticData: { sitemap: false },
   head: () => ({
     meta: [
-      { title: "DRE de Ofertas (Board) — Atende.ai" },
+      { title: "DRE de Ofertas (Board) — ConectCon HUB" },
       { name: "description", content: "Visão executiva de receita, custos, despesas, comissões e margem das Ofertas." },
-      { property: "og:title", content: "DRE de Ofertas (Board) — Atende.ai" },
+      { property: "og:title", content: "DRE de Ofertas (Board) — ConectCon HUB" },
       { property: "og:description", content: "Visão executiva de receita, custos, despesas, comissões e margem das Ofertas." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

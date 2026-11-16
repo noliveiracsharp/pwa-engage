@@ -29,9 +29,9 @@ export const Route = createFileRoute("/_authenticated/itens")({
   staticData: { sitemap: false },
   head: () => ({
     meta: [
-      { title: "Produtos e Serviços — Atende.ai" },
+      { title: "Produtos e Serviços — ConectCon HUB" },
       { name: "description", content: "Cadastro de produtos e serviços com formação automática de preço de venda." },
-      { property: "og:title", content: "Produtos e Serviços — Atende.ai" },
+      { property: "og:title", content: "Produtos e Serviços — ConectCon HUB" },
       {
         property: "og:description",
         content: "Cadastro de produtos e serviços com formação automática de preço de venda.",

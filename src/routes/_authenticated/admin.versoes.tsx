@@ -28,9 +28,9 @@ export const Route = createFileRoute("/_authenticated/admin/versoes")({
   staticData: { sitemap: false },
   head: () => ({
     meta: [
-      { title: "Versões e Novidades — Atende.ai" },
+      { title: "Versões e Novidades — ConectCon HUB" },
       { name: "description", content: "Gestão de versões, notas de atualização e sugestões dos usuários." },
-      { property: "og:title", content: "Versões e Novidades — Atende.ai" },
+      { property: "og:title", content: "Versões e Novidades — ConectCon HUB" },
       { property: "og:description", content: "Gestão de versões, notas de atualização e sugestões dos usuários." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

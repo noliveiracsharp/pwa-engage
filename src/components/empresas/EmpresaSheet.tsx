@@ -362,7 +362,7 @@ export function ChildTable({ config, empresa, perms = FULL }: { config: ChildCon
     refresh();
   };
 
-  // Liga o recebimento: aponta a Z-API para o Atende.ai (mensagens entram e os fluxos respondem).
+  // Liga o recebimento: aponta a Z-API para o ConectCon HUB (mensagens entram e os fluxos respondem).
   const ativarRecebimento = async (row: Row) => {
     const k = text(pick(row, ["webhook_token"]));
     if (!k) {
@@ -482,7 +482,7 @@ export function ChildTable({ config, empresa, perms = FULL }: { config: ChildCon
                   (text(pick(row, ["status_conexao"])).toLowerCase() === "conectado" ? (
                     <>
                       {row["webhook_ativo"] !== true && (
-                        <Button variant="outline" size="sm" className="h-9" onClick={() => void ativarRecebimento(row)} title="Faz as mensagens recebidas entrarem no Atende.ai e acionarem os fluxos">
+                        <Button variant="outline" size="sm" className="h-9" onClick={() => void ativarRecebimento(row)} title="Faz as mensagens recebidas entrarem no ConectCon HUB e acionarem os fluxos">
                           <Inbox className="mr-1 h-4 w-4" /> Ativar recebimento
                         </Button>
                       )}

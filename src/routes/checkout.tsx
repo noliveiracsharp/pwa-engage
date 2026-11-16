@@ -18,8 +18,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-const TITLE = "Checkout — Atende.ai";
-const DESC = "Cadastre sua empresa e escolha a forma de pagamento para assinar o Atende.ai.";
+const TITLE = "Checkout — ConectCon HUB";
+const DESC = "Cadastre sua empresa e escolha a forma de pagamento para assinar o ConectCon HUB.";
 
 export const Route = createFileRoute("/checkout")({
   ssr: false,
@@ -159,8 +159,8 @@ function CheckoutPage() {
       <header className="border-b">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
           <Link to="/" className="flex items-center gap-2 font-bold">
-            <img src="/logo-atendeai-azulesc.png" alt="Atende.ai" className="h-9 w-auto dark:hidden" />
-            <img src="/logo-atendeai-azul.png" alt="Atende.ai" className="hidden h-9 w-auto dark:block" />
+            <img src="/logo-atendeai-azulesc.png" alt="ConectCon HUB" className="h-9 w-auto dark:hidden" />
+            <img src="/logo-atendeai-azul.png" alt="ConectCon HUB" className="hidden h-9 w-auto dark:block" />
           </Link>
           <Button asChild variant="ghost" size="sm">
             <Link to="/"><ArrowLeft className="mr-1 h-4 w-4" /> Voltar</Link>
@@ -169,7 +169,7 @@ function CheckoutPage() {
       </header>
 
       <main className="mx-auto grid max-w-5xl gap-6 px-4 py-8 lg:grid-cols-[1fr_320px]">
-        <h1 className="sr-only">Assinar o Atende.ai</h1>
+        <h1 className="sr-only">Assinar o ConectCon HUB</h1>
         <Card className="order-2 lg:order-1">
           {resultado ? (
             <Sucesso resultado={resultado} email={dados.email} />

@@ -15,9 +15,9 @@ export const Route = createFileRoute("/fornecedor")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Portal do Fornecedor — Atende.ai" },
+      { title: "Portal do Fornecedor — ConectCon HUB" },
       { name: "description", content: "Consulte suas cotações e os pedidos de compra recebidos." },
-      { property: "og:title", content: "Portal do Fornecedor — Atende.ai" },
+      { property: "og:title", content: "Portal do Fornecedor — ConectCon HUB" },
       { property: "og:description", content: "Consulte suas cotações e os pedidos de compra recebidos." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -57,7 +57,7 @@ function PortalFornecedor() {
     <div className="min-h-screen bg-muted/40">
       <header className="border-b border-border bg-card">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3">
-          <span className="font-semibold text-primary">Atende.ai · Portal do Fornecedor</span>
+          <span className="font-semibold text-primary">ConectCon HUB · Portal do Fornecedor</span>
           {acesso && <Button variant="ghost" size="sm" onClick={sair}><LogOut className="mr-1 h-4 w-4" /> Sair</Button>}
         </div>
       </header>

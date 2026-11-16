@@ -66,7 +66,7 @@ export const desconectarWhatsApp = createServerFn({ method: "POST" })
     }
   });
 
-/** Aponta o "Ao receber" da Z-API para o endereço de recebimento do Atende.ai. */
+/** Aponta o "Ao receber" da Z-API para o endereço de recebimento do ConectCon HUB. */
 export const configurarWebhookZapi = createServerFn({ method: "POST" })
   .middleware([exigirLogin])
   .inputValidator((d) =>
@@ -135,7 +135,7 @@ export const atualizarPerfilZapi = createServerFn({ method: "POST" })
     return { ok: falhas.length === 0, falhas };
   });
 
-/** Aponta os avisos escolhidos da Z-API para a mesma URL do Atende.ai (status e desconexão são ignorados com segurança no recebimento). */
+/** Aponta os avisos escolhidos da Z-API para a mesma URL do ConectCon HUB (status e desconexão são ignorados com segurança no recebimento). */
 export const sincronizarWebhooksZapi = createServerFn({ method: "POST" })
   .middleware([exigirLogin])
   .inputValidator((d) =>

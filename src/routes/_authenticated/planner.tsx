@@ -15,9 +15,9 @@ export const Route = createFileRoute("/_authenticated/planner")({
   staticData: { sitemap: false },
   head: () => ({
     meta: [
-      { title: "Planner — Atende.ai" },
+      { title: "Planner — ConectCon HUB" },
       { name: "description", content: "Planejamento semanal de tarefas, delegação com aceite e reuniões da equipe." },
-      { property: "og:title", content: "Planner — Atende.ai" },
+      { property: "og:title", content: "Planner — ConectCon HUB" },
       { property: "og:description", content: "Planejamento semanal de tarefas, delegação com aceite e reuniões da equipe." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

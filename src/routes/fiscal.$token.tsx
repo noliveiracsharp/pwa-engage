@@ -12,9 +12,9 @@ export const Route = createFileRoute("/fiscal/$token")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Dados fiscais dos itens — Atende.ai" },
+      { title: "Dados fiscais dos itens — ConectCon HUB" },
       { name: "description", content: "Preencha NCM, CEST, CFOP e demais dados fiscais dos itens para faturamento." },
-      { property: "og:title", content: "Dados fiscais dos itens — Atende.ai" },
+      { property: "og:title", content: "Dados fiscais dos itens — ConectCon HUB" },
       { property: "og:description", content: "Preencha NCM, CEST, CFOP e demais dados fiscais dos itens para faturamento." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

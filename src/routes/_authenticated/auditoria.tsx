@@ -17,9 +17,9 @@ export const Route = createFileRoute("/_authenticated/auditoria")({
   staticData: { sitemap: false },
   head: () => ({
     meta: [
-      { title: "Auditoria LGPD — Atende.ai" },
+      { title: "Auditoria LGPD — ConectCon HUB" },
       { name: "description", content: "Trilha de auditoria: quem criou, alterou ou excluiu cada registro e quando." },
-      { property: "og:title", content: "Auditoria LGPD — Atende.ai" },
+      { property: "og:title", content: "Auditoria LGPD — ConectCon HUB" },
       { property: "og:description", content: "Trilha de auditoria: quem criou, alterou ou excluiu cada registro e quando." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

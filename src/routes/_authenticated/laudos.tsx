@@ -29,9 +29,9 @@ export const Route = createFileRoute("/_authenticated/laudos")({
   staticData: { sitemap: false },
   head: () => ({
     meta: [
-      { title: "Laudos Técnicos — Atende.ai" },
+      { title: "Laudos Técnicos — ConectCon HUB" },
       { name: "description", content: "Levantamentos e inspeções técnicas em campo com checklist, fotos e relatório para o cliente." },
-      { property: "og:title", content: "Laudos Técnicos — Atende.ai" },
+      { property: "og:title", content: "Laudos Técnicos — ConectCon HUB" },
       { property: "og:description", content: "Levantamentos e inspeções técnicas em campo com checklist, fotos e relatório para o cliente." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

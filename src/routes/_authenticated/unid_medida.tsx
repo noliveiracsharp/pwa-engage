@@ -6,9 +6,9 @@ export const Route = createFileRoute("/_authenticated/unid_medida")({
   staticData: { sitemap: false },
   head: () => ({
     meta: [
-      { title: "Unidades de Medida — Atende.ai" },
+      { title: "Unidades de Medida — ConectCon HUB" },
       { name: "description", content: "Cadastro das unidades de medida usadas nos produtos e serviços." },
-      { property: "og:title", content: "Unidades de Medida — Atende.ai" },
+      { property: "og:title", content: "Unidades de Medida — ConectCon HUB" },
       { property: "og:description", content: "Cadastro das unidades de medida usadas nos produtos e serviços." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

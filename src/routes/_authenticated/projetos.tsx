@@ -53,9 +53,9 @@ export const Route = createFileRoute("/_authenticated/projetos")({
   staticData: { sitemap: false },
   head: () => ({
     meta: [
-      { title: "Projetos — Atende.ai" },
+      { title: "Projetos — ConectCon HUB" },
       { name: "description", content: "Gerencie projetos por status, tarefas, checklists, dependências e anexos." },
-      { property: "og:title", content: "Projetos — Atende.ai" },
+      { property: "og:title", content: "Projetos — ConectCon HUB" },
       { property: "og:description", content: "Gerencie projetos por status, tarefas, checklists, dependências e anexos." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

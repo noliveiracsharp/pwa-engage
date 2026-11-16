@@ -18,9 +18,9 @@ export const Route = createFileRoute("/_authenticated/projetos_/templates")({
   staticData: { sitemap: false },
   head: () => ({
     meta: [
-      { title: "Templates de Tarefas — Atende.ai" },
+      { title: "Templates de Tarefas — ConectCon HUB" },
       { name: "description", content: "Monte templates com tarefas padrão para aplicar em novos projetos." },
-      { property: "og:title", content: "Templates de Tarefas — Atende.ai" },
+      { property: "og:title", content: "Templates de Tarefas — ConectCon HUB" },
       { property: "og:description", content: "Monte templates com tarefas padrão para aplicar em novos projetos." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

@@ -36,8 +36,8 @@ export function useEmpresaAtiva() {
   const logo = pick<string>(atual, ["logo", "logo_url", "url_logo", "imagem", "avatar"]);
   const logoEscuro = pick<string>(atual, ["logo_escuro"], "");
   return {
-    nome: pick<string>(atual, ["nome_fantasia", "nome", "empresa_nome", "razao_social"], "Atende.ai"),
-    titulo: pick<string>(atual, ["titulo", "nome_fantasia", "nome", "razao_social"], "Atende.ai"),
+    nome: pick<string>(atual, ["nome_fantasia", "nome", "empresa_nome", "razao_social"], "ConectCon HUB"),
+    titulo: pick<string>(atual, ["titulo", "nome_fantasia", "nome", "razao_social"], "ConectCon HUB"),
     logo,
     logoEscuro,
     /** Logo conforme o tema atual; sem logo escuro, usa o padrão. */

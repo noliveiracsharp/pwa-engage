@@ -26,9 +26,9 @@ export const Route = createFileRoute("/_authenticated/manutencoes")({
   staticData: { sitemap: false },
   head: () => ({
     meta: [
-      { title: "Manutenções — Atende.ai" },
+      { title: "Manutenções — ConectCon HUB" },
       { name: "description", content: "Ordens de manutenção preventiva, corretiva e preditiva com checklist, fotos e calendário." },
-      { property: "og:title", content: "Manutenções — Atende.ai" },
+      { property: "og:title", content: "Manutenções — ConectCon HUB" },
       { property: "og:description", content: "Ordens de manutenção com checklist, fotos e calendário." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

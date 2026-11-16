@@ -68,7 +68,7 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
   staticData: { sitemap: false },
   server: {
     handlers: {
-      GET: async () => ok({ info: "Endereço de recebimento do Atende.ai" }),
+      GET: async () => ok({ info: "Endereço de recebimento do ConectCon HUB" }),
       POST: async ({ request }) => {
         const url = new URL(request.url);
         const k = url.searchParams.get("k") ?? "";

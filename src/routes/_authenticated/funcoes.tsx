@@ -17,9 +17,9 @@ export const Route = createFileRoute("/_authenticated/funcoes")({
   staticData: { sitemap: false },
   head: () => ({
     meta: [
-      { title: "Funções — Atende.ai" },
+      { title: "Funções — ConectCon HUB" },
       { name: "description", content: "Telas e menus do sistema liberados para cada perfil de acesso." },
-      { property: "og:title", content: "Funções — Atende.ai" },
+      { property: "og:title", content: "Funções — ConectCon HUB" },
       { property: "og:description", content: "Telas e menus do sistema liberados para cada perfil de acesso." },
     ],
   }),

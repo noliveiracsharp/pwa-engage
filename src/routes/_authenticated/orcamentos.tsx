@@ -61,13 +61,13 @@ export const Route = createFileRoute("/_authenticated/orcamentos")({
   staticData: { sitemap: false },
   head: () => ({
     meta: [
-      { title: "Ofertas — Atende.ai" },
+      { title: "Ofertas — ConectCon HUB" },
       {
         name: "description",
         content:
           "Ofertas de produtos e serviços com numeração automática, situação e memória de cálculo de lucratividade.",
       },
-      { property: "og:title", content: "Ofertas — Atende.ai" },
+      { property: "og:title", content: "Ofertas — ConectCon HUB" },
       {
         property: "og:description",
         content:

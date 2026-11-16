@@ -182,7 +182,7 @@ export function CentralAjuda() {
 
                 {(resposta || carregando) && (
                   <div className="rounded-lg border border-primary/30 bg-primary/5 p-4">
-                    <p className="mb-2 flex items-center gap-2 text-sm font-semibold"><Bot className="h-4 w-4 text-primary" /> Copiloto Atende.ai</p>
+                    <p className="mb-2 flex items-center gap-2 text-sm font-semibold"><Bot className="h-4 w-4 text-primary" /> Copiloto ConectCon HUB</p>
                     {carregando ? <p className="text-sm text-muted-foreground">Consultando os guias…</p> : <Resposta texto={resposta} />}
                   </div>
                 )}

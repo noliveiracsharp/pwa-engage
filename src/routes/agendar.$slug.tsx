@@ -15,9 +15,9 @@ export const Route = createFileRoute("/agendar/$slug")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Agende um horário — Atende.ai" },
+      { title: "Agende um horário — ConectCon HUB" },
       { name: "description", content: "Escolha o melhor dia e horário e confirme sua reunião em poucos cliques." },
-      { property: "og:title", content: "Agende um horário — Atende.ai" },
+      { property: "og:title", content: "Agende um horário — ConectCon HUB" },
       { property: "og:description", content: "Escolha o melhor dia e horário e confirme sua reunião em poucos cliques." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -163,7 +163,7 @@ function AgendarPublico() {
           )}
         </main>
       </div>
-      <p className="mt-6 text-center text-xs text-muted-foreground">Agendamento por Atende.ai</p>
+      <p className="mt-6 text-center text-xs text-muted-foreground">Agendamento por ConectCon HUB</p>
     </div>
   );
 }

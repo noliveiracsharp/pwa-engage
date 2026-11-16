@@ -76,9 +76,9 @@ export const Route = createFileRoute("/_authenticated/kanban")({
   staticData: { sitemap: false },
   head: () => ({
     meta: [
-      { title: "Kanban — Atende.ai" },
+      { title: "Kanban — ConectCon HUB" },
       { name: "description", content: "Acompanhe os atendimentos por etapa em um quadro Kanban." },
-      { property: "og:title", content: "Kanban — Atende.ai" },
+      { property: "og:title", content: "Kanban — ConectCon HUB" },
       {
         property: "og:description",
         content: "Acompanhe os atendimentos por etapa em um quadro Kanban.",

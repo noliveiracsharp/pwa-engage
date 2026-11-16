@@ -17,9 +17,9 @@ export const Route = createFileRoute("/_authenticated/minha-unidade")({
   staticData: { sitemap: false },
   head: () => ({
     meta: [
-      { title: "Minha unidade — Atende.ai" },
+      { title: "Minha unidade — ConectCon HUB" },
       { name: "description", content: "Dados da sua unidade no condomínio." },
-      { property: "og:title", content: "Minha unidade — Atende.ai" },
+      { property: "og:title", content: "Minha unidade — ConectCon HUB" },
       { property: "og:description", content: "Dados da sua unidade no condomínio." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

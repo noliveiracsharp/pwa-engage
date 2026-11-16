@@ -5,10 +5,10 @@ export const Route = createFileRoute("/_authenticated/meus-dados")({
   staticData: { sitemap: false },
   head: () => ({
     meta: [
-      { title: "Meus Dados — Atende.ai" },
-      { name: "description", content: "Edite seus dados de cadastro, foto, e-mail e senha no Atende.ai." },
-      { property: "og:title", content: "Meus Dados — Atende.ai" },
-      { property: "og:description", content: "Edite seus dados de cadastro, foto, e-mail e senha no Atende.ai." },
+      { title: "Meus Dados — ConectCon HUB" },
+      { name: "description", content: "Edite seus dados de cadastro, foto, e-mail e senha no ConectCon HUB." },
+      { property: "og:title", content: "Meus Dados — ConectCon HUB" },
+      { property: "og:description", content: "Edite seus dados de cadastro, foto, e-mail e senha no ConectCon HUB." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],

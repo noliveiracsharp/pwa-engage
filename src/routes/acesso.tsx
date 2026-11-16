@@ -17,9 +17,9 @@ export const Route = createFileRoute("/acesso")({
   },
   head: () => ({
     meta: [
-      { title: "Onde deseja entrar? — Atende.ai" },
+      { title: "Onde deseja entrar? — ConectCon HUB" },
       { name: "description", content: "Escolha entre a gestão da empresa e as suas unidades em condomínios." },
-      { property: "og:title", content: "Onde deseja entrar? — Atende.ai" },
+      { property: "og:title", content: "Onde deseja entrar? — ConectCon HUB" },
       { property: "og:description", content: "Escolha entre a gestão da empresa e as suas unidades em condomínios." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

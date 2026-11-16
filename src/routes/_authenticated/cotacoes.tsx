@@ -28,9 +28,9 @@ export const Route = createFileRoute("/_authenticated/cotacoes")({
   staticData: { sitemap: false },
   head: () => ({
     meta: [
-      { title: "Cotações de Compras — Atende.ai" },
+      { title: "Cotações de Compras — ConectCon HUB" },
       { name: "description", content: "Cotações com fornecedores via CSV, comparativo automático de preços e geração de oferta." },
-      { property: "og:title", content: "Cotações de Compras — Atende.ai" },
+      { property: "og:title", content: "Cotações de Compras — ConectCon HUB" },
       { property: "og:description", content: "Cotações com fornecedores via CSV, comparativo automático de preços e geração de oferta." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

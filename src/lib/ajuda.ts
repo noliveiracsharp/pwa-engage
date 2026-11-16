@@ -28,7 +28,7 @@ export const MODULOS_AJUDA = [
 
 export const ARTIGOS_PADRAO: ArtigoAjuda[] = [
   {
-    id: "primeiro-acesso", modulo: "Primeiros passos", titulo: "Conhecendo a tela do Atende.ai",
+    id: "primeiro-acesso", modulo: "Primeiros passos", titulo: "Conhecendo a tela do ConectCon HUB",
     imagem: "/ajuda/dashboard.jpg",
     resumo: "Onde ficam o menu, os avisos, a troca de tema e seus dados.", perfil: "Todos",
     passos: [

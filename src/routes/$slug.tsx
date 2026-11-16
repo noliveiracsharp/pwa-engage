@@ -11,10 +11,10 @@ export const Route = createFileRoute("/$slug")({
     const ok = !!s && !SLUGS_RESERVADOS.has(s);
     return {
       meta: [
-        { title: "Acesso da empresa — Atende.ai" },
-        { name: "description", content: "Entre no Atende.ai pelo endereço exclusivo da sua empresa." },
-        { property: "og:title", content: "Acesso da empresa — Atende.ai" },
-        { property: "og:description", content: "Entre no Atende.ai pelo endereço exclusivo da sua empresa." },
+        { title: "Acesso da empresa — ConectCon HUB" },
+        { name: "description", content: "Entre no ConectCon HUB pelo endereço exclusivo da sua empresa." },
+        { property: "og:title", content: "Acesso da empresa — ConectCon HUB" },
+        { property: "og:description", content: "Entre no ConectCon HUB pelo endereço exclusivo da sua empresa." },
         { property: "og:type", content: "website" },
         { name: "twitter:card", content: "summary" },
       ],
