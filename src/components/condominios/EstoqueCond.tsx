@@ -68,13 +68,13 @@ export function EstoqueCond({ condominioId, perms }: { condominioId: string; per
   const [mov, setMov] = useState<Row | null>(null);
 
   const linhas = useMemo(() => itens.map((i) => {
-    const saldo = saldoItem(movs as never, s(i["id"]), local || undefined);
+    const saldo = saldoItem(movs, s(i["id"]), local || undefined);
     const situacao = situacaoEstoque(saldo, Number(i["estoque_minimo"] ?? 0));
     return { i, saldo, situacao };
   }).filter((l) => (!sit || l.situacao === sit) && norm([l.i["nome"], l.i["codigo"], catLabel(l.i["categoria"])].map(s).join(" ")).includes(norm(busca)))
     .sort((a, b) => s(a.i["nome"]).localeCompare(s(b.i["nome"]), "pt-BR")), [itens, movs, local, sit, busca]);
-  const repor = itens.filter((i) => ["abaixo", "zerado"].includes(situacaoEstoque(saldoItem(movs as never, s(i["id"])), Number(i["estoque_minimo"] ?? 0))) && Number(i["estoque_minimo"] ?? 0) > 0).length;
-  const valorTotal = itens.reduce((t, i) => t + Math.max(0, saldoItem(movs as never, s(i["id"]))) * Number(i["custo_unitario"] ?? 0), 0);
+  const repor = itens.filter((i) => ["abaixo", "zerado"].includes(situacaoEstoque(saldoItem(movs, s(i["id"])), Number(i["estoque_minimo"] ?? 0))) && Number(i["estoque_minimo"] ?? 0) > 0).length;
+  const valorTotal = itens.reduce((t, i) => t + Math.max(0, saldoItem(movs, s(i["id"]))) * Number(i["custo_unitario"] ?? 0), 0);
 
   const criarLocaisPadrao = async () => {
     const { error } = await db.from("cond_estoque_locais").insert(LOCAIS_PADRAO.map((nome) => ({ condominio_id: condominioId, nome })));
@@ -256,11 +256,11 @@ function ItemSheet({ condominioId, registro, onClose, invalidar, perms }: { cond
 }
 
 function MovSheet({ condominioId, registro, onClose, itens, locais, movs, invalidar }: { condominioId: string; registro: Row; onClose: () => void } & ReturnType<typeof useEstoqueCond>) {
-  const [v, setV] = useState({ tipo: "entrada_compra", item_id: s(registro["item_id"]), origem: "", destino: locais.length === 1 ? s(locais[0]["id"]) : "", qtd: "", custo: "", documento: "", responsavel: "", obs: "" });
+  const [v, setV] = useState({ tipo: "entrada_compra", item_id: s(registro["item_id"]), origem: "", destino: locais.length === 1 ? s(locais[0]?.["id"]) : "", qtd: "", custo: "", documento: "", responsavel: "", obs: "" });
   const [salvando, setSalvando] = useState(false);
   const t = tipoMovCond(v.tipo);
   const it = itens.find((i) => s(i["id"]) === v.item_id);
-  const saldoOrigem = v.item_id && v.origem ? saldoItem(movs as never, v.item_id, v.origem) : 0;
+  const saldoOrigem = v.item_id && v.origem ? saldoItem(movs, v.item_id, v.origem) : 0;
   const salvar = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!v.item_id) return void toast.error("Escolha o item.");
@@ -308,12 +308,12 @@ function MovSheet({ condominioId, registro, onClose, itens, locais, movs, invali
 
 export function MateriaisOs({ condominioId, osId, editavel }: { condominioId: string; osId: string; editavel: boolean }) {
   const { itens, locais, movs, invalidar } = useEstoqueCond(condominioId);
-  const [v, setV] = useState({ item_id: "", local: locais.length === 1 ? s(locais[0]["id"]) : "", qtd: "" });
+  const [v, setV] = useState({ item_id: "", local: locais.length === 1 ? s(locais[0]?.["id"]) : "", qtd: "" });
   const [salvando, setSalvando] = useState(false);
   const daOs = movs.filter((m) => s(m["os_id"]) === osId);
   const nItem = new Map(itens.map((i) => [s(i["id"]), i]));
   const total = custoMateriais(daOs);
-  const saldo = v.item_id && v.local ? saldoItem(movs as never, v.item_id, v.local) : 0;
+  const saldo = v.item_id && v.local ? saldoItem(movs, v.item_id, v.local) : 0;
 
   const lancar = async (tipo: "saida_os" | "devolucao", m?: Row) => {
     const item_id = m ? s(m["item_id"]) : v.item_id;

@@ -43,7 +43,7 @@ export function situacaoEstoque(saldo: number, minimo: number): SituacaoEstoque 
   return "normal";
 }
 
-type Mov = { item_id: unknown; local_origem_id?: unknown; local_destino_id?: unknown; quantidade: unknown };
+type Mov = { item_id?: unknown; local_origem_id?: unknown; local_destino_id?: unknown; quantidade?: unknown };
 const n = (v: unknown) => { const x = Number(v); return Number.isFinite(x) ? x : 0; };
 
 /** Saldo de um item em um local (ou em todos, sem local). */
@@ -71,7 +71,7 @@ export function validarMovimento(p: { tipo: string; quantidade: number; origem?:
 }
 
 /** Custo dos materiais: soma quantidade × custo das saídas (devoluções à OS abatem). */
-export function custoMateriais(movs: { tipo: unknown; quantidade: unknown; custo_unitario?: unknown }[]) {
+export function custoMateriais(movs: { tipo?: unknown; quantidade?: unknown; custo_unitario?: unknown }[]) {
   const total = movs.reduce((t, m) => {
     const v = n(m.quantidade) * n(m.custo_unitario);
     return m.tipo === "devolucao" ? t - v : tipoMovCond(m.tipo)?.origem && !tipoMovCond(m.tipo)?.destino ? t + v : t;
