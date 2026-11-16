@@ -10,14 +10,13 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { SearchSelect } from "@/components/data-table/SearchSelect";
-import { confirmar } from "@/components/layout/DialogoGlobal";
+import { confirmar, perguntar } from "@/components/layout/DialogoGlobal";
 import {
   CATEGORIAS_ESTOQUE, SITUACAO_ESTOQUE, faltaParaComprar, mensagemFaltaEstoque, TIPOS_MOV_COND, UNIDADES_ESTOQUE, custoMateriais, saldoItem, situacaoEstoque, tipoMovCond, validarMovimento,
 } from "@/lib/cond-estoque";
 import type { Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
 import { AcaoIcone } from "./AcaoIcone";
-import { perguntar } from "@/components/layout/DialogoGlobal";
 import { enviarWhatsappEmpresa } from "@/lib/manutencoes";
 import { destinatariosAviso } from "@/lib/cond-manutencoes";
 import { s, useCondRows } from "./cond-data";
