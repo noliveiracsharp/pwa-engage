@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { buscarColaborador, filtrarTerceirizados, formatarDocumento, liberacaoAcesso, type Colaborador, type Terceirizado } from "./cond-terceirizados";
 
-const t = (nome: string, ativo = true, extra: Partial<Terceirizado> = {}): Terceirizado => ({ id: nome, nome, tipo_pessoa: "pj", documento: null, atividade: null, contato: null, telefone: null, email: null, observacoes: null, vinculo_id: nome, vinculo_ativo: ativo, obs_acesso: null, colaboradores: 0, ...extra });
-const c = (nome: string, cpf: string): Colaborador => ({ id: nome, terceirizado_id: "x", nome, funcao: null, rg: null, cpf, celular: null, foto_url: null, ativo: true, observacoes: null });
+const t = (nome: string, ativo = true, extra: Partial<Terceirizado> = {}): Terceirizado => ({ id: nome, nome, tipo_pessoa: "Jurídica", documento: null, atividade: null, contato: null, telefone: null, email: null, observacoes: null, vinculo_id: nome, vinculo_ativo: ativo, obs_acesso: null, colaboradores: 0, ...extra });
+const c = (nome: string, cpf: string): Colaborador => ({ id: nome, empresa_id: "x", nome, funcao: null, rg: null, cpf, celular: null, foto_url: null, ativo: true, observacoes: null });
 
 describe("terceirizados", () => {
   it("separa ativos e inativos em ordem alfabética", () => {

@@ -1,6 +1,7 @@
 /** Regras puras do módulo Terceirizados (prestadores PJ/PF e seus colaboradores). */
-export type Terceirizado = { id: string; nome: string; tipo_pessoa: "pj" | "pf"; documento: string | null; atividade: string | null; contato: string | null; telefone: string | null; email: string | null; observacoes: string | null; vinculo_id: string; vinculo_ativo: boolean; obs_acesso: string | null; colaboradores: number };
-export type Colaborador = { id: string; terceirizado_id: string; nome: string; funcao: string | null; rg: string | null; cpf: string | null; celular: string | null; foto_url: string | null; ativo: boolean; observacoes: string | null };
+/** Prestador = linha de `empresas` (id) + vínculo com o condomínio. */
+export type Terceirizado = { id: string; nome: string; titulo?: string | null; tipo_pessoa: string | null; is_tenant?: boolean; telefone_contato?: string | null; documento: string | null; atividade: string | null; contato: string | null; telefone: string | null; email: string | null; observacoes: string | null; vinculo_id: string; vinculo_ativo: boolean; obs_acesso: string | null; colaboradores: number };
+export type Colaborador = { id: string; empresa_id: string; nome: string; funcao: string | null; rg: string | null; cpf: string | null; celular: string | null; foto_url: string | null; ativo: boolean; observacoes: string | null };
 
 export const soDigitos = (s: string | null | undefined) => String(s ?? "").replace(/\D/g, "");
 
@@ -18,7 +19,7 @@ export function filtrarTerceirizados(lista: Terceirizado[], busca: string, ativo
   const q = norm(busca.trim()); const qd = soDigitos(busca);
   return lista
     .filter((t) => t.vinculo_ativo === ativos)
-    .filter((t) => !q || norm([t.nome, t.atividade, t.contato].join(" ")).includes(q) || (qd.length >= 3 && (soDigitos(t.documento).includes(qd) || soDigitos(t.telefone).includes(qd))))
+    .filter((t) => !q || norm([t.nome, t.titulo, t.atividade, t.contato].join(" ")).includes(q) || (qd.length >= 3 && (soDigitos(t.documento).includes(qd) || soDigitos(t.telefone).includes(qd) || soDigitos(t.telefone_contato).includes(qd))))
     .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
 }
 
