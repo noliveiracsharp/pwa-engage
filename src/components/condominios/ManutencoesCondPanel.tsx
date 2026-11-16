@@ -24,6 +24,8 @@ import { cn } from "@/lib/utils";
 import { AcaoIcone } from "./AcaoIcone";
 import { CampoData } from "./CampoData";
 import { s, useCondRows } from "./cond-data";
+import { EstoqueCond, MateriaisOs, useEstoqueCond } from "./EstoqueCond";
+import { custoMateriais } from "@/lib/cond-estoque";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabase as any;
@@ -101,6 +103,7 @@ export function ManutencoesCondPanel({ condominioId, nomeCondominio, perms }: { 
         <TabsTrigger value="calendario">Calendário</TabsTrigger>
         <TabsTrigger value="bens">Bens & Patrimônio</TabsTrigger>
         <TabsTrigger value="preventivas">Preventivas</TabsTrigger>
+        <TabsTrigger value="estoque">Estoque & Insumos</TabsTrigger>
         <TabsTrigger value="modelos">Modelos de checklist</TabsTrigger>
         <TabsTrigger value="relatorio">Relatório</TabsTrigger>
       </TabsList>
@@ -108,6 +111,7 @@ export function ManutencoesCondPanel({ condominioId, nomeCondominio, perms }: { 
       <TabsContent value="calendario"><Calendario {...ctx} /></TabsContent>
       <TabsContent value="bens"><Bens {...ctx} /></TabsContent>
       <TabsContent value="preventivas"><Planos {...ctx} /></TabsContent>
+      <TabsContent value="estoque"><EstoqueCond condominioId={condominioId} perms={perms} /></TabsContent>
       <TabsContent value="modelos"><Modelos {...ctx} /></TabsContent>
       <TabsContent value="relatorio"><Relatorio {...ctx} /></TabsContent>
     </Tabs>
@@ -393,6 +397,7 @@ function OsSheet({ condominioId, nomeCondominio, perms, ativos, modelos, invalid
             </div>
           )}
           <div className="px-4 pb-4"><Campo id="o-obs" label="Observações da execução"><Textarea id="o-obs" rows={3} value={v.observacoes} disabled={encerrada} onChange={(e) => setV((o) => ({ ...o, observacoes: e.target.value }))} /></Campo></div>
+          {!novo && <MateriaisOs condominioId={condominioId} osId={s(registro["id"])} editavel={perms.canUpdate && !encerrada} />}
           {!novo && (
             <div className="flex flex-wrap gap-2 px-4 pb-4">
               <Button type="button" variant="outline" onClick={() => window.open(linkOs(registro["token"]), "_blank", "noopener")}><ClipboardList className="size-4" /> Relatório da OS</Button>
@@ -633,6 +638,10 @@ function Relatorio({ condominioId, nomeCondominio, os, planos, ativos }: Ctx) {
   const nc = noPeriodo.reduce((t, r) => t + resumoChecklist((r["checklist"] as ItemChecklist[]) ?? []).naoConformes, 0);
   const vencidos = planos.filter((p) => p["ativo"] !== false && situacaoPlano(s(p["proxima_data"]), hoje()) === "vencido").length;
   const logo = s(cond?.["logo"]) || s(emp.logo);
+  const { movs: movsEst } = useEstoqueCond(condominioId);
+  const idsPeriodo = new Set(noPeriodo.map((r) => s(r["id"])));
+  const custoOs = (id: string) => custoMateriais(movsEst.filter((m) => s(m["os_id"]) === id));
+  const custoTotal = custoMateriais(movsEst.filter((m) => idsPeriodo.has(s(m["os_id"]))));
   return (
     <section className="space-y-3">
       <div className="flex flex-wrap items-end gap-3">
@@ -656,13 +665,14 @@ function Relatorio({ condominioId, nomeCondominio, os, planos, ativos }: Ctx) {
             <td><span>Itens não conformes</span><strong>{nc}</strong></td>
             <td><span>Planos vencidos hoje</span><strong>{vencidos}</strong></td>
             <td><span>Bens cadastrados</span><strong>{ativos.length}</strong></td>
+            <td><span>Materiais usados</span><strong>{brl(custoTotal)}</strong></td>
           </tr></tbody></table>
           <table className="dre-tab">
-            <thead><tr><th>OS</th><th>Tipo</th><th>Bem / serviço</th><th>Prevista</th><th>Concluída</th><th>Checklist</th><th>Situação</th></tr></thead>
+            <thead><tr><th>OS</th><th>Tipo</th><th>Bem / serviço</th><th>Prevista</th><th>Concluída</th><th>Checklist</th><th>Materiais</th><th>Situação</th></tr></thead>
             <tbody>{noPeriodo.map((r) => { const ck = resumoChecklist((r["checklist"] as ItemChecklist[]) ?? []); return (
-              <tr key={s(r["id"])}><td>{s(r["numero"])}</td><td>{meta(TIPOS, r["tipo"]).label}</td><td>{s(r["equipamento"]) || s(r["descricao"])}</td><td>{dia(r["data_prevista"])}</td><td>{dia(r["concluido_em"])}</td><td>{ck.total ? `${ck.respondidos}/${ck.total}${ck.naoConformes ? ` · ${ck.naoConformes} NC` : ""}` : "—"}</td><td>{meta(STATUS, r["status"]).label}</td></tr>
+              <tr key={s(r["id"])}><td>{s(r["numero"])}</td><td>{meta(TIPOS, r["tipo"]).label}</td><td>{s(r["equipamento"]) || s(r["descricao"])}</td><td>{dia(r["data_prevista"])}</td><td>{dia(r["concluido_em"])}</td><td>{ck.total ? `${ck.respondidos}/${ck.total}${ck.naoConformes ? ` · ${ck.naoConformes} NC` : ""}` : "—"}</td><td>{custoOs(s(r["id"])) ? brl(custoOs(s(r["id"]))) : "—"}</td><td>{meta(STATUS, r["status"]).label}</td></tr>
             ); })}
-            {!noPeriodo.length && <tr><td colSpan={7}>Nenhuma ordem no período.</td></tr>}</tbody>
+            {!noPeriodo.length && <tr><td colSpan={8}>Nenhuma ordem no período.</td></tr>}</tbody>
           </table>
           <footer className="dre-rodape">Registros gerados pelo sistema com data, checklist e fotos de cada ordem. Documento de uso interno.</footer>
         </div>
