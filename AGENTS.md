@@ -39,3 +39,4 @@
 - Interfone points/ramais: extra QR points (cond_interfone_pontos) and ramais reuse the main config's transfer engine via cond_interfone_chamar_v2, so one call path owns ringing, rate limits and LGPD retention.
 - Condo assemblies: votes are insert-only via SECURITY DEFINER cond_assembleia_votar (weight, IP, chained SHA-256); SQL only sums, verdicts come from pure src/lib/assembleias.ts so quorum rules live in one tested place.
 - Condo maintenance reuses manutencao_* tables tagged with condominio_id (empresa_id = condo); pure rules in src/lib/cond-manutencoes.ts — one maintenance engine for ERP and vertical.
+- Condo stock (Estoque & Insumos) lives in cond_estoque_* tables (insert-only Kardex, DB trigger blocks negative balance); OS materials are saida_os rows with os_id so maintenance cost derives from the ledger; pure rules in src/lib/cond-estoque.ts.
