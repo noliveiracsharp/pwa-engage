@@ -26,13 +26,18 @@ const CAMPOS = ["nome", "email", "celular", "cpf", "cargo", "vinculo", "empresa_
 export function EquipePanel({ condominioId, blocos, unidades, perms, publico = false }: { condominioId: string; blocos: Row[]; unidades: Row[]; perms: P; publico?: boolean }) {
   const { data: equipeGestao = [], isLoading: carregandoGestao } = useCondRows("cond_equipe", "condominio_id", publico ? "" : condominioId);
   // Portal do morador: lista pública (diretoria + equipe) via função segura do banco.
-  const { data: publica = [], isLoading: carregandoPublica } = useQuery({
+  const { data: publica = [], isLoading: carregandoPublica, error: erroPublica } = useQuery({
     queryKey: ["cond", "equipe-publica", condominioId],
     enabled: publico && !!condominioId,
     queryFn: async (): Promise<Row[]> => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await (supabase as any).rpc("cond_equipe_publica", { p_condominio: condominioId });
-      if (error) throw new Error(error.message);
+      if (error) {
+        // Função ainda não instalada: mantém ao menos a equipe operacional visível.
+        const { data: eq } = await (supabase as any).from("cond_equipe").select("*").eq("condominio_id", condominioId);
+        if (!eq?.length) throw new Error(error.message);
+        return (eq as Row[]).map((r) => ({ ...r, origem: "equipe" }));
+      }
       return (data ?? []) as Row[];
     },
   });
@@ -94,6 +99,7 @@ export function EquipePanel({ condominioId, blocos, unidades, perms, publico = f
     return nomeEmpresa(s(r["empresa_id"]));
   };
 
+  const avisoPublico = publico && erroPublica ? <p role="alert" className="rounded-md border border-destructive/40 p-3 text-sm text-destructive">Não foi possível carregar o corpo diretivo: {erroPublica.message}</p> : null;
   const Lista = ({ titulo, itens, icon: Icon }: { titulo: string; itens: Row[]; icon: typeof Users }) => (
     <section className="space-y-2 rounded-lg border bg-card p-4">
       <h3 className="flex items-center gap-2 font-semibold"><Icon className="size-4" /> {titulo} <span className="text-sm font-normal text-muted-foreground">({itens.length})</span></h3>
@@ -125,6 +131,7 @@ export function EquipePanel({ condominioId, blocos, unidades, perms, publico = f
         <span className="mr-auto" />
         {perms.canCreate && <Button size="sm" onClick={() => setEdit({})}><Plus className="size-4" /> Adicionar</Button>}
       </div>
+      {avisoPublico}
       {isLoading ? <p className="text-sm text-muted-foreground">Carregando…</p> : (
         <div className="grid gap-4 lg:grid-cols-2">
           <Lista titulo="Corpo diretivo" itens={diretoria} icon={Crown} />
