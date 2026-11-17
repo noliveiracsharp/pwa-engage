@@ -31,7 +31,7 @@ import { cn } from "@/lib/utils";
 import { OCUPACOES, PAPEIS, TIPOS_UNIDADE, s, useCatalogo, useCondRows, useCondSalvar } from "./cond-data";
 
 type Perms = { canCreate: boolean; canUpdate: boolean; canDelete: boolean };
-type Props = { unidade: Row; condominioId: string; blocoNome: string; perms: Perms; onClose: () => void };
+type Props = { unidade: Row; condominioId: string; blocoNome: string; perms: Perms; permsDados?: Perms; onClose: () => void };
 
 const rpc = (fn: string, args: Record<string, unknown>) =>
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -48,7 +48,8 @@ function usePessoas(unidadeId: string) {
   });
 }
 
-export function UnidadeSheet({ unidade, condominioId, blocoNome, perms, onClose }: Props) {
+export function UnidadeSheet({ unidade, condominioId, blocoNome, perms, permsDados, onClose }: Props) {
+  const pd = permsDados ?? perms;
   const id = s(unidade["id"]);
   const [ocupacao, setOcupacao] = useState(s(unidade["ocupacao"]) || "vazia");
   const [aba, setAba] = useState("painel");
@@ -80,13 +81,13 @@ export function UnidadeSheet({ unidade, condominioId, blocoNome, perms, onClose 
             <TabsContent value="dados"><DadosUnidade unidade={unidade} condominioId={condominioId} perms={perms} onClose={onClose} onOcupacao={setOcupacao} /></TabsContent>
             <TabsContent value="proprietario"><Pessoas unidadeId={id} condominioId={condominioId} perms={perms} lado="proprietario" papeis={["proprietario", "preposto"]} titulo="Proprietários e procuradores" /></TabsContent>
             <TabsContent value="inquilino"><Pessoas unidadeId={id} condominioId={condominioId} perms={perms} lado="inquilino" papeis={["inquilino"]} titulo="Inquilinos (locatários)" /></TabsContent>
-            <TabsContent value="familia"><Pessoas unidadeId={id} condominioId={condominioId} perms={perms} lado={ocupacao === "alugada" ? "inquilino" : "proprietario"} papeis={s(unidade["tipo"]) === "comercial" || s(unidade["tipo"]) === "sala" || s(unidade["tipo"]) === "loja" ? ["colaborador"] : ["familiar"]} titulo="Família da unidade (pai, mãe, filhos, avós…)" /></TabsContent>
-            <TabsContent value="visitantes"><Pessoas unidadeId={id} condominioId={condominioId} perms={perms} lado={ocupacao === "alugada" ? "inquilino" : "proprietario"} papeis={["visitante"]} titulo="Visitantes autorizados (acesso temporário)" /></TabsContent>
-            <TabsContent value="prestadores"><Pessoas unidadeId={id} condominioId={condominioId} perms={perms} lado={ocupacao === "alugada" ? "inquilino" : "proprietario"} papeis={["prestador"]} titulo="Prestadores de serviço da unidade" /></TabsContent>
-            <TabsContent value="veiculos"><Veiculos unidadeId={id} limiteUnidade={unidade["limite_veiculos"]} condominioId={condominioId} perms={perms} /></TabsContent>
-            <TabsContent value="pets"><Pets unidadeId={id} perms={perms} /></TabsContent>
-            <TabsContent value="documentos"><Documentos unidadeId={id} perms={perms} /></TabsContent>
-            <TabsContent value="emergencia"><Contatos unidadeId={id} perms={perms} /></TabsContent>
+            <TabsContent value="familia"><Pessoas unidadeId={id} condominioId={condominioId} perms={pd} lado={ocupacao === "alugada" ? "inquilino" : "proprietario"} papeis={s(unidade["tipo"]) === "comercial" || s(unidade["tipo"]) === "sala" || s(unidade["tipo"]) === "loja" ? ["colaborador"] : ["familiar"]} titulo="Família da unidade (pai, mãe, filhos, avós…)" /></TabsContent>
+            <TabsContent value="visitantes"><Pessoas unidadeId={id} condominioId={condominioId} perms={pd} lado={ocupacao === "alugada" ? "inquilino" : "proprietario"} papeis={["visitante"]} titulo="Visitantes autorizados (acesso temporário)" /></TabsContent>
+            <TabsContent value="prestadores"><Pessoas unidadeId={id} condominioId={condominioId} perms={pd} lado={ocupacao === "alugada" ? "inquilino" : "proprietario"} papeis={["prestador"]} titulo="Prestadores de serviço da unidade" /></TabsContent>
+            <TabsContent value="veiculos"><Veiculos unidadeId={id} limiteUnidade={unidade["limite_veiculos"]} condominioId={condominioId} perms={pd} /></TabsContent>
+            <TabsContent value="pets"><Pets unidadeId={id} perms={pd} /></TabsContent>
+            <TabsContent value="documentos"><Documentos unidadeId={id} perms={pd} /></TabsContent>
+            <TabsContent value="emergencia"><Contatos unidadeId={id} perms={pd} /></TabsContent>
           </div>
         </Tabs>
       </SheetContent>

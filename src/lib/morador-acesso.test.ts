@@ -12,3 +12,11 @@ describe("acesso do morador", () => {
   it("login Master em unidade de morador não vai para a gestão", () => expect(entraNaGestao(false)).toBe(false));
   it("chamado finalizado não conta como aberto", () => { expect(chamadoAberto("finalizado")).toBe(false); expect(chamadoAberto("respondida")).toBe(true); });
 });
+
+import { permsFichaMorador as pf } from "./morador-acesso";
+describe("permsFichaMorador", () => {
+  it("condomínio permite e perfil permite: libera", () => expect(pf(true, true).canUpdate).toBe(true));
+  it("condomínio não permite: bloqueia", () => expect(pf(true, false).canUpdate).toBe(false));
+  it("config ausente: bloqueia", () => expect(pf(true, undefined).canCreate).toBe(false));
+  it("perfil sem alteração: bloqueia mesmo com condomínio liberando", () => expect(pf(false, true).canUpdate).toBe(false));
+});

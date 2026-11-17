@@ -22,3 +22,10 @@ export const entraNaGestao = (ehGestorDoVinculo: boolean) => ehGestorDoVinculo;
 
 export const ASSEMBLEIA_ATIVA = ["convocada", "em_andamento", "sessao_permanente"];
 export const chamadoAberto = (status: unknown) => String(status ?? "") !== "finalizado";
+
+/** Permissão efetiva do morador na ficha: perfil (teto da plataforma) E switch do condomínio (morador_edita_dados). Excluir dados nunca. */
+export const permsFichaMorador = (perfilPodeAlterar: boolean, condominioPermite: unknown) => {
+  const pode = perfilPodeAlterar && condominioPermite === true;
+  return { canCreate: pode, canUpdate: pode, canDelete: pode };
+};
+export const SOMENTE_LEITURA = { canCreate: false, canUpdate: false, canDelete: false };

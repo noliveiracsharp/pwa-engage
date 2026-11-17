@@ -9,7 +9,7 @@ import { ObrasPanel } from "@/components/condominios/ObrasPanel";
 import { AtendimentosPanel } from "@/components/condominios/AtendimentosPanel";
 import { EnquetesPanel } from "@/components/condominios/EnquetesPanel";
 import { useAuth } from "@/hooks/useAuth";
-import { ASSEMBLEIA_ATIVA, chamadoAberto, entraNaGestao, permsMorador, visibilidadesDocumento } from "@/lib/morador-acesso";
+import { ASSEMBLEIA_ATIVA, chamadoAberto, entraNaGestao, permsFichaMorador, permsMorador, SOMENTE_LEITURA, visibilidadesDocumento } from "@/lib/morador-acesso";
 import { AssembleiasMorador } from "@/components/condominios/AssembleiasPanel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { gravarAmbiente, lerAmbiente, useAmbientes } from "@/hooks/useAmbientes";
 import { ehGestor, rotuloCargo } from "@/lib/ambientes";
 import { htmlParaTexto } from "@/lib/html-texto";
+import { useCondRows } from "@/components/condominios/cond-data";
 import { UnidadeSheet } from "@/components/condominios/UnidadeSheet";
 import { CardAviso, LeituraAvisoDialog } from "@/components/condominios/LeituraAvisoDialog";
 
@@ -50,6 +51,9 @@ function MinhaUnidade() {
   const condId = v?.condominio_id ?? "";
   const db = supabase as any;
   const [fichaAberta, setFichaAberta] = useState(false);
+  const { data: cfgCond = [] } = useCondRows("cond_config", "condominio_id", condId || undefined);
+  // Perfil Morador é o teto da plataforma; quem decide é o switch do condomínio ativo.
+  const permsFicha = permsFichaMorador(true, cfgCond[0]?.["morador_edita_dados"]);
   const unidadeQ = useQuery({
     queryKey: ["portal", "unidade", v?.unidade_id],
     enabled: !!v?.unidade_id,
@@ -203,7 +207,7 @@ function MinhaUnidade() {
             </CardContent>
           </Card>
           {fichaAberta && unidadeRow && condId && (
-            <UnidadeSheet unidade={unidadeRow} condominioId={condId} blocoNome={v.bloco ?? ""} perms={{ canCreate: false, canUpdate: false, canDelete: false }} onClose={() => setFichaAberta(false)} />
+            <UnidadeSheet unidade={unidadeRow} condominioId={condId} blocoNome={v.bloco ?? ""} perms={SOMENTE_LEITURA} permsDados={permsFicha} onClose={() => setFichaAberta(false)} />
           )}
         </div>)}
         {secao === "meu" && <MeuCondominioPanel condominioId={condId} perms={p("meu")} />}
