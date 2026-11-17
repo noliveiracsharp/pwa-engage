@@ -1,3 +1,4 @@
+import { PwaInstallPrompt } from "@/components/pwa/PwaInstallPrompt";
 import { VisualizadorArquivoHost } from "@/components/layout/VisualizadorArquivo";
 import type { ErrorComponentProps } from "@tanstack/react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -153,6 +154,7 @@ function RootComponent() {
           <NovaVersaoAviso />
           <DialogoGlobal />
           <VisualizadorArquivoHost />
+          <PwaInstallPrompt />
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
