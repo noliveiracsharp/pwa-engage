@@ -19,6 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { gravarAmbiente, lerAmbiente, useAmbientes } from "@/hooks/useAmbientes";
 import { ehGestor, rotuloCargo } from "@/lib/ambientes";
 import { htmlParaTexto } from "@/lib/html-texto";
+import { CardAviso, LeituraAvisoDialog } from "@/components/condominios/LeituraAvisoDialog";
 
 export const Route = createFileRoute("/_authenticated/minha-unidade")({
   staticData: { sitemap: false },
@@ -92,6 +93,7 @@ function MinhaUnidade() {
     }
   }, [atual, v, navigate]);
   const [secao, setSecao] = useState("painel");
+  const [avisoAberto, setAvisoAberto] = useState<Row | null>(null);
   const sec = (key: string, label: string, icon: Secao["icon"]): Secao => ({ key, label, icon, ...permsMorador(key) });
   const secoes: Secao[] = [
     sec("painel", "Painel", LayoutDashboard),
@@ -116,10 +118,7 @@ function MinhaUnidade() {
   const listaAvisos = (lim?: number) => (avisos.isLoading ? <Loader2 className="mx-auto h-5 w-5 animate-spin" aria-label="Carregando" /> : (avisos.data ?? []).length === 0
     ? <p className="py-8 text-center text-sm text-muted-foreground">Nenhum aviso ativo.</p>
     : (lim ? avisos.data!.slice(0, lim) : avisos.data!).map((a) => (
-      <Card key={s(a["id"])}><CardContent className="space-y-1 p-4">
-        <div className="flex items-center justify-between gap-2"><p className="font-medium">{s(a["titulo"])}</p><span className="text-xs text-muted-foreground">{dataBR(a["created_at"])}</span></div>
-        <p className="line-clamp-3 text-sm text-muted-foreground">{htmlParaTexto(s(a["mensagem"]))}</p>
-      </CardContent></Card>
+      <CardAviso key={s(a["id"])} aviso={a} onAbrir={() => setAvisoAberto(a)} />
     )));
   const kpis = [
     { k: "avisos", l: "Avisos ativos", n: avisos.data?.length ?? 0, i: Megaphone },
@@ -199,6 +198,7 @@ function MinhaUnidade() {
         {secao === "enquetes" && <EnquetesPanel condominioId={condId} blocos={[]} perms={p("enquetes")} />}
         {secao === "assembleias" && condId && <AssembleiasMorador condominioId={condId} />}
         {secao === "avisos" && <div className="space-y-2">{listaAvisos()}</div>}
+        <LeituraAvisoDialog aviso={avisoAberto} usuarioId={s(usuario?.["id"]) || undefined} onClose={() => setAvisoAberto(null)} />
         {secao === "docs" && condId && <DocumentosPanel condominioId={condId} perms={p("docs")} condominios={[{ value: condId, label: v.condominio_nome ?? "" }]} blocos={[]} unidades={[]} visibilidades={visibilidadesDocumento(v.papel)} />}
       </div>
     </div>

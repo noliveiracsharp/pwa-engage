@@ -30,6 +30,7 @@ import { buscarTodos, enfileirarAviso, inserirEmLotes, quandoConcluirEnvio, useF
 import { AcaoIcone } from "./AcaoIcone";
 import { AssistenteAvisoIA } from "./AssistenteAvisoIA";
 import { Wand2 } from "lucide-react";
+import { LeituraAvisoDialog } from "./LeituraAvisoDialog";
 
 type Opt = { value: string; label: string };
 type Perms = { canCreate: boolean; canUpdate?: boolean; canDelete?: boolean };
@@ -58,6 +59,7 @@ export function AvisosPanel({ condominioId, condominios, blocos, unidades, perms
   const [reenviar, setReenviar] = useState<Row | null>(null);
   const [busca, setBusca] = useState("");
   const [verArquivados, setVerArquivados] = useState(false);
+  const [lendo, setLendo] = useState<Row | null>(null);
   const podeGerir = perms.canUpdate ?? perms.canCreate;
   const nomeCond = condominios.find((c) => c.value === condominioId)?.label ?? "";
   const empresaId = String(rowId(empresa ?? {}));
@@ -124,6 +126,7 @@ export function AvisosPanel({ condominioId, condominios, blocos, unidades, perms
 
   return (
     <section className="space-y-4">
+      <LeituraAvisoDialog aviso={lendo} onClose={() => setLendo(null)} />
       <div className="flex flex-wrap items-center gap-2">
         <span className="mr-auto" />
         <div className="relative w-full sm:w-64">
@@ -165,6 +168,7 @@ export function AvisosPanel({ condominioId, condominios, blocos, unidades, perms
                     <p className="text-xs"><span className="text-success">{Number(a["enviados"] ?? 0)}</span> de {Number(a["total"] ?? 0)} entregues{Number(a["falhas"] ?? 0) > 0 && <span className="ml-1 text-destructive">· {Number(a["falhas"])} falha(s)</span>}</p>
                   </div>
                   <div className="flex flex-wrap items-center justify-end gap-0.5">
+                    <AcaoIcone titulo="Ler comunicado" onClick={() => setLendo(a)}><FileText className="size-4" /></AcaoIcone>
                     <AcaoIcone titulo="Quem recebeu e quem visualizou" onClick={() => setLeituras([a])}><Eye className="size-4" /></AcaoIcone>
                     {podeGerir && acoes.cancelar && <AcaoIcone titulo="Cancelar aviso" destrutivo onClick={() => cancelar(a)}><Ban className="size-4" /></AcaoIcone>}
                     {podeGerir && acoes.editar && <AcaoIcone titulo={acoes.editarCriaVersao ? "Editar (nova versão)" : "Editar"} destaque onClick={() => setEditor({ base: a })}><Pencil className="size-4" /></AcaoIcone>}
