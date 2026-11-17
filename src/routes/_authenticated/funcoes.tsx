@@ -12,6 +12,8 @@ import { rowId, idColumn, useDeleteRecord, useSaveRecord, useTableRows } from "@
 import { matchesAny } from "@/lib/input-masks";
 import { pick, type Row } from "@/lib/row";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
+import { Badge } from "@/components/ui/badge";
+import { ROTULO_VERTICAL, verticalDaRota } from "@/lib/perfil-vertical";
 
 export const Route = createFileRoute("/_authenticated/funcoes")({
   staticData: { sitemap: false },
@@ -77,7 +79,23 @@ function FuncoesPage() {
   });
   const [open, setOpen] = useState(false);
   const [record, setRecord] = useState<Row | null>(null);
-  const [f, setF] = useState({ busca: "", status: "todos" });
+  const [f, setF] = useState({ busca: "", status: "todos", vertical: "todos" });
+  // Vertical de cada função = rota da função raiz (/condominios/* é Condomínios).
+  const verticalDe = useMemo(() => {
+    const byId = new Map(rows.map((r) => [String(rowId(r) ?? ""), r]));
+    return (row: Row) => {
+      let atual = row;
+      const vistos = new Set<string>();
+      while (true) {
+        const pai = String(pick(atual, ["funcoes_pai_id"]) ?? "");
+        if (!pai || vistos.has(pai) || !byId.has(pai)) break;
+        vistos.add(pai);
+        atual = byId.get(pai)!;
+      }
+      const propria = verticalDaRota(pick(row, ["path"]));
+      return propria === "condominio" ? propria : verticalDaRota(pick(atual, ["path"]));
+    };
+  }, [rows]);
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(() => new Set());
 
   const hierarchy = useMemo(() => {
@@ -98,7 +116,8 @@ function FuncoesPage() {
     const matches = ordered.filter(
       (row) =>
         matchesAny([pick(row, ["descricao"]), pick(row, ["path"]), pick(row, ["icone"])], f.busca) &&
-        (f.status === "todos" || (f.status === "ativo" ? row["status"] === true : row["status"] === false)),
+        (f.status === "todos" || (f.status === "ativo" ? row["status"] === true : row["status"] === false)) &&
+        (f.vertical === "todos" || verticalDe(row) === f.vertical),
     );
     const included = new Set(matches.map((row) => String(rowId(row) ?? "")));
     for (const row of matches) {
@@ -114,7 +133,7 @@ function FuncoesPage() {
     const depthById = new Map<string, number>();
     const visible: Row[] = [];
     const visited = new Set<string>();
-    const hasActiveFilter = f.busca.trim() !== "" || f.status !== "todos";
+    const hasActiveFilter = f.busca.trim() !== "" || f.status !== "todos" || f.vertical !== "todos";
     const append = (row: Row, depth: number, ancestors: Set<string>) => {
       const id = String(rowId(row) ?? "");
       if (!id || visited.has(id) || ancestors.has(id) || !included.has(id)) return;
@@ -133,7 +152,7 @@ function FuncoesPage() {
     }
 
     return { visible, children, depthById, hasActiveFilter };
-  }, [rows, f, collapsedIds]);
+  }, [rows, f, collapsedIds, verticalDe]);
 
 
   const fields: Field[] = useMemo(() => {
@@ -164,6 +183,15 @@ function FuncoesPage() {
   const columns: Column[] = [
     { key: "descricao", header: "Descrição", fields: ["descricao"] },
     { key: "path", header: "Caminho", fields: ["path"] },
+    {
+      key: "vertical",
+      header: "Vertical",
+      fields: ["path"],
+      render: (row) => {
+        const v = verticalDe(row);
+        return <Badge variant={v === "condominio" ? "default" : "secondary"}>{ROTULO_VERTICAL[v]}</Badge>;
+      },
+    },
     {
       key: "status",
       header: "Status",
@@ -223,6 +251,16 @@ function FuncoesPage() {
               onChange={(v) => setF({ ...f, status: v })}
               options={BOOL_OPTIONS}
             />
+            <FilterSelect
+              label="Vertical"
+              value={f.vertical}
+              onChange={(v) => setF({ ...f, vertical: v })}
+              options={[
+                { value: "todos", label: "Todas" },
+                { value: "condominio", label: "Condomínios" },
+                { value: "geral", label: "Corporativo" },
+              ]}
+            />
           </>
         }
       />
@@ -237,7 +275,7 @@ function FuncoesPage() {
         record={record}
         readOnly={record ? !perms.canUpdate : !perms.canCreate}
         saving={save.isPending}
-        extra={<FuncaoPerfis funcaoId={record ? rowId(record) : undefined} />}
+        extra={<FuncaoPerfis funcaoId={record ? rowId(record) : undefined} vertical={record ? verticalDe(record) : "geral"} />}
         onSave={(values) => {
           const pai = values["funcoes_pai_id"];
           const isChild = !(pai === NONE || pai === "" || pai === undefined);

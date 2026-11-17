@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react";
+import { useAudit } from "@/lib/audit";
+import { ROTULO_VERTICAL, verticalDoPerfil } from "@/lib/perfil-vertical";
 import { createFileRoute } from "@tanstack/react-router";
 import { nomeProprio } from "@/lib/nome-proprio";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -350,21 +352,23 @@ function UsuariosPage() {
   });
   const userPerfilOrdem = ordemPerfil.get(text(pick(usuario, ["perfil_id", "id_perfil"])));
 
+  const { empresaId: empresaAtivaPerfis } = useAudit();
   const perfisPermitidos = useMemo(
     () =>
       perfis.filter((p) => {
         const o = Number(p["ordem"]);
         if (!(o > 0)) return false;
+        if (p["empresa_id"] && empresaAtivaPerfis != null && String(p["empresa_id"]) !== String(empresaAtivaPerfis)) return false;
         if (isMaster) return true;
         return userPerfilOrdem !== undefined && o >= userPerfilOrdem;
       }),
-    [perfis, isMaster, userPerfilOrdem],
+    [perfis, isMaster, userPerfilOrdem, empresaAtivaPerfis],
   );
 
   const perfilOptions = useMemo(
     () => [
       { value: "todos", label: "Todos" },
-      ...perfisPermitidos.map((p) => ({ value: text(rowId(p)), label: text(pick(p, ["descricao"], "Perfil")) })),
+      ...perfisPermitidos.map((p) => ({ value: text(rowId(p)), label: text(pick(p, ["descricao"], "Perfil")), hint: ROTULO_VERTICAL[verticalDoPerfil(p)] })),
     ],
     [perfisPermitidos],
   );

@@ -27,24 +27,24 @@ import { rowId, text, useDeleteRecord, useTableRows } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
 import { toast } from "sonner";
 import { useAudit } from "@/lib/audit";
+import { Badge } from "@/components/ui/badge";
+import { ROTULO_VERTICAL, perfisDaEmpresa, verticalDoPerfil, type Vertical } from "@/lib/perfil-vertical";
 
-type Props = { funcaoId: string | number | undefined };
+type Props = { funcaoId: string | number | undefined; vertical?: Exclude<Vertical, "global"> };
 
-export function FuncaoPerfis({ funcaoId }: Props) {
+export function FuncaoPerfis({ funcaoId, vertical = "geral" }: Props) {
   const queryClient = useQueryClient();
   const { empresaId } = useAudit();
   const { data: todosPerfis = [] } = useTableRows("perfil");
-  // Isolamento: somente perfis da empresa ativa (empresa_id é a âncora de tudo).
+  // Perfis padrão do sistema (sem empresa) + personalizados da empresa ativa; Master fica de fora.
   const perfis = useMemo(
     () =>
-      empresaId === undefined || empresaId === null
-        ? []
-        : todosPerfis
-            .filter((p) => String(p["empresa_id"] ?? "") === String(empresaId))
-            .sort((a, b) =>
-              text(pick(a, ["descricao", "nome"])).localeCompare(text(pick(b, ["descricao", "nome"])), "pt-BR", { sensitivity: "base" }),
-            ),
-    [todosPerfis, empresaId],
+      perfisDaEmpresa(todosPerfis, empresaId).sort(
+        (a, b) =>
+          Number(verticalDoPerfil(a) !== vertical) - Number(verticalDoPerfil(b) !== vertical) ||
+          text(pick(a, ["descricao", "nome"])).localeCompare(text(pick(b, ["descricao", "nome"])), "pt-BR", { sensitivity: "base" }),
+      ),
+    [todosPerfis, empresaId, vertical],
   );
   const idsPerfisEmpresa = useMemo(() => new Set(perfis.map((p) => String(rowId(p)))), [perfis]);
   const { data: menu = [] } = useTableRows("menu");
@@ -56,7 +56,7 @@ export function FuncaoPerfis({ funcaoId }: Props) {
   const [saving, setSaving] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [edit, setEdit] = useState({ descricao: "", ordem: "", status: true });
-  const perfisAtivos = useMemo(() => perfis.filter((p) => p["status"] !== false), [perfis]);
+  const perfisAtivos = useMemo(() => perfis.filter((p) => p["status"] !== false && verticalDoPerfil(p) === vertical), [perfis, vertical]);
   const [perms] = useState({
     can_create: false,
     can_read: false,
@@ -218,6 +218,10 @@ export function FuncaoPerfis({ funcaoId }: Props) {
         <p className="text-muted-foreground text-xs">
           Selecione um perfil existente ou cadastre um novo para liberar esta função.
         </p>
+        <p className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <Badge variant={vertical === "condominio" ? "default" : "secondary"}>Vertical: {ROTULO_VERTICAL[vertical]}</Badge>
+          Os perfis desta vertical aparecem primeiro. "Liberar para todos" libera só os perfis de {ROTULO_VERTICAL[vertical]}.
+        </p>
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
@@ -231,6 +235,8 @@ export function FuncaoPerfis({ funcaoId }: Props) {
               {perfis.map((p) => (
                 <SelectItem key={String(rowId(p))} value={String(rowId(p))}>
                   {text(pick(p, ["descricao", "nome", "titulo"]))}
+                  {` · ${ROTULO_VERTICAL[verticalDoPerfil(p)]}`}
+                  {p["empresa_id"] ? " (desta empresa)" : ""}
                   {p["status"] === false ? " (inativo)" : ""}
                 </SelectItem>
               ))}
