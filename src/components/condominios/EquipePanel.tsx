@@ -32,12 +32,7 @@ export function EquipePanel({ condominioId, blocos, unidades, perms, publico = f
     queryFn: async (): Promise<Row[]> => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await (supabase as any).rpc("cond_equipe_publica", { p_condominio: condominioId });
-      if (error) {
-        // Função ainda não instalada: mantém ao menos a equipe operacional visível.
-        const { data: eq } = await (supabase as any).from("cond_equipe").select("*").eq("condominio_id", condominioId);
-        if (!eq?.length) throw new Error(error.message);
-        return (eq as Row[]).map((r) => ({ ...r, origem: "equipe" }));
-      }
+      if (error) throw new Error(error.message);
       return (data ?? []) as Row[];
     },
   });
