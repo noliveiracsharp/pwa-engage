@@ -80,7 +80,7 @@ export function useTableRows(table: string, enabled = true, orderBy?: string, fi
         if (res.error) res = await run();
       } else if (ctx && !isEmpresas && !CATALOG_TABLES.has(table)) {
         // Com filtro próprio (que pode usar .or), evita um segundo "or" que o banco descartaria.
-        res = await run((q) => (isMaster && !filtro ? q.or(`empresa_id.eq.${ctx},empresa_id.is.null`) : q.eq("empresa_id", ctx)) as typeof q);
+        res = await run((q) => ((isMaster || table === "perfil") && !filtro ? q.or(`empresa_id.eq.${ctx},empresa_id.is.null`) : q.eq("empresa_id", ctx)) as typeof q);
         if (res.error) res = await run();
       } else {
         res = await run();
@@ -95,7 +95,8 @@ export function useTableRows(table: string, enabled = true, orderBy?: string, fi
       // Master: mantém registros sem empresa (modelos). Demais: só a própria empresa.
       return rows.filter((r) => {
         if (!("empresa_id" in r)) return true;
-        if (r["empresa_id"] == null) return isMaster;
+        // Perfis padrão do sistema (sem empresa) valem para todas as empresas.
+        if (r["empresa_id"] == null) return isMaster || table === "perfil";
         const e = String(r["empresa_id"]);
         return e === ctx || (!!paiCatalogo && e === paiCatalogo);
       });
