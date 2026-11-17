@@ -21,6 +21,10 @@ export const Route = createFileRoute("/_authenticated")({
     if (emModoUnidade(lerAmbiente()) && !ROTAS_UNIDADE.some((r) => location.pathname.startsWith(r))) {
       throw redirect({ to: (lerDestinoAmbiente() === "/condominios" ? "/condominios" : "/minha-unidade") as "/minha-unidade" });
     }
+    // Acesso de morador (sem função de gestão) nunca abre a gestão do condomínio, mesmo com login Master.
+    if (emModoUnidade(lerAmbiente()) && lerDestinoAmbiente() !== "/condominios" && location.pathname.startsWith("/condominios")) {
+      throw redirect({ to: "/minha-unidade" });
+    }
     // Bloqueia acesso direto pela URL a telas não liberadas no menu
     // (vw_menu_usuario_perfil, perfil do usuário logado).
     const allowed = await getAllowedPathsCached(data.user.id, data.user.email ?? undefined);
