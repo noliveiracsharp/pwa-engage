@@ -19,6 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { gravarAmbiente, lerAmbiente, useAmbientes } from "@/hooks/useAmbientes";
 import { ehGestor, rotuloCargo } from "@/lib/ambientes";
 import { htmlParaTexto } from "@/lib/html-texto";
+import { UnidadeSheet } from "@/components/condominios/UnidadeSheet";
 import { CardAviso, LeituraAvisoDialog } from "@/components/condominios/LeituraAvisoDialog";
 
 export const Route = createFileRoute("/_authenticated/minha-unidade")({
@@ -48,6 +49,16 @@ function MinhaUnidade() {
   const v = atual && atual.tipo === "unidade" ? atual.vinculo : null;
   const condId = v?.condominio_id ?? "";
   const db = supabase as any;
+  const [fichaAberta, setFichaAberta] = useState(false);
+  const unidadeQ = useQuery({
+    queryKey: ["portal", "unidade", v?.unidade_id],
+    enabled: !!v?.unidade_id,
+    queryFn: async () => {
+      const { data } = await db.from("cond_unidades").select("*").eq("id", v!.unidade_id).maybeSingle();
+      return (data ?? null) as Row | null;
+    },
+  });
+  const unidadeRow = unidadeQ.data ?? null;
 
   const avisos = useQuery({
     queryKey: ["portal", "avisos", condId],
@@ -188,8 +199,12 @@ function MinhaUnidade() {
               {v.bloco && <span className="font-medium">{v.bloco}</span>}
               <span className="font-medium">Unidade {v.numero}</span>
               <Badge variant="secondary">{rotuloCargo(v)}</Badge>
+              <Button size="sm" className="ml-auto" disabled={!unidadeRow} onClick={() => setFichaAberta(true)}>Ver ficha completa</Button>
             </CardContent>
           </Card>
+          {fichaAberta && unidadeRow && condId && (
+            <UnidadeSheet unidade={unidadeRow} condominioId={condId} blocoNome={v.bloco ?? ""} perms={{ canCreate: false, canUpdate: false, canDelete: false }} onClose={() => setFichaAberta(false)} />
+          )}
         </div>)}
         {secao === "meu" && <MeuCondominioPanel condominioId={condId} perms={p("meu")} />}
         {secao === "equipe" && <EquipePanel condominioId={condId} blocos={[]} unidades={[]} perms={p("equipe")} publico />}
