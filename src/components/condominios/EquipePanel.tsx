@@ -23,8 +23,21 @@ type P = { canCreate: boolean; canUpdate: boolean; canDelete: boolean };
 const alfa = <T extends { label: string }>(l: readonly T[]) => [...l].sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
 const CAMPOS = ["nome", "email", "celular", "cpf", "cargo", "vinculo", "empresa_id", "cond_unidade_id", "turno", "inicio", "fim", "observacoes"] as const;
 
-export function EquipePanel({ condominioId, blocos, unidades, perms }: { condominioId: string; blocos: Row[]; unidades: Row[]; perms: P }) {
-  const { data: equipe = [], isLoading } = useCondRows("cond_equipe", "condominio_id", condominioId);
+export function EquipePanel({ condominioId, blocos, unidades, perms, publico = false }: { condominioId: string; blocos: Row[]; unidades: Row[]; perms: P; publico?: boolean }) {
+  const { data: equipeGestao = [], isLoading: carregandoGestao } = useCondRows("cond_equipe", "condominio_id", publico ? "" : condominioId);
+  // Portal do morador: lista pública (diretoria + equipe) via função segura do banco.
+  const { data: publica = [], isLoading: carregandoPublica } = useQuery({
+    queryKey: ["cond", "equipe-publica", condominioId],
+    enabled: publico && !!condominioId,
+    queryFn: async (): Promise<Row[]> => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any).rpc("cond_equipe_publica", { p_condominio: condominioId });
+      if (error) throw new Error(error.message);
+      return (data ?? []) as Row[];
+    },
+  });
+  const equipe = publico ? publica.filter((r) => r["origem"] === "equipe") : equipeGestao;
+  const isLoading = publico ? carregandoPublica : carregandoGestao;
   const salvar = useCondSalvar("cond_equipe");
   const { data: parceiros = [] } = useTableRows("parceiros");
   const [edit, setEdit] = useState<Row | null>(null);
@@ -39,7 +52,7 @@ export function EquipePanel({ condominioId, blocos, unidades, perms }: { condomi
   const unidadeIds = useMemo(() => unidades.map((u) => s(u["id"])).filter(Boolean), [unidades]);
   const { data: daUnidade = [] } = useQuery({
     queryKey: ["cond", "cond_unidades_vinculos", "diretoria", condominioId, unidadeIds.join(",")],
-    enabled: unidadeIds.length > 0,
+    enabled: !publico && unidadeIds.length > 0,
     queryFn: async (): Promise<Row[]> => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const db = supabase as any;
@@ -61,8 +74,9 @@ export function EquipePanel({ condominioId, blocos, unidades, perms }: { condomi
   });
 
   const ordem = (r: Row) => r["origem"] === "unidade" ? FUNCOES_DIRETIVAS_UNIDADE[s(r["funcao"])]?.ordem ?? 9 : CARGOS.findIndex((c) => c.value === s(r["cargo"]));
+  const daUnidadeFinal = publico ? publica.filter((r) => r["origem"] === "unidade") : daUnidade;
   const jaNaEquipe = (r: Row) => equipe.some((e) => s(e["cond_unidade_id"]) === s(r["cond_unidade_id"]) && s(e["nome"]).toLowerCase() === s(r["nome"]).toLowerCase());
-  const diretoria = [...equipe.filter((r) => ehDiretoria(s(r["cargo"]))), ...daUnidade.filter((r) => !jaNaEquipe(r))].sort((a, b) => ordem(a) - ordem(b) || s(a["nome"]).localeCompare(s(b["nome"]), "pt-BR"));
+  const diretoria = [...equipe.filter((r) => ehDiretoria(s(r["cargo"]))), ...daUnidadeFinal.filter((r) => !jaNaEquipe(r))].sort((a, b) => ordem(a) - ordem(b) || s(a["nome"]).localeCompare(s(b["nome"]), "pt-BR"));
   const operacao = equipe.filter((r) => !ehDiretoria(s(r["cargo"]))).sort((a, b) => ordem(a) - ordem(b) || s(a["nome"]).localeCompare(s(b["nome"]), "pt-BR"));
 
   async function excluir(r: Row) {
@@ -72,6 +86,7 @@ export function EquipePanel({ condominioId, blocos, unidades, perms }: { condomi
   }
 
   const empresaDoMembro = (r: Row) => {
+    if (publico) return s(r["vinculo"]) === "morador" ? s(r["unidade_label"]) : s(r["empresa_nome"]) || s(r["unidade_label"]);
     const v = s(r["vinculo"]);
     if (v === "administradora") return nomeEmpresa(s(cond?.["administradora_id"]));
     if (v === "facilities") return nomeEmpresa(s(cond?.["facilities_id"]));

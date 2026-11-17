@@ -192,7 +192,7 @@ function MinhaUnidade() {
           </Card>
         </div>)}
         {secao === "meu" && <MeuCondominioPanel condominioId={condId} perms={p("meu")} />}
-        {secao === "equipe" && <EquipePanel condominioId={condId} blocos={[]} unidades={[]} perms={p("equipe")} />}
+        {secao === "equipe" && <EquipePanel condominioId={condId} blocos={[]} unidades={[]} perms={p("equipe")} publico />}
         {secao === "obras" && <ObrasPanel condominioId={condId} perms={p("obras")} />}
         {secao === "atendimentos" && <AtendimentosPanel condominioId={condId} nomeCondominio={v.condominio_nome} blocos={[]} unidades={[]} perms={p("atendimentos")} />}
         {secao === "enquetes" && <EnquetesPanel condominioId={condId} blocos={[]} perms={p("enquetes")} />}
