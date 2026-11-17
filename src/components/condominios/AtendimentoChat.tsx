@@ -1,3 +1,4 @@
+import { abrirArquivo } from "@/components/layout/VisualizadorArquivo";
 import { useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -61,7 +62,7 @@ async function imagemNoTexto(condominioId: string, f: File) {
 async function abrirAnexo(a: Anexo) {
   const { data, error } = await supabase.storage.from("cond-documentos").createSignedUrl(a.path, 300);
   if (error || !data) { toast.error("Não foi possível abrir o arquivo."); return; }
-  window.open(data.signedUrl, "_blank", "noopener");
+  abrirArquivo({ url: data.signedUrl, titulo: a.nome, nome: a.nome });
 }
 
 /** Avisa por WhatsApp o outro lado do diálogo (responsáveis do assunto ou o morador). */

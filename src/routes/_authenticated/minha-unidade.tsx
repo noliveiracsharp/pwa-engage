@@ -1,3 +1,4 @@
+import { DocumentosPanel } from "@/components/condominios/DocumentosPanel";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
@@ -104,13 +105,7 @@ function MinhaUnidade() {
     sec("obras", "Obras", HardHat),
     sec("docs", "Documentos", FileText),
   ];
-  const [abrindo, setAbrindo] = useState<string | null>(null);
-  const abrirDoc = async (d: Row) => {
-    setAbrindo(s(d["id"]));
-    const { data } = await supabase.storage.from("cond-documentos").createSignedUrl(s(d["arquivo_path"]), 3600);
-    setAbrindo(null);
-    if (data?.signedUrl) window.open(data.signedUrl, "_blank", "noopener");
-  };
+
 
   if (isLoading) return <div className="flex h-64 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" aria-label="Carregando" /></div>;
   if (!v) return <div className="py-12 text-center text-muted-foreground">Você não tem unidade vinculada. <Link to="/acesso" className="text-primary underline">Voltar</Link></div>;
@@ -136,7 +131,7 @@ function MinhaUnidade() {
   return (
     <div className="flex min-h-full flex-col md:flex-row">
       <CondominiosSidebar secoes={secoes} ativa={secao} onChange={setSecao} chatCondominioId={condId || undefined} />
-      <div className="mx-auto w-full max-w-5xl min-w-0 flex-1 space-y-4 p-4 md:p-6">
+      <div className="w-full min-w-0 flex-1 space-y-4 p-4 md:p-6 lg:p-8">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{v.condominio_nome}</p>
@@ -204,16 +199,7 @@ function MinhaUnidade() {
         {secao === "enquetes" && <EnquetesPanel condominioId={condId} blocos={[]} perms={p("enquetes")} />}
         {secao === "assembleias" && condId && <AssembleiasMorador condominioId={condId} />}
         {secao === "avisos" && <div className="space-y-2">{listaAvisos()}</div>}
-        {secao === "docs" && (<div className="space-y-2">
-          {docs.isLoading ? <Loader2 className="mx-auto h-5 w-5 animate-spin" /> : (docs.data ?? []).length === 0
-            ? <p className="py-8 text-center text-sm text-muted-foreground">Nenhum documento disponível.</p>
-            : docs.data!.map((d) => (
-              <Card key={s(d["id"])}><CardContent className="flex items-center justify-between gap-2 p-4">
-                <div className="min-w-0"><p className="truncate font-medium">{s(d["titulo"])}</p><p className="text-xs text-muted-foreground">{dataBR(d["data_documento"] || d["created_at"])}</p></div>
-                <Button size="sm" variant="outline" disabled={abrindo === s(d["id"])} onClick={() => void abrirDoc(d)}>Abrir</Button>
-              </CardContent></Card>
-            ))}
-        </div>)}
+        {secao === "docs" && condId && <DocumentosPanel condominioId={condId} perms={p("docs")} condominios={[{ value: condId, label: v.condominio_nome ?? "" }]} blocos={[]} unidades={[]} visibilidades={visibilidadesDocumento(v.papel)} />}
       </div>
     </div>
   );

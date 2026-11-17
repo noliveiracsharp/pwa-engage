@@ -1,3 +1,4 @@
+import { VisualizadorArquivoHost } from "@/components/layout/VisualizadorArquivo";
 import type { ErrorComponentProps } from "@tanstack/react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -151,6 +152,7 @@ function RootComponent() {
           <VisualizadorGlobal />
           <NovaVersaoAviso />
           <DialogoGlobal />
+          <VisualizadorArquivoHost />
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>

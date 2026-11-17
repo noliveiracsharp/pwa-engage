@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { Activity, AlertTriangle, Paperclip, Settings2, RotateCcw, CalendarClock, Eye, ExternalLink, Megaphone, Send, FileText, FolderOpen, Loader2, Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { Activity, AlertTriangle, Paperclip, Settings2, RotateCcw, CalendarClock, Eye, Megaphone, Send, FileText, FolderOpen, Loader2, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ import { Switch } from "@/components/ui/switch";
 import { CampoData } from "./CampoData";
 import { s, useCondRows, useCondSalvar } from "./cond-data";
 import { AvisoEditorDialog, LeiturasDialog, ReenviarDialog, StatusEnvioDialog, type DocumentoAviso } from "./AvisosPanel";
+import { abrirArquivo } from "@/components/layout/VisualizadorArquivo";
 import { useAuth } from "@/hooks/useAuth";
 import { rowId } from "@/lib/crud";
 import { STATUS_AVISO, statusDoAviso } from "@/lib/cond-avisos-ciclo";
@@ -44,8 +45,10 @@ function BadgeValidade({ venc, dias }: { venc: string; dias?: unknown }) {
   return <Badge variant="outline" className={cls[st]}>{txt}</Badge>;
 }
 
-export function DocumentosPanel({ condominioId, perms, condominios, blocos, unidades }: { condominioId: string; perms: Perms; condominios: Opt[]; blocos: Row[]; unidades: Row[] }) {
-  const { data: docs = [], isLoading } = useCondRows("cond_documentos", "condominio_id", condominioId);
+export function DocumentosPanel({ condominioId, perms, condominios, blocos, unidades, visibilidades }: { condominioId: string; perms: Perms; condominios: Opt[]; blocos: Row[]; unidades: Row[]; /** Modo morador: só mostra estas visibilidades e esconde ações de gestão. */ visibilidades?: string[] }) {
+  const { data: todosDocs = [], isLoading } = useCondRows("cond_documentos", "condominio_id", condominioId);
+  const gestao = !visibilidades;
+  const docs = useMemo(() => (visibilidades ? todosDocs.filter((d) => visibilidades.includes(s(d["visibilidade"]))) : todosDocs), [todosDocs, visibilidades]);
   const { data: avisos = [] } = useCondRows("cond_avisos", "condominio_id", condominioId);
   const { empresa } = useAuth();
   const empresaId = String(rowId(empresa ?? {}));
@@ -73,7 +76,6 @@ export function DocumentosPanel({ condominioId, perms, condominios, blocos, unid
   const [cat, setCat] = useState("todas");
   const [busca, setBusca] = useState("");
   const [editando, setEditando] = useState<Row | null | undefined>(undefined);
-  const [previa, setPrevia] = useState<{ url: string; tipo: string; titulo: string } | null>(null);
 
   const contagem = useMemo(() => {
     const m = new Map<string, number>();
@@ -92,9 +94,7 @@ export function DocumentosPanel({ condominioId, perms, condominios, blocos, unid
   async function abrir(d: Row) {
     const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(s(d["arquivo_path"]), 600);
     if (error || !data) { toast.error("Não foi possível abrir o documento."); return; }
-    const tipo = s(d["arquivo_tipo"]);
-    if (tipo === "application/pdf" || tipo.startsWith("image/")) setPrevia({ url: data.signedUrl, tipo, titulo: s(d["titulo"]) });
-    else window.open(data.signedUrl, "_blank", "noopener");
+    abrirArquivo({ url: data.signedUrl, titulo: s(d["titulo"]), tipo: s(d["arquivo_tipo"]), nome: s(d["arquivo_nome"]) });
   }
   async function excluir(d: Row) {
     if (!(await confirmar({ title: `Excluir "${s(d["titulo"])}"?`, description: "O arquivo será removido definitivamente.", destructive: true, confirmText: "Excluir" }))) return;
@@ -160,18 +160,18 @@ export function DocumentosPanel({ condominioId, perms, condominios, blocos, unid
                   <button type="button" className="min-w-0 text-left md:flex-1" onClick={() => abrir(d)}>
                     <p className="truncate font-medium hover:underline">{s(d["titulo"])}</p>
                     <p className="line-clamp-2 text-xs text-muted-foreground md:truncate">
-                      {catLabel(s(d["categoria"]))}{s(d["emissor"]) ? ` · ${s(d["emissor"])}` : ""}{s(d["numero_registro"]) ? ` · nº ${s(d["numero_registro"])}` : ""} · {dataBR(d["data_documento"] || d["created_at"])} · {visLabel(s(d["visibilidade"]))}
+                      {catLabel(s(d["categoria"]))}{s(d["emissor"]) ? ` · ${s(d["emissor"])}` : ""}{s(d["numero_registro"]) ? ` · nº ${s(d["numero_registro"])}` : ""} · {dataBR(d["data_documento"] || d["created_at"])}{gestao ? ` · ${visLabel(s(d["visibilidade"]))}` : ""}
                     </p>
                   </button>
                   <div className="col-span-2 flex flex-wrap items-center justify-between gap-2 md:contents">
                   <div className="flex flex-wrap items-center gap-2">{s(d["data_vencimento"]) && <BadgeValidade venc={s(d["data_vencimento"])} dias={d["dias_antecedencia"]} />}
-                  {(() => { const ult = avisosDoDoc(s(d["id"]))[0]; if (!ult) return null; const st = statusDoAviso(ult["status"]); return <Badge variant="outline">{STATUS_AVISO[st].label}{st === "agendado" && ult["agendado_para"] ? ` · ${new Date(s(ult["agendado_para"])).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}` : ""}</Badge>; })()}
+                  {gestao && (() => { const ult = avisosDoDoc(s(d["id"]))[0]; if (!ult) return null; const st = statusDoAviso(ult["status"]); return <Badge variant="outline">{STATUS_AVISO[st].label}{st === "agendado" && ult["agendado_para"] ? ` · ${new Date(s(ult["agendado_para"])).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}` : ""}</Badge>; })()}
                   </div>
                   <div className="ml-auto flex flex-wrap justify-end">
-                    <Button size="icon" variant="ghost" className="size-10 md:size-8" aria-label="Quem visualizou" onClick={() => verLeituras(d)}><Eye className="size-4" /></Button>
-                    <Button size="icon" variant="ghost" className="size-10 md:size-8" aria-label="Abrir documento" onClick={() => abrir(d)}><ExternalLink className="size-4" /></Button>
+                    {gestao && <Button size="icon" variant="ghost" className="size-10 md:size-8" aria-label="Quem visualizou" onClick={() => verLeituras(d)}><Eye className="size-4" /></Button>}
+                    <Button size="icon" variant="ghost" className="size-10 md:size-8" aria-label="Visualizar documento" onClick={() => abrir(d)}><Eye className="size-4" /></Button>
                     {perms.canCreate && <Button size="icon" variant="ghost" className="size-10 md:size-8" aria-label="Enviar ou agendar para moradores" onClick={() => prepararEnvio(d)}><Megaphone className="size-4" /></Button>}
-                    {avisosDoDoc(s(d["id"]))[0] && <Button size="icon" variant="ghost" className="size-10 md:size-8" aria-label="Status do envio" onClick={() => setStatus(avisosDoDoc(s(d["id"]))[0]!)}><Activity className="size-4" /></Button>}
+                    {gestao && avisosDoDoc(s(d["id"]))[0] && <Button size="icon" variant="ghost" className="size-10 md:size-8" aria-label="Status do envio" onClick={() => setStatus(avisosDoDoc(s(d["id"]))[0]!)}><Activity className="size-4" /></Button>}
                     {perms.canCreate && avisosDoDoc(s(d["id"]))[0] && <Button size="icon" variant="ghost" className="size-10 md:size-8" aria-label="Reenviar" onClick={() => setReenviar(avisosDoDoc(s(d["id"]))[0]!)}><Send className="size-4" /></Button>}
                     {perms.canUpdate && <Button size="icon" variant="ghost" className="size-10 md:size-8" aria-label="Editar" onClick={() => setEditando(d)}><Pencil className="size-4" /></Button>}
                     {perms.canDelete && <Button size="icon" variant="ghost" className="size-10 md:size-8 text-destructive" aria-label="Excluir" onClick={() => excluir(d)}><Trash2 className="size-4" /></Button>}
@@ -194,18 +194,6 @@ export function DocumentosPanel({ condominioId, perms, condominios, blocos, unid
 
       {gerenciar && <CategoriasDialog condominioId={condominioId} rows={catRows} contagem={contagem} onClose={() => setGerenciar(false)} />}
 
-      <Dialog open={!!previa} onOpenChange={(o) => !o && setPrevia(null)}>
-        <DialogContent className="flex h-[90vh] max-w-5xl flex-col">
-          <DialogHeader><DialogTitle>{previa?.titulo}</DialogTitle></DialogHeader>
-          {previa && (previa.tipo.startsWith("image/")
-            ? <img src={previa.url} alt={previa.titulo} className="min-h-0 flex-1 rounded-md object-contain" />
-            : <iframe src={previa.url} title={previa.titulo} className="min-h-0 w-full flex-1 rounded-md border" />)}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => previa && window.open(previa.url, "_blank", "noopener")}>Abrir em nova aba</Button>
-            <Button onClick={() => setPrevia(null)}>Fechar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

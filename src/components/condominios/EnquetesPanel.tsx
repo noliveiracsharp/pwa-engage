@@ -1,3 +1,4 @@
+import { abrirArquivo } from "@/components/layout/VisualizadorArquivo";
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BarChart3, FileText, ImagePlus, Paperclip, CheckCircle2, Copy, Lock, Pencil, Plus, Send, Square, Trash2, Users, Vote, X } from "lucide-react";
@@ -226,9 +227,9 @@ function AnexosOpcao({ o, onRemover, grande }: { o: { imagem?: string | null; ar
       )}
       {o.arquivo && (
         <span className="inline-flex items-center gap-1 rounded-md border bg-background px-2 py-1 text-xs">
-          <a href={o.arquivo} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 text-primary hover:underline">
+          <button type="button" onClick={(e) => { e.stopPropagation(); abrirArquivo({ url: o.arquivo!, titulo: o.arquivo_nome || "Anexo", nome: o.arquivo_nome || undefined }); }} className="inline-flex items-center gap-1 text-primary hover:underline">
             <FileText className="size-3.5" />{o.arquivo_nome || "Ver anexo"}
-          </a>
+          </button>
           {onRemover && <button type="button" aria-label="Remover arquivo" onClick={() => onRemover("arquivo")}><X className="size-3" /></button>}
         </span>
       )}
