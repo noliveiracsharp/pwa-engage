@@ -63,7 +63,7 @@ export function GerenciarGrupo({ open, onOpenChange, canal, me, meuNome, usuario
 
   const remover = async (u: Row) => {
     const n = nomeDe(u);
-    if (!(await confirmar({ title: "Remover do grupo", description: `${n} deixará de ver as mensagens deste grupo.`, confirmText: "Remover", variant: "destructive" } as never))) return;
+    if (!(await confirmar({ title: "Remover do grupo", description: `${n} deixará de ver as mensagens deste grupo.`, confirmText: "Remover", destructive: true }))) return;
     const { error } = await supabase.from("chat_interno_participantes").delete().eq("canal_id", canalId).eq("usuario_id", String(u["id"]));
     if (error) { toast.error("Não foi possível remover: " + error.message); return; }
     await aviso(`👥 ${meuNome} removeu ${n} do grupo.`);
@@ -80,7 +80,7 @@ export function GerenciarGrupo({ open, onOpenChange, canal, me, meuNome, usuario
   };
 
   const sair = async () => {
-    if (!(await confirmar({ title: "Sair do grupo", description: "Você deixará de receber as mensagens deste grupo.", confirmText: "Sair", variant: "destructive" } as never))) return;
+    if (!(await confirmar({ title: "Sair do grupo", description: "Você deixará de receber as mensagens deste grupo.", confirmText: "Sair", destructive: true }))) return;
     await aviso(`👥 ${meuNome} saiu do grupo.`);
     const { error } = await supabase.from("chat_interno_participantes").delete().eq("canal_id", canalId).eq("usuario_id", me);
     if (error) { toast.error(error.message); return; }
@@ -88,7 +88,7 @@ export function GerenciarGrupo({ open, onOpenChange, canal, me, meuNome, usuario
   };
 
   const excluir = async () => {
-    if (!(await confirmar({ title: "Excluir grupo", description: "O grupo e todas as mensagens serão apagados para todos. Esta ação não pode ser desfeita.", confirmText: "Excluir", variant: "destructive" } as never))) return;
+    if (!(await confirmar({ title: "Excluir grupo", description: "O grupo e todas as mensagens serão apagados para todos. Esta ação não pode ser desfeita.", confirmText: "Excluir", destructive: true }))) return;
     await supabase.from("chat_interno_mensagens").delete().eq("canal_id", canalId);
     await supabase.from("chat_interno_participantes").delete().eq("canal_id", canalId).neq("usuario_id", me);
     const { error } = await supabase.from("chat_interno_canais").delete().eq("id", canalId);
