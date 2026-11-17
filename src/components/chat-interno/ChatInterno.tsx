@@ -26,6 +26,7 @@ import { tocarSom } from "@/lib/som-notificacao";
 import { adicionarAviso, EVT_ABRIR_CHAT } from "@/lib/avisos";
 import { TarefasChat, NovaTarefa } from "@/components/chat-interno/TarefasChat";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { GerenciarGrupo } from "@/components/chat-interno/GerenciarGrupo";
 
 /** Chamada ativa fica fora dos componentes: fechar/reorganizar o chat não derruba a ligação. */
 type ChamadaAtiva = Chamada & { canalId: string; empresaId: string; me: string; nome: string; titulo: string };
@@ -526,6 +527,7 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack, onModoMeet, 
   const { usuario } = useAuth();
   const meuNome = String(pick(usuario, ["nome"], "Colaborador"));
   const chamada = useChamadaAtiva().c;
+  const [gerenciar, setGerenciar] = useState(false);
   void onModoMeet;
   const endRef = useRef<HTMLDivElement>(null);
   const key = ["chat-interno", canalId];
@@ -713,13 +715,18 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack, onModoMeet, 
           <AvatarFallback>{sel.tipo === "grupo" ? <Users className="h-4 w-4" /> : iniciais(nome)}</AvatarFallback>
         </Avatar>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium">{nome}</p>
+          {sel.tipo === "grupo" ? (
+            <button type="button" onClick={() => setGerenciar(true)} className="block max-w-full truncate rounded text-left text-sm font-medium hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" title="Ver e gerenciar participantes">{nome}</button>
+          ) : <p className="truncate text-sm font-medium">{nome}</p>}
           {sel.tipo === "direto" ? (
             <p className={cn("text-xs", isOnline ? "text-success" : "text-muted-foreground")}>{isOnline ? "Online" : "Offline"}</p>
           ) : (
             <p className="text-xs text-muted-foreground">Grupo</p>
           )}
         </div>
+        {sel.tipo === "grupo" && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setGerenciar(true)} aria-label="Participantes do grupo" title="Participantes do grupo">
+          <Users className="h-4 w-4" />
+        </Button>}
         {!semTarefas && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setNovaTarefa(true)} aria-label="Nova tarefa" title={sel.tipo === "direto" ? `Nova tarefa para ${nome}` : "Nova tarefa"}>
           <ClipboardList className="h-4 w-4" />
         </Button>}
@@ -730,6 +737,7 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack, onModoMeet, 
           <Video className="h-4 w-4" />
         </Button>
       </div>
+      {sel.tipo === "grupo" && <GerenciarGrupo open={gerenciar} onOpenChange={setGerenciar} canal={sel.canal} me={me} meuNome={meuNome} usuarios={usuarios} onSaiu={onBack} />}
       <Dialog open={novaTarefa} onOpenChange={setNovaTarefa}>
         <DialogContent className="flex max-h-[90vh] flex-col p-0">
           <DialogHeader className="px-4 pt-4"><DialogTitle>{sel.tipo === "direto" ? `Nova tarefa para ${nome}` : "Nova tarefa"}</DialogTitle></DialogHeader>
