@@ -79,8 +79,8 @@ export function UnidadeSheet({ unidade, condominioId, blocoNome, perms, permsDad
           <div className="min-h-0 flex-1 overflow-y-auto p-4">
             <TabsContent value="painel"><PainelUnidade unidadeId={id} condominioId={condominioId} ocupacao={ocupacao} perms={perms} onOcupacao={setOcupacao} onIr={setAba} /></TabsContent>
             <TabsContent value="dados"><DadosUnidade unidade={unidade} condominioId={condominioId} perms={perms} onClose={onClose} onOcupacao={setOcupacao} /></TabsContent>
-            <TabsContent value="proprietario"><Pessoas unidadeId={id} condominioId={condominioId} perms={perms} lado="proprietario" papeis={["proprietario", "preposto"]} titulo="Proprietários e procuradores" /></TabsContent>
-            <TabsContent value="inquilino"><Pessoas unidadeId={id} condominioId={condominioId} perms={perms} lado="inquilino" papeis={["inquilino"]} titulo="Inquilinos (locatários)" /></TabsContent>
+            <TabsContent value="proprietario"><Pessoas unidadeId={id} condominioId={condominioId} perms={perms} editarPessoa={pd.canUpdate} lado="proprietario" papeis={["proprietario", "preposto"]} titulo="Proprietários e procuradores" /></TabsContent>
+            <TabsContent value="inquilino"><Pessoas unidadeId={id} condominioId={condominioId} perms={perms} editarPessoa={pd.canUpdate} lado="inquilino" papeis={["inquilino"]} titulo="Inquilinos (locatários)" /></TabsContent>
             <TabsContent value="familia"><Pessoas unidadeId={id} condominioId={condominioId} perms={pd} lado={ocupacao === "alugada" ? "inquilino" : "proprietario"} papeis={s(unidade["tipo"]) === "comercial" || s(unidade["tipo"]) === "sala" || s(unidade["tipo"]) === "loja" ? ["colaborador"] : ["familiar"]} titulo="Família da unidade (pai, mãe, filhos, avós…)" /></TabsContent>
             <TabsContent value="visitantes"><Pessoas unidadeId={id} condominioId={condominioId} perms={pd} lado={ocupacao === "alugada" ? "inquilino" : "proprietario"} papeis={["visitante"]} titulo="Visitantes autorizados (acesso temporário)" /></TabsContent>
             <TabsContent value="prestadores"><Pessoas unidadeId={id} condominioId={condominioId} perms={pd} lado={ocupacao === "alugada" ? "inquilino" : "proprietario"} papeis={["prestador"]} titulo="Prestadores de serviço da unidade" /></TabsContent>
@@ -232,7 +232,7 @@ function Cabecalho({ titulo, total, podeCriar, onNovo, rotulo = "Adicionar" }: {
 
 const Vazio = ({ texto }: { texto: string }) => <p className="rounded-lg border border-dashed py-10 text-center text-sm text-muted-foreground">{texto}</p>;
 
-function Pessoas({ unidadeId, condominioId, perms, lado, papeis, titulo }: { unidadeId: string; condominioId: string; perms: Perms; lado: string; papeis: string[]; titulo: string }) {
+function Pessoas({ unidadeId, condominioId, perms, editarPessoa, lado, papeis, titulo }: { unidadeId: string; condominioId: string; perms: Perms; editarPessoa?: boolean; lado: string; papeis: string[]; titulo: string }) {
   const qc = useQueryClient();
   const { data: vinculos = [] } = useCondRows("cond_unidades_vinculos", "cond_unidade_id", unidadeId);
   const { data: pessoas = [] } = usePessoas(unidadeId);
@@ -303,7 +303,7 @@ function Pessoas({ unidadeId, condominioId, perms, lado, papeis, titulo }: { uni
               {ativas.length > 0 && <p className="mt-1 text-xs text-muted-foreground">{ativas.map((x) => x.l).join(" · ")}</p>}
             </div>
             <div className="flex flex-wrap items-center gap-0.5">
-              {perms.canUpdate && p && <AcaoIcone titulo="Editar" destaque onClick={() => setForm({ pessoa: p, vinculo: v })}><Pencil className="size-4" /></AcaoIcone>}
+              {(perms.canUpdate || editarPessoa) && p && <AcaoIcone titulo="Editar" destaque onClick={() => setForm({ pessoa: p, vinculo: v })}><Pencil className="size-4" /></AcaoIcone>}
               <AcaoIcone titulo="Permissões" onClick={() => setPermsDe(v)}><Settings2 className="size-4" /></AcaoIcone>
               {perms.canUpdate && <AcaoIcone titulo="Transferir para outra unidade" onClick={() => setTransferir({ v, nome: p?.nome ?? "pessoa" })}><ArrowRightLeft className="size-4" /></AcaoIcone>}
               {perms.canUpdate && p && <AcaoIcone titulo="Enviar link de senha" disabled={ocupado} onClick={() => enviarLink(p)}><Mail className="size-4" /></AcaoIcone>}

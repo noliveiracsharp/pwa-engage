@@ -2,7 +2,7 @@ import { DocumentosPanel } from "@/components/condominios/DocumentosPanel";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { FileText, Gavel, Home, Loader2, Megaphone, LayoutDashboard, MapPinned, Users, HardHat, MessageSquareText, Vote, Wallet, ArrowRight } from "lucide-react";
+import { FileText, Gavel, Home, Loader2, Megaphone, LayoutDashboard, MapPinned, Users, HardHat, MessageSquareText, Vote, Wallet, ArrowRight, DoorOpen, ChevronRight } from "lucide-react";
 import { MeuCondominioPanel } from "@/components/condominios/MeuCondominioPanel";
 import { EquipePanel } from "@/components/condominios/EquipePanel";
 import { ObrasPanel } from "@/components/condominios/ObrasPanel";
@@ -197,15 +197,16 @@ function MinhaUnidade() {
           </div>
         </div>)}
         {secao === "unidade" && (<div>
-          <Card>
-            <CardHeader><CardTitle className="text-base">Dados da unidade</CardTitle></CardHeader>
-            <CardContent className="flex flex-wrap items-center gap-2 text-sm">
-              {v.bloco && <span className="font-medium">{v.bloco}</span>}
-              <span className="font-medium">Unidade {v.numero}</span>
-              <Badge variant="secondary">{rotuloCargo(v)}</Badge>
-              <Button size="sm" className="ml-auto" disabled={!unidadeRow} onClick={() => setFichaAberta(true)}>Ver ficha completa</Button>
-            </CardContent>
-          </Card>
+          <button type="button" disabled={!unidadeRow} onClick={() => setFichaAberta(true)} aria-label={`Abrir ficha da unidade ${v.numero}`}
+            className="flex w-full items-center gap-3 rounded-xl border bg-card p-4 text-left shadow-sm transition-colors hover:bg-accent active:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"><DoorOpen className="size-5" aria-hidden /></span>
+            <span className="min-w-0 flex-1">
+              {v.bloco && <span className="block text-xs text-muted-foreground">{v.bloco}</span>}
+              <span className="block text-lg font-semibold">Unidade {v.numero}</span>
+              <Badge variant="secondary" className="mt-1">{rotuloCargo(v)}</Badge>
+            </span>
+            <ChevronRight className="size-5 shrink-0 text-muted-foreground" aria-hidden />
+          </button>
           {fichaAberta && unidadeRow && condId && (
             <UnidadeSheet unidade={unidadeRow} condominioId={condId} blocoNome={v.bloco ?? ""} perms={SOMENTE_LEITURA} permsDados={permsFicha} onClose={() => setFichaAberta(false)} />
           )}
