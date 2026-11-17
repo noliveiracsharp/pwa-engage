@@ -48,7 +48,7 @@ export function GerenciarGrupo({ open, onOpenChange, canal, me, meuNome, usuario
   }, [usuarios, membrosIds, busca]);
 
   const atualizar = () => { void qc.invalidateQueries({ queryKey: key }); void qc.invalidateQueries({ queryKey: ["chat-interno-grupos"] }); void qc.invalidateQueries({ queryKey: ["tarefas-grupos"] }); };
-  const aviso = async (msg: string) => { await supabase.from("chat_interno_mensagens").insert({ empresa_id: empresaId, canal_id: canalId, remetente_id: me, mensagem: msg, anexos: [], lida_por: [me] }); void qc.invalidateQueries({ queryKey: ["chat-interno-msgs"] }); };
+  const aviso = async (msg: string) => { await supabase.from("chat_interno_mensagens").insert({ empresa_id: empresaId, canal_id: canalId, remetente_id: me, mensagem: msg, anexos: [], lida_por: [me] }); void qc.invalidateQueries({ queryKey: ["chat-interno", canalId] }); };
 
   const adicionar = async () => {
     if (!escolhidos.size) return;
