@@ -4,7 +4,7 @@ import { DndContext, KeyboardSensor, PointerSensor, closestCenter, useSensor, us
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
-  ArrowLeft, CheckCircle2, ClipboardCheck, FileSignature, Gavel, GripVertical, Lock, Maximize2, Megaphone, Pencil, Play, Plus, Printer,
+  ArrowLeft, CheckCircle2, ChevronLeft, ChevronRight, ClipboardCheck, FileSignature, Gavel, GripVertical, Lock, Maximize2, Megaphone, Pencil, Play, Plus, Printer,
   MessageSquare, Search, ShieldCheck, Square, Timer, Trash2, UserCheck, Video, Vote, X,
 } from "lucide-react";
 import { Bar, BarChart, Cell, ResponsiveContainer, XAxis, YAxis, LabelList } from "recharts";
@@ -966,6 +966,7 @@ export function AssembleiasMorador({ condominioId }: { condominioId: string }) {
     queryFn: async (): Promise<Minha[]> => { const { data, error } = await db.rpc("cond_assembleias_minhas", { p_condominio: condominioId }); if (error) throw error; return (data ?? []) as Minha[]; },
   });
   const [ocupado, setOcupado] = useState("");
+  const [pautaAberta, setPautaAberta] = useState<{ aId: string; pId: string } | null>(null);
   const statusMinhas = useMemo(() => data.map((a) => a.status), [data]);
   const [aba, setAba] = useAbaAssembleia(statusMinhas, false, !isLoading);
   const recarregar = () => qc.invalidateQueries({ queryKey: chave });
@@ -1006,35 +1007,94 @@ export function AssembleiasMorador({ condominioId }: { condominioId: string }) {
               </div>
             </header>
             {a.edital && !sessao && <details className="text-sm"><summary className="cursor-pointer text-primary">Ler edital de convocação</summary><div className="prose prose-sm mt-2 max-w-none dark:prose-invert" dangerouslySetInnerHTML={{ __html: a.edital }} /></details>}
-            <ol className="space-y-2">
-              {a.pautas.map((p, i) => (
-                <li key={p.id} className={cn("rounded-md border p-3", p.status === "em_votacao" && "border-success/60")}>
-                  <div className="flex flex-wrap items-center gap-2"><span className="font-medium">{i + 1}. {p.titulo}</span>
-                    <Badge variant="outline">{p.status === "em_votacao" ? "Em votação" : p.status === "encerrada" ? "Encerrada" : "Aguardando"}</Badge></div>
-                  {p.descricao && <details className="mt-1 text-sm"><summary className="cursor-pointer text-xs text-primary">Ver detalhes</summary><div className="prose prose-sm mt-1 max-w-none dark:prose-invert" dangerouslySetInnerHTML={{ __html: p.descricao }} /></details>}
-                  {<details className="mt-1 text-sm"><summary className="cursor-pointer text-xs text-primary"><MessageSquare className="mr-1 inline size-3" aria-hidden />Debate da pauta</summary><div className="mt-2"><DebatePauta pautaId={p.id} assembleiaId={a.id} /></div></details>}
-                  {p.status === "em_votacao" && sessao && a.unidades.map((u) => {
-                    const meu = p.meus_votos.find((v) => v.unidade_id === u.id);
-                    return (
-                      <div key={u.id} className="mt-2 space-y-1">
-                        {a.unidades.length > 1 && <p className="text-xs font-medium text-muted-foreground">Unidade {u.numero}</p>}
-                        {meu ? <p className="text-sm text-success"><CheckCircle2 className="mr-1 inline size-4" />Votou: {p.opcoes.find((o) => o.id === meu.opcao_id)?.descricao} · comprovante <span className="font-mono text-xs">{meu.hash.slice(0, 12)}</span></p>
-                          : !u.presente ? <p className="text-xs text-muted-foreground">{a.formato === "presencial" ? "Faça o check-in na recepção para votar." : "Confirme a presença para votar."}</p>
-                          : !u.direito_voto ? <p className="text-xs text-destructive">Unidade com pendência financeira: participação como ouvinte.</p>
-                          : <div role="group" aria-label={`Votar: ${p.titulo}`} className="flex flex-wrap gap-2">{p.opcoes.map((o) => (
-                              <Button key={o.id} size="sm" variant={o.tipo === "sim" ? "default" : o.tipo === "nao" ? "destructive" : "outline"} disabled={ocupado === p.id + u.id} onClick={() => votar(p.id, o.id, u.id, o.descricao)}>{o.descricao}</Button>))}</div>}
+            <ol className="space-y-3" aria-label="Pautas">
+              {a.pautas.map((p, i) => {
+                const votadas = a.unidades.filter((u) => p.meus_votos.some((v) => v.unidade_id === u.id)).length;
+                const pendente = p.status === "em_votacao" && sessao && a.unidades.some((u) => u.presente && u.direito_voto && !p.meus_votos.some((v) => v.unidade_id === u.id));
+                return (
+                  <li key={p.id}>
+                    <button type="button" onClick={() => setPautaAberta({ aId: a.id, pId: p.id })}
+                      aria-label={`Abrir pauta ${i + 1}: ${p.titulo}`}
+                      className={cn("flex min-h-14 w-full items-center gap-3 rounded-xl border bg-background p-4 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", p.status === "em_votacao" && "border-success/60")}>
+                      <div className="min-w-0 flex-1 space-y-2">
+                        <p className="text-base font-semibold leading-snug md:text-sm">{i + 1}. {p.titulo}</p>
+                        <div className="flex flex-wrap items-center gap-2 text-sm md:text-xs">
+                          <Badge variant="outline">{rotuloPauta(p.status)}</Badge>
+                          {pendente && <span className="rounded-full bg-destructive/15 px-2 py-0.5 font-medium text-destructive">Voto pendente</span>}
+                          {votadas > 0 && <span className="inline-flex items-center gap-1 font-medium text-success"><CheckCircle2 className="size-4" aria-hidden />{a.unidades.length > 1 ? `${votadas}/${a.unidades.length} votadas` : "Você votou"}</span>}
+                        </div>
                       </div>
-                    );
-                  })}
-                </li>
-              ))}
+                      <ChevronRight className="size-5 shrink-0 text-muted-foreground" aria-hidden />
+                    </button>
+                  </li>
+                );
+              })}
             </ol>
           </article>
         );
       })}
+      {(() => {
+        const a = pautaAberta && data.find((x) => x.id === pautaAberta.aId);
+        const idx = a ? a.pautas.findIndex((x) => x.id === pautaAberta!.pId) : -1;
+        const p = a && idx >= 0 ? a.pautas[idx] : undefined;
+        if (!a || !p) return null;
+        const sessao = emSessao(a.status);
+        const ir = (d: number) => { const alvo = a.pautas[idx + d]; if (alvo) setPautaAberta({ aId: a.id, pId: alvo.id }); };
+        return (
+          <Dialog open onOpenChange={(o) => !o && setPautaAberta(null)}>
+            <DialogContent className="flex h-[100dvh] max-h-[100dvh] w-full max-w-full flex-col gap-0 overflow-hidden rounded-none p-0 sm:h-auto sm:max-h-[90dvh] sm:max-w-2xl sm:rounded-xl">
+              <DialogHeader className="space-y-2 border-b p-4 pr-14 text-left">
+                <p className="text-sm text-muted-foreground">Pauta {idx + 1} de {a.pautas.length} · {a.titulo}</p>
+                <DialogTitle className="text-xl leading-snug">{p.titulo}</DialogTitle>
+                <DialogDescription asChild><div><Badge variant="outline" className="text-sm">{rotuloPauta(p.status)}</Badge></div></DialogDescription>
+              </DialogHeader>
+              <Tabs defaultValue="proposta" key={p.id} className="flex min-h-0 flex-1 flex-col">
+                <TabsList className="mx-4 mt-3 grid h-auto grid-cols-2">
+                  <TabsTrigger value="proposta" className="min-h-11 text-base md:text-sm">Proposta e voto</TabsTrigger>
+                  <TabsTrigger value="debate" className="min-h-11 text-base md:text-sm"><MessageSquare className="mr-1.5 size-4" aria-hidden />Debate</TabsTrigger>
+                </TabsList>
+                <TabsContent value="proposta" className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4">
+                  <section aria-labelledby="pauta-det">
+                    <h3 id="pauta-det" className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">Detalhes da proposta</h3>
+                    {p.descricao ? <div className="prose max-w-none text-base leading-relaxed dark:prose-invert" dangerouslySetInnerHTML={{ __html: p.descricao }} />
+                      : <p className="text-base text-muted-foreground">Sem descrição adicional.</p>}
+                  </section>
+                  <section aria-labelledby="pauta-voto" className="space-y-3 border-t pt-4">
+                    <h3 id="pauta-voto" className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Seu voto</h3>
+                    {p.status !== "em_votacao" || !sessao ? <p className="text-base text-muted-foreground">{p.status === "encerrada" ? "Votação encerrada." : "A votação desta pauta ainda não foi aberta."}</p>
+                      : a.unidades.map((u) => {
+                        const meu = p.meus_votos.find((v) => v.unidade_id === u.id);
+                        return (
+                          <div key={u.id} className="space-y-2 rounded-xl border p-3">
+                            <p className="text-base font-medium">Unidade {u.numero}</p>
+                            {meu ? <p className="text-base text-success"><CheckCircle2 className="mr-1 inline size-5" aria-hidden />Votou: {p.opcoes.find((o) => o.id === meu.opcao_id)?.descricao}<br /><span className="text-sm">Comprovante <span className="font-mono">{meu.hash.slice(0, 12)}</span></span></p>
+                              : !u.presente ? <p className="text-base text-muted-foreground">{a.formato === "presencial" ? "Faça o check-in na recepção para votar." : "Confirme a presença para votar."}</p>
+                              : !u.direito_voto ? <p className="text-base text-destructive">Unidade com pendência financeira: participação como ouvinte.</p>
+                              : <div role="group" aria-label={`Votar na pauta ${p.titulo}, unidade ${u.numero}`} className="grid grid-cols-1 gap-2 sm:grid-cols-3">{p.opcoes.map((o) => (
+                                  <Button key={o.id} className="min-h-12 text-base" variant={o.tipo === "sim" ? "default" : o.tipo === "nao" ? "destructive" : "outline"} disabled={ocupado === p.id + u.id} onClick={() => votar(p.id, o.id, u.id, o.descricao)}>{o.descricao}</Button>))}</div>}
+                          </div>
+                        );
+                      })}
+                    {sessao && a.formato !== "presencial" && !a.unidades.some((u) => u.presente) && <Button className="min-h-12 w-full text-base" onClick={() => checkin(a)} disabled={ocupado === a.id}><UserCheck className="size-5" /> Confirmar presença</Button>}
+                  </section>
+                </TabsContent>
+                <TabsContent value="debate" className="min-h-0 flex-1 overflow-y-auto p-4">
+                  <DebatePauta pautaId={p.id} assembleiaId={a.id} />
+                </TabsContent>
+              </Tabs>
+              <DialogFooter className="flex-row justify-between gap-2 border-t p-3 sm:justify-between">
+                <Button variant="outline" className="min-h-11 flex-1 text-base sm:flex-none" disabled={idx === 0} onClick={() => ir(-1)}><ChevronLeft className="size-5" aria-hidden /> Anterior</Button>
+                <Button variant="outline" className="min-h-11 flex-1 text-base sm:flex-none" disabled={idx === a.pautas.length - 1} onClick={() => ir(1)}>Próxima <ChevronRight className="size-5" aria-hidden /></Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        );
+      })()}
     </div>
   );
 }
+
+const rotuloPauta = (st: string) => (st === "em_votacao" ? "Em votação" : st === "encerrada" ? "Encerrada" : "Aguardando");
 
 /* --------------------------- Configurações --------------------------- */
 
