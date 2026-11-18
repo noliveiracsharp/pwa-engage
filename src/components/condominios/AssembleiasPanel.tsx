@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
@@ -27,7 +28,7 @@ import { htmlParaTexto } from "@/lib/html-texto";
 import { comprimirImagem } from "@/lib/image-compress";
 import { imprimirElemento } from "@/lib/propostas";
 import {
-  OPCOES_PADRAO, QUORUNS, STATUS_ASSEMBLEIA, abaInicialAssembleias, emSessao, grupoAssembleia, type GrupoAssembleia, segundaConvocacao, validarAntecedencia, vereditoPauta,
+  OPCOES_PADRAO, QUORUNS, STATUS_ASSEMBLEIA, abaInicialAssembleias, emSessao, grupoAssembleia, type GrupoAssembleia, segundaConvocacao, validarAntecedencia, vereditoPauta, alternarEscolha,
   type OpcaoTotal, type Quorum, type StatusAssembleia,
 } from "@/lib/assembleias";
 import type { Row } from "@/lib/row";
@@ -535,7 +536,7 @@ function PautaItem({ id, n, pauta: p, resultado, total, criterio, arrastavel, ch
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id, disabled: !arrastavel });
   const st = s(p["status"]);
-  const ver = resultado ? vereditoPauta(resultado.quorum, resultado.opcoes, total) : null;
+  const ver = resultado ? vereditoPauta(resultado.quorum, resultado.opcoes, total, p["multipla_escolha"] ? Number(p["max_escolhas"]) || 1 : 1) : null;
   const votos = resultado?.opcoes.reduce((acc, o) => acc + o.votos, 0) ?? 0;
   return (
     <li ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }} className={cn("rounded-lg border bg-card p-3", isDragging && "z-10 shadow-lg", st === "em_votacao" && "border-success/60")}>
@@ -570,6 +571,8 @@ function PautaDialog({ assembleiaId, pauta, proxima, onClose, onSalvo }: { assem
   const [debAtivo, setDebAtivo] = useState(p["debate_ativo"] !== false);
   const [debModerado, setDebModerado] = useState(p["debate_moderado"] === true);
   const [debFechado, setDebFechado] = useState(p["debate_encerrado"] === true);
+  const [multipla, setMultipla] = useState(p["multipla_escolha"] === true);
+  const [maxEsc, setMaxEsc] = useState(Math.max(2, Number(p["max_escolhas"]) || 2));
   const { data: opcoesAtuais = [] } = useCondRows("cond_assembleia_opcoes_voto", "pauta_id", pauta ? s(p["id"]) : undefined, "ordem");
   const [chapas, setChapas] = useState<string[]>(["", ""]);
   useEffect(() => { if (pauta && s(p["quorum"]) === "eleicao" && opcoesAtuais.length) setChapas(opcoesAtuais.filter((o) => s(o["tipo"]) === "outro").map((o) => s(o["descricao"]))); }, [opcoesAtuais]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -578,9 +581,11 @@ function PautaDialog({ assembleiaId, pauta, proxima, onClose, onSalvo }: { assem
     if (!titulo.trim()) { toast.error("Informe o título da pauta."); return; }
     const nomes = chapas.map((c) => c.trim()).filter(Boolean);
     if (quorum === "eleicao" && nomes.length < 2) { toast.error("Informe pelo menos duas opções (chapas, candidatos ou orçamentos)."); return; }
+    const multi = quorum === "eleicao" && multipla;
+    if (multi && (maxEsc < 2 || maxEsc > nomes.length)) { toast.error(`O máximo de escolhas deve ficar entre 2 e ${nomes.length}.`); return; }
     setSalvando(true);
     try {
-      const valores = { assembleia_id: assembleiaId, titulo: titulo.trim(), descricao: descricao || null, quorum, debate_ativo: debAtivo, debate_moderado: debModerado, debate_encerrado: debFechado };
+      const valores = { assembleia_id: assembleiaId, titulo: titulo.trim(), descricao: descricao || null, quorum, debate_ativo: debAtivo, debate_moderado: debModerado, debate_encerrado: debFechado, multipla_escolha: multi, max_escolhas: multi ? maxEsc : 1 };
       let pid = s(p["id"]);
       if (pauta) { const r = await db.from("cond_assembleia_pautas").update(valores).eq("id", pid); if (r.error) throw r.error; }
       else { const r = await db.from("cond_assembleia_pautas").insert({ ...valores, ordem: proxima }).select("id").single(); if (r.error) throw r.error; pid = s(r.data.id); }
@@ -626,6 +631,17 @@ function PautaDialog({ assembleiaId, pauta, proxima, onClose, onSalvo }: { assem
               ))}
               <Button type="button" variant="outline" size="sm" onClick={() => setChapas([...chapas, ""])}><Plus className="size-4" /> Adicionar opção</Button>
               <p className="text-xs text-muted-foreground">“Abstenção” entra automaticamente.</p>
+              <div className="space-y-2 rounded-md border p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div><Label htmlFor="pa-multi">Permitir selecionar mais de uma opção</Label><p className="text-xs text-muted-foreground">Use em exceções, como eleição do conselho.</p></div>
+                  <Switch id="pa-multi" checked={multipla} onCheckedChange={setMultipla} />
+                </div>
+                {multipla && <div>
+                  <Label htmlFor="pa-max" className="mb-1.5 block">Máximo de opções por voto</Label>
+                  <Input id="pa-max" type="number" inputMode="numeric" min={2} max={Math.max(2, chapas.filter((c) => c.trim()).length)} value={maxEsc} onChange={(e) => setMaxEsc(Number(e.target.value) || 2)} className="w-32" />
+                  <p className="mt-1 text-xs text-muted-foreground">Ex.: para eleger 3 conselheiros, defina 3. Os mais votados até esse número são eleitos.</p>
+                </div>}
+              </div>
             </fieldset>
           ) : <p className="text-xs text-muted-foreground">Opções de voto: Sim, Não e Abstenção.</p>}
         </div>
@@ -848,11 +864,12 @@ function Telao({ assembleia: a }: { assembleia: Row }) {
 
 /* --------------------------------- Ata --------------------------------- */
 
-function montarAta(a: Row, res: Resultado, presencas: Row[], unidades: Row[], blocos: Row[], cond: string): string {
+function montarAta(a: Row, res: Resultado, presencas: Row[], unidades: Row[], blocos: Row[], cond: string, linhas: Row[] = []): string {
   const criterio = s(a["criterio_peso"]);
   const presentes = presencas.map((p) => { const u = unidades.find((x) => s(x["id"]) === s(p["unidade_id"])); return `${u ? rotuloUnidade(u, blocos) : "Unidade"} — ${s(p["pessoa_nome"])}${p["is_procurador"] ? " (procurador)" : ""}${p["direito_voto"] ? "" : " (ouvinte)"}`; }).sort(ordemNatural);
   const itens = res.pautas.map((p, i) => {
-    const v = vereditoPauta(p.quorum, p.opcoes, res.total_condominio);
+    const lp = linhas.find((x) => s(x["id"]) === p.id);
+    const v = vereditoPauta(p.quorum, p.opcoes, res.total_condominio, lp?.["multipla_escolha"] ? Number(lp["max_escolhas"]) || 1 : 1);
     const votos = p.opcoes.map((o) => `${o.descricao}: ${o.votos} voto(s), peso ${fmtPeso(o.peso, criterio)}`).join("; ");
     return `<p><strong>${i + 1}. ${p.titulo}</strong> (${rotuloQuorum(p.quorum)}) — ${votos}. <strong>Resultado: ${v.texto}.</strong></p>`;
   }).join("");
@@ -883,7 +900,7 @@ function Ata({ assembleia: a, unidades, blocos, pode, onAtualizar }: { assemblei
   const gerar = async () => {
     if (!res) return;
     if (html.trim() && !(await confirmar({ title: "Gerar a ata de novo?", description: "O texto atual será substituído pela minuta com os resultados.", confirmText: "Gerar" }))) return;
-    setHtml(montarAta(a, res, presencas, unidades, blocos, cond));
+    setHtml(montarAta(a, res, presencas, unidades, blocos, cond, pautas));
   };
   const salvar = async () => {
     setSalvando(true);
@@ -987,6 +1004,20 @@ export function AssembleiasMorador({ condominioId }: { condominioId: string }) {
     queryKey: chave, enabled: !!condominioId, refetchInterval: 20_000,
     queryFn: async (): Promise<Minha[]> => { const { data, error } = await db.rpc("cond_assembleias_minhas", { p_condominio: condominioId }); if (error) throw error; return (data ?? []) as Minha[]; },
   });
+  const regrasQ = useQuery({
+    queryKey: ["cond", "assembleia-regras", data.map((a) => a.id).join(",")], enabled: data.length > 0,
+    queryFn: async (): Promise<Record<string, number>> => {
+      const out: Record<string, number> = {};
+      for (const a of data) {
+        const { data: r, error } = await db.rpc("cond_assembleia_pautas_regras", { p_assembleia: a.id });
+        if (error) return out; // script ainda não aplicado: todas as pautas seguem com escolha única
+        for (const x of (r ?? []) as { id: string; multipla_escolha: boolean; max_escolhas: number }[]) if (x.multipla_escolha) out[x.id] = Math.max(1, Number(x.max_escolhas) || 1);
+      }
+      return out;
+    },
+  });
+  const maxDe = (pid: string) => regrasQ.data?.[pid] ?? 1;
+  const [selecao, setSelecao] = useState<Record<string, string[]>>({});
   const [ocupado, setOcupado] = useState("");
   const [pautaAberta, setPautaAberta] = useState<{ aId: string; pId: string } | null>(null);
   const [assembleiaAberta, setAssembleiaAberta] = useState<string | null>(null);
@@ -1005,6 +1036,16 @@ export function AssembleiasMorador({ condominioId }: { condominioId: string }) {
     const { error } = await db.rpc("cond_assembleia_votar", { p_pauta: pautaId, p_opcao: opcaoId, p_unidade: unidadeId, p_user_agent: navigator.userAgent });
     setOcupado("");
     if (error) toast.error(erroMsg(error)); else { toast.success("Voto registrado com segurança."); recarregar(); }
+  };
+  const votarMultiplo = async (p: Minha["pautas"][number], unidadeId: string) => {
+    const ids = selecao[p.id + unidadeId] ?? [];
+    if (!ids.length) return;
+    const nomes = p.opcoes.filter((o) => ids.includes(o.id)).map((o) => o.descricao).join(", ");
+    if (!(await confirmar({ title: "Confirmar voto?", description: `Suas escolhas: ${nomes}. Depois de confirmado não pode ser alterado.`, confirmText: "Votar" }))) return;
+    setOcupado(p.id + unidadeId);
+    const { error } = await db.rpc("cond_assembleia_votar_multiplo", { p_pauta: p.id, p_opcoes: ids, p_unidade: unidadeId, p_user_agent: navigator.userAgent });
+    setOcupado("");
+    if (error) toast.error(erroMsg(error)); else { toast.success("Voto registrado com segurança."); setSelecao((m) => ({ ...m, [p.id + unidadeId]: [] })); recarregar(); }
   };
   if (isLoading) return <p className="text-sm text-muted-foreground">Carregando assembleias…</p>;
   if (!data.length) return <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground"><Gavel className="mx-auto mb-2 size-7 opacity-60" aria-hidden />Nenhuma assembleia convocada para você no momento.</div>;
@@ -1119,13 +1160,34 @@ export function AssembleiasMorador({ condominioId }: { condominioId: string }) {
                     <h3 id="pauta-voto" className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Seu voto</h3>
                     {p.status !== "em_votacao" || !sessao ? <p className="text-base text-muted-foreground">{p.status === "encerrada" ? "Votação encerrada." : "A votação desta pauta ainda não foi aberta."}</p>
                       : a.unidades.map((u) => {
-                        const meu = p.meus_votos.find((v) => v.unidade_id === u.id);
+                        const meusU = p.meus_votos.filter((v) => v.unidade_id === u.id);
+                        const meu = meusU[0];
+                        const max = maxDe(p.id);
+                        const chaveSel = p.id + u.id;
+                        const sel = selecao[chaveSel] ?? [];
+                        const abst = p.opcoes.filter((o) => o.tipo === "abstencao").map((o) => o.id);
                         return (
                           <div key={u.id} className="space-y-2 rounded-xl border p-3">
                             <p className="text-base font-medium">Unidade {u.numero}</p>
-                            {meu ? <p className="text-base text-success"><CheckCircle2 className="mr-1 inline size-5" aria-hidden />Votou: {p.opcoes.find((o) => o.id === meu.opcao_id)?.descricao}<br /><span className="text-sm">Comprovante <span className="font-mono">{meu.hash.slice(0, 12)}</span></span></p>
+                            {meu ? <p className="text-base text-success"><CheckCircle2 className="mr-1 inline size-5" aria-hidden />Votou: {meusU.map((v) => p.opcoes.find((o) => o.id === v.opcao_id)?.descricao).filter(Boolean).join(", ")}<br /><span className="text-sm">Comprovante <span className="font-mono">{meu.hash.slice(0, 12)}</span></span></p>
                               : !u.presente ? <p className="text-base text-muted-foreground">{a.formato === "presencial" ? "Faça o check-in na recepção para votar." : "Confirme a presença para votar."}</p>
                               : !u.direito_voto ? <p className="text-base text-destructive">Unidade com pendência financeira: participação como ouvinte.</p>
+                              : max > 1 ? (
+                                <fieldset className="space-y-2">
+                                  <legend className="text-base font-medium" aria-live="polite">Selecione até {max} opções <span className="ml-1 rounded-full bg-primary/15 px-2 py-0.5 text-sm font-bold text-primary">{sel.length}/{max}</span></legend>
+                                  {p.opcoes.map((o) => {
+                                    const marcado = sel.includes(o.id);
+                                    const bloqueado = !marcado && !abst.includes(o.id) && sel.filter((x) => !abst.includes(x)).length >= max;
+                                    return (
+                                      <label key={o.id} className={cn("flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border p-3 text-base", marcado && "border-primary bg-primary/10", bloqueado && "cursor-not-allowed opacity-50")}>
+                                        <Checkbox className="size-6" checked={marcado} disabled={bloqueado} onCheckedChange={() => setSelecao((m) => ({ ...m, [chaveSel]: alternarEscolha(sel, o.id, abst, max) }))} />
+                                        <span className="flex-1">{o.descricao}</span>
+                                      </label>
+                                    );
+                                  })}
+                                  <Button className="min-h-12 w-full text-base" disabled={!sel.length || ocupado === chaveSel} onClick={() => votarMultiplo(p, u.id)}>Confirmar voto</Button>
+                                </fieldset>
+                              )
                               : <div role="group" aria-label={`Votar na pauta ${p.titulo}, unidade ${u.numero}`} className="grid grid-cols-1 gap-2 sm:grid-cols-3">{p.opcoes.map((o) => (
                                   <Button key={o.id} className="min-h-12 text-base" variant={o.tipo === "sim" ? "default" : o.tipo === "nao" ? "destructive" : "outline"} disabled={ocupado === p.id + u.id} onClick={() => votar(p.id, o.id, u.id, o.descricao)}>{o.descricao}</Button>))}</div>}
                           </div>

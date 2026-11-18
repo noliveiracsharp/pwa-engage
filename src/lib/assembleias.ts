@@ -59,11 +59,21 @@ export type Veredito = { situacao: "aprovada" | "reprovada" | "empate" | "sem_vo
  * Veredito de uma pauta.
  * @param totalCondominio soma de pesos de todo o condomínio (frações ou nº de unidades)
  */
-export function vereditoPauta(quorum: Quorum, opcoes: OpcaoTotal[], totalCondominio: number): Veredito {
+export function vereditoPauta(quorum: Quorum, opcoes: OpcaoTotal[], totalCondominio: number, vagas = 1): Veredito {
   const somaVotos = opcoes.reduce((a, o) => a + o.votos, 0);
   if (!somaVotos) return { situacao: "sem_votos", texto: "Sem votos registrados", percentualSim: 0 };
   if (quorum === "eleicao") {
     const validas = opcoes.filter((o) => o.tipo !== "abstencao");
+    if (vagas > 1) {
+      const ord = [...validas].filter((o) => o.peso > 0).sort((a, b) => b.peso - a.peso);
+      if (!ord.length) return { situacao: "sem_votos", texto: "Sem votos válidos", percentualSim: 0 };
+      const corte = ord[Math.min(vagas, ord.length) - 1]!.peso;
+      const empateCorte = ord.length > vagas && ord[vagas]!.peso === corte;
+      const eleitas = ord.filter((o) => (empateCorte ? o.peso > corte : o.peso >= corte)).slice(0, vagas);
+      const nomes = eleitas.map((o) => o.descricao).join(", ");
+      if (empateCorte) return { situacao: "empate", texto: `Empate na ${vagas}ª vaga${nomes ? ` — eleitas: ${nomes}` : ""}`, percentualSim: 0 };
+      return { situacao: "aprovada", texto: `Eleitas: ${nomes}`, vencedora: nomes, percentualSim: 0 };
+    }
     const max = Math.max(0, ...validas.map((o) => o.peso));
     const top = validas.filter((o) => o.peso === max && max > 0);
     if (top.length !== 1) return { situacao: "empate", texto: "Empate — nova votação necessária", percentualSim: 0 };
@@ -126,4 +136,12 @@ export function validarAntecedencia(p: { dataHora: string | null; tipo: string; 
   const min = p.tipo === "AGO" ? p.minAgo : p.minAge;
   if (dias < min) return { ok: false, motivo: `A convenção exige ${min} dia(s) de antecedência para ${p.tipo}; faltam só ${dias}. Ajuste a data ou marque como emergencial.` };
   return { ok: true };
+}
+
+/** Alterna uma opção na cédula de múltipla escolha: abstenção é exclusiva e o limite é respeitado. */
+export function alternarEscolha(sel: string[], id: string, abstencaoIds: string[], max: number): string[] {
+  if (sel.includes(id)) return sel.filter((x) => x !== id);
+  if (abstencaoIds.includes(id)) return [id];
+  const sem = sel.filter((x) => !abstencaoIds.includes(x));
+  return sem.length >= Math.max(1, max) ? sem : [...sem, id];
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { direitoVoto, pesoUnidade, procuracoesExcedidas, segundaConvocacao, vereditoPauta, type OpcaoTotal } from "./assembleias";
+import { alternarEscolha, direitoVoto, pesoUnidade, procuracoesExcedidas, segundaConvocacao, vereditoPauta, type OpcaoTotal } from "./assembleias";
 
 const op = (tipo: string, peso: number, votos = 1): OpcaoTotal => ({ id: tipo, descricao: tipo, tipo, peso, votos });
 
@@ -51,5 +51,21 @@ describe("abas de assembleias", () => {
   it("sem ao vivo abre em convocadas; morador nunca abre em rascunho", () => {
     expect(abaInicialAssembleias(["finalizada", "convocada"], false)).toBe("convocadas");
     expect(abaInicialAssembleias(["rascunho"], false)).toBe("convocadas");
+  });
+  it("múltipla escolha: elege as N opções mais votadas", () => {
+    const o = (d: string, peso: number): OpcaoTotal => ({ id: d, descricao: d, tipo: "outro", peso, votos: 1 });
+    const v = vereditoPauta("eleicao", [o("Ana", 5), o("Bia", 3), o("Caio", 4), o("Davi", 1)], 10, 3);
+    expect(v.situacao).toBe("aprovada");
+    expect(v.texto).toBe("Eleitas: Ana, Caio, Bia");
+  });
+  it("múltipla escolha: empate na última vaga exige desempate", () => {
+    const o = (d: string, peso: number): OpcaoTotal => ({ id: d, descricao: d, tipo: "outro", peso, votos: 1 });
+    expect(vereditoPauta("eleicao", [o("Ana", 5), o("Bia", 3), o("Caio", 3)], 10, 2).situacao).toBe("empate");
+  });
+  it("cédula respeita o máximo de escolhas e a abstenção é exclusiva", () => {
+    expect(alternarEscolha(["a", "b"], "c", ["x"], 2)).toEqual(["a", "b"]);
+    expect(alternarEscolha(["a"], "c", ["x"], 2)).toEqual(["a", "c"]);
+    expect(alternarEscolha(["a", "b"], "x", ["x"], 3)).toEqual(["x"]);
+    expect(alternarEscolha(["x"], "a", ["x"], 3)).toEqual(["a"]);
   });
 });
