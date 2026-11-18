@@ -177,7 +177,7 @@ export function CondominiosPage() {
   const ocupDe = (u: Row) => (u["status"] === false ? "inativa" : s(u["ocupacao"]) || "vazia");
   const filtradas = unidadesBloco.filter((u) => (!termo || s(u["numero"]).toLowerCase().includes(termo)) && (!filtroOcup || ocupDe(u) === filtroOcup));
 
-  // Agrupa por andar, do mais alto para o térreo (como o prédio é visto).
+  // Agrupa por andar, do térreo para o mais alto.
   const porAndar = useMemo(() => {
     const m = new Map<string, Row[]>();
     for (const u of filtradas) {
@@ -185,7 +185,7 @@ export function CondominiosPage() {
       m.set(k, [...(m.get(k) ?? []), u]);
     }
     return [...m.entries()]
-      .sort(([a], [b]) => (a === "—" ? 1 : b === "—" ? -1 : Number(b) - Number(a)))
+      .sort(([a], [b]) => (a === "—" ? 1 : b === "—" ? -1 : Number(a) - Number(b)))
       .map(([andar, us]) => ({ andar, us: us.sort((x, y) => ordemNatural(s(x["numero"]), s(y["numero"]))) }));
   }, [filtradas]);
 
@@ -397,9 +397,9 @@ export function CondominiosPage() {
               ) : (
                 <div className="space-y-2">
                   {porAndar.map(({ andar, us }) => (
-                    <div key={andar} className="flex gap-3">
-                      <div className="w-16 shrink-0 pt-2 text-right text-xs font-medium text-muted-foreground">{andar === "—" ? "Sem andar" : andar === "0" ? "Térreo" : `${andar}º andar`}</div>
-                      <div className="flex flex-1 flex-wrap gap-2 border-l pl-3">
+                    <div key={andar} className="flex gap-2 sm:gap-3">
+                      <div className="w-12 shrink-0 pt-2 text-right text-[11px] leading-tight sm:w-16 sm:text-xs font-medium text-muted-foreground">{andar === "—" ? "Sem andar" : andar === "0" ? "Térreo" : `${andar}º andar`}</div>
+                      <div className="grid min-w-0 flex-1 grid-cols-4 gap-1.5 border-l pl-2 sm:flex sm:flex-wrap sm:gap-2 sm:pl-3">
                         {us.map((u) => {
                           const o = OCUP_VISUAL.find((x) => x.value === ocupDe(u)) ?? OCUP_VISUAL[0]!;
                           return (
@@ -409,7 +409,7 @@ export function CondominiosPage() {
                               onClick={() => setUnidadeAberta(u)}
                               aria-label={`Unidade ${s(u["numero"])} — ${o.label}`}
                               title={o.label}
-                              className={cn("flex min-w-20 flex-col items-center gap-0.5 rounded-md border px-3 py-1.5 text-center transition hover:shadow-sm hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", o.card)}
+                              className={cn("flex min-h-11 w-full flex-col items-center justify-center gap-0.5 rounded-md border px-1 py-1.5 sm:w-auto sm:min-w-20 sm:px-3 text-center transition hover:shadow-sm hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", o.card)}
                             >
                               <span className="text-sm font-semibold">{s(u["numero"])}</span>
                               <span className="text-[10px] font-medium uppercase tracking-wide opacity-80">{o.curto}</span>
@@ -418,7 +418,7 @@ export function CondominiosPage() {
                               <TooltipProvider delayDuration={100}><Tooltip>
                                 <TooltipTrigger asChild>
                                   <button type="button" aria-label={`Excluir unidade ${s(u["numero"])}`} onClick={() => setUnidadeExcluir(u)}
-                                    className="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground md:opacity-0 shadow transition focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-hover:opacity-100">
+                                    className="absolute -right-1.5 -top-1.5 hidden size-5 md:flex items-center justify-center rounded-full bg-destructive text-destructive-foreground md:opacity-0 shadow transition focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-hover:opacity-100">
                                     <X className="size-3" />
                                   </button>
                                 </TooltipTrigger>
