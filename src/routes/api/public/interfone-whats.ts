@@ -5,7 +5,7 @@ import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/integrations/supabase/
 import { dispararMensagem } from "@/lib/atendimentos-envio";
 import { instanciaParaAvisos } from "@/lib/instancia-finalidade";
 import { mensagemInterfoneWhats } from "@/lib/interfone";
-import { enviarPushPendentes } from "@/lib/push-envio.server";
+import { enviarPushPendentes, segredoServidor } from "@/lib/push-envio.server";
 
 const Corpo = z.object({ id: z.string().uuid(), token: z.string().min(10).max(100) });
 type Resp = { destinos?: { nome: string; telefone: string | null }[]; visitante?: string; motivo?: string | null; unidade?: string | null; condominio?: string; instancias?: Record<string, unknown>[] };
@@ -20,8 +20,7 @@ export const Route = createFileRoute("/api/public/interfone-whats")({
         if (!p.success) return Response.json({ ok: false }, { status: 400 });
         // Push primeiro: a chamada já foi enfileirada no banco ao ser criada, mesmo sem WhatsApp configurado.
         await enviarPushPendentes().catch(() => undefined);
-        const segredo = process.env["INTERFONE_WHATS_SEGREDO"];
-        if (!segredo) return Response.json({ ok: false, erro: "não configurado" }, { status: 503 });
+        const segredo = segredoServidor();
         const db = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, { auth: { persistSession: false, autoRefreshToken: false, storage: undefined } });
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data, error } = await (db as any).rpc("cond_interfone_whats", { p_id: p.data.id, p_token: p.data.token, p_segredo: segredo });

@@ -6,12 +6,29 @@ import { VAPID_PUBLICA } from "@/lib/push";
 type Aparelho = { endpoint: string; p256dh: string; auth: string };
 type Item = { id: string; titulo: string; corpo: string | null; url: string | null; tag: string | null; urgente: boolean; aparelhos: Aparelho[] };
 
-/** Envia as notificações pendentes da fila. Só roda no servidor (segredo + chave VAPID privada). */
+/** Segredo do servidor: variável de ambiente ou o padrão gravado em cond_interfone_segredo (hospedagens sem .env). */
+export const segredoServidor = (): string => process.env["INTERFONE_WHATS_SEGREDO"] || "d4bffe1933df9294d26844db8e6697ecb6e40e1923deae5a";
+
+const novoDb = () => createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, { auth: { persistSession: false, autoRefreshToken: false, storage: undefined } });
+
+/** Chave VAPID privada: variável de ambiente (e grava no banco se faltar) ou lida do banco. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function chavePrivada(db: any, segredo: string): Promise<string | null> {
+  const env = process.env["VAPID_PRIVATE_KEY"];
+  if (env) {
+    await db.rpc("push_vapid_salvar", { p_segredo: segredo, p_valor: env }).catch(() => undefined);
+    return env;
+  }
+  const { data } = await db.rpc("push_vapid", { p_segredo: segredo });
+  return typeof data === "string" && data ? data : null;
+}
+
+/** Envia as notificações pendentes da fila. Só roda no servidor. */
 export async function enviarPushPendentes(): Promise<{ enviados: number; erro?: string }> {
-  const segredo = process.env["INTERFONE_WHATS_SEGREDO"];
-  const privada = process.env["VAPID_PRIVATE_KEY"];
-  if (!segredo || !privada) return { enviados: 0, erro: "não configurado" };
-  const db = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, { auth: { persistSession: false, autoRefreshToken: false, storage: undefined } });
+  const segredo = segredoServidor();
+  const db = novoDb();
+  const privada = await chavePrivada(db, segredo);
+  if (!privada) return { enviados: 0, erro: "não configurado" };
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (db as any).rpc("push_pendentes", { p_segredo: segredo });
   if (error) return { enviados: 0, erro: error.message };
