@@ -40,6 +40,8 @@ export function TextoRico({ value, onChange, minHeight = 120, disabled, placehol
     if (!el) return;
     const v = value ?? "";
     // Valor que acabamos de emitir: não reescrever (evita salto do cursor e recodificação).
+    // Pai limpou o campo (ex.: após enviar): limpa mesmo com foco.
+    if (v === "" && ultimo.current !== "") { el.innerHTML = ""; ultimo.current = ""; return; }
     if (v === ultimo.current || (v === "" && ultimo.current === "<br>")) return;
     if (document.activeElement === el && ultimo.current !== null) return;
     const html = textoParaHtml(v);

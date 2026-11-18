@@ -3,7 +3,7 @@ import { dispararPush } from "@/lib/push";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { GitBranch, Loader2, Lock, Paperclip, Printer, Send, Star, X } from "lucide-react";
+import { GitBranch, Loader2, Lock, Paperclip, Printer, Send, Star, Wrench, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +16,7 @@ import { TextoRico } from "@/components/ui/texto-rico";
 import { confirmar } from "@/components/layout/DialogoGlobal";
 import { imprimirElemento } from "@/lib/propostas";
 import { htmlParaTexto } from "@/lib/html-texto";
-import { enviarWhatsappEmpresa } from "@/lib/manutencoes";
+import { enviarWhatsappEmpresa, proximoNumeroOs, prazoSla as prazoSlaOs } from "@/lib/manutencoes";
 import { STATUS_ATEND, mensagemInteracao, numeroTicket, prazoSla, situacaoSla, statusAtend, type Horarios } from "@/lib/cond-atendimentos";
 import type { Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
@@ -269,6 +269,27 @@ export function AtendimentoSheet({ ctx, atendimento: a, onClose }: { ctx: CtxAte
     toast.success("Obrigado pela avaliação!"); ctx.recarregar();
   };
 
+  const [abrindoOs, setAbrindoOs] = useState(false);
+  const abrirCorretiva = async () => {
+    if (!(await confirmar({ title: "Abrir manutenção corretiva?", description: "Cria uma ordem de serviço corretiva com os dados deste atendimento e muda o status para Em manutenção.", confirmText: "Abrir manutenção" }))) return;
+    setAbrindoOs(true);
+    try {
+      const numero = await proximoNumeroOs(condominioId);
+      const desc = `${numeroTicket(a["numero"])} — ${s(a["titulo"])}\n${htmlParaTexto(s(a["texto"]))}`.trim();
+      const { data, error } = await db.from("manutencao_os").insert({
+        empresa_id: condominioId, condominio_id: condominioId, numero, tipo: "corretiva", prioridade: "normal", status: "agendada",
+        equipamento: s(a["titulo"]).slice(0, 80), local: s(a["local"]) || null, descricao: desc,
+        solicitante: nomePessoa(a["aberto_por"]) || null, observacoes: `Aberta a partir do atendimento ${numeroTicket(a["numero"])}.`,
+        data_prevista: new Date().toISOString(), prazo_sla: prazoSlaOs(new Date(), "normal").toISOString(),
+      }).select("numero").single();
+      if (error) throw error;
+      await db.from("cond_atend_mensagens").insert({ atendimento_id: id, autor_id: me, autor_gestao: true, interna: true, texto: `Manutenção corretiva <b>${s((data as Row)["numero"])}</b> aberta.`, anexos: [] });
+      if (s(a["status"]) !== "em_manutencao") await db.from("cond_atendimentos").update({ status: "em_manutencao" }).eq("id", id);
+      qc.invalidateQueries({ queryKey: ["cond", "atend-msgs", id] }); qc.invalidateQueries({ queryKey: ["cond", "manutencao_os"] }); ctx.recarregar();
+      toast.success(`Ordem ${s((data as Row)["numero"])} aberta em Manutenções.`);
+    } catch (e) { toast.error((e as Error).message); } finally { setAbrindoOs(false); }
+  };
+
   const abrirLateral = (m: Row) => {
     const mor = moradores.find((x) => s(x["unidade_id"]) === s(m["id"]));
     ctx.novo({ origem_id: id, aberto_para: mor ? `${s(mor["usuario_id"])}|${s(mor["unidade_id"])}` : "", unidade_id: s(m["id"]), assunto_id: s(a["assunto_id"]), titulo: s(a["titulo"]).slice(0, 80) });
@@ -314,10 +335,11 @@ export function AtendimentoSheet({ ctx, atendimento: a, onClose }: { ctx: CtxAte
 
             <ol className="space-y-3" aria-label="Conversa">
               {conversa.filter((m) => gestao || !m["interna"]).map((m) => {
-                const meu = s(m["autor_id"]) === me;
+                // Gestão à direita na visão da gestão; morador à direita na visão do morador.
+                const meu = gestao ? !!m["autor_gestao"] : !m["autor_gestao"];
                 return (
                   <li key={s(m["id"])} className={cn("flex", meu ? "justify-end" : "justify-start")}>
-                    <div className={cn("max-w-[85%] rounded-lg border p-3 text-sm", m["interna"] ? "border-amber-300 bg-amber-50 dark:bg-amber-500/10" : meu ? "bg-primary/10" : "bg-muted/40")}>
+                    <div className={cn("max-w-[85%] rounded-2xl border p-3 text-sm", meu ? "rounded-br-sm" : "rounded-bl-sm", m["interna"] ? "border-amber-300 bg-amber-50 dark:bg-amber-500/10" : meu ? "bg-primary/10" : "bg-muted/40")}>
                       <div className="mb-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                         <span className="font-semibold text-foreground">{nomeAutor(m)}</span><span>{dh(m["created_at"])}</span>
                         {m["interna"] ? <span className="inline-flex items-center gap-0.5 text-amber-700"><Lock className="size-3" />Nota interna</span> : null}
@@ -368,6 +390,7 @@ export function AtendimentoSheet({ ctx, atendimento: a, onClose }: { ctx: CtxAte
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   {gestao && <div className="w-52"><SearchSelect value={s(a["status"])} onChange={(v) => v && mudarStatus(v)} options={STATUS_ATEND.map((x) => ({ value: x.value, label: x.label }))} /></div>}
+                  {gestao && !finalizado && <Button variant="outline" onClick={abrirCorretiva} disabled={abrindoOs}>{abrindoOs ? <Loader2 className="size-4 animate-spin" /> : <Wrench className="size-4" />} Manutenção corretiva</Button>}
                   {gestao && <Button variant="outline" onClick={() => imprimirElemento(`enredo-${id}`)} aria-label="Imprimir enredo"><Printer className="size-4" /></Button>}
                   <Button variant="outline" onClick={onClose}>Fechar</Button>
                   <Button onClick={enviar} disabled={enviando}>{enviando ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />} Enviar</Button>
