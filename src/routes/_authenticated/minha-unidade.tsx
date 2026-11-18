@@ -171,7 +171,7 @@ function MinhaUnidade() {
           )}
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             {kpis.map((c) => (
-              <button key={c.k} type="button" onClick={() => setSecao(c.k)} className="flex min-h-[7.5rem] flex-col justify-between rounded-2xl border bg-card p-4 text-left shadow-sm transition-colors hover:bg-accent active:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:min-h-0">
+              <button key={c.k} type="button" onClick={() => setSecao(c.k)} className="flex min-h-[7.5rem] flex-col justify-start gap-1 rounded-2xl border bg-card p-4 text-left shadow-sm transition-colors hover:bg-accent active:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:min-h-0">
                 <span className="mb-2 flex size-10 items-center justify-center rounded-xl bg-primary/10 md:size-auto md:bg-transparent"><c.i className="size-6 text-primary md:size-5" aria-hidden /></span>
                 <p className="text-3xl font-bold md:text-2xl">{c.n}</p>
                 <p className="text-base font-medium text-foreground/85 md:text-xs md:font-normal md:text-muted-foreground">{c.l}</p>
