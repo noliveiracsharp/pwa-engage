@@ -90,6 +90,7 @@ import { Route as ApiPublicIconeRouteImport } from './routes/api/public/icone'
 import { Route as ApiPublicInterfoneWhatsRouteImport } from './routes/api/public/interfone-whats'
 import { Route as ApiPublicLeadsRouteImport } from './routes/api/public/leads'
 import { Route as ApiPublicManifestRouteImport } from './routes/api/public/manifest'
+import { Route as ApiPublicPushEnviarRouteImport } from './routes/api/public/push-enviar'
 import { Route as ApiPublicVersaoRouteImport } from './routes/api/public/versao'
 import { Route as ApiPublicZapiWebhookRouteImport } from './routes/api/public/zapi-webhook'
 import { Route as ApiPublicAvisoLidoIdRouteImport } from './routes/api/public/aviso-lido.$id'
@@ -520,6 +521,11 @@ const ApiPublicManifestRoute = ApiPublicManifestRouteImport.update({
   path: '/api/public/manifest',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicPushEnviarRoute = ApiPublicPushEnviarRouteImport.update({
+  id: '/api/public/push-enviar',
+  path: '/api/public/push-enviar',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicVersaoRoute = ApiPublicVersaoRouteImport.update({
   id: '/api/public/versao',
   path: '/api/public/versao',
@@ -617,6 +623,7 @@ export interface FileRoutesByFullPath {
   '/api/public/interfone-whats': typeof ApiPublicInterfoneWhatsRoute
   '/api/public/leads': typeof ApiPublicLeadsRoute
   '/api/public/manifest': typeof ApiPublicManifestRoute
+  '/api/public/push-enviar': typeof ApiPublicPushEnviarRoute
   '/api/public/versao': typeof ApiPublicVersaoRoute
   '/api/public/zapi-webhook': typeof ApiPublicZapiWebhookRoute
   '/api/public/aviso-lido/$id': typeof ApiPublicAvisoLidoIdRoute
@@ -702,6 +709,7 @@ export interface FileRoutesByTo {
   '/api/public/interfone-whats': typeof ApiPublicInterfoneWhatsRoute
   '/api/public/leads': typeof ApiPublicLeadsRoute
   '/api/public/manifest': typeof ApiPublicManifestRoute
+  '/api/public/push-enviar': typeof ApiPublicPushEnviarRoute
   '/api/public/versao': typeof ApiPublicVersaoRoute
   '/api/public/zapi-webhook': typeof ApiPublicZapiWebhookRoute
   '/api/public/aviso-lido/$id': typeof ApiPublicAvisoLidoIdRoute
@@ -789,6 +797,7 @@ export interface FileRoutesById {
   '/api/public/interfone-whats': typeof ApiPublicInterfoneWhatsRoute
   '/api/public/leads': typeof ApiPublicLeadsRoute
   '/api/public/manifest': typeof ApiPublicManifestRoute
+  '/api/public/push-enviar': typeof ApiPublicPushEnviarRoute
   '/api/public/versao': typeof ApiPublicVersaoRoute
   '/api/public/zapi-webhook': typeof ApiPublicZapiWebhookRoute
   '/api/public/aviso-lido/$id': typeof ApiPublicAvisoLidoIdRoute
@@ -876,6 +885,7 @@ export interface FileRouteTypes {
     | '/api/public/interfone-whats'
     | '/api/public/leads'
     | '/api/public/manifest'
+    | '/api/public/push-enviar'
     | '/api/public/versao'
     | '/api/public/zapi-webhook'
     | '/api/public/aviso-lido/$id'
@@ -961,6 +971,7 @@ export interface FileRouteTypes {
     | '/api/public/interfone-whats'
     | '/api/public/leads'
     | '/api/public/manifest'
+    | '/api/public/push-enviar'
     | '/api/public/versao'
     | '/api/public/zapi-webhook'
     | '/api/public/aviso-lido/$id'
@@ -1047,6 +1058,7 @@ export interface FileRouteTypes {
     | '/api/public/interfone-whats'
     | '/api/public/leads'
     | '/api/public/manifest'
+    | '/api/public/push-enviar'
     | '/api/public/versao'
     | '/api/public/zapi-webhook'
     | '/api/public/aviso-lido/$id'
@@ -1084,6 +1096,7 @@ export interface RootRouteChildren {
   ApiPublicInterfoneWhatsRoute: typeof ApiPublicInterfoneWhatsRoute
   ApiPublicLeadsRoute: typeof ApiPublicLeadsRoute
   ApiPublicManifestRoute: typeof ApiPublicManifestRoute
+  ApiPublicPushEnviarRoute: typeof ApiPublicPushEnviarRoute
   ApiPublicVersaoRoute: typeof ApiPublicVersaoRoute
   ApiPublicZapiWebhookRoute: typeof ApiPublicZapiWebhookRoute
   ApiPublicAvisoLidoIdRoute: typeof ApiPublicAvisoLidoIdRoute
@@ -1658,6 +1671,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicManifestRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/push-enviar': {
+      id: '/api/public/push-enviar'
+      path: '/api/public/push-enviar'
+      fullPath: '/api/public/push-enviar'
+      preLoaderRoute: typeof ApiPublicPushEnviarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/versao': {
       id: '/api/public/versao'
       path: '/api/public/versao'
@@ -1827,6 +1847,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicInterfoneWhatsRoute: ApiPublicInterfoneWhatsRoute,
   ApiPublicLeadsRoute: ApiPublicLeadsRoute,
   ApiPublicManifestRoute: ApiPublicManifestRoute,
+  ApiPublicPushEnviarRoute: ApiPublicPushEnviarRoute,
   ApiPublicVersaoRoute: ApiPublicVersaoRoute,
   ApiPublicZapiWebhookRoute: ApiPublicZapiWebhookRoute,
   ApiPublicAvisoLidoIdRoute: ApiPublicAvisoLidoIdRoute,

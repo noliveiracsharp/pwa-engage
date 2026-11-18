@@ -7,6 +7,7 @@ import { dispararMensagem } from "@/lib/atendimentos-envio";
 import { text } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
 import { situacaoAtivada } from "@/lib/oferta-ativacao";
+import { dispararPush } from "@/lib/push";
 
 export const AVISOS_EQUIPE = "avisos_equipe";
 const INTERVALO = 30 * 1000;
@@ -35,7 +36,7 @@ export async function notificarEquipe(n: Notificacao): Promise<{ avisos: number;
       empresa_id: n.empresaId ?? null, usuario_id: uid, autor_id: n.autorId ?? null,
       titulo: n.titulo, texto: n.texto, link: n.link ?? null,
     })) as never);
-    if (!error) avisos = ids.length;
+    if (!error) { avisos = ids.length; dispararPush(); }
   } catch { /* sininho opcional */ }
   try {
     const { data: insts } = await supabase.from("empresas_instancias").select("*").eq("empresa_id", n.empresaId as never);

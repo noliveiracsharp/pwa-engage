@@ -5,6 +5,7 @@ import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/integrations/supabase/
 import { dispararMensagem } from "@/lib/atendimentos-envio";
 import { instanciaParaAvisos } from "@/lib/instancia-finalidade";
 import { mensagemInterfoneWhats } from "@/lib/interfone";
+import { enviarPushPendentes } from "@/lib/push-envio.server";
 
 const Corpo = z.object({ id: z.string().uuid(), token: z.string().min(10).max(100) });
 type Resp = { destinos?: { nome: string; telefone: string | null }[]; visitante?: string; motivo?: string | null; unidade?: string | null; condominio?: string; instancias?: Record<string, unknown>[] };
@@ -23,6 +24,8 @@ export const Route = createFileRoute("/api/public/interfone-whats")({
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data, error } = await (db as any).rpc("cond_interfone_whats", { p_id: p.data.id, p_token: p.data.token, p_segredo: segredo });
         if (error) return Response.json({ ok: false }, { status: 400 });
+        // O banco já enfileirou o push desta etapa (gatilho em whats_avisados): envia antes do WhatsApp.
+        await enviarPushPendentes().catch(() => undefined);
         const r = (data ?? {}) as Resp;
         const inst = instanciaParaAvisos(r.instancias ?? []);
         if (!inst || !r.destinos?.length) return Response.json({ ok: true, enviados: 0 });

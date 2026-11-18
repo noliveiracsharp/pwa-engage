@@ -1,4 +1,5 @@
 import { abrirArquivo } from "@/components/layout/VisualizadorArquivo";
+import { dispararPush } from "@/lib/push";
 import { useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -229,6 +230,7 @@ export function AtendimentoSheet({ ctx, atendimento: a, onClose }: { ctx: CtxAte
       const { data: u } = await supabase.auth.getUser();
       const nomeMeu = s((u.user?.user_metadata as Row | undefined)?.["nome"]) || s(u.user?.email).split("@")[0];
       const { error } = await db.from("cond_atend_mensagens").insert({ atendimento_id: id, autor_id: me, autor_nome: gestao ? nomeMeu : null, autor_gestao: gestao, interna: gestao && interna, texto: htmlSeguro(texto), anexos });
+      if (!error) dispararPush();
       if (error) throw error;
       setTexto(""); setFiles([]);
       qc.invalidateQueries({ queryKey: ["cond", "atend-msgs", id] }); ctx.recarregar();

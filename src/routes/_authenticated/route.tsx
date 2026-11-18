@@ -1,3 +1,4 @@
+import { AtivarNotificacoes } from "@/components/pwa/AtivarNotificacoes";
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -46,6 +47,7 @@ function AuthenticatedLayout() {
         <Outlet />
       </SubmenuTabs>
       <FilaEnvioFlutuante />
+      <AtivarNotificacoes />
     </AppLayout>
   );
 }
