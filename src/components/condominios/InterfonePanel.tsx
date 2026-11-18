@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { DiscadorInterno } from "./DiscadorInterno";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Row } from "@/lib/row";
 import { s } from "./cond-data";
@@ -123,8 +124,9 @@ export function InterfonePanel({ condominioId, nomeCondominio, blocos, unidades,
   );
 
   return (
-    <Tabs defaultValue="config" className="space-y-4">
-      <TabsList><TabsTrigger value="config">Configuração e QR Code</TabsTrigger><TabsTrigger value="pontos">Pontos de QR Code</TabsTrigger><TabsTrigger value="ramais">Ramais</TabsTrigger><TabsTrigger value="historico">Histórico</TabsTrigger></TabsList>
+    <Tabs defaultValue="discador" className="space-y-4">
+      <TabsList><TabsTrigger value="discador">Discador</TabsTrigger><TabsTrigger value="config">Configuração e QR Code</TabsTrigger><TabsTrigger value="pontos">Pontos de QR Code</TabsTrigger><TabsTrigger value="ramais">Ramais</TabsTrigger><TabsTrigger value="historico">Histórico</TabsTrigger></TabsList>
+      <TabsContent value="discador"><DiscadorInterno condominioId={condominioId} /></TabsContent>
       <TabsContent value="pontos"><InterfonePontos condominioId={condominioId} nomeCondominio={nomeCondominio} canUpdate={perms.canUpdate} /></TabsContent>
       <TabsContent value="ramais"><InterfoneRamais condominioId={condominioId} canUpdate={perms.canUpdate} /></TabsContent>
       <TabsContent value="config">

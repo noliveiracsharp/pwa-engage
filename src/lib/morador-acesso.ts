@@ -8,7 +8,7 @@ const ABRIR: PermsSecao = { canRead: true, canCreate: true, canUpdate: false, ca
 /** Seções do portal do morador; somente Atendimentos permite criar (abrir chamado próprio). */
 export const SECOES_MORADOR: Record<string, PermsSecao> = {
   painel: LER, unidade: LER, meu: LER, equipe: LER, obras: LER,
-  avisos: LER, assembleias: LER, atendimentos: ABRIR, enquetes: LER, docs: LER,
+  avisos: LER, assembleias: LER, atendimentos: ABRIR, enquetes: LER, docs: LER, interfone: LER,
 };
 
 export const permsMorador = (secao: string): PermsSecao => SECOES_MORADOR[secao] ?? { canRead: false, canCreate: false, canUpdate: false, canDelete: false };

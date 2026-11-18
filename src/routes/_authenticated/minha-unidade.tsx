@@ -2,7 +2,7 @@ import { DocumentosPanel } from "@/components/condominios/DocumentosPanel";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { FileText, Gavel, Home, Loader2, Megaphone, LayoutDashboard, MapPinned, Users, HardHat, MessageSquareText, Vote, Wallet, ArrowRight, DoorOpen, ChevronRight } from "lucide-react";
+import { FileText, Gavel, Home, Loader2, Megaphone, LayoutDashboard, MapPinned, Users, HardHat, MessageSquareText, Vote, Wallet, ArrowRight, DoorOpen, ChevronRight, Phone } from "lucide-react";
 import { MeuCondominioPanel } from "@/components/condominios/MeuCondominioPanel";
 import { EquipePanel } from "@/components/condominios/EquipePanel";
 import { ObrasPanel } from "@/components/condominios/ObrasPanel";
@@ -21,6 +21,8 @@ import { ehGestor, rotuloCargo } from "@/lib/ambientes";
 import { htmlParaTexto } from "@/lib/html-texto";
 import { useCondRows } from "@/components/condominios/cond-data";
 import { UnidadeSheet } from "@/components/condominios/UnidadeSheet";
+import { DiscadorInterno } from "@/components/condominios/DiscadorInterno";
+import { InterfoneTocando } from "@/components/condominios/InterfoneTocando";
 import { CardAviso, LeituraAvisoDialog } from "@/components/condominios/LeituraAvisoDialog";
 
 export const Route = createFileRoute("/_authenticated/minha-unidade")({
@@ -114,6 +116,7 @@ function MinhaUnidade() {
     sec("painel", "Painel", LayoutDashboard),
     sec("unidade", "Minha unidade", Home),
     sec("meu", "Meu Condomínio", MapPinned),
+    sec("interfone", "Interfone", Phone),
     sec("avisos", "Avisos & Comunicados", Megaphone),
     sec("assembleias", "Assembleias", Gavel),
     sec("atendimentos", "Atendimentos", MessageSquareText),
@@ -144,6 +147,7 @@ function MinhaUnidade() {
 
   return (
     <div className="flex min-h-full flex-col md:flex-row">
+      <InterfoneTocando nome={primeiroNome || "Morador"} />
       <CondominiosSidebar secoes={secoes} ativa={secao} onChange={setSecao} chatCondominioId={condId || undefined} />
       <div className="w-full min-w-0 flex-1 space-y-4 p-4 md:p-6 lg:p-8">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -217,6 +221,7 @@ function MinhaUnidade() {
         {secao === "atendimentos" && <AtendimentosPanel condominioId={condId} nomeCondominio={v.condominio_nome} blocos={[]} unidades={[]} perms={p("atendimentos")} />}
         {secao === "enquetes" && <EnquetesPanel condominioId={condId} blocos={[]} perms={p("enquetes")} />}
         {secao === "assembleias" && condId && <AssembleiasMorador condominioId={condId} />}
+        {secao === "interfone" && condId && <DiscadorInterno condominioId={condId} />}
         {secao === "avisos" && <div className="space-y-2">{listaAvisos()}</div>}
         <LeituraAvisoDialog aviso={avisoAberto} usuarioId={s(usuario?.["id"]) || undefined} onClose={() => setAvisoAberto(null)} />
         {secao === "docs" && condId && <DocumentosPanel condominioId={condId} perms={p("docs")} condominios={[{ value: condId, label: v.condominio_nome ?? "" }]} blocos={[]} unidades={[]} visibilidades={visibilidadesDocumento(v.papel)} />}
