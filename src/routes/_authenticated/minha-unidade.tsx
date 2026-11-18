@@ -18,6 +18,7 @@ import { CondominiosSidebar, type Secao } from "@/components/condominios/Condomi
 import { supabase } from "@/integrations/supabase/client";
 import { gravarAmbiente, lerAmbiente, useAmbientes } from "@/hooks/useAmbientes";
 import { ehGestor, rotuloCargo } from "@/lib/ambientes";
+import { useEmpresaAtiva } from "@/hooks/useEmpresaAtiva";
 import { htmlParaTexto } from "@/lib/html-texto";
 import { useCondRows } from "@/components/condominios/cond-data";
 import { UnidadeSheet } from "@/components/condominios/UnidadeSheet";
@@ -49,6 +50,7 @@ const dataBR = (v: unknown) => (v ? new Date(s(v)).toLocaleDateString("pt-BR") :
 function MinhaUnidade() {
   const { data: ambientes, isLoading } = useAmbientes();
   const { user, usuario } = useAuth();
+  const empresaAtiva = useEmpresaAtiva();
   const unidades = (ambientes ?? []).filter((a) => a.tipo === "unidade");
   const atual = unidades.find((a) => a.id === lerAmbiente()) ?? unidades[0];
   const v = atual && atual.tipo === "unidade" ? atual.vinculo : null;
@@ -151,7 +153,7 @@ function MinhaUnidade() {
   return (
     <div className="flex min-h-full flex-col md:flex-row">
       <InterfoneTocando nome={primeiroNome || "Morador"} />
-      <CondominiosSidebar secoes={secoes} ativa={secao} onChange={setSecao} chatCondominioId={condId || undefined} />
+      <CondominiosSidebar secoes={secoes} ativa={secao} onChange={setSecao} chatCondominioId={condId || undefined} direto={{ nome: s(v.condominio_nome) || "Condomínio", logo: empresaAtiva.logoAtivo ?? null, cargo: rotuloCargo(v) }} />
       <div className="w-full min-w-0 flex-1 space-y-4 p-4 md:p-6 lg:p-8">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>

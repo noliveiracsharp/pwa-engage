@@ -48,6 +48,9 @@ export async function loadUsuario(user: User) {
     if (byEmail.data) return byEmail.data as Row;
     if (byEmail.error && byId.error) throw byEmail.error;
   } else if (byId.error) throw byId.error;
+  // Morador: a tabela não expõe o próprio cadastro; a RPC devolve só a linha do usuário logado.
+  const proprio = await (supabase as any).rpc("meu_usuario");
+  if (proprio.data && typeof proprio.data === "object") return proprio.data as Row;
   return null;
 }
 const USUARIO_CACHE = "atendeai.usuarioCache";

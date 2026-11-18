@@ -42,7 +42,7 @@ export function MeusDadosSheet({ open, onOpenChange }: { open: boolean; onOpenCh
       email: text(pick(usuario, ["email"], user?.email)),
       cpf: text(pick(usuario, ["cpf"])),
       cargo: text(pick(usuario, ["cargo"])),
-      telefone: text(pick(usuario, ["telefone"])),
+      telefone: text(pick(usuario, ["telefone", "celular"])),
       departamento_id: text(pick(usuario, ["departamento_id"])),
       perfil_id: text(pick(usuario, ["perfil_id"])),
       empresa_id: text(pick(usuario, ["empresa_id"])),
@@ -94,8 +94,13 @@ export function MeusDadosSheet({ open, onOpenChange }: { open: boolean; onOpenCh
       if (podeEditarPerfil && "departamento_id" in (usuario ?? {})) values["departamento_id"] = form.departamento_id || null;
       if (podeEditarPerfil && form.perfil_id) values["perfil_id"] = form.perfil_id;
       if (isMaster && form.empresa_id) values["empresa_id"] = form.empresa_id;
-      const { error } = await supabase.from("usuarios").update(values).eq("id", rowId(usuario) as never);
+      const { data: alterados, error } = await supabase.from("usuarios").update(values as never).eq("id", rowId(usuario) as never).select("id");
       if (error) throw error;
+      if (!alterados?.length) {
+        // Sem acesso direto à tabela (ex.: morador): salva só os próprios dados pessoais.
+        const { error: e2 } = await (supabase as any).rpc("meu_usuario_salvar", { p_dados: { nome: values["nome"], foto: values["foto"] ?? "", cpf: values["cpf"] ?? "", cargo: values["cargo"] ?? "", telefone: form.telefone || "" } });
+        if (e2) throw e2;
+      }
       if (pw.senha) {
         const { error: pwErr } = await supabase.auth.updateUser({ password: pw.senha });
         if (pwErr) throw new Error("Senha não alterada: " + pwErr.message);
