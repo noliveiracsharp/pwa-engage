@@ -29,22 +29,22 @@ export function CardAviso({ aviso, onAbrir, lido }: { aviso: Row; onAbrir: () =>
   const tipo = s(aviso["tipo"]);
   return (
     <button type="button" onClick={onAbrir} aria-label={`Ler comunicado: ${s(aviso["titulo"])}`}
-      className="group w-full rounded-lg border bg-card p-4 text-left transition-colors hover:border-primary/50 hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+      className="group w-full rounded-2xl border bg-card p-4 text-left transition-colors hover:border-primary/50 hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
       <div className="flex items-start gap-3">
-        <div className="min-w-0 flex-1 space-y-1.5">
-          <p className="text-xs text-muted-foreground">{s(aviso["abrangencia"]) || "Todas as torres"}</p>
-          <p className="flex flex-wrap items-center gap-2 font-semibold">
+        <div className="min-w-0 flex-1 space-y-2 md:space-y-1.5">
+          <p className="text-sm text-foreground/75 md:text-xs md:text-muted-foreground">{s(aviso["abrangencia"]) || "Todas as torres"}</p>
+          <p className="flex flex-wrap items-center gap-2 text-lg font-semibold leading-snug md:text-base">
             {lido === false && <span className="size-2 rounded-full bg-primary" aria-label="Não lido" />}
             {s(aviso["titulo"])}
             {s(aviso["midia_url"]) && <IconeMidia tipo={s(aviso["midia_tipo"])} className="size-4 text-primary" />}
           </p>
-          <div className="flex flex-wrap items-center gap-1.5 text-xs">
-            <Badge variant="outline" className={tipoAvisoCor[tipo]}>{tipoAvisoLabel(tipo)}</Badge>
-            <span className="text-muted-foreground">{dtHora(aviso["created_at"])}</span>
+          <div className="flex flex-wrap items-center gap-2 text-sm md:text-xs">
+            <Badge variant="outline" className={`text-sm md:text-xs ${tipoAvisoCor[tipo] ?? ""}`}>{tipoAvisoLabel(tipo)}</Badge>
+            <span className="text-foreground/75 md:text-muted-foreground">{dtHora(aviso["created_at"])}</span>
           </div>
-          <p className="line-clamp-2 text-sm text-muted-foreground">{htmlParaTexto(s(aviso["mensagem"]))}</p>
+          <p className="line-clamp-2 text-base leading-relaxed text-foreground/80 md:text-sm md:text-muted-foreground">{htmlParaTexto(s(aviso["mensagem"]))}</p>
         </div>
-        <span className="flex shrink-0 items-center gap-1 text-xs font-medium text-primary opacity-80 group-hover:opacity-100"><Eye className="size-4" aria-hidden /> Ler</span>
+        <span className="flex shrink-0 items-center gap-1 text-base font-semibold text-primary md:text-xs md:font-medium md:opacity-80 group-hover:opacity-100"><Eye className="size-5 md:size-4" aria-hidden /> Ler</span>
       </div>
     </button>
   );

@@ -155,9 +155,9 @@ function MinhaUnidade() {
       <div className="w-full min-w-0 flex-1 space-y-4 p-4 md:p-6 lg:p-8">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{v.condominio_nome}</p>
-          <h1 className="text-2xl font-bold text-foreground">{secao === "painel" ? `Olá, ${primeiroNome}!` : secoes.find((x) => x.key === secao)?.label}</h1>
-          <p className="text-sm text-muted-foreground">{local} · {rotuloCargo(v)}</p>
+          <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground md:text-xs">{v.condominio_nome}</p>
+          <h1 className="text-[1.75rem] font-bold leading-tight text-foreground md:text-2xl">{secao === "painel" ? `Olá, ${primeiroNome}!` : secoes.find((x) => x.key === secao)?.label}</h1>
+          <p className="text-base text-foreground/80 md:text-sm md:text-muted-foreground">{local} · {rotuloCargo(v)}</p>
         </div>
         {(ambientes?.length ?? 0) > 1 && <Button variant="outline" asChild><Link to="/acesso">Trocar acesso</Link></Button>}
       </div>
@@ -171,22 +171,22 @@ function MinhaUnidade() {
           )}
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             {kpis.map((c) => (
-              <button key={c.k} type="button" onClick={() => setSecao(c.k)} className="rounded-xl border bg-card p-4 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                <c.i className="mb-2 size-5 text-primary" aria-hidden />
-                <p className="text-2xl font-bold">{c.n}</p>
-                <p className="text-xs text-muted-foreground">{c.l}</p>
+              <button key={c.k} type="button" onClick={() => setSecao(c.k)} className="flex min-h-[7.5rem] flex-col justify-between rounded-2xl border bg-card p-4 text-left shadow-sm transition-colors hover:bg-accent active:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:min-h-0">
+                <span className="mb-2 flex size-10 items-center justify-center rounded-xl bg-primary/10 md:size-auto md:bg-transparent"><c.i className="size-6 text-primary md:size-5" aria-hidden /></span>
+                <p className="text-3xl font-bold md:text-2xl">{c.n}</p>
+                <p className="text-base font-medium text-foreground/85 md:text-xs md:font-normal md:text-muted-foreground">{c.l}</p>
               </button>
             ))}
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
             <Card>
-              <CardHeader className="flex-row items-center justify-between space-y-0"><CardTitle className="text-base">Avisos recentes</CardTitle><Button size="sm" variant="ghost" onClick={() => setSecao("avisos")}>Ver todos</Button></CardHeader>
-              <CardContent className="space-y-2">{listaAvisos(3)}</CardContent>
+              <CardHeader className="flex-row items-center justify-between space-y-0"><CardTitle className="text-lg md:text-base">Avisos recentes</CardTitle><Button size="sm" variant="ghost" className="text-base text-primary md:text-sm" onClick={() => setSecao("avisos")}>Ver todos</Button></CardHeader>
+              <CardContent className="space-y-3 px-3 md:px-6">{listaAvisos(3)}</CardContent>
             </Card>
             <div className="space-y-4">
               <Card>
-                <CardHeader className="flex-row items-center justify-between space-y-0"><CardTitle className="text-base">Seus atendimentos</CardTitle><Button size="sm" onClick={() => setSecao("atendimentos")}>Abrir chamado</Button></CardHeader>
-                <CardContent className="space-y-2 text-sm">
+                <CardHeader className="flex-row items-center justify-between space-y-0"><CardTitle className="text-lg md:text-base">Seus atendimentos</CardTitle><Button size="sm" onClick={() => setSecao("atendimentos")}>Abrir chamado</Button></CardHeader>
+                <CardContent className="space-y-2 text-base md:text-sm">
                   {(chamados.data ?? []).length === 0 ? <p className="text-muted-foreground">Nenhum chamado em aberto.</p>
                     : chamados.data!.slice(0, 3).map((c) => (
                       <button key={s(c["id"])} type="button" onClick={() => setSecao("atendimentos")} className="flex w-full items-center justify-between gap-2 rounded-md border p-2 text-left hover:bg-accent">
@@ -198,7 +198,7 @@ function MinhaUnidade() {
               </Card>
               <Card>
                 <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Wallet className="size-4" aria-hidden /> Financeiro da unidade</CardTitle></CardHeader>
-                <CardContent className="text-sm text-muted-foreground">Em breve: cota do mês, 2ª via do boleto e Pix direto por aqui.</CardContent>
+                <CardContent className="text-base text-foreground/80 md:text-sm md:text-muted-foreground">Em breve: cota do mês, 2ª via do boleto e Pix direto por aqui.</CardContent>
               </Card>
             </div>
           </div>
