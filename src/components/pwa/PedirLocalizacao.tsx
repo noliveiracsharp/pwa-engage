@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 
 const CHAVE = "conectcon-localizacao-adiado";
 const ADIAR_MS = 3 * 864e5;
+// Garante um único convite na tela, mesmo se o layout montar mais de uma vez.
+let donoAtual: symbol | null = null;
 
 /** Convite, logo ao abrir o app, para liberar a localização (interfone e portaria). */
 export function PedirLocalizacao() {
@@ -12,14 +14,19 @@ export function PedirLocalizacao() {
   const [ocupado, setOcupado] = useState(false);
 
   useEffect(() => {
-    if (!("geolocation" in navigator)) return;
+    if (donoAtual) return;
+    const eu = Symbol("loc");
+    donoAtual = eu;
+    const liberar = () => { if (donoAtual === eu) donoAtual = null; };
+    if (!("geolocation" in navigator)) return liberar;
     const adiado = Number(localStorage.getItem(CHAVE) ?? 0);
-    if (Date.now() - adiado < ADIAR_MS) return;
+    if (Date.now() - adiado < ADIAR_MS) return liberar;
     const perm = (navigator as Navigator & { permissions?: Permissions }).permissions;
-    if (!perm?.query) { setVisivel(true); return; }
+    if (!perm?.query) { setVisivel(true); return liberar; }
     perm.query({ name: "geolocation" as PermissionName })
       .then((s) => { if (s.state === "prompt") setVisivel(true); })
       .catch(() => setVisivel(true));
+    return liberar;
   }, []);
 
   if (!visivel) return null;
