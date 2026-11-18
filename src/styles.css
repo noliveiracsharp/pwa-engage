@@ -804,6 +804,7 @@ input[type="date"]::-webkit-calendar-picker-indicator, input[type="datetime-loca
   .text-sm { font-size: 0.9375rem; line-height: 1.4rem; }
   .text-\[10px\], .text-\[11px\] { font-size: 0.8125rem !important; }
   input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea { font-size: 16px !important; }
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]), select { min-height: 44px; }
   button:not([role="switch"]):not([role="checkbox"]):not([role="radio"]), [role="tab"], a[href].inline-flex, [role="menuitem"], [role="option"] { min-height: 44px; }
   button[data-size="icon"], button.size-8, button.size-9, button.h-8, button.h-9 { min-width: 44px; min-height: 44px; }
   :focus-visible { outline: 3px solid var(--ring); outline-offset: 2px; }
