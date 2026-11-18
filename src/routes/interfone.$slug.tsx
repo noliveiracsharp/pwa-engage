@@ -248,12 +248,18 @@ function Identificar({ slug, exigeGeo, alvo, onVoltar, onChamou }: { slug: strin
     if (nome.trim().length < 2) return setErro("Informe seu nome.");
     setEnviando(true); setErro("");
     let pos: { lat: number; lng: number } | null = null;
+    let negado = false;
     if (exigeGeo) {
       pos = await new Promise((ok) => {
         if (!navigator.geolocation) return ok(null);
-        navigator.geolocation.getCurrentPosition((p) => ok({ lat: p.coords.latitude, lng: p.coords.longitude }), () => ok(null), { enableHighAccuracy: true, timeout: 15000 });
+        navigator.geolocation.getCurrentPosition((p) => ok({ lat: p.coords.latitude, lng: p.coords.longitude }), (e) => { negado = e.code === 1; ok(null); }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 });
       });
-      if (!pos) { setEnviando(false); return setErro("Permita a localização: este interfone só funciona no portão do condomínio."); }
+      if (!pos) {
+        setEnviando(false);
+        return setErro(negado
+          ? "Localização bloqueada. No iPhone: Ajustes › Privacidade › Serviços de Localização › Safari › \"Ao Usar\". No Android: toque no cadeado da barra de endereço › Permissões › Localização. Depois tente de novo."
+          : "Não conseguimos sua localização. Ative o GPS, vá para perto do portão e tente de novo.");
+      }
     }
     const { data, error } = await db.rpc("cond_interfone_chamar_v2", { p_slug: slug, p_destino: alvo.destino, p_unidade: alvo.unidade ?? null, p_ramal: alvo.ramal ?? null, p_nome: nome, p_motivo: motivo, p_foto: foto(), p_lat: pos?.lat ?? null, p_lng: pos?.lng ?? null });
     setEnviando(false);

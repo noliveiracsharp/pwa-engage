@@ -1,6 +1,6 @@
 import { abrirArquivo } from "@/components/layout/VisualizadorArquivo";
 import { dispararPush } from "@/lib/push";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { GitBranch, Loader2, Lock, Paperclip, Printer, Send, Star, X } from "lucide-react";
@@ -208,7 +208,18 @@ export function AtendimentoSheet({ ctx, atendimento: a, onClose }: { ctx: CtxAte
   const { data: msgs = [] } = useQuery({
     queryKey: ["cond", "atend-msgs", id],
     queryFn: async (): Promise<Row[]> => ((await db.from("cond_atend_mensagens").select("*").eq("atendimento_id", id).order("created_at")).data ?? []) as Row[],
+    // Rede de segurança: mesmo sem tempo real, a conversa se atualiza a cada 4s enquanto aberta.
+    refetchInterval: 4000, refetchIntervalInBackground: false, refetchOnWindowFocus: true,
   });
+  // Tempo real: mensagem nova do outro lado aparece na hora.
+  useEffect(() => {
+    const ch = supabase.channel(`atend-msgs-${id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "cond_atend_mensagens", filter: `atendimento_id=eq.${id}` },
+        () => { void qc.invalidateQueries({ queryKey: ["cond", "atend-msgs", id] }); ctx.recarregar(); })
+      .subscribe();
+    return () => { void supabase.removeChannel(ch); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, qc]);
   const assunto = assuntos.find((x) => s(x["id"]) === s(a["assunto_id"]));
   const origem = atendimentos.find((x) => s(x["id"]) === s(a["origem_id"]));
   const laterais = atendimentos.filter((x) => s(x["origem_id"]) === id);
