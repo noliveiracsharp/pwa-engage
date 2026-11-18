@@ -16,7 +16,7 @@ const novoDb = () => createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, { auth
 async function chavePrivada(db: any, segredo: string): Promise<string | null> {
   const env = process.env["VAPID_PRIVATE_KEY"];
   if (env) {
-    await db.rpc("push_vapid_salvar", { p_segredo: segredo, p_valor: env }).catch(() => undefined);
+    try { await db.rpc("push_vapid_salvar", { p_segredo: segredo, p_valor: env }); } catch { /* script ainda não rodado */ }
     return env;
   }
   const { data } = await db.rpc("push_vapid", { p_segredo: segredo });
