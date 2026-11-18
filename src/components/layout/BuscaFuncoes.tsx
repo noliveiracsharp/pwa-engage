@@ -28,8 +28,8 @@ export function BuscaFuncoes() {
 
   return (
     <>
-      <Button variant="ghost" size="icon" aria-label="O que você quer fazer?" title="O que você quer fazer? (Ctrl+K)" onClick={() => setOpen(true)}>
-        <Search className="h-4 w-4" />
+      <Button variant="ghost" size="icon" className="size-11 sm:size-10" aria-label="O que você quer fazer?" title="O que você quer fazer? (Ctrl+K)" onClick={() => setOpen(true)}>
+        <Search className="size-5" />
       </Button>
       <CommandDialog open={open} onOpenChange={setOpen}>
         <CommandInput placeholder="O que você quer fazer? Ex.: ofertas, contas a pagar, clientes…" />

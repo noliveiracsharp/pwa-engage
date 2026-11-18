@@ -163,7 +163,7 @@ function MinhaUnidade() {
           <h1 className="text-[1.75rem] font-bold leading-tight text-foreground md:text-2xl">{secao === "painel" ? `Olá, ${primeiroNome}!` : secoes.find((x) => x.key === secao)?.label}</h1>
           <p className="text-base text-foreground/80 md:text-sm md:text-muted-foreground">{local} · {rotuloCargo(v)}</p>
         </div>
-        {(ambientes?.length ?? 0) > 1 && <Button variant="outline" asChild><Link to="/acesso">Trocar acesso</Link></Button>}
+        {(ambientes?.length ?? 0) > 1 && <Button variant="outline" className="hidden sm:inline-flex" asChild><Link to="/acesso">Trocar acesso</Link></Button>}
       </div>
         {secao === "painel" && (<div className="space-y-4">
           {(assembleias.data ?? []).length > 0 && (

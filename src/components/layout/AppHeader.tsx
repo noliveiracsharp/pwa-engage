@@ -92,8 +92,8 @@ export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) 
   return (
     <header className="flex h-16 w-full shrink-0 items-center justify-between gap-2 overflow-hidden border-b border-border bg-card px-2 sm:gap-3 sm:px-4">
       <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-        <Button variant="ghost" size="icon" className="shrink-0" onClick={() => (menuCondominio ? window.dispatchEvent(new Event("cond-menu-toggle")) : onToggleSidebar())} aria-label="Abrir menu">
-          <Menu className="h-5 w-5" />
+        <Button variant="ghost" size="icon" className="size-11 shrink-0 sm:size-10" onClick={() => (menuCondominio ? window.dispatchEvent(new Event("cond-menu-toggle")) : onToggleSidebar())} aria-label="Abrir menu">
+          <Menu className="size-6 sm:size-5" />
         </Button>
         {condSel && (!modoUnidade || condSel.opcoes.length > 1) ? (
           <div className="flex min-w-0 items-center gap-1">
@@ -105,7 +105,7 @@ export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) 
             </Button>
           </div>
         ) : (
-          <span className="truncate text-base font-bold tracking-tight text-foreground sm:text-lg">{ativa.titulo}</span>
+          <span className="truncate text-lg font-bold tracking-tight text-foreground">{ativa.titulo}</span>
         )}
       </div>
 
@@ -168,8 +168,8 @@ export function AppHeader({ onToggleSidebar }: { onToggleSidebar: () => void }) 
         </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="rounded-full outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring">
-              <Avatar className="h-9 w-9">
+            <button aria-label="Menu do usuário" className="flex size-11 items-center justify-center rounded-full outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring">
+              <Avatar className="size-10 sm:size-9">
                 {foto && <AvatarImage src={foto} alt={nome} />}
                 <AvatarFallback>{iniciais}</AvatarFallback>
               </Avatar>

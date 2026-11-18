@@ -4,7 +4,7 @@ import { DndContext, KeyboardSensor, PointerSensor, closestCenter, useSensor, us
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
-  ArrowLeft, CheckCircle2, ChevronLeft, ChevronRight, ClipboardCheck, FileSignature, Gavel, GripVertical, Lock, Maximize2, Megaphone, Pencil, Play, Plus, Printer,
+  ArrowLeft, CheckCircle2, ChevronLeft, ChevronRight, ClipboardCheck, ClipboardList, FileSignature, Gavel, GripVertical, Lock, Maximize2, Megaphone, Pencil, Play, Plus, Printer,
   MessageSquare, Search, ShieldCheck, Square, Timer, Trash2, UserCheck, Video, Vote, X,
 } from "lucide-react";
 import { Bar, BarChart, Cell, ResponsiveContainer, XAxis, YAxis, LabelList } from "recharts";
@@ -124,11 +124,11 @@ function AbasStatus({ status, comRascunho, aba, onAba }: { status: string[]; com
         const ativa = aba === a.value;
         return (
           <button key={a.value} type="button" role="tab" aria-selected={ativa} onClick={() => onAba(a.value)}
-            className={cn("flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            className={cn("flex min-h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-3 py-2 text-[15px] font-semibold md:min-h-0 md:py-1.5 md:text-sm md:font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               ativa ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>
             {aoVivo && <span className="relative flex size-2.5" aria-hidden><span className="absolute inline-flex size-full animate-ping rounded-full bg-destructive opacity-75" /><span className="relative inline-flex size-2.5 rounded-full bg-destructive" /></span>}
             {a.label}
-            <span className={cn("min-w-5 rounded-full px-1.5 text-center text-xs font-semibold", aoVivo ? "bg-destructive text-destructive-foreground" : "bg-background/60 text-muted-foreground")}
+            <span className={cn("min-w-6 rounded-full px-1.5 text-center text-[13px] font-bold md:min-w-5 md:text-xs md:font-semibold", aoVivo ? "bg-destructive text-destructive-foreground" : "bg-background/60 text-muted-foreground")}
               aria-label={aoVivo ? `${n} ao vivo` : `${n}`}>{n}</span>
           </button>
         );
@@ -339,6 +339,27 @@ function Detalhe({ assembleia: a, blocos, unidades, perms, onVoltar, onEditar, o
     if (!(await confirmar({ title: "Convocar assembleia?", description: a["emergencial"] === true ? "Convocação EMERGENCIAL: o prazo da convenção será dispensado com a justificativa registrada." : "Os condôminos passam a ver a assembleia no portal.", confirmText: "Convocar" }))) return;
     await mudar("convocada", { convocada_em: new Date().toISOString() }, "Assembleia convocada: os condôminos já a veem no portal.");
   };
+  const gerarPreAssembleia = async () => {
+    if (!(await confirmar({ title: "Gerar Pré-Assembleia?", description: "Será criada uma enquete em rascunho no módulo Enquetes & Pesquisas, com uma pergunta por pauta. Revise e publique por lá.", confirmText: "Gerar enquete" }))) return;
+    const { data: ps, error: e1 } = await db.from("cond_assembleia_pautas").select("id,titulo,ordem").eq("assembleia_id", id).order("ordem");
+    if (e1) { toast.error(erroMsg(e1)); return; }
+    const ids = (ps ?? []).map((p: Row) => p["id"]);
+    const { data: ops } = ids.length ? await db.from("cond_assembleia_opcoes_voto").select("pauta_id,descricao,ordem").in("pauta_id", ids).order("ordem") : { data: [] };
+    const { data: nova, error } = await db.from("cond_enquetes").insert({
+      condominio_id: s(a["condominio_id"]), titulo: `Pré-Assembleia: ${s(a["titulo"])}`, status: "rascunho",
+      descricao: `<p>Consulta prévia, sem valor de voto, para conhecer a opinião dos condôminos sobre as pautas da ${s(a["tipo"])} "${s(a["titulo"])}".</p>`,
+      voto_secreto: true, voto_por: "unidade", mostrar_resultado: "apos_votar",
+    }).select("id").single();
+    if (error) { toast.error(erroMsg(error)); return; }
+    const uid = () => (crypto.randomUUID?.() ?? String(Math.random()).slice(2));
+    const perguntas = (ps ?? []).map((p: Row, i: number) => {
+      const lista = ((ops ?? []) as Row[]).filter((o) => o["pauta_id"] === p["id"]).map((o) => s(o["descricao"]));
+      const textos = lista.length >= 2 ? lista : ["A favor", "Contra", "Abstenção"];
+      return { enquete_id: nova.id, ordem: i + 1, texto: s(p["titulo"]), tipo: "unica", obrigatoria: true, opcoes: textos.map((x) => ({ id: uid(), texto: x })) };
+    });
+    if (perguntas.length) { const r = await db.from("cond_enquetes_perguntas").insert(perguntas); if (r.error) { toast.error(erroMsg(r.error)); return; } }
+    toast.success("Pré-Assembleia criada em rascunho no módulo Enquetes & Pesquisas.");
+  };
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-start gap-2">
@@ -355,6 +376,7 @@ function Detalhe({ assembleia: a, blocos, unidades, perms, onVoltar, onEditar, o
           {s(a["link_video"]) && <Button variant="outline" asChild><a href={s(a["link_video"])} target="_blank" rel="noreferrer"><Video className="size-4" /> Entrar na sala</a></Button>}
           {pode && st !== "finalizada" && st !== "cancelada" && <AcaoIcone titulo="Editar dados" onClick={onEditar}><Pencil className="size-4" /></AcaoIcone>}
           {perms.canDelete && st === "rascunho" && <AcaoIcone titulo="Excluir rascunho" destrutivo onClick={excluir}><Trash2 className="size-4" /></AcaoIcone>}
+          {perms.canCreate && st === "rascunho" && <Button variant="outline" onClick={gerarPreAssembleia}><ClipboardList className="size-4" /> Gerar Pré-Assembleia</Button>}
           {pode && st === "rascunho" && <Button onClick={convocar}><Megaphone className="size-4" /> Convocar</Button>}
           {pode && st === "convocada" && <Button onClick={() => mudar("em_andamento", { aberta_em: new Date().toISOString() }, "Sessão aberta.")}><Play className="size-4" /> Abrir sessão</Button>}
           {pode && st === "em_andamento" && <Button variant="outline" onClick={() => setPermanente(true)}><Timer className="size-4" /> Sessão permanente</Button>}
@@ -967,6 +989,7 @@ export function AssembleiasMorador({ condominioId }: { condominioId: string }) {
   });
   const [ocupado, setOcupado] = useState("");
   const [pautaAberta, setPautaAberta] = useState<{ aId: string; pId: string } | null>(null);
+  const [assembleiaAberta, setAssembleiaAberta] = useState<string | null>(null);
   const statusMinhas = useMemo(() => data.map((a) => a.status), [data]);
   const [aba, setAba] = useAbaAssembleia(statusMinhas, false, !isLoading);
   const recarregar = () => qc.invalidateQueries({ queryKey: chave });
@@ -987,26 +1010,59 @@ export function AssembleiasMorador({ condominioId }: { condominioId: string }) {
   if (!data.length) return <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground"><Gavel className="mx-auto mb-2 size-7 opacity-60" aria-hidden />Nenhuma assembleia convocada para você no momento.</div>;
   return (
     <div className="space-y-3">
+      {!data.some((a) => a.id === assembleiaAberta) && <>
       <AbasStatus status={statusMinhas} comRascunho={false} aba={aba} onAba={setAba} />
-      {!data.some((a) => grupoAssembleia(a.status) === aba) && <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">Nenhuma assembleia em "{ABAS_ASSEMBLEIA.find((x) => x.value === aba)?.label}".</div>}
-      {data.filter((a) => grupoAssembleia(a.status) === aba).map((a) => {
+      {!data.some((a) => grupoAssembleia(a.status) === aba) && <div className="rounded-lg border border-dashed p-8 text-center text-base text-muted-foreground md:text-sm">Nenhuma assembleia em "{ABAS_ASSEMBLEIA.find((x) => x.value === aba)?.label}".</div>}
+      <ul className="space-y-3" aria-label="Assembleias">
+        {data.filter((a) => grupoAssembleia(a.status) === aba).map((a) => {
+          const sessao = emSessao(a.status);
+          const presente = a.unidades.some((u) => u.presente);
+          const pendentes = a.pautas.filter((p) => p.status === "em_votacao" && sessao && a.unidades.some((u) => u.presente && u.direito_voto && !p.meus_votos.some((v) => v.unidade_id === u.id))).length;
+          const votando = a.pautas.filter((p) => p.status === "em_votacao").length;
+          return (
+            <li key={a.id}>
+              <button type="button" onClick={() => setAssembleiaAberta(a.id)} aria-label={`Abrir assembleia ${a.titulo}`}
+                className={cn("flex min-h-14 w-full items-center gap-3 rounded-2xl border bg-card p-4 text-left shadow-sm transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", sessao && "border-success/60")}>
+                <div className="min-w-0 flex-1 space-y-2">
+                  <div className="flex flex-wrap items-center gap-2 text-sm md:text-xs">
+                    <Badge variant="outline">{a.tipo}</Badge>
+                    <span className={cn("rounded-full px-2 py-0.5 font-medium", COR_STATUS[a.status])}>{rotuloStatus(a.status)}</span>
+                    {presente && <span className="inline-flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 font-medium text-success"><CheckCircle2 className="size-4" aria-hidden /> Presença confirmada</span>}
+                  </div>
+                  <h3 className="text-lg font-semibold leading-snug md:text-base">{a.titulo}</h3>
+                  <p className="text-[15px] text-foreground/80 md:text-xs md:text-muted-foreground">1ª {dtHora(a.data_hora)}{a.local ? ` · ${a.local}` : ""}</p>
+                  <div className="flex flex-wrap items-center gap-2 text-sm md:text-xs">
+                    <span className="font-medium">{a.pautas.length} pauta(s){votando ? ` · ${votando} em votação` : ""}</span>
+                    {pendentes > 0 && <span className="rounded-full bg-destructive/15 px-2 py-0.5 font-medium text-destructive">{pendentes} voto(s) pendente(s)</span>}
+                  </div>
+                </div>
+                <ChevronRight className="size-6 shrink-0 text-muted-foreground" aria-hidden />
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+      </>}
+      {data.filter((a) => a.id === assembleiaAberta).map((a) => {
         const sessao = emSessao(a.status);
         const presente = a.unidades.some((u) => u.presente);
         return (
-          <article key={a.id} className="space-y-3 rounded-lg border bg-card p-4">
-            <header className="flex flex-wrap items-start gap-2">
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2"><Badge variant="outline">{a.tipo}</Badge><span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", COR_STATUS[a.status])}>{rotuloStatus(a.status)}</span></div>
-                <h3 className="mt-1 font-semibold">{a.titulo}</h3>
-                <p className="text-xs text-muted-foreground">1ª {dtHora(a.data_hora)} · 2ª {dtHora(a.data_hora_2a)}{a.local ? ` · ${a.local}` : ""}{a.status === "sessao_permanente" && a.sessao_ate ? ` · votação até ${dtHora(a.sessao_ate)}` : ""}</p>
+          <article key={a.id} className="space-y-4">
+            <Button variant="ghost" className="-ml-2 min-h-11 text-base md:min-h-0 md:text-sm" onClick={() => setAssembleiaAberta(null)}><ArrowLeft className="size-5 md:size-4" aria-hidden /> Voltar para assembleias</Button>
+            <header className="space-y-3 rounded-2xl border bg-card p-4">
+              <div className="w-full space-y-2">
+                <div className="flex flex-wrap items-center gap-2 text-sm md:text-xs"><Badge variant="outline">{a.tipo}</Badge><span className={cn("rounded-full px-2 py-0.5 font-medium", COR_STATUS[a.status])}>{rotuloStatus(a.status)}</span>
+                {presente && <span className="inline-flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 font-medium text-success"><CheckCircle2 className="size-4" aria-hidden /> Presença confirmada</span>}</div>
+                <h2 className="text-xl font-bold leading-snug md:text-lg">{a.titulo}</h2>
+                <p className="text-[15px] text-foreground/80 md:text-xs md:text-muted-foreground">1ª {dtHora(a.data_hora)} · 2ª {dtHora(a.data_hora_2a)}{a.local ? ` · ${a.local}` : ""}{a.status === "sessao_permanente" && a.sessao_ate ? ` · votação até ${dtHora(a.sessao_ate)}` : ""}</p>
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 [&>*]:min-h-11 md:[&>*]:min-h-0">
                 {a.link_video && a.status !== "finalizada" && <Button variant="outline" asChild><a href={a.link_video} target="_blank" rel="noreferrer"><Video className="size-4" /> Entrar na sala</a></Button>}
                 {sessao && a.formato !== "presencial" && !presente && <Button onClick={() => checkin(a)} disabled={ocupado === a.id}><UserCheck className="size-4" /> Confirmar presença</Button>}
-                {presente && <Badge className="bg-success/15 text-success" variant="outline"><CheckCircle2 className="mr-1 size-3" /> Presença confirmada</Badge>}
               </div>
             </header>
-            {a.edital && !sessao && <details className="text-sm"><summary className="cursor-pointer text-primary">Ler edital de convocação</summary><div className="prose prose-sm mt-2 max-w-none dark:prose-invert" dangerouslySetInnerHTML={{ __html: a.edital }} /></details>}
+            {a.edital && !sessao && <details className="text-base md:text-sm"><summary className="cursor-pointer text-primary">Ler edital de convocação</summary><div className="prose prose-sm mt-2 max-w-none dark:prose-invert" dangerouslySetInnerHTML={{ __html: a.edital }} /></details>}
+            <h3 className="text-lg font-semibold md:text-base">Pautas</h3>
             <ol className="space-y-3" aria-label="Pautas">
               {a.pautas.map((p, i) => {
                 const votadas = a.unidades.filter((u) => p.meus_votos.some((v) => v.unidade_id === u.id)).length;

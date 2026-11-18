@@ -33,8 +33,8 @@ export function SemaforoConexao() {
     <TooltipProvider delayDuration={100}>
     <Tooltip>
       <TooltipTrigger asChild>
-        <Button variant="ghost" size="icon" onClick={reconectar} aria-label={`${ROTULO_CONEXAO[estado]}. Verificar novamente`} className="relative">
-          <Icone className={cn("size-4", estado === "offline" && "text-destructive", estado === "verificando" && "animate-spin")} aria-hidden />
+        <Button variant="ghost" size="icon" onClick={reconectar} aria-label={`${ROTULO_CONEXAO[estado]}. Verificar novamente`} className="relative size-11 sm:size-10">
+          <Icone className={cn("size-5", estado === "offline" && "text-destructive", estado === "verificando" && "animate-spin")} aria-hidden />
           <span className={cn("absolute right-1.5 top-1.5 size-2.5 rounded-full ring-2 ring-background", COR[estado])} aria-hidden />
         </Button>
       </TooltipTrigger>
