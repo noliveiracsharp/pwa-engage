@@ -1,4 +1,7 @@
 import { lazy, Suspense, useMemo, useState } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DadosMarcaCondSecao } from "./DadosMarcaCondSecao";
+import { ConfiguracoesCondSecao } from "./ConfiguracoesCondSecao";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ClientOnly } from "@tanstack/react-router";
@@ -32,6 +35,23 @@ const enderecoDe = (r?: Row) => {
 const fone = (v: string) => (/^\d{3}$/.test(v) ? v : formatPhoneDisplay(v) || v);
 
 export function MeuCondominioPanel({ condominioId, perms }: { condominioId: string; perms: P }) {
+  const [aba, setAba] = useState("geral");
+  if (!perms.canUpdate) return <VisaoGeralCond condominioId={condominioId} perms={perms} />;
+  return (
+    <Tabs value={aba} onValueChange={setAba} className="space-y-4">
+      <TabsList className="h-auto w-full flex-wrap justify-start sm:w-auto">
+        <TabsTrigger value="geral" className="min-h-11 text-[15px]">Visão geral</TabsTrigger>
+        <TabsTrigger value="dados" className="min-h-11 text-[15px]">Dados & marca</TabsTrigger>
+        <TabsTrigger value="config" className="min-h-11 text-[15px]">Configurações</TabsTrigger>
+      </TabsList>
+      <TabsContent value="geral" className="mt-0"><VisaoGeralCond condominioId={condominioId} perms={perms} /></TabsContent>
+      <TabsContent value="dados" className="mt-0"><DadosMarcaCondSecao condominioId={condominioId} podeEditar={perms.canUpdate} /></TabsContent>
+      <TabsContent value="config" className="mt-0"><ConfiguracoesCondSecao condominioId={condominioId} podeEditar={perms.canUpdate} /></TabsContent>
+    </Tabs>
+  );
+}
+
+function VisaoGeralCond({ condominioId, perms }: { condominioId: string; perms: P }) {
   const { data: parceiros = [] } = useTableRows("parceiros");
   const byId = (id: unknown) => parceiros.find((p) => s(rowId(p)) === s(id));
   // Morador não enxerga o cadastro da empresa: lê pelo vínculo da unidade (função segura no banco).

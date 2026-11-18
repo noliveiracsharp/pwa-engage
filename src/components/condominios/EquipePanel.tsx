@@ -17,13 +17,37 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { CARGOS, FUNCOES_DIRETIVAS_UNIDADE, VINCULOS, ehDiretoria, rotuloCargo, validarMembro, vigente, vinculoPadrao } from "@/lib/cond-equipe";
 import { CampoData } from "./CampoData";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SindicaturaSecao } from "./SindicaturaSecao";
+import { DiretoriaSecao } from "./DiretoriaSecao";
 import { s, useCondRows, useCondSalvar } from "./cond-data";
 
 type P = { canCreate: boolean; canUpdate: boolean; canDelete: boolean };
 const alfa = <T extends { label: string }>(l: readonly T[]) => [...l].sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
 const CAMPOS = ["nome", "email", "celular", "cpf", "cargo", "vinculo", "empresa_id", "cond_unidade_id", "turno", "inicio", "fim", "observacoes"] as const;
 
-export function EquipePanel({ condominioId, blocos, unidades, perms, publico = false }: { condominioId: string; blocos: Row[]; unidades: Row[]; perms: P; publico?: boolean }) {
+type EquipeProps = { condominioId: string; blocos: Row[]; unidades: Row[]; perms: P; publico?: boolean };
+
+export function EquipePanel(props: EquipeProps) {
+  const [aba, setAba] = useState("diretoria");
+  if (props.publico) return <EquipeOperacional {...props} />;
+  const pode = props.perms.canUpdate;
+  return (
+    <Tabs value={aba} onValueChange={setAba} className="space-y-4">
+      <TabsList className="h-auto w-full flex-wrap justify-start sm:w-auto">
+        <TabsTrigger value="diretoria" className="min-h-11 text-[15px]">Diretoria & Sindicatura</TabsTrigger>
+        <TabsTrigger value="equipe" className="min-h-11 text-[15px]">Equipe operacional</TabsTrigger>
+      </TabsList>
+      <TabsContent value="diretoria" className="mt-0 space-y-4">
+        <SindicaturaSecao condominioId={props.condominioId} podeEditar={pode} />
+        <DiretoriaSecao condominioId={props.condominioId} podeEditar={pode} />
+      </TabsContent>
+      <TabsContent value="equipe" className="mt-0"><EquipeOperacional {...props} /></TabsContent>
+    </Tabs>
+  );
+}
+
+function EquipeOperacional({ condominioId, blocos, unidades, perms, publico = false }: EquipeProps) {
   const { data: equipeGestao = [], isLoading: carregandoGestao } = useCondRows("cond_equipe", "condominio_id", publico ? "" : condominioId);
   // Portal do morador: lista pública (diretoria + equipe) via função segura do banco.
   const { data: publica = [], isLoading: carregandoPublica, error: erroPublica } = useQuery({
