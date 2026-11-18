@@ -38,3 +38,18 @@ describe("assembleias", () => {
     expect(segundaConvocacao("2026-11-20T19:00:00.000Z")).toBe("2026-11-20T19:30:00.000Z");
   });
 });
+
+import { abaInicialAssembleias, grupoAssembleia } from "./assembleias";
+describe("abas de assembleias", () => {
+  it("agrupa sessão permanente em andamento e cancelada em encerradas", () => {
+    expect(grupoAssembleia("sessao_permanente")).toBe("andamento");
+    expect(grupoAssembleia("cancelada")).toBe("encerradas");
+  });
+  it("abre em andamento quando há assembleia ao vivo", () => {
+    expect(abaInicialAssembleias(["convocada", "em_andamento"], true)).toBe("andamento");
+  });
+  it("sem ao vivo abre em convocadas; morador nunca abre em rascunho", () => {
+    expect(abaInicialAssembleias(["finalizada", "convocada"], false)).toBe("convocadas");
+    expect(abaInicialAssembleias(["rascunho"], false)).toBe("convocadas");
+  });
+});

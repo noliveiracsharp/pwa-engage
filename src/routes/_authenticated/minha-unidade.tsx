@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CondominiosSidebar, type Secao } from "@/components/condominios/CondominiosSidebar";
+import { useAssembleiasAoVivo } from "@/components/condominios/assembleias-ao-vivo";
 import { supabase } from "@/integrations/supabase/client";
 import { gravarAmbiente, lerAmbiente, useAmbientes } from "@/hooks/useAmbientes";
 import { ehGestor, rotuloCargo } from "@/lib/ambientes";
@@ -117,6 +118,7 @@ function MinhaUnidade() {
   const [filtroAvisos, setFiltroAvisos] = useState(FILTRO_AVISOS_VAZIO);
   const [avisoAberto, setAvisoAberto] = useState<Row | null>(null);
   const sec = (key: string, label: string, icon: Secao["icon"]): Secao => ({ key, label, icon, ...permsMorador(key) });
+  const assembleiasAoVivo = useAssembleiasAoVivo(condId);
   const secoes: Secao[] = [
     sec("painel", "Painel", LayoutDashboard),
     sec("unidade", "Minha unidade", Home),
@@ -153,7 +155,7 @@ function MinhaUnidade() {
   return (
     <div className="flex min-h-full flex-col md:flex-row">
       <InterfoneTocando nome={primeiroNome || "Morador"} />
-      <CondominiosSidebar secoes={secoes} ativa={secao} onChange={setSecao} chatCondominioId={condId || undefined} direto={{ nome: s(v.condominio_nome) || "Condomínio", logo: empresaAtiva.logoAtivo ?? null, cargo: rotuloCargo(v) }} />
+      <CondominiosSidebar secoes={secoes} ativa={secao} onChange={setSecao} chatCondominioId={condId || undefined} badges={{ assembleias: assembleiasAoVivo }} direto={{ nome: s(v.condominio_nome) || "Condomínio", logo: empresaAtiva.logoAtivo ?? null, cargo: rotuloCargo(v) }} />
       <div className="w-full min-w-0 flex-1 space-y-4 p-4 md:p-6 lg:p-8">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>

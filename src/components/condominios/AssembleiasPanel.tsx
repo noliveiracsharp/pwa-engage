@@ -27,7 +27,7 @@ import { htmlParaTexto } from "@/lib/html-texto";
 import { comprimirImagem } from "@/lib/image-compress";
 import { imprimirElemento } from "@/lib/propostas";
 import {
-  OPCOES_PADRAO, QUORUNS, STATUS_ASSEMBLEIA, emSessao, segundaConvocacao, validarAntecedencia, vereditoPauta,
+  OPCOES_PADRAO, QUORUNS, STATUS_ASSEMBLEIA, abaInicialAssembleias, emSessao, grupoAssembleia, type GrupoAssembleia, segundaConvocacao, validarAntecedencia, vereditoPauta,
   type OpcaoTotal, type Quorum, type StatusAssembleia,
 } from "@/lib/assembleias";
 import type { Row } from "@/lib/row";
@@ -105,11 +105,52 @@ export function AssembleiasPanel({ condominioId, blocos, unidades, perms }: { co
   );
 }
 
+/* ------------------------------- Abas por status ------------------------------- */
+
+const ABAS_ASSEMBLEIA: { value: GrupoAssembleia; label: string }[] = [
+  { value: "andamento", label: "Em andamento" },
+  { value: "convocadas", label: "Convocadas" },
+  { value: "rascunho", label: "Rascunho" },
+  { value: "encerradas", label: "Encerradas" },
+];
+
+function AbasStatus({ status, comRascunho, aba, onAba }: { status: string[]; comRascunho: boolean; aba: GrupoAssembleia; onAba: (g: GrupoAssembleia) => void }) {
+  const cont = (g: GrupoAssembleia) => status.filter((x) => grupoAssembleia(x) === g).length;
+  return (
+    <div role="tablist" aria-label="Assembleias por situação" className="flex gap-1 overflow-x-auto rounded-lg bg-muted p-1">
+      {ABAS_ASSEMBLEIA.filter((a) => comRascunho || a.value !== "rascunho").map((a) => {
+        const n = cont(a.value);
+        const aoVivo = a.value === "andamento" && n > 0;
+        const ativa = aba === a.value;
+        return (
+          <button key={a.value} type="button" role="tab" aria-selected={ativa} onClick={() => onAba(a.value)}
+            className={cn("flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              ativa ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>
+            {aoVivo && <span className="relative flex size-2.5" aria-hidden><span className="absolute inline-flex size-full animate-ping rounded-full bg-destructive opacity-75" /><span className="relative inline-flex size-2.5 rounded-full bg-destructive" /></span>}
+            {a.label}
+            <span className={cn("min-w-5 rounded-full px-1.5 text-center text-xs font-semibold", aoVivo ? "bg-destructive text-destructive-foreground" : "bg-background/60 text-muted-foreground")}
+              aria-label={aoVivo ? `${n} ao vivo` : `${n}`}>{n}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Mantém a aba escolhida; escolhe a inicial quando os dados chegam. */
+function useAbaAssembleia(status: string[], comRascunho: boolean, pronto: boolean) {
+  const [aba, setAba] = useState<GrupoAssembleia | null>(null);
+  useEffect(() => { if (pronto && aba === null) setAba(abaInicialAssembleias(status, comRascunho)); }, [pronto, aba, status, comRascunho]);
+  return [aba ?? "andamento", setAba] as const;
+}
+
 /* ------------------------------- Gestão ------------------------------- */
 
 function Gestao({ condominioId, blocos, unidades, perms }: { condominioId: string; blocos: Row[]; unidades: Row[]; perms: Perms }) {
   const qc = useQueryClient();
-  const { data: lista = [] } = useCondRows("cond_assembleias", "condominio_id", condominioId);
+  const { data: lista = [], isLoading: carregandoLista } = useCondRows("cond_assembleias", "condominio_id", condominioId);
+  const statusLista = useMemo(() => lista.map((a) => s(a["status"])), [lista]);
+  const [aba, setAba] = useAbaAssembleia(statusLista, true, !carregandoLista);
   const [busca, setBusca] = useState("");
   const [editar, setEditar] = useState<Row | "nova" | null>(null);
   const [abertaId, setAbertaId] = useState<string | null>(null);
@@ -117,6 +158,7 @@ function Gestao({ condominioId, blocos, unidades, perms }: { condominioId: strin
   const termo = busca.trim().toLowerCase();
   const filtradas = [...lista]
     .sort((a, b) => s(b["data_hora"] ?? b["created_at"]).localeCompare(s(a["data_hora"] ?? a["created_at"])))
+    .filter((a) => termo || grupoAssembleia(s(a["status"])) === aba)
     .filter((a) => !termo || `${s(a["titulo"])} ${s(a["tipo"])} ${rotuloStatus(s(a["status"]))}`.toLowerCase().includes(termo));
   const recarregar = () => qc.invalidateQueries({ queryKey: ["cond", "cond_assembleias"] });
 
@@ -137,10 +179,11 @@ function Gestao({ condominioId, blocos, unidades, perms }: { condominioId: strin
         </div>
         {perms.canCreate && <Button onClick={() => setEditar("nova")}><Plus className="size-4" /> Nova assembleia</Button>}
       </div>
+      {!termo && <AbasStatus status={statusLista} comRascunho aba={aba} onAba={setAba} />}
       {filtradas.length === 0 ? (
         <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
           <Gavel className="mx-auto mb-2 size-8 opacity-60" aria-hidden />
-          {lista.length ? "Nenhuma assembleia encontrada." : "Nenhuma assembleia cadastrada. Crie a primeira como rascunho."}
+          {termo ? "Nenhuma assembleia encontrada." : lista.length ? `Nenhuma assembleia em "${ABAS_ASSEMBLEIA.find((x) => x.value === aba)?.label}".` : "Nenhuma assembleia cadastrada. Crie a primeira como rascunho."}
         </div>
       ) : (
         <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -923,6 +966,8 @@ export function AssembleiasMorador({ condominioId }: { condominioId: string }) {
     queryFn: async (): Promise<Minha[]> => { const { data, error } = await db.rpc("cond_assembleias_minhas", { p_condominio: condominioId }); if (error) throw error; return (data ?? []) as Minha[]; },
   });
   const [ocupado, setOcupado] = useState("");
+  const statusMinhas = useMemo(() => data.map((a) => a.status), [data]);
+  const [aba, setAba] = useAbaAssembleia(statusMinhas, false, !isLoading);
   const recarregar = () => qc.invalidateQueries({ queryKey: chave });
   const checkin = async (a: Minha) => {
     setOcupado(a.id);
@@ -941,7 +986,9 @@ export function AssembleiasMorador({ condominioId }: { condominioId: string }) {
   if (!data.length) return <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground"><Gavel className="mx-auto mb-2 size-7 opacity-60" aria-hidden />Nenhuma assembleia convocada para você no momento.</div>;
   return (
     <div className="space-y-3">
-      {data.map((a) => {
+      <AbasStatus status={statusMinhas} comRascunho={false} aba={aba} onAba={setAba} />
+      {!data.some((a) => grupoAssembleia(a.status) === aba) && <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">Nenhuma assembleia em "{ABAS_ASSEMBLEIA.find((x) => x.value === aba)?.label}".</div>}
+      {data.filter((a) => grupoAssembleia(a.status) === aba).map((a) => {
         const sessao = emSessao(a.status);
         const presente = a.unidades.some((u) => u.presente);
         return (

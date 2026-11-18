@@ -93,6 +93,21 @@ export function segundaConvocacao(primeira: string): string {
 /** Status em que o morador pode votar. */
 export const emSessao = (st: string) => st === "em_andamento" || st === "sessao_permanente";
 
+export type GrupoAssembleia = "andamento" | "convocadas" | "rascunho" | "encerradas";
+/** Agrupa o status nas abas do módulo (ordem: em andamento, convocadas, rascunho, encerradas). */
+export function grupoAssembleia(st: string): GrupoAssembleia {
+  if (st === "em_andamento" || st === "sessao_permanente") return "andamento";
+  if (st === "convocada") return "convocadas";
+  if (st === "rascunho") return "rascunho";
+  return "encerradas";
+}
+/** Aba inicial: ao vivo > convocadas > rascunho > encerradas (a primeira com itens). */
+export function abaInicialAssembleias(status: string[], comRascunho: boolean): GrupoAssembleia {
+  const g = new Set(status.map(grupoAssembleia));
+  const ordem: GrupoAssembleia[] = comRascunho ? ["andamento", "convocadas", "rascunho", "encerradas"] : ["andamento", "convocadas", "encerradas"];
+  return ordem.find((x) => g.has(x)) ?? (g.has("encerradas") ? "encerradas" : "convocadas");
+}
+
 /** Dias corridos entre o envio (agora) e a 1ª convocação. */
 export function diasAteConvocacao(dataHora: string | Date, agora: Date = new Date()): number {
   const alvo = new Date(dataHora);

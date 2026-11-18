@@ -29,6 +29,7 @@ import { cn } from "@/lib/utils";
 import { ordemNatural, s, useCondRows, useCondSalvar } from "./cond-data";
 import { UnidadeSheet } from "./UnidadeSheet";
 import { CondominiosSidebar, useSecoesCondominio } from "./CondominiosSidebar";
+import { useAssembleiasAoVivo } from "./assembleias-ao-vivo";
 import { VagasPanel } from "./VagasPanel";
 import { SorteioPanel } from "./SorteioPanel";
 import { PainelCondominios } from "./PainelCondominios";
@@ -141,6 +142,7 @@ export function CondominiosPage() {
   }, [blocos, blocoId]);
 
   const secoesBase = useSecoesCondominio(perms);
+  const assembleiasAoVivo = useAssembleiasAoVivo(condId);
   const secoes = useMemo(
     () => (modoUnidade ? [...secoesBase, { key: "minha-unidade", label: "Minha unidade", icon: Home, canRead: true, canCreate: false, canUpdate: false, canDelete: false }] : secoesBase),
     [secoesBase, modoUnidade],
@@ -228,6 +230,7 @@ export function CondominiosPage() {
       ativa={ABA_PAI[secao] && secoesMenu.some((x) => x.key === ABA_PAI[secao]) ? ABA_PAI[secao]! : secao}
       onChange={irSecao}
       chatCondominioId={modoUnidade && condId ? condId : undefined}
+      badges={{ assembleias: assembleiasAoVivo }}
       direto={modoUnidade ? {
         nome: condominios.find((c) => c.value === condId)?.label ?? "Condomínio",
         logo: ativa.logoAtivo ?? null,

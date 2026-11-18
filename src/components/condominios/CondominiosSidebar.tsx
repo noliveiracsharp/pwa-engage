@@ -77,7 +77,7 @@ export function useSecoesCondominio(pagina: P): Secao[] {
   }, [funcoes, mc, u, v, s, e, g, dc, av, eq, it, ap, es, ch, ob, pt, ga, mn, asb, atd, tc, pagina]);
 }
 
-export function CondominiosSidebar({ secoes, ativa, onChange, topo, direto, chatCondominioId }: { chatCondominioId?: string | undefined; secoes: Secao[]; ativa: string; onChange: (k: string) => void; topo?: ReactNode; direto?: { nome: string; logo?: string | null; cargo?: string | null } | undefined }) {
+export function CondominiosSidebar({ secoes, ativa, onChange, topo, direto, chatCondominioId, badges }: { badges?: Record<string, number> | undefined; chatCondominioId?: string | undefined; secoes: Secao[]; ativa: string; onChange: (k: string) => void; topo?: ReactNode; direto?: { nome: string; logo?: string | null; cargo?: string | null } | undefined }) {
   const [aberto, setAberto] = useState(false);
   // Sempre inicia fechado; o hambúrguer do cabeçalho abre/fecha este menu.
   useEffect(() => {
@@ -140,11 +140,12 @@ export function CondominiosSidebar({ secoes, ativa, onChange, topo, direto, chat
         <nav className={cn("flex min-h-0 flex-col gap-0.5 pb-3 md:flex-1 md:overflow-y-auto", aberto ? "px-3" : "hidden md:flex md:px-2")}>
           {secoes.map((x) => {
             const ativo = ativa === x.key;
+            const nBadge = badges?.[x.key] ?? 0;
             const btn = (
               <button
                 key={x.key}
                 type="button"
-                aria-label={x.label}
+                aria-label={nBadge ? `${x.label} — ${nBadge} ao vivo` : x.label}
                 aria-current={ativo ? "page" : undefined}
                 onClick={() => { onChange(x.key); if (ehMobile()) setAberto(false); }}
                 className={cn(
@@ -153,8 +154,12 @@ export function CondominiosSidebar({ secoes, ativa, onChange, topo, direto, chat
                   ativo ? "bg-sidebar-primary font-semibold text-sidebar-primary-foreground hover:bg-sidebar-primary" : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                 )}
               >
-                <x.icon className={cn("shrink-0", aberto ? "size-4" : "size-5")} />
-                {aberto && <span className="truncate">{x.label}</span>}
+                <span className="relative shrink-0">
+                  <x.icon className={cn(aberto ? "size-4" : "size-5")} />
+                  {nBadge > 0 && !aberto && <span className="absolute -right-1.5 -top-1.5 flex size-2.5" aria-hidden><span className="absolute inline-flex size-full animate-ping rounded-full bg-destructive opacity-75" /><span className="relative inline-flex size-2.5 rounded-full bg-destructive ring-2 ring-sidebar" /></span>}
+                </span>
+                {aberto && <span className="flex-1 truncate">{x.label}</span>}
+                {aberto && nBadge > 0 && <span className="ml-auto min-w-5 rounded-full bg-destructive px-1.5 text-center text-xs font-bold text-destructive-foreground">{nBadge}</span>}
               </button>
             );
             if (aberto) return btn;
