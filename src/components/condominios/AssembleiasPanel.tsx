@@ -603,15 +603,34 @@ function PautaDialog({ assembleiaId, pauta, proxima, onClose, onSalvo }: { assem
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-h-[92dvh] max-w-2xl overflow-y-auto">
-        <DialogHeader><DialogTitle>{pauta ? "Editar pauta" : "Nova pauta"}</DialogTitle><DialogDescription>O quórum define como o resultado é apurado.</DialogDescription></DialogHeader>
+        <DialogHeader><DialogTitle>{pauta ? "Editar pauta" : "Nova pauta"}</DialogTitle><DialogDescription>Escolha o tipo de votação: aprovação (Sim/Não) com quórum, ou escolha entre opções.</DialogDescription></DialogHeader>
         <div className="space-y-3">
           <div><Label htmlFor="pa-tit" className="mb-1.5 block">Título *</Label><Input id="pa-tit" value={titulo} onChange={(e) => setTitulo(e.target.value)} /></div>
           <div><Label className="mb-1.5 block">Descrição / material para debate</Label><TextoRico value={descricao} onChange={setDescricao} minHeight={120} /></div>
-          <div>
-            <Label className="mb-1.5 block">Quórum de aprovação</Label>
-            <SearchSelect value={quorum} onChange={(x) => setQuorum((x || "simples") as Quorum)} options={QUORUNS.map((q) => ({ value: q.value, label: q.label })).sort((x, y) => x.label.localeCompare(y.label, "pt-BR"))} />
-            <p className="mt-1 text-xs text-muted-foreground">{QUORUNS.find((q) => q.value === quorum)?.ajuda}</p>
-          </div>
+          <fieldset className="space-y-2">
+            <legend className="mb-1.5 text-sm font-medium">Tipo de votação</legend>
+            <div role="radiogroup" aria-label="Tipo de votação" className="grid gap-2 sm:grid-cols-2">
+              {([
+                { v: false, t: "Aprovação (Sim / Não)", d: "Aprovar contas, obras, regras. Opções: Sim, Não e Abstenção." },
+                { v: true, t: "Escolha entre opções", d: "Chapas, candidatos, orçamentos, cores. Vence a mais votada." },
+              ]).map((o) => {
+                const ativo = (quorum === "eleicao") === o.v;
+                return (
+                  <button key={o.t} type="button" role="radio" aria-checked={ativo}
+                    onClick={() => setQuorum(o.v ? "eleicao" : (quorum === "eleicao" ? "simples" : quorum))}
+                    className={cn("min-h-11 rounded-md border p-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", ativo ? "border-primary bg-primary/10" : "hover:bg-muted")}>
+                    <span className="block text-sm font-semibold">{o.t}</span>
+                    <span className="mt-0.5 block text-xs text-muted-foreground">{o.d}</span>
+                  </button>
+                );
+              })}
+            </div>
+            {quorum !== "eleicao" && <div>
+              <Label className="mb-1.5 block">Quórum de aprovação</Label>
+              <SearchSelect value={quorum} onChange={(x) => setQuorum((x || "simples") as Quorum)} options={QUORUNS.filter((q) => q.value !== "eleicao").map((q) => ({ value: q.value, label: q.label })).sort((x, y) => x.label.localeCompare(y.label, "pt-BR"))} />
+              <p className="mt-1 text-xs text-muted-foreground">{QUORUNS.find((q) => q.value === quorum)?.ajuda}</p>
+            </div>}
+          </fieldset>
           <fieldset className="space-y-2 rounded-md border p-3">
             <legend className="px-1 text-sm font-medium">Fórum de debate</legend>
             <div className="flex items-center justify-between gap-3"><Label htmlFor="pa-deb">Permitir debate entre os condôminos</Label><Switch id="pa-deb" checked={debAtivo} onCheckedChange={setDebAtivo} /></div>
@@ -623,6 +642,7 @@ function PautaDialog({ assembleiaId, pauta, proxima, onClose, onSalvo }: { assem
           {quorum === "eleicao" ? (
             <fieldset className="space-y-2">
               <legend className="mb-1 text-sm font-medium">Opções de voto</legend>
+              <p className="text-xs text-muted-foreground">Digite uma alternativa por linha (mínimo 2). Ex.: Azul, Amarelo, Vermelho.</p>
               {chapas.map((c, i) => (
                 <div key={i} className="flex gap-2">
                   <Input aria-label={`Opção ${i + 1}`} value={c} placeholder={`Ex.: Chapa ${i + 1}`} onChange={(e) => setChapas(chapas.map((x, j) => (j === i ? e.target.value : x)))} />
