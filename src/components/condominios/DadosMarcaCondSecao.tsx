@@ -20,7 +20,7 @@ const TODOS = [...GRUPOS.flatMap((g) => g.campos.map((c) => c[0])), ...MARCA];
 export function DadosMarcaCondSecao({ condominioId, podeEditar }: { condominioId: string; podeEditar: boolean }) {
   const qc = useQueryClient();
   const q = useQuery({
-    queryKey: ["cond", "dados", condominioId],
+    queryKey: ["cond", "dados", condominioId], retry: false,
     queryFn: async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const r = await (supabase as any).rpc("cond_dados_ler", { p_condominio: condominioId });
