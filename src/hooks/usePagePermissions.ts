@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useTableRows, rowId } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
+import { lerAmbiente, useAmbientes } from "@/hooks/useAmbientes";
+import { ehGestor, emModoUnidade } from "@/lib/ambientes";
 
 export type Perms = { canRead: boolean; canCreate: boolean; canUpdate: boolean; canDelete: boolean };
 export type SubTab = Perms & { id: string; descricao: string };
@@ -60,8 +62,14 @@ export function usePagePermissions(path: string) {
   // Enquanto o usuário/perfil ainda não chegou, a tela aguarda em vez de dizer "sem acesso".
   const isLoading = carregando || (!!user && (!usuario || viewRows === undefined));
   const { data: funcoes = [] } = useTableRows("funcoes");
+  // Síndico/subsíndico definido na unidade gere o próprio condomínio pelo vínculo, sem depender
+  // do perfil do ERP (o banco continua restringindo os dados ao condomínio dele).
+  const { data: ambientes } = useAmbientes();
+  const idAmb = lerAmbiente();
+  const gestorPorVinculo = path.startsWith("/condominios") && emModoUnidade(idAmb) &&
+    !!ambientes?.some((a) => a.tipo === "unidade" && a.id === idAmb && ehGestor(a.vinculo));
 
-  return useMemo(() => {
+  const base = useMemo(() => {
     const unrestricted = viewRows === null; // somente Master
     const byFuncao = new Map<string, Row>();
     for (const r of viewRows ?? []) byFuncao.set(String(pick(r, ["funcao_id", "funcoes_id"]) ?? ""), r);
@@ -128,6 +136,7 @@ export function usePagePermissions(path: string) {
 
     return { ...page, loading: isLoading, subtabs, hasSubtabDefinitions: funcoes.some((f) => pageId && String(pick(f, ["funcoes_pai_id"]) ?? "") === pageId) };
   }, [viewRows, funcoes, path, isLoading]);
+  return useMemo(() => (gestorPorVinculo ? { ...base, ...ALL, loading: false } : base), [base, gestorPorVinculo]);
 }
 
 /** Identifica qual aba do formulário a função filha representa. */

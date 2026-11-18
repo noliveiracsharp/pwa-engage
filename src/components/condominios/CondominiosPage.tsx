@@ -102,15 +102,18 @@ export function CondominiosPage() {
   const ativa = useEmpresaAtiva();
   const condominios = useMemo(
     () =>
-      parceiros
+      // Acesso do síndico: os condomínios vêm do próprio vínculo (a lista de clientes é da administradora).
+      modoUnidade
+        ? [...new Map(ambientes.flatMap((a) => (a.tipo === "unidade" && geridos.has(a.vinculo.condominio_id)
+            ? [[a.vinculo.condominio_id, { value: a.vinculo.condominio_id, label: a.vinculo.condominio_nome, hint: undefined as string | undefined }] as const] : []))).values()]
+        : parceiros
         .filter((p) => ehCondominio(classificacoes, s(p["classificacao_id"])))
-        .filter((p) => !modoUnidade || geridos.has(s(rowId(p))))
         .map((p) => ({
           value: s(rowId(p)),
           label: s(pick(p, ["titulo", "nome_fantasia", "nome", "razao_social"]) ?? "—"),
           hint: caminhoClassificacao(classificacoes, p["classificacao_id"]) || undefined,
         })),
-    [parceiros, classificacoes, modoUnidade, geridos],
+    [parceiros, classificacoes, modoUnidade, geridos, ambientes],
   );
 
   const { user } = useAuth();
@@ -158,8 +161,9 @@ export function CondominiosPage() {
   const [minhaAberta, setMinhaAberta] = useState<Row | null>(null);
   const [secao, setSecao] = useState("painel");
   useEffect(() => {
-    if (secoes.length && !secoes.some((x) => x.key === secao)) setSecao(secoes[0]!.key);
-  }, [secoes, secao]);
+    // Espera as seções liberadas chegarem (no acesso de unidade "Minha unidade" vem antes) para não pular o Painel.
+    if (secoes.length > (modoUnidade ? 1 : 0) && !secoes.some((x) => x.key === secao)) setSecao(secoes[0]!.key);
+  }, [secoes, secao, modoUnidade]);
   const secAtual = secoes.find((x) => x.key === secao);
   // Sorteio é aba de Garagem & Vagas; Galeria é aba de Meu Condomínio (some do menu se o pai estiver visível).
   const secoesMenu = useMemo(() => secoes.filter((x) => !(ABA_PAI[x.key] && secoes.some((y) => y.key === ABA_PAI[x.key]))), [secoes]);
