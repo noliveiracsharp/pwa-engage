@@ -27,6 +27,9 @@ export const Route = createFileRoute("/_authenticated")({
     if (emModoUnidade(lerAmbiente()) && lerDestinoAmbiente() !== "/condominios" && location.pathname.startsWith("/condominios")) {
       throw redirect({ to: "/minha-unidade" });
     }
+    // Dentro de uma unidade, o acesso vem do vínculo (e o banco protege os dados): o menu de perfil
+    // não se aplica — senão síndico sem perfil de gestão cai em /sem-acesso e entra em loop.
+    if (emModoUnidade(lerAmbiente())) return { user: data.user };
     // Bloqueia acesso direto pela URL a telas não liberadas no menu
     // (vw_menu_usuario_perfil, perfil do usuário logado).
     const allowed = await getAllowedPathsCached(data.user.id, data.user.email ?? undefined);
