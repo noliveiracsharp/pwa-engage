@@ -51,7 +51,7 @@ export function AtendimentosPanel({ condominioId, nomeCondominio, blocos, unidad
   useEffect(() => { void supabase.auth.getUser().then(({ data }) => setMe(data.user?.id ?? "")); }, []);
 
   const chave = ["cond", "atendimentos", condominioId];
-  const { data: atendimentos = [], isLoading } = useQuery({
+  const { data: todosAtend = [], isLoading } = useQuery({
     queryKey: chave, enabled: !!condominioId,
     queryFn: async (): Promise<Row[]> => {
       const { data, error } = await db.from("cond_atendimentos").select("*").eq("condominio_id", condominioId).order("created_at", { ascending: false }).limit(2000);
@@ -59,6 +59,8 @@ export function AtendimentosPanel({ condominioId, nomeCondominio, blocos, unidad
       return (data ?? []) as Row[];
     },
   });
+  // Morador só enxerga chamados que abriu ou que foram abertos para ele — nunca de outra unidade.
+  const atendimentos = useMemo(() => (gestao ? todosAtend : me ? todosAtend.filter((a) => s(a["aberto_por"]) === me || s(a["aberto_para"]) === me) : []), [gestao, todosAtend, me]);
   const { data: assuntos = [] } = useQuery({
     queryKey: ["cond", "atend-assuntos", condominioId], enabled: !!condominioId,
     queryFn: async (): Promise<Row[]> => ((await db.from("cond_atend_assuntos").select("*").eq("condominio_id", condominioId)).data ?? []) as Row[],
@@ -247,6 +249,7 @@ function Lista({ ctx, filtroPainel, limparPainel }: { ctx: CtxAtend; filtroPaine
     if (f.de && (!d || d < f.de)) return false;
     if (f.ate && (!d || d > f.ate)) return false;
     if (f.texto) { const q = f.texto.toLowerCase(); if (!`${s(a["titulo"])} ${htmlParaTexto(s(a["texto"]))} ${s(a["local"])}`.toLowerCase().includes(q)) return false; }
+    if (f.ticket && !String(a["numero"]).includes(f.ticket.replace(/\D/g, ""))) return false;
     if (!gestao) return true;
     if (f.assunto && s(a["assunto_id"]) !== f.assunto) return false;
     if (f.ticket && !String(a["numero"]).includes(f.ticket.replace(/\D/g, ""))) return false;
@@ -259,8 +262,25 @@ function Lista({ ctx, filtroPainel, limparPainel }: { ctx: CtxAtend; filtroPaine
   }).sort((a, b) => (f.ordem === "recentes" ? -1 : 1) * s(a["created_at"]).localeCompare(s(b["created_at"])));
 
   const opStatus = [{ value: "todos", label: "— Todos —" }, ...STATUS_ATEND.map((x) => ({ value: x.value, label: gestao ? x.label : x.morador }))];
+  const resumo = !gestao ? [
+    { k: "todos", l: "Total", n: atendimentos.length },
+    { k: "pendente_resposta", l: "Aguardando", n: atendimentos.filter((a) => a["status"] === "pendente_resposta").length },
+    { k: "respondida", l: "Respondidos", n: atendimentos.filter((a) => a["status"] === "respondida").length },
+    { k: "finalizado", l: "Finalizados", n: atendimentos.filter((a) => a["status"] === "finalizado").length },
+  ] : [];
   return (
     <div className="space-y-3">
+      {!gestao && (
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" role="group" aria-label="Resumo dos seus atendimentos">
+          {resumo.map((r) => (
+            <button key={r.k} type="button" aria-pressed={f.status === r.k} onClick={() => setF({ ...f, status: r.k })}
+              className={cn("rounded-lg border bg-card p-3 text-left transition hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", f.status === r.k && "border-primary ring-1 ring-primary")}>
+              <span className="block text-2xl font-bold tabular-nums">{r.n}</span>
+              <span className="text-xs text-muted-foreground">{r.l}</span>
+            </button>
+          ))}
+        </div>
+      )}
       <div className="rounded-lg border">
         <button type="button" className="flex w-full items-center justify-between p-3 text-left text-sm font-semibold" onClick={() => setMostrar((v) => !v)} aria-expanded={mostrar}>
           <span className="inline-flex items-center gap-2"><Filter className="size-4" /> Filtrar atendimentos</span><span className="text-xs text-muted-foreground">{lista.length} resultado(s)</span>
@@ -269,7 +289,7 @@ function Lista({ ctx, filtroPainel, limparPainel }: { ctx: CtxAtend; filtroPaine
           <div className="grid gap-3 border-t p-3 md:grid-cols-2">
             <Campo label="Status"><SearchSelect value={f.status} onChange={(v) => setF({ ...f, status: v || "todos" })} options={opStatus} /></Campo>
             {gestao && <Campo label="Assunto"><SearchSelect value={f.assunto} allowClear placeholder="— Todos —" onChange={(v) => setF({ ...f, assunto: v })} options={alfa(assuntos.map((x) => ({ value: s(x["id"]), label: s(x["nome"]) })))} /></Campo>}
-            {gestao && <Campo label="Nº do ticket"><Input inputMode="numeric" value={f.ticket} onChange={(e) => setF({ ...f, ticket: e.target.value })} placeholder="#000000" /></Campo>}
+            {<Campo label="Nº do protocolo"><Input inputMode="numeric" value={f.ticket} onChange={(e) => setF({ ...f, ticket: e.target.value })} placeholder="#000000" /></Campo>}
             {gestao && <Campo label="Aberto por / para"><SearchSelect value={f.abertoPor} allowClear placeholder="— Todos —" onChange={(v) => setF({ ...f, abertoPor: v })} options={alfa(moradores.map((m) => ({ value: s(m["usuario_id"]), label: `${s(m["nome"])} — ${s(m["rotulo"])}` })))} /></Campo>}
             {gestao && <Campo label="Mencionado"><SearchSelect value={f.mencionado} allowClear placeholder="— Todos —" onChange={(v) => setF({ ...f, mencionado: v })} options={alfa(mencionaveis.map((m) => ({ value: s(m["id"]), label: s(m["rotulo"]) })))} /></Campo>}
             {gestao && <Campo label="Torre / bloco"><SearchSelect value={f.torre} allowClear placeholder="— Todos —" onChange={(v) => setF({ ...f, torre: v })} options={alfa(blocos.map((b) => ({ value: s(b["id"]), label: s(b["nome"] ?? b["descricao"]) })))} /></Campo>}

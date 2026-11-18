@@ -36,6 +36,8 @@ type Status = { status: string; etapa?: number; total?: number; central?: boolea
 
 function Interfone() {
   const { slug } = Route.useParams();
+  const [embed, setEmbed] = useState(false);
+  useEffect(() => { setEmbed(new URLSearchParams(window.location.search).get("embed") === "1"); }, []);
   const [dados, setDados] = useState<Dados | null | undefined>(undefined);
   const [alvo, setAlvo] = useState<Alvo | null>(null);
   const [chamada, setChamada] = useState<{ id: string; token: string } | null>(null);
@@ -79,13 +81,14 @@ function Interfone() {
   }
 
   return (
-    <Tela>
-      <header className="mb-6 flex flex-col items-center gap-2 text-center">
+    <Tela embed={embed}>
+      <header className={cn("mb-6", embed && "sr-only")}>
+      <div className=" flex flex-col items-center gap-2 text-center">
         {dados.logo ? <img src={dados.logo} alt={dados.nome} className="h-12 max-w-[180px] object-contain" /> : <Building2 className="size-10 text-primary" />}
         <h1 className="text-xl font-semibold">{dados.nome}</h1>
         <p className="text-sm text-muted-foreground">Interfone virtual</p>
         {dados.ponto && <p className="flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary"><MapPin className="size-3.5" aria-hidden /> Você está em: {dados.ponto.nome}</p>}
-      </header>
+      </div></header>
 
       {!alvo ? (
         <Escolher dados={dados} onEscolher={setAlvo} />
@@ -114,14 +117,15 @@ function Interfone() {
         </div>
       )}
 
-      <p className="mt-8 flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
+      {!embed && <p className="mt-8 flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
         <ShieldCheck className="size-3.5" /> Nenhum dado de morador é exibido. Sua imagem e o horário ficam registrados para a segurança do condomínio.
-      </p>
+      </p>}
     </Tela>
   );
 }
 
-function Tela({ children }: { children: React.ReactNode }) {
+function Tela({ children, embed }: { children: React.ReactNode; embed?: boolean }) {
+  if (embed) return <main className="min-h-dvh bg-background px-4 py-4"><div className="mx-auto max-w-sm">{children}</div></main>;
   return <main className="min-h-dvh bg-muted/40 px-4 py-8"><div className="mx-auto max-w-md rounded-2xl border bg-card p-6 shadow-sm">{children}</div></main>;
 }
 
@@ -172,13 +176,22 @@ function Escolher({ dados, onEscolher }: { dados: Dados; onEscolher: (a: Alvo) =
       <Tabs defaultValue="teclado">
         <TabsList className={cn("grid w-full", temUnid ? "grid-cols-2" : "grid-cols-1")}><TabsTrigger value="teclado">{temUnid ? "Digitar número" : "Digitar ramal"}</TabsTrigger>{temUnid && <TabsTrigger value="torres">Torres</TabsTrigger>}</TabsList>
         <TabsContent value="teclado" className="space-y-3 pt-2">
-          <div className="flex h-14 items-center justify-center rounded-lg border bg-muted/50 text-3xl font-semibold tracking-widest" aria-live="polite">{digito || <span className="text-base font-normal text-muted-foreground">{!temUnid ? "Ex.: 15" : multi ? "Ex.: B-102 ou ramal" : "Ex.: 102 ou ramal"}</span>}</div>
-          {erro && <p className="text-center text-sm text-destructive">{erro}</p>}
-          <div className="grid grid-cols-3 gap-2">
-            {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((k) => <Button key={k} variant="secondary" className="h-14 text-xl" onClick={() => tecla(k)}>{k}</Button>)}
-            <Button variant="secondary" className="h-14 text-xl" onClick={() => tecla("*")} aria-label="Asterisco">*</Button>
-            <Button variant="secondary" className="h-14 text-xl" onClick={() => tecla("0")}>0</Button>
-            <Button variant="ghost" className="h-14" onClick={() => setDigito((d) => d.slice(0, -1))} aria-label="Apagar"><Delete className="size-5" /></Button>
+          <output aria-live="polite" aria-label="Número discado" className="flex h-16 items-center justify-center text-4xl font-light tabular-nums tracking-[0.2em]">{digito || <span className="text-base font-normal tracking-normal text-muted-foreground">{!temUnid ? "Digite o ramal" : multi ? "Ex.: B-102 ou ramal" : "Ex.: 102 ou ramal"}</span>}</output>
+          {erro && <p role="alert" className="text-center text-sm text-destructive">{erro}</p>}
+          <div className="mx-auto grid w-fit grid-cols-3 gap-x-6 gap-y-4" role="group" aria-label="Teclado numérico">
+            {[["1",""],["2","ABC"],["3","DEF"],["4","GHI"],["5","JKL"],["6","MNO"],["7","PQRS"],["8","TUV"],["9","WXYZ"],["*",""],["0","+"]].map(([k,l]) => (
+              <button key={k} type="button" onClick={() => tecla(k!)} aria-label={k === "*" ? "Asterisco" : `Tecla ${k}`}
+                className="flex size-[4.5rem] flex-col items-center justify-center rounded-full bg-secondary text-secondary-foreground transition active:scale-95 active:bg-primary/20 hover:bg-secondary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                <span className="text-3xl font-normal leading-none">{k}</span>
+                <span className="mt-0.5 h-3 text-[10px] font-semibold tracking-widest text-muted-foreground">{l}</span>
+              </button>
+            ))}
+            <button type="button" disabled={!digito} onClick={() => setDigito((d) => d.slice(0, -1))} aria-label="Apagar último dígito"
+              className="flex size-[4.5rem] items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted disabled:opacity-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><Delete className="size-7" /></button>
+          </div>
+          <div className="flex justify-center pt-2">
+            <button type="button" disabled={!digito} onClick={discar} aria-label="Chamar"
+              className="flex size-[4.5rem] items-center justify-center rounded-full bg-success text-success-foreground shadow-lg transition active:scale-95 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><Phone className="size-8" /></button>
           </div>
           {digito && <Button variant="ghost" size="sm" className="w-full" onClick={() => setDigito("")}>Limpar</Button>}
           {multi && (
@@ -186,7 +199,6 @@ function Escolher({ dados, onEscolher }: { dados: Dados; onEscolher: (a: Alvo) =
               {[...new Set(dados.blocos.map((b) => (b.nome.match(/[A-Za-z]+\s*$/)?.[0] ?? "").trim().toUpperCase()).filter((x) => x.length === 1))].map((l) => <Button key={l} size="sm" variant="outline" onClick={() => setDigito((d) => `${l}-${d.replace(/^[A-Z]+-?/, "")}`)}>{l}</Button>)}
             </div>
           )}
-          <Button size="lg" className="w-full" disabled={!digito} onClick={discar}><Phone className="size-5" /> Chamar</Button>
         </TabsContent>
         {temUnid && <TabsContent value="torres" className="space-y-3 pt-2">
           {multi && (

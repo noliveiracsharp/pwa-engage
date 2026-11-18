@@ -21,8 +21,8 @@ export function DiscadorInterno({ condominioId }: { condominioId: string }) {
     </div>
   );
   return (
-    <div className="mx-auto w-full max-w-md overflow-hidden rounded-2xl border bg-card">
-      <iframe title="Discador do interfone" src={`/interfone/${q.data}`} allow="camera; microphone; geolocation; autoplay" className="h-[min(78dvh,760px)] w-full border-0" />
+    <div className="mx-auto w-full max-w-md overflow-hidden rounded-2xl">
+      <iframe title="Discador do interfone" src={`/interfone/${q.data}?embed=1`} allow="camera; microphone; geolocation; autoplay" className="h-[min(78dvh,760px)] w-full border-0" />
     </div>
   );
 }

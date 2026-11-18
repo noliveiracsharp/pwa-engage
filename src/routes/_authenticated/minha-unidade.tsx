@@ -24,6 +24,8 @@ import { UnidadeSheet } from "@/components/condominios/UnidadeSheet";
 import { DiscadorInterno } from "@/components/condominios/DiscadorInterno";
 import { InterfoneTocando } from "@/components/condominios/InterfoneTocando";
 import { CardAviso, LeituraAvisoDialog } from "@/components/condominios/LeituraAvisoDialog";
+import { FiltroAvisosMorador } from "@/components/condominios/FiltroAvisosMorador";
+import { FILTRO_AVISOS_VAZIO, filtrarAvisos } from "@/lib/avisos-filtro";
 
 export const Route = createFileRoute("/_authenticated/minha-unidade")({
   staticData: { sitemap: false },
@@ -89,7 +91,7 @@ function MinhaUnidade() {
     enabled: !!condId && !!user,
     queryFn: async () => {
       const { data } = await db.from("cond_atendimentos").select("*").eq("condominio_id", condId).order("created_at", { ascending: false }).limit(50);
-      return ((data ?? []) as Row[]).filter((a) => chamadoAberto(a["status"]));
+      return ((data ?? []) as Row[]).filter((a) => (s(a["aberto_por"]) === user!.id || s(a["aberto_para"]) === user!.id) && chamadoAberto(a["status"]));
     },
   });
   const assembleias = useQuery({
@@ -110,6 +112,7 @@ function MinhaUnidade() {
     }
   }, [atual, v, navigate]);
   const [secao, setSecao] = useState("painel");
+  const [filtroAvisos, setFiltroAvisos] = useState(FILTRO_AVISOS_VAZIO);
   const [avisoAberto, setAvisoAberto] = useState<Row | null>(null);
   const sec = (key: string, label: string, icon: Secao["icon"]): Secao => ({ key, label, icon, ...permsMorador(key) });
   const secoes: Secao[] = [
@@ -222,7 +225,19 @@ function MinhaUnidade() {
         {secao === "enquetes" && <EnquetesPanel condominioId={condId} blocos={[]} perms={p("enquetes")} />}
         {secao === "assembleias" && condId && <AssembleiasMorador condominioId={condId} />}
         {secao === "interfone" && condId && <DiscadorInterno condominioId={condId} />}
-        {secao === "avisos" && <div className="space-y-2">{listaAvisos()}</div>}
+        {secao === "avisos" && (() => {
+          const filtrados = filtrarAvisos(avisos.data ?? [], filtroAvisos);
+          return (
+            <div className="space-y-3">
+              <FiltroAvisosMorador f={filtroAvisos} onChange={setFiltroAvisos} total={filtrados.length} />
+              <div className="space-y-2">
+                {avisos.isLoading ? <Loader2 className="mx-auto h-5 w-5 animate-spin" aria-label="Carregando" />
+                  : filtrados.length === 0 ? <p className="py-8 text-center text-sm text-muted-foreground">Nenhum aviso encontrado.</p>
+                  : filtrados.map((a) => <CardAviso key={s(a["id"])} aviso={a} onAbrir={() => setAvisoAberto(a)} />)}
+              </div>
+            </div>
+          );
+        })()}
         <LeituraAvisoDialog aviso={avisoAberto} usuarioId={s(usuario?.["id"]) || undefined} onClose={() => setAvisoAberto(null)} />
         {secao === "docs" && condId && <DocumentosPanel condominioId={condId} perms={p("docs")} condominios={[{ value: condId, label: v.condominio_nome ?? "" }]} blocos={[]} unidades={[]} visibilidades={visibilidadesDocumento(v.papel)} />}
       </div>

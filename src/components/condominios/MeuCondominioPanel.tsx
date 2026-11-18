@@ -1,4 +1,6 @@
 import { lazy, Suspense, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { ClientOnly } from "@tanstack/react-router";
 import { Building, Copy, Globe, Info, Mail, MapPin, MessageCircle, Navigation, Pencil, Phone, Plus, Search, ShieldCheck, Siren, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -32,9 +34,19 @@ const fone = (v: string) => (/^\d{3}$/.test(v) ? v : formatPhoneDisplay(v) || v)
 export function MeuCondominioPanel({ condominioId, perms }: { condominioId: string; perms: P }) {
   const { data: parceiros = [] } = useTableRows("parceiros");
   const byId = (id: unknown) => parceiros.find((p) => s(rowId(p)) === s(id));
-  const cond = byId(condominioId);
-  const adm = cond && s(cond["tipo_gestao"]) !== "autogestao" ? byId(cond["administradora_id"]) : undefined;
-  const fac = cond ? byId(cond["facilities_id"]) : undefined;
+  // Morador não enxerga o cadastro da empresa: lê pelo vínculo da unidade (função segura no banco).
+  const viaVinculo = useQuery({
+    queryKey: ["cond", "meu-condominio", condominioId], enabled: !!condominioId,
+    queryFn: async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const r = await (supabase as any).rpc("cond_meu_condominio", { p_condominio: condominioId });
+      return (r.error ? null : r.data) as { condominio?: Row; administradora?: Row | null; facilities?: Row | null } | null;
+    },
+  });
+  const v = viaVinculo.data;
+  const cond = byId(condominioId) ?? v?.condominio ?? undefined;
+  const adm = cond && s(cond["tipo_gestao"]) !== "autogestao" ? (byId(cond["administradora_id"]) ?? v?.administradora ?? undefined) : undefined;
+  const fac = cond ? (byId(cond["facilities_id"]) ?? v?.facilities ?? undefined) : undefined;
   const end = enderecoDe(cond);
   const c = cond ? coordenadas(cond) : null;
   const rota = linksRota(c?.[0] ?? null, c?.[1] ?? null, end.full);
