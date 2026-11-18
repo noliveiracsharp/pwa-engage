@@ -259,6 +259,8 @@ function Identificar({ slug, exigeGeo, alvo, onVoltar, onChamou }: { slug: strin
     setEnviando(false);
     if (error) return setErro(error.message || "Não foi possível chamar agora.");
     cam?.getTracks().forEach((t) => t.stop());
+    // Dispara na hora o push que o banco enfileirou ao criar a chamada (celular em segundo plano).
+    void fetch("/api/public/push-enviar", { method: "POST" }).catch(() => undefined);
     onChamou(data as { id: string; token: string });
   };
 

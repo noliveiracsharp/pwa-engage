@@ -18,13 +18,15 @@ export const Route = createFileRoute("/api/public/interfone-whats")({
       POST: async ({ request }) => {
         const p = Corpo.safeParse(await request.json().catch(() => null));
         if (!p.success) return Response.json({ ok: false }, { status: 400 });
+        // Push primeiro: a chamada já foi enfileirada no banco ao ser criada, mesmo sem WhatsApp configurado.
+        await enviarPushPendentes().catch(() => undefined);
         const segredo = process.env["INTERFONE_WHATS_SEGREDO"];
         if (!segredo) return Response.json({ ok: false, erro: "não configurado" }, { status: 503 });
         const db = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, { auth: { persistSession: false, autoRefreshToken: false, storage: undefined } });
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data, error } = await (db as any).rpc("cond_interfone_whats", { p_id: p.data.id, p_token: p.data.token, p_segredo: segredo });
         if (error) return Response.json({ ok: false }, { status: 400 });
-        // O banco já enfileirou o push desta etapa (gatilho em whats_avisados): envia antes do WhatsApp.
+        // Etapas seguintes do transbordo enfileiram push via whats_avisados: envia antes do WhatsApp.
         await enviarPushPendentes().catch(() => undefined);
         const r = (data ?? {}) as Resp;
         const inst = instanciaParaAvisos(r.instancias ?? []);
