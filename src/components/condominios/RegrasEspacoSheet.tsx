@@ -16,6 +16,7 @@ import { chaveHora, dataMaxima, estruturaTravada, type ModoConcorrencia } from "
 import type { Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
 import { ordemNatural, s, useCondRows } from "./cond-data";
+import { FUNCOES_DIRETIVAS_UNIDADE } from "@/lib/cond-equipe";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = () => supabase as any;
@@ -376,7 +377,7 @@ export function BloqueioDatasDialog({ condominioId, espacos, onClose }: { condom
   );
 }
 
-const ROTULO_FUNCAO: Record<string, string> = { sindico: "Síndico(a)", subsindico: "Subsíndico(a)", conselheiro: "Conselho", conselho: "Conselho", conselho_fiscal: "Conselho fiscal", conselho_consultivo: "Conselho consultivo" };
+const ROTULO_FUNCAO: Record<string, string> = Object.fromEntries(Object.entries(FUNCOES_DIRETIVAS_UNIDADE).map(([k, x]) => [k, x.label]));
 
 /** Pessoas da gestão (síndico, subsíndico, conselho, gerente, administradora) que podem aprovar reservas. */
 function AprovadoresDialog({ condominioId, valor, onClose, onAplicar }: { condominioId: string; valor: Row[]; onClose: () => void; onAplicar: (l: Row[]) => void }) {
@@ -398,11 +399,14 @@ function AprovadoresDialog({ condominioId, valor, onClose, onAplicar }: { condom
       const ids = ((us ?? []) as Row[]).map((u) => s(u["id"]));
       if (ids.length) {
         const { data: vs } = await db().from("cond_unidades_vinculos").select("usuario_id,funcao_condominio").in("cond_unidade_id", ids).in("funcao_condominio", Object.keys(ROTULO_FUNCAO));
-        const uids = [...new Set(((vs ?? []) as Row[]).map((x) => s(x["usuario_id"])))];
-        const { data: ps } = uids.length ? await db().from("usuarios").select("id,nome,email").in("id", uids) : { data: [] };
+        const pessoasU = new Map<string, Row>();
+        await Promise.all([...new Set(((vs ?? []) as Row[]).map((x) => s(x["cond_unidade_id"])))].map(async (u) => {
+          const { data } = await db().rpc("cond_unidade_pessoas", { p_unidade: u });
+          for (const q of (data ?? []) as Row[]) pessoasU.set(s(q["usuario_id"]), q);
+        }));
         for (const x of (vs ?? []) as Row[]) {
-          const p = ((ps ?? []) as Row[]).find((q) => s(q["id"]) === s(x["usuario_id"])); if (!p) continue;
-          add({ chave: `u:${s(p["id"])}`, usuario_id: p["id"], nome: s(p["nome"]) || s(p["email"]), email: s(p["email"]), perfil: ROTULO_FUNCAO[s(x["funcao_condominio"])] ?? s(x["funcao_condominio"]) });
+          const p = pessoasU.get(s(x["usuario_id"]));
+          add({ chave: `u:${s(x["usuario_id"])}`, usuario_id: x["usuario_id"], nome: s(p?.["nome"]) || s(p?.["email"]) || "Sem nome", email: s(p?.["email"]), perfil: ROTULO_FUNCAO[s(x["funcao_condominio"])] ?? s(x["funcao_condominio"]) });
         }
       }
       const { data: c } = await db().from("empresas").select("administradora_id").eq("id", condominioId).maybeSingle();
