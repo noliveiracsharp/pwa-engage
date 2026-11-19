@@ -148,10 +148,10 @@ export function AvisosPanel({ condominioId, condominios, blocos, unidades, perms
             const expirado = avisoExpirado(s(a["expira_em"]) || null);
             return (
               <article key={s(a["id"])} className="rounded-lg border bg-card p-4">
-                <div className="flex flex-wrap items-start gap-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
                   <div className="min-w-0 flex-1 space-y-1">
-                    <p className="text-xs text-muted-foreground">{s(a["abrangencia"]) || "—"}</p>
-                    <p className="flex flex-wrap items-center gap-2 font-semibold">
+                    <p className="text-sm text-muted-foreground sm:text-xs">{s(a["abrangencia"]) || "—"}</p>
+                    <p className="flex flex-wrap items-center gap-2 text-lg font-semibold leading-snug sm:text-base">
                       {s(a["titulo"])}
                       {Number(a["versao"] ?? 1) > 1 && <Badge variant="outline">V{Number(a["versao"])}</Badge>}
                       {s(a["midia_url"]) && <button type="button" onClick={() => setAnexoAberto({ url: s(a["midia_url"]), tipo: s(a["midia_tipo"]), titulo: s(a["midia_nome"]) || s(a["titulo"]) })} className="text-primary" aria-label={`Abrir anexo ${s(a["midia_nome"])}`}>{s(a["midia_tipo"]) === "imagem" ? <ImageIcon className="size-4" /> : s(a["midia_tipo"]) === "video" ? <Film className="size-4" /> : <FileText className="size-4" />}</button>}
@@ -167,7 +167,7 @@ export function AvisosPanel({ condominioId, condominios, blocos, unidades, perms
                     {s(a["motivo_cancelamento"]) && <p className="text-xs text-destructive">Motivo do cancelamento: {s(a["motivo_cancelamento"])}</p>}
                     <p className="text-xs"><span className="text-success">{Number(a["enviados"] ?? 0)}</span> de {Number(a["total"] ?? 0)} entregues{Number(a["falhas"] ?? 0) > 0 && <span className="ml-1 text-destructive">· {Number(a["falhas"])} falha(s)</span>}</p>
                   </div>
-                  <div className="flex flex-wrap items-center justify-end gap-0.5">
+                  <div className="flex w-full flex-wrap items-center justify-between gap-0.5 border-t pt-2 sm:w-auto sm:justify-end sm:border-0 sm:pt-0">
                     <AcaoIcone titulo="Ler comunicado" onClick={() => setLendo(a)}><FileText className="size-4" /></AcaoIcone>
                     <AcaoIcone titulo="Quem recebeu e quem visualizou" onClick={() => setLeituras([a])}><Eye className="size-4" /></AcaoIcone>
                     {podeGerir && acoes.cancelar && <AcaoIcone titulo="Cancelar aviso" destrutivo onClick={() => cancelar(a)}><Ban className="size-4" /></AcaoIcone>}

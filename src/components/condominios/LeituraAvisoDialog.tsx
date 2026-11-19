@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { CalendarDays, Eye, FileText, Film, ImageIcon, Paperclip } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { CalendarDays, Eye, ZoomIn, ZoomOut, FileText, Film, ImageIcon, Paperclip } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -57,6 +57,12 @@ export function LeituraAvisoDialog({ aviso, usuarioId, onClose }: { aviso: Row |
     // Melhor esforço: a leitura alimenta o relatório da gestão; falhas não atrapalham o morador.
     void (supabase as any).from("cond_avisos_leituras").upsert({ aviso_id: aviso["id"], usuario_id: usuarioId, canal: "sistema" }, { onConflict: "aviso_id,usuario_id,canal", ignoreDuplicates: true }).then(() => undefined, () => undefined);
   }, [aviso, usuarioId]);
+  const [zoom, setZoom] = useState(1);
+  const pinch = useRef<{ d: number; z: number } | null>(null);
+  const toque = useRef(0);
+  useEffect(() => { setZoom(1); }, [aviso]);
+  const lim = (z: number) => Math.min(3, Math.max(1, Math.round(z * 100) / 100));
+  const dist = (e: React.TouchEvent) => Math.hypot(e.touches[0]!.clientX - e.touches[1]!.clientX, e.touches[0]!.clientY - e.touches[1]!.clientY);
   if (!aviso) return null;
   const tipo = s(aviso["tipo"]);
   const midia = s(aviso["midia_url"]);
@@ -76,7 +82,19 @@ export function LeituraAvisoDialog({ aviso, usuarioId, onClose }: { aviso: Row |
             <span>{s(aviso["expira_em"]) ? `Visível até ${new Date(`${s(aviso["expira_em"]).slice(0, 10)}T12:00:00`).toLocaleDateString("pt-BR")}` : "Não expira"}</span>
           </DialogDescription>
         </DialogHeader>
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
+        <div className="flex items-center justify-end gap-1" role="group" aria-label="Tamanho do texto">
+          <Button type="button" variant="outline" size="icon" className="size-11" onClick={() => setZoom((z) => lim(z - 0.25))} disabled={zoom <= 1} aria-label="Diminuir texto"><ZoomOut className="size-5" aria-hidden /></Button>
+          <button type="button" onClick={() => setZoom(1)} className="min-h-11 min-w-14 rounded-md px-2 text-sm font-medium tabular-nums" aria-label="Voltar ao tamanho normal">{Math.round(zoom * 100)}%</button>
+          <Button type="button" variant="outline" size="icon" className="size-11" onClick={() => setZoom((z) => lim(z + 0.25))} disabled={zoom >= 3} aria-label="Aumentar texto"><ZoomIn className="size-5" aria-hidden /></Button>
+        </div>
+        <div className="min-h-0 flex-1 space-y-4 overflow-auto pr-1" style={{ touchAction: "pan-x pan-y" }}
+          onTouchStart={(e) => {
+            if (e.touches.length === 2) pinch.current = { d: dist(e), z: zoom };
+            else if (e.touches.length === 1) { const ag = Date.now(); if (ag - toque.current < 300) setZoom((z) => (z > 1 ? 1 : 1.75)); toque.current = ag; }
+          }}
+          onTouchMove={(e) => { if (e.touches.length === 2 && pinch.current) { const p = pinch.current; setZoom(lim(p.z * (dist(e) / p.d))); } }}
+          onTouchEnd={(e) => { if (e.touches.length < 2) pinch.current = null; }}>
+          <div className="space-y-4" style={{ zoom }}>
           {s(aviso["mensagem"]).trim()
             ? <div className="prose prose-sm max-w-none text-foreground dark:prose-invert [&_img]:max-w-full [&_img]:rounded-md" dangerouslySetInnerHTML={{ __html: s(aviso["mensagem"]) }} />
             : <p className="text-sm text-muted-foreground">Este comunicado não possui texto.</p>}
@@ -98,6 +116,7 @@ export function LeituraAvisoDialog({ aviso, usuarioId, onClose }: { aviso: Row |
               )}
             </section>
           )}
+          </div>
         </div>
         <DialogFooter><Button variant="outline" onClick={onClose} className={cn()}>Fechar</Button></DialogFooter>
       </DialogContent>
