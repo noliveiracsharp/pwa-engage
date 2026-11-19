@@ -52,7 +52,8 @@ export function DocumentoIADialog({ doc, gestao, onClose }: { doc: Row; gestao: 
     try {
       const { data: url } = await supabase.storage.from("cond-documentos").createSignedUrl(s(doc["arquivo_path"]), 1800);
       if (!url) throw new Error("Não foi possível acessar o arquivo.");
-      const r = await ler({ data: { url: url.signedUrl } });
+      const token = (await supabase.auth.getSession()).data.session?.access_token;
+      const r = await ler({ data: { url: url.signedUrl, token } });
       if (r.erro) throw new Error(r.erro);
       const del = await db.from("cond_documentos_artigos").delete().eq("documento_id", docId);
       if (del.error) throw del.error;
@@ -73,7 +74,8 @@ export function DocumentoIADialog({ doc, gestao, onClose }: { doc: Row; gestao: 
     setPensando(true); setResposta("");
     try {
       const contexto = artigos.map((a) => `[${ORIGEM[s(a["origem"])] ?? ""} ${s(a["numero"])}${a["titulo"] ? ` – ${s(a["titulo"])}` : ""}] ${s(a["texto"])}`).join("\n").slice(0, 400000);
-      const r = await perguntar({ data: { pergunta: pergunta.trim(), contexto } });
+      const token = (await supabase.auth.getSession()).data.session?.access_token;
+      const r = await perguntar({ data: { pergunta: pergunta.trim(), contexto, token } });
       if (r.erro) throw new Error(r.erro);
       setResposta(r.resposta);
     } catch (e) {
