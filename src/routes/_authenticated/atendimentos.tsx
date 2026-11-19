@@ -72,7 +72,7 @@ function AtendimentosPage() {
   const { data: participantes = [] } = useTableRows("atendimentos_participantes");
   const { data: usuarios = [] } = useTableRows("usuarios");
   const { data: notas = [] } = useTableRows("empresas_notasrapidas");
-  const { data: orcamentos = [] } = useTableRows("orcamentos");
+  
   const { data: parceiros = [] } = useTableRows("parceiros");
   const [parcFiltro, setParcFiltro] = useState("todos");
 
@@ -87,10 +87,13 @@ function AtendimentosPage() {
   });
 
   // Última mensagem de cada conversa.
+  const [painelAberto, setPainelAberto] = useState(false);
+  const { data: orcamentos = [] } = useTableRows("orcamentos", painelAberto);
   const { data: ultimas = new Map<string, Row>() } = useQuery({
     queryKey: ["table", "atendimentos_mensagem", "ultimas"],
     queryFn: async () => {
-      const { data } = await supabase.from("atendimentos_mensagem").select("*").eq("oculta_para_atendente", false).order("id", { ascending: false }).limit(800);
+      let { data, error } = await supabase.from("atendimentos_mensagem").select("atendimento_id, mensagem, msg_interna, usuario_id, remetente_tipo, created_at").eq("oculta_para_atendente", false).order("created_at", { ascending: false }).limit(800);
+      if (error) ({ data } = await supabase.from("atendimentos_mensagem").select("*").eq("oculta_para_atendente", false).order("created_at", { ascending: false }).limit(800));
       const map = new Map<string, Row>();
       for (const m of (data ?? []) as Row[]) {
         const k = text(pick(m, M.atendimento));
@@ -395,6 +398,7 @@ function AtendimentosPage() {
       )}
 
       {/* Coluna 3 */}
+      {ativo && painel && !painelAberto && (setTimeout(() => setPainelAberto(true)), null)}
       {ativo && painel && (
         <div className="fixed inset-0 z-40 flex bg-card md:static md:z-auto">
           <ContatoPainel
