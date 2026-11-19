@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Briefcase, Building, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,7 +25,17 @@ export const MODALIDADES_PORTARIA = [
 export function GestaoTerceirosPanel({ condominioId, podeEditar }: { condominioId: string; podeEditar: boolean }) {
   const qc = useQueryClient();
   const { data: parceiros = [] } = useTableRows("parceiros");
-  const atual = parceiros.find((p) => String(rowId(p)) === condominioId);
+  const rpc = useQuery({
+    queryKey: ["cond", "gestao", condominioId], retry: false,
+    queryFn: async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const r = await (supabase as any).rpc("cond_gestao_ler", { p_condominio: condominioId });
+      if (r.error) throw new Error(r.error.message);
+      return (r.data ?? null) as Record<string, unknown> | null;
+    },
+  });
+  const local = parceiros.find((p) => String(rowId(p)) === condominioId);
+  const atual = (rpc.data && Object.keys(rpc.data).length ? rpc.data : local) as Record<string, unknown> | undefined;
   const [v, setV] = useState<Record<string, string>>({});
   const [salvando, setSalvando] = useState(false);
 
@@ -36,6 +46,9 @@ export function GestaoTerceirosPanel({ condominioId, podeEditar }: { condominioI
   }, [atual, condominioId]);
 
   const nome = (id: string) => {
+    if (!id) return "Não definida";
+    if (atual && String(atual["administradora_id"] ?? "") === id && atual["administradora_nome"]) return String(atual["administradora_nome"]);
+    if (atual && String(atual["facilities_id"] ?? "") === id && atual["facilities_nome"]) return String(atual["facilities_nome"]);
     const r = parceiros.find((p) => String(rowId(p)) === id);
     return r ? String(pick<string>(r, ["titulo", "nome_fantasia", "nome", "razao_social"], "—")) : "Não definida";
   };
@@ -46,12 +59,18 @@ export function GestaoTerceirosPanel({ condominioId, podeEditar }: { condominioI
     for (const c of CAMPOS) valores[c] = v[c] || null;
     if (valores["tipo_gestao"] === "autogestao") valores["administradora_id"] = null;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase as any).from("parceiros").update(valores).eq("id", condominioId).select("id");
+    let { data, error } = await (supabase as any).from("parceiros").update(valores).eq("id", condominioId).select("id");
+    if (!error && !data?.length) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const r = await (supabase as any).rpc("cond_gestao_salvar", { p_condominio: condominioId, p_dados: valores });
+      error = r.error; data = r.error ? null : [{ id: condominioId }];
+    }
     setSalvando(false);
     if (error) { toast.error(/column|schema cache/i.test(error.message) ? "Rode o script atendeai-condominios-gestao-parceiros.sql no banco." : error.message); return; }
     if (!data?.length) { toast.error("Nada foi gravado: seu perfil não tem permissão para alterar este condomínio."); return; }
     toast.success("Gestão do condomínio salva.");
     void qc.invalidateQueries({ queryKey: ["table", "parceiros"] });
+    void qc.invalidateQueries({ queryKey: ["cond", "gestao", condominioId] });
     void qc.invalidateQueries({ queryKey: ["table", "empresas"] });
   }
 

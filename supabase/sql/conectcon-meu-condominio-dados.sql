@@ -11,7 +11,7 @@ END $$;
 CREATE OR REPLACE FUNCTION public.cond_dados_salvar(p_condominio uuid, p_dados jsonb)
 RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE k text; sets text[] := '{}';
-  permitidos text[] := ARRAY['razao_social','nome_fantasia','cnpj','inscricao_estadual','email','telefone','cep','endereco','numero_endereco','complemento','bairro','cidade','uf','logo','logo_escuro','cor_primaria_claro','cor_primaria_escuro'];
+  permitidos text[] := ARRAY['nome','titulo','cnpj_cpf','telefone1','numero','razao_social','nome_fantasia','cnpj','inscricao_estadual','email','telefone','cep','endereco','numero_endereco','complemento','bairro','cidade','uf','logo','logo_escuro','cor_primaria_claro','cor_primaria_escuro'];
 BEGIN
   IF NOT public.cond_atend_eh_gestor(p_condominio) THEN RAISE EXCEPTION 'Sem permissão'; END IF;
   FOR k IN SELECT jsonb_object_keys(p_dados) LOOP
@@ -23,6 +23,36 @@ BEGIN
   EXECUTE format('UPDATE public.empresas SET %s WHERE id = %L', array_to_string(sets, ', '), p_condominio);
 END $$;
 
+-- Gestão & Terceiros: leitura/gravação do vínculo com administradora e facilities
+CREATE OR REPLACE FUNCTION public.cond_gestao_ler(p_condominio uuid)
+RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public AS $$
+DECLARE r jsonb;
+BEGIN
+  IF NOT public.cond_atend_eh_gestor(p_condominio) THEN RAISE EXCEPTION 'Sem permissão'; END IF;
+  SELECT to_jsonb(p) INTO r FROM public.parceiros p WHERE p.id = p_condominio;
+  IF r IS NULL THEN RETURN '{}'::jsonb; END IF;
+  RETURN r || jsonb_build_object(
+    'administradora_nome', (SELECT coalesce(titulo, nome) FROM public.parceiros WHERE id::text = r->>'administradora_id'),
+    'facilities_nome', (SELECT coalesce(titulo, nome) FROM public.parceiros WHERE id::text = r->>'facilities_id'));
+END $$;
+
+CREATE OR REPLACE FUNCTION public.cond_gestao_salvar(p_condominio uuid, p_dados jsonb)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE k text; sets text[] := '{}';
+  permitidos text[] := ARRAY['tipo_gestao','administradora_id','facilities_id','cond_contato_administradora','cond_contato_portaria','cond_portaria_modalidade'];
+BEGIN
+  IF NOT public.cond_atend_eh_gestor(p_condominio) THEN RAISE EXCEPTION 'Sem permissão'; END IF;
+  FOR k IN SELECT jsonb_object_keys(p_dados) LOOP
+    IF k = ANY(permitidos) AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='parceiros' AND column_name=k) THEN
+      sets := sets || format('%I = NULLIF(%L, '''')', k, p_dados->>k);
+    END IF;
+  END LOOP;
+  IF array_length(sets,1) IS NULL THEN RETURN; END IF;
+  EXECUTE format('UPDATE public.parceiros SET %s WHERE id = %L', array_to_string(sets, ', '), p_condominio);
+END $$;
+
+GRANT EXECUTE ON FUNCTION public.cond_gestao_ler(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.cond_gestao_salvar(uuid, jsonb) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.cond_dados_ler(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.cond_dados_salvar(uuid, jsonb) TO authenticated;
 NOTIFY pgrst, 'reload schema';

@@ -9,9 +9,9 @@ import { PhoneInput } from "@/components/data-table/PhoneInput";
 import { supabase } from "@/integrations/supabase/client";
 
 const GRUPOS: { titulo: string; campos: [string, string, string?][] }[] = [
-  { titulo: "Identificação", campos: [["razao_social", "Razão social", "sm:col-span-2"], ["nome_fantasia", "Nome fantasia"], ["cnpj", "CNPJ"], ["inscricao_estadual", "Inscrição estadual"]] },
-  { titulo: "Contato", campos: [["email", "E-mail institucional"], ["telefone", "Telefone"]] },
-  { titulo: "Endereço", campos: [["cep", "CEP"], ["endereco", "Logradouro", "sm:col-span-2"], ["numero_endereco", "Número"], ["complemento", "Complemento"], ["bairro", "Bairro"], ["cidade", "Cidade"], ["uf", "UF"]] },
+  { titulo: "Identificação", campos: [["nome", "Razão social", "sm:col-span-2"], ["titulo", "Nome fantasia"], ["cnpj_cpf", "CNPJ"], ["inscricao_estadual", "Inscrição estadual"]] },
+  { titulo: "Contato", campos: [["email", "E-mail institucional"], ["telefone1", "Telefone"]] },
+  { titulo: "Endereço", campos: [["cep", "CEP"], ["endereco", "Logradouro", "sm:col-span-2"], ["numero", "Número"], ["complemento", "Complemento"], ["bairro", "Bairro"], ["cidade", "Cidade"], ["uf", "UF"]] },
 ];
 const MARCA = ["logo", "logo_escuro", "cor_primaria_claro", "cor_primaria_escuro"];
 const TODOS = [...GRUPOS.flatMap((g) => g.campos.map((c) => c[0])), ...MARCA];
@@ -61,7 +61,7 @@ export function DadosMarcaCondSecao({ condominioId, podeEditar }: { condominioId
             {g.campos.map(([k, l, cls]) => (
               <div key={k} className={`min-w-0 ${cls ?? ""}`}>
                 <Label htmlFor={`cd-${k}`} className="mb-1.5 block">{l}</Label>
-                {k === "telefone" && podeEditar
+                {k === "telefone1" && podeEditar
                   ? <PhoneInput value={v[k] ?? ""} onChange={(x: string) => set(k, x)} />
                   : <Input id={`cd-${k}`} value={v[k] ?? ""} disabled={!podeEditar} maxLength={k === "uf" ? 2 : undefined} onChange={(e) => set(k, k === "uf" ? e.target.value.toUpperCase() : e.target.value)} />}
               </div>
