@@ -63,3 +63,10 @@
 - [x] Moradores em Usuários (e-mail obrigatório), liberar/revogar acesso, proprietário x inquilino, prestadores, veículos com placa, pets, documentos, emergência, menu lateral, vagas privativas e sorteio auditável.
 - [ ] Ativar no banco próprio — aguarda executar atendeai-condominios-unidades-completo.sql e liberar as 3 funções aos perfis.
 - [ ] Consulta automática de placa — aguarda token do provedor (PLACA_API_TOKEN).
+
+## Espaços & Reservas
+- [x] Etapa 1: script do banco (conectcon-espacos-reservas.sql)
+- [x] Etapa 2: motor de regras + testes (src/lib/cond-reservas.ts)
+- [x] Etapa 3a: Regras de agendamento (horários, unidades, outros espaços, feriados, trava amarela)
+- [ ] Etapa 3b: Gerenciar agendamentos (aprovação, reservar por terceiro) e Meus agendamentos — aguarda script rodado
+- [ ] Etapa 4: fluxo do morador (calendário, aceite, convidados, lista de espera)

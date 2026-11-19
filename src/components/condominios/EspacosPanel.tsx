@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { BadgeCheck, Briefcase, Camera, Hammer, Images, Luggage, Pencil, Plus, Search, Settings2, Star, Trash2, Trees, Truck, Users, type LucideIcon } from "lucide-react";
+import { BadgeCheck, CalendarX, SlidersHorizontal, Briefcase, Camera, Hammer, Images, Luggage, Pencil, Plus, Search, Settings2, Star, Trash2, Trees, Truck, Users, type LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,7 @@ import { comprimirImagem } from "@/lib/image-compress";
 import type { Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
 import { AcaoIcone } from "./AcaoIcone";
+import { BloqueioDatasDialog, RegrasEspacoSheet } from "./RegrasEspacoSheet";
 import { ordemNatural, s, useCondRows, useCondSalvar } from "./cond-data";
 
 type Perms = { canCreate: boolean; canUpdate: boolean; canDelete: boolean };
@@ -61,6 +62,8 @@ export function EspacosPanel({ condominioId, perms }: { condominioId: string; pe
   const [editar, setEditar] = useState<Row | "novo" | null>(null);
   const [galeria, setGaleria] = useState<Foto[] | null>(null);
   const [aba, setAba] = useState<"todos" | Tipo>("todos");
+  const [regras, setRegras] = useState<Row | null>(null);
+  const [datas, setDatas] = useState(false);
   const contagem = useMemo(() => ({ todos: rows.length, social: rows.filter((r) => tipoDe(r) === "social").length, operacional: rows.filter((r) => tipoDe(r) === "operacional").length }), [rows]);
 
   const lista = useMemo(() => {
@@ -82,6 +85,7 @@ export function EspacosPanel({ condominioId, perms }: { condominioId: string; pe
           <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar espaço..." className="pl-8" aria-label="Buscar espaço" />
         </div>
+        {perms.canUpdate && <Button variant="outline" onClick={() => setDatas(true)}><CalendarX className="size-4" /> Bloquear datas específicas</Button>}
         {perms.canCreate && <Button onClick={() => setEditar("novo")}><Plus className="size-4" /> Novo cadastro</Button>}
       </div>
 
@@ -120,6 +124,7 @@ export function EspacosPanel({ condominioId, perms }: { condominioId: string; pe
                   <div className="flex items-start justify-between gap-2">
                     <h3 className="font-semibold leading-tight">{s(r["nome"])}</h3>
                     <div className="flex shrink-0">
+                      {perms.canUpdate && r["permite_agendamento"] !== false && <AcaoIcone titulo="Regras de agendamento" onClick={() => setRegras(r)}><SlidersHorizontal className="size-4" /></AcaoIcone>}
                       {perms.canUpdate && <AcaoIcone titulo="Editar" onClick={() => setEditar(r)}><Pencil className="size-4" /></AcaoIcone>}
                       {perms.canDelete && <AcaoIcone titulo="Excluir" destrutivo onClick={() => excluir(r)}><Trash2 className="size-4" /></AcaoIcone>}
                     </div>
@@ -151,6 +156,9 @@ export function EspacosPanel({ condominioId, perms }: { condominioId: string; pe
           salvando={salvar.isPending}
         />
       )}
+
+      {regras && <RegrasEspacoSheet espaco={regras} condominioId={condominioId} espacos={rows} onClose={() => setRegras(null)} />}
+      {datas && <BloqueioDatasDialog condominioId={condominioId} espacos={rows} onClose={() => setDatas(false)} />}
 
       <Dialog open={!!galeria} onOpenChange={(o) => !o && setGaleria(null)}>
         <DialogContent className="max-h-[92dvh] overflow-y-auto max-w-3xl">
