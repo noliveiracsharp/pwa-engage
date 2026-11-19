@@ -21,6 +21,8 @@ import { AvisoEditorDialog, LeiturasDialog, ReenviarDialog, StatusEnvioDialog, t
 import { abrirArquivo } from "@/components/layout/VisualizadorArquivo";
 import { useAuth } from "@/hooks/useAuth";
 import { rowId } from "@/lib/crud";
+import { DocumentoIADialog } from "./DocumentoIADialog";
+import { Sparkles } from "lucide-react";
 import { STATUS_AVISO, statusDoAviso } from "@/lib/cond-avisos-ciclo";
 
 type Opt = { value: string; label: string };
@@ -76,6 +78,7 @@ export function DocumentosPanel({ condominioId, perms, condominios, blocos, unid
   const [cat, setCat] = useState("todas");
   const [busca, setBusca] = useState("");
   const [editando, setEditando] = useState<Row | null | undefined>(undefined);
+  const [ia, setIa] = useState<Row | null>(null);
 
   const contagem = useMemo(() => {
     const m = new Map<string, number>();
@@ -170,6 +173,7 @@ export function DocumentosPanel({ condominioId, perms, condominios, blocos, unid
                   <div className="ml-auto flex flex-wrap justify-end">
                     {gestao && <Button size="icon" variant="ghost" className="size-10 md:size-8" aria-label="Quem visualizou" onClick={() => verLeituras(d)}><Eye className="size-4" /></Button>}
                     <Button size="icon" variant="ghost" className="size-10 md:size-8" aria-label="Visualizar documento" onClick={() => abrir(d)}><Eye className="size-4" /></Button>
+                    {/pdf/i.test(s(d["arquivo_tipo"]) + s(d["arquivo_nome"])) && <Button size="icon" variant="ghost" className="size-10 md:size-8" aria-label="Leitura por IA (artigos e perguntas)" title="Leitura por IA" onClick={() => setIa(d)}><Sparkles className="size-4 text-primary" /></Button>}
                     {perms.canCreate && <Button size="icon" variant="ghost" className="size-10 md:size-8" aria-label="Enviar ou agendar para moradores" onClick={() => prepararEnvio(d)}><Megaphone className="size-4" /></Button>}
                     {gestao && avisosDoDoc(s(d["id"]))[0] && <Button size="icon" variant="ghost" className="size-10 md:size-8" aria-label="Status do envio" onClick={() => setStatus(avisosDoDoc(s(d["id"]))[0]!)}><Activity className="size-4" /></Button>}
                     {perms.canCreate && avisosDoDoc(s(d["id"]))[0] && <Button size="icon" variant="ghost" className="size-10 md:size-8" aria-label="Reenviar" onClick={() => setReenviar(avisosDoDoc(s(d["id"]))[0]!)}><Send className="size-4" /></Button>}
@@ -192,6 +196,7 @@ export function DocumentosPanel({ condominioId, perms, condominios, blocos, unid
       {status && <StatusEnvioDialog aviso={status} onClose={() => setStatus(null)} />}
       {reenviar && <ReenviarDialog aviso={reenviar} empresaId={empresaId} nomeCondominio={nomeCond} onClose={() => setReenviar(null)} />}
 
+      {ia && <DocumentoIADialog doc={ia} gestao={gestao && perms.canUpdate} onClose={() => setIa(null)} />}
       {gerenciar && <CategoriasDialog condominioId={condominioId} rows={catRows} contagem={contagem} onClose={() => setGerenciar(false)} />}
 
     </div>
