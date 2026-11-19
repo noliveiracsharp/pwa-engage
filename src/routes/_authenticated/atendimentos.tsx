@@ -202,6 +202,7 @@ function AtendimentosPage() {
   }, [atendimentos, etapas, kanbans, isMaster, usuarioId, instFiltro, depFiltro, parcFiltro, rapido, busca, pessoasMap, participantes, ultimas, visiveis, meuParticipa]);
 
   const ativo = atendimentos.find((a) => text(rowId(a)) === id);
+  useEffect(() => { if (painel && ativo) setPainelAberto(true); }, [painel, ativo]);
   useEffect(() => {
     if (typeof window !== "undefined" && window.innerWidth < 1024) setPainel(false);
   }, []);
@@ -398,7 +399,6 @@ function AtendimentosPage() {
       )}
 
       {/* Coluna 3 */}
-      {ativo && painel && !painelAberto && (setTimeout(() => setPainelAberto(true)), null)}
       {ativo && painel && (
         <div className="fixed inset-0 z-40 flex bg-card md:static md:z-auto">
           <ContatoPainel
