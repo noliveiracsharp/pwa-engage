@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useQueryClient } from "@tanstack/react-query";
-import { CalendarDays, Clock, Lock, Search, Trees, Users } from "lucide-react";
+import { CalendarDays, Clock, Lock, Search, ShieldCheck, Trees, Users } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -41,7 +42,10 @@ function Sw({ label, checked, onChange }: { label: string; checked: boolean; onC
 }
 
 /** Regras de agendamento de um espaço (síndico/administradora). */
-export function RegrasEspacoSheet({ espaco, condominioId, espacos, onClose }: { espaco: Row; condominioId: string; espacos: Row[]; onClose: () => void }) {
+export function RegrasEspacoSheet({ espaco, condominioId, espacos, onClose, cadastro, validarCadastro }: { espaco: Row; condominioId: string; espacos: Row[]; onClose: () => void;
+  cadastro?: (v: Row, set: (k: string, val: unknown) => void) => ReactNode; validarCadastro?: (v: Row) => string | null }) {
+  const [aba, setAba] = useState<"cadastro" | "regras">(cadastro ? "cadastro" : "regras");
+  const [escolherAprov, setEscolherAprov] = useState(false);
   const qc = useQueryClient();
   const { data: reservas = [] } = useCondRows("cond_reservas", "espaco_id", s(espaco["id"]));
   const travado = useMemo(() => estruturaTravada(s(espaco["id"]),
@@ -53,12 +57,17 @@ export function RegrasEspacoSheet({ espaco, condominioId, espacos, onClose }: { 
   const [salvando, setSalvando] = useState(false);
 
   const gravar = async () => {
+    const erroCad = validarCadastro?.(v); if (erroCad) { toast.error(erroCad); setAba("cadastro"); return; }
     if (hhmm(v["hora_fim"], "22:00") <= hhmm(v["hora_inicio"], "07:00")) { toast.error("Hora fim deve ser depois da hora início."); return; }
     setSalvando(true);
-    const campos = ["exige_aprovacao", "ativo", "inativo_inicio", "inativo_fim", "inativo_texto", "valor", "texto_regimento", "texto_valor", "texto_cancelamento", "dias_min", "dias_max", "antecipar_horas", "max_por_unidade", "max_mesmo_dia", "periodo_cota", "periodo_cota_dias", "horas_entre", "horas_cancelamento", "hora_inicio", "hora_fim", "periodo_qtd", "periodo_unidade", "horarios_seguidos", "simultaneas", "intervalo_min", "bloqueio_antes_h", "bloqueio_depois_h", "max_convidados", "avisar_lista_convidados", "bloquear_inadimplentes", "mostrar_unidade", "morador_cancela_aprovada", "minutos_no_show"];
+    const campos = ["exige_aprovacao", "ativo", "inativo_inicio", "inativo_fim", "inativo_texto", "valor", "texto_regimento", "texto_valor", "texto_cancelamento", "dias_min", "dias_max", "antecipar_horas", "max_por_unidade", "max_mesmo_dia", "periodo_cota", "periodo_cota_dias", "horas_entre", "horas_cancelamento", "hora_inicio", "hora_fim", "periodo_qtd", "periodo_unidade", "horarios_seguidos", "simultaneas", "intervalo_min", "bloqueio_antes_h", "bloqueio_depois_h", "avisar_lista_convidados", "bloquear_inadimplentes", "mostrar_unidade", "morador_cancela_aprovada", "minutos_no_show", ...(cadastro ? ["nome", "tipo", "icone", "permite_agendamento", "capacidade_pessoas", "descricao", "fotos"] : [])];
     const valores: Row = Object.fromEntries(campos.map((k) => [k, v[k] === "" ? null : v[k] ?? null]));
     for (const k of ["valor", "dias_min", "antecipar_horas", "horas_entre", "horas_cancelamento", "periodo_qtd", "horarios_seguidos", "simultaneas", "intervalo_min", "bloqueio_antes_h", "bloqueio_depois_h"]) valores[k] = n(valores[k]);
     valores["dias_max"] = n(valores["dias_max"], 90); valores["ativo"] = v["ativo"] !== false;
+    // Capacidade é a única fonte do limite de convidados (evita dois campos para a mesma informação).
+    valores["max_convidados"] = v["capacidade_pessoas"] ? Number(v["capacidade_pessoas"]) : null;
+    const aprov = Array.isArray(v["aprovadores"]) ? v["aprovadores"] : [];
+    if (v["exige_aprovacao"] && aprov.length) valores["aprovadores"] = aprov;
     const { error } = await db().from("cond_espacos").update(valores).eq("id", s(espaco["id"]));
     setSalvando(false);
     if (error) { msgErro(error.message?.includes("column") ? { message: "Rode o script conectcon-espacos-reservas.sql no SQL Editor." } : error); return; }
@@ -68,11 +77,27 @@ export function RegrasEspacoSheet({ espaco, condominioId, espacos, onClose }: { 
   return (
     <Sheet open onOpenChange={(o) => !o && onClose()}>
       <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-full lg:w-[60vw] lg:max-w-[60vw]" onInteractOutside={(e) => e.preventDefault()}>
-        <SheetHeader className="border-b p-4"><SheetTitle>Regras de agendamento · {s(espaco["nome"])}</SheetTitle></SheetHeader>
-        <div className="flex-1 space-y-6 overflow-y-auto p-4">
+        <SheetHeader className="border-b p-4"><SheetTitle>{cadastro ? "Editar espaço" : "Regras de agendamento"} · {s(v["nome"])}</SheetTitle></SheetHeader>
+        {cadastro && (
+          <div role="tablist" aria-label="Seções do espaço" className="flex gap-1 border-b px-4 pt-2">
+            {([["cadastro", "Cadastro"], ["regras", "Regras de agendamento"]] as const).filter(([k]) => k === "cadastro" || v["permite_agendamento"] !== false).map(([k, l]) => (
+              <button key={k} type="button" role="tab" aria-selected={aba === k} onClick={() => setAba(k)}
+                className={cn("min-h-11 border-b-2 px-4 text-sm font-medium", aba === k ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground")}>{l}</button>
+            ))}
+          </div>
+        )}
+        {aba === "cadastro" && cadastro && <div className="flex-1 overflow-y-auto p-4">{cadastro(v, set)}</div>}
+        <div className={cn("flex-1 space-y-6 overflow-y-auto p-4", aba !== "regras" && "hidden")}>
           <section className="grid gap-3 sm:grid-cols-2">
             <Sw label="Ativo" checked={v["ativo"] !== false} onChange={(x) => set("ativo", x)} />
-            <Sw label="Exige aprovação da gestão" checked={!!v["exige_aprovacao"]} onChange={(x) => set("exige_aprovacao", x)} />
+            <div className="space-y-2">
+              <Sw label="Exige aprovação da gestão" checked={!!v["exige_aprovacao"]} onChange={(x) => set("exige_aprovacao", x)} />
+              {!!v["exige_aprovacao"] && (
+                <Button type="button" variant="outline" className="h-11 w-full justify-start" onClick={() => setEscolherAprov(true)}>
+                  <ShieldCheck className="size-4" /> Quem aprova: {Array.isArray(v["aprovadores"]) && (v["aprovadores"] as Row[]).length ? (v["aprovadores"] as Row[]).map((a) => s(a["nome"])).join(", ") : "toda a gestão (escolher)"}
+                </Button>
+              )}
+            </div>
             <Campo label="Valor a cobrar (R$)"><Input {...num("valor")} step="0.01" /></Campo>
           </section>
 
@@ -136,7 +161,6 @@ export function RegrasEspacoSheet({ espaco, condominioId, espacos, onClose }: { 
           </section>
 
           <section className="grid gap-3 sm:grid-cols-2">
-            <Campo label="Máximo de convidados" ajuda="Em branco = ilimitado"><Input {...num("max_convidados")} placeholder="Ilimitado" /></Campo>
             <Campo label="Cancelar se não usar (minutos, SmartAccess)"><Input {...num("minutos_no_show")} placeholder="Desligado" /></Campo>
             <Sw label="Avisar condomínio do preenchimento da lista de convidados" checked={!!v["avisar_lista_convidados"]} onChange={(x) => set("avisar_lista_convidados", x)} />
             <Sw label="Bloquear inadimplentes automaticamente" checked={!!v["bloquear_inadimplentes"]} onChange={(x) => set("bloquear_inadimplentes", x)} />
@@ -155,6 +179,8 @@ export function RegrasEspacoSheet({ espaco, condominioId, espacos, onClose }: { 
             set("horarios_bloqueados", lista); toast.success("Horários bloqueados salvos."); setSub(null);
             void qc.invalidateQueries({ queryKey: ["cond", "cond_espacos"] });
           }} />}
+        {escolherAprov && <AprovadoresDialog condominioId={condominioId} valor={Array.isArray(v["aprovadores"]) ? (v["aprovadores"] as Row[]) : []}
+          onClose={() => setEscolherAprov(false)} onAplicar={(l) => { set("aprovadores", l); setEscolherAprov(false); }} />}
         {sub === "unidades" && <UnidadesDialog condominioId={condominioId} espacoId={s(espaco["id"])} onClose={() => setSub(null)} />}
         {sub === "espacos" && <OutrosEspacosDialog condominioId={condominioId} espaco={espaco} espacos={espacos} onClose={() => setSub(null)} />}
       </SheetContent>
@@ -345,6 +371,76 @@ export function BloqueioDatasDialog({ condominioId, espacos, onClose }: { condom
           </>
         )}
         <DialogFooter><Button variant="outline" className="h-11" onClick={onClose}>Fechar</Button><Button className="h-11" onClick={salvar} disabled={salvando || !data}>{salvando ? "Salvando..." : "Salvar bloqueio"}</Button></DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+const ROTULO_FUNCAO: Record<string, string> = { sindico: "Síndico(a)", subsindico: "Subsíndico(a)", conselheiro: "Conselho", conselho: "Conselho", conselho_fiscal: "Conselho fiscal", conselho_consultivo: "Conselho consultivo" };
+
+/** Pessoas da gestão (síndico, subsíndico, conselho, gerente, administradora) que podem aprovar reservas. */
+function AprovadoresDialog({ condominioId, valor, onClose, onAplicar }: { condominioId: string; valor: Row[]; onClose: () => void; onAplicar: (l: Row[]) => void }) {
+  const [sel, setSel] = useState(new Set(valor.map((a) => s(a["chave"]))));
+  const [busca, setBusca] = useState("");
+  const { data: pessoas = [], isLoading } = useQuery({
+    queryKey: ["cond", "espaco-aprovadores", condominioId],
+    queryFn: async (): Promise<Row[]> => {
+      const out = new Map<string, Row>();
+      const add = (r: Row) => { if (!out.has(s(r["chave"]))) out.set(s(r["chave"]), r); };
+      const { data: eq } = await db().from("cond_equipe").select("id,usuario_id,nome,email,cargo,vinculo,status").eq("condominio_id", condominioId);
+      for (const e of (eq ?? []) as Row[]) {
+        if (e["status"] === false) continue;
+        const cargo = s(e["cargo"]).replace(/_/g, " ");
+        if (!/sindic|conselh|gerente|administr|diretor|presidente/i.test(cargo + " " + s(e["vinculo"]))) continue;
+        add({ chave: e["usuario_id"] ? `u:${s(e["usuario_id"])}` : `e:${s(e["id"])}`, usuario_id: e["usuario_id"] ?? null, equipe_id: e["id"], nome: s(e["nome"]), email: s(e["email"]), perfil: cargo.charAt(0).toUpperCase() + cargo.slice(1) });
+      }
+      const { data: us } = await db().from("cond_unidades").select("id").eq("condominio_id", condominioId);
+      const ids = ((us ?? []) as Row[]).map((u) => s(u["id"]));
+      if (ids.length) {
+        const { data: vs } = await db().from("cond_unidades_vinculos").select("usuario_id,funcao_condominio").in("cond_unidade_id", ids).in("funcao_condominio", Object.keys(ROTULO_FUNCAO));
+        const uids = [...new Set(((vs ?? []) as Row[]).map((x) => s(x["usuario_id"])))];
+        const { data: ps } = uids.length ? await db().from("usuarios").select("id,nome,email").in("id", uids) : { data: [] };
+        for (const x of (vs ?? []) as Row[]) {
+          const p = ((ps ?? []) as Row[]).find((q) => s(q["id"]) === s(x["usuario_id"])); if (!p) continue;
+          add({ chave: `u:${s(p["id"])}`, usuario_id: p["id"], nome: s(p["nome"]) || s(p["email"]), email: s(p["email"]), perfil: ROTULO_FUNCAO[s(x["funcao_condominio"])] ?? s(x["funcao_condominio"]) });
+        }
+      }
+      const { data: c } = await db().from("empresas").select("administradora_id").eq("id", condominioId).maybeSingle();
+      const adm = s((c as Row | null)?.["administradora_id"]);
+      if (adm) {
+        const { data: au } = await db().from("usuarios").select("id,nome,email,status").eq("empresa_id", adm);
+        for (const p of (au ?? []) as Row[]) if (p["status"] !== false) add({ chave: `u:${s(p["id"])}`, usuario_id: p["id"], nome: s(p["nome"]) || s(p["email"]), email: s(p["email"]), perfil: "Administradora" });
+      }
+      return [...out.values()].sort((a, b) => ordemNatural(s(a["nome"]), s(b["nome"])));
+    },
+  });
+  const t = busca.trim().toLowerCase();
+  const lista = pessoas.filter((p) => !t || `${s(p["nome"])} ${s(p["email"])} ${s(p["perfil"])}`.toLowerCase().includes(t));
+  const alt = (k: string) => setSel((p) => { const x = new Set(p); x.has(k) ? x.delete(k) : x.add(k); return x; });
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-h-[92dvh] max-w-2xl overflow-y-auto">
+        <DialogHeader><DialogTitle>Quem recebe as aprovações</DialogTitle></DialogHeader>
+        <p className="text-sm text-muted-foreground">Marque uma ou mais pessoas. Sem ninguém marcado, toda a gestão pode aprovar.</p>
+        <div className="relative"><Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input className="h-11 pl-8" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar por nome, e-mail ou perfil..." aria-label="Buscar pessoa" /></div>
+        {isLoading ? <p className="text-sm text-muted-foreground">Carregando...</p> : lista.length === 0 ? <p className="py-6 text-center text-sm text-muted-foreground">Ninguém da gestão encontrado.</p> : (
+          <ul className="divide-y rounded-md border">
+            {lista.map((p) => (
+              <li key={s(p["chave"])}>
+                <label className="flex min-h-12 cursor-pointer items-center gap-3 px-3 py-2">
+                  <Checkbox checked={sel.has(s(p["chave"]))} onCheckedChange={() => alt(s(p["chave"]))} />
+                  <span className="min-w-0 flex-1"><span className="block font-medium">{s(p["nome"])}</span><span className="block truncate text-xs text-muted-foreground">{s(p["email"]) || "sem e-mail"}</span></span>
+                  <span className="shrink-0 text-xs text-muted-foreground">{s(p["perfil"])}</span>
+                </label>
+              </li>
+            ))}
+          </ul>
+        )}
+        <DialogFooter>
+          <Button variant="outline" className="h-11" onClick={onClose}>Cancelar</Button>
+          <Button className="h-11" onClick={() => onAplicar(pessoas.filter((p) => sel.has(s(p["chave"]))))}>Aplicar ({sel.size})</Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
