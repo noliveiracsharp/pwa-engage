@@ -24,6 +24,7 @@ export function DocumentoIADialog({ doc, gestao, onClose }: { doc: Row; gestao: 
   const docId = s(doc["id"]);
   const qc = useQueryClient();
   const ler = useServerFn(lerDocumentoIA);
+  const [progresso, setProgresso] = useState("");
   const perguntar = useServerFn(perguntarRegimento);
   const [lendo, setLendo] = useState(false);
   const [busca, setBusca] = useState("");
@@ -53,8 +54,18 @@ export function DocumentoIADialog({ doc, gestao, onClose }: { doc: Row; gestao: 
       const { data: url } = await supabase.storage.from("cond-documentos").createSignedUrl(s(doc["arquivo_path"]), 1800);
       if (!url) throw new Error("Não foi possível acessar o arquivo.");
       const token = (await supabase.auth.getSession()).data.session?.access_token;
-      const r = await ler({ data: { url: url.signedUrl, token } });
-      if (r.erro) throw new Error(r.erro);
+      const todos: Awaited<ReturnType<typeof ler>>["artigos"] = [];
+      let depois: string | undefined;
+      for (let passo = 0; passo < 20; passo++) {
+        setProgresso(passo ? `Lendo… ${todos.length} artigos até agora` : "Lendo o documento…");
+        const parte = await ler({ data: { url: url.signedUrl, token, depois } });
+        if (parte.erro) { if (todos.length) break; throw new Error(parte.erro); }
+        todos.push(...parte.artigos);
+        const ult = parte.artigos[parte.artigos.length - 1];
+        if (parte.fim || !ult) break;
+        depois = `${ult.numero ?? ""} ${ult.titulo ?? ""} ${ult.texto.slice(-200)}`.trim().slice(0, 590);
+      }
+      const r = { artigos: todos };
       const del = await db.from("cond_documentos_artigos").delete().eq("documento_id", docId);
       if (del.error) throw del.error;
       const linhas = r.artigos.map((a, i) => ({ ...a, documento_id: docId, condominio_id: s(doc["condominio_id"]), ordem: i }));
@@ -66,7 +77,7 @@ export function DocumentoIADialog({ doc, gestao, onClose }: { doc: Row; gestao: 
       toast.success(`${linhas.length} artigos lidos e guardados.`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Falha na leitura.");
-    } finally { setLendo(false); }
+    } finally { setLendo(false); setProgresso(""); }
   }
 
   async function enviarPergunta() {
@@ -106,7 +117,7 @@ export function DocumentoIADialog({ doc, gestao, onClose }: { doc: Row; gestao: 
                 </div>
                 {gestao && <Button className="min-h-11" onClick={processar} disabled={lendo}>{lendo ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />} {artigos.length ? "Ler de novo" : "Ler com IA"}</Button>}
               </div>
-              {lendo && <p role="status" className="rounded-lg bg-muted p-3 text-base">Lendo todas as páginas, inclusive as escaneadas. Documentos grandes levam alguns minutos; não feche esta janela.</p>}
+              {lendo && <p role="status" className="rounded-lg bg-muted p-3 text-base">Lendo todas as páginas, inclusive as escaneadas. Documentos grandes levam alguns minutos; não feche esta janela.{progresso && <strong className="mt-1 block">{progresso}</strong>}</p>}
               {!artigos.length && !lendo ? (
                 <p className="rounded-lg border border-dashed p-6 text-center text-base text-muted-foreground">{gestao ? "Este documento ainda não foi lido. Clique em Ler com IA para transformar o PDF em artigos pesquisáveis." : "Este documento ainda não foi lido pela administração."}</p>
               ) : (

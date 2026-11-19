@@ -5,8 +5,9 @@ import { exigirLogin } from "@/lib/auth-guard";
 export type ArtigoLido = { origem: "convencao" | "regimento" | "outro"; capitulo: string | null; numero: string | null; titulo: string | null; tema: string | null; texto: string };
 
 const SCHEMA = {
-  type: "object", additionalProperties: false, required: ["artigos"],
+  type: "object", additionalProperties: false, required: ["artigos", "fim"],
   properties: {
+    fim: { type: "boolean", description: "true quando não há mais artigos depois destes no documento" },
     artigos: {
       type: "array",
       items: {
@@ -129,31 +130,36 @@ async function gateway(body: unknown): Promise<Res> {
 /** Lê o PDF (inclusive escaneado) e devolve os artigos da convenção e do regimento. */
 export const lerDocumentoIA = createServerFn({ method: "POST" })
   .middleware([exigirLogin])
-  .inputValidator((d) => z.object({ url: z.string().url().max(3000), token: z.string().max(5000).optional() }).parse(d))
-  .handler(async ({ data }): Promise<{ artigos: ArtigoLido[]; erro?: string }> => {
+  .inputValidator((d) => z.object({ url: z.string().url().max(3000), token: z.string().max(5000).optional(), depois: z.string().max(600).optional() }).parse(d))
+  .handler(async ({ data }): Promise<{ artigos: ArtigoLido[]; fim: boolean; erro?: string }> => {
     try {
+      const parte = data.depois
+        ? `\n\nCONTINUAÇÃO: os trechos até "${data.depois}" já foram transcritos. Comece IMEDIATAMENTE depois dele, sem repetir nada.`
+        : "\n\nComece do início do documento.";
+      const PEDIDO = `${PROMPT_LER}${parte}\nTranscreva no máximo 25 artigos nesta resposta e marque fim=false se ainda houver artigos depois; fim=true só quando chegar ao final do documento. Nunca escreva notas ou comentários sobre a transcrição.`;
       const a = await autorizar(data.token);
-      if (a.permitido === false) return { artigos: [], erro: a.motivo === "cota" ? `Limite de ${a.cota} usos de IA no mês atingido.` : "A IA está nos planos Pro e Enterprise ou com a chave própria da empresa (Empresas → Inteligência Artificial)." };
+      if (a.permitido === false) return { artigos: [], fim: true, erro: a.motivo === "cota" ? `Limite de ${a.cota} usos de IA no mês atingido.` : "A IA está nos planos Pro e Enterprise ou com a chave própria da empresa (Empresas → Inteligência Artificial)." };
       const { txt, erro } = a.origem === "propria" && a.chave
-        ? await chavePropria(a, "Você transcreve documentos condominiais brasileiros. Responda somente JSON válido.", `${PROMPT_LER}\n\nResponda em JSON no formato {"artigos":[{"origem":"convencao|regimento|outro","capitulo":null,"numero":"Art. 1","titulo":null,"tema":"palavra-chave","texto":"texto integral"}]}.`, data.url, true)
+        ? await chavePropria(a, "Você transcreve documentos condominiais brasileiros. Responda somente JSON válido.", `${PEDIDO}\n\nResponda em JSON no formato {"fim":false,"artigos":[{"origem":"convencao|regimento|outro","capitulo":null,"numero":"Art. 1","titulo":null,"tema":"palavra-chave","texto":"texto integral"}]}.`, data.url, true)
         : await gateway({
         model: "openai/gpt-6.1-sol",
         reasoning: { effort: "low" },
         text: { format: { type: "json_schema", name: "artigos", strict: true, schema: SCHEMA } },
         input: [{ role: "user", content: [
-          { type: "input_text", text: PROMPT_LER },
+          { type: "input_text", text: PEDIDO },
           { type: "input_file", file_url: data.url },
         ] }],
       });
-      if (erro) return { artigos: [], erro };
+      if (erro) return { artigos: [], fim: true, erro };
       const limpo = txt.trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "");
-      const j = JSON.parse(limpo) as { artigos?: ArtigoLido[] };
+      const j = JSON.parse(limpo) as { artigos?: ArtigoLido[]; fim?: boolean };
       const ORIG = ["convencao", "regimento", "outro"];
-      const artigos = (j.artigos ?? []).filter((x) => x.texto?.trim()).map((x) => ({ ...x, origem: ORIG.includes(x.origem) ? x.origem : "outro", capitulo: x.capitulo ?? null, numero: x.numero ?? null, titulo: x.titulo ?? null, tema: x.tema ?? null }));
-      return artigos.length ? { artigos } : { artigos: [], erro: "Nenhum artigo encontrado no documento." };
+      const artigos = (j.artigos ?? []).filter((x) => x.texto?.trim() && !/transcri[çc][ãa]o (parcial|integral)|nota sobre a transcri/i.test(`${x.titulo ?? ""} ${x.texto.slice(0, 200)}`)).map((x) => ({ ...x, origem: ORIG.includes(x.origem) ? x.origem : "outro", capitulo: x.capitulo ?? null, numero: x.numero ?? null, titulo: x.titulo ?? null, tema: x.tema ?? null }));
+      const fim = j.fim !== false || !artigos.length;
+      return artigos.length || data.depois ? { artigos, fim } : { artigos: [], fim: true, erro: "Nenhum artigo encontrado no documento." };
     } catch (e) {
       console.error("lerDocumentoIA", e);
-      return { artigos: [], erro: "A IA não conseguiu ler o documento." };
+      return { artigos: [], fim: true, erro: "A IA não conseguiu ler o documento." };
     }
   });
 
