@@ -16,6 +16,14 @@ const GRUPOS: { titulo: string; campos: [string, string, string?][] }[] = [
 const MARCA = ["logo", "logo_escuro", "cor_primaria_claro", "cor_primaria_escuro"];
 const TODOS = [...GRUPOS.flatMap((g) => g.campos.map((c) => c[0])), ...MARCA];
 
+/** Telefones antigos gravados como "551141163571" viram "+551141163571" para o seletor de país não duplicar o 55. */
+function carregar(d: Record<string, unknown>): Record<string, string> {
+  const o = Object.fromEntries(TODOS.map((k) => [k, d[k] == null ? "" : String(d[k])]));
+  const dig = o["telefone1"].replace(/\D/g, "");
+  if (!o["telefone1"].startsWith("+") && dig.startsWith("55") && dig.length >= 12) o["telefone1"] = `+${dig}`;
+  return o;
+}
+
 /** Dados cadastrais e marca própria (white label) do condomínio, editáveis pelo síndico. */
 export function DadosMarcaCondSecao({ condominioId, podeEditar }: { condominioId: string; podeEditar: boolean }) {
   const qc = useQueryClient();
@@ -31,7 +39,7 @@ export function DadosMarcaCondSecao({ condominioId, podeEditar }: { condominioId
   const [v, setV] = useState<Record<string, string>>({});
   const [salvando, setSalvando] = useState(false);
   useEffect(() => {
-    if (q.data) setV(Object.fromEntries(TODOS.map((k) => [k, q.data[k] == null ? "" : String(q.data[k])])));
+    if (q.data) setV(carregar(q.data));
   }, [q.data]);
   const set = (k: string, x: string) => setV((o) => ({ ...o, [k]: x }));
 
@@ -88,7 +96,7 @@ export function DadosMarcaCondSecao({ condominioId, podeEditar }: { condominioId
       </section>
       {podeEditar && (
         <div className="sticky bottom-0 flex justify-end gap-2 border-t bg-background py-3">
-          <Button variant="outline" onClick={() => q.data && setV(Object.fromEntries(TODOS.map((k) => [k, q.data[k] == null ? "" : String(q.data[k])])))}>Cancelar</Button>
+          <Button variant="outline" onClick={() => q.data && setV(carregar(q.data))}>Cancelar</Button>
           <Button onClick={salvar} disabled={salvando}>{salvando ? "Salvando…" : "Salvar"}</Button>
         </div>
       )}
