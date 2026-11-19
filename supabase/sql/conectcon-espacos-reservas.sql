@@ -191,3 +191,8 @@ CREATE TRIGGER cond_espacos_trava_estrutura BEFORE UPDATE ON public.cond_espacos
   FOR EACH ROW EXECUTE FUNCTION public.cond_espacos_trava_estrutura();
 
 NOTIFY pgrst, 'reload schema';
+
+-- Aprovadores escolhidos por espaço (lista vazia = toda a gestão aprova)
+ALTER TABLE public.cond_espacos ADD COLUMN IF NOT EXISTS aprovadores jsonb NOT NULL DEFAULT '[]'::jsonb;
+-- Capacidade passa a ser a fonte única do limite de convidados
+UPDATE public.cond_espacos SET max_convidados = capacidade_pessoas WHERE capacidade_pessoas IS NOT NULL AND max_convidados IS DISTINCT FROM capacidade_pessoas;

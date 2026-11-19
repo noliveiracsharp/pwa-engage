@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { BadgeCheck, CalendarX, SlidersHorizontal, Briefcase, Camera, Hammer, Images, Luggage, Pencil, Plus, Search, Settings2, Star, Trash2, Trees, Truck, Users, type LucideIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from "lucide-react";
+import { BadgeCheck, CalendarX, Briefcase, Camera, Hammer, Images, Luggage, Pencil, Plus, Search, Settings2, Star, Trash2, Trees, Truck, Users, type LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
@@ -124,8 +125,7 @@ export function EspacosPanel({ condominioId, perms }: { condominioId: string; pe
                   <div className="flex items-start justify-between gap-2">
                     <h3 className="font-semibold leading-tight">{s(r["nome"])}</h3>
                     <div className="flex shrink-0">
-                      {perms.canUpdate && r["permite_agendamento"] !== false && <AcaoIcone titulo="Regras de agendamento" onClick={() => setRegras(r)}><SlidersHorizontal className="size-4" /></AcaoIcone>}
-                      {perms.canUpdate && <AcaoIcone titulo="Editar" onClick={() => setEditar(r)}><Pencil className="size-4" /></AcaoIcone>}
+                      {perms.canUpdate && <AcaoIcone titulo="Editar cadastro e regras" onClick={() => setRegras(r)}><Pencil className="size-4" /></AcaoIcone>}
                       {perms.canDelete && <AcaoIcone titulo="Excluir" destrutivo onClick={() => excluir(r)}><Trash2 className="size-4" /></AcaoIcone>}
                     </div>
                   </div>
@@ -157,17 +157,12 @@ export function EspacosPanel({ condominioId, perms }: { condominioId: string; pe
         />
       )}
 
-      {regras && <RegrasEspacoSheet espaco={regras} condominioId={condominioId} espacos={rows} onClose={() => setRegras(null)} />}
+      {regras && <RegrasEspacoSheet espaco={{ ...regras, tipo: tipoDe(regras), icone: iconeDe(regras), fotos: fotosDe(regras) }} condominioId={condominioId} espacos={rows} onClose={() => setRegras(null)}
+        validarCadastro={(v) => (s(v["nome"]).trim() ? null : "Informe o nome do espaço.")}
+        cadastro={(v, set) => <CadastroEspaco v={v} set={set} />} />}
       {datas && <BloqueioDatasDialog condominioId={condominioId} espacos={rows} onClose={() => setDatas(false)} />}
 
-      <Dialog open={!!galeria} onOpenChange={(o) => !o && setGaleria(null)}>
-        <DialogContent className="max-h-[92dvh] overflow-y-auto max-w-3xl">
-          <DialogHeader><DialogTitle>Fotos do espaço</DialogTitle></DialogHeader>
-          <div className="grid max-h-[70vh] gap-2 overflow-y-auto sm:grid-cols-2">
-            {galeria?.map((f) => <img key={f.url} src={f.url} alt={f.legenda || "Foto do espaço"} className="w-full rounded-md object-cover" />)}
-          </div>
-        </DialogContent>
-      </Dialog>
+      {galeria && <Carrossel fotos={galeria} onClose={() => setGaleria(null)} />}
     </div>
   );
 }
@@ -289,5 +284,121 @@ function EspacoSheet({ registro, proximaOrdem, onClose, onSalvar, salvando }: {
         </div>
       </SheetContent>
     </Sheet>
+  );
+}
+
+/** Galeria com setas (botões e teclado) e zoom. */
+function Carrossel({ fotos, onClose }: { fotos: Foto[]; onClose: () => void }) {
+  const [i, setI] = useState(0);
+  const [zoom, setZoom] = useState(1);
+  const ir = (d: number) => { setZoom(1); setI((p) => (p + d + fotos.length) % fotos.length); };
+  const f = fotos[i]!;
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-h-[96dvh] max-w-5xl" onKeyDown={(e) => { if (e.key === "ArrowLeft") ir(-1); if (e.key === "ArrowRight") ir(1); }}>
+        <DialogHeader><DialogTitle>Fotos do espaço <span className="text-sm font-normal text-muted-foreground">{i + 1} de {fotos.length}</span></DialogTitle></DialogHeader>
+        <div className="relative flex h-[70dvh] items-center justify-center overflow-auto rounded-md bg-muted">
+          <img src={f.url} alt={f.legenda || `Foto ${i + 1}`} onClick={() => setZoom((z) => (z === 1 ? 2 : 1))}
+            className={cn("max-h-full max-w-full object-contain transition-transform", zoom > 1 ? "cursor-zoom-out" : "cursor-zoom-in")} style={{ transform: `scale(${zoom})`, transformOrigin: "center" }} />
+          {fotos.length > 1 && <>
+            <Button type="button" size="icon" variant="secondary" className="absolute left-2 top-1/2 size-12 -translate-y-1/2 rounded-full" aria-label="Foto anterior" onClick={() => ir(-1)}><ChevronLeft className="size-6" /></Button>
+            <Button type="button" size="icon" variant="secondary" className="absolute right-2 top-1/2 size-12 -translate-y-1/2 rounded-full" aria-label="Próxima foto" onClick={() => ir(1)}><ChevronRight className="size-6" /></Button>
+          </>}
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex gap-1 overflow-x-auto">
+            {fotos.map((x, j) => (
+              <button key={x.url} type="button" aria-label={`Ver foto ${j + 1}`} aria-current={j === i} onClick={() => { setZoom(1); setI(j); }}
+                className={cn("size-14 shrink-0 overflow-hidden rounded border-2", j === i ? "border-primary" : "border-transparent opacity-70")}><img src={x.url} alt="" className="size-full object-cover" /></button>
+            ))}
+          </div>
+          <div className="flex gap-1">
+            <Button type="button" size="icon" variant="outline" className="size-11" aria-label="Diminuir zoom" disabled={zoom <= 1} onClick={() => setZoom((z) => Math.max(1, z - 0.5))}><ZoomOut className="size-5" /></Button>
+            <Button type="button" size="icon" variant="outline" className="size-11" aria-label="Aumentar zoom" disabled={zoom >= 4} onClick={() => setZoom((z) => Math.min(4, z + 0.5))}><ZoomIn className="size-5" /></Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** Aba "Cadastro" da tela única do espaço (mesmos campos do novo cadastro). */
+function CadastroEspaco({ v, set }: { v: Row; set: (k: string, val: unknown) => void }) {
+  const tipo = (v["tipo"] as Tipo) ?? "social";
+  const icone = (v["icone"] as Icone) ?? "outro";
+  const fotos = fotosDe(v);
+  const [enviando, setEnviando] = useState(false);
+  const adicionar = async (files: FileList | null) => {
+    if (!files?.length) return;
+    setEnviando(true);
+    const novas: Foto[] = [];
+    for (const f of Array.from(files)) { const url = await enviarFoto(f); if (url) novas.push({ url }); }
+    set("fotos", [...fotos, ...novas]);
+    setEnviando(false);
+  };
+  return (
+    <div className="space-y-4">
+      <div className="space-y-1.5">
+        <Label>Tipo *</Label>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {([["social", "Espaço social / lazer", "Salão, churrasqueira, academia, piscina...", Trees], ["operacional", "Operacional / serviços", "Mudança, reforma, locação temporária, visitantes...", Settings2]] as const).map(([k, t, d, I]) => (
+            <button key={k} type="button" aria-pressed={tipo === k} onClick={() => set("tipo", k)}
+              className={cn("flex min-h-11 items-start gap-3 rounded-md border p-3 text-left text-sm transition-colors", tipo === k ? "border-primary bg-primary/5" : "hover:bg-muted")}>
+              <I className="mt-0.5 size-5 shrink-0" /><span><span className="font-medium">{t}</span><span className="block text-xs text-muted-foreground">{d}</span></span>
+            </button>
+          ))}
+        </div>
+      </div>
+      {tipo === "operacional" && (
+        <div className="flex flex-wrap gap-2">
+          {(Object.keys(ICONES) as Icone[]).sort((a, b) => ICONES[a].label.localeCompare(ICONES[b].label, "pt-BR")).map((k) => {
+            const it = ICONES[k];
+            return <button key={k} type="button" aria-pressed={icone === k} onClick={() => set("icone", k)} className={cn("flex min-h-11 items-center gap-1.5 rounded-md border px-3 text-sm", icone === k ? "border-primary bg-primary/5" : "hover:bg-muted")}><it.Icon className={cn("size-4", it.cor)} />{it.label}</button>;
+          })}
+        </div>
+      )}
+      <div className="space-y-1.5">
+        <Label htmlFor="cad-nome">Nome *</Label>
+        <Input id="cad-nome" className="h-11" value={s(v["nome"])} onChange={(e) => set("nome", e.target.value)} />
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="flex min-h-11 items-center justify-between gap-3 rounded-md border p-3 text-sm">
+          <span><span className="font-medium">Ativo</span><span className="block text-xs text-muted-foreground">Inativo some para os moradores.</span></span>
+          <Switch checked={v["ativo"] !== false} onCheckedChange={(x) => set("ativo", x)} />
+        </label>
+        <label className="flex min-h-11 items-center justify-between gap-3 rounded-md border p-3 text-sm">
+          <span><span className="font-medium">Permite reserva</span><span className="block text-xs text-muted-foreground">Desligado = uso livre, sem agendamento.</span></span>
+          <Switch checked={v["permite_agendamento"] !== false} onCheckedChange={(x) => set("permite_agendamento", x)} />
+        </label>
+      </div>
+      {tipo === "social" && <div className="space-y-1.5">
+        <Label htmlFor="cad-cap">Capacidade / máximo de convidados (pessoas)</Label>
+        <Input id="cad-cap" type="number" min={1} className="h-11 max-w-48" value={s(v["capacidade_pessoas"])} placeholder="Ilimitado"
+          onChange={(e) => set("capacidade_pessoas", e.target.value ? Math.max(1, Math.round(Number(e.target.value))) : null)} />
+      </div>}
+      <div className="space-y-1.5">
+        <Label htmlFor="cad-desc">Descrição / orientações</Label>
+        <Textarea id="cad-desc" rows={3} value={s(v["descricao"])} onChange={(e) => set("descricao", e.target.value)} />
+      </div>
+      <div className="space-y-2">
+        <div className="flex items-center gap-2"><Label>{tipo === "social" ? "Fotos do local" : "Imagens (opcional)"}</Label><UploadInfo perfil="chat" /></div>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {fotos.map((f, i) => (
+            <div key={f.url} className="relative aspect-square overflow-hidden rounded-md border">
+              <img src={f.url} alt={`Foto ${i + 1}`} className="size-full object-cover" />
+              {i === 0 && <span className="absolute left-1 top-1 rounded bg-primary px-1.5 py-0.5 text-[10px] text-primary-foreground">Capa</span>}
+              <div className="absolute inset-x-1 bottom-1 flex justify-end gap-1">
+                {i > 0 && <Button type="button" size="icon" variant="secondary" className="size-9" aria-label="Usar como capa" onClick={() => set("fotos", [fotos[i]!, ...fotos.filter((_, j) => j !== i)])}><Star className="size-4" /></Button>}
+                <Button type="button" size="icon" variant="destructive" className="size-9" aria-label="Remover foto" onClick={() => set("fotos", fotos.filter((_, j) => j !== i))}><Trash2 className="size-4" /></Button>
+              </div>
+            </div>
+          ))}
+          <label className={cn("flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded-md border border-dashed text-xs text-muted-foreground hover:bg-muted", enviando && "pointer-events-none opacity-60")}>
+            <Camera className="size-5" />{enviando ? "Enviando..." : "Adicionar fotos"}
+            <input type="file" accept="image/*" multiple className="sr-only" onChange={(e) => { void adicionar(e.target.files); e.target.value = ""; }} />
+          </label>
+        </div>
+      </div>
+    </div>
   );
 }
