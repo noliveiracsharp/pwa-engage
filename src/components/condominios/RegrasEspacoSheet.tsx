@@ -398,7 +398,7 @@ function AprovadoresDialog({ condominioId, valor, onClose, onAplicar }: { condom
       const { data: us } = await db().from("cond_unidades").select("id").eq("condominio_id", condominioId);
       const ids = ((us ?? []) as Row[]).map((u) => s(u["id"]));
       if (ids.length) {
-        const { data: vs } = await db().from("cond_unidades_vinculos").select("usuario_id,funcao_condominio").in("cond_unidade_id", ids).in("funcao_condominio", Object.keys(ROTULO_FUNCAO));
+        const { data: vs } = await db().from("cond_unidades_vinculos").select("cond_unidade_id,usuario_id,funcao_condominio").in("cond_unidade_id", ids).in("funcao_condominio", Object.keys(ROTULO_FUNCAO));
         const pessoasU = new Map<string, Row>();
         await Promise.all([...new Set(((vs ?? []) as Row[]).map((x) => s(x["cond_unidade_id"])))].map(async (u) => {
           const { data } = await db().rpc("cond_unidade_pessoas", { p_unidade: u });
