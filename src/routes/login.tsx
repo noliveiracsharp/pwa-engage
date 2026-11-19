@@ -115,13 +115,16 @@ function LoginPage() {
   return (
     <div className="flex h-dvh overflow-hidden bg-background">
       <div className="relative hidden h-full min-h-0 w-1/2 overflow-hidden lg:block">
-        <img src={marca?.login_imagem || loginHero} alt="Atendimento multicanal" width={1024} height={1536} className="absolute inset-0 h-full w-full object-cover" />
-        <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-primary/80 to-transparent p-10">
-          <h2 className="text-3xl font-bold text-primary-foreground">{nomeMarca}</h2>
-          <p className="mt-2 max-w-md text-primary-foreground/90">
-            Suporte e atendimento multicanal para todas as suas empresas, em um só lugar.
-          </p>
-        </div>
+        <img src={marca?.login_imagem || loginHero} alt={marca?.login_imagem ? nomeMarca : "Atendimento multicanal"} width={1600} height={1500} className="absolute inset-0 h-full w-full object-cover object-center" />
+        {/* Imagem própria da empresa já traz a arte/logo: não sobrepor texto nem escurecer. */}
+        {!marca?.login_imagem && (
+          <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-primary/80 to-transparent p-10">
+            <h2 className="text-3xl font-bold text-primary-foreground">{nomeMarca}</h2>
+            <p className="mt-2 max-w-md text-primary-foreground/90">
+              Suporte e atendimento multicanal para todas as suas empresas, em um só lugar.
+            </p>
+          </div>
+        )}
       </div>
 
       <main id="conteudo-principal" tabIndex={-1} className="flex h-full min-h-0 w-full items-center justify-center overflow-y-auto p-6 focus:outline-none lg:w-1/2">
