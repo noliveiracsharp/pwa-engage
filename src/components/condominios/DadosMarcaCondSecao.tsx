@@ -19,8 +19,9 @@ const TODOS = [...GRUPOS.flatMap((g) => g.campos.map((c) => c[0])), ...MARCA];
 /** Telefones antigos gravados como "551141163571" viram "+551141163571" para o seletor de país não duplicar o 55. */
 function carregar(d: Record<string, unknown>): Record<string, string> {
   const o = Object.fromEntries(TODOS.map((k) => [k, d[k] == null ? "" : String(d[k])]));
-  const dig = o["telefone1"].replace(/\D/g, "");
-  if (!o["telefone1"].startsWith("+") && dig.startsWith("55") && dig.length >= 12) o["telefone1"] = `+${dig}`;
+  const tel = o["telefone1"] ?? "";
+  const dig = tel.replace(/\D/g, "");
+  if (!tel.startsWith("+") && dig.startsWith("55") && dig.length >= 12) o["telefone1"] = `+${dig}`;
   return o;
 }
 
