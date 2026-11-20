@@ -73,8 +73,6 @@ function AtendimentosPage() {
   const { data: usuarios = [] } = useTableRows("usuarios");
   const { data: notas = [] } = useTableRows("empresas_notasrapidas");
   
-  const { data: parceiros = [] } = useTableRows("parceiros");
-  const [parcFiltro, setParcFiltro] = useState("todos");
 
   const { data: meusKanbans = [] } = useQuery({
     queryKey: ["table", "usuario_kanban", usuarioId],
@@ -87,8 +85,6 @@ function AtendimentosPage() {
   });
 
   // Última mensagem de cada conversa.
-  const [painelAberto, setPainelAberto] = useState(false);
-  const { data: orcamentos = [] } = useTableRows("orcamentos", painelAberto);
   const { data: ultimas = new Map<string, Row>() } = useQuery({
     queryKey: ["table", "atendimentos_mensagem", "ultimas"],
     queryFn: async () => {
@@ -185,7 +181,6 @@ function AtendimentosPage() {
     return visiveis
       .filter((a) => instFiltro === "todas" || text(pick(a, A.instancia)) === instFiltro)
       .filter((a) => depFiltro === "todos" || text(pick(a, A.kanban)) === depFiltro)
-      .filter((a) => parcFiltro === "todos" || text(pessoasMap.get(text(pick(a, A.pessoa)))?.["parceiro_id"]) === parcFiltro)
       .filter((a) => naAba(a, rapido))
       .filter((a) => {
         if (!termo) return true;
@@ -199,10 +194,9 @@ function AtendimentosPage() {
         return { a, ult, quando: dataDe(ult, M.data) ?? dataDe(a, A.data) };
       })
       .sort((x, y) => (y.quando?.getTime() ?? 0) - (x.quando?.getTime() ?? 0));
-  }, [atendimentos, etapas, kanbans, isMaster, usuarioId, instFiltro, depFiltro, parcFiltro, rapido, busca, pessoasMap, participantes, ultimas, visiveis, meuParticipa]);
+  }, [atendimentos, etapas, kanbans, isMaster, usuarioId, instFiltro, depFiltro, rapido, busca, pessoasMap, participantes, ultimas, visiveis, meuParticipa]);
 
   const ativo = atendimentos.find((a) => text(rowId(a)) === id);
-  useEffect(() => { if (painel && ativo) setPainelAberto(true); }, [painel, ativo]);
   useEffect(() => {
     if (typeof window !== "undefined" && window.innerWidth < 1024) setPainel(false);
   }, []);
@@ -266,17 +260,6 @@ function AtendimentosPage() {
               </SelectContent>
             </Select>
           </div>
-          {parceiros.length > 0 && (
-            <Select value={parcFiltro} onValueChange={setParcFiltro}>
-              <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Parceiro" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos os parceiros</SelectItem>
-                {parceiros.map((p) => (
-                  <SelectItem key={text(rowId(p))} value={text(rowId(p))}>{text(p["razao_social"]) || text(p["nome_fantasia"]) || "—"}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar por nome, telefone ou protocolo" className="h-9 pl-8" />
@@ -410,7 +393,7 @@ function AtendimentosPage() {
             vinculosEtiqueta={vincEt}
             kanbans={kanbans}
             etapas={etapas}
-            orcamentos={orcamentos}
+            kanbansDestino={kanbansDestino}
             instancia={instMap.get(text(pick(ativo, A.instancia)))}
             onFechar={() => setPainel(false)}
           />

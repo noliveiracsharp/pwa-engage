@@ -142,7 +142,8 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
 
   const { data: mensagens = [], isLoading } = useQuery({
     queryKey: ["table", "atendimentos_mensagem", "at", id],
-    refetchInterval: 3000,
+    // Realtime entrega na hora; o polling lento fica só como rede de segurança.
+    refetchInterval: 20000,
     queryFn: async (): Promise<Row[]> => {
       const { data, error } = await supabase
         .from("atendimentos_mensagem")
@@ -158,6 +159,19 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
       );
     },
   });
+
+  // Mensagens novas chegam por WebSocket (Realtime), sem esperar o próximo ciclo.
+  useEffect(() => {
+    if (!id) return;
+    const canal = supabase
+      .channel(`at-msg-${id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "atendimentos_mensagem", filter: `atendimento_id=eq.${id}` }, () => {
+        void qc.invalidateQueries({ queryKey: ["table", "atendimentos_mensagem", "at", id] });
+        void qc.invalidateQueries({ queryKey: ["table", "atendimentos_mensagem", "ultimas"] });
+      })
+      .subscribe();
+    return () => { void supabase.removeChannel(canal); };
+  }, [id, qc]);
 
   // Checklists de etapa entram na linha do tempo como eventos internos (nunca vão ao cliente).
   const { data: checklists = [] } = useChecklistsAtendimento(id);

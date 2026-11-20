@@ -3,7 +3,7 @@ import { etiquetasDoQuadro } from "@/lib/etiquetas";
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Tag, X, KanbanSquare, Pencil } from "lucide-react";
+import { Plus, Tag, X, KanbanSquare, Pencil, ArrowRightLeft } from "lucide-react";
 import { perguntar } from "@/components/layout/DialogoGlobal";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -19,7 +19,7 @@ import { A, corEtiqueta, etapaPayload, etapasDoKanban, fotoPessoa, iniciais, nom
 import { filterPayload, useCols } from "@/lib/projetos";
 import { usePesquisaSatisfacao } from "./Pesquisa";
 import { ChecklistsPainel } from "./ChecklistRespostas";
-import { ComercialChat } from "./ComercialChat";
+import { useAuth } from "@/hooks/useAuth";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type Props = {
@@ -31,14 +31,14 @@ type Props = {
   vinculosEtiqueta: Row[];
   kanbans: Row[];
   etapas: Row[];
-  orcamentos: Row[];
+  kanbansDestino: Row[];
   instancia?: Row | undefined;
   onFechar: () => void;
 };
 
 const nomeUsuario = (u: Row | undefined) => pick<string>(u, ["nome", "nome_completo", "email"], "Usuário") ?? "";
 
-export function ContatoPainel({ atendimento, pessoa, usuarios, participantes, etiquetas, vinculosEtiqueta, kanbans, etapas, orcamentos, instancia, onFechar }: Props) {
+export function ContatoPainel({ atendimento, pessoa, usuarios, participantes, etiquetas, vinculosEtiqueta, kanbans, kanbansDestino, etapas, instancia, onFechar }: Props) {
   const qc = useQueryClient();
   const { data: colsAt } = useCols("atendimentos");
   const atId = text(rowId(atendimento));
@@ -107,9 +107,41 @@ export function ContatoPainel({ atendimento, pessoa, usuarios, participantes, et
     if (alvo && checklist.precisa(alvo)) await checklist.exigir({ atendimento, etapa: alvo, executar: mover });
     else await mover();
   }
-  const orcamento = orcamentos.find(
-    (o) => text(o["atendimento_id"]) === atId || (pessoaId !== undefined && text(pick(o, ["pessoa_id"])) === text(pessoaId)),
-  );
+  const { usuario } = useAuth();
+  const meuId = usuario ? text(rowId(usuario)) : "";
+  const { data: colsMsg } = useCols("atendimentos_mensagem");
+  async function notaInterna(msg: string) {
+    await supabase.from("atendimentos_mensagem").insert(filterPayload({
+      atendimento_id: atId, mensagem: msg, conteudo: msg, texto: msg, msg_interna: true, usuario_id: meuId || null, remetente_tipo: "atendente",
+    }, colsMsg) as never);
+    void qc.invalidateQueries({ queryKey: ["table", "atendimentos_mensagem", "at", atId] });
+  }
+  async function transferirAtendente(novoId: string) {
+    if (!novoId || novoId === responsavel) return;
+    const de = nomeUsuario(usuarios.find((u) => text(rowId(u)) === responsavel));
+    const para = nomeUsuario(usuarios.find((u) => text(rowId(u)) === novoId));
+    const { error } = await supabase.from("atendimentos").update(filterPayload({ usuario_responsavel_id: novoId, responsavel_id: novoId }, colsAt) as never).eq("id", atId);
+    if (error) { toast.error(error.message); return; }
+    if (responsavel && !meusPart.some((p) => text(p["usuario_id"]) === responsavel)) {
+      await supabase.from("atendimentos_participantes").insert({ atendimento_id: atId, usuario_id: responsavel });
+      void qc.invalidateQueries({ queryKey: ["table", "atendimentos_participantes"] });
+    }
+    await notaInterna(`🔀 Atendimento transferido${responsavel ? ` de ${de}` : ""} para ${para}.`);
+    void qc.invalidateQueries({ queryKey: ["table", "atendimentos"] });
+    toast.success(`Transferido para ${para}.`);
+  }
+  async function transferirKanban(kbId: string) {
+    if (!kbId || kbId === text(pick(atendimento, A.kanban))) return;
+    const destino = kanbansDestino.find((k) => text(rowId(k)) === kbId);
+    const primeira = etapasDoKanban(etapas, kbId)[0];
+    const payload = { kanban_nome_id: kbId, kanban_id: kbId, ...etapaPayload(primeira ? rowId(primeira) : null, etapas) };
+    const { error } = await supabase.from("atendimentos").update(filterPayload(payload, colsAt) as never).eq("id", atId);
+    if (error) { toast.error(error.message); return; }
+    const nomeKb = text(pick(destino, ["nome", "descricao"]));
+    await notaInterna(`🔀 Atendimento transferido de ${kanban ? text(pick(kanban, ["nome", "descricao"])) : "sem departamento"} para ${nomeKb}.`);
+    void qc.invalidateQueries({ queryKey: ["table", "atendimentos"] });
+    toast.success(`Enviado para ${nomeKb}.`);
+  }
 
   return (
     <aside className="flex w-full flex-col overflow-y-auto border-l border-border bg-card md:w-80 lg:w-96">
@@ -159,9 +191,23 @@ export function ContatoPainel({ atendimento, pessoa, usuarios, participantes, et
         <section className="space-y-2">
           <div className="flex items-center justify-between">
             <p className="text-xs font-medium uppercase text-muted-foreground">Atendentes</p>
+            <div className="flex">
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="ghost" size="sm"><Plus className="mr-1 h-3.5 w-3.5" /> Convidar atendente</Button>
+                <Button variant="ghost" size="sm"><ArrowRightLeft className="mr-1 h-3.5 w-3.5" /> Transferir</Button>
+              </PopoverTrigger>
+              <PopoverContent className="max-h-64 w-60 overflow-y-auto p-1" align="end">
+                {usuarios.filter((u) => text(rowId(u)) !== responsavel && u["status"] !== false)
+                  .sort((a, b) => nomeUsuario(a).localeCompare(nomeUsuario(b), "pt-BR")).map((u) => (
+                  <button key={text(rowId(u))} type="button" className="block w-full rounded px-2 py-1.5 text-left text-sm hover:bg-accent" onClick={() => void transferirAtendente(text(rowId(u)))}>
+                    {nomeUsuario(u)}
+                  </button>
+                ))}
+              </PopoverContent>
+            </Popover>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="sm"><Plus className="mr-1 h-3.5 w-3.5" /> Convidar</Button>
               </PopoverTrigger>
               <PopoverContent className="max-h-64 w-60 overflow-y-auto p-1" align="end">
                 {usuarios.filter((u) => !partIds.has(text(rowId(u))) && u["status"] !== false).map((u) => (
@@ -171,6 +217,7 @@ export function ContatoPainel({ atendimento, pessoa, usuarios, participantes, et
                 ))}
               </PopoverContent>
             </Popover>
+            </div>
           </div>
           <div className="flex flex-wrap gap-2">
             {[...partIds].map((uid) => {
@@ -215,7 +262,14 @@ export function ContatoPainel({ atendimento, pessoa, usuarios, participantes, et
 
         <section className="space-y-2 rounded-lg border border-border p-3">
           <p className="flex items-center gap-1 text-xs font-medium uppercase text-muted-foreground"><KanbanSquare className="h-3 w-3" /> Kanban</p>
-          <p className="text-sm text-foreground">{kanban ? text(pick(kanban, ["nome", "descricao"])) : "Sem departamento"}</p>
+          <Select value={kanban ? text(rowId(kanban)) : ""} onValueChange={(v) => void transferirKanban(v)}>
+            <SelectTrigger className="h-9" aria-label="Departamento (transferir)"><SelectValue placeholder="Sem departamento" /></SelectTrigger>
+            <SelectContent>
+              {kanbansDestino.map((k) => (
+                <SelectItem key={text(rowId(k))} value={text(rowId(k))}>{text(pick(k, ["nome", "descricao"]))}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Select value={etapa ? text(rowId(etapa)) : ""} onValueChange={mudarEtapa} disabled={!kanban}>
             <SelectTrigger className="h-9"><SelectValue placeholder="Selecione a etapa" /></SelectTrigger>
             <SelectContent>
@@ -226,15 +280,8 @@ export function ContatoPainel({ atendimento, pessoa, usuarios, participantes, et
           </Select>
           {pesquisa.dialog}
           {checklist.dialog}
-          {orcamento && (
-            <p className="text-sm text-muted-foreground">
-              Oferta {text(orcamento["numero"])} · {text(orcamento["situacao"])}
-              {orcamento["total_liquido"] != null && ` · ${Number(orcamento["total_liquido"]).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`}
-            </p>
-          )}
         </section>
 
-        <ComercialChat atendimento={atendimento} pessoa={pessoa} instancia={instancia} usuarios={usuarios} orcamentos={orcamentos} />
         <ChecklistsPainel atId={atId} />
           </TabsContent>
           <TabsContent value="campos" className="space-y-4 pt-3">
