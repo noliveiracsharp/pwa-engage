@@ -115,12 +115,29 @@ export function ContatoPainel({ atendimento, pessoa, usuarios, participantes, et
     }, colsMsg) as never);
     void qc.invalidateQueries({ queryKey: ["table", "atendimentos_mensagem", "at", atId] });
   }
+  // Atualiza a lista na hora (sem esperar o banco), para o card sair/mudar imediatamente.
+  function otimista(patch: Row) {
+    qc.setQueriesData<Row[]>({ queryKey: ["table", "atendimentos"] }, (rows) =>
+      Array.isArray(rows) ? rows.map((r) => (text(rowId(r)) === atId ? { ...r, ...patch } : r)) : rows);
+  }
+  // Update tolerante: se o cache de colunas falhar, remove a coluna inexistente apontada pelo banco e tenta de novo.
+  async function atualizarAt(payload: Row) {
+    let body = filterPayload(payload, colsAt);
+    for (let i = 0; i < 6; i++) {
+      const { error } = await supabase.from("atendimentos").update(body as never).eq("id", atId);
+      const col = error?.code === "PGRST204" ? /'([^']+)' column/.exec(error.message)?.[1] : undefined;
+      if (!col || !(col in body)) return { error };
+      body = Object.fromEntries(Object.entries(body).filter(([k]) => k !== col));
+    }
+    return { error: null };
+  }
   async function transferirAtendente(novoId: string) {
     if (!novoId || novoId === responsavel) return;
     const de = nomeUsuario(usuarios.find((u) => text(rowId(u)) === responsavel));
     const para = nomeUsuario(usuarios.find((u) => text(rowId(u)) === novoId));
-    const { error } = await supabase.from("atendimentos").update(filterPayload({ usuario_responsavel_id: novoId, responsavel_id: novoId }, colsAt) as never).eq("id", atId);
+    const { error } = await atualizarAt({ usuario_responsavel_id: novoId, modo: "Humano", modo_atendimento: "Humano" });
     if (error) { toast.error(error.message); return; }
+    otimista({ usuario_responsavel_id: novoId, modo: "Humano", modo_atendimento: "Humano" });
     if (responsavel && !meusPart.some((p) => text(p["usuario_id"]) === responsavel)) {
       await supabase.from("atendimentos_participantes").insert({ atendimento_id: atId, usuario_id: responsavel });
       void qc.invalidateQueries({ queryKey: ["table", "atendimentos_participantes"] });
@@ -132,11 +149,14 @@ export function ContatoPainel({ atendimento, pessoa, usuarios, participantes, et
   async function transferirKanban(kbId: string) {
     if (!kbId || kbId === text(pick(atendimento, A.kanban))) return;
     const destino = kanbansDestino.find((k) => text(rowId(k)) === kbId);
-    const primeira = etapasDoKanban(etapas, kbId)[0];
-    // Libera o responsável para o chamado cair em "Aguardando" do novo departamento.
-    const payload = { kanban_nome_id: kbId, kanban_id: kbId, usuario_responsavel_id: null, responsavel_id: null, ...etapaPayload(primeira ? rowId(primeira) : null, etapas) };
-    const { error } = await supabase.from("atendimentos").update(filterPayload(payload, colsAt) as never).eq("id", atId);
+    // Primeira etapa HUMANA do departamento (pula etapas de IA/robô) para cair em "Aguardando".
+    const doKb = etapasDoKanban(etapas, kbId);
+    const primeira = doKb.find((e) => !/\b(ia|bot|rob[oô])\b/i.test(text(pick(e, ["nome", "descricao"])))) ?? doKb[0];
+    // Libera o responsável e marca modo humano: o chamado entra na fila "Aguardando" do novo departamento.
+    const payload: Row = { kanban_nome_id: kbId, usuario_responsavel_id: null, modo: "Humano", modo_atendimento: "Humano", ...etapaPayload(primeira ? rowId(primeira) : null, etapas) };
+    const { error } = await atualizarAt(payload);
     if (error) { toast.error(error.message); return; }
+    otimista(payload);
     if (responsavel && !meusPart.some((p) => text(p["usuario_id"]) === responsavel)) {
       await supabase.from("atendimentos_participantes").insert({ atendimento_id: atId, usuario_id: responsavel });
       void qc.invalidateQueries({ queryKey: ["table", "atendimentos_participantes"] });

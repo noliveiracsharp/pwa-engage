@@ -46,11 +46,27 @@ export const Route = createFileRoute("/_authenticated/atendimentos")({
 
 type Rapido = "todos" | "historico" | "minhas" | "aguardando" | "ia" | "encerrados";
 const RAPIDOS_BASE: { key: Rapido; label: string }[] = [
-  { key: "minhas", label: "Minhas conversas" },
+  { key: "minhas", label: "Ativos" },
   { key: "aguardando", label: "Aguardando" },
-  { key: "ia", label: "Pela IA" },
-  { key: "encerrados", label: "Encerrados" },
+  { key: "ia", label: "Leads / IA" },
 ];
+type Sub = "todas" | "naolidas" | "grupos";
+const SUBS: { key: Sub; label: string }[] = [
+  { key: "todas", label: "Todas" },
+  { key: "naolidas", label: "Não lidas" },
+  { key: "grupos", label: "Grupos" },
+];
+const DIAS_LISTA = 90;
+/** Busca linhas cujo `col` está em `ids`, em lotes (evita URLs gigantes e downloads da tabela inteira). */
+async function porIds(table: string, col: string, ids: string[], select = "*"): Promise<Row[]> {
+  const out: Row[] = [];
+  const lotes: string[][] = [];
+  for (let i = 0; i < ids.length; i += 150) lotes.push(ids.slice(i, i + 150));
+  const res = await Promise.all(lotes.map((l) => supabase.from(table).select(select).in(col, l)));
+  for (const r of res) { if (r.error) throw r.error; out.push(...((r.data ?? []) as unknown as Row[])); }
+  return out;
+}
+const chaveIds = (ids: string[]) => { let h = 0; const s = [...ids].sort().join(","); for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return `${ids.length}:${h}`; };
 const naoLidasDe = (a: Row) => { const c = A.naoLidas.find((k) => k in a); return c ? Number(a[c]) || 0 : 0; };
 
 const byId = (rows: Row[]) => new Map(rows.map((r) => [text(rowId(r)), r]));
@@ -89,14 +105,38 @@ function AtendimentosChat({ comAbas = false }: { comAbas?: boolean }) {
   const usuarioId = usuario ? text(rowId(usuario)) : "";
   const empresaId = empresa ? text(rowId(empresa)) : "";
 
-  const { data: atendimentos = [], isLoading } = useTableRows("atendimentos");
-  const { data: pessoas = [] } = useTableRows("pessoas");
+  // Só conversas recentes (últimos dias) — o histórico inteiro deixava a entrada lenta.
+  const filtroRecentes = useMemo(() => {
+    const d = new Date(Date.now() - DIAS_LISTA * 864e5).toISOString();
+    return { key: `recentes-${d.slice(0, 10)}`, apply: (q: any) => q.gte("created_at", d) }; // eslint-disable-line @typescript-eslint/no-explicit-any
+  }, []);
+  const { data: atendimentos = [], isLoading } = useTableRows("atendimentos", true, undefined, filtroRecentes);
+  const atIds = useMemo(() => atendimentos.map((a) => text(rowId(a))).filter(Boolean), [atendimentos]);
+  const pesIds = useMemo(() => [...new Set(atendimentos.map((a) => text(pick(a, A.pessoa))).filter(Boolean))], [atendimentos]);
+  const [novoAberto, setNovoAberto] = useState(false);
+  // Contatos: só os das conversas carregadas; a tabela inteira só ao abrir "Iniciar Atendimento".
+  const { data: pessoasLista = [] } = useQuery({
+    queryKey: ["table", "pessoas", "ids", chaveIds(pesIds)],
+    enabled: pesIds.length > 0,
+    staleTime: 60_000,
+    queryFn: () => porIds("pessoas", "id", pesIds),
+  });
+  const { data: pessoasTodas = [] } = useTableRows("pessoas", novoAberto);
+  const pessoas = novoAberto && pessoasTodas.length ? pessoasTodas : pessoasLista;
   const { data: instancias = [] } = useTableRows("empresas_instancias");
   const { data: allKanbans = [] } = useTableRows("kanban_nome");
   const { data: etapas = [] } = useTableRows("kanban_etapas");
   const { data: etiquetas = [] } = useTableRows("etiquetas");
-  const { data: vincEt = [] } = useTableRows("atendimentos_etiqueta");
-  const { data: participantes = [] } = useTableRows("atendimentos_participantes");
+  const { data: vincEt = [] } = useQuery({
+    queryKey: ["table", "atendimentos_etiqueta", "ids", chaveIds(atIds)],
+    enabled: atIds.length > 0,
+    queryFn: () => porIds("atendimentos_etiqueta", "atendimento_id", atIds),
+  });
+  const { data: participantes = [] } = useQuery({
+    queryKey: ["table", "atendimentos_participantes", "ids", chaveIds(atIds)],
+    enabled: atIds.length > 0,
+    queryFn: () => porIds("atendimentos_participantes", "atendimento_id", atIds),
+  });
   const { data: usuarios = [] } = useTableRows("usuarios");
   const { data: notas = [] } = useTableRows("empresas_notasrapidas");
   const qcLista = useQueryClient();
@@ -161,13 +201,14 @@ function AtendimentosChat({ comAbas = false }: { comAbas?: boolean }) {
   const [instFiltro, setInstFiltro] = useState("todas");
   const [depFiltro, setDepFiltro] = useState("todos");
   const gerencial = usePagePermissions("/atendimentos/gerencial").canRead || isMaster;
-  const RAPIDOS = useMemo(() => [...RAPIDOS_BASE, gerencial ? { key: "todos" as Rapido, label: "Todos" } : { key: "historico" as Rapido, label: "Histórico" }], [gerencial]);
+  const RAPIDOS = RAPIDOS_BASE;
+  const EXTRAS = useMemo(() => [{ key: "encerrados" as Rapido, label: "Encerrados" }, gerencial ? { key: "todos" as Rapido, label: "Todos" } : { key: "historico" as Rapido, label: "Histórico" }], [gerencial]);
+  const [sub, setSub] = useState<Sub>("todas");
   const [rapido, setRapido] = useState<Rapido>("minhas");
   useEffect(() => { if (!gerencial && rapido === "todos") setRapido("historico"); if (gerencial && rapido === "historico") setRapido("todos"); }, [gerencial, rapido]);
   const [busca, setBusca] = useState("");
   const [painel, setPainel] = useState(true);
   const [listaAberta, setLista] = useState(true);
-  const [novoAberto, setNovoAberto] = useState(false);
   const [bloqAberto, setBloqAberto] = useState(false);
   const empresaBloq = empresaId;
   const bloqueioDe = useBloqueados(empresaId);
@@ -182,6 +223,7 @@ function AtendimentosChat({ comAbas = false }: { comAbas?: boolean }) {
   const pessoasMap = useMemo(() => byId(pessoas), [pessoas]);
   const instMap = useMemo(() => byId(instancias), [instancias]);
   const etMap = useMemo(() => byId(etiquetas), [etiquetas]);
+  const kbMap = useMemo(() => byId(allKanbans), [allKanbans]);
   const autores = useMemo(
     () => new Map(usuarios.map((u) => [text(rowId(u)), text(pick(u, ["nome", "name", "email"])).split(" ")[0] ?? ""])),
     [usuarios],
@@ -211,7 +253,7 @@ function AtendimentosChat({ comAbas = false }: { comAbas?: boolean }) {
     }
     return m;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visiveis, etapas, RAPIDOS, usuarioId, meuParticipa]);
+  }, [visiveis, etapas, usuarioId, meuParticipa]);
 
   const lista = useMemo(() => {
     const termo = busca.trim().toLowerCase();
@@ -219,6 +261,7 @@ function AtendimentosChat({ comAbas = false }: { comAbas?: boolean }) {
       .filter((a) => instFiltro === "todas" || text(pick(a, A.instancia)) === instFiltro)
       .filter((a) => depFiltro === "todos" || text(pick(a, A.kanban)) === depFiltro)
       .filter((a) => naAba(a, rapido))
+      .filter((a) => sub === "todas" || (sub === "naolidas" ? naoLidasDe(a) > 0 : pessoasMap.get(text(pick(a, A.pessoa)))?.["is_group"] === true))
       .filter((a) => {
         if (!termo) return true;
         const p = pessoasMap.get(text(pick(a, A.pessoa)));
@@ -231,7 +274,7 @@ function AtendimentosChat({ comAbas = false }: { comAbas?: boolean }) {
         return { a, ult, quando: dataDe(ult, M.data) ?? dataDe(a, A.data) };
       })
       .sort((x, y) => (y.quando?.getTime() ?? 0) - (x.quando?.getTime() ?? 0));
-  }, [atendimentos, etapas, kanbans, isMaster, usuarioId, instFiltro, depFiltro, rapido, busca, pessoasMap, participantes, ultimas, visiveis, meuParticipa]);
+  }, [atendimentos, etapas, kanbans, isMaster, usuarioId, instFiltro, depFiltro, rapido, sub, busca, pessoasMap, participantes, ultimas, visiveis, meuParticipa]);
 
   const ativo = atendimentos.find((a) => text(rowId(a)) === id);
   useEffect(() => {
@@ -296,25 +339,35 @@ function AtendimentosChat({ comAbas = false }: { comAbas?: boolean }) {
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar por nome, telefone ou protocolo" className="h-9 pl-8" />
           </div>
-          <div className="flex gap-1 overflow-x-auto pb-1">
+          <div className="grid grid-cols-3 gap-1 rounded-lg bg-muted p-1" role="tablist" aria-label="Situação das conversas">
             {RAPIDOS.map((r) => (
-              <button
-                key={r.key}
-                type="button"
-                onClick={() => setRapido(r.key)}
-                className={cn(
-                  "shrink-0 rounded-full px-3 py-1 text-xs transition-colors",
-                  rapido === r.key ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {r.label}
+              <button key={r.key} type="button" role="tab" aria-selected={rapido === r.key} onClick={() => setRapido(r.key)}
+                className={cn("flex items-center justify-center gap-1 rounded-md px-2 py-1.5 text-xs transition-colors",
+                  rapido === r.key ? "bg-background font-semibold text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>
+                <span className="truncate">{r.label}</span>
                 {(selos.get(r.key) ?? 0) > 0 && (
-                  <span className="ml-1.5 inline-flex min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold leading-4 text-destructive-foreground" aria-label={`${selos.get(r.key)} novas`}>
+                  <span className="inline-flex min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold leading-4 text-destructive-foreground" aria-label={`${selos.get(r.key)} novas`}>
                     {selos.get(r.key)}
                   </span>
                 )}
               </button>
             ))}
+          </div>
+          <div className="flex items-center gap-1">
+            {SUBS.map((x) => (
+              <button key={x.key} type="button" aria-pressed={sub === x.key} onClick={() => setSub(x.key)}
+                className={cn("rounded-full px-3 py-1 text-xs transition-colors", sub === x.key ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground")}>
+                {x.label}
+              </button>
+            ))}
+            <div className="ml-auto flex gap-1">
+              {EXTRAS.map((x) => (
+                <button key={x.key} type="button" aria-pressed={rapido === x.key} onClick={() => setRapido(rapido === x.key ? "minhas" : x.key)}
+                  className={cn("rounded-full px-2 py-1 text-[11px] transition-colors", rapido === x.key ? "bg-secondary font-medium text-secondary-foreground" : "text-muted-foreground hover:text-foreground")}>
+                  {x.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
         <div className="flex-1 overflow-y-auto">
@@ -368,6 +421,10 @@ function AtendimentosChat({ comAbas = false }: { comAbas?: boolean }) {
                     )}
                   </div>
                   <div className="mt-1 flex flex-wrap items-center gap-1">
+                    {(() => { const k = kbMap.get(text(pick(a, A.kanban))); if (!k) return null; const cor = text(pick(k, ["cor_hex", "cor"])); return (
+                      <span className={cn("rounded-full px-1.5 py-0.5 text-[10px] font-medium", !cor && "bg-secondary text-secondary-foreground")} style={cor ? { backgroundColor: cor, color: "white" } : undefined}>
+                        {text(pick(k, ["nome", "descricao"]))}
+                      </span>); })()}
                     {inst && <Badge variant="outline" className="h-5 px-1.5 text-[10px]">{text(pick(inst, ["nome", "descricao"]))}</Badge>}
                     {(() => { const b = bloqueioDe(telefonePessoa(p)); return b ? <SeloBloqueado motivo={b.motivo} /> : null; })()}
                     {enc && <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">Encerrado</Badge>}
