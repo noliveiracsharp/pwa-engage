@@ -121,8 +121,13 @@ export function etapaDe(a: Row | undefined, etapas: Row[]) {
   return id ? etapas.find((e) => text(e["id"]) === id) : undefined;
 }
 /** Encerrado = etapa atual com is_default_encerrado (fonte única da verdade). */
+const RE_ENCERRADO = /encerr|finaliz|fechad|conclu/i;
 export function isEncerrado(a: Row | undefined, etapas: Row[]) {
-  return etapaDe(a, etapas)?.["is_default_encerrado"] === true;
+  const et = etapaDe(a, etapas);
+  if (et?.["is_default_encerrado"] === true) return true;
+  // Etapa ou status com nome de encerramento também contam (etapa sem a marcação).
+  if (et && RE_ENCERRADO.test(text(pick(et, ["descricao", "nome"])))) return true;
+  return RE_ENCERRADO.test(text(pick(a, A.status)));
 }
 /** Nome da etapa atual (ou o texto gravado em status, como fallback). */
 export function nomeEtapa(a: Row | undefined, etapas: Row[]) {

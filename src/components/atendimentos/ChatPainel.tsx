@@ -245,6 +245,9 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
       toast.error(error.message);
       return false;
     }
+    // Atualização imediata na lista (sem esperar recarregar do banco).
+    qc.setQueriesData({ queryKey: ["table", "atendimentos"] }, (old: unknown) =>
+      Array.isArray(old) ? old.map((r: Row) => (text(rowId(r)) === text(id) ? { ...r, ...values } : r)) : old);
     qc.invalidateQueries({ queryKey: ["table", "atendimentos"] });
     toast.success(ok);
     return true;
