@@ -711,7 +711,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
           <Button variant="ghost" size="icon" aria-label="Anexar" onClick={() => fileRef.current?.click()}>
             <Paperclip className="h-5 w-5" />
           </Button>
-          <UploadInfo perfil="chat" arquivos className="hidden sm:inline-flex" />
+          <UploadInfo perfil="chat" arquivos className="hidden h-10 w-6 sm:inline-flex" />
           <input
             ref={fileRef}
             type="file"
@@ -742,9 +742,9 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
                 void enviarTudo();
               }
             }}
-            rows={1}
+            rows={2}
             placeholder={interna ? "Nota interna (só a equipe vê)…" : "Digite uma mensagem ou / para respostas rápidas"}
-            className="max-h-32 min-h-10 flex-1 resize-none"
+            className="max-h-80 min-h-16 flex-1 resize-y"
           />
           <GravadorAudio disabled={enviando} onGravado={(f) => void anexar(f)} />
           <Button size="icon" onClick={() => void enviarTudo()} disabled={enviando || (!texto.trim() && !pendentes.length)} aria-label="Enviar">

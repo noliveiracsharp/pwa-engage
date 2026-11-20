@@ -222,6 +222,10 @@ function AtendimentosChat({ comAbas = false }: { comAbas?: boolean }) {
 
   const pessoasMap = useMemo(() => byId(pessoas), [pessoas]);
   const instMap = useMemo(() => byId(instancias), [instancias]);
+  // Canal único: já vem selecionado.
+  useEffect(() => {
+    if (instanciasAtivas.length === 1 && instFiltro === "todas") setInstFiltro(text(rowId(instanciasAtivas[0]!)));
+  }, [instanciasAtivas, instFiltro]);
   const etMap = useMemo(() => byId(etiquetas), [etiquetas]);
   const kbMap = useMemo(() => byId(allKanbans), [allKanbans]);
   const autores = useMemo(
@@ -413,7 +417,7 @@ function AtendimentosChat({ comAbas = false }: { comAbas?: boolean }) {
                       {isIA(a) && <Bot className="h-3.5 w-3.5 shrink-0 text-primary" />}
                       <span className="truncate">
                         {autorUlt && <span className="font-medium text-foreground/80">{autorUlt}: </span>}
-                        {interna ? "📝 Nota interna" : text(pick(ult, M.texto)) || "—"}
+                        {ult ? (interna ? "📝 Nota interna" : text(pick(ult, M.texto)) || "Mídia") : (() => { const r = text(pick(a, A.responsavel)); return r ? (r === usuarioId ? "Com você" : `Com ${autores.get(r) || "atendente"}`) : "Aguardando atendente"; })()}
                       </span>
                     </p>
                     {naoLidas > 0 && (
