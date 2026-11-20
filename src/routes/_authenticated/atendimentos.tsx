@@ -110,19 +110,33 @@ function AtendimentosChat({ comAbas = false }: { comAbas?: boolean }) {
     const d = new Date(Date.now() - DIAS_LISTA * 864e5).toISOString();
     return { key: `recentes-${d.slice(0, 10)}`, apply: (q: any) => q.gte("created_at", d) }; // eslint-disable-line @typescript-eslint/no-explicit-any
   }, []);
-  const { data: atendimentos = [], isLoading } = useTableRows("atendimentos", true, undefined, filtroRecentes);
+  // Painel em 1 chamada (função fn_atendimentos_painel): conversa + contato + última mensagem já juntos.
+  const { data: painelRpc, isLoading: carregandoRpc } = useQuery({
+    queryKey: ["table", "atendimentos", "painel", empresaId || "todas"],
+    staleTime: 30_000,
+    queryFn: async (): Promise<Row[] | null> => {
+      const { data, error } = await supabase.rpc("fn_atendimentos_painel" as never, { p_empresa_id: empresaId || null, p_dias: DIAS_LISTA } as never);
+      if (error) return null; // função ainda não criada: usa o caminho antigo
+      return (data ?? []) as unknown as Row[];
+    },
+  });
+  const usaRpc = Array.isArray(painelRpc);
+  const { data: atendLegado = [], isLoading: carregandoLeg } = useTableRows("atendimentos", painelRpc === null, undefined, filtroRecentes);
+  const atendimentos = usaRpc ? painelRpc : atendLegado;
+  const isLoading = carregandoRpc || (!usaRpc && carregandoLeg);
   const atIds = useMemo(() => atendimentos.map((a) => text(rowId(a))).filter(Boolean), [atendimentos]);
   const pesIds = useMemo(() => [...new Set(atendimentos.map((a) => text(pick(a, A.pessoa))).filter(Boolean))], [atendimentos]);
   const [novoAberto, setNovoAberto] = useState(false);
   // Contatos: só os das conversas carregadas; a tabela inteira só ao abrir "Iniciar Atendimento".
   const { data: pessoasLista = [] } = useQuery({
     queryKey: ["table", "pessoas", "ids", chaveIds(pesIds)],
-    enabled: pesIds.length > 0,
+    enabled: !usaRpc && pesIds.length > 0,
     staleTime: 60_000,
     queryFn: () => porIds("pessoas", "id", pesIds),
   });
   const { data: pessoasTodas = [] } = useTableRows("pessoas", novoAberto);
-  const pessoas = novoAberto && pessoasTodas.length ? pessoasTodas : pessoasLista;
+  const pessoasRpc = useMemo(() => usaRpc ? atendimentos.map((a) => a["_pessoa"] as Row | null).filter((p): p is Row => !!p) : [], [usaRpc, atendimentos]);
+  const pessoas = novoAberto && pessoasTodas.length ? pessoasTodas : usaRpc ? pessoasRpc : pessoasLista;
   const { data: instancias = [] } = useTableRows("empresas_instancias");
   const { data: allKanbans = [] } = useTableRows("kanban_nome");
   const { data: etapas = [] } = useTableRows("kanban_etapas");
@@ -162,8 +176,9 @@ function AtendimentosChat({ comAbas = false }: { comAbas?: boolean }) {
   });
 
   // Última mensagem de cada conversa.
-  const { data: ultimas = new Map<string, Row>() } = useQuery({
+  const { data: ultimasLeg = new Map<string, Row>() } = useQuery({
     queryKey: ["table", "atendimentos_mensagem", "ultimas"],
+    enabled: painelRpc === null,
     queryFn: async () => {
       let { data, error } = await supabase.from("atendimentos_mensagem").select("atendimento_id, mensagem, msg_interna, usuario_id, remetente_tipo, created_at").eq("oculta_para_atendente", false).order("created_at", { ascending: false }).limit(800);
       if (error) ({ data } = await supabase.from("atendimentos_mensagem").select("*").eq("oculta_para_atendente", false).order("created_at", { ascending: false }).limit(800));
@@ -176,6 +191,12 @@ function AtendimentosChat({ comAbas = false }: { comAbas?: boolean }) {
     },
   });
 
+  const ultimas = useMemo(() => {
+    if (!usaRpc) return ultimasLeg;
+    const map = new Map<string, Row>();
+    for (const a of atendimentos) { const m = a["_ultima"] as Row | null; if (m) map.set(text(rowId(a)), m); }
+    return map;
+  }, [usaRpc, atendimentos, ultimasLeg]);
   const acessoKb = useKanbansPermitidos();
   void meusKanbans;
   const kanbans = useMemo(() => {
