@@ -45,3 +45,4 @@
 - Web Push: triggers enqueue into push_fila; /api/public/push-enviar (and interfone-whats) drain it via secret-checked RPCs using VAPID_PRIVATE_KEY; public/push-sw.js only handles push/click (no caching) — one queue owns all device notifications.
 - Condo regimento/convenção AI reading: PDF → artigos in cond_documentos_artigos (src/lib/cond-documentos-ia.functions.ts); Q&A answers only from stored artigos so replies cite the tenant's own rules.
 - Condo space bookings: rules (advance, quotas, weekly hour matrix, holiday/unit blocks, cross-space concurrency) live in pure tested src/lib/cond-reservas.ts; the DB trigger only locks structural hour fields while active bookings exist, so validation has one source.
+- Resident portal tabs (/minha-unidade) are shown only when the Morador profile has Ler for the matching /condominios/* funcao (ROTA_SECAO_MORADOR); actions stay capped by permsMorador so Funções can hide modules but never grant management powers.

@@ -29,3 +29,21 @@ export const permsFichaMorador = (perfilPodeAlterar: boolean, condominioPermite:
   return { canCreate: pode, canUpdate: pode, canDelete: pode };
 };
 export const SOMENTE_LEITURA = { canCreate: false, canUpdate: false, canDelete: false };
+
+/** Rota da função (tela Funções) que libera cada aba do portal do morador. Painel e Minha unidade são a base do acesso. */
+export const ROTA_SECAO_MORADOR: Record<string, string | null> = {
+  painel: null, unidade: null,
+  meu: "/condominios/meu", interfone: "/condominios/interfone", avisos: "/condominios/avisos",
+  assembleias: "/condominios/assembleias", atendimentos: "/condominios/atendimentos", enquetes: "/condominios/enquetes",
+  equipe: "/condominios/equipe", obras: "/condominios/obras", docs: "/condominios/documentos",
+};
+
+/**
+ * Aba visível ao morador: liberada em Funções (Ler) para o perfil dele.
+ * Ações continuam limitadas pelo teto do morador (permsMorador) — ativar "Criar" em Funções não dá poder de gestão.
+ */
+export const secaoMoradorLiberada = (secao: string, perfilPodeLer: (rota: string) => boolean) => {
+  if (!(secao in ROTA_SECAO_MORADOR)) return false;
+  const rota = ROTA_SECAO_MORADOR[secao];
+  return rota === null || perfilPodeLer(rota!);
+};

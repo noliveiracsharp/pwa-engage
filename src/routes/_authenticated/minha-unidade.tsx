@@ -9,7 +9,8 @@ import { ObrasPanel } from "@/components/condominios/ObrasPanel";
 import { AtendimentosPanel } from "@/components/condominios/AtendimentosPanel";
 import { EnquetesPanel } from "@/components/condominios/EnquetesPanel";
 import { useAuth } from "@/hooks/useAuth";
-import { ASSEMBLEIA_ATIVA, chamadoAberto, entraNaGestao, permsFichaMorador, permsMorador, SOMENTE_LEITURA, visibilidadesDocumento } from "@/lib/morador-acesso";
+import { usePagePermissions } from "@/hooks/usePagePermissions";
+import { ASSEMBLEIA_ATIVA, secaoMoradorLiberada, chamadoAberto, entraNaGestao, permsFichaMorador, permsMorador, SOMENTE_LEITURA, visibilidadesDocumento } from "@/lib/morador-acesso";
 import { AssembleiasMorador } from "@/components/condominios/AssembleiasPanel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -119,7 +120,27 @@ function MinhaUnidade() {
   const [avisoAberto, setAvisoAberto] = useState<Row | null>(null);
   const sec = (key: string, label: string, icon: Secao["icon"]): Secao => ({ key, label, icon, ...permsMorador(key) });
   const assembleiasAoVivo = useAssembleiasAoVivo(condId);
-  const secoes: Secao[] = [
+  // Abas liberadas pelo perfil em Funções (Ler). Ordem fixa de hooks.
+  const pMeu = usePagePermissions("/condominios/meu");
+  const pInt = usePagePermissions("/condominios/interfone");
+  const pAv = usePagePermissions("/condominios/avisos");
+  const pAsb = usePagePermissions("/condominios/assembleias");
+  const pAtd = usePagePermissions("/condominios/atendimentos");
+  const pEnq = usePagePermissions("/condominios/enquetes");
+  const pEq = usePagePermissions("/condominios/equipe");
+  const pOb = usePagePermissions("/condominios/obras");
+  const pDoc = usePagePermissions("/condominios/documentos");
+  const leituraPorRota: Record<string, boolean> = {
+    "/condominios/meu": pMeu.canRead, "/condominios/interfone": pInt.canRead, "/condominios/avisos": pAv.canRead,
+    "/condominios/assembleias": pAsb.canRead, "/condominios/atendimentos": pAtd.canRead, "/condominios/enquetes": pEnq.canRead,
+    "/condominios/equipe": pEq.canRead, "/condominios/obras": pOb.canRead, "/condominios/documentos": pDoc.canRead,
+  };
+  const permsCarregando = pAv.loading;
+  const liberada = (k: string) => secaoMoradorLiberada(k, (r) => !!leituraPorRota[r]);
+  useEffect(() => {
+    if (!permsCarregando && !liberada(secao)) setSecao("painel");
+  });
+  const secoes: Secao[] = ([
     sec("painel", "Painel", LayoutDashboard),
     sec("unidade", "Minha unidade", Home),
     sec("meu", "Meu Condomínio", MapPinned),
@@ -131,7 +152,7 @@ function MinhaUnidade() {
     sec("equipe", "Equipe & Diretoria", Users),
     sec("obras", "Obras", HardHat),
     sec("docs", "Documentos", FileText),
-  ];
+  ] as Secao[]).filter((x) => liberada(x.key));
 
 
   if (isLoading) return <div className="flex h-64 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" aria-label="Carregando" /></div>;
@@ -145,12 +166,12 @@ function MinhaUnidade() {
     : (lim ? avisos.data!.slice(0, lim) : avisos.data!).map((a) => (
       <CardAviso key={s(a["id"])} aviso={a} onAbrir={() => setAvisoAberto(a)} />
     )));
-  const kpis = [
+  const kpis = ([
     { k: "avisos", l: "Avisos ativos", n: avisos.data?.length ?? 0, i: Megaphone },
     { k: "atendimentos", l: "Chamados em aberto", n: chamados.data?.length ?? 0, i: MessageSquareText },
     { k: "assembleias", l: "Assembleias ativas", n: assembleias.data?.length ?? 0, i: Gavel },
     { k: "docs", l: "Documentos", n: docs.data?.length ?? 0, i: FileText },
-  ];
+  ]).filter((c) => liberada(c.k));
 
   return (
     <div className="flex min-h-full flex-col md:flex-row">
@@ -166,7 +187,7 @@ function MinhaUnidade() {
         {(ambientes?.length ?? 0) > 1 && <Button variant="outline" className="hidden sm:inline-flex" asChild><Link to="/acesso">Trocar acesso</Link></Button>}
       </div>
         {secao === "painel" && (<div className="space-y-4">
-          {(assembleias.data ?? []).length > 0 && (
+          {liberada("assembleias") && (assembleias.data ?? []).length > 0 && (
             <button type="button" onClick={() => setSecao("assembleias")} className="flex w-full items-center gap-3 rounded-xl border border-primary/40 bg-primary/10 p-4 text-left transition-colors hover:bg-primary/15">
               <Gavel className="size-5 shrink-0 text-primary" aria-hidden />
               <span className="flex-1"><span className="block font-medium">{s(assembleias.data![0]!["titulo"]) || "Assembleia em andamento"}</span><span className="text-sm text-muted-foreground">Participe do debate e vote nas pautas.</span></span>
@@ -183,12 +204,12 @@ function MinhaUnidade() {
             ))}
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
-            <Card>
+            {liberada("avisos") && <Card>
               <CardHeader className="flex-row items-center justify-between space-y-0"><CardTitle className="text-lg md:text-base">Avisos recentes</CardTitle><Button size="sm" variant="ghost" className="text-base text-primary md:text-sm" onClick={() => setSecao("avisos")}>Ver todos</Button></CardHeader>
               <CardContent className="space-y-3 px-3 md:px-6">{listaAvisos(3)}</CardContent>
-            </Card>
+            </Card>}
             <div className="space-y-4">
-              <Card>
+              {liberada("atendimentos") && <Card>
                 <CardHeader className="flex-row items-center justify-between space-y-0"><CardTitle className="text-lg md:text-base">Seus atendimentos</CardTitle><Button size="sm" onClick={() => setSecao("atendimentos")}>Abrir chamado</Button></CardHeader>
                 <CardContent className="space-y-2 text-base md:text-sm">
                   {(chamados.data ?? []).length === 0 ? <p className="text-muted-foreground">Nenhum chamado em aberto.</p>
@@ -199,7 +220,7 @@ function MinhaUnidade() {
                       </button>
                     ))}
                 </CardContent>
-              </Card>
+              </Card>}
               <Card>
                 <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Wallet className="size-4" aria-hidden /> Financeiro da unidade</CardTitle></CardHeader>
                 <CardContent className="text-base text-foreground/80 md:text-sm md:text-muted-foreground">Em breve: cota do mês, 2ª via do boleto e Pix direto por aqui.</CardContent>
