@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Download, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PdfPaginas, precisaPdfJs } from "@/components/layout/PdfPaginas";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export type ArquivoVisivel = { url: string; titulo: string; tipo?: string | undefined; nome?: string | undefined };
@@ -32,7 +33,7 @@ export function VisualizadorArquivoHost() {
         {a && (
           <div className="min-h-0 flex-1 overflow-hidden rounded-md border bg-muted/30">
             {k === "imagem" ? <img src={a.url} alt={a.titulo} className="size-full object-contain" />
-              : k === "pdf" ? <iframe src={a.url} title={a.titulo} className="size-full" />
+              : k === "pdf" ? (precisaPdfJs() ? <PdfPaginas url={a.url} titulo={a.titulo} /> : <iframe src={a.url} title={a.titulo} className="size-full" />)
               : k === "video" ? <video src={a.url} controls className="size-full" aria-label={a.titulo} />
               : (
                 <div className="flex size-full flex-col items-center justify-center gap-3 p-6 text-center">

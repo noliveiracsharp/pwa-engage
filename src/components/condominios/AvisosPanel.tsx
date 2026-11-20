@@ -1,3 +1,4 @@
+import { PdfPaginas, precisaPdfJs } from "@/components/layout/PdfPaginas";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { Archive, BarChart3, Ban, Building, Building2, CalendarClock, Eye, FileSpreadsheet, FileText, Film, ImageIcon, Loader2, Mail, Megaphone, MessageCircle, Paperclip, Pencil, Plus, Printer, RotateCcw, Search, Send, Users, X } from "lucide-react";
@@ -194,7 +195,7 @@ export function AvisosPanel({ condominioId, condominios, blocos, unidades, perms
             ? <img src={anexoAberto.url} alt={anexoAberto.titulo} className="min-h-0 flex-1 rounded-md object-contain" />
             : anexoAberto.tipo === "video"
               ? <video src={anexoAberto.url} controls className="min-h-0 w-full flex-1 rounded-md bg-muted" />
-              : <iframe src={anexoAberto.url} title={anexoAberto.titulo} className="min-h-0 w-full flex-1 rounded-md border" />)}
+              : precisaPdfJs() ? <div className="min-h-0 w-full flex-1 overflow-hidden rounded-md border"><PdfPaginas url={anexoAberto.url} titulo={anexoAberto.titulo} /></div> : <iframe src={anexoAberto.url} title={anexoAberto.titulo} className="min-h-0 w-full flex-1 rounded-md border" />)}
           <DialogFooter>
             <Button variant="outline" onClick={() => anexoAberto && window.open(anexoAberto.url, "_blank", "noopener")}>Abrir em nova aba</Button>
             <Button onClick={() => setAnexoAberto(null)}>Fechar</Button>
