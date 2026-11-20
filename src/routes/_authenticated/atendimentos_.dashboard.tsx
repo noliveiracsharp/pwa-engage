@@ -75,7 +75,7 @@ function DashboardAtendimentos() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="flex items-center gap-2">
-          <Button asChild variant="ghost" size="icon" aria-label="Voltar"><Link to="/atendimentos"><ArrowLeft className="h-5 w-5" /></Link></Button>
+          <Button asChild variant="ghost" size="icon" aria-label="Voltar" className={typeof window !== "undefined" && window.location.pathname === "/atendimentos" ? "hidden" : undefined}><Link to="/atendimentos"><ArrowLeft className="h-5 w-5" /></Link></Button>
           <div>
             <h1 className="text-xl font-semibold text-foreground">Dashboard de Atendimentos</h1>
             <p className="text-sm text-muted-foreground">Conversas abertas no período escolhido.</p>

@@ -1,7 +1,7 @@
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { useKanbansPermitidos } from "@/hooks/useKanbansPermitidos";
 import { ProtocoloBadge } from "@/components/atendimentos/ProtocoloBadge";
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, type ComponentType, useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Bot, MessageSquare, PanelLeftClose, PanelLeftOpen, Plus, Search, Users } from "lucide-react";
@@ -19,7 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ChatPainel } from "@/components/atendimentos/ChatPainel";
 import { ContatoPainel } from "@/components/atendimentos/ContatoPainel";
 import { BloqueiosDialog, SeloBloqueado, useBloqueados } from "@/components/atendimentos/Bloqueios";
-import { Ban, BarChart3 } from "lucide-react";
+import { Ban } from "lucide-react";
 import {
   A, M, corEtiqueta, dataDe, fotoPessoa, horaCurta, iniciais, isCliente, isEncerrado, isIA, nomePessoa, telefonePessoa,
 } from "@/lib/atendimentos";
@@ -55,7 +55,34 @@ const naoLidasDe = (a: Row) => { const c = A.naoLidas.find((k) => k in a); retur
 
 const byId = (rows: Row[]) => new Map(rows.map((r) => [text(rowId(r)), r]));
 
+const DashboardAba = lazy(() => import("@/routes/_authenticated/atendimentos_.dashboard").then((m) => ({ default: m.Route.options.component as ComponentType })));
+
+/** Gestores veem as abas Atendimentos | Dashboard; o Dashboard só carrega ao abrir a aba. */
 function AtendimentosPage() {
+  const { isMaster } = useAuth();
+  const perm = usePagePermissions("/atendimentos/gerencial");
+  const gerencial = perm.canRead || isMaster;
+  const [aba, setAba] = useState<"chat" | "dash">("chat");
+  if (!gerencial) return <AtendimentosChat />;
+  const btn = (k: "chat" | "dash", label: string) => (
+    <button type="button" onClick={() => setAba(k)} aria-pressed={aba === k}
+      className={cn("rounded-md px-3 py-1 text-sm transition-colors", aba === k ? "bg-background font-medium text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>
+      {label}
+    </button>
+  );
+  return (
+    <div className="flex flex-col">
+      <div className="-mx-4 -mt-4 mb-4 flex border-b border-border bg-card px-3 py-1.5 sm:-mx-6 sm:-mt-6">
+        <div className="inline-flex gap-1 rounded-lg bg-muted p-1">{btn("chat", "Atendimentos")}{btn("dash", "Dashboard")}</div>
+      </div>
+      {aba === "chat" ? <AtendimentosChat comAbas /> : (
+        <Suspense fallback={<p className="text-sm text-muted-foreground">Carregando…</p>}><DashboardAba /></Suspense>
+      )}
+    </div>
+  );
+}
+
+function AtendimentosChat({ comAbas = false }: { comAbas?: boolean }) {
   const { id } = Route.useSearch();
   const navigate = useNavigate();
   const { isMaster, usuario, empresa } = useAuth();
@@ -117,7 +144,7 @@ function AtendimentosPage() {
   );
 
   const instanciasAtivas = useMemo(
-    () => instancias.filter((i) => i["status"] !== false && (!empresaId || !("empresa_id" in i) || text(i["empresa_id"]) === empresaId)),
+    () => instancias.filter((i) => i["status"] !== false && String(i["finalidade"] ?? "").toLowerCase() !== "notificacoes" && (!empresaId || !("empresa_id" in i) || text(i["empresa_id"]) === empresaId)),
     [instancias, empresaId],
   );
 
@@ -203,7 +230,7 @@ function AtendimentosPage() {
   const abrir = (aid?: string) => navigate({ to: "/atendimentos", search: { id: aid }, replace: true });
 
   return (
-    <div className="-m-4 flex h-[calc(100vh-4rem)] overflow-hidden border-border bg-card sm:-m-6">
+    <div className={cn("flex overflow-hidden border-border bg-card", comAbas ? "-mx-4 -mb-4 -mt-4 h-[calc(100vh-7rem)] sm:-mx-6 sm:-mb-6" : "-m-4 h-[calc(100vh-4rem)] sm:-m-6")}>
       {/* Coluna 1 */}
       <aside className={cn("flex w-full flex-col border-r border-border md:w-80 lg:w-96", ativo && (listaAberta ? "hidden md:flex" : "hidden"))}>
         <div className="space-y-2 border-b border-border p-3">
@@ -214,11 +241,6 @@ function AtendimentosPage() {
             <Button variant="outline" size="icon" className="shrink-0" onClick={() => setBloqAberto(true)} aria-label="Contatos bloqueados" title="Contatos bloqueados">
               <Ban className="h-4 w-4" />
             </Button>
-            {gerencial && (
-              <Button asChild variant="outline" size="icon" className="shrink-0" aria-label="Dashboard gerencial" title="Dashboard gerencial">
-                <Link to="/atendimentos/dashboard"><BarChart3 className="h-4 w-4" /></Link>
-              </Button>
-            )}
             <BloqueiosDialog open={bloqAberto} onOpenChange={setBloqAberto} empresaId={empresaBloq} />
             {ativo && (
               <Button variant="outline" size="icon" className="hidden shrink-0 md:inline-flex" onClick={() => setLista(false)} aria-label="Ocultar conversas" title="Ocultar conversas">

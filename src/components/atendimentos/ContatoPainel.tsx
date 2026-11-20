@@ -3,7 +3,7 @@ import { etiquetasDoQuadro } from "@/lib/etiquetas";
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Tag, X, KanbanSquare, Pencil, ArrowRightLeft } from "lucide-react";
+import { Plus, Tag, X, Pencil, ArrowRightLeft } from "lucide-react";
 import { perguntar } from "@/components/layout/DialogoGlobal";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -20,7 +20,6 @@ import { filterPayload, useCols } from "@/lib/projetos";
 import { usePesquisaSatisfacao } from "./Pesquisa";
 import { ChecklistsPainel } from "./ChecklistRespostas";
 import { useAuth } from "@/hooks/useAuth";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type Props = {
   atendimento: Row;
@@ -196,7 +195,15 @@ export function ContatoPainel({ atendimento, pessoa, usuarios, participantes, et
               <PopoverTrigger asChild>
                 <Button variant="ghost" size="sm"><ArrowRightLeft className="mr-1 h-3.5 w-3.5" /> Transferir</Button>
               </PopoverTrigger>
-              <PopoverContent className="max-h-64 w-60 overflow-y-auto p-1" align="end">
+              <PopoverContent className="max-h-80 w-64 overflow-y-auto p-1" align="end">
+                <p className="px-2 pb-1 pt-1.5 text-[11px] font-medium uppercase text-muted-foreground">Departamento</p>
+                {kanbansDestino.filter((k) => text(rowId(k)) !== text(pick(atendimento, A.kanban)))
+                  .sort((a, b) => text(pick(a, ["nome", "descricao"])).localeCompare(text(pick(b, ["nome", "descricao"])), "pt-BR")).map((k) => (
+                  <button key={`kb-${text(rowId(k))}`} type="button" className="block w-full rounded px-2 py-1.5 text-left text-sm hover:bg-accent" onClick={() => void transferirKanban(text(rowId(k)))}>
+                    {text(pick(k, ["nome", "descricao"]))}
+                  </button>
+                ))}
+                <p className="mt-1 border-t border-border px-2 pb-1 pt-2 text-[11px] font-medium uppercase text-muted-foreground">Atendente</p>
                 {usuarios.filter((u) => text(rowId(u)) !== responsavel && u["status"] !== false)
                   .sort((a, b) => nomeUsuario(a).localeCompare(nomeUsuario(b), "pt-BR")).map((u) => (
                   <button key={text(rowId(u))} type="button" className="block w-full rounded px-2 py-1.5 text-left text-sm hover:bg-accent" onClick={() => void transferirAtendente(text(rowId(u)))}>
@@ -260,27 +267,8 @@ export function ContatoPainel({ atendimento, pessoa, usuarios, participantes, et
           </div>
         </section>
 
-        <section className="space-y-2 rounded-lg border border-border p-3">
-          <p className="flex items-center gap-1 text-xs font-medium uppercase text-muted-foreground"><KanbanSquare className="h-3 w-3" /> Kanban</p>
-          <Select value={kanban ? text(rowId(kanban)) : ""} onValueChange={(v) => void transferirKanban(v)}>
-            <SelectTrigger className="h-9" aria-label="Departamento (transferir)"><SelectValue placeholder="Sem departamento" /></SelectTrigger>
-            <SelectContent>
-              {kanbansDestino.map((k) => (
-                <SelectItem key={text(rowId(k))} value={text(rowId(k))}>{text(pick(k, ["nome", "descricao"]))}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={etapa ? text(rowId(etapa)) : ""} onValueChange={mudarEtapa} disabled={!kanban}>
-            <SelectTrigger className="h-9"><SelectValue placeholder="Selecione a etapa" /></SelectTrigger>
-            <SelectContent>
-              {etapasDoKanban(etapas, text(pick(atendimento, A.kanban))).map((e) => (
-                <SelectItem key={text(rowId(e))} value={text(rowId(e))}>{text(pick(e, ["descricao", "nome"]))}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {pesquisa.dialog}
-          {checklist.dialog}
-        </section>
+        {pesquisa.dialog}
+        {checklist.dialog}
 
         <ChecklistsPainel atId={atId} />
           </TabsContent>
