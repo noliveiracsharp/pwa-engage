@@ -24,6 +24,7 @@ import {
   A, M, corEtiqueta, dataDe, fotoPessoa, horaCurta, iniciais, isCliente, isEncerrado, isIA, nomePessoa, telefonePessoa,
 } from "@/lib/atendimentos";
 import { AvaliacaoSelo } from "@/components/atendimentos/Pesquisa";
+import { BuscaAtendimentosDialog } from "@/components/atendimentos/BuscaAtendimentosDialog";
 
 export const Route = createFileRoute("/_authenticated/atendimentos")({
   staticData: { sitemap: false },
@@ -115,6 +116,9 @@ function AtendimentosChat({ comAbas = false }: { comAbas?: boolean }) {
     queryKey: ["table", "atendimentos", "painel", empresaId || "todas"],
     staleTime: 30_000,
     queryFn: async (): Promise<Row[] | null> => {
+      // Só o que está em andamento (ativos, aguardando, IA); encerrados vêm pela busca.
+      const at = await supabase.rpc("fn_atendimentos_ativos" as never, { p_empresa_id: empresaId || null } as never);
+      if (!at.error) return (at.data ?? []) as unknown as Row[];
       const { data, error } = await supabase.rpc("fn_atendimentos_painel" as never, { p_empresa_id: empresaId || null, p_dias: DIAS_LISTA } as never);
       if (error) return null; // função ainda não criada: usa o caminho antigo
       return (data ?? []) as unknown as Row[];
@@ -122,7 +126,12 @@ function AtendimentosChat({ comAbas = false }: { comAbas?: boolean }) {
   });
   const usaRpc = Array.isArray(painelRpc);
   const { data: atendLegado = [], isLoading: carregandoLeg } = useTableRows("atendimentos", painelRpc === null, undefined, filtroRecentes);
-  const atendimentos = usaRpc ? painelRpc : atendLegado;
+  const [escolhidos, setEscolhidos] = useState<Row[]>([]);
+  const atendimentos = useMemo(() => {
+    const base = usaRpc ? painelRpc : atendLegado;
+    const ids = new Set(base.map((a) => text(rowId(a))));
+    return [...base, ...escolhidos.filter((e) => !ids.has(text(rowId(e))))];
+  }, [usaRpc, painelRpc, atendLegado, escolhidos]);
   const isLoading = carregandoRpc || (!usaRpc && carregandoLeg);
   const atIds = useMemo(() => atendimentos.map((a) => text(rowId(a))).filter(Boolean), [atendimentos]);
   const pesIds = useMemo(() => [...new Set(atendimentos.map((a) => text(pick(a, A.pessoa))).filter(Boolean))], [atendimentos]);
@@ -228,6 +237,7 @@ function AtendimentosChat({ comAbas = false }: { comAbas?: boolean }) {
   const [rapido, setRapido] = useState<Rapido>("minhas");
   useEffect(() => { if (!gerencial && rapido === "todos") setRapido("historico"); if (gerencial && rapido === "historico") setRapido("todos"); }, [gerencial, rapido]);
   const [busca, setBusca] = useState("");
+  const [buscaModo, setBuscaModo] = useState<"encerrados" | "todos" | "historico" | null>(null);
   const [painel, setPainel] = useState(true);
   const [listaAberta, setLista] = useState(true);
   const [bloqAberto, setBloqAberto] = useState(false);
@@ -360,6 +370,10 @@ function AtendimentosChat({ comAbas = false }: { comAbas?: boolean }) {
               </SelectContent>
             </Select>
           </div>
+          {buscaModo && (
+            <BuscaAtendimentosDialog open onOpenChange={(v) => { if (!v) setBuscaModo(null); }} empresaId={empresaId} modo={buscaModo} usuarioId={usuarioId}
+              onEscolher={(row) => { setEscolhidos((l) => [row, ...l.filter((x) => text(rowId(x)) !== text(rowId(row)))]); abrir(text(rowId(row))); }} />
+          )}
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar por nome, telefone ou protocolo" className="h-9 pl-8" />
@@ -387,8 +401,8 @@ function AtendimentosChat({ comAbas = false }: { comAbas?: boolean }) {
             ))}
             <div className="ml-auto flex gap-1">
               {EXTRAS.map((x) => (
-                <button key={x.key} type="button" aria-pressed={rapido === x.key} onClick={() => setRapido(rapido === x.key ? "minhas" : x.key)}
-                  className={cn("rounded-full px-2 py-1 text-[11px] transition-colors", rapido === x.key ? "bg-secondary font-medium text-secondary-foreground" : "text-muted-foreground hover:text-foreground")}>
+                <button key={x.key} type="button" onClick={() => setBuscaModo(x.key as "encerrados" | "todos" | "historico")}
+                  className="rounded-full px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:text-foreground">
                   {x.label}
                 </button>
               ))}
