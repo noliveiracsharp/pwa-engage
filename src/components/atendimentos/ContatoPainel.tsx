@@ -133,9 +133,14 @@ export function ContatoPainel({ atendimento, pessoa, usuarios, participantes, et
     if (!kbId || kbId === text(pick(atendimento, A.kanban))) return;
     const destino = kanbansDestino.find((k) => text(rowId(k)) === kbId);
     const primeira = etapasDoKanban(etapas, kbId)[0];
-    const payload = { kanban_nome_id: kbId, kanban_id: kbId, ...etapaPayload(primeira ? rowId(primeira) : null, etapas) };
+    // Libera o responsável para o chamado cair em "Aguardando" do novo departamento.
+    const payload = { kanban_nome_id: kbId, kanban_id: kbId, usuario_responsavel_id: null, responsavel_id: null, ...etapaPayload(primeira ? rowId(primeira) : null, etapas) };
     const { error } = await supabase.from("atendimentos").update(filterPayload(payload, colsAt) as never).eq("id", atId);
     if (error) { toast.error(error.message); return; }
+    if (responsavel && !meusPart.some((p) => text(p["usuario_id"]) === responsavel)) {
+      await supabase.from("atendimentos_participantes").insert({ atendimento_id: atId, usuario_id: responsavel });
+      void qc.invalidateQueries({ queryKey: ["table", "atendimentos_participantes"] });
+    }
     const nomeKb = text(pick(destino, ["nome", "descricao"]));
     await notaInterna(`🔀 Atendimento transferido de ${kanban ? text(pick(kanban, ["nome", "descricao"])) : "sem departamento"} para ${nomeKb}.`);
     void qc.invalidateQueries({ queryKey: ["table", "atendimentos"] });

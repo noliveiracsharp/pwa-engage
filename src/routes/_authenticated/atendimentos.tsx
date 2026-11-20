@@ -3,7 +3,7 @@ import { useKanbansPermitidos } from "@/hooks/useKanbansPermitidos";
 import { ProtocoloBadge } from "@/components/atendimentos/ProtocoloBadge";
 import { lazy, Suspense, type ComponentType, useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bot, MessageSquare, PanelLeftClose, PanelLeftOpen, Plus, Search, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NovoAtendimentoDialog } from "@/components/atendimentos/NovoAtendimentoDialog";
@@ -99,6 +99,16 @@ function AtendimentosChat({ comAbas = false }: { comAbas?: boolean }) {
   const { data: participantes = [] } = useTableRows("atendimentos_participantes");
   const { data: usuarios = [] } = useTableRows("usuarios");
   const { data: notas = [] } = useTableRows("empresas_notasrapidas");
+  const qcLista = useQueryClient();
+  // Lista ao vivo: novos chamados e transferências aparecem sem recarregar.
+  useEffect(() => {
+    let t: ReturnType<typeof setTimeout> | undefined;
+    const ch = supabase.channel("at-lista").on("postgres_changes", { event: "*", schema: "public", table: "atendimentos" }, () => {
+      clearTimeout(t);
+      t = setTimeout(() => { void qcLista.invalidateQueries({ queryKey: ["table", "atendimentos"], exact: false }); }, 400);
+    }).subscribe();
+    return () => { clearTimeout(t); void supabase.removeChannel(ch); };
+  }, [qcLista]);
   
 
   const { data: meusKanbans = [] } = useQuery({
