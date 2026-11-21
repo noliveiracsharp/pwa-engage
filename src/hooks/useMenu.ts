@@ -20,17 +20,15 @@ export type MenuItem = {
 const FALLBACK: MenuItem[] = [
   { id: "dashboard", label: "Dashboard", path: "/dashboard", icon: "layout-dashboard", order: 1 },
   { id: "empresas", label: "Empresas", path: "/empresas", icon: "building-2", order: 2 },
-  { id: "pessoas", label: "Pessoas", path: "/pessoas", icon: "users", order: 3 },
-  { id: "usuarios", label: "Usuários", path: "/usuarios", icon: "user-cog", order: 4 },
-  { id: "funcoes", label: "Funções", path: "/funcoes", icon: "shield-check", order: 5 },
+  { id: "atendimentos", label: "Atendimentos", path: "/atendimentos", icon: "message-circle", order: 3 },
+  { id: "parceiros", label: "Clientes e Fornecedores", path: "/parceiros", icon: "handshake", order: 4 },
+  { id: "condominios", label: "Condomínios", path: "/condominios", icon: "building", order: 5 },
   { id: "kanban", label: "Kanban", path: "/kanban", icon: "kanban", order: 6 },
-  { id: "atendimentos", label: "Atendimentos", path: "/atendimentos", icon: "message-circle", order: 7 },
+  { id: "orcamentos", label: "Ofertas", path: "/orcamentos", icon: "file-text", order: 7 },
   { id: "itens", label: "Produtos e Serviços", path: "/itens", icon: "package", order: 8 },
-  { id: "marcas", label: "Marcas", path: "/marcas", icon: "tag", order: 9 },
-  { id: "unid_medida", label: "Unidades de Medida", path: "/unid_medida", icon: "ruler", order: 10 },
-  { id: "parceiros", label: "Parceiros", path: "/parceiros", icon: "handshake", order: 12 },
-  { id: "orcamentos", label: "Ofertas", path: "/orcamentos", icon: "file-text", order: 13 },
-  { id: "relatorios", label: "Relatórios", path: "/relatorios", icon: "bar-chart-3", order: 14 },
+  { id: "financeiro", label: "Financeiro", path: "/financeiro", icon: "wallet", order: 9 },
+  { id: "documentos", label: "Documentos", path: "/documentos", icon: "folder-open", order: 10 },
+  { id: "relatorios", label: "Relatórios", path: "/relatorios", icon: "bar-chart-3", order: 11 },
 ];
 
 // Perfil sem nenhuma permissão: apenas o Dashboard (nunca liberar tudo).

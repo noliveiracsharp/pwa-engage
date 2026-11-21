@@ -76,6 +76,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
               <AppSidebar open onNavigate={() => setOpen(false)} />
             </div>
           </>
+        ) : telaCondominio ? (
+          // Telas do condomínio já têm menu próprio: o menu principal só aparece quando aberto pelo hambúrguer.
+          open ? <AppSidebar open /> : null
         ) : (
           <AppSidebar open={open} />
         )}

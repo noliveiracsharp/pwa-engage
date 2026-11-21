@@ -12,6 +12,8 @@ import { MeuCondominioPanel } from "./MeuCondominioPanel";
 import { useEffect, useMemo, useState } from "react";
 import { Building, Building2, DoorOpen, Layers, Pencil, Plus, Search, Star, Trash2, Wand2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { condominioInicial } from "@/lib/cond-carteira";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -94,7 +96,26 @@ const OCUP_VISUAL = [
 export function CondominiosPage() {
   const perms = usePagePermissions("/condominios");
   const { data: classificacoes = [] } = useClassificacoes();
-  const { data: parceiros = [] } = useTableRows("parceiros");
+  const { data: parceirosProprios = [] } = useTableRows("parceiros");
+  const { empresa: empresaSessao, usuario: usuarioSessao, isMaster: masterSessao, empresaContextoId: ctxSessao } = useAuth();
+  // Carteira da administradora: condomínios em que ela é administradora_id, mesmo cadastrados
+  // por outra empresa (ex.: cliente de sistemas da ConectCon e administrado pela GK).
+  const empresaCarteira = String((masterSessao && ctxSessao) || pick(usuarioSessao ?? {}, ["empresa_id"]) || (empresaSessao ? rowId(empresaSessao) ?? "" : ""));
+  const { data: administrados = [] } = useQuery({
+    queryKey: ["table", "empresas", "carteira-administradora", empresaCarteira],
+    enabled: !!empresaCarteira,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("empresas").select("*").eq("administradora_id" as never, empresaCarteira as never);
+      if (error) return [] as Row[];
+      return (data ?? []) as Row[];
+    },
+  });
+  const parceiros = useMemo(() => {
+    const m = new Map<string, Row>();
+    for (const r of [...parceirosProprios, ...administrados]) m.set(s(rowId(r)), r);
+    return [...m.values()];
+  }, [parceirosProprios, administrados]);
   // No acesso de condomínio (síndico), o escopo fica só nos condomínios que ele gere.
   const modoUnidade = emModoUnidade(lerAmbiente());
   const { data: ambientes = [] } = useAmbientes();
