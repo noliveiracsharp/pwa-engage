@@ -35,6 +35,7 @@ import { SorteioPanel } from "./SorteioPanel";
 import { PainelCondominios } from "./PainelCondominios";
 import { EquipePanel } from "./EquipePanel";
 import { GestaoTerceirosPanel } from "./GestaoTerceirosPanel";
+import { TransferenciaCarteira } from "./TransferenciaCarteira";
 import { DocumentosPanel } from "./DocumentosPanel";
 import { AvisosPanel } from "./AvisosPanel";
 import { EnquetesPanel } from "./EnquetesPanel";
@@ -247,9 +248,12 @@ export function CondominiosPage() {
         const sAt = abaPai ?? secAtual;
         const I = sAt?.icon ?? Building2;
         return (
-          <div className="min-w-0">
-            <h1 className="flex items-center gap-2 text-2xl font-semibold"><I className="size-6 text-primary" /> {sAt?.label ?? "Painel"}</h1>
-            {DESCRICAO_SECAO[secao] && <p className="text-sm text-muted-foreground">{DESCRICAO_SECAO[secao]}</p>}
+          <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
+            <div className="min-w-0">
+              <h1 className="flex items-center gap-2 text-2xl font-semibold"><I className="size-6 text-primary" /> {sAt?.label ?? "Painel"}</h1>
+              {DESCRICAO_SECAO[secao] && <p className="text-sm text-muted-foreground">{DESCRICAO_SECAO[secao]}</p>}
+            </div>
+            {!modoUnidade && perms.canUpdate && <TransferenciaCarteira />}
           </div>
         );
       })()}
