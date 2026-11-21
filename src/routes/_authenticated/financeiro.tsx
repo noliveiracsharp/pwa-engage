@@ -1,5 +1,6 @@
 import { imprimirDre } from "@/components/relatorios/DreRelatorioPDF";
 import { Carregando } from "@/components/financeiro/Carregando";
+import { ContextoFinanceiro } from "@/components/financeiro/ContextoFinanceiro";
 import { FILTRO_TITULOS_CARTAO, FILTRO_EM_ABERTO, filtroPagosDesde, filtroVencimentoEntre, filtroPagoEntre, unirTitulos } from "@/lib/financeiro-filtros";
 import { useEmpresaAtiva } from "@/hooks/useEmpresaAtiva";
 import { PeriodoNavegavel } from "@/components/financeiro/PeriodoNavegavel";
@@ -159,11 +160,18 @@ const SECOES_FIN = [
 const FILTRO_PAGOS_24M = filtroPagosDesde(24);
 
 function FinanceiroPage() {
+  return <ContextoFinanceiro><FinanceiroConteudo /></ContextoFinanceiro>;
+}
+
+function FinanceiroConteudo() {
+  const { empresa, empresaOriginal, isMaster } = useAuth();
+  const condominio = empresa?.["is_tenant"] === false || (!isMaster && text(empresa?.["id"]) !== text(empresaOriginal?.["id"]));
   const perms = usePagePermissions("/financeiro");
   const secoes = useSecoes("/financeiro", SECOES_FIN);
-  const filhas = useAbasFilhas();
+  const todasFilhas = useAbasFilhas();
+  const filhas = condominio ? [] : todasFilhas;
   // Sem leitura no Financeiro, mostra só as abas filhas liberadas (ex.: Reembolsos).
-  const visiveis = [...(perms.canRead ? SECOES_FIN.filter((s) => secoes[s.key]?.canRead) : []), ...filhas.map((a) => ({ key: a.path, label: a.label }))];
+  const visiveis = [...(perms.canRead ? SECOES_FIN.filter((s) => secoes[s.key]?.canRead && (!condominio || !["regua", "comissoes"].includes(s.key))) : []), ...filhas.map((a) => ({ key: a.path, label: a.label }))];
   const [abaSel, setAba] = useState<string>("receber");
   const aba = visiveis.some((s) => s.key === abaSel) ? abaSel : (visiveis[0]?.key ?? "");
   // Histórico completo só para as visões que realmente precisam dele (caixa e controller).

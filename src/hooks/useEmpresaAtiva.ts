@@ -9,7 +9,7 @@ import { emModoUnidade } from "@/lib/ambientes";
 
 /** Empresa exibida no topo: a do contexto (Master) ou a do usuário. */
 export function useEmpresaAtiva() {
-  const { empresa, isMaster, empresaContextoId } = useAuth();
+  const { empresa, isMaster, empresaContextoId, escopoFinanceiro } = useAuth();
   const { theme } = useTheme();
   const { data: empresas = [] } = useTableRows("empresas", isMaster);
   const ctx = isMaster && empresaContextoId ? empresas.find((e) => String(rowId(e)) === String(empresaContextoId)) : undefined;
@@ -29,7 +29,7 @@ export function useEmpresaAtiva() {
       return ((Array.isArray(data) ? data[0] : data) ?? null) as Record<string, unknown> | null;
     },
   });
-  const base = ctx ?? empresa;
+  const base = escopoFinanceiro ? empresa : ctx ?? empresa;
   const atual = marcaCond
     ? { ...(base ?? {}), ...Object.fromEntries(Object.entries(marcaCond).filter(([, v]) => v != null && v !== "")) }
     : base;

@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { pick, type Row } from "@/lib/row";
 import { useAuth } from "@/hooks/useAuth";
+import { empresaDaConsulta } from "@/lib/financeiro-contexto";
 
 /** Tabelas globais: nunca filtradas pelo contexto de empresa do Master. */
 // "perfil" NÃO é global: cada empresa tem seus perfis (só o Master fica sem empresa).
@@ -16,13 +17,13 @@ export type FiltroBanco = { key: string; apply: (q: any) => any };
 
 /** Reads every row of a table (schema-tolerant: no column names assumed). */
 export function useTableRows(table: string, enabled = true, orderBy?: string, filtro?: FiltroBanco) {
-  const { isMaster, empresa, usuario, loading } = useAuth();
+  const { isMaster, empresa, usuario, loading, escopoFinanceiro } = useAuth();
   // Master: empresa do "Contexto da Empresa". Demais perfis: sempre a empresa do próprio usuário.
   const ownEmpresa = usuario ? text(pick(usuario, ["empresa_id", "id_empresa", "empresaid"])) : "";
   // "empresas": Master vê todas; demais perfis só a própria empresa e suas filiais.
   const isEmpresas = table === "empresas";
   const scoped = !GLOBAL_TABLES.has(table) || (isEmpresas && !isMaster);
-  const ctx = !scoped ? "" : isMaster ? (empresa ? String(rowId(empresa) ?? "") : "") : ownEmpresa || "__sem_empresa__";
+  const ctx = !scoped ? "" : empresaDaConsulta(escopoFinanceiro, isMaster, empresa ? String(rowId(empresa) ?? "") : "", ownEmpresa);
   // Não-Master só consulta depois de saber a empresa, para nunca exibir dados de outras.
   const ready = isMaster || !scoped || (!loading && !!usuario);
   const chave = ctx ? ["table", table, "ctx", ctx] : ["table", table];
@@ -68,12 +69,15 @@ export function useTableRows(table: string, enabled = true, orderBy?: string, fi
       // Catálogo compartilhado: filial também vê os itens da matriz quando ela permite.
       let paiCatalogo = "";
       const paiId = empresa ? text(empresa["empresa_pai_id"]) : "";
-      if (ctx && CATALOG_TABLES.has(table) && paiId) {
+      if (!escopoFinanceiro && ctx && CATALOG_TABLES.has(table) && paiId) {
         const { data: pai } = await supabase.from("empresas").select("*").eq("id", paiId).maybeSingle();
         if (pai && (pai as Row)["compartilhar_catalogo_filiais"] === true) paiCatalogo = paiId;
       }
       let res: Res;
-      if (ctx && CATALOG_TABLES.has(table) && !filtro) {
+      if (escopoFinanceiro && ctx && !isEmpresas) {
+        // Nunca inclui modelos de outra entidade nem repete sem filtro em caso de erro.
+        res = await run((q) => q.eq("empresa_id", ctx) as typeof q);
+      } else if (ctx && CATALOG_TABLES.has(table) && !filtro) {
         // Filtra no banco (usa índice) em vez de trazer o catálogo de todas as empresas.
         const ids = [ctx, ...(paiCatalogo ? [paiCatalogo] : [])].join(",");
         res = await run((q) => (isMaster ? q.or(`empresa_id.in.(${ids}),empresa_id.is.null`) : q.in("empresa_id", ids.split(","))) as typeof q);
@@ -96,7 +100,7 @@ export function useTableRows(table: string, enabled = true, orderBy?: string, fi
       return rows.filter((r) => {
         if (!("empresa_id" in r)) return true;
         // Perfis padrão do sistema (sem empresa) valem para todas as empresas.
-        if (r["empresa_id"] == null) return isMaster || table === "perfil";
+        if (r["empresa_id"] == null) return !escopoFinanceiro && (isMaster || table === "perfil");
         const e = String(r["empresa_id"]);
         return e === ctx || (!!paiCatalogo && e === paiCatalogo);
       });

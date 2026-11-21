@@ -6,7 +6,7 @@ import { preservarRecuperacao, RECUPERACAO_KEY } from "@/lib/recuperacao-senha";
 
 const CTX_KEY = "atendeai.empresaContexto";
 /** Mude este valor a cada atualização publicada: força novo login de todos. */
-const APP_RELEASE = "2026-11-09-locacao-veiculos-config";
+const APP_RELEASE = "2026-11-21-financeiro-condominios";
 const RELEASE_KEY = "atendeai.release";
 
 type AuthContextValue = {
@@ -17,6 +17,7 @@ type AuthContextValue = {
   empresa: Row | null;
   /** Empresa original do usuário logado. */
   empresaOriginal: Row | null;
+  escopoFinanceiro: boolean;
   isMaster: boolean;
   empresaContextoId: string | null;
   setEmpresaContexto: (id: string | null) => void;
@@ -31,6 +32,7 @@ const AuthContext = createContext<AuthContextValue>({
   usuario: null,
   empresa: null,
   empresaOriginal: null,
+  escopoFinanceiro: false,
   isMaster: false,
   empresaContextoId: null,
   setEmpresaContexto: () => {},
@@ -179,6 +181,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       usuario,
       empresa: (isMaster && ctxEmpresa) || empresaOriginal,
       empresaOriginal,
+      escopoFinanceiro: false,
       isMaster,
       empresaContextoId: isMaster ? ctxId : null,
       setEmpresaContexto,
@@ -195,3 +198,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 }
 
 export const useAuth = () => useContext(AuthContext);
+
+/** Contexto local: não altera login, perfil nem a empresa global do ERP. */
+export function AuthEscopoFinanceiro({ empresa, children }: { empresa: Row; children: ReactNode }) {
+  const auth = useAuth();
+  const value = useMemo(() => ({ ...auth, empresa, escopoFinanceiro: true }), [auth, empresa]);
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}

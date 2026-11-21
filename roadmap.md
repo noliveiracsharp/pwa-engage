@@ -1,5 +1,11 @@
 # Roadmap
 
+## Financeiro da administradora e condomínios
+- [x] Alternar a entidade financeira sem trocar o usuário, perfil ou contexto global do ERP; recriar formulários ao trocar entidade.
+- [x] Entregar SQL com vínculo financeiro por condomínio e acesso limitado à administradora atual, sem duplicar CNPJ nem mover títulos.
+- [x] Testar isolamento de seleção, permissões, gravação/leitura e bloqueio após transferência: 35 testes passaram; SQL reaplicável testado em PostgreSQL local.
+- [ ] Validar lançamentos reais de duas administradoras — depende da aplicação do SQL no banco próprio.
+
 ## Recuperação de senha
 - [x] Validar o link antes de permitir nova senha e preservar a sessão de recuperação durante atualizações — 6 testes passaram; links inválidos e retorno ao login verificados no computador e celular.
 - [ ] Testar o fluxo real pelo e-mail — sessão do banco externo indisponível nesta execução.
