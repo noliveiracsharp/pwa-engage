@@ -1,4 +1,8 @@
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { createFileRoute } from "@tanstack/react-router";
 import { DataTable, type Column } from "@/components/data-table/DataTable";
 import { FilterInput, FilterMultiSelect, FilterSelect } from "@/components/data-table/FilterField";
@@ -35,7 +39,25 @@ const STATUS_OPTIONS = [
 ];
 
 function EmpresasPage() {
-  const { data: rows = [], isLoading } = useTableRows("empresas");
+  const { isMaster } = useAuth();
+  const { data: operadoras = [], isLoading: carregandoOp } = useTableRows("empresas");
+  // Master enxerga também parceiros/condomínios (is_tenant = false) para poder promovê-los a operadora.
+  const todas = useQuery({
+    queryKey: ["table", "empresas", "todas-master"],
+    enabled: isMaster,
+    queryFn: async (): Promise<Row[]> => {
+      const out: Row[] = [];
+      for (let from = 0; ; from += 1000) {
+        const { data, error } = await supabase.from("empresas").select("*").order("id").range(from, from + 999);
+        if (error) throw error;
+        out.push(...((data ?? []) as Row[]));
+        if ((data ?? []).length < 1000) break;
+      }
+      return out;
+    },
+  });
+  const rows = isMaster && todas.data ? todas.data : operadoras;
+  const isLoading = isMaster ? todas.isLoading : carregandoOp;
   const save = useSaveRecord("empresas");
   const perms = usePagePermissions("/empresas");
   const remove = useDeleteRecord("empresas");
@@ -63,7 +85,7 @@ function EmpresasPage() {
     const paiPerms = { canRead: perms.canRead, canCreate: perms.canCreate, canUpdate: perms.canUpdate, canDelete: perms.canDelete };
     return secoesComPermissao(base, paiPerms, definidas, perms.subtabs.map((t) => ({ ...t, kind: subtabKind(t), label: t.descricao })));
   }, [funcoes, perms]);
-  const [f, setF] = useState({ busca: "", status: "todos", classificacao: [] as string[] });
+  const [f, setF] = useState({ busca: "", status: "todos", tipo: "operadoras", classificacao: [] as string[] });
   const { data: classificacoes = [] } = useClassificacoes();
 
   const filtered = useMemo(
@@ -76,13 +98,24 @@ function EmpresasPage() {
           ) &&
           (f.status === "todos" ||
             (f.status === "ativo" ? row["status"] === true : row["status"] === false)) &&
-          passaClassificacao(f.classificacao, row["classificacao_id"]),
+          passaClassificacao(f.classificacao, row["classificacao_id"]) &&
+          (!isMaster || f.tipo === "todas" || (f.tipo === "operadoras" ? row["is_tenant"] !== false : row["is_tenant"] === false)),
       ),
-    [rows, f],
+    [rows, f, isMaster],
   );
 
   const columns: Column[] = [
-    { key: "nome", header: "Nome", fields: ["nome"] },
+    {
+      key: "nome", header: "Nome", fields: ["nome"],
+      render: (row) => (
+        <span className="flex items-center gap-2">
+          {String(pick(row, ["nome"], ""))}
+          {isMaster && (row["is_tenant"] === false
+            ? <Badge variant="outline">Parceiro / Condomínio</Badge>
+            : <Badge variant="secondary">Operadora</Badge>)}
+        </span>
+      ),
+    },
     {
       key: "documento",
       header: "CNPJ / CPF",
@@ -140,6 +173,18 @@ function EmpresasPage() {
               onChange={(v) => setF({ ...f, status: v })}
               options={STATUS_OPTIONS}
             />
+            {isMaster && (
+              <FilterSelect
+                label="Tipo"
+                value={f.tipo}
+                onChange={(v) => setF({ ...f, tipo: v })}
+                options={[
+                  { value: "operadoras", label: "Operadoras" },
+                  { value: "parceiros", label: "Parceiros / Condomínios" },
+                  { value: "todas", label: "Todas" },
+                ]}
+              />
+            )}
             <FilterMultiSelect
               label="Classificação"
               value={f.classificacao}

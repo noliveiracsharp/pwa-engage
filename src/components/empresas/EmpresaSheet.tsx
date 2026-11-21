@@ -20,6 +20,7 @@ import { GestaoCondominial, ehCondominio } from "@/components/empresas/GestaoCon
 import { IaConfigPainel } from "@/components/financeiro/IaConfigDialog";
 import { EmpresaEmailPainel } from "@/components/empresas/EmpresaEmailPainel";
 import { useAudit } from "@/lib/audit";
+import { useAuth } from "@/hooks/useAuth";
 import { rowId, useTableRows } from "@/lib/crud";
 import { TODOS_QUADROS } from "@/lib/etiquetas";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -68,6 +69,7 @@ export const EMPRESA_FIELDS: EmpresaField[] = [
   { key: "tipo_pessoa", label: "Tipo de pessoa", grupo: "gerais", type: "select", options: [{ value: "Jurídica", label: "Jurídica" }, { value: "Física", label: "Física" }] },
   { key: "cnpj_cpf", label: "CNPJ / CPF", grupo: "gerais", type: "document" },
   { key: "status", label: "Status", grupo: "gerais", type: "boolean" },
+  { key: "is_tenant", label: "Empresa operadora (usa o sistema com equipe e login próprios)", grupo: "gerais", type: "boolean", full: true },
   { key: "compartilhar_catalogo_filiais", label: "Compartilhar catálogo com filiais", grupo: "gerais", type: "boolean", full: true },
   { key: "nome", label: "Razão social / Nome", grupo: "gerais", full: true },
   { key: "titulo", label: "Nome fantasia (título exibido)", grupo: "gerais", full: true },
@@ -805,6 +807,7 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
   }, [quadros, empresa]);
   const configFor: Record<string, ChildConfig> = { instancias: INSTANCIAS, campos: CAMPOS, etiquetas: etiquetasCfg, notas: NOTAS };
   const [values, setValues] = useState<Record<string, string>>({});
+  const { isMaster } = useAuth();
   const { data: classificacoes = [] } = useClassificacoes();
   type Cnae = { codigo: string; descricao: string };
   type Socio = { nome: string; qualificacao: string; pais: string; faixa_etaria: string };
@@ -818,6 +821,7 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
     const next: Record<string, string> = {};
     for (const field of EMPRESA_FIELDS) next[field.key] = text(pick(empresa, [field.key], ""));
     if (!next["tipo_pessoa"]) next["tipo_pessoa"] = "Jurídica";
+    if (!next["is_tenant"]) next["is_tenant"] = empresa ? "false" : "true";
     setValues(next);
     const arr = <T,>(v: unknown): T[] => (Array.isArray(v) ? (v as T[]) : []);
     setExtras({ cnaes_secundarios: arr<Cnae>(empresa?.["cnaes_secundarios"]), qsa: arr<Socio>(empresa?.["qsa"]), alterado: false });
@@ -881,6 +885,7 @@ export function EmpresaSheet({ open, onOpenChange, empresa, saving, onSave, sect
   const camposDo = (g: NonNullable<EmpresaField["grupo"]>) => EMPRESA_FIELDS
     .filter((field) => (field.grupo ?? "fiscal") === g)
     .filter((field) => field.key !== "compartilhar_catalogo_filiais" || !empresa?.["empresa_pai_id"])
+    .filter((field) => field.key !== "is_tenant" || isMaster)
     .filter((field) => !(empresa && rowId(empresa) !== undefined && (field.key === "telefone1" || field.key === "telefone2")));
   const campo = (field: EmpresaField) => field.type === "classificacao" ? (
     <div key={field.key} className="min-w-0 sm:col-span-2">

@@ -41,7 +41,7 @@ DECLARE v_doc text := regexp_replace(coalesce(p_cnpj,''), '\D', '', 'g'); v_me u
 BEGIN
   IF length(v_doc) <> 14 THEN RETURN jsonb_build_object('situacao','invalido'); END IF;
   SELECT p.id, p.empresa_id, coalesce(p.nome_fantasia, p.razao_social) AS nome,
-         coalesce(e.nome_fantasia, e.razao_social) AS dona
+         coalesce(e.titulo, e.nome) AS dona
     INTO r FROM public.parceiros p LEFT JOIN public.empresas e ON e.id = p.empresa_id
    WHERE regexp_replace(coalesce(p.documento,''), '\D', '', 'g') = v_doc
    ORDER BY p.created_at LIMIT 1;
