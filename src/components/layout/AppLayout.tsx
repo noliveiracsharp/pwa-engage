@@ -51,9 +51,24 @@ export function AppLayout({ children }: { children: ReactNode }) {
     };
   }, [pathname]);
 
+  // Teclado virtual no celular: a área útil acompanha o visualViewport,
+  // assim o campo de digitação fica sempre acima do teclado.
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const aplicar = () => {
+      document.documentElement.style.setProperty("--app-vh", `${vv.height}px`);
+      const raiz = document.getElementById("app-layout-raiz");
+      if (raiz) raiz.style.height = `${vv.height}px`;
+    };
+    aplicar();
+    vv.addEventListener("resize", aplicar);
+    return () => vv.removeEventListener("resize", aplicar);
+  }, []);
+
   return (
     <ConexaoProvider>
-    <div id="app-layout-raiz" className="fixed inset-0 flex w-full flex-col overflow-hidden bg-background">
+    <div id="app-layout-raiz" className="fixed inset-x-0 top-0 h-dvh flex w-full flex-col overflow-hidden bg-background">
       <AppHeader onToggleSidebar={() => setOpen((v) => !v)} />
       <BannerOffline />
       {!modoUnidade && <BarraAprovacaoCotacao />}

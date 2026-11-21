@@ -746,6 +746,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
               }
             }}
             rows={2}
+            onFocus={() => setTimeout(() => fimRef.current?.scrollIntoView({ block: "end" }), 300)}
             placeholder={interna ? "Nota interna (só a equipe vê)…" : "Digite uma mensagem ou / para respostas rápidas"}
             className="max-h-80 min-h-16 flex-1 resize-y"
           />

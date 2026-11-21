@@ -318,7 +318,7 @@ function AtendimentosChat({ comAbas = false }: { comAbas?: boolean }) {
   const abrir = (aid?: string) => navigate({ to: "/atendimentos", search: { id: aid }, replace: true });
 
   return (
-    <div className={cn("flex overflow-hidden border-border bg-card", comAbas ? "-mx-4 -mb-4 -mt-4 h-[calc(100vh-7rem)] sm:-mx-6 sm:-mb-6" : "-m-4 h-[calc(100vh-4rem)] sm:-m-6")}>
+    <div className={cn("flex overflow-hidden border-border bg-card", comAbas ? "-mx-4 -mb-4 -mt-4 h-[calc(var(--app-vh,100dvh)-7rem)] sm:-mx-6 sm:-mb-6" : "-m-4 h-[calc(var(--app-vh,100dvh)-4rem)] sm:-m-6")}>
       {/* Coluna 1 */}
       <aside className={cn("flex w-full flex-col border-r border-border md:w-80 lg:w-96", ativo && (listaAberta ? "hidden md:flex" : "hidden"))}>
         <div className="space-y-2 border-b border-border p-3">
