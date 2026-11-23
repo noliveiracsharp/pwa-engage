@@ -13,12 +13,29 @@ import { useIdioma } from "@/lib/i18n";
 import { rotuloMenu } from "@/lib/i18n-menu";
 import { useTableRows } from "@/lib/crud";
 import { A } from "@/lib/atendimentos";
+import { estaAguardando } from "@/lib/atendimentos-alerta";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 
-/** Conversas com mensagens novas ainda não lidas (selo no menu Atendimentos). */
+/** Chamados aguardando atendente + conversas com não lidas (selo piscante no menu Atendimentos). */
 function useNovasConversas(ativo: boolean) {
   const { data = [] } = useTableRows("atendimentos", ativo);
+  const qc = useQueryClient();
+  useEffect(() => {
+    if (!ativo) return;
+    let t: ReturnType<typeof setTimeout> | undefined;
+    const ch = supabase.channel("selo-atendimentos").on("postgres_changes", { event: "*", schema: "public", table: "atendimentos" }, () => {
+      clearTimeout(t);
+      t = setTimeout(() => { void qc.invalidateQueries({ queryKey: ["table", "atendimentos"], exact: false }); }, 800);
+    }).subscribe();
+    return () => { clearTimeout(t); void supabase.removeChannel(ch); };
+  }, [ativo, qc]);
   if (!ativo) return 0;
-  return data.filter((a) => { const c = A.naoLidas.find((k) => k in a); return c ? Number(a[c]) > 0 : false; }).length;
+  return data.filter((a) => {
+    if (estaAguardando(a)) return true;
+    const c = A.naoLidas.find((k) => k in a);
+    return c ? Number(a[c]) > 0 : false;
+  }).length;
 }
 
 type Props = {
@@ -92,7 +109,7 @@ function SidebarEntry({
   const children = item.children ?? [];
   const novas = useNovasConversas(item.path === "/atendimentos");
   const selo = novas > 0 ? (
-    <span className={cn("rounded-full bg-destructive px-1.5 text-[10px] font-semibold leading-4 text-destructive-foreground", open ? "ml-auto" : "absolute right-1 top-1")} aria-label={`${novas} conversas novas`}>{novas > 99 ? "99+" : novas}</span>
+    <span className={cn("animate-pulse rounded-full bg-destructive ring-2 ring-destructive/40 px-1.5 text-[10px] font-semibold leading-4 text-destructive-foreground", open ? "ml-auto" : "absolute right-1 top-1")} aria-label={`${novas} conversas novas`}>{novas > 99 ? "99+" : novas}</span>
   ) : null;
   const childActive = hasActiveChild(item, pathname);
   const [expanded, setExpanded] = useState(childActive);

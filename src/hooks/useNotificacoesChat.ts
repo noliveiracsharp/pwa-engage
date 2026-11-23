@@ -7,6 +7,9 @@ import { A, M, nomePessoa } from "@/lib/atendimentos";
 import { toast } from "sonner";
 import { tocarSom } from "@/lib/som-notificacao";
 import { adicionarAviso } from "@/lib/avisos";
+import { estaAguardando } from "@/lib/atendimentos-alerta";
+
+const avisados = new Set<string>();
 
 /** Pede permissão e mostra notificação nativa quando chega mensagem de cliente com a aba oculta. */
 export function useNotificacoesChat() {
@@ -60,12 +63,38 @@ export function useNotificacoesChat() {
           duration: 8000,
           action: window.location.pathname.startsWith("/atendimentos") ? undefined : { label: "Abrir", onClick: () => { window.location.href = "/atendimentos"; } },
         });
-        if (!document.hidden || Notification.permission !== "granted") return;
+        if (!(document.hidden || !document.hasFocus()) || Notification.permission !== "granted") return;
         const n = new Notification(nome, { body: curto, icon: "/icon-192.png", tag: String(atId ?? "") });
         n.onclick = () => {
           window.focus();
           n.close();
         };
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "atendimentos" }, (payload) => {
+        const at = payload.new as Row | undefined;
+        const antes = (payload.old ?? {}) as Row;
+        if (!at || !estaAguardando(at)) return;
+        // Só avisa quando o chamado acabou de entrar na fila (novo ou vindo de outro estado).
+        if (payload.eventType === "UPDATE" && "usuario_responsavel_id" in antes && estaAguardando({ ...at, ...antes })) return;
+        const id = String(at["id"] ?? "");
+        if (avisados.has(id)) return;
+        avisados.add(id);
+        const { usuario: u, isMaster: master } = ctx.current;
+        const s = (x: unknown) => (x === undefined || x === null || x === "" ? null : String(x));
+        if (!deveNotificar({
+          kanbanId: s(pick(at, A.kanban)), responsavelId: null,
+          usuarioId: s(pick(u, ["id"])), perfilId: s(pick(u, ["perfil_id", "id_perfil"])),
+          vinculos: vinculos.current ?? [], isMaster: master,
+        })) return;
+        const proto = String(at["protocolo"] ?? "");
+        const texto = `Chamado ${proto} aguardando atendente`.replace("  ", " ");
+        adicionarAviso({ tipo: "cliente", titulo: "Novo chamado na fila", texto, link: "/atendimentos" });
+        tocarSom("cliente");
+        toast("Novo chamado aguardando", { description: texto, duration: 10000, action: window.location.pathname.startsWith("/atendimentos") ? undefined : { label: "Abrir", onClick: () => { window.location.href = "/atendimentos"; } } });
+        if (Notification.permission === "granted" && (document.hidden || !document.hasFocus())) {
+          const n = new Notification("Novo chamado aguardando", { body: texto, icon: "/icon-192.png", tag: `fila-${id}` });
+          n.onclick = () => { window.focus(); window.location.href = "/atendimentos"; n.close(); };
+        }
       })
       .subscribe();
     return () => {

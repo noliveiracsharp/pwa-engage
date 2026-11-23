@@ -166,7 +166,14 @@ function AtendimentosChat({ comAbas = false }: { comAbas?: boolean }) {
   // Lista ao vivo: novos chamados e transferências aparecem sem recarregar.
   useEffect(() => {
     let t: ReturnType<typeof setTimeout> | undefined;
-    const ch = supabase.channel("at-lista").on("postgres_changes", { event: "*", schema: "public", table: "atendimentos" }, () => {
+    const ch = supabase.channel("at-lista").on("postgres_changes", { event: "*", schema: "public", table: "atendimentos" }, (payload) => {
+      // Aplica a mudança na hora (assumir/transferir) sem esperar nova consulta.
+      const novo = payload.new as Row | undefined;
+      const nid = novo ? text(rowId(novo)) : "";
+      if (nid) {
+        qcLista.setQueriesData<Row[] | null>({ queryKey: ["table", "atendimentos", "painel"] }, (old) =>
+          Array.isArray(old) ? old.map((a) => (text(rowId(a)) === nid ? { ...a, ...novo } : a)) : old);
+      }
       clearTimeout(t);
       t = setTimeout(() => { void qcLista.invalidateQueries({ queryKey: ["table", "atendimentos"], exact: false }); }, 400);
     }).subscribe();
