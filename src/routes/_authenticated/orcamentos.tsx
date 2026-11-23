@@ -36,6 +36,7 @@ import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { useSecoes } from "@/hooks/useSecoes";
 import { useAuth } from "@/hooks/useAuth";
 import { rowId, useDeleteRecord, useTableRows } from "@/lib/crud";
+import { useFinanceiroRpc } from "@/lib/financeiro-rpc";
 import { useAudit } from "@/lib/audit";
 import { matchesAny } from "@/lib/input-masks";
 import { daysUntil, formatBRL, formatDate, situacaoMeta, situacaoOf, SITUACOES, yearOf, seloEnvio } from "@/lib/orcamentos";
@@ -100,8 +101,9 @@ function OrcamentosPage() {
   const secoes = useSecoes("/orcamentos", SECOES_OFERTA);
   const { empresaId, usuarioId } = useAudit();
   const { empresa } = useAuth();
-  const { data: todos = [], isLoading } = useTableRows("orcamentos");
-  const { data: todasLinhas = [], isPending: linhasLoading } = useTableRows("orcamento_itens");
+  // Listas vêm de procedures no banco (SECURITY DEFINER), não de download da tabela inteira.
+  const { data: todos = [], isLoading } = useFinanceiroRpc("fn_orcamentos_lista", {}, true, ["table", "orcamentos"]);
+  const { data: todasLinhas = [], isPending: linhasLoading } = useFinanceiroRpc("fn_orcamentos_itens", {}, true, ["table", "orcamento_itens"]);
   const { data: parceiros = [] } = useTableRows("parceiros");
   const { data: usuarios = [] } = useTableRows("usuarios");
   const { data: itens = [] } = useTableRows("itens");

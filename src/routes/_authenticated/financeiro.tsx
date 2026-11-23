@@ -1,7 +1,7 @@
 import { imprimirDre } from "@/components/relatorios/DreRelatorioPDF";
 import { Carregando } from "@/components/financeiro/Carregando";
 import { ContextoFinanceiro } from "@/components/financeiro/ContextoFinanceiro";
-import { FILTRO_TITULOS_CARTAO, filtroPagosDesde } from "@/lib/financeiro-filtros";
+
 import { useEmpresaAtiva } from "@/hooks/useEmpresaAtiva";
 import { PeriodoNavegavel } from "@/components/financeiro/PeriodoNavegavel";
 import { buscarIpca12m } from "@/lib/indices.functions";
@@ -158,8 +158,6 @@ const SECOES_FIN = [
   { key: "comissoes", label: "Comissões" },
 ];
 
-const FILTRO_PAGOS_24M = filtroPagosDesde(24);
-
 function FinanceiroPage() {
   return <ContextoFinanceiro><FinanceiroConteudo /></ContextoFinanceiro>;
 }
@@ -292,9 +290,9 @@ function RelatorioTitulos({ tipo, rows, hoje, filtros, resumo, nomeParc, nomeCen
   );
 }
 
-/** Inbox DDA só busca os títulos a pagar quando a aba é aberta. */
+/** Inbox DDA só busca os títulos a pagar quando a aba é aberta (via procedure no banco). */
 function DdaComTitulos({ perms }: { perms: Perms }) {
-  const { data: titulos = [] } = useTableRows("financeiro_titulos", true, undefined, { key: "pagar|dda", apply: (q) => q.eq("tipo", "pagar") });
+  const { data: titulos = [] } = useFinanceiroRpc("fn_financeiro_titulos_lista", { p_tipo: "pagar" }, true, ["table", "financeiro_titulos"]);
   return <DdaInbox titulos={titulos} perms={perms} />;
 }
 
@@ -333,16 +331,13 @@ function Titulos({ tipo, perms }: { tipo: TipoTitulo; perms: Perms }) {
   const [cobrar, setCobrar] = useState<Row | null>(null);
   const hoje = hojeISO();
 
-  // Só os títulos deste tipo e do período vêm do banco (antes vinha todo o histórico).
-  const { data: todos = [], isLoading: loading } = useTableRows("financeiro_titulos", true, undefined, {
-    key: `${tipo}|${periodoF.de}|${periodoF.ate}`,
-    apply: (q) => {
-      let x = q.eq("tipo", tipo);
-      if (periodoF.de) x = x.gte("vencimento", periodoF.de);
-      if (periodoF.ate) x = x.lte("vencimento", periodoF.ate);
-      return x;
-    },
-  });
+  // Só os títulos deste tipo e do período vêm do banco, via procedure (antes vinha todo o histórico).
+  const { data: todos = [], isLoading: loading } = useFinanceiroRpc(
+    "fn_financeiro_titulos_lista",
+    { p_tipo: tipo, p_de: periodoF.de || null, p_ate: periodoF.ate || null },
+    true,
+    ["table", "financeiro_titulos"],
+  );
   const doTipo = useMemo(() => todos.filter((t) => t["tipo"] === tipo), [todos, tipo]);
   // Série completa (só colunas leves) para numerar n/total mesmo com parcelas fora do período.
   const seriesIds = useMemo(() => [...new Set(doTipo.filter((t) => t["origem_tipo"] === "manual" && t["origem_id"]).map((t) => text(t["origem_id"])))].sort(), [doTipo]);
@@ -1206,7 +1201,7 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
       plano_contas_id: s.plano_contas_id || cat?.plano_contas_id || "" }));
   };
   const { data: contas = [] } = useTableRows("financeiro_contas_bancarias");
-  const { data: titulosCartao = [] } = useTableRows("financeiro_titulos", true, undefined, FILTRO_TITULOS_CARTAO);
+  const { data: titulosCartao = [] } = useFinanceiroRpc("fn_financeiro_titulos_cartao", {}, true, ["table", "financeiro_titulos"]);
   const centroOpts = useMemo(() => buildTree(centros.filter((c) => c["status"] !== false || text(rowId(c)) === v.centro_custo_id), "centro_custo_pai_id").map((n) => {
     const parts = n.path.split(" > ");
     const pai = parts.length > 1 ? parts[parts.length - 2] : undefined;
@@ -1942,7 +1937,7 @@ function BaixaDialog({ tipo, titulo, onClose, onSaved }: { tipo: TipoTitulo; tit
     finally { setEnviando(false); }
   };
   const { data: contasBanc = [] } = useTableRows("financeiro_contas_bancarias");
-  const { data: todosTitulos = [] } = useTableRows("financeiro_titulos", true, undefined, FILTRO_PAGOS_24M);
+  const { data: todosTitulos = [] } = useFinanceiroRpc("fn_financeiro_pagos_meses", { p_meses: 24 }, true, ["table", "financeiro_titulos"]);
   const conta = useMemo(() => {
     if (tipo !== "receber") return null;
     const id = text(titulo["conta_bancaria_id"]);
