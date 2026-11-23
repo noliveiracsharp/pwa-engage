@@ -10,7 +10,7 @@ import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { rowId, text, useTableRows } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
 import { A, dataDe, isEncerrado } from "@/lib/atendimentos";
-import { notaDe } from "@/components/atendimentos/Pesquisa";
+import { notaOuNull } from "@/components/atendimentos/Pesquisa";
 import { lerJornada, statusSla, duracaoCurta } from "@/lib/sla-etapa";
 import { agruparPor, calcularMetricas, type ItemMetrica, type Metricas } from "@/lib/atendimentos-dashboard";
 import { hojeISO } from "@/lib/financeiro";
@@ -60,7 +60,7 @@ function DashboardAtendimentos() {
       return [{
         atendente: usu.get(text(pick(a, A.responsavel))) || "Sem atendente",
         departamento: text(pick(k, ["nome", "descricao"])) || "—",
-        nota: a["nota"] === null || a["nota"] === undefined || a["nota"] === "" ? null : notaDe(a), encerrado: enc, sla,
+        nota: notaOuNull(a), encerrado: enc, sla,
         duracaoMin: aberto && fimAt ? (fimAt.getTime() - aberto.getTime()) / 60000 : null,
       }];
     });

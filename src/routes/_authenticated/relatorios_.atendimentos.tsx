@@ -15,7 +15,7 @@ import { rowId, text, useTableRows } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
 import { A, M, dataDe, isCliente, isEncerrado, nomeEtapa, nomePessoa, telefonePessoa } from "@/lib/atendimentos";
 import { hojeISO } from "@/lib/financeiro";
-import { notaDe } from "@/components/atendimentos/Pesquisa";
+import { notaOuNull } from "@/components/atendimentos/Pesquisa";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 
 export const Route = createFileRoute("/_authenticated/relatorios_/atendimentos")({
@@ -39,7 +39,7 @@ const abertura = (a: Row) => dataDe(a, ["created_at", "criado_em", "data_abertur
 function inicioMes(meses: number) { const d = new Date(); d.setMonth(d.getMonth() - (meses - 1), 1); return d.toISOString().slice(0, 10); }
 const porNome = (a: { nome: string }, b: { nome: string }) => a.nome.localeCompare(b.nome, "pt-BR");
 
-type Linha = { a: Row; id: string; protocolo: string; aberto: Date | null; ultima: Date | null; cliente: string; telefone: string; departamento: string; atendente: string; etapa: string; encerrado: boolean; nota: number };
+type Linha = { a: Row; id: string; protocolo: string; aberto: Date | null; ultima: Date | null; cliente: string; telefone: string; departamento: string; atendente: string; etapa: string; encerrado: boolean; nota: number | null };
 
 function RelatorioAtendimentos() {
   const perms = usePagePermissions("/relatorios/atendimentos");
@@ -71,7 +71,7 @@ function RelatorioAtendimentos() {
       cliente: nomePessoa(p), telefone: telefonePessoa(p),
       departamento: depNome.get(text(pick(a, A.kanban))) || "—",
       atendente: usuNome.get(text(pick(a, A.responsavel))) || "—",
-      etapa: nomeEtapa(a, etapas) || "—", encerrado: isEncerrado(a, etapas), nota: notaDe(a),
+      etapa: nomeEtapa(a, etapas) || "—", encerrado: isEncerrado(a, etapas), nota: notaOuNull(a),
     };
   }), [atendimentos, pessoasMap, usuNome, depNome, etapas]);
 
@@ -83,14 +83,14 @@ function RelatorioAtendimentos() {
       .filter((l) => dep === "todos" || text(pick(l.a, A.kanban)) === dep)
       .filter((l) => atd === "todos" || text(pick(l.a, A.responsavel)) === atd)
       .filter((l) => sit === "todos" || (sit === "encerrados" ? l.encerrado : !l.encerrado))
-      .filter((l) => nota === "todos" || (nota === "sem" ? l.encerrado && !l.nota : String(l.nota) === nota))
+      .filter((l) => nota === "todos" || (nota === "sem" ? l.encerrado && l.nota === null : String(l.nota) === nota))
       .filter((l) => !t || `${l.protocolo} ${l.cliente} ${l.telefone} ${l.atendente}`.toLowerCase().includes(t))
       .sort((x, y) => (y.aberto?.getTime() ?? 0) - (x.aberto?.getTime() ?? 0));
   }, [todas, desde, ate, dep, atd, sit, nota, busca]);
 
   const enc = lista.filter((l) => l.encerrado);
-  const avaliados = enc.filter((l) => l.nota > 0);
-  const media = avaliados.length ? avaliados.reduce((s, l) => s + l.nota, 0) / avaliados.length : 0;
+  const avaliados = lista.flatMap((l) => (l.nota === null ? [] : [l.nota]));
+  const media = avaliados.length ? avaliados.reduce((s, n) => s + n, 0) / avaliados.length : 0;
   const deps = kanbans.map((k) => ({ id: text(rowId(k)), nome: depNome.get(text(rowId(k))) || "—" })).sort(porNome);
   const atds = usuarios.map((u) => ({ id: text(rowId(u)), nome: usuNome.get(text(rowId(u))) || "—" })).sort(porNome);
   const filtrosTxt = [
@@ -162,7 +162,7 @@ function RelatorioAtendimentos() {
                 <TableCell>{l.departamento}</TableCell>
                 <TableCell>{l.atendente}</TableCell>
                 <TableCell><Badge variant={l.encerrado ? "secondary" : "outline"}>{l.encerrado ? "Encerrado" : l.etapa}</Badge></TableCell>
-                <TableCell>{l.nota ? "★".repeat(l.nota) : l.encerrado ? <span className="text-xs text-muted-foreground">Aguardando</span> : "—"}</TableCell>
+                <TableCell>{l.nota !== null ? (l.nota ? "★".repeat(l.nota) : "0 ★") : l.encerrado ? <span className="text-xs text-muted-foreground">Aguardando</span> : "—"}</TableCell>
                 <TableCell className="text-right"><Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); setConversa(l); }}><MessageSquare className="mr-1 h-4 w-4" /> Ver conversa</Button></TableCell>
               </TableRow>
             ))}
@@ -187,7 +187,7 @@ function RelatorioAtendimentos() {
             { header: "Departamento", cell: (l) => l.departamento },
             { header: "Atendente", cell: (l) => l.atendente },
             { header: "Situação", cell: (l) => (l.encerrado ? "Encerrado" : l.etapa) },
-            { header: "Nota", cell: (l) => (l.nota ? `${l.nota}/5` : "—"), right: true },
+            { header: "Nota", cell: (l) => (l.nota !== null ? `${l.nota}/5` : "—"), right: true },
           ]}
           chave={(l) => l.id} onClose={() => setImprimir(false)}
         />

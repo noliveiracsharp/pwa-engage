@@ -37,10 +37,16 @@ export function notaDe(a: Row | undefined): number {
   return Number.isFinite(n) ? Math.max(0, Math.min(5, Math.round(n))) : 0;
 }
 
+/** Nota gravada (0 a 5) ou null quando o cliente ainda não avaliou — nota 0 é uma avaliação válida. */
+export function notaOuNull(a: Row | undefined): number | null {
+  const v = a?.["nota"];
+  return v === null || v === undefined || v === "" ? null : notaDe(a);
+}
+
 /** Estrelas quando há nota; selo "Aguardando Avaliação" quando encerrado sem nota. */
 export function AvaliacaoSelo({ atendimento, encerrado }: { atendimento: Row; encerrado: boolean }) {
-  const nota = notaDe(atendimento);
-  if (nota > 0) {
+  const nota = notaOuNull(atendimento);
+  if (nota !== null) {
     return (
       <span className="inline-flex items-center gap-0.5" aria-label={`Avaliação ${nota} de 5`} title={`Avaliação ${nota}/5`}>
         {[1, 2, 3, 4, 5].map((i) => (
