@@ -1,7 +1,7 @@
 import { imprimirDre } from "@/components/relatorios/DreRelatorioPDF";
 import { Carregando } from "@/components/financeiro/Carregando";
 import { ContextoFinanceiro } from "@/components/financeiro/ContextoFinanceiro";
-import { FILTRO_TITULOS_CARTAO, FILTRO_EM_ABERTO, filtroPagosDesde, filtroVencimentoEntre, filtroPagoEntre, unirTitulos } from "@/lib/financeiro-filtros";
+import { FILTRO_TITULOS_CARTAO, filtroPagosDesde } from "@/lib/financeiro-filtros";
 import { useEmpresaAtiva } from "@/hooks/useEmpresaAtiva";
 import { PeriodoNavegavel } from "@/components/financeiro/PeriodoNavegavel";
 import { buscarIpca12m } from "@/lib/indices.functions";
@@ -48,6 +48,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UploadInfo } from "@/components/ui/upload-info";
 import { supabase } from "@/integrations/supabase/client";
+import { useFinanceiroRpc } from "@/lib/financeiro-rpc";
 
 /** Copia os itens (rateio) de um título para outros da mesma série, proporcional ao valor de cada um. */
 async function replicarItensTitulo(origemId: string, destinos: string[]) {
@@ -176,10 +177,8 @@ function FinanceiroConteudo() {
   const aba = visiveis.some((s) => s.key === abaSel) ? abaSel : (visiveis[0]?.key ?? "");
   // Histórico completo só para as visões que realmente precisam dele (caixa e controller).
   const ctrl = aba === "controller";
-  const { data: abertosCtrl = [], isLoading: l1, error: e1 } = useTableRows("financeiro_titulos", ctrl, undefined, FILTRO_EM_ABERTO);
-  const { data: pagosCtrl = [], isLoading: l2, error: e2 } = useTableRows("financeiro_titulos", ctrl, undefined, FILTRO_PAGOS_24M);
-  const titulosCtrl = useMemo(() => unirTitulos(abertosCtrl, pagosCtrl), [abertosCtrl, pagosCtrl]);
-  const erroCtrl = e1 || e2;
+  const { data: titulosCtrl = [], isLoading: l1, error: erroCtrl } = useFinanceiroRpc("fn_financeiro_controller", {}, ctrl);
+  const l2 = false;
   if (!perms.loading && visiveis.length === 0) return <p className="text-muted-foreground text-sm">Você não tem acesso a esta página.</p>;
   const p = (k: string) => ({ ...(secoes[k] ?? perms) });
   return (
@@ -2048,11 +2047,7 @@ function Caixa() {
   const [per, setPer] = useState<Periodo>(() => periodoPreset("mes"));
   // Só consulta ao clicar em Processar (abre já com o mês atual).
   const [aplicado, setAplicado] = useState<Periodo>(per);
-  const { data: previstos = [], isFetching: f1, error: e1 } = useTableRows("financeiro_titulos", true, undefined, filtroVencimentoEntre(aplicado.de, aplicado.ate));
-  const { data: realizados = [], isFetching: f2, error: e2 } = useTableRows("financeiro_titulos", true, undefined, filtroPagoEntre(aplicado.de, aplicado.ate));
-  const titulos = useMemo(() => unirTitulos(previstos, realizados), [previstos, realizados]);
-  const processando = f1 || f2;
-  const erroCaixa = e1 || e2;
+  const { data: titulos = [], isFetching: processando, error: erroCaixa } = useFinanceiroRpc("fn_financeiro_fluxo_caixa", { p_de: aplicado.de || "1900-01-01", p_ate: aplicado.ate || "2999-12-31" });
   const [modo, setModo] = useState<ModoCaixa>("ambos");
   const periodo = useMemo(() => {
     const per = aplicado;
