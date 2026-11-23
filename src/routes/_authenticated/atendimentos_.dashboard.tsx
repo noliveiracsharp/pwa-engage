@@ -60,7 +60,7 @@ function DashboardAtendimentos() {
       return [{
         atendente: usu.get(text(pick(a, A.responsavel))) || "Sem atendente",
         departamento: text(pick(k, ["nome", "descricao"])) || "—",
-        nota: notaDe(a), encerrado: enc, sla,
+        nota: a["nota"] === null || a["nota"] === undefined || a["nota"] === "" ? null : notaDe(a), encerrado: enc, sla,
         duracaoMin: aberto && fimAt ? (fimAt.getTime() - aberto.getTime()) / 60000 : null,
       }];
     });

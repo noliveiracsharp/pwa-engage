@@ -28,6 +28,13 @@ describe("motor de fluxos", () => {
   it("opção inválida sem ligação repete o menu", () => {
     const r = executarFluxo({ nos, conexoes, estado: { no_atual: "m", status: "aguardando", variaveis: {} }, texto: "9" });
     expect(r.estado).toMatchObject({ status: "aguardando", no_atual: "m" });
+    expect(r.acoes[0]).toMatchObject({ tipo: "mensagem", texto: expect.stringContaining("Desculpe, não conseguimos entender") });
+  });
+  it("opção inválida ligada ao próprio menu avisa e repete as opções", () => {
+    const r = executarFluxo({ nos, conexoes: [...conexoes, { source: "m", target: "m", sourceHandle: "invalida" }], estado: { no_atual: "m", status: "aguardando", variaveis: {} }, texto: "oi" });
+    expect(r.acoes[0]).toEqual({ tipo: "mensagem", texto: "Desculpe, não conseguimos entender. Por favor, selecione uma das opções de resposta." });
+    expect(r.acoes[1]).toEqual({ tipo: "mensagem", texto: "Como podemos ajudar?\n1. Comercial\n2. Suporte" });
+    expect(r.estado).toMatchObject({ status: "aguardando", no_atual: "m" });
   });
 });
 

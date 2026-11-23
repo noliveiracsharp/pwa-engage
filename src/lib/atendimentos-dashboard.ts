@@ -1,6 +1,6 @@
 /** Métricas puras do Dashboard gerencial de Atendimentos. */
 export type ItemMetrica = {
-  atendente: string; departamento: string; nota: number; encerrado: boolean;
+  atendente: string; departamento: string; nota: number | null; encerrado: boolean;
   duracaoMin: number | null; sla: "sem_sla" | "ok" | "atencao" | "estourado" | null;
 };
 export type Metricas = {
@@ -10,7 +10,7 @@ export type Metricas = {
 
 export function calcularMetricas(itens: ItemMetrica[]): Metricas {
   const enc = itens.filter((i) => i.encerrado);
-  const av = enc.filter((i) => i.nota > 0);
+  const av = itens.filter((i): i is ItemMetrica & { nota: number } => i.nota !== null);
   const dur = enc.map((i) => i.duracaoMin).filter((d): d is number => d !== null && d >= 0);
   const comSla = itens.filter((i) => !i.encerrado && i.sla && i.sla !== "sem_sla");
   const ok = comSla.filter((i) => i.sla !== "estourado").length;

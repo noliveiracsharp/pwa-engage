@@ -927,6 +927,9 @@ function Propriedades({ no, atualizar, quadros, etapas, campos, fluxos }: {
               </>
             )}
           </div>
+          <Campo label="Mensagem para resposta não entendida" ajuda="Enviada antes de repetir as opções quando o cliente responde algo fora da lista (ex.: “oi”).">
+            <Input value={s("msg_invalida")} placeholder="Desculpe, não conseguimos entender. Por favor, selecione uma das opções de resposta." onChange={(e) => atualizar({ msg_invalida: e.target.value })} />
+          </Campo>
           {!s("lista_origem").trim() && texto("Opções", "opcoes", "Uma opção por linha — cada uma vira uma saída. Pode usar {{variavel}} com várias linhas (máx. 10 na lista).")}
         </>
       );

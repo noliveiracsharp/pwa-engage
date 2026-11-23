@@ -136,6 +136,8 @@ function avaliarCondicao(d: DadosNo, vars: Record<string, string>) {
   return comparar(paraTexto(lerCaminho(vars, str(d["variavel"]))), str(d["operador"]), interpolar(str(d["valor"]), vars));
 }
 
+export const MSG_INVALIDA_PADRAO = "Desculpe, não conseguimos entender. Por favor, selecione uma das opções de resposta.";
+
 export function executarFluxo(p: {
   nos: NoFluxo[];
   conexoes: ConexaoFluxo[];
@@ -170,10 +172,13 @@ export function executarFluxo(p: {
       const i = escolhaMenu(d, p.texto);
       if (i < 0) {
         atual = proximo(esperando.id, "invalida");
+        const aviso = interpolar(str(d["msg_invalida"]).trim() || MSG_INVALIDA_PADRAO, vars);
         if (!atual) {
-          acoes.push({ tipo: "mensagem", texto: `Opção inválida.\n${interpolar(textoMenu(d), vars)}` });
+          acoes.push({ tipo: "mensagem", texto: `${aviso}\n\n${interpolar(textoMenu(d), vars)}` });
           return fim("aguardando", esperando.id);
         }
+        // Saída "Opção inválida" ligada de volta ao próprio menu: avisa antes de repetir as opções.
+        if (atual.id === esperando.id) acoes.push({ tipo: "mensagem", texto: aviso });
       } else {
         vars["opcao"] = opcoesMenu(d["opcoes"])[i] ?? "";
         if (str(d["lista_origem"]).trim()) {

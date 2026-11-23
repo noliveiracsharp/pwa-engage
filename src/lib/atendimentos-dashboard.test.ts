@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { agruparPor, calcularMetricas, type ItemMetrica } from "./atendimentos-dashboard";
-const i = (o: Partial<ItemMetrica>): ItemMetrica => ({ atendente: "Ana", departamento: "Suporte", nota: 0, encerrado: true, duracaoMin: null, sla: null, ...o });
+const i = (o: Partial<ItemMetrica>): ItemMetrica => ({ atendente: "Ana", departamento: "Suporte", nota: null, encerrado: true, duracaoMin: null, sla: null, ...o });
 describe("dashboard de atendimentos", () => {
   it("média de nota ignora encerrados sem avaliação", () => {
-    expect(calcularMetricas([i({ nota: 5 }), i({ nota: 3 }), i({ nota: 0 })]).mediaNota).toBe(4);
+    expect(calcularMetricas([i({ nota: 5 }), i({ nota: 3 }), i({ nota: null })]).mediaNota).toBe(4);
+  });
+  it("nota 0 conta como avaliação", () => {
+    const m = calcularMetricas([i({ nota: 4 }), i({ nota: 0 })]);
+    expect([m.avaliados, m.mediaNota]).toEqual([2, 2]);
   });
   it("tempo médio usa só encerrados", () => {
     expect(calcularMetricas([i({ duracaoMin: 10 }), i({ duracaoMin: 30 }), i({ encerrado: false, duracaoMin: 999 })]).tempoMedioMin).toBe(20);
