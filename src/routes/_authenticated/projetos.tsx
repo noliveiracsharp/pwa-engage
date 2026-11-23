@@ -72,7 +72,10 @@ export const Route = createFileRoute("/_authenticated/projetos")({
 function useProjetoData() {
   const { data: status = [] } = useTableRows("projetos_status");
   const { data: projetos = [], isLoading } = useTableRows("projetos");
-  const { data: tarefas = [] } = useTableRows("projetos_tarefas", true, "ordem");
+  // Sem ORDER BY no banco (estourava timeout); ordena no navegador.
+  const tarefasQ = useTableRows("projetos_tarefas", true);
+  const tarefas = useMemo(() => [...(tarefasQ.data ?? [])].sort((a, b) => (Number(a.ordem) || 0) - (Number(b.ordem) || 0)), [tarefasQ.data]);
+  useEffect(() => { if (tarefasQ.error) toast.error("Não foi possível carregar as tarefas: " + (tarefasQ.error as Error).message); }, [tarefasQ.error]);
   const { data: parceiros = [] } = useTableRows("parceiros");
   const { data: usuarios = [] } = useTableRows("usuarios");
   const { data: pCols } = useCols("projetos");
