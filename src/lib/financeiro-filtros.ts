@@ -24,7 +24,7 @@ export function filtroVencimentoEntre(de: string, ate: string): FiltroBanco {
 
 /** Fluxo de caixa: realizados por data de pagamento no período. */
 export function filtroPagoEntre(de: string, ate: string): FiltroBanco {
-  return { key: `pago|${de}|${ate}`, apply: (q) => { let x = q.eq("status", "pago"); if (de) x = x.gte("pago_em", de); if (ate) x = x.lte("pago_em", `${ate}T23:59:59`); return x; } };
+  return { key: `pago|${de}|${ate}`, apply: (q) => { let x = q.eq("status", "pago"); if (de) x = x.gte("pago_em", de); if (ate) x = x.lte("pago_em", ate); return x; } };
 }
 
 /** Junta listas sem repetir o mesmo título. */
