@@ -214,11 +214,12 @@ function AtendimentosChat({ comAbas = false }: { comAbas?: boolean }) {
     return map;
   }, [usaRpc, atendimentos, ultimasLeg]);
   const acessoKb = useKanbansPermitidos();
+  const gerencial = usePagePermissions("/atendimentos/gerencial").canRead || isMaster;
   void meusKanbans;
   const kanbans = useMemo(() => {
-    if (isMaster) return allKanbans;
+    if (isMaster || gerencial) return allKanbans;
     return allKanbans.filter((k) => acessoKb.pode(rowId(k)));
-  }, [isMaster, allKanbans, acessoKb]);
+  }, [isMaster, gerencial, allKanbans, acessoKb]);
 
   // Transferência: qualquer atendente pode enviar a conversa para outro departamento ativo da empresa (ex.: Suporte).
   const kanbansDestino = useMemo(
@@ -237,7 +238,6 @@ function AtendimentosChat({ comAbas = false }: { comAbas?: boolean }) {
 
   const [instFiltro, setInstFiltro] = useState("todas");
   const [depFiltro, setDepFiltro] = useState("todos");
-  const gerencial = usePagePermissions("/atendimentos/gerencial").canRead || isMaster;
   const RAPIDOS = useMemo(() => gerencial ? [...RAPIDOS_BASE, { key: "equipe" as Rapido, label: "Equipe" }] : RAPIDOS_BASE, [gerencial]);
   const EXTRAS = useMemo(() => [{ key: "encerrados" as Rapido, label: "Encerrados" }, gerencial ? { key: "todos" as Rapido, label: "Todos" } : { key: "historico" as Rapido, label: "Histórico" }], [gerencial]);
   const [sub, setSub] = useState<Sub>("todas");
