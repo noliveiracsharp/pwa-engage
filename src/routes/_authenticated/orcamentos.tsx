@@ -753,7 +753,7 @@ function OrcamentosPage() {
       <MinutaDialog
         open={minutaOpen}
         onOpenChange={setMinutaOpen}
-        orcamento={preview ? (todos.find((t) => rowId(t) === rowId(preview)) ?? preview) : null}
+        orcamento={preview ? (todos.find((t: Row) => rowId(t) === rowId(preview)) ?? preview) : null}
         linhas={linhasPreview}
         empresa={empresas.find((e) => String(rowId(e) ?? "") === String(preview?.["empresa_id"] ?? empresaId ?? "")) ?? empresa}
         cliente={parceiroById.get(String(preview ? (pick(preview, ["parceiro_id", "parceiros_id"]) ?? "") : ""))}
@@ -789,7 +789,7 @@ function OrcamentosPage() {
       <AtivacaoOfertaDialog
         open={!!ativar}
         onOpenChange={(v) => !v && setAtivarRaw(null)}
-        oferta={ativar ? (todos.find((t) => rowId(t) === rowId(ativar)) ?? ativar) : null}
+        oferta={ativar ? (todos.find((t: Row) => rowId(t) === rowId(ativar)) ?? ativar) : null}
         cliente={ativar ? nomeCliente(ativar) : ""}
         empresaId={String(ativar?.["empresa_id"] ?? empresaId ?? "")}
       />
