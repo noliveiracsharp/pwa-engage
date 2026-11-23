@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, Printer } from "lucide-react";
+import { ArrowLeft, Loader2, Printer, RefreshCw } from "lucide-react";
+import { useFinanceiroRpc } from "@/lib/financeiro-rpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,14 +43,20 @@ function inicioPadrao() {
 
 function BoardPage() {
   const emp = useEmpresaAtiva();
-  const { data: titulos = [] } = useTableRows("financeiro_titulos");
+
   const { data: orcs = [] } = useTableRows("orcamentos");
   const { data: parceiros = [] } = useTableRows("parceiros");
   const { data: contas = [] } = useTableRows("financeiro_contas_bancarias");
   const { data: cotItens = [] } = useTableRows("cotacoes_itens");
   const { data: cotPrecos = [] } = useTableRows("cotacoes_precos");
-  const [desde, setDesde] = useState(inicioPadrao());
-  const [ate, setAte] = useState(hojeISO());
+  const [desdeEd, setDesde] = useState(inicioPadrao());
+  const [ateEd, setAte] = useState(hojeISO());
+  // Só consulta ao clicar em Processar.
+  const [{ desde, ate }, setAplicado] = useState({ desde: desdeEd, ate: ateEd });
+  const { data: titulos = [], isFetching: p1, error: e1 } = useFinanceiroRpc("fn_financeiro_fluxo_caixa", { p_de: desde, p_ate: ate });
+  const { data: abertos = [], isFetching: p2, error: e2 } = useFinanceiroRpc("fn_financeiro_controller", {});
+  const processando = p1 || p2;
+  const erro = (e1 || e2) as Error | null;
   const hoje = hojeISO();
 
   const nomeParc = (id: string) => {
@@ -76,8 +83,8 @@ function BoardPage() {
     return {
       pipe, ganho, perdidas, mrr, misto, caixa, limite, evol, receita, despesa, pmr, pmp,
       conv: taxaConversao(ganho?.qtd ?? 0, perdidas),
-      aging: agingReceber(titulos, hoje),
-      inad: inadimplencia(titulos, hoje),
+      aging: agingReceber(abertos, hoje),
+      inad: inadimplencia(abertos, hoje),
       topRec: concentracao(titulos, "receber", desde, ate),
       topPag: concentracao(titulos, "pagar", desde, ate),
       categorias: despesasPorCategoria(titulos, desde, ate),
@@ -85,7 +92,7 @@ function BoardPage() {
       ticket: ganho && ganho.qtd ? { impl: ganho.implantacao / ganho.qtd, mensal: ganho.mensal / ganho.qtd } : { impl: 0, mensal: 0 },
       totalOfertas: ofertas.length,
     };
-  }, [orcs, titulos, contas, cotItens, cotPrecos, desde, ate, hoje]);
+  }, [orcs, titulos, abertos, contas, cotItens, cotPrecos, desde, ate, hoje]);
 
   const resultado = d.receita - d.despesa;
   const margem = d.receita > 0 ? (resultado / d.receita) * 100 : 0;
@@ -101,11 +108,16 @@ function BoardPage() {
           <h1 className="text-2xl font-bold text-foreground">Painel do Board</h1>
         </div>
         <div className="flex flex-wrap items-end gap-2">
-          <div><Label className="text-xs">De</Label><Input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} /></div>
-          <div><Label className="text-xs">Até</Label><Input type="date" value={ate} onChange={(e) => setAte(e.target.value)} /></div>
+          <div><Label className="text-xs">De</Label><Input type="date" value={desdeEd} onChange={(e) => setDesde(e.target.value)} /></div>
+          <div><Label className="text-xs">Até</Label><Input type="date" value={ateEd} onChange={(e) => setAte(e.target.value)} /></div>
+          <Button variant="outline" disabled={processando || !desdeEd || !ateEd || desdeEd > ateEd} onClick={() => setAplicado({ desde: desdeEd, ate: ateEd })}>
+            {processando ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-1 h-4 w-4" />}Processar
+          </Button>
           <Button onClick={() => imprimirBoard()}><Printer className="mr-1 h-4 w-4" /> Imprimir / PDF</Button>
         </div>
       </div>
+
+      {erro && <p className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive print:hidden">Não foi possível carregar os títulos: {erro.message}</p>}
 
       <div className="dre-print-src" aria-hidden>
         <div id="board-print" className="dre-doc">
