@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useFinanceiroRpc } from "@/lib/financeiro-rpc";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { etapasDoKanban, kanbanDoModuloOrcamentos } from "@/lib/orcamento-kanban";
@@ -109,7 +110,7 @@ function Extrato({ canUpdate, canDelete }: { canUpdate: boolean; canDelete: bool
   );
   const { data: recebs = [] } = useTableRows("orcamento_recebimentos");
   const { liberacao, entradaPct } = useComissaoConfig();
-  const { data: titulos = [] } = useTableRows("financeiro_titulos");
+  const { data: titulos = [] } = useFinanceiroRpc("fn_financeiro_titulos_ofertas", {});
   const recebidoPorOrc = useMemo(() => recebidoPorOferta(titulos, recebs), [titulos, recebs]);
   const calc = (r: Row) => {
     const orc = orcById.get(text(r["orcamento_id"]));
@@ -570,7 +571,7 @@ function Recebimentos({ canEdit }: { canEdit: boolean }) {
   const { data: comissoes = [] } = useTableRows("orcamento_comissoes");
   const { data: orcs = [] } = useTableRows("orcamentos");
   const { data: recebs = [], isError } = useTableRows("orcamento_recebimentos");
-  const { data: titulos = [] } = useTableRows("financeiro_titulos");
+  const { data: titulos = [] } = useFinanceiroRpc("fn_financeiro_titulos_ofertas", {});
   const titMap = useMemo(() => {
     const m = new Map<string, Row>();
     for (const t of titulos) if (t["tipo"] === "receber" && t["origem_tipo"] === "oferta" && t["origem_id"]) m.set(`${text(t["origem_id"])}:${num(t["parcela_n"])}`, t);

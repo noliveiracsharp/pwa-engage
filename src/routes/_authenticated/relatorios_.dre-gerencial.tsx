@@ -1,6 +1,7 @@
 import { Fragment, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Printer } from "lucide-react";
+import { Loader2, Printer, RefreshCw } from "lucide-react";
+import { useFinanceiroRpc } from "@/lib/financeiro-rpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -45,26 +46,31 @@ function DreGerencialPage() {
   const perms = usePagePermissions("/relatorios");
   const { empresaId } = useAudit();
   const emp = useEmpresaAtiva();
-  const { data: titulos = [] } = useTableRows("financeiro_titulos");
-  const { data: itens = [] } = useTableRows("financeiro_titulos_itens" as never);
   const { data: contas = [] } = useTableRows("plano_contas" as never);
   const { data: centros = [] } = useTableRows("centro_custo");
   const [f, setF] = useState({ inicio: `${ano}-01-01`, fim: `${ano}-12-31`, regime: "competencia" as "competencia" | "caixa", centro: "todos" });
+  // Títulos e rateios só são consultados ao clicar em Processar.
+  const [per, setPer] = useState({ inicio: f.inicio, fim: f.fim });
+  const args = { p_de: per.inicio, p_ate: per.fim };
+  const { data: titulos = [], isFetching: p1, error: e1 } = useFinanceiroRpc("fn_financeiro_titulos_periodo", args);
+  const { data: itens = [], isFetching: p2, error: e2 } = useFinanceiroRpc("fn_financeiro_titulos_itens_periodo", args);
+  const processando = p1 || p2;
+  const erro = (e1 || e2) as Error | null;
 
   const daEmpresa = <T extends Record<string, unknown>>(l: T[]) =>
     l.filter((r) => empresaId === undefined || !r["empresa_id"] || String(r["empresa_id"]) === String(empresaId));
   const centrosEmp = daEmpresa(centros);
   const a = useMemo(
     () => apurarDre(daEmpresa(titulos), daEmpresa(itens), daEmpresa(contas), {
-      inicio: f.inicio, fim: f.fim, regime: f.regime, centro: f.centro === "todos" ? undefined : f.centro,
+      inicio: per.inicio, fim: per.fim, regime: f.regime, centro: f.centro === "todos" ? undefined : f.centro,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [titulos, itens, contas, f, empresaId],
+    [titulos, itens, contas, f.regime, f.centro, per, empresaId],
   );
   const eq = pontoEquilibrio(a.receitaLiquida, a.custos, a.despesas);
   const meses = a.meses.length || 1;
   const nomeCentro = f.centro === "todos" ? "Todos" : String(centrosEmp.find((c) => String(c["id"]) === f.centro)?.["descricao"] ?? "—");
-  const periodo = `${f.inicio.split("-").reverse().join("/")} a ${f.fim.split("-").reverse().join("/")}`;
+  const periodo = `${per.inicio.split("-").reverse().join("/")} a ${per.fim.split("-").reverse().join("/")}`;
   const filtros = `Regime: ${f.regime === "caixa" ? "Caixa" : "Competência"} • Centro de custo: ${nomeCentro}`;
 
   if (!perms.canRead) return <p className="text-muted-foreground">Sem permissão para Relatórios.</p>;
@@ -79,7 +85,7 @@ function DreGerencialPage() {
         <Button variant="outline" onClick={imprimirDre}><Printer className="mr-1 h-4 w-4" />Imprimir / PDF</Button>
       </div>
 
-      <FilterBar className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 print:hidden">
+      <FilterBar className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5 print:hidden">
         <div className="space-y-1"><Label>De</Label><Input type="date" value={f.inicio} onChange={(e) => setF({ ...f, inicio: e.target.value })} /></div>
         <div className="space-y-1"><Label>Até</Label><Input type="date" value={f.fim} onChange={(e) => setF({ ...f, fim: e.target.value })} /></div>
         <FilterSelect label="Regime" value={f.regime} onChange={(v) => setF({ ...f, regime: v as "competencia" | "caixa" })}
@@ -87,7 +93,13 @@ function DreGerencialPage() {
         <FilterSelect label="Centro de custo" value={f.centro} onChange={(v) => setF({ ...f, centro: v })}
           options={[{ value: "todos", label: "Todos" }, ...centrosEmp.map((c) => ({ value: String(c["id"]), label: String(c["descricao"] ?? "") }))
             .sort((x, y) => x.label.localeCompare(y.label, "pt-BR"))]} />
+        <div className="flex items-end">
+          <Button variant="outline" disabled={processando || !f.inicio || !f.fim || f.inicio > f.fim} onClick={() => setPer({ inicio: f.inicio, fim: f.fim })}>
+            {processando ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-1 h-4 w-4" />}Processar
+          </Button>
+        </div>
       </FilterBar>
+      {erro && <p className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive print:hidden">Não foi possível carregar os títulos: {erro.message}</p>}
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5 print:hidden">
         <Kpi t="Receita líquida" v={formatBRL(a.receitaLiquida)} />

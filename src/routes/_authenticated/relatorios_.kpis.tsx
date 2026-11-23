@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, Printer } from "lucide-react";
+import { ArrowLeft, Loader2, Printer, RefreshCw } from "lucide-react";
+import { useFinanceiroRpc } from "@/lib/financeiro-rpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,11 +39,13 @@ function inicio(meses: number) { const d = new Date(); d.setMonth(d.getMonth() -
 
 function KpisPage() {
   const emp = useEmpresaAtiva();
-  const { data: titulos = [] } = useTableRows("financeiro_titulos");
   const { data: orcs = [] } = useTableRows("orcamentos");
   const { data: os = [] } = useTableRows("manutencao_os");
-  const [desde, setDesde] = useState(inicio(6));
-  const [ate, setAte] = useState(hojeISO());
+  const [desdeEd, setDesde] = useState(inicio(6));
+  const [ateEd, setAte] = useState(hojeISO());
+  // Só consulta ao clicar em Processar (ou num atalho de período).
+  const [{ desde, ate }, setAplicado] = useState({ desde: desdeEd, ate: ateEd });
+  const { data: titulos = [], isFetching: processando, error: erro } = useFinanceiroRpc("fn_financeiro_titulos_periodo", { p_de: desde, p_ate: ate });
 
   const blocos = useMemo(() => {
     const r = recorrencia(orcs, desde, ate);
@@ -90,13 +93,18 @@ function KpisPage() {
         </div>
         <div className="flex flex-wrap items-end gap-2">
           {PERIODOS.map((p) => (
-            <Button key={p.m} size="sm" variant={desde === inicio(p.m) && ate === hojeISO() ? "default" : "outline"} onClick={() => { setDesde(inicio(p.m)); setAte(hojeISO()); }}>{p.l}</Button>
+            <Button key={p.m} size="sm" variant={desde === inicio(p.m) && ate === hojeISO() ? "default" : "outline"} onClick={() => { setDesde(inicio(p.m)); setAte(hojeISO()); setAplicado({ desde: inicio(p.m), ate: hojeISO() }); }}>{p.l}</Button>
           ))}
-          <div><Label className="text-xs">De</Label><Input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} /></div>
-          <div><Label className="text-xs">Até</Label><Input type="date" value={ate} onChange={(e) => setAte(e.target.value)} /></div>
+          <div><Label className="text-xs">De</Label><Input type="date" value={desdeEd} onChange={(e) => setDesde(e.target.value)} /></div>
+          <div><Label className="text-xs">Até</Label><Input type="date" value={ateEd} onChange={(e) => setAte(e.target.value)} /></div>
+          <Button variant="outline" disabled={processando || !desdeEd || !ateEd || desdeEd > ateEd} onClick={() => setAplicado({ desde: desdeEd, ate: ateEd })}>
+            {processando ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-1 h-4 w-4" />}Processar
+          </Button>
           <Button onClick={imprimir}><Printer className="mr-1 h-4 w-4" /> Imprimir / PDF</Button>
         </div>
       </div>
+
+      {erro && <p className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">Não foi possível carregar os títulos: {(erro as Error).message}</p>}
 
       {blocos.map((b) => (
         <section key={b.n} className="rounded-lg border bg-card p-4">
@@ -129,7 +137,9 @@ function KpisPage() {
               <td key={k.t}><span>{k.t}</span><strong>{k.v}</strong>{k.s && <small>{k.s}</small>}</td>
             ))}
           </tr></tbody></table>
-          {blocos.map((b) => (
+          {erro && <p className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">Não foi possível carregar os títulos: {(erro as Error).message}</p>}
+
+      {blocos.map((b) => (
             <div key={b.n}>
               <h2>{b.n}</h2>
               <table className="dre-tab">

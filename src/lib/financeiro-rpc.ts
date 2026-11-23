@@ -4,8 +4,10 @@ import { pick, type Row } from "@/lib/row";
 import { useAuth } from "@/hooks/useAuth";
 import { empresaDaConsulta } from "@/lib/financeiro-contexto";
 
+export type FinanceiroRpc = "fn_financeiro_fluxo_caixa" | "fn_financeiro_controller" | "fn_financeiro_titulos_periodo" | "fn_financeiro_titulos_itens_periodo" | "fn_financeiro_titulos_ofertas";
+
 /** Chama uma procedure financeira (SECURITY DEFINER) em lotes de 1000 linhas, na empresa em contexto. */
-export function useFinanceiroRpc(fn: "fn_financeiro_fluxo_caixa" | "fn_financeiro_controller", args: Record<string, unknown>, enabled = true) {
+export function useFinanceiroRpc(fn: FinanceiroRpc, args: Record<string, unknown>, enabled = true) {
   const { isMaster, empresa, usuario, loading, escopoFinanceiro } = useAuth();
   const own = usuario ? String(pick(usuario, ["empresa_id", "id_empresa", "empresaid"]) ?? "") : "";
   const ctx = empresaDaConsulta(escopoFinanceiro, isMaster, empresa ? String(empresa["id"] ?? "") : "", own);
