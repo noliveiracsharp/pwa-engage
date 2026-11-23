@@ -45,7 +45,7 @@ export const Route = createFileRoute("/_authenticated/atendimentos")({
   component: AtendimentosPage,
 });
 
-type Rapido = "todos" | "historico" | "minhas" | "aguardando" | "ia" | "encerrados";
+type Rapido = "equipe" | "todos" | "historico" | "minhas" | "aguardando" | "ia" | "encerrados";
 const RAPIDOS_BASE: { key: Rapido; label: string }[] = [
   { key: "minhas", label: "Ativos" },
   { key: "aguardando", label: "Aguardando" },
@@ -238,7 +238,7 @@ function AtendimentosChat({ comAbas = false }: { comAbas?: boolean }) {
   const [instFiltro, setInstFiltro] = useState("todas");
   const [depFiltro, setDepFiltro] = useState("todos");
   const gerencial = usePagePermissions("/atendimentos/gerencial").canRead || isMaster;
-  const RAPIDOS = RAPIDOS_BASE;
+  const RAPIDOS = useMemo(() => gerencial ? [...RAPIDOS_BASE, { key: "equipe" as Rapido, label: "Equipe" }] : RAPIDOS_BASE, [gerencial]);
   const EXTRAS = useMemo(() => [{ key: "encerrados" as Rapido, label: "Encerrados" }, gerencial ? { key: "todos" as Rapido, label: "Todos" } : { key: "historico" as Rapido, label: "Histórico" }], [gerencial]);
   const [sub, setSub] = useState<Sub>("todas");
   const [rapido, setRapido] = useState<Rapido>("minhas");
@@ -274,14 +274,16 @@ function AtendimentosChat({ comAbas = false }: { comAbas?: boolean }) {
   const meuParticipa = useMemo(() => new Set(participantes.filter((x) => text(x["usuario_id"]) === usuarioId).map((x) => text(x["atendimento_id"]))), [participantes, usuarioId]);
   const visiveis = useMemo(() => {
     const permitidos = new Set(kanbans.map((k) => text(rowId(k))));
-    return atendimentos.filter((a) => isMaster || permitidos.has(text(pick(a, A.kanban))) || text(pick(a, A.responsavel)) === usuarioId);
-  }, [atendimentos, kanbans, isMaster, usuarioId]);
+    return atendimentos.filter((a) => isMaster || gerencial || permitidos.has(text(pick(a, A.kanban))) || text(pick(a, A.responsavel)) === usuarioId);
+  }, [atendimentos, kanbans, isMaster, gerencial, usuarioId]);
   function naAba(a: Row, aba: Rapido) {
     const enc = isEncerrado(a, etapas);
     if (aba === "encerrados") return enc;
     if (aba === "historico") return text(pick(a, A.responsavel)) === usuarioId || meuParticipa.has(text(rowId(a)));
     if (enc) return false; // Encerrados só aparecem nas abas "Encerrados"/"Histórico".
     if (aba === "minhas") return !!usuarioId && text(pick(a, A.responsavel)) === usuarioId;
+    // Gestores: tudo que está com algum atendente da equipe.
+    if (aba === "equipe") return !!text(pick(a, A.responsavel));
     if (aba === "aguardando") return !isIA(a) && !text(pick(a, A.responsavel));
     if (aba === "ia") return isIA(a);
     return true;
@@ -385,7 +387,7 @@ function AtendimentosChat({ comAbas = false }: { comAbas?: boolean }) {
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar por nome, telefone ou protocolo" className="h-9 pl-8" />
           </div>
-          <div className="grid grid-cols-3 gap-1 rounded-lg bg-muted p-1" role="tablist" aria-label="Situação das conversas">
+          <div className={cn("grid gap-1 rounded-lg bg-muted p-1", RAPIDOS.length > 3 ? "grid-cols-4" : "grid-cols-3")} role="tablist" aria-label="Situação das conversas">
             {RAPIDOS.map((r) => (
               <button key={r.key} type="button" role="tab" aria-selected={rapido === r.key} onClick={() => setRapido(r.key)}
                 className={cn("flex items-center justify-center gap-1 rounded-md px-2 py-1.5 text-xs transition-colors",
