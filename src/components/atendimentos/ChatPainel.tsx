@@ -145,13 +145,20 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
     // Realtime entrega na hora; o polling lento fica só como rede de segurança.
     refetchInterval: 20000,
     queryFn: async (): Promise<Row[]> => {
-      const { data, error } = await supabase
-        .from("atendimentos_mensagem")
-        .select("*")
-        .eq("atendimento_id", id)
-        .eq("oculta_para_atendente", false);
-      if (error) throw error;
-      return ((data ?? []) as Row[])
+      // Procedure rápida (índice atendimento_id+created_at); cai na consulta direta se ainda não existir.
+      let linhas: Row[] | null = null;
+      const rpc = await supabase.rpc("fn_atendimentos_mensagens" as never, { p_atendimento_id: id, p_limite: 600 } as never);
+      if (!rpc.error && Array.isArray(rpc.data)) linhas = rpc.data as Row[];
+      if (!linhas) {
+        const { data, error } = await supabase
+          .from("atendimentos_mensagem")
+          .select("*")
+          .eq("atendimento_id", id)
+          .eq("oculta_para_atendente", false);
+        if (error) throw error;
+        linhas = (data ?? []) as Row[];
+      }
+      return linhas
         .filter((m) => m["apagada_para_todos"] !== true && !APAGADAS.has(text(rowId(m))))
         .map((m) => { const e = EDITADAS.get(text(rowId(m))); return e === undefined ? m : { ...m, mensagem: e, conteudo: e, texto: e }; })
         .sort(
@@ -165,8 +172,18 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
     if (!id) return;
     const canal = supabase
       .channel(`at-msg-${id}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "atendimentos_mensagem", filter: `atendimento_id=eq.${id}` }, () => {
-        void qc.invalidateQueries({ queryKey: ["table", "atendimentos_mensagem", "at", id] });
+      .on("postgres_changes", { event: "*", schema: "public", table: "atendimentos_mensagem", filter: `atendimento_id=eq.${id}` }, (payload) => {
+        const nova = payload.new as Row | undefined;
+        if (payload.eventType === "INSERT" && nova && nova["oculta_para_atendente"] !== true) {
+          // Aplica direto no cache: aparece na hora, sem nova consulta.
+          qc.setQueryData<Row[]>(["table", "atendimentos_mensagem", "at", id], (old) =>
+            old && !old.some((m) => m["id"] === nova["id"]) ? [...old, nova] : old);
+        } else if (payload.eventType === "UPDATE" && nova) {
+          qc.setQueryData<Row[]>(["table", "atendimentos_mensagem", "at", id], (old) =>
+            old?.map((m) => (m["id"] === nova["id"] ? { ...m, ...nova } : m)).filter((m) => m["apagada_para_todos"] !== true));
+        } else {
+          void qc.invalidateQueries({ queryKey: ["table", "atendimentos_mensagem", "at", id] });
+        }
         void qc.invalidateQueries({ queryKey: ["table", "atendimentos_mensagem", "ultimas"] });
       })
       .subscribe();
@@ -274,15 +291,27 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
     // Notas internas nunca vão para a Z-API: não levam instância.
     if (!interna) payload["instancia_id"] = pick(atendimento, A.instancia);
     if (!interna) payload["status_envio"] = "pendente";
+    // Envio otimista: limpa o campo e mostra o balão na hora, sem esperar banco nem Z-API.
+    const textoAnterior = texto;
+    setTexto("");
+    setRespondendo(null);
+    const chaveMsgs = ["table", "atendimentos_mensagem", "at", id];
+    const tmpId = `tmp-${Date.now()}`;
+    qc.setQueryData<Row[]>(chaveMsgs, (old) => [...(old ?? []), { ...payload, id: tmpId, created_at: new Date().toISOString() }]);
     const { data: salva, error } = await supabase.from("atendimentos_mensagem").insert(filterPayload(payload, colsMsg)).select().single();
     if (error) {
       setEnviando(false);
+      qc.setQueryData<Row[]>(chaveMsgs, (old) => (old ?? []).filter((m) => m["id"] !== tmpId));
+      setTexto(textoAnterior);
       console.error(error);
       toast.error(error.message);
       return;
     }
-    setTexto("");
-    setRespondendo(null);
+    qc.setQueryData<Row[]>(chaveMsgs, (old) => {
+      const sem = (old ?? []).filter((m) => m["id"] !== tmpId && m["id"] !== (salva as Row)["id"]);
+      return [...sem, salva as Row];
+    });
+    setEnviando(false);
     if (!interna) void desarmarSino(id, atendimento, colsAt).then(() => qc.invalidateQueries({ queryKey: ["table", "atendimentos"] }));
     // Handoff silencioso: humano respondeu numa conversa da IA.
     if (!interna && isIA(atendimento)) {
@@ -296,7 +325,8 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
     }
     if (!interna) {
       const mid = (salva as Row | null)?.["id"];
-      try {
+      // Disparo à Z-API em segundo plano: o atendente já pode digitar a próxima.
+      void (async () => { try {
         await dispararMensagem({
           instancia,
           mensagemId: mid,
@@ -313,9 +343,10 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
         await marcarEnvio(mid, "falha");
         toast.error(`Mensagem salva, mas o envio falhou: ${(e as Error).message}`);
       }
+      void qc.invalidateQueries({ queryKey: chaveMsgs });
+      void qc.invalidateQueries({ queryKey: ["table", "atendimentos_mensagem", "ultimas"] });
+      })();
     }
-    setEnviando(false);
-    qc.invalidateQueries({ queryKey: ["table", "atendimentos_mensagem"] });
   }
 
   /** Nome do atendente em negrito no início da mensagem do WhatsApp. */

@@ -272,6 +272,25 @@ export function ChatInterno({ sidebarOpen, onAbrir, condominioId }: { sidebarOpe
 
   // O chat só fecha pelo botão de fechar (sem clique fora/ESC), para não derrubar chamadas.
   const painelRef = useRef<HTMLDivElement>(null);
+  // Largura ajustável por arraste, lembrada no navegador.
+  const [largura, setLargura] = useState(400);
+  useEffect(() => { const v = Number(localStorage.getItem("chat-interno-largura")); if (v >= 320 && v <= 900) setLargura(v); }, []);
+  function iniciarArraste(e: { preventDefault(): void; clientX: number }, bordaEsquerda: boolean) {
+    e.preventDefault();
+    const x0 = e.clientX, w0 = largura;
+    let atual = w0;
+    const mover = (ev: PointerEvent) => {
+      const d = bordaEsquerda ? x0 - ev.clientX : ev.clientX - x0;
+      atual = Math.max(320, Math.min(Math.min(900, window.innerWidth - 120), w0 + d));
+      setLargura(atual);
+    };
+    const soltar = () => { window.removeEventListener("pointermove", mover); window.removeEventListener("pointerup", soltar); document.body.style.userSelect = ""; localStorage.setItem("chat-interno-largura", String(atual)); };
+    document.body.style.userSelect = "none";
+    window.addEventListener("pointermove", mover);
+    window.addEventListener("pointerup", soltar);
+  }
+  const redimensionavel = modoMeet !== "chat" && modoMeet !== "oculto";
+  const bordaEsquerda = acoplado && lado === "direita";
   const botaoRef = useRef<HTMLButtonElement>(null);
 
   /** Envia uma mensagem automática na conversa direta (avisos de tarefas). */
@@ -337,6 +356,7 @@ export function ChatInterno({ sidebarOpen, onAbrir, condominioId }: { sidebarOpe
       {open && createPortal(
         <div
           ref={painelRef}
+          style={redimensionavel && desktop ? { width: largura } : undefined}
           className={cn(
             modoMeet === "chat"
               ? "fixed inset-y-0 right-0 z-[60] flex w-full flex-col overflow-hidden border-l border-border bg-popover text-popover-foreground shadow-2xl md:w-[380px] max-md:top-[55%]"
@@ -350,8 +370,20 @@ export function ChatInterno({ sidebarOpen, onAbrir, condominioId }: { sidebarOpe
                   sidebarOpen ? "md:left-[15.5rem]" : "md:left-[4.5rem]",
                   "md:h-[560px] md:w-[380px] md:max-h-[calc(100vh-2rem)] md:max-w-[calc(100vw-5.5rem)]",
                 ),
+            acoplado && "relative",
           )}
         >
+          {redimensionavel && desktop && (
+            <div
+              role="separator"
+              aria-orientation="vertical"
+              aria-label="Arraste para ajustar a largura do chat"
+              title="Arraste para ajustar a largura"
+              onPointerDown={(e) => iniciarArraste(e, bordaEsquerda)}
+              onDoubleClick={() => { setLargura(400); localStorage.setItem("chat-interno-largura", "400"); }}
+              className={cn("absolute inset-y-0 z-10 w-1.5 cursor-col-resize transition-colors hover:bg-primary/40", bordaEsquerda ? "left-0" : "right-0")}
+            />
+          )}
           <div className="flex items-center justify-between border-b border-border px-4 py-3">
             <div>
               <p className="text-sm font-semibold">Chat da equipe</p>
@@ -523,6 +555,7 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack, onModoMeet, 
   const [texto, setTexto] = useState("");
   const [respondendo, setRespondendo] = useState<Citacao | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const [imagemAberta, setImagemAberta] = useState<Anexo | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const { usuario } = useAuth();
   const meuNome = String(pick(usuario, ["nome"], "Colaborador"));
@@ -543,6 +576,9 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack, onModoMeet, 
     queryKey: key,
     enabled: !!canalId,
     queryFn: async () => {
+      // Procedure rápida (índice canal_id+criado_em); consulta direta se ainda não existir.
+      const rpc = await supabase.rpc("fn_chat_interno_mensagens" as never, { p_canal_id: canalId, p_limite: 300 } as never);
+      if (!rpc.error && Array.isArray(rpc.data)) return rpc.data as Row[];
       const { data, error } = await supabase.from(TABLE).select("*").eq("canal_id", canalId).order("criado_em", { ascending: true }).limit(300);
       if (error) throw error;
       return (data ?? []) as Row[];
@@ -795,9 +831,9 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack, onModoMeet, 
                   {(() => { const c = lerCitacao(m["citacao"]); return c ? <CitacaoNoBalao citacao={c} claro={mine} /> : null; })()}
                   {anexos.map((a, i) =>
                     a.tipo === "imagem" ? (
-                      <a key={i} href={a.url} target="_blank" rel="noreferrer">
+                      <button key={i} type="button" onClick={() => setImagemAberta(a)} className="block cursor-zoom-in" aria-label="Ampliar imagem">
                         <img src={a.url} alt={a.nome || "Imagem"} className="mb-1 max-h-48 rounded-lg" />
-                      </a>
+                      </button>
                     ) : a.tipo === "audio" ? (
                       <audio key={i} src={a.url} controls preload="metadata" className="mb-1 h-10 w-56 max-w-full" />
                     ) : a.tipo === "video" ? (
@@ -846,7 +882,7 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack, onModoMeet, 
 
       {respondendo && <div className="min-w-0 border-t border-border px-2 pt-2"><FaixaResposta citacao={respondendo} onCancelar={() => setRespondendo(null)} /></div>}
       <form
-        className={cn("flex min-w-0 items-end gap-1 p-2", respondendo ? "pt-0" : "border-t border-border")}
+        className={cn("min-w-0 p-2", respondendo ? "pt-0" : "border-t border-border")}
         onSubmit={(e) => {
           e.preventDefault();
           void enviar();
@@ -854,7 +890,7 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack, onModoMeet, 
       >
         <input ref={fileRef} type="file" accept="image/*,video/*,audio/*,application/pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.zip" hidden onChange={(e) => e.target.files?.[0] && void anexar(e.target.files[0])} />
         {gravando ? (
-          <>
+          <div className="flex items-center gap-1">
             <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={cancelarGravacao} aria-label="Cancelar gravação">
               <X className="h-4 w-4" />
             </Button>
@@ -864,36 +900,50 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack, onModoMeet, 
             <Button type="button" size="icon" className="h-9 w-9 shrink-0" onClick={() => void gravar()} aria-label="Enviar áudio">
               <Send className="h-4 w-4" />
             </Button>
-          </>
+          </div>
         ) : (
-          <>
-            <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => fileRef.current?.click()} aria-label="Anexar arquivo, imagem ou vídeo" title="Anexar arquivo, imagem ou vídeo" disabled={enviando || !canalId}>
-              <Paperclip className="h-4 w-4" />
-            </Button>
-            <UploadInfo perfil="chat" arquivos />
+          <div className="rounded-xl border border-input bg-background focus-within:ring-2 focus-within:ring-ring">
             <textarea
-              ref={(el) => { if (el) { el.style.height = "auto"; el.style.height = `${Math.min(el.scrollHeight, 160)}px`; } }}
-              rows={1}
+              ref={(el) => { if (el) { el.style.height = "auto"; el.style.height = `${Math.min(Math.max(el.scrollHeight, 64), 220)}px`; } }}
+              rows={3}
               value={texto}
-              onChange={(e) => { setTexto(e.target.value); const el = e.currentTarget; el.style.height = "auto"; el.style.height = `${Math.min(el.scrollHeight, 160)}px`; }}
+              onChange={(e) => { setTexto(e.target.value); const el = e.currentTarget; el.style.height = "auto"; el.style.height = `${Math.min(Math.max(el.scrollHeight, 64), 220)}px`; }}
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void enviar(); } }}
               onPaste={colar}
               placeholder="Mensagem (Shift+Enter pula linha)..."
               title="Enter envia · Shift+Enter pula linha"
-              className="max-h-40 min-h-9 min-w-0 flex-1 resize-none overflow-y-auto rounded-md border border-input bg-background px-3 py-2 text-sm leading-5 ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="block max-h-56 min-h-16 w-full resize-none overflow-y-auto rounded-t-xl bg-transparent px-3 py-2 text-sm leading-5 placeholder:text-muted-foreground focus-visible:outline-none"
             />
-            {texto.trim() ? (
-              <Button type="submit" size="icon" className="h-9 w-9 shrink-0" disabled={enviando || !canalId} aria-label="Enviar">
-                {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            <div className="flex items-center gap-1 px-1 pb-1">
+              <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => fileRef.current?.click()} aria-label="Anexar arquivo, imagem ou vídeo" title="Anexar arquivo, imagem ou vídeo" disabled={enviando || !canalId}>
+                <Paperclip className="h-4 w-4" />
               </Button>
-            ) : (
-              <Button type="button" size="icon" className="h-9 w-9 shrink-0" disabled={enviando || !canalId} onClick={() => void gravar()} aria-label="Gravar áudio" title="Gravar áudio">
-                {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mic className="h-4 w-4" />}
-              </Button>
-            )}
-          </>
+              <UploadInfo perfil="chat" arquivos />
+              <div className="ml-auto" />
+              {texto.trim() ? (
+                <Button type="submit" size="icon" className="h-8 w-8 shrink-0" disabled={enviando || !canalId} aria-label="Enviar">
+                  {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                </Button>
+              ) : (
+                <Button type="button" size="icon" className="h-8 w-8 shrink-0" disabled={enviando || !canalId} onClick={() => void gravar()} aria-label="Gravar áudio" title="Gravar áudio">
+                  {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mic className="h-4 w-4" />}
+                </Button>
+              )}
+            </div>
+          </div>
         )}
       </form>
+      <Dialog open={!!imagemAberta} onOpenChange={(v) => !v && setImagemAberta(null)}>
+        <DialogContent className="max-w-[min(92vw,1100px)] p-2">
+          <DialogHeader className="sr-only"><DialogTitle>{imagemAberta?.nome || "Imagem"}</DialogTitle></DialogHeader>
+          {imagemAberta && (
+            <div className="flex flex-col items-center gap-2">
+              <img src={imagemAberta.url} alt={imagemAberta.nome || "Imagem"} className="max-h-[80vh] w-auto rounded-md object-contain" />
+              <a href={imagemAberta.url} download={imagemAberta.nome || true} target="_blank" rel="noreferrer" className="text-xs text-primary underline">Baixar imagem</a>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
