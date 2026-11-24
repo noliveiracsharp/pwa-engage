@@ -609,7 +609,7 @@ function FluxosPage() {
                 fitView deleteKeyCode={["Delete", "Backspace"]} proOptions={{ hideAttribution: true }}
               >
                 <Background gap={18} />
-                <Controls />
+                <Controls className="overflow-hidden rounded-md border border-border !shadow-sm [&_button]:!border-border [&_button]:!bg-card [&_button]:!text-foreground [&_button:hover]:!bg-muted [&_button_svg]:!fill-current" />
                 <MiniMap pannable zoomable className="!bg-card" />
                 <Panel position="top-right" className="flex gap-1 rounded-lg border bg-card p-1 shadow-sm">
                   <Button size="sm" variant={modoSelecao ? "ghost" : "secondary"} onClick={() => setModoSelecao(false)} title="Arrastar o quadro" aria-pressed={!modoSelecao}><Hand className="size-4" /> Mover</Button>
