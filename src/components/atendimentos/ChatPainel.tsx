@@ -314,6 +314,11 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
     setEnviando(false);
     if (!interna) void desarmarSino(id, atendimento, colsAt).then(() => qc.invalidateQueries({ queryKey: ["table", "atendimentos"] }));
     // Handoff silencioso: humano respondeu numa conversa da IA.
+    // Chamado da fila sem responsável: quem responde assume (a avaliação vai para ele).
+    if (!interna && !isIA(atendimento) && !pick(atendimento, A.responsavel) && usuarioId) {
+      const { error: eR } = await supabase.from("atendimentos").update(filterPayload({ usuario_responsavel_id: usuarioId }, colsAt)).eq("id", id);
+      if (!eR) qc.invalidateQueries({ queryKey: ["table", "atendimentos"] });
+    }
     if (!interna && isIA(atendimento)) {
       const et = etapaHumano(etapas, text(pick(atendimento, A.kanban)));
       const { error: eH } = await supabase
@@ -464,7 +469,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
     }
     await pesquisa.pedir({
       atendimento, pessoa, instancia,
-      executar: () => atualizarAtendimento(etapaPayload(rowId(et), etapas), "Atendimento encerrado."),
+      executar: () => atualizarAtendimento({ ...etapaPayload(rowId(et), etapas), ...(usuarioId ? { usuario_responsavel_id: usuarioId } : {}) }, "Atendimento encerrado."),
     });
   }
 

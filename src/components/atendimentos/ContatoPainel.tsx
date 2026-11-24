@@ -88,8 +88,10 @@ export function ContatoPainel({ atendimento, pessoa, usuarios, participantes, et
   const etapa = etapas.find((e) => text(rowId(e)) === text(pick(atendimento, A.etapa)));
   const pesquisa = usePesquisaSatisfacao();
   const checklist = useChecklistGate();
-  async function aplicarEtapa(etId: string) {
-    const { error } = await supabase.from("atendimentos").update(filterPayload(etapaPayload(etId, etapas), colsAt)).eq("id", atId);
+  async function aplicarEtapa(etId: string, encerrando = false) {
+    // Ao encerrar, quem encerra fica como responsável (a avaliação vai para ele).
+    const body = { ...etapaPayload(etId, etapas), ...(encerrando && meuId ? { usuario_responsavel_id: meuId } : {}) };
+    const { error } = await supabase.from("atendimentos").update(filterPayload(body, colsAt)).eq("id", atId);
     if (error) { toast.error(error.message); return false; }
     qc.invalidateQueries({ queryKey: ["table", "atendimentos"] });
     toast.success("Etapa atualizada.");
@@ -99,7 +101,7 @@ export function ContatoPainel({ atendimento, pessoa, usuarios, participantes, et
     const alvo = etapas.find((e) => text(rowId(e)) === etId);
     const mover = async (): Promise<boolean> => {
       if (alvo?.["is_default_encerrado"] === true && etapa?.["is_default_encerrado"] !== true) {
-        return pesquisa.pedir({ atendimento, pessoa, executar: () => aplicarEtapa(etId) });
+        return pesquisa.pedir({ atendimento, pessoa, executar: () => aplicarEtapa(etId, true) });
       }
       return aplicarEtapa(etId);
     };
