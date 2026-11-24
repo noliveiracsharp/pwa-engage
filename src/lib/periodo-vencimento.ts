@@ -40,7 +40,7 @@ export function periodoPreset(preset: PresetPeriodo, ref = hojeLocal()): Periodo
     case "12m": return { preset, de: addDias(addMeses(ref, -12), 1), ate: ref };
     case "proximos30d": return { preset, de: ref, ate: addDias(ref, 29) };
     case "proximos120d": return { preset, de: ref, ate: addDias(ref, 119) };
-    case "proximos12m": return { preset, de: ref, ate: addDias(addMeses(ref, 12), -1) };
+    case "proximos12m": return { preset, de: fmt(new Date(Date.UTC(y, m, 1))), ate: fimMes(y, m + 11) };
     case "todo": return { preset, de: "", ate: "" };
     default: return { preset, de: ref, ate: ref };
   }
@@ -55,7 +55,7 @@ export function navegarPeriodo(p: Periodo, dir: 1 | -1): Periodo {
     case "30d": return { ...p, de: addDias(p.de, 30 * dir), ate: addDias(p.ate, 30 * dir) };
     case "proximos30d": return { ...p, de: addDias(p.de, 30 * dir), ate: addDias(p.ate, 30 * dir) };
     case "proximos120d": return { ...p, de: addDias(p.de, 120 * dir), ate: addDias(p.ate, 120 * dir) };
-    case "proximos12m": { const de = addMeses(p.de, 12 * dir); return { ...p, de, ate: addDias(addMeses(de, 12), -1) }; }
+    case "proximos12m": { const de = addMeses(p.de, 12 * dir); const x = parse(de); return { ...p, de, ate: fimMes(x.getUTCFullYear(), x.getUTCMonth() + 11) }; }
     case "mes": { const de = addMeses(p.de, dir); const x = parse(de); return { ...p, de, ate: fimMes(x.getUTCFullYear(), x.getUTCMonth()) }; }
     case "ano": { const y = Number(p.de.slice(0, 4)) + dir; return { ...p, de: `${y}-01-01`, ate: `${y}-12-31` }; }
     case "12m": return { ...p, de: addMeses(p.de, 12 * dir), ate: addMeses(p.ate, 12 * dir) };

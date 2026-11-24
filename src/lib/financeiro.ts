@@ -528,7 +528,7 @@ export type MesFluxo = { mes: string; entradas: number; saidas: number; saldo: n
  * Fluxo mês a mês no período. Realizado = baixas por data de pagamento; previsto = em aberto por vencimento.
  * Meses contínuos entre `de` e `ate`; acumulado parte do saldo inicial.
  */
-export function fluxoPeriodo(titulos: Row[], opts: { de: string; ate: string; modo: ModoCaixa; saldoInicial?: number }): MesFluxo[] {
+export function fluxoPeriodo(titulos: Row[], opts: { de: string; ate: string; modo: ModoCaixa; saldoInicial?: number; hoje?: string }): MesFluxo[] {
   if (!opts.de || !opts.ate || opts.de > opts.ate) return [];
   const mapa = new Map<string, { e: number; s: number }>();
   for (const t of titulos) {
@@ -537,9 +537,12 @@ export function fluxoPeriodo(titulos: Row[], opts: { de: string; ate: string; mo
     const pago = st === "pago";
     if (pago && opts.modo === "previsto") continue;
     if (!pago && opts.modo === "realizado") continue;
-    const data = pago ? iso(t["pago_em"]) : iso(t["vencimento"]);
+    let data = pago ? iso(t["pago_em"]) : iso(t["vencimento"]);
+    // Vencidos em aberto: liquidação esperada hoje (ou no início do período, se ele começar depois).
+    const hj = opts.hoje ?? hojeISO();
+    if (!pago && data && data < hj) data = hj < opts.de ? opts.de : hj;
     if (!data || data < opts.de || data > opts.ate) continue;
-    const v = pago ? num(t["valor_pago"]) || num(t["valor"]) : num(t["valor"]);
+    const v = pago ? num(t["valor_pago"]) || num(t["valor"]) : st === "parcial" ? Math.max(0, num(t["valor"]) - num(t["valor_pago"])) : num(t["valor"]);
     const k = data.slice(0, 7);
     const x = mapa.get(k) ?? { e: 0, s: 0 };
     if (t["tipo"] === "receber") x.e += v; else x.s += v;

@@ -13,11 +13,11 @@ describe("periodo de vencimento", () => {
     expect(p).toMatchObject({ de: "2026-10-22", ate: "2027-02-18" });
     expect(navegarPeriodo(p, 1)).toMatchObject({ de: "2027-02-19", ate: "2027-06-18" });
   });
-  it("próximos 12 meses terminam na véspera do aniversário", () => {
-    const p = periodoPreset("proximos12m", "2026-10-22");
-    expect(p).toMatchObject({ de: "2026-10-22", ate: "2027-10-21" });
-    expect(navegarPeriodo(p, 1)).toMatchObject({ de: "2027-10-22", ate: "2028-10-21" });
-    expect(periodoPreset("proximos12m", "2027-03-01")).toMatchObject({ ate: "2028-02-29" });
+  it("próximos 12 meses começam no dia 1º do mês atual", () => {
+    const p = periodoPreset("proximos12m", "2026-11-24");
+    expect(p).toMatchObject({ de: "2026-11-01", ate: "2027-10-31" });
+    expect(navegarPeriodo(p, 1)).toMatchObject({ de: "2027-11-01", ate: "2028-10-31" });
+    expect(periodoPreset("proximos12m", "2027-03-15")).toMatchObject({ ate: "2028-02-29" });
   });
   it("este mês e setas pulam mês", () => {
     const p = periodoPreset("mes", "2026-10-18");
