@@ -50,10 +50,11 @@ export function mesesPeriodo(de: string, ate: string) {
 export const CATEGORIAS_CAC = /marketing|comercial|vendas?|an[uú]ncio|tr[aá]fego|publicidade|propaganda|comiss/i;
 
 /** CAC = despesas pagas de marketing/vendas no período ÷ novos clientes ganhos. */
-export function cac(titulos: Row[], orcs: Row[], de: string, ate: string) {
+export function cac(titulos: Row[], orcs: Row[], de: string, ate: string, nomes: Record<string, string> = {}) {
+  const rotulo = (t: Row) => [t["categoria"], nomes[String(t["plano_contas_id"] ?? "")], nomes[String(t["centro_custo_id"] ?? "")], t["descricao"]].filter(Boolean).join(" ");
   const gasto = r2(titulos
-    .filter((t) => t["tipo"] === "pagar" && CATEGORIAS_CAC.test(String(t["categoria"] ?? "")))
-    .filter((t) => entre(dia(t["data_pagamento"] || (t["status"] === "pago" ? t["vencimento"] : "")), de, ate))
+    .filter((t) => t["tipo"] === "pagar" && CATEGORIAS_CAC.test(rotulo(t)))
+    .filter((t) => entre(dia(t["pago_em"] || t["data_pagamento"] || (t["status"] === "pago" ? t["vencimento"] : "")), de, ate))
     .reduce((s, t) => s + num(t["valor_pago"] || t["valor"]), 0));
   const novos = new Set(orcs.filter((o) => ganha(o) && entre(dataFechamento(o), de, ate)).map((o) => String(o["parceiro_id"] ?? o["id"]))).size;
   return { gasto, novos, valor: novos ? r2(gasto / novos) : 0 };

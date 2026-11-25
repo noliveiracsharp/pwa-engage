@@ -41,6 +41,8 @@ function KpisPage() {
   const emp = useEmpresaAtiva();
   const { data: orcs = [] } = useTableRows("orcamentos");
   const { data: os = [] } = useTableRows("manutencao_os");
+  const { data: contas = [] } = useTableRows("plano_contas");
+  const { data: centros = [] } = useTableRows("centro_custo");
   const [desdeEd, setDesde] = useState(inicio(6));
   const [ateEd, setAte] = useState(hojeISO());
   // Só consulta ao clicar em Processar (ou num atalho de período).
@@ -50,7 +52,9 @@ function KpisPage() {
   const blocos = useMemo(() => {
     const r = recorrencia(orcs, desde, ate);
     const v = vendas(orcs, desde, ate);
-    const c = cac(titulos, orcs, desde, ate);
+    const nomes: Record<string, string> = {};
+    for (const x of [...contas, ...centros]) nomes[String(x["id"])] = String(x["nome"] ?? x["descricao"] ?? "");
+    const c = cac(titulos, orcs, desde, ate, nomes);
     const relacao = c.valor > 0 ? r.ltv / c.valor : 0;
     const pb = payback(c.valor, v.margemImpl, v.ticketMensal || r.ticket);
     const o = operacao(os, desde, ate);
@@ -80,7 +84,7 @@ function KpisPage() {
       { n: "2. Vendas, projetos e aquisição", k: b2 },
       { n: "3. Operação de campo e manutenção", k: b3 },
     ];
-  }, [orcs, titulos, os, desde, ate]);
+  }, [orcs, titulos, os, contas, centros, desde, ate]);
 
   const dt = (s: string) => new Date(s + "T12:00").toLocaleDateString("pt-BR");
 
