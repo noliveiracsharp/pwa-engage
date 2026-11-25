@@ -469,11 +469,11 @@ function AtendimentosChat({ comAbas = false }: { comAbas?: boolean }) {
                     )}
                   </div>
                   <div className="mt-1 flex flex-wrap items-center gap-1">
-                    {(() => { const k = kbMap.get(text(pick(a, A.kanban))); if (!k) return null; const cor = text(pick(k, ["cor_hex", "cor"])); return (
+                    {(() => { const k = kbMap.get(text(pick(a, A.kanban))); if (!k) return <span className="rounded-full border border-dashed px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">Triagem</span>; const cor = text(pick(k, ["cor_hex", "cor"])); return (
                       <span className={cn("rounded-full px-1.5 py-0.5 text-[10px] font-medium", !cor && "bg-secondary text-secondary-foreground")} style={cor ? { backgroundColor: cor, color: "white" } : undefined}>
                         {text(pick(k, ["nome", "descricao"]))}
                       </span>); })()}
-                    {inst && <Badge variant="outline" className="h-5 px-1.5 text-[10px]">{text(pick(inst, ["nome", "descricao"]))}</Badge>}
+                    {inst && <Badge variant="outline" title="Linha de WhatsApp" className="h-5 px-1.5 text-[10px]">📱 {text(pick(inst, ["nome", "descricao"]))}</Badge>}
                     {(() => { const b = bloqueioDe(telefonePessoa(p)); return b ? <SeloBloqueado motivo={b.motivo} /> : null; })()}
                     {enc && <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">Encerrado</Badge>}
                     {enc && <AvaliacaoSelo atendimento={a} encerrado />}

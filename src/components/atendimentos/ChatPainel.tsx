@@ -553,8 +553,8 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
             <ProtocoloBadge protocolo={atendimento?.["protocolo"]} className="shrink-0" />
           </div>
           <div className="mt-0.5 flex min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap text-xs text-muted-foreground">
-            {kanban && <span className="truncate">{text(pick(kanban, ["nome", "descricao"]))}</span>}
-            {instancia && <Badge variant="outline" className="h-5 shrink-0 px-1.5 text-[10px]">{text(pick(instancia, ["nome", "descricao"]))}</Badge>}
+            {kanban ? <span className="truncate">{text(pick(kanban, ["nome", "descricao"]))}</span> : <span className="truncate italic">Triagem</span>}
+            {instancia && <Badge variant="outline" title="Linha de WhatsApp" className="h-5 shrink-0 px-1.5 text-[10px]">📱 {text(pick(instancia, ["nome", "descricao"]))}</Badge>}
             <Badge variant={encerrado ? "secondary" : "outline"} className="h-5 max-w-40 shrink-0 truncate px-1.5 text-[10px]">
               {status}
             </Badge>
