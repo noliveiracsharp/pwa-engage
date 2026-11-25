@@ -9,11 +9,25 @@ export async function transcreverAgente(url: string, opts: { clientToken?: strin
   let u: URL;
   try { u = new URL(url); } catch { console.error("crm-agente transcricao: url inválida"); return ""; }
   if (u.protocol !== "https:") return "";
-  let a = await fetch(u.toString()).catch(() => null);
-  if ((!a || !a.ok) && opts.clientToken) a = await fetch(u.toString(), { headers: { "Client-Token": opts.clientToken } }).catch(() => null);
-  if (!a || !a.ok) { console.error("crm-agente download audio", a?.status ?? "rede"); return ""; }
-  const buf = await a.arrayBuffer();
-  if (!buf.byteLength || buf.byteLength > 20 * 1024 * 1024) { console.error("crm-agente audio tamanho", buf.byteLength); return ""; }
+  // A Z-API às vezes entrega o link antes do arquivo ficar pronto ou devolve um erro curto com status 200.
+  const baixar = async (h?: Record<string, string>) => {
+    const r = await fetch(u.toString(), h ? { headers: h } : undefined).catch(() => null);
+    if (!r || !r.ok) return { erro: `status ${r?.status ?? "rede"}` } as const;
+    const tipo = (r.headers.get("content-type") || "").toLowerCase();
+    const b = await r.arrayBuffer();
+    if (b.byteLength < 1000 || /json|html|xml|text\//.test(tipo)) return { erro: `conteúdo inválido (${tipo || "?"}, ${b.byteLength} bytes): ${new TextDecoder().decode(b.slice(0, 200))}` } as const;
+    return { buf: b, tipo } as const;
+  };
+  let res: Awaited<ReturnType<typeof baixar>> = { erro: "não tentou" };
+  for (let i = 0; i < 4; i++) {
+    res = await baixar();
+    if (!("buf" in res) && opts.clientToken) res = await baixar({ "Client-Token": opts.clientToken });
+    if ("buf" in res) break;
+    await new Promise((ok) => setTimeout(ok, 1500));
+  }
+  if (!("buf" in res) || !res.buf) { console.error("crm-agente download audio", res.erro); return ""; }
+  const buf = res.buf;
+  const a = { headers: new Headers({ "content-type": res.tipo }) };
   const mime = (opts.mimeType || a.headers.get("content-type") || "audio/ogg").split(";")[0]!.trim();
   const ext = mime.includes("mpeg") || mime.includes("mp3") ? "mp3" : mime.includes("mp4") || mime.includes("m4a") || mime.includes("aac") ? "m4a" : mime.includes("wav") ? "wav" : mime.includes("webm") ? "webm" : "ogg";
   const form = new FormData();
