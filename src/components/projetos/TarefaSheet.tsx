@@ -21,6 +21,7 @@ import { C, PRIORIDADES, TIPOS_ITEM, filterPayload, isDone, prioridadeClass, pro
 import type { Row } from "@/lib/row";
 import type { Perms } from "@/hooks/usePagePermissions";
 import { Switch } from "@/components/ui/switch";
+import { perguntar } from "@/components/layout/DialogoGlobal";
 import { ComentariosTarefa } from "@/components/projetos/ComentariosTarefa";
 
 export function TarefaSheet({ tarefa, tarefasDoProjeto, projetoId, perms, onClose, isNew, espacoId, statusId, statusOpcoes, statusNomeCol }: {
@@ -73,6 +74,7 @@ export function TarefaSheet({ tarefa, tarefasDoProjeto, projetoId, perms, onClos
       ({ error } = await supabase.from("projetos_tarefas").update(filterPayload(stamp(base, false), tCols)).eq(idColumn(tarefa), rowId(tarefa) as never));
     } else {
       base[tc.projeto] = projetoId || null;
+      if (tCols?.includes("criado_por") && usuarioId) base["criado_por"] = usuarioId;
       if (!projetoId && espacoId) base["espaco_id"] = espacoId;
       let criado: unknown;
       ({ data: criado, error } = await supabase.from("projetos_tarefas").insert(filterPayload(stamp({ ...base, ordem: tarefasDoProjeto.reduce((mx, t) => Math.max(mx, Number(t["ordem"] ?? -1) || 0), -1) + 1 }, true), tCols)).select("id").maybeSingle());
@@ -89,6 +91,32 @@ export function TarefaSheet({ tarefa, tarefasDoProjeto, projetoId, perms, onClos
     onClose();
   }
 
+  // Validação: quem abriu a tarefa aprova (vai para Concluído) ou reabre (volta para Em progresso).
+  const statusAtual = statusOpcoes?.find((x) => String(rowId(x)) === String(tarefa?.["status_id"] ?? ""));
+  const podeValidar = !!tarefa && statusAtual?.["tipo"] === "validacao" && !!usuarioId && String(tarefa["criado_por"] ?? "") === String(usuarioId);
+  async function validar(aprovar: boolean) {
+    if (!tarefa || !statusOpcoes) return;
+    const destino = statusOpcoes.find((x) => x["tipo"] === (aprovar ? "concluido" : "progresso")) ?? statusOpcoes.find((x) => x["tipo"] === (aprovar ? "concluido" : "a_fazer"));
+    if (!destino) { toast.error(`Cadastre um status do tipo "${aprovar ? "Concluído" : "Em progresso"}" neste espaço.`); return; }
+    let obs = "";
+    if (!aprovar) {
+      const r = await perguntar({ title: "Reabrir tarefa", description: "Conte o que ainda não está funcionando.", confirmText: "Reabrir", multiline: true, required: false });
+      if (r === null) return;
+      obs = String(r).trim();
+    }
+    const { error } = await supabase.from("projetos_tarefas").update(filterPayload(stamp({ status_id: rowId(destino) }, false), tCols) as never).eq(idColumn(tarefa), rowId(tarefa) as never);
+    if (error) { toast.error(error.message); return; }
+    await supabase.from("projetos_tarefas_comentarios" as never).insert({ tarefa_id: rowId(tarefa), autor_nome: String(usuario?.["nome"] ?? "Equipe"), texto: aprovar ? "✅ Validado e aprovado por quem abriu." : `🔁 Reaberto: ${obs || "sem observação"}`, origem: "equipe", criado_por: usuarioId ?? null } as never);
+    if (!aprovar) void registrarEventoProjeto({
+      empresaId, autorId: usuarioId, autorNome: String(usuario?.["nome"] ?? ""), projetoId: tarefa[tc.projeto], tarefaId: rowId(tarefa),
+      tipo: "tarefa", acao: "alterou", titulo: `${String(tarefa[tc.nome] ?? "")} (reaberta)`, prazo: tarefa[tc.fim],
+      responsaveis: responsaveisDe(tarefa, tc.resp).filter((id) => id !== String(usuarioId)), anteriores: responsaveisDe(tarefa, tc.resp),
+    });
+    toast.success(aprovar ? "Tarefa aprovada e concluída." : "Tarefa reaberta para a equipe.");
+    qc.invalidateQueries({ queryKey: ["table", "projetos_tarefas"] });
+    onClose();
+  }
+
   return (
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
       <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-2xl">
@@ -97,6 +125,16 @@ export function TarefaSheet({ tarefa, tarefasDoProjeto, projetoId, perms, onClos
           <SheetDescription>Dados da tarefa (fase ou entrega do projeto).</SheetDescription>
         </SheetHeader>
         <div className="flex-1 space-y-6 overflow-y-auto p-4">
+          {podeValidar && (
+            <section className="space-y-2 rounded-lg border border-warning/50 bg-warning/10 p-3">
+              <h3 className="font-semibold text-foreground">Aguardando sua validação</h3>
+              <p className="text-sm text-muted-foreground">A equipe concluiu esta tarefa que você abriu. Teste e confirme.</p>
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={() => void validar(true)}>Aprovar / Resolvido</Button>
+                <Button variant="outline" onClick={() => void validar(false)}>Reabrir com observação</Button>
+              </div>
+            </section>
+          )}
           {tarefa && (
             <section className="space-y-2 rounded-lg border border-border p-3">
               <div className="flex items-center justify-between">

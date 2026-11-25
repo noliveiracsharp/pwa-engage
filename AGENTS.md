@@ -51,3 +51,4 @@
 - Heavy searches/reports read financeiro data through SECURITY DEFINER RPCs scoped by fin_rpc_empresa (SQL in supabase/sql/conectcon-financeiro-procedures-*.sql) via useFinanceiroRpc, querying only on Processar — avoids full-table downloads that time out under RLS.
 - Migrated recurrence KPIs use company-scoped monthly receivable aggregates, not synthetic Offers; billing gaps never prove churn and LTV without cancellation history is labeled as an estimate.
 - Product/service lists use fn_itens_lista with database filters, ordering and bounded pages; full filtered exports are fetched only on demand, preserving catalog-sharing authorization and table-cache invalidations.
+- Projetos tasks load through fn_projetos_tarefas_lista (open + recently concluded + linked task) with direct-read fallback; status-change notices to the task creator come from a DB trigger so every UI path notifies.

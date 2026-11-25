@@ -27,6 +27,17 @@ export const TIPOS_ESPACO = [
   { v: "pasta", label: "Pasta", icone: "FolderOpen", desc: "Só organiza itens, com visão geral." },
   { v: "lista", label: "Lista", icone: "ListChecks", desc: "Onde ficam os status e as tarefas (ex.: Plano de testes)." },
 ] as const;
+/** Finalidade do espaço raiz: entregas com projetos ou backlog de tarefas/bugs sem projeto. */
+export const FINALIDADES = [
+  { v: "projetos", label: "Projetos", desc: "Entregas com cliente, prazos e progresso (projeto → tarefas → atividades)." },
+  { v: "tarefas", label: "Tarefas & Bugs", desc: "Erros, melhorias e ajustes direto no espaço, sem precisar de projeto." },
+] as const;
+/** Finalidade herdada da raiz do espaço. */
+export function finalidadeEspaco(espacos: Row[], id: string | null): string {
+  const cadeia = cadeiaEspaco(espacos, id);
+  const raiz = espacos.find((e) => String(rowId(e)) === cadeia[cadeia.length - 1]);
+  return String(raiz?.["finalidade"] ?? "") || "projetos";
+}
 export function tipoEspaco(e: Row | undefined): string {
   const t = String(e?.["tipo"] ?? "");
   return TIPOS_ESPACO.some((x) => x.v === t) ? t : "espaco";
@@ -200,11 +211,13 @@ function EspacoDialog({ original, pai, paiTipo, total, onClose }: { original: Ro
   const [cor, setCor] = useState(String(original?.["cor"] ?? "#3b82f6"));
   const [saving, setSaving] = useState(false);
   const semTipo = !!cols?.length && !cols.includes("tipo");
+  const [finalidade, setFinalidade] = useState(String(original?.["finalidade"] ?? "") || "projetos");
 
   async function salvar() {
     if (!nome.trim()) { toast.error("Informe o nome."); return; }
     setSaving(true);
     const v: Row = { nome: nome.trim(), icone, cor, tipo };
+    if (!pai) v["finalidade"] = finalidade;
     if (!original) { v[PAI] = pai; v["ordem"] = total; }
     const payload = filterPayload(stamp(v, !original), cols);
     const { error } = original
@@ -241,6 +254,21 @@ function EspacoDialog({ original, pai, paiTipo, total, onClose }: { original: Ro
             </div>
             {semTipo && <p className="text-xs text-warning">Para gravar o tipo, rode o script atendeai-espacos-tipo.sql no SQL Editor.</p>}
           </div>
+          {!pai && (
+            <div className="space-y-1">
+              <Label>Finalidade</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {FINALIDADES.map((f) => (
+                  <button key={f.v} type="button" onClick={() => setFinalidade(f.v)}
+                    className={cn("rounded-md border border-border p-2 text-left text-sm hover:bg-accent", finalidade === f.v && "border-primary bg-primary/10")}>
+                    <div className="font-medium">{f.label}</div>
+                    <p className="mt-0.5 text-xs text-muted-foreground">{f.desc}</p>
+                  </button>
+                ))}
+              </div>
+              {!!cols?.length && !cols.includes("finalidade") && <p className="text-xs text-warning">Para gravar a finalidade, rode o script conectcon-projetos-performance-validacao.sql.</p>}
+            </div>
+          )}
           <div className="space-y-1"><Label htmlFor="esp-nome">Nome</Label><Input id="esp-nome" autoFocus value={nome} onChange={(e) => setNome(e.target.value)} /></div>
           <div className="space-y-1"><Label htmlFor="esp-icone">Ícone (opcional — o padrão segue o tipo)</Label><IconPicker id="esp-icone" value={icone} onChange={setIcone} /></div>
           <div className="space-y-1"><Label htmlFor="esp-cor">Cor</Label>

@@ -32,12 +32,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { SearchSelect } from "@/components/data-table/SearchSelect";
 import { StatusDialog } from "@/components/projetos/StatusDialog";
 import { TAREFAS_PADRAO, diasDoModelo } from "@/components/projetos/TarefasPadraoDialog";
-import { EspacosSidebar, ESPACOS, cadeiaEspaco, espacoEDescendentes, tipoEspaco } from "@/components/projetos/EspacosSidebar";
+import { EspacosSidebar, ESPACOS, finalidadeEspaco, cadeiaEspaco, espacoEDescendentes, tipoEspaco } from "@/components/projetos/EspacosSidebar";
 import { TarefaSheet } from "@/components/projetos/TarefaSheet";
 import { AtividadeSheet } from "@/components/projetos/AtividadeSheet";
 import { EspacoDashboard } from "@/components/projetos/EspacoDashboard";
 import { DashboardGeral } from "@/components/projetos/DashboardGeral";
 import { TarefasEspaco } from "@/components/projetos/TarefasEspaco";
+import { useTarefasProjetos } from "@/lib/projetos-tarefas-rpc";
+import { Switch } from "@/components/ui/switch";
 import { useTableRows, rowId, idColumn, matches } from "@/lib/crud";
 import { SortableList, salvarOrdem, useSortableRow } from "@/lib/reorder";
 import { useAudit } from "@/lib/audit";
@@ -69,11 +71,11 @@ export const Route = createFileRoute("/_authenticated/projetos")({
   component: ProjetosPage,
 });
 
-function useProjetoData() {
+function useProjetoData(incluirConcluidas = false, tarefaLink?: string) {
   const { data: status = [] } = useTableRows("projetos_status");
   const { data: projetos = [], isLoading } = useTableRows("projetos");
   // Sem ORDER BY no banco (estourava timeout); ordena no navegador.
-  const tarefasQ = useTableRows("projetos_tarefas", true);
+  const tarefasQ = useTarefasProjetos(incluirConcluidas, tarefaLink);
   const tarefas = useMemo(() => [...(tarefasQ.data ?? [])].sort((a, b) => (Number(a["ordem"]) || 0) - (Number(b["ordem"]) || 0)), [tarefasQ.data]);
   useEffect(() => { if (tarefasQ.error) toast.error("Não foi possível carregar as tarefas: " + (tarefasQ.error as Error).message); }, [tarefasQ.error]);
   const { data: parceiros = [] } = useTableRows("parceiros");
@@ -111,8 +113,9 @@ function useProjetoData() {
 
 function ProjetosPage() {
   const perms = usePagePermissions("/projetos");
-  const d = useProjetoData();
   const { espaco, projeto: projetoQ, tarefa: tarefaQ } = Route.useSearch();
+  const [comConcluidas, setComConcluidas] = useState(false);
+  const d = useProjetoData(comConcluidas, tarefaQ);
   const navigate = useNavigate({ from: "/projetos" });
   const qc = useQueryClient();
   const espacoId = espaco && d.espacos.some((e) => String(rowId(e)) === espaco) ? espaco : null;
@@ -164,7 +167,8 @@ function ProjetosPage() {
   }
   // Lista abre as tarefas por status; Espaço, Pasta e Projeto abrem a visão geral.
   const raiz = !!espAtual && tipoEspaco(espAtual) !== "lista";
-  const abaAtual = !espacoId ? (aba === "projetos" || aba === "lista" ? aba : "geral") : aba ?? (raiz ? "painel" : "tarefas");
+  const soTarefas = !!espacoId && finalidadeEspaco(d.espacos, espacoId) === "tarefas";
+  const abaAtual = !espacoId ? (aba === "projetos" || aba === "lista" ? aba : "geral") : soTarefas && (aba === "projetos" || aba === "painel" || !aba) ? "tarefas" : aba ?? (raiz ? "painel" : "tarefas");
   return (
     <div className="flex flex-col gap-4 md:flex-row md:items-start">
       <EspacosSidebar espacos={d.espacos} ativo={espacoId} perms={perms} onSelect={(id) => { setAba(null); ir(id); }} onMoverProjeto={moverEspaco} />
@@ -185,13 +189,17 @@ function ProjetosPage() {
           <div className="flex flex-wrap items-center gap-3">
             {abaAtual === "tarefas" && <h1 className="text-2xl font-bold text-foreground">{String(espAtual?.["nome"] ?? "")}</h1>}
             <div className="flex rounded-md border border-border p-0.5" role="tablist" aria-label="Visão do espaço">
-              {raiz && <Button size="sm" variant={abaAtual === "painel" ? "secondary" : "ghost"} onClick={() => setAba("painel")}>Visão geral</Button>}
+              {raiz && !soTarefas && <Button size="sm" variant={abaAtual === "painel" ? "secondary" : "ghost"} onClick={() => setAba("painel")}>Visão geral</Button>}
               <Button size="sm" variant={abaAtual === "tarefas" ? "secondary" : "ghost"} onClick={() => setAba("tarefas")}>Tarefas</Button>
-              <Button size="sm" variant={abaAtual === "projetos" ? "secondary" : "ghost"} onClick={() => setAba("projetos")}>Projetos</Button>
+              {!soTarefas && <Button size="sm" variant={abaAtual === "projetos" ? "secondary" : "ghost"} onClick={() => setAba("projetos")}>Projetos</Button>}
               <Button size="sm" variant={abaAtual === "lista" ? "secondary" : "ghost"} onClick={() => setAba("lista")}>Lista corrida</Button>
             </div>
           </div>
         )}
+        <label className="flex w-fit items-center gap-2 text-sm text-muted-foreground">
+          <Switch checked={comConcluidas} onCheckedChange={setComConcluidas} aria-label="Exibir concluídas antigas" />
+          Exibir concluídas antigas <span className="text-xs">(por padrão, só as concluídas nos últimos 15 dias)</span>
+        </label>
         {abaAtual === "lista"
           ? <ListaCorrida d={d} espacoId={espacoId} onAbrir={abrirTarefa} />
           : abaAtual === "geral"
@@ -223,7 +231,7 @@ function ListaCorrida({ d, espacoId, onAbrir }: { d: D; espacoId: string | null;
       const st = status.get(String(t["status_id"] ?? ""));
       const pct = tarefaPct(t, d.tc.done);
       const sNome = st ? String(st[d.sc.nome] ?? "") : pct >= 100 ? "Concluída" : pct > 0 ? "Em andamento" : "A fazer";
-      const rank = pct >= 100 || st?.["tipo"] === "concluido" ? 3 : st?.["tipo"] === "erro" ? 0 : pct > 0 || st?.["tipo"] === "progresso" ? 2 : 1;
+      const rank = pct >= 100 || st?.["tipo"] === "concluido" ? 3 : st?.["tipo"] === "erro" ? 0 : st?.["tipo"] === "validacao" ? 0.5 : pct > 0 || st?.["tipo"] === "progresso" ? 2 : 1;
       return {
         id: String(rowId(t)), esp, rank, ordem: Number(st?.[d.sc.ordem] ?? 0), sNome, cor: st ? String(st[d.sc.cor] ?? "") : "",
         tipo: String(t["tipo"] ?? "") || "Melhoria", projeto: p ? String(p[d.pc.nome] ?? "") : "Sem projeto",

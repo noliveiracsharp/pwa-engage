@@ -19,6 +19,7 @@ const T = "projetos_status";
 export const TIPOS_STATUS = [
   { value: "a_fazer", label: "A fazer" },
   { value: "progresso", label: "Em progresso" },
+  { value: "validacao", label: "Aguardando validação" },
   { value: "concluido", label: "Concluído" },
   { value: "erro", label: "Erro" },
 ] as const;

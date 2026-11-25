@@ -23,7 +23,7 @@ export function useAvisosProjetos(usuarioId: unknown) {
         adicionarAviso({
           tipo: "projeto",
           chave: `projeto:${String(ev["id"])}`,
-          titulo: acao === "atribuiu" ? `Nova ${String(ev["tipo"] ?? "atividade")} para você` : "Atualização em projeto",
+          titulo: acao === "atribuiu" ? `Nova ${String(ev["tipo"] ?? "atividade")} para você` : acao === "validar" ? "Tarefa pronta para sua validação" : acao === "status" ? "Status da sua tarefa mudou" : "Atualização em projeto",
           texto: String(ev["descricao"] ?? ""),
           link: linkItemProjeto(ev["projeto_id"], ev["tarefa_id"]),
         });
