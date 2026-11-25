@@ -8,6 +8,7 @@ import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/integrations/supabase/
 import { dispararMensagem } from "@/lib/atendimentos-envio";
 import { executarExterno } from "@/lib/fluxos-externo";
 import { detectarNota, ehCortesia, notaDaLinha } from "@/lib/csat";
+import { interpretarAgente, transcreverAgente } from "@/lib/crm-agente.server";
 import { executarFluxo, proximoNoId, type ConexaoFluxo, type EstadoExec, type NoFluxo } from "@/lib/fluxos-motor";
 
 // Recebe as mensagens da Z-API ("Ao receber"). A chave ?k= identifica a instância.
@@ -141,6 +142,35 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
         // Linha exclusiva de notificações: respostas (ex.: auto-resposta de fornecedor) não abrem atendimento nem robô.
         const { data: fin } = await db.rpc("instancia_finalidade", { p_token: k });
         if (String(fin ?? "") === "notificacoes") return ok({ ignorada: true, motivo: "notificacoes" });
+
+        // Agente Comercial (instância interna com agente_crm): colaborador relata e o CRM é atualizado.
+        {
+          const { data: ag, error: eAg } = await db.rpc("crm_agente_identificar" as never, { p_token: k, p_telefone: body.phone } as never);
+          if (eAg && !/function|schema cache/i.test(eAg.message)) console.error("zapi-webhook agente", eAg.message);
+          const col = ag as { nome?: string; instancia?: Record<string, unknown> } | null;
+          if (col?.instancia) {
+            const responder = (t: string) => dispararMensagem({ instancia: col.instancia!, telefone: body.phone!, texto: t, mensagemId: null, atendimentoId: null }).catch((e: unknown) => console.error("zapi-webhook agente envio", e));
+            try {
+              const relato = tipo === "audio" && midia ? await transcreverAgente(midia) : texto;
+              if (!relato.trim()) { await responder("Não consegui entender a mensagem. Envie em texto ou um áudio mais claro."); return ok({ agente: true }); }
+              const acao = await interpretarAgente(relato);
+              if (!acao) { await responder("Não identifiquei o cliente. Ex.: \"Visitei o Condomínio Aurora, síndico pediu proposta para sexta\"."); return ok({ agente: true }); }
+              const { data: rx, error: eX } = await db.rpc("crm_agente_executar" as never, { p_token: k, p_telefone: body.phone, p_dados: acao } as never);
+              if (eX) throw eX;
+              const r0 = rx as { cliente: string; novo: boolean; visita: boolean; tecnico?: string };
+              const fmt = (v: string) => new Date(v).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+              await responder([
+                `✅ Registrado no CRM de *${r0.cliente}*${r0.novo ? " (novo Lead cadastrado — complete o CNPJ no Hub)" : ""}.`,
+                acao.proxima_acao_em ? `📌 Próxima ação: ${acao.proxima_acao_tipo ?? "Retorno"} em ${fmt(acao.proxima_acao_em)}` : "",
+                r0.visita && acao.visita_em ? `🗓️ Visita técnica agendada no Planner para ${fmt(acao.visita_em)} (${r0.tecnico ?? "você"}).` : "",
+              ].filter(Boolean).join("\n"));
+            } catch (e) {
+              console.error("zapi-webhook agente", e);
+              await responder("Não consegui registrar agora. Tente novamente em instantes.");
+            }
+            return ok({ agente: true });
+          }
+        }
 
         // Resposta à pesquisa de satisfação: grava a nota no atendimento encerrado, agradece e NÃO abre novo atendimento.
         const notaCsat = tipo === "texto" ? (lr?.selectedRowId && /^[0-5]$/.test(texto) && /⭐/.test(String(lr.title ?? "")) ? notaDaLinha(texto) : detectarNota(texto)) : null;
