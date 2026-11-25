@@ -1,7 +1,10 @@
 import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Paperclip, X, FileText } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { uploadAnexo, enviarWhatsappEmpresa } from "@/lib/manutencoes";
+import { notificarEquipe } from "@/lib/avisos-equipe";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,7 +37,19 @@ export function SolicitarLaudoDialog({ open, onOpenChange, usuarios, me, onAvisa
   const { data: colsLaudo } = useCols("laudos_tecnicos");
   const salvarOferta = useSaveOrcamento();
   const [salvando, setSalvando] = useState(false);
-  const [f, setF] = useState({ objetivo: OBJETIVO_LEVANTAMENTO, cliente: "", tecnico: "", data: todayISO(), hora: "09:00", comCusto: false, itemId: "" });
+  const [anexos, setAnexos] = useState<{ url: string; nome: string; tipo: "imagem" | "arquivo" }[]>([]);
+  const [enviando, setEnviando] = useState(false);
+  async function anexar(files: FileList | null) {
+    if (!files?.length) return;
+    setEnviando(true);
+    try {
+      const novos: { url: string; nome: string; tipo: "imagem" | "arquivo" }[] = [];
+      for (const file of Array.from(files)) novos.push({ url: await uploadAnexo(file), nome: file.name, tipo: (file.type.startsWith("image/") ? "imagem" : "arquivo") as "imagem" | "arquivo" });
+      setAnexos((a) => [...a, ...novos]);
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Falha ao enviar o arquivo."); }
+    finally { setEnviando(false); }
+  }
+  const [f, setF] = useState({ briefing: "", objetivo: OBJETIVO_LEVANTAMENTO, cliente: "", tecnico: "", data: todayISO(), hora: "09:00", comCusto: false, itemId: "" });
 
   const clienteOpts = useMemo(() => parceiros
     .filter((p) => p["is_cliente"] !== false && p["status"] !== false)
@@ -62,18 +77,20 @@ export function SolicitarLaudoDialog({ open, onOpenChange, usuarios, me, onAvisa
       const numero = await proximoNumero("laudos_tecnicos", "LAU", empresaId);
       const { data: laudo, error } = await supabase.from("laudos_tecnicos").insert(filterPayload({
         numero, empresa_id: empresaId, parceiro_id: f.cliente, objetivo: f.objetivo, data_visita: f.data,
-        tecnico_usuario_id: f.tecnico, status: f.comCusto ? "Aguardando aprovação da taxa" : "Pendente",
+        tecnico_usuario_id: f.tecnico, observacoes_gerais: f.briefing.trim() || null, status: f.comCusto ? "Aguardando aprovação da taxa" : "Pendente",
       }, colsLaudo) as never).select("id").single();
       if (error) throw error;
       const laudoId = String((laudo as Row)["id"]);
+      const fotos = anexos.filter((a) => a.tipo === "imagem").map((a) => ({ laudo_id: laudoId, laudo_item_id: null, url_foto: a.url }));
+      if (fotos.length) await supabase.from("laudos_fotos").insert(fotos as never);
       const tipo = objetivoLabel(f.objetivo);
       const proprio = f.tecnico === (usuarioId ?? me);
 
       const t = await (supabase.from("tarefas_usuarios" as never) as unknown as ReturnType<typeof supabase.from>).insert({
         empresa_id: empresaId, criado_por: usuarioId ?? me, responsavel_id: f.tecnico,
-        titulo: `${tipo}: ${nomeCliente}`, descricao: `Laudo ${numero} · ${f.data} ${f.hora}\nTelefone: ${telefone}${f.comCusto ? "\nVisita com custo: aguardar aprovação da Oferta." : ""}`,
+        titulo: `${tipo}: ${nomeCliente}`, descricao: `Laudo ${numero} · ${f.data} ${f.hora}\nTelefone: ${telefone}${f.briefing.trim() ? `\n\nBriefing:\n${f.briefing.trim()}` : ""}${f.comCusto ? "\nVisita com custo: aguardar aprovação da Oferta." : ""}`,
         data_solicitacao: todayISO(), data_entrega: f.data, data_planejada: proprio ? f.data : null,
-        status: proprio ? "andamento" : "aguardando", prioridade: "media", anexos: [],
+        status: proprio ? "andamento" : "aguardando", prioridade: "media", anexos,
       } as never);
       if (t.error) throw t.error;
 
@@ -90,12 +107,31 @@ export function SolicitarLaudoDialog({ open, onOpenChange, usuarios, me, onAvisa
         });
         extra = ` Oferta ${res.numero} da taxa criada.`;
       }
-      if (!proprio && onAvisar) await onAvisar(f.tecnico, `📋 Laudo ${numero} (${tipo}) para ${nomeCliente} em ${f.data} ${f.hora}. Aceite a tarefa no Planner.`).catch(() => undefined);
+      const dataBR = f.data.split("-").reverse().join("/");
+      const endereco = [pick(cli, ["endereco", "logradouro"]), pick(cli, ["numero"]), pick(cli, ["bairro"]), pick(cli, ["cidade"])].filter(Boolean).join(", ");
+      if (!proprio && onAvisar) await onAvisar(f.tecnico, `📋 Laudo ${numero} (${tipo}) para ${nomeCliente} em ${dataBR} ${f.hora}. Aceite a tarefa no Planner.`).catch(() => undefined);
+      // Técnico: sininho + push + WhatsApp com os dados da visita.
+      const r = await notificarEquipe({
+        empresaId, autorId: usuarioId ?? me, usuarioIds: [f.tecnico], link: "/planner",
+        titulo: `Laudo agendado: ${tipo}`,
+        texto: [`📋 Laudo ${numero} · ${nomeCliente}`, `📅 ${dataBR} às ${f.hora}`, endereco ? `📍 ${endereco}` : "", `📞 ${telefone}`,
+          f.briefing.trim() ? `\n📝 Briefing:\n${f.briefing.trim()}` : "", anexos.length ? `\n📎 Anexos:\n${anexos.map((a) => `${a.nome}: ${a.url}`).join("\n")}` : ""].filter(Boolean).join("\n"),
+      }).catch(() => ({ avisos: 0, whatsapp: 0 }));
+      // Cliente: confirmação do agendamento por WhatsApp.
+      let zapCli = false;
+      const foneCli = String(pick(cli, ["whatsapp", "celular", "telefone"]) ?? "");
+      if (foneCli.replace(/\D/g, "").length >= 10) {
+        const tecNome = tecOpts.find((o) => o.value === f.tecnico)?.label ?? "";
+        zapCli = !(await enviarWhatsappEmpresa(empresaId, foneCli, `Olá, ${nomeCliente}!\n\nSua visita de *${tipo.toLowerCase()}* (${numero}) foi agendada para *${dataBR} às ${f.hora}*${tecNome && tecNome !== "Eu mesmo" ? ` com o técnico *${tecNome}*` : ""}.\n\nQualquer dúvida, é só responder esta mensagem.`).catch(() => "erro"));
+      }
+      extra += r.whatsapp ? " Técnico avisado no WhatsApp." : "";
+      extra += zapCli ? " Cliente avisado no WhatsApp." : "";
       for (const k of ["laudos_tecnicos", "orcamentos"]) void qc.invalidateQueries({ queryKey: ["table", k] });
       void qc.invalidateQueries({ queryKey: ["planner"] });
       void qc.invalidateQueries({ queryKey: ["tarefas-usuarios"] });
       toast.success(`Laudo ${numero} solicitado e agendado no Planner.${extra}`);
-      setF({ ...f, cliente: "", comCusto: false, itemId: "" });
+      setF({ ...f, cliente: "", comCusto: false, itemId: "", briefing: "" });
+      setAnexos([]);
       onOpenChange(false);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Não foi possível solicitar o laudo.");
@@ -106,7 +142,7 @@ export function SolicitarLaudoDialog({ open, onOpenChange, usuarios, me, onAvisa
 
   return (
     <Dialog open={open} onOpenChange={(o) => !salvando && onOpenChange(o)}>
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader><DialogTitle>Solicitar laudo técnico</DialogTitle></DialogHeader>
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-2">
@@ -126,6 +162,33 @@ export function SolicitarLaudoDialog({ open, onOpenChange, usuarios, me, onAvisa
             <div className="space-y-1"><Label>Data da visita</Label><Input type="date" value={f.data} onChange={(e) => setF({ ...f, data: e.target.value })} /></div>
             <div className="space-y-1"><Label>Horário</Label><Input type="time" value={f.hora} onChange={(e) => setF({ ...f, hora: e.target.value })} /></div>
           </div>
+          <div className="space-y-1">
+            <Label htmlFor="laudo-briefing">Briefing</Label>
+            <Textarea id="laudo-briefing" rows={4} placeholder="O que o técnico precisa saber: problema relatado, acesso ao local, contato no dia…" value={f.briefing} onChange={(e) => setF({ ...f, briefing: e.target.value })} />
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label>Arquivos e fotos</Label>
+              <Button type="button" size="sm" variant="outline" disabled={enviando} asChild>
+                <label className="cursor-pointer">
+                  {enviando ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Paperclip className="mr-1 h-4 w-4" />} Anexar
+                  <input type="file" multiple className="sr-only" accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt" onChange={(e) => { void anexar(e.target.files); e.target.value = ""; }} />
+                </label>
+              </Button>
+            </div>
+            {anexos.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {anexos.map((a, i) => (
+                  <div key={a.url} className="relative">
+                    {a.tipo === "imagem"
+                      ? <img src={a.url} alt={a.nome} className="h-16 w-16 rounded-md border border-border object-cover" />
+                      : <div className="flex h-16 w-28 items-center gap-1 rounded-md border border-border p-2 text-xs"><FileText className="h-4 w-4 shrink-0" /><span className="truncate">{a.nome}</span></div>}
+                    <button type="button" aria-label={`Remover ${a.nome}`} className="absolute -right-1.5 -top-1.5 rounded-full bg-destructive p-0.5 text-destructive-foreground" onClick={() => setAnexos((x) => x.filter((_, j) => j !== i))}><X className="h-3 w-3" /></button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
           <div className="flex items-center justify-between rounded-md border border-border p-3">
             <div><p className="text-sm font-medium">Visita com custo</p><p className="text-xs text-muted-foreground">Gera uma Oferta com o item do catálogo para o cliente aprovar.</p></div>
             <Switch checked={f.comCusto} onCheckedChange={(v) => setF({ ...f, comCusto: v })} />
@@ -136,7 +199,7 @@ export function SolicitarLaudoDialog({ open, onOpenChange, usuarios, me, onAvisa
         </div>
         <DialogFooter>
           <Button variant="outline" disabled={salvando} onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button disabled={salvando} onClick={() => void solicitar()}>{salvando && <Loader2 className="mr-1 h-4 w-4 animate-spin" />} Salvar</Button>
+          <Button disabled={salvando || enviando} onClick={() => void solicitar()}>{salvando && <Loader2 className="mr-1 h-4 w-4 animate-spin" />} Salvar</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
