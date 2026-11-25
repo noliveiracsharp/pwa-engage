@@ -25,7 +25,7 @@ export async function transcreverAgente(url: string, opts: { clientToken?: strin
     if ("buf" in res) break;
     await new Promise((ok) => setTimeout(ok, 1500));
   }
-  if (!("buf" in res) || !res.buf) { console.error("crm-agente download audio", res.erro); return ""; }
+  if (!("buf" in res)) { console.error("crm-agente download audio", res.erro); return ""; }
   const buf = res.buf;
   const a = { headers: new Headers({ "content-type": res.tipo }) };
   const mime = (opts.mimeType || a.headers.get("content-type") || "audio/ogg").split(";")[0]!.trim();
