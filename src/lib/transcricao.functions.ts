@@ -47,6 +47,7 @@ export const transcreverAudio = createServerFn({ method: "POST" })
       const buf = await a.arrayBuffer();
       if (!buf.byteLength || buf.byteLength > LIMITE) return { erro: "Áudio vazio ou muito grande." };
       let tipo = (a.headers.get("content-type") ?? "").split(";")[0]!.trim();
+      if (buf.byteLength < 1000 || /json|html|xml|text\//i.test(tipo)) return { erro: "O arquivo de áudio ainda não está disponível ou expirou. Tente novamente em instantes." };
       if (!tipo.startsWith("audio/")) tipo = /\.mp3/i.test(u.pathname) ? "audio/mpeg" : "audio/ogg";
       const ext = tipo.includes("mpeg") ? "mp3" : tipo.includes("mp4") || tipo.includes("m4a") ? "m4a" : tipo.includes("wav") ? "wav" : "ogg";
       if (gemini) {
