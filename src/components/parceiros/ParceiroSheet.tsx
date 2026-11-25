@@ -15,6 +15,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CarteiraCondominios } from "./CarteiraCondominios";
+import { CrmClientePainel } from "@/components/crm/CrmClientePainel";
 import { DocumentosButton } from "@/components/documentos/DocumentosPainel";
 import { ContatosPainel } from "@/components/contatos/ContatosButton";
 import { rowId as docRowId } from "@/lib/crud";
@@ -359,12 +360,13 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly: roTela, sa
           <SheetTitle className="pr-8">{record ? "Editar parceiro" : "Novo parceiro"}</SheetTitle>
           <SheetDescription>Clientes e fornecedores usados no financeiro e faturamento.</SheetDescription>
         </SheetHeader>
-        <Tabs value={pf ? "gerais" : tab} onValueChange={setTab} className="flex min-h-0 flex-1 flex-col">
+        <Tabs value={pf && tab !== "crm" ? "gerais" : tab} onValueChange={setTab} className="flex min-h-0 flex-1 flex-col">
           <div className="mx-6 mb-4 flex flex-wrap items-center gap-2">
             <TabsList className="h-auto w-fit flex-wrap">
               <TabsTrigger value="gerais">Dados Gerais</TabsTrigger>
               {!pf && ver("fiscal") && <TabsTrigger value="fiscal">Fiscal e Atividades</TabsTrigger>}
               {!pf && ver("qsa") && <TabsTrigger value="qsa">Quadro Societário</TabsTrigger>}
+              {record && <TabsTrigger value="crm">CRM</TabsTrigger>}
               {!pf && record && !condo && <TabsTrigger value="carteira">Condomínios</TabsTrigger>}
               {!pf && condo && record && <TabsTrigger value="wl">White Label</TabsTrigger>}
             </TabsList>
@@ -671,6 +673,11 @@ export function ParceiroSheet({ open, onOpenChange, record, readOnly: roTela, sa
             {!pf && record && !condo && (
               <TabsContent value="carteira" className="mt-0">
                 <CarteiraCondominios parceiroId={String(docRowId(record) ?? "")} />
+              </TabsContent>
+            )}
+            {record && (
+              <TabsContent value="crm" className="mt-0">
+                <CrmClientePainel clienteId={String(docRowId(record) ?? "")} cliente={record} readOnly={readOnly} />
               </TabsContent>
             )}
           </fieldset>

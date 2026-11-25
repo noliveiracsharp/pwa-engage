@@ -52,3 +52,4 @@
 - Migrated recurrence KPIs use company-scoped monthly receivable aggregates, not synthetic Offers; billing gaps never prove churn and LTV without cancellation history is labeled as an estimate.
 - Product/service lists use fn_itens_lista with database filters, ordering and bounded pages; full filtered exports are fetched only on demand, preserving catalog-sharing authorization and table-cache invalidations.
 - Projetos tasks load through fn_projetos_tarefas_lista (open + recently concluded + linked task) with direct-read fallback; status-change notices to the task creator come from a DB trigger so every UI path notifies.
+- CRM do Cliente (Etapa 1): tabela crm_interacoes + fn_crm_timeline (SQL em supabase/sql/conectcon-crm-cliente.sql); aba CRM na ficha do cliente une interações, ofertas, histórico antigo das ofertas e laudos; o Consultor Comercial IA mora ali (analisarOferta com modo cliente) — o cliente é o centro do relacionamento, não a Oferta.
