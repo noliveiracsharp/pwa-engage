@@ -10,17 +10,18 @@ import { formatBRL } from "@/lib/orcamentos";
 import { hojeISO } from "@/lib/financeiro";
 import { useEmpresaAtiva } from "@/hooks/useEmpresaAtiva";
 import { farol } from "@/lib/board";
-import { cac, operacao, payback, recorrencia, vendas } from "@/lib/kpis";
+import { cac, operacao, payback, vendas } from "@/lib/kpis";
+import { recorrenciaRecebiveis } from "@/lib/kpis-recebiveis";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 /** Explicação de cada indicador (ícone i). */
 const INFO: Record<string, string> = {
-  "MRR atual": "Monthly Recurring Revenue (receita recorrente mensal): soma das mensalidades dos contratos ativos na data final. Vem das Ofertas ganhas que têm itens de natureza \"Recorrente\".",
+  "MRR atual": "Monthly Recurring Revenue: soma dos títulos mensais a receber no mês da data final, pagos ou abertos, identificados pelo texto informado na categoria ou descrição. Inclui vencimentos posteriores à data final dentro desse mês; exclui cancelados. Não depende de Ofertas nem soma parcelas de outros meses.",
   "ARR projetado": "Annual Recurring Revenue: o MRR atual multiplicado por 12. Mostra quanto a recorrência gera em um ano se nada mudar.",
-  "Ticket médio mensal": "Valor médio da mensalidade por contrato ativo (MRR ÷ número de contratos).",
-  "Churn mensal": "Percentual da receita recorrente perdida por mês com contratos encerrados no período. Quanto menor, melhor (meta até 1%).",
-  "LTV médio": "Lifetime Value (valor do tempo de vida): quanto um cliente gera de receita durante todo o tempo em que fica conosco. Cálculo: ticket mensal ÷ churn; sem churn, considera 60 meses.",
+  "Ticket médio mensal": "MRR dividido pela quantidade de clientes distintos com mensalidade no mês final. Usa o cliente atendido quando disponível, senão o pagador. Vários títulos do mesmo cliente somam receita, mas contam um único cliente.",
+  "Churn mensal": "Receita recorrente perdida por cancelamentos confirmados. Sem o histórico contratual da carteira migrada, não é possível calcular com segurança: a ausência de cobrança pode ser apenas falta de lançamento, não cancelamento.",
+  "LTV médio": "Lifetime Value: receita estimada durante a relação com o cliente, não o tempo já transcorrido. Sem histórico confiável de cancelamentos, esta projeção usa ticket mensal × 60 meses; não representa duração contratual comprovada.",
   "CAC médio": "Custo de Aquisição de Cliente: despesas pagas de marketing, comercial, vendas, anúncios e comissões no período ÷ novos clientes ganhos.",
   "Relação LTV / CAC": "Quantas vezes o cliente devolve o que custou para conquistá-lo. Saudável: 3× ou mais.",
   "Payback do CAC": "Tempo para recuperar o CAC: primeiro com a margem da implantação, depois com as mensalidades. \"Imediato\" = a implantação já pagou a aquisição.",
@@ -65,12 +66,17 @@ function KpisPage() {
   const { data: centros = [] } = useTableRows("centro_custo");
   const [desdeEd, setDesde] = useState(inicio(6));
   const [ateEd, setAte] = useState(hojeISO());
-  // Só consulta ao clicar em Processar (ou num atalho de período).
-  const [{ desde, ate }, setAplicado] = useState({ desde: desdeEd, ate: ateEd });
-  const { data: titulos = [], isFetching: processando, error: erro } = useFinanceiroRpc("fn_financeiro_titulos_periodo", { p_de: desde, p_ate: ate });
+  const [classificacaoEd, setClassificacao] = useState("Mensalidade");
+  // Edição de filtros não dispara consultas; cada Processar também permite repetir o período.
+  const [{ desde, ate, classificacao, rodada }, setAplicado] = useState({ desde: desdeEd, ate: ateEd, classificacao: classificacaoEd, rodada: 0 });
+  const { data: titulos = [], isFetching: carregandoTitulos, error: erroTitulos } = useFinanceiroRpc("fn_financeiro_titulos_periodo", { p_de: desde, p_ate: ate }, rodada > 0, ["kpis-financeiro", rodada]);
+  const { data: mensais, isFetching: carregandoMensais, error: erroMensais } = useFinanceiroRpc("fn_financeiro_recorrencia_mensal", { p_de: desde, p_ate: ate, p_classificacao: classificacao }, rodada > 0, ["kpis-recorrencia", rodada]);
+  const processando = carregandoTitulos || carregandoMensais;
+  const erro = erroMensais || erroTitulos;
+  const recorrenciaDisponivel = rodada > 0 && !!mensais && !erroMensais && !carregandoMensais;
 
   const blocos = useMemo(() => {
-    const r = recorrencia(orcs, desde, ate);
+    const r = recorrenciaRecebiveis(mensais ?? [], ate);
     const v = vendas(orcs, desde, ate);
     const nomes: Record<string, string> = {};
     for (const x of [...contas, ...centros]) nomes[String(x["id"])] = String(x["nome"] ?? x["descricao"] ?? "");
@@ -79,16 +85,16 @@ function KpisPage() {
     const pb = payback(c.valor, v.margemImpl, v.ticketMensal || r.ticket);
     const o = operacao(os, desde, ate);
     const b1: K[] = [
-      { t: "MRR atual", v: formatBRL(r.mrr), s: `${r.contratos} contratos • ${r.clientes} clientes`, c: farol(r.mrr, 1, 0) },
-      { t: "ARR projetado", v: formatBRL(r.arr), s: "MRR × 12" },
-      { t: "Ticket médio mensal", v: formatBRL(r.ticket), s: "Por contrato ativo" },
-      { t: "Churn mensal", v: pct(r.churn), s: `${r.cancelados} encerrados • ${formatBRL(r.mrrPerdido)}/mês`, c: farol(r.churn, 1, 2.5, true) },
-      { t: "LTV médio", v: formatBRL(r.ltv), s: r.churn > 0 ? "Ticket ÷ churn" : "Sem churn: 60 meses" },
+      { t: "MRR atual", v: recorrenciaDisponivel ? formatBRL(r.mrr) : "—", s: recorrenciaDisponivel ? `${r.clientes} clientes • Contas a Receber` : "Aguardando processamento", c: recorrenciaDisponivel ? farol(r.mrr, 1, 0) : undefined },
+      { t: "ARR projetado", v: recorrenciaDisponivel ? formatBRL(r.arr) : "—", s: "MRR × 12" },
+      { t: "Ticket médio mensal", v: recorrenciaDisponivel ? formatBRL(r.ticket) : "—", s: "Por cliente no mês final" },
+      { t: "Churn mensal", v: "—", s: "Sem histórico de cancelamentos" },
+      { t: "LTV médio", v: recorrenciaDisponivel ? formatBRL(r.ltv) : "—", s: "Estimativa: ticket × 60 meses" },
     ];
     const b2: K[] = [
       { t: "CAC médio", v: formatBRL(c.valor), s: `${formatBRL(c.gasto)} ÷ ${c.novos} novos clientes` },
-      { t: "Relação LTV / CAC", v: c.valor ? x(relacao) : "—", s: "Meta: 3× ou mais", c: c.valor ? farol(relacao, 3, 1.5) : undefined },
-      { t: "Payback do CAC", v: !c.valor ? "—" : pb === 0 ? "Imediato" : Number.isFinite(pb) ? `${pb.toLocaleString("pt-BR")} meses` : "Sem retorno", s: "Implantação + mensalidade", c: c.valor ? (pb <= 1 ? "verde" : pb <= 12 ? "amarelo" : "vermelho") : undefined },
+      { t: "Relação LTV / CAC", v: c.valor && recorrenciaDisponivel ? x(relacao) : "—", s: "LTV estimado • meta ≥ 3×", c: c.valor && recorrenciaDisponivel ? farol(relacao, 3, 1.5) : undefined },
+      { t: "Payback do CAC", v: !c.valor || !recorrenciaDisponivel ? "—" : pb === 0 ? "Imediato" : Number.isFinite(pb) ? `${pb.toLocaleString("pt-BR")} meses` : "Sem retorno", s: "Implantação + mensalidade", c: c.valor && recorrenciaDisponivel ? (pb <= 1 ? "verde" : pb <= 12 ? "amarelo" : "vermelho") : undefined },
       { t: "Taxa de conversão", v: pct(v.conversao), s: `${v.ganhas} ganhas • ${v.perdidas} perdidas`, c: farol(v.conversao, 30, 15) },
       { t: "Ticket médio implantação", v: formatBRL(v.ticketImpl), s: `+ ${formatBRL(v.ticketMensal)}/mês` },
       { t: "Ciclo de fechamento", v: `${v.ciclo} dias`, s: "Criação até o ganho" },
@@ -104,7 +110,7 @@ function KpisPage() {
       { n: "2. Vendas, projetos e aquisição", k: b2 },
       { n: "3. Operação de campo e manutenção", k: b3 },
     ];
-  }, [orcs, titulos, os, contas, centros, desde, ate]);
+  }, [orcs, titulos, mensais, recorrenciaDisponivel, os, contas, centros, desde, ate]);
 
   const dt = (s: string) => new Date(s + "T12:00").toLocaleDateString("pt-BR");
 
@@ -117,11 +123,12 @@ function KpisPage() {
         </div>
         <div className="flex flex-wrap items-end gap-2">
           {PERIODOS.map((p) => (
-            <Button key={p.m} size="sm" variant={desde === inicio(p.m) && ate === hojeISO() ? "default" : "outline"} onClick={() => { setDesde(inicio(p.m)); setAte(hojeISO()); setAplicado({ desde: inicio(p.m), ate: hojeISO() }); }}>{p.l}</Button>
+            <Button key={p.m} size="sm" variant={desdeEd === inicio(p.m) && ateEd === hojeISO() ? "default" : "outline"} onClick={() => { setDesde(inicio(p.m)); setAte(hojeISO()); }}>{p.l}</Button>
           ))}
           <div><Label className="text-xs">De</Label><Input type="date" value={desdeEd} onChange={(e) => setDesde(e.target.value)} /></div>
           <div><Label className="text-xs">Até</Label><Input type="date" value={ateEd} onChange={(e) => setAte(e.target.value)} /></div>
-          <Button variant="outline" disabled={processando || !desdeEd || !ateEd || desdeEd > ateEd} onClick={() => setAplicado({ desde: desdeEd, ate: ateEd })}>
+          <div><Label htmlFor="kpis-mensalidade" className="text-xs">Identificação da mensalidade</Label><Input id="kpis-mensalidade" value={classificacaoEd} onChange={(e) => setClassificacao(e.target.value)} /></div>
+          <Button variant="outline" disabled={processando || !desdeEd || !ateEd || desdeEd > ateEd || !classificacaoEd.trim()} onClick={() => setAplicado({ desde: desdeEd, ate: ateEd, classificacao: classificacaoEd.trim(), rodada: rodada + 1 })}>
             {processando ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-1 h-4 w-4" />}Processar
           </Button>
           <Button onClick={imprimir}><Printer className="mr-1 h-4 w-4" /> Imprimir / PDF</Button>
@@ -154,7 +161,7 @@ function KpisPage() {
           </div>
         </section>
       ))}
-      <p className="text-xs text-muted-foreground">CAC considera despesas pagas com categoria de Marketing, Comercial, Vendas, Anúncios, Tráfego, Publicidade ou Comissões. Churn usa a data de encerramento do contrato.</p>
+      <p className="text-xs text-muted-foreground">Recorrência: Contas a Receber • Identificação aplicada: {classificacao} • Mês de referência: {ate.slice(0, 7)}. Churn indisponível sem cancelamentos confirmados; LTV estimado em 60 meses.</p>
 
       <div className="dre-print-src" aria-hidden>
         <div id="kpis-print" className="dre-doc">
@@ -167,7 +174,7 @@ function KpisPage() {
           </header>
           <div className="dre-titulo"><h1>Cockpit de KPIs</h1><p>Período de {dt(desde)} a {dt(ate)}</p></div>
           <table className="dre-kpis"><tbody><tr>
-            {[blocos[0]!.k[0]!, blocos[0]!.k[3]!, blocos[0]!.k[4]!, blocos[1]!.k[0]!, blocos[1]!.k[1]!, blocos[2]!.k[3]!].map((k) => (
+            {[blocos[0]?.k[0], blocos[0]?.k[3], blocos[0]?.k[4], blocos[1]?.k[0], blocos[1]?.k[1], blocos[2]?.k[3]].filter((k): k is K => !!k).map((k) => (
               <td key={k.t}><span>{k.t}</span><strong>{k.v}</strong>{k.s && <small>{k.s}</small>}</td>
             ))}
           </tr></tbody></table>

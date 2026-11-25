@@ -1,5 +1,11 @@
 # Roadmap
 
+## KPIs da carteira migrada
+- [x] Ler mensalidades por procedure com escopo de empresa, sem criar Ofertas e sem somar meses diferentes no MRR.
+- [x] Atualizar explicações, ticket por cliente e LTV estimado; churn indisponível sem cancelamentos confirmados.
+- [x] Validar cálculos (10 testes e build OK); entregar SQL em Files. Acesso ao Cockpit redirecionou ao login.
+- [ ] Validar valores reais — depende da execução do SQL no banco próprio e identificação das mensalidades.
+
 ## Financeiro da administradora e condomínios
 - [x] Alternar a entidade financeira sem trocar o usuário, perfil ou contexto global do ERP; recriar formulários ao trocar entidade.
 - [x] Entregar SQL com vínculo financeiro por condomínio e acesso limitado à administradora atual, sem duplicar CNPJ nem mover títulos.

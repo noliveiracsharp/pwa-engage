@@ -4,7 +4,7 @@ import { pick, type Row } from "@/lib/row";
 import { useAuth } from "@/hooks/useAuth";
 import { empresaDaConsulta } from "@/lib/financeiro-contexto";
 
-export type FinanceiroRpc = "fn_financeiro_fluxo_caixa" | "fn_financeiro_controller" | "fn_financeiro_titulos_periodo" | "fn_financeiro_titulos_itens_periodo" | "fn_financeiro_titulos_ofertas" | "fn_financeiro_titulos_lista" | "fn_financeiro_titulos_cartao" | "fn_financeiro_pagos_meses" | "fn_orcamentos_lista" | "fn_orcamentos_itens";
+export type FinanceiroRpc = "fn_financeiro_recorrencia_mensal" | "fn_financeiro_fluxo_caixa" | "fn_financeiro_controller" | "fn_financeiro_titulos_periodo" | "fn_financeiro_titulos_itens_periodo" | "fn_financeiro_titulos_ofertas" | "fn_financeiro_titulos_lista" | "fn_financeiro_titulos_cartao" | "fn_financeiro_pagos_meses" | "fn_orcamentos_lista" | "fn_orcamentos_itens";
 
 /** Chama uma procedure financeira (SECURITY DEFINER) em lotes de 1000 linhas, na empresa em contexto.
  *  `chave` substitui o prefixo da queryKey (ex.: ["table","financeiro_titulos"]) para que as
