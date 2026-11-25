@@ -55,4 +55,4 @@
 - CRM do Cliente (Etapa 1): tabela crm_interacoes + fn_crm_timeline (SQL em supabase/sql/conectcon-crm-cliente.sql); aba CRM na ficha do cliente une interações, ofertas, histórico antigo das ofertas e laudos; o Consultor Comercial IA mora ali (analisarOferta com modo cliente) — o cliente é o centro do relacionamento, não a Oferta.
 - CRM Agente (Etapa 2): instâncias com empresas_instancias.agente_crm tratam mensagens de colaboradores no zapi-webhook antes do robô; IA extrai a ação (src/lib/crm-agente.ts, puro/testado) e crm_agente_executar (SQL em supabase/sql/conectcon-crm-agente-whatsapp.sql) grava Lead/interação/visita — o banco valida o remetente pelo token da instância.
 
-- CRM Agent meeting invites: dated commitments become `reunioes` rows flagged agente_pendente; invite sending (explicit in the report or via 1/2/3 reply) reuses the cobranca-regua `agente_reuniao_convite` action authorized by instance token + phone, so one mail engine owns invites.
+- CRM Agent invites: dated items become `reunioes` (agente_pendente); sends reuse cobranca-regua `agente_reuniao_convite` (token+phone auth) — one mail engine.
