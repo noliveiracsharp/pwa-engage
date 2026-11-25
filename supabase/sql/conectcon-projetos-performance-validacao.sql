@@ -6,6 +6,12 @@ ALTER TABLE public.projetos_espacos ADD COLUMN IF NOT EXISTS finalidade text NOT
 ALTER TABLE public.projetos_tarefas ADD COLUMN IF NOT EXISTS criado_por uuid;
 ALTER TABLE public.projetos_tarefas ADD COLUMN IF NOT EXISTS status_alterado_em timestamptz;
 
+
+-- 1b) Permite o tipo de status "Aguardando validação" (validacao)
+ALTER TABLE public.projetos_status DROP CONSTRAINT IF EXISTS projetos_status_tipo_check;
+ALTER TABLE public.projetos_status ADD CONSTRAINT projetos_status_tipo_check
+  CHECK (tipo IS NULL OR tipo IN ('a_fazer','progresso','validacao','concluido','erro'));
+
 -- 2) Índices
 CREATE INDEX IF NOT EXISTS idx_projetos_tarefas_empresa ON public.projetos_tarefas (empresa_id);
 CREATE INDEX IF NOT EXISTS idx_projetos_tarefas_espaco ON public.projetos_tarefas (espaco_id);
