@@ -59,7 +59,7 @@ function DashboardAtendimentos() {
       const sla = !enc && e ? statusSla(a["etapa_desde"] ?? a["updated_at"] ?? a["created_at"], e["sla_horas"], new Date(), lerJornada(k?.["jornada"])).estado : null;
       return [{
         atendente: usu.get(text(pick(a, A.responsavel))) || "Sem atendente",
-        departamento: text(pick(k, ["nome", "descricao"])) || "—",
+        departamento: text(pick(k, ["nome", "descricao"])) || "Triagem",
         nota: notaOuNull(a), encerrado: enc, sla,
         duracaoMin: aberto && fimAt ? (fimAt.getTime() - aberto.getTime()) / 60000 : null,
       }];
