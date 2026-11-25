@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { exigirLogin } from "@/lib/auth-guard";
+import { formatoAudio } from "@/lib/audio-formato";
 
 const LIMITE = 20 * 1024 * 1024;
 
@@ -49,7 +50,9 @@ export const transcreverAudio = createServerFn({ method: "POST" })
       let tipo = (a.headers.get("content-type") ?? "").split(";")[0]!.trim();
       if (buf.byteLength < 1000 || /json|html|xml|text\//i.test(tipo)) return { erro: "O arquivo de áudio ainda não está disponível ou expirou. Tente novamente em instantes." };
       if (!tipo.startsWith("audio/")) tipo = /\.mp3/i.test(u.pathname) ? "audio/mpeg" : "audio/ogg";
-      const ext = tipo.includes("mpeg") ? "mp3" : tipo.includes("mp4") || tipo.includes("m4a") ? "m4a" : tipo.includes("wav") ? "wav" : "ogg";
+      let ext = tipo.includes("mpeg") ? "mp3" : tipo.includes("mp4") || tipo.includes("m4a") ? "m4a" : tipo.includes("wav") ? "wav" : "ogg";
+      const real = formatoAudio(new Uint8Array(buf.slice(0, 16)));
+      if (real) { tipo = real.mime; ext = real.ext; }
       if (gemini) {
         const bytes = new Uint8Array(buf);
         let bin = "";

@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { exigirLogin } from "@/lib/auth-guard";
+import { formatoAudio } from "@/lib/audio-formato";
 
 const LIMITE = 24 * 1024 * 1024;
 const GW = "https://ai.gateway.lovable.dev/v1";
@@ -41,8 +42,9 @@ export const transcreverChamada = createServerFn({ method: "POST" })
     if (!bin.length || bin.length > LIMITE) return { erro: "Gravação vazia ou muito longa para transcrever." };
     const bytes = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    const tipo = data.tipo.split(";")[0] || "audio/webm";
-    const ext = tipo.includes("mp4") ? "m4a" : tipo.includes("ogg") ? "ogg" : "webm";
+    const real = formatoAudio(bytes.slice(0, 16));
+    const tipo = real?.mime ?? (data.tipo.split(";")[0] || "audio/webm");
+    const ext = real?.ext ?? (tipo.includes("mp4") ? "m4a" : tipo.includes("ogg") ? "ogg" : "webm");
 
     const form = new FormData();
     form.append("model", "openai/gpt-transcribe");
