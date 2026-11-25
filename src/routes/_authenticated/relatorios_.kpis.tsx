@@ -66,7 +66,7 @@ function KpisPage() {
   const { data: centros = [] } = useTableRows("centro_custo");
   const [desdeEd, setDesde] = useState(inicio(6));
   const [ateEd, setAte] = useState(hojeISO());
-  const [classificacaoEd, setClassificacao] = useState("Mensalidade");
+  const [classificacaoEd, setClassificacao] = useState("Serviços Recorrentes (Mensais)");
   // Edição de filtros não dispara consultas; cada Processar também permite repetir o período.
   const [{ desde, ate, classificacao, rodada }, setAplicado] = useState({ desde: desdeEd, ate: ateEd, classificacao: classificacaoEd, rodada: 0 });
   const { data: titulos = [], isFetching: carregandoTitulos, error: erroTitulos } = useFinanceiroRpc("fn_financeiro_titulos_periodo", { p_de: desde, p_ate: ate }, rodada > 0, ["kpis-financeiro", rodada]);
@@ -127,7 +127,7 @@ function KpisPage() {
           ))}
           <div><Label className="text-xs">De</Label><Input type="date" value={desdeEd} onChange={(e) => setDesde(e.target.value)} /></div>
           <div><Label className="text-xs">Até</Label><Input type="date" value={ateEd} onChange={(e) => setAte(e.target.value)} /></div>
-          <div><Label htmlFor="kpis-mensalidade" className="text-xs">Identificação da mensalidade</Label><Input id="kpis-mensalidade" value={classificacaoEd} onChange={(e) => setClassificacao(e.target.value)} /></div>
+          <div><Label htmlFor="kpis-mensalidade" className="text-xs">Identificação da mensalidade (categoria do item ou texto do título)</Label><Input id="kpis-mensalidade" value={classificacaoEd} onChange={(e) => setClassificacao(e.target.value)} /></div>
           <Button variant="outline" disabled={processando || !desdeEd || !ateEd || desdeEd > ateEd || !classificacaoEd.trim()} onClick={() => setAplicado({ desde: desdeEd, ate: ateEd, classificacao: classificacaoEd.trim(), rodada: rodada + 1 })}>
             {processando ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-1 h-4 w-4" />}Processar
           </Button>

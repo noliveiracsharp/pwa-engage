@@ -24,7 +24,17 @@ BEGIN
       AND coalesce(t.status, '') NOT IN ('cancelado', 'cancelada', 'estornado', 'estornada')
       AND t.valor > 0 AND coalesce(t.cliente_atendido_id, t.parceiro_id) IS NOT NULL
       -- Literal substring, not wildcard/regex: cannot accidentally match every row.
-      AND strpos(lower(concat_ws(' ', t.categoria, t.descricao)), lower(trim(p_classificacao))) > 0
+      -- Casa pelo texto do título OU pela categoria do item cadastrado (ex.: "Serviços Recorrentes (Mensais)").
+      AND (
+        strpos(lower(concat_ws(' ', t.categoria, t.descricao)), lower(trim(p_classificacao))) > 0
+        OR EXISTS (
+          SELECT 1
+          FROM public.financeiro_titulos_itens ti
+          JOIN public.itens i ON i.id = ti.item_id
+          WHERE ti.titulo_id = t.id
+            AND strpos(lower(concat_ws(' ', i.categoria, i.descricao, ti.descricao)), lower(trim(p_classificacao))) > 0
+        )
+      )
     GROUP BY 1, 2 ORDER BY 1, 2;
 END $$;
 REVOKE ALL ON FUNCTION public.fn_financeiro_recorrencia_mensal(uuid, date, date, text) FROM PUBLIC, anon;
