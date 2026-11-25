@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { RelatorioLista } from "@/components/relatorios/RelatorioLista";
 import { Ban, CheckCircle2, ChevronDown, FileText, ImageIcon, Landmark, Package, Settings2, Trash2, Wand2 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -18,7 +18,8 @@ import { ReajusteOfertasDialog } from "@/components/itens/ReajusteOfertasDialog"
 import type { NovoPreco } from "@/lib/reajuste-itens";
 import { ImagensCarrosselDialog } from "@/components/itens/ImagensCarrosselDialog";
 import { rowId, useDeleteRecord, useSaveRecord, useTableRows } from "@/lib/crud";
-import { matchesAny } from "@/lib/input-masks";
+import { useItensLista } from "@/lib/itens-lista";
+import { FILTROS_ITENS, type FiltrosItens } from "@/lib/itens-pesquisa";
 import { useAudit } from "@/lib/audit";
 import { pick, type Row } from "@/lib/row";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
@@ -98,8 +99,6 @@ function FilterMulti({ label, value, onChange, options }: { label: string; value
 
 function ItensPage() {
   const perms = usePagePermissions("/itens");
-  const { data: rows = [], isLoading } = useTableRows("itens");
-  const { data: marcas = [] } = useTableRows("itens_marcas");
   const save = useSaveRecord("itens");
   const remove = useDeleteRecord("itens");
   const { stamp } = useAudit();
@@ -117,36 +116,41 @@ function ItensPage() {
     return lote.atualizar(row, mud);
   };
   const [duplicando, setDuplicando] = useState(false);
-  const [f, setF] = useState<{ busca: string; tipos: string[]; categoria: string; status: string }>({ busca: "", tipos: [], categoria: "todos", status: "todos" });
+  const [f, setF] = useState<FiltrosItens>(FILTROS_ITENS);
+  const [aplicados, setAplicados] = useState<FiltrosItens>(FILTROS_ITENS);
+  const [pagina, setPagina] = useState(1);
+  const [tamanho, setTamanho] = useState(50);
+  const [ordem, setOrdem] = useState<{ key: string; dir: "asc" | "desc" }>({ key: "descricao", dir: "asc" });
+  useEffect(() => {
+    const timer = setTimeout(() => { setAplicados(f); setPagina(1); setSel(new Set()); }, 350);
+    return () => clearTimeout(timer);
+  }, [f]);
   const [precOpen, setPrecOpen] = useState(false);
   const [reajuste, setReajuste] = useState<{ itemId: string; nome: string; novo: NovoPreco } | null>(null);
   const [fiscalOpen, setFiscalOpen] = useState(false);
   const [relOpen, setRelOpen] = useState(false);
   const [galeria, setGaleria] = useState<{ titulo: string; imagens: string[] } | null>(null);
+  const lista = useItensLista(aplicados, pagina, tamanho, ordem.key, ordem.dir, perms.canRead);
+  const relatorio = useItensLista(aplicados, 1, 1000, ordem.key, ordem.dir, perms.canRead && relOpen, true);
+  const fiscal = useItensLista(FILTROS_ITENS, 1, 1000, "descricao", "asc", perms.canRead && fiscalOpen, true);
+  const rows = lista.data?.rows ?? [];
+  const filtered = rows;
+  const reportRows = relatorio.data?.rows ?? [];
+  const isLoading = lista.isFetching || f !== aplicados;
+  useEffect(() => {
+    if (!lista.data || lista.isFetching) return;
+    const ultima = Math.max(1, Math.ceil(lista.data.total / tamanho));
+    if (pagina > ultima) { setPagina(ultima); setSel(new Set()); }
+  }, [lista.data, lista.isFetching, pagina, tamanho]);
 
   const marcaById = useMemo(() => {
     const map = new Map<string, Row>();
-    for (const m of marcas) map.set(String(rowId(m) ?? ""), m);
+    for (const r of [...rows, ...reportRows]) {
+      const m = r["__marca"] as Row | null;
+      if (m) map.set(String(rowId(m) ?? ""), m);
+    }
     return map;
-  }, [marcas]);
-
-  const filtered = useMemo(
-    () =>
-      rows.filter((row) => {
-        const marca = marcaById.get(String(pick(row, ["itens_marcas_id"]) ?? ""));
-        return (
-          matchesAny(
-            [pick(row, ["codigo"]), pick(row, ["descricao"]), pick(row, ["modelo"]), pick(row, ["tipo"]), pick(row, ["categoria"]), pick(marca ?? {}, ["descricao"])],
-            f.busca,
-          ) &&
-          (f.tipos.length === 0 || f.tipos.includes(String(pick(row, ["tipo"]) ?? ""))) &&
-          (f.categoria === "todos" ||
-            (f.categoria === SEM_CATEGORIA ? !String(row["categoria"] ?? "").trim() : String(row["categoria"] ?? "") === f.categoria)) &&
-          (f.status === "todos" || (f.status === "ativo" ? row["status"] === true : row["status"] === false))
-        );
-      }),
-    [rows, f, marcaById],
-  );
+  }, [rows, reportRows]);
 
   const columns: Column[] = [
     {
@@ -244,6 +248,8 @@ function ItensPage() {
 
   return (
     <div className="space-y-4">
+      {(lista.error || relatorio.error || fiscal.error) && <p role="alert" className="text-destructive text-sm">{(lista.error || relatorio.error || fiscal.error)?.message}</p>}
+      {(relatorio.isFetching || fiscal.isFetching) && <p role="status" className="text-muted-foreground text-sm">Carregando itens…</p>}
       <div className="space-y-3">
         <div className="flex justify-end gap-2">
           <Button variant="outline" size="sm" onClick={() => setRelOpen(true)}>
@@ -268,6 +274,12 @@ function ItensPage() {
           columns={columns}
           rows={filtered}
           loading={isLoading}
+          pagination={{
+            page: pagina, pageSize: tamanho, total: lista.data?.total ?? 0, sort: ordem,
+            onPageChange: (p) => { setPagina(p); setSel(new Set()); },
+            onPageSizeChange: (s) => { setTamanho(s); setPagina(1); setSel(new Set()); },
+            onSortChange: (s) => { setOrdem(s); setPagina(1); setSel(new Set()); },
+          }}
           getValue={(row, keys) => pick(row, keys)}
           rowKey={(row, i) => String(rowId(row) ?? i)}
           onAdd={
@@ -397,11 +409,11 @@ function ItensPage() {
           novo={reajuste.novo}
         />
       )}
-      {relOpen && (
+      {relOpen && relatorio.isSuccess && !relatorio.isFetching && (
         <RelatorioLista
           titulo="Relatório de Produtos e Serviços"
           rotulo="Cadastro de itens"
-          rows={filtered}
+          rows={reportRows}
           filtros={[
             f.busca && `Busca: ${f.busca}`,
             f.tipos.length > 0 && `Natureza: ${TIPO_OPTIONS.filter((o) => f.tipos.includes(o.value)).map((o) => o.label).join(", ")}`,
@@ -409,10 +421,10 @@ function ItensPage() {
             f.status !== "todos" && `Status: ${f.status === "ativo" ? "Ativo" : "Inativo"}`,
           ].filter((x): x is string => Boolean(x))}
           kpis={[
-            { label: "Total de itens", valor: filtered.length },
-            { label: "Custo em catálogo", valor: brl(filtered.reduce((s, r) => s + (Number(r["preco_custo"]) || 0), 0)) },
-            { label: "Venda média", valor: brl(filtered.length ? filtered.reduce((s, r) => s + (Number(r["preco_venda"]) || 0), 0) / filtered.length : 0) },
-            { label: "Margem média", valor: (() => { const m = filtered.map((r) => Number(r["margem_lucro"])).filter((x) => x > 0); return m.length ? `${(m.reduce((a, b) => a + b, 0) / m.length).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%` : "—"; })() },
+            { label: "Total de itens", valor: reportRows.length },
+            { label: "Custo em catálogo", valor: brl(reportRows.reduce((s, r) => s + (Number(r["preco_custo"]) || 0), 0)) },
+            { label: "Venda média", valor: brl(reportRows.length ? reportRows.reduce((s, r) => s + (Number(r["preco_venda"]) || 0), 0) / reportRows.length : 0) },
+            { label: "Margem média", valor: (() => { const m = reportRows.map((r) => Number(r["margem_lucro"])).filter((x) => x > 0); return m.length ? `${(m.reduce((a, b) => a + b, 0) / m.length).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%` : "—"; })() },
           ]}
           colunas={[
             { header: "Código", cell: (r) => String(r["codigo"] ?? "—") },
@@ -431,7 +443,7 @@ function ItensPage() {
         />
       )}
       <PrecificacaoDialog open={precOpen} onOpenChange={setPrecOpen} />
-      <FiscalContadorDialog open={fiscalOpen} onOpenChange={setFiscalOpen} itens={rows as Row[]} />
+      <FiscalContadorDialog open={fiscalOpen && fiscal.isSuccess && !fiscal.isFetching} onOpenChange={setFiscalOpen} itens={fiscal.data?.rows ?? []} />
       <ImagensCarrosselDialog
         open={galeria !== null}
         onOpenChange={(o) => !o && setGaleria(null)}

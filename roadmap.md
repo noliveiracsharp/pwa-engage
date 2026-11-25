@@ -1,5 +1,11 @@
 # Roadmap
 
+## Produtos e Serviços — pesquisa
+- [x] Criar procedure com filtros, paginação, índices e autorização do catálogo compartilhado.
+- [x] Conectar listagem e relatórios, preservando edição e atualização após salvar.
+- [x] Testar e entregar SQL para execução no banco próprio — 26 testes passaram, build OK.
+- [ ] Validar desempenho e resultados reais em Produtos e Serviços — aguarda executar o SQL no banco próprio; acesso à tela redirecionou ao login.
+
 ## KPIs da carteira migrada
 - [x] Ler mensalidades por procedure com escopo de empresa, sem criar Ofertas e sem somar meses diferentes no MRR.
 - [x] Atualizar explicações, ticket por cliente e LTV estimado; churn indisponível sem cancelamentos confirmados.

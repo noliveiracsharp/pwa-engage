@@ -70,6 +70,14 @@ type Props = {
   selection?: { selected: Set<string>; onChange: (s: Set<string>) => void } | undefined;
   /** Rendered above the table (e.g. bulk actions bar). */
   bulkBar?: ReactNode;
+  /** Optional server-side pagination; existing tables keep their local behavior. */
+  pagination?: {
+    page: number; pageSize: number; total: number;
+    sort: { key: string; dir: "asc" | "desc" };
+    onPageChange: (page: number) => void;
+    onPageSizeChange: (size: number) => void;
+    onSortChange: (sort: { key: string; dir: "asc" | "desc" }) => void;
+  };
 };
 
 export function DataTable({
@@ -95,16 +103,19 @@ export function DataTable({
   onToggleRow,
   selection,
   bulkBar,
+  pagination,
 }: Props) {
   const { t, idioma } = useIdioma();
   const caminho = useRouterState({ select: (s) => s.location.pathname });
-  const [sort, setSort] = useState<{ key: string; dir: "asc" | "desc" } | null>(null);
+  const [localSort, setLocalSort] = useState<{ key: string; dir: "asc" | "desc" } | null>(null);
+  const sort = pagination?.sort ?? localSort;
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(0);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dropIndex, setDropIndex] = useState<number | null>(null);
 
   const sorted = useMemo(() => {
+    if (pagination) return rows;
     if (!sort) return rows;
     const col = columns.find((c) => c.key === sort.key);
     if (!col) return rows;
@@ -123,13 +134,14 @@ export function DataTable({
       return sort.dir === "asc" ? cmp : -cmp;
     });
     return copy;
-  }, [rows, sort, columns, getValue]);
+  }, [rows, sort, columns, getValue, pagination]);
 
-  const total = sorted.length;
-  const size = pageSize || Math.max(total, 1);
+  const total = pagination?.total ?? sorted.length;
+  const size = pagination?.pageSize ?? (pageSize || Math.max(total, 1));
   const totalPages = Math.max(1, Math.ceil(total / size));
-  const current = Math.min(page, totalPages);
-  const pageRows = sorted.slice((current - 1) * size, current * size);
+  const current = Math.min(pagination?.page ?? page, totalPages);
+  const pageRows = pagination ? sorted : sorted.slice((current - 1) * size, current * size);
+  const changePage = pagination?.onPageChange ?? setPage;
   const colSpan = columns.length + (onReorder ? 2 : 1) + (selection ? 1 : 0);
   const canDrag = Boolean(onReorder) && !sort;
 
@@ -202,13 +214,11 @@ export function DataTable({
                       type="button"
                       aria-label={typeof col.header === "string" ? t("tabela.ordenarPor", { campo: termo(idioma, col.header) }) : undefined}
                       className="inline-flex items-center gap-1 rounded-sm font-medium hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      onClick={() =>
-                        setSort((prev) =>
-                          prev?.key === col.key
-                            ? { key: col.key, dir: prev.dir === "asc" ? "desc" : "asc" }
-                            : { key: col.key, dir: "asc" },
-                        )
-                      }
+                      onClick={() => {
+                        const next: { key: string; dir: "asc" | "desc" } = { key: col.key, dir: sort?.key === col.key && sort.dir === "asc" ? "desc" : "asc" };
+                        if (pagination) pagination.onSortChange(next);
+                        else setLocalSort(next);
+                      }}
                     >
                       {termoNo(idioma, col.header)}
                       {sort?.key === col.key ? (
@@ -371,8 +381,9 @@ export function DataTable({
         <div className="flex items-center gap-2">
           <span>{t("tabela.linhasPorPagina")}</span>
           <Select
-            value={String(pageSize)}
+            value={String(pagination?.pageSize ?? pageSize)}
             onValueChange={(v) => {
+              if (pagination) { pagination.onPageSizeChange(Number(v)); return; }
               setPageSize(Number(v));
               setPage(1);
             }}
@@ -381,7 +392,7 @@ export function DataTable({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {[10, 50, 100, 0].map((n) => (
+              {(pagination ? [10, 50, 100] : [10, 50, 100, 0]).map((n) => (
                 <SelectItem key={n} value={String(n)}>
                   {n || t("filtro.todos")}
                 </SelectItem>
@@ -393,14 +404,14 @@ export function DataTable({
           <span role="status" aria-live="polite">
             {loading ? t("msg.carregando") : <>{total === 0 ? 0 : (current - 1) * size + 1}–{Math.min(current * size, total)} {t("tabela.de")} {total}<span className="sr-only"> registros</span></>}
           </span>
-          <Button variant="outline" size="sm" disabled={current <= 1} onClick={() => setPage(current - 1)}>
+          <Button variant="outline" size="sm" disabled={current <= 1 || !!pagination && loading} onClick={() => changePage(current - 1)}>
             {t("tabela.anterior")}
           </Button>
           <Button
             variant="outline"
             size="sm"
-            disabled={current >= totalPages}
-            onClick={() => setPage(current + 1)}
+            disabled={current >= totalPages || !!pagination && loading}
+            onClick={() => changePage(current + 1)}
           >
             {t("tabela.proxima")}
           </Button>

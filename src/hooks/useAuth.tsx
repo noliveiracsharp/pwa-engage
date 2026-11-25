@@ -6,7 +6,7 @@ import { preservarRecuperacao, RECUPERACAO_KEY } from "@/lib/recuperacao-senha";
 
 const CTX_KEY = "atendeai.empresaContexto";
 /** Mude este valor a cada atualização publicada: força novo login de todos. */
-const APP_RELEASE = "2026-11-21-financeiro-condominios";
+const APP_RELEASE = "2026-11-25-produtos-servicos-rpc";
 const RELEASE_KEY = "atendeai.release";
 
 type AuthContextValue = {
