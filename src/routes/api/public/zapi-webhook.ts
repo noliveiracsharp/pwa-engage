@@ -8,7 +8,7 @@ import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/integrations/supabase/
 import { dispararMensagem } from "@/lib/atendimentos-envio";
 import { executarExterno } from "@/lib/fluxos-externo";
 import { detectarNota, ehCortesia, notaDaLinha } from "@/lib/csat";
-import { interpretarAgente, transcreverAgente } from "@/lib/crm-agente.server";
+import { interpretarAgente, transcreverAgente, type IaAgente } from "@/lib/crm-agente.server";
 import { executarFluxo, proximoNoId, type ConexaoFluxo, type EstadoExec, type NoFluxo } from "@/lib/fluxos-motor";
 
 // Recebe as mensagens da Z-API ("Ao receber"). A chave ?k= identifica a instância.
@@ -147,10 +147,13 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
           if (col?.instancia) {
             const responder = (t: string) => dispararMensagem({ instancia: col.instancia!, telefone: body.phone!, texto: t, mensagemId: null, atendimentoId: null }).catch((e: unknown) => console.error("zapi-webhook agente envio", e));
             try {
-              const tr = tipo === "audio" && midia ? await transcreverAgente(midia, { clientToken: String(col.instancia["client_token"] ?? col.instancia["security_token"] ?? "") || undefined, mimeType: body.audio?.mimeType }) : { texto };
+              const { data: iaRaw, error: eIa } = await db.rpc("crm_agente_ia" as never, { p_token: k, p_telefone: body.phone } as never);
+              if (eIa) console.error("zapi-webhook agente ia", eIa.message);
+              const ia = (iaRaw ?? null) as IaAgente;
+              const tr = tipo === "audio" && midia ? await transcreverAgente(midia, { clientToken: String(col.instancia["client_token"] ?? col.instancia["security_token"] ?? "") || undefined, mimeType: body.audio?.mimeType, ia }) : { texto };
               const relato = tr.texto;
               if (!relato.trim()) { await responder(tipo === "audio" ? `Não consegui ouvir o áudio agora${tr.motivo ? ` (motivo: ${tr.motivo})` : ""}. Tente de novo ou envie em texto.` : "Não consegui entender a mensagem. Envie em texto ou um áudio mais claro."); return ok({ agente: true }); }
-              const acao = await interpretarAgente(relato);
+              const acao = await interpretarAgente(relato, ia);
               if (!acao) { await responder("Não identifiquei o cliente. Ex.: \"Visitei o Condomínio Aurora, síndico pediu proposta para sexta\"."); return ok({ agente: true }); }
               const { data: rx, error: eX } = await db.rpc("crm_agente_executar" as never, { p_token: k, p_telefone: body.phone, p_dados: acao } as never);
               if (eX) throw eX;
