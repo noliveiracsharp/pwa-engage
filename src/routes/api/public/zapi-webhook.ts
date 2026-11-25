@@ -9,6 +9,7 @@ import { dispararMensagem } from "@/lib/atendimentos-envio";
 import { executarExterno } from "@/lib/fluxos-externo";
 import { detectarNota, ehCortesia, notaDaLinha } from "@/lib/csat";
 import { interpretarAgente, transcreverAgente, type IaAgente } from "@/lib/crm-agente.server";
+import { escolhaConvite, textoConviteAgente, type CanalConvite } from "@/lib/crm-agente";
 import { executarFluxo, proximoNoId, type ConexaoFluxo, type EstadoExec, type NoFluxo } from "@/lib/fluxos-motor";
 
 // Recebe as mensagens da Z-API ("Ao receber"). A chave ?k= identifica a instância.
@@ -146,7 +147,45 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
           const col = ag as { nome?: string; instancia?: Record<string, unknown> } | null;
           if (col?.instancia) {
             const responder = (t: string) => dispararMensagem({ instancia: col.instancia!, telefone: body.phone!, texto: t, mensagemId: null, atendimentoId: null }).catch((e: unknown) => console.error("zapi-webhook agente envio", e));
+            type Pend = { id: string; titulo: string; inicio: string; sala: string; video: boolean; modalidade?: string | null; local?: string | null; duracao_min: number; convidados?: { nome?: string; email?: string; telefone?: string }[] };
+            const linkSala = (sala: string, video = true) => `${url.origin}/chamada/${sala}${video ? "" : "?audio=1"}`;
+            const concluir = (id: string, enviado: boolean) => db.rpc("crm_agente_reuniao_concluir" as never, { p_token: k, p_telefone: body.phone, p_reuniao: id, p_enviado: enviado } as never);
+            // Envia o convite da reunião pelo canal escolhido; devolve a linha de confirmação para o colaborador.
+            const enviarConvite = async (r: Pend, canal: CanalConvite): Promise<string> => {
+              const link = linkSala(r.sala, r.video);
+              if (canal === "email") {
+                const para = (r.convidados ?? []).map((c) => String(c.email ?? "").trim()).filter((e) => /\S+@\S+\.\S+/.test(e));
+                if (!para.length) return "⚠️ Não encontrei e-mail do cliente. Envie o e-mail por aqui ou responda *2* para receber o convite e repassar no WhatsApp.";
+                const res = await fetch(`${SUPABASE_URL}/functions/v1/cobranca-regua`, {
+                  method: "POST", headers: { apikey: SUPABASE_PUBLISHABLE_KEY, "Content-Type": "application/json" },
+                  body: JSON.stringify({ acao: "agente_reuniao_convite", token: k, telefone: body.phone, reuniao_id: r.id, para, link }),
+                }).catch(() => null);
+                const j = res ? ((await res.json().catch(() => ({}))) as { ok?: boolean; erro?: string }) : {};
+                if (!res?.ok || !j.ok) return `⚠️ Não consegui enviar o e-mail${j.erro ? ` (${j.erro})` : ""}. Use o botão "Enviar por e-mail" na reunião do Planner.`;
+                await concluir(r.id, true);
+                return `✉️ Convite enviado por e-mail para ${para.join(", ")}.`;
+              }
+              const convite = textoConviteAgente({ ...r, link });
+              const fone = (r.convidados ?? []).map((c) => String(c.telefone ?? "").replace(/\D/g, "")).find((f) => f.length >= 10);
+              await concluir(r.id, true);
+              if (fone) {
+                await dispararMensagem({ instancia: col.instancia!, telefone: fone.length <= 11 ? `55${fone}` : fone, texto: convite, mensagemId: null, atendimentoId: null });
+                return `💬 Convite enviado por WhatsApp para ${fone}.`;
+              }
+              return `💬 Não tenho o WhatsApp do cliente. Encaminhe a mensagem abaixo para ele:\n\n${convite}`;
+            };
             try {
+              // Resposta ao menu do convite (1 e-mail / 2 WhatsApp / 3 não enviar) da última reunião agendada pelo Agente.
+              const esc = tipo === "texto" ? escolhaConvite(texto) : null;
+              if (esc) {
+                const { data: pd } = await db.rpc("crm_agente_reuniao_pendente" as never, { p_token: k, p_telefone: body.phone } as never);
+                const pend = pd as Pend | null;
+                if (pend?.id) {
+                  if (esc === "nao") { await concluir(pend.id, false); await responder("👍 Ok, convite não enviado. Você pode enviar depois pelo Planner."); }
+                  else await responder(await enviarConvite(pend, esc));
+                  return ok({ agente: true });
+                }
+              }
               const { data: iaRaw, error: eIa } = await db.rpc("crm_agente_ia" as never, { p_token: k, p_telefone: body.phone } as never);
               if (eIa) console.error("zapi-webhook agente ia", eIa.message);
               const ia = (iaRaw ?? null) as IaAgente;
@@ -157,13 +196,22 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
               if (!acao) { await responder("Não identifiquei o cliente. Ex.: \"Visitei o Condomínio Aurora, síndico pediu proposta para sexta\"."); return ok({ agente: true }); }
               const { data: rx, error: eX } = await db.rpc("crm_agente_executar" as never, { p_token: k, p_telefone: body.phone, p_dados: acao } as never);
               if (eX) throw eX;
-              const r0 = rx as { cliente: string; novo: boolean; visita: boolean; tecnico?: string };
-              const fmt = (v: string) => new Date(v).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
-              await responder([
-                `✅ Registrado no CRM de *${r0.cliente}*${r0.novo ? " (novo Lead cadastrado — complete o CNPJ no Hub)" : ""}.`,
-                acao.proxima_acao_em ? `📌 Próxima ação: ${acao.proxima_acao_tipo ?? "Retorno"} em ${fmt(acao.proxima_acao_em)}` : "",
-                r0.visita && acao.visita_em ? `🗓️ Visita técnica agendada no Planner para ${fmt(acao.visita_em)} (${r0.tecnico ?? "você"}).` : "",
-              ].filter(Boolean).join("\n"));
+              const r0 = rx as { cliente: string; novo: boolean; reuniao_id?: string | null; sala?: string | null; inicio?: string | null; presencial?: boolean; emails?: string[]; telefones?: string[] };
+              const fmt = (v: string) => new Date(v).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+              const linhas = [`✅ Registrado no CRM de *${r0.cliente}*${r0.novo ? " (novo Lead cadastrado no Kanban — complete o CNPJ no Hub)" : ""}.`];
+              if (r0.reuniao_id && r0.inicio && r0.sala) {
+                const emails = r0.emails ?? [], fones = r0.telefones ?? [];
+                const pend: Pend = { id: r0.reuniao_id, titulo: `${r0.presencial ? "Visita" : "Reunião online"}: ${r0.cliente}`, inicio: r0.inicio, sala: r0.sala, video: true, modalidade: r0.presencial ? "presencial" : "online", local: r0.presencial ? r0.cliente : null, duracao_min: 60,
+                  convidados: [...emails.map((e, i) => ({ email: e, telefone: i === 0 ? fones[0] ?? "" : "" })), ...(emails.length ? [] : fones.slice(0, 1).map((f) => ({ email: "", telefone: f })))] };
+                linhas.push(`📅 *${r0.presencial ? "Visita" : "Reunião online"} agendada no Planner*: ${fmt(r0.inicio)} (60 min)`);
+                if (acao.convidados_nome) linhas.push(`👥 Convidados: ${acao.convidados_nome}`);
+                if (!r0.presencial) linhas.push(`🔗 Sala: ${linkSala(r0.sala)}`);
+                if (acao.enviar_convite) linhas.push(await enviarConvite(pend, acao.enviar_convite));
+                else linhas.push("", "Quer enviar o convite ao cliente?", `1️⃣ Por e-mail${emails[0] ? ` (${emails.join(", ")})` : ""}`, `2️⃣ Por WhatsApp${fones[0] ? ` (${fones[0]})` : " (te mando o texto para repassar)"}`, "3️⃣ Não enviar agora");
+              } else if (acao.proxima_acao_em) {
+                linhas.push(`📌 Próxima ação: ${acao.proxima_acao_tipo ?? "Retorno"} em ${fmt(acao.proxima_acao_em)}`);
+              }
+              await responder(linhas.join("\n"));
             } catch (e) {
               console.error("zapi-webhook agente", e);
               await responder("Não consegui registrar agora. Tente novamente em instantes.");
