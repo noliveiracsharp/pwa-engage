@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, Loader2, Printer, RefreshCw } from "lucide-react";
+import { ArrowLeft, Info, Loader2, Printer, RefreshCw } from "lucide-react";
 import { useFinanceiroRpc } from "@/lib/financeiro-rpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,26 @@ import { useEmpresaAtiva } from "@/hooks/useEmpresaAtiva";
 import { farol } from "@/lib/board";
 import { cac, operacao, payback, recorrencia, vendas } from "@/lib/kpis";
 import { cn } from "@/lib/utils";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+
+/** Explicação de cada indicador (ícone i). */
+const INFO: Record<string, string> = {
+  "MRR atual": "Monthly Recurring Revenue (receita recorrente mensal): soma das mensalidades dos contratos ativos na data final. Vem das Ofertas ganhas que têm itens de natureza \"Recorrente\".",
+  "ARR projetado": "Annual Recurring Revenue: o MRR atual multiplicado por 12. Mostra quanto a recorrência gera em um ano se nada mudar.",
+  "Ticket médio mensal": "Valor médio da mensalidade por contrato ativo (MRR ÷ número de contratos).",
+  "Churn mensal": "Percentual da receita recorrente perdida por mês com contratos encerrados no período. Quanto menor, melhor (meta até 1%).",
+  "LTV médio": "Lifetime Value (valor do tempo de vida): quanto um cliente gera de receita durante todo o tempo em que fica conosco. Cálculo: ticket mensal ÷ churn; sem churn, considera 60 meses.",
+  "CAC médio": "Custo de Aquisição de Cliente: despesas pagas de marketing, comercial, vendas, anúncios e comissões no período ÷ novos clientes ganhos.",
+  "Relação LTV / CAC": "Quantas vezes o cliente devolve o que custou para conquistá-lo. Saudável: 3× ou mais.",
+  "Payback do CAC": "Tempo para recuperar o CAC: primeiro com a margem da implantação, depois com as mensalidades. \"Imediato\" = a implantação já pagou a aquisição.",
+  "Taxa de conversão": "Ofertas ganhas ÷ (ganhas + perdidas) no período.",
+  "Ticket médio implantação": "Valor médio de implantação (produtos e serviços avulsos) das Ofertas ganhas, mais a mensalidade média.",
+  "Ciclo de fechamento": "Média de dias entre a criação da Oferta e o ganho.",
+  "Ordens de serviço": "Quantidade de OS abertas no período, separadas em preventivas e corretivas.",
+  "Tempo médio de resolução": "Média de horas entre a abertura e a conclusão das OS concluídas.",
+  "Dentro do prazo (SLA)": "Percentual das OS concluídas antes do prazo de SLA definido.",
+  "Resolução na 1ª visita (FCR)": "First Call Resolution: corretivas que não tiveram nova corretiva no mesmo cliente/equipamento em até 30 dias.",
+};
 
 export const Route = createFileRoute("/_authenticated/relatorios_/kpis")({
   staticData: { sitemap: false },
@@ -116,7 +136,17 @@ function KpisPage() {
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
             {b.k.map((k) => (
               <div key={k.t} className={cn("rounded-md border border-l-4 bg-background p-3", k.c ? FAROL[k.c] : "border-l-border")}>
-                <div className="text-xs text-muted-foreground">{k.t}</div>
+                <div className="flex items-center justify-between gap-1 text-xs text-muted-foreground">
+                  <span>{k.t}</span>
+                  {INFO[k.t] && (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button type="button" aria-label={`O que é ${k.t}`} className="rounded-full p-0.5 hover:bg-muted hover:text-foreground print:hidden"><Info className="h-3.5 w-3.5" /></button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-72 text-sm">{INFO[k.t]}</PopoverContent>
+                    </Popover>
+                  )}
+                </div>
                 <div className="text-lg font-bold tabular-nums text-foreground">{k.v}</div>
                 {k.s && <div className="text-[11px] text-muted-foreground">{k.s}</div>}
               </div>
