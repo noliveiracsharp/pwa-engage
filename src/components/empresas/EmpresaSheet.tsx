@@ -198,6 +198,7 @@ export const INSTANCIAS: ChildConfig = {
     },
     { key: "icone", label: "Ícone", type: "icon" },
     { key: "permitir_colaboradores", label: "Permitir atendimento de colaboradores", type: "boolean", showIf: notChat },
+    { key: "agente_crm", label: "Agente Comercial IA (colaboradores registram no CRM)", type: "boolean", showIf: notChat },
     { key: "status", label: "Status", type: "boolean" },
   ],
   sheet: true,

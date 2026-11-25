@@ -139,11 +139,7 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
         else if (body.video?.videoUrl) { tipo = "video"; midia = body.video.videoUrl; texto = body.video.caption ?? ""; }
         else if (body.document?.documentUrl) { tipo = "documento"; midia = body.document.documentUrl; texto = body.document.fileName ?? ""; }
 
-        // Linha exclusiva de notificações: respostas (ex.: auto-resposta de fornecedor) não abrem atendimento nem robô.
-        const { data: fin } = await db.rpc("instancia_finalidade", { p_token: k });
-        if (String(fin ?? "") === "notificacoes") return ok({ ignorada: true, motivo: "notificacoes" });
-
-        // Agente Comercial (instância interna com agente_crm): colaborador relata e o CRM é atualizado.
+        // Agente Comercial (agente_crm): roda antes do filtro de notificações, pois só atende colaboradores cadastrados.
         {
           const { data: ag, error: eAg } = await db.rpc("crm_agente_identificar" as never, { p_token: k, p_telefone: body.phone } as never);
           if (eAg && !/function|schema cache/i.test(eAg.message)) console.error("zapi-webhook agente", eAg.message);
@@ -171,6 +167,10 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
             return ok({ agente: true });
           }
         }
+
+        // Linha exclusiva de notificações: respostas (ex.: auto-resposta de fornecedor) não abrem atendimento nem robô.
+        const { data: fin } = await db.rpc("instancia_finalidade", { p_token: k });
+        if (String(fin ?? "") === "notificacoes") return ok({ ignorada: true, motivo: "notificacoes" });
 
         // Resposta à pesquisa de satisfação: grava a nota no atendimento encerrado, agradece e NÃO abre novo atendimento.
         const notaCsat = tipo === "texto" ? (lr?.selectedRowId && /^[0-5]$/.test(texto) && /⭐/.test(String(lr.title ?? "")) ? notaDaLinha(texto) : detectarNota(texto)) : null;
