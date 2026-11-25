@@ -2,41 +2,54 @@ import { lerAcaoAgente, promptAgente, type AcaoAgente } from "@/lib/crm-agente";
 
 const GW = "https://ai.gateway.lovable.dev/v1";
 
-/** Transcreve o áudio do colaborador pelo AI Gateway da plataforma. Mídia da Z-API pode exigir o Client-Token. */
-export async function transcreverAgente(url: string, opts: { clientToken?: string | undefined; mimeType?: string | undefined } = {}): Promise<string> {
+/** Formato real do áudio pelos primeiros bytes (a Z-API pode informar um tipo diferente do arquivo). */
+export function formatoAudio(b: Uint8Array): { ext: string; mime: string } | null {
+  const ascii = (i: number, n: number) => String.fromCharCode(...b.slice(i, i + n));
+  if (ascii(0, 4) === "OggS") return { ext: "ogg", mime: "audio/ogg" };
+  if (ascii(4, 4) === "ftyp") return { ext: "m4a", mime: "audio/mp4" };
+  if (ascii(0, 3) === "ID3" || (b[0] === 0xff && ((b[1] ?? 0) & 0xe0) === 0xe0)) return { ext: "mp3", mime: "audio/mpeg" };
+  if (ascii(0, 4) === "RIFF") return { ext: "wav", mime: "audio/wav" };
+  if (b[0] === 0x1a && b[1] === 0x45 && b[2] === 0xdf && b[3] === 0xa3) return { ext: "webm", mime: "audio/webm" };
+  return null;
+}
+
+/** Transcreve o áudio do colaborador pelo AI Gateway. Devolve o texto ou o motivo da falha (curto, para o colaborador). */
+export async function transcreverAgente(url: string, opts: { clientToken?: string | undefined; mimeType?: string | undefined } = {}): Promise<{ texto: string; motivo?: string }> {
   const chave = process.env["LOVABLE_API_KEY"];
-  if (!chave) { console.error("crm-agente transcricao: LOVABLE_API_KEY ausente no servidor"); return ""; }
+  if (!chave) { console.error("crm-agente transcricao: LOVABLE_API_KEY ausente no servidor"); return { texto: "", motivo: "chave de IA (LOVABLE_API_KEY) não configurada no servidor" }; }
   let u: URL;
-  try { u = new URL(url); } catch { console.error("crm-agente transcricao: url inválida"); return ""; }
-  if (u.protocol !== "https:") return "";
+  try { u = new URL(url); } catch { return { texto: "", motivo: "link do áudio inválido" }; }
+  if (u.protocol !== "https:") return { texto: "", motivo: "link do áudio sem https" };
   // A Z-API às vezes entrega o link antes do arquivo ficar pronto ou devolve um erro curto com status 200.
   const baixar = async (h?: Record<string, string>) => {
-    const r = await fetch(u.toString(), h ? { headers: h } : undefined).catch(() => null);
-    if (!r || !r.ok) return { erro: `status ${r?.status ?? "rede"}` } as const;
+    const r = await fetch(u.toString(), h ? { headers: h } : undefined).catch((e: unknown) => { console.error("crm-agente download rede", e); return null; });
+    if (!r || !r.ok) return { erro: `download status ${r?.status ?? "rede"}` } as const;
     const tipo = (r.headers.get("content-type") || "").toLowerCase();
     const b = await r.arrayBuffer();
-    if (b.byteLength < 1000 || /json|html|xml|text\//.test(tipo)) return { erro: `conteúdo inválido (${tipo || "?"}, ${b.byteLength} bytes): ${new TextDecoder().decode(b.slice(0, 200))}` } as const;
+    if (b.byteLength < 1000 || /json|html|xml|text\//.test(tipo)) return { erro: `download inválido (${tipo || "?"}, ${b.byteLength} bytes)`, amostra: new TextDecoder().decode(b.slice(0, 200)) } as const;
     return { buf: b, tipo } as const;
   };
-  let res: { erro: string } | { buf: ArrayBuffer; tipo: string } = { erro: "não tentou" };
+  let res: { erro: string; amostra?: string } | { buf: ArrayBuffer; tipo: string } = { erro: "não tentou" };
   for (let i = 0; i < 4; i++) {
     res = await baixar();
     if (!("buf" in res) && opts.clientToken) res = await baixar({ "Client-Token": opts.clientToken });
     if ("buf" in res) break;
     await new Promise((ok) => setTimeout(ok, 1500));
   }
-  if (!("buf" in res)) { console.error("crm-agente download audio", res.erro); return ""; }
+  if (!("buf" in res)) { console.error("crm-agente download audio", res.erro, res.amostra ?? ""); return { texto: "", motivo: res.erro }; }
   const buf = res.buf;
-  const a = { headers: new Headers({ "content-type": res.tipo }) };
-  const mime = (opts.mimeType || a.headers.get("content-type") || "audio/ogg").split(";")[0]!.trim();
-  const ext = mime.includes("mpeg") || mime.includes("mp3") ? "mp3" : mime.includes("mp4") || mime.includes("m4a") || mime.includes("aac") ? "m4a" : mime.includes("wav") ? "wav" : mime.includes("webm") ? "webm" : "ogg";
+  const real = formatoAudio(new Uint8Array(buf.slice(0, 16)));
+  const informado = (opts.mimeType || res.tipo || "audio/ogg").split(";")[0]!.trim();
+  const fmt = real ?? { ext: "ogg", mime: informado.startsWith("audio/") ? informado : "audio/ogg" };
   const form = new FormData();
   form.append("model", "openai/gpt-transcribe");
-  form.append("file", new File([buf], `audio.${ext}`, { type: mime.startsWith("audio/") ? mime : "audio/ogg" }));
+  form.append("file", new File([buf], `audio.${fmt.ext}`, { type: fmt.mime }));
   form.append("language", "pt");
-  const r = await fetch(`${GW}/audio/transcriptions`, { method: "POST", headers: { Authorization: `Bearer ${chave}`, "X-Lovable-AIG-SDK": "fetch" }, body: form });
-  if (!r.ok) { console.error("crm-agente transcricao", r.status, await r.text().catch(() => "")); return ""; }
-  return String(((await r.json()) as { text?: string }).text ?? "").trim();
+  const r = await fetch(`${GW}/audio/transcriptions`, { method: "POST", headers: { Authorization: `Bearer ${chave}`, "X-Lovable-AIG-SDK": "fetch" }, body: form }).catch((e: unknown) => { console.error("crm-agente transcricao rede", e); return null; });
+  if (!r) return { texto: "", motivo: "sem conexão com a IA" };
+  if (!r.ok) { const t = await r.text().catch(() => ""); console.error("crm-agente transcricao", r.status, t); return { texto: "", motivo: `IA recusou o áudio (${r.status}, ${fmt.mime}, ${buf.byteLength} bytes)` }; }
+  const texto = String(((await r.json()) as { text?: string }).text ?? "").trim();
+  return texto ? { texto } : { texto: "", motivo: "áudio sem fala reconhecida" };
 }
 
 /** Pede à IA a interpretação do relato do colaborador. */

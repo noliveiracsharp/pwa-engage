@@ -147,8 +147,9 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
           if (col?.instancia) {
             const responder = (t: string) => dispararMensagem({ instancia: col.instancia!, telefone: body.phone!, texto: t, mensagemId: null, atendimentoId: null }).catch((e: unknown) => console.error("zapi-webhook agente envio", e));
             try {
-              const relato = tipo === "audio" && midia ? await transcreverAgente(midia, { clientToken: String(col.instancia["client_token"] ?? col.instancia["security_token"] ?? "") || undefined, mimeType: body.audio?.mimeType }) : texto;
-              if (!relato.trim()) { await responder(tipo === "audio" ? "Não consegui ouvir o áudio agora. Tente de novo ou envie em texto." : "Não consegui entender a mensagem. Envie em texto ou um áudio mais claro."); return ok({ agente: true }); }
+              const tr = tipo === "audio" && midia ? await transcreverAgente(midia, { clientToken: String(col.instancia["client_token"] ?? col.instancia["security_token"] ?? "") || undefined, mimeType: body.audio?.mimeType }) : { texto };
+              const relato = tr.texto;
+              if (!relato.trim()) { await responder(tipo === "audio" ? `Não consegui ouvir o áudio agora${tr.motivo ? ` (motivo: ${tr.motivo})` : ""}. Tente de novo ou envie em texto.` : "Não consegui entender a mensagem. Envie em texto ou um áudio mais claro."); return ok({ agente: true }); }
               const acao = await interpretarAgente(relato);
               if (!acao) { await responder("Não identifiquei o cliente. Ex.: \"Visitei o Condomínio Aurora, síndico pediu proposta para sexta\"."); return ok({ agente: true }); }
               const { data: rx, error: eX } = await db.rpc("crm_agente_executar" as never, { p_token: k, p_telefone: body.phone, p_dados: acao } as never);
