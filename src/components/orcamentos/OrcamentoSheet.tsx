@@ -1146,11 +1146,11 @@ export function OrcamentoSheet({
                   <Input value={h.motivo_perda_obs} disabled={Boolean(readOnly)} placeholder={tx("Detalhes (ex.: concorrente)")}
                     onChange={(e) => patchHeader({ motivo_perda_obs: e.target.value })} />
                 </div>
-          {record && (
-            <div hidden={aba !== "oferta"} className="rounded-lg border p-4">
-              <PessoaCampos pessoaId={recordId} templates={["ofertas"]} tabela="orcamentos_camposperson" fk="orcamento_id" titulo="Campos personalizados da Oferta" />
-            </div>
-          )}
+              </div>
+            )}
+            {record && (
+              <div className="min-w-0 space-y-1.5 sm:col-span-2 rounded-lg border p-4">
+                <PessoaCampos pessoaId={recordId} templates={["ofertas"]} tabela="orcamentos_camposperson" fk="orcamento_id" titulo="Campos personalizados da Oferta" />
               </div>
             )}
           </div>
