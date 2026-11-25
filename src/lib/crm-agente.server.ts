@@ -18,7 +18,7 @@ export async function transcreverAgente(url: string, opts: { clientToken?: strin
     if (b.byteLength < 1000 || /json|html|xml|text\//.test(tipo)) return { erro: `conteúdo inválido (${tipo || "?"}, ${b.byteLength} bytes): ${new TextDecoder().decode(b.slice(0, 200))}` } as const;
     return { buf: b, tipo } as const;
   };
-  let res: Awaited<ReturnType<typeof baixar>> = { erro: "não tentou" };
+  let res: { erro: string } | { buf: ArrayBuffer; tipo: string } = { erro: "não tentou" };
   for (let i = 0; i < 4; i++) {
     res = await baixar();
     if (!("buf" in res) && opts.clientToken) res = await baixar({ "Client-Token": opts.clientToken });
