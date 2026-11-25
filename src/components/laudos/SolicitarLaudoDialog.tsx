@@ -16,7 +16,7 @@ import { rowId, text, useTableRows } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
 import { useAudit } from "@/lib/audit";
 import { filterPayload, useCols } from "@/lib/projetos";
-import { OBJETIVOS, OBJETIVO_LEVANTAMENTO, objetivoLabel, proximoNumero } from "@/lib/laudos";
+import { OBJETIVO_LEVANTAMENTO, proximoNumero } from "@/lib/laudos";
 import { useSaveOrcamento } from "@/hooks/useSaveOrcamento";
 import { todayISO } from "@/lib/orcamentos";
 import { linhaOfertaDoItem } from "@/lib/comercial-chat";
@@ -83,7 +83,8 @@ export function SolicitarLaudoDialog({ open, onOpenChange, usuarios, me, onAvisa
       const laudoId = String((laudo as Row)["id"]);
       const fotos = anexos.filter((a) => a.tipo === "imagem").map((a) => ({ laudo_id: laudoId, laudo_item_id: null, url_foto: a.url }));
       if (fotos.length) await supabase.from("laudos_fotos").insert(fotos as never);
-      const tipo = objetivoLabel(f.objetivo);
+      // O técnico decide levantamento x inspeção ao executar; o comercial só agenda a visita.
+      const tipo = "Visita técnica";
       const proprio = f.tecnico === (usuarioId ?? me);
 
       const t = await (supabase.from("tarefas_usuarios" as never) as unknown as ReturnType<typeof supabase.from>).insert({
@@ -113,7 +114,7 @@ export function SolicitarLaudoDialog({ open, onOpenChange, usuarios, me, onAvisa
       // Técnico: sininho + push + WhatsApp com os dados da visita.
       const r = await notificarEquipe({
         empresaId, autorId: usuarioId ?? me, usuarioIds: [f.tecnico], link: "/planner",
-        titulo: `Laudo agendado: ${tipo}`,
+        titulo: `${tipo} agendada`,
         texto: [`📋 Laudo ${numero} · ${nomeCliente}`, `📅 ${dataBR} às ${f.hora}`, endereco ? `📍 ${endereco}` : "", `📞 ${telefone}`,
           f.briefing.trim() ? `\n📝 Briefing:\n${f.briefing.trim()}` : "", anexos.length ? `\n📎 Anexos:\n${anexos.map((a) => `${a.nome}: ${a.url}`).join("\n")}` : ""].filter(Boolean).join("\n"),
       }).catch(() => ({ avisos: 0, whatsapp: 0 }));
@@ -129,12 +130,12 @@ export function SolicitarLaudoDialog({ open, onOpenChange, usuarios, me, onAvisa
       for (const k of ["laudos_tecnicos", "orcamentos"]) void qc.invalidateQueries({ queryKey: ["table", k] });
       void qc.invalidateQueries({ queryKey: ["planner"] });
       void qc.invalidateQueries({ queryKey: ["tarefas-usuarios"] });
-      toast.success(`Laudo ${numero} solicitado e agendado no Planner.${extra}`);
+      toast.success(`Visita técnica ${numero} agendada no Planner.${extra}`);
       setF({ ...f, cliente: "", comCusto: false, itemId: "", briefing: "" });
       setAnexos([]);
       onOpenChange(false);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Não foi possível solicitar o laudo.");
+      toast.error(e instanceof Error ? e.message : "Não foi possível agendar a visita técnica.");
     } finally {
       setSalvando(false);
     }
@@ -143,13 +144,8 @@ export function SolicitarLaudoDialog({ open, onOpenChange, usuarios, me, onAvisa
   return (
     <Dialog open={open} onOpenChange={(o) => !salvando && onOpenChange(o)}>
       <DialogContent className="max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>Solicitar laudo técnico</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>Agendar visita técnica</DialogTitle></DialogHeader>
         <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-2">
-            {OBJETIVOS.map((o) => (
-              <Button key={o.value} type="button" variant={f.objetivo === o.value ? "default" : "outline"} onClick={() => setF({ ...f, objetivo: o.value })}>{o.label}</Button>
-            ))}
-          </div>
           <div className="space-y-1">
             <Label>Cliente</Label>
             <div className="flex items-center gap-2">

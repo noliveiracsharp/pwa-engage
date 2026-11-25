@@ -68,7 +68,7 @@ function PlannerPagina() {
           <Button size="sm" variant={pendentes ? "default" : "outline"} onClick={() => setAceites(true)}>
             <Inbox className="mr-1 h-4 w-4" /> Aguardando aceite{pendentes ? ` (${pendentes})` : ""}
           </Button>
-          <Button size="sm" variant="outline" onClick={() => setLaudo(true)}><ClipboardCheck className="mr-1 h-4 w-4" /> Laudo técnico</Button>
+          <Button size="sm" variant="outline" onClick={() => setLaudo(true)}><ClipboardCheck className="mr-1 h-4 w-4" /> Visita técnica</Button>
         </>} />
       <SolicitarLaudoDialog open={laudo} onOpenChange={setLaudo} usuarios={usuarios} me={me} onAvisar={avisar} />
       {aceites && (
