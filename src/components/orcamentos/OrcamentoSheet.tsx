@@ -1,3 +1,4 @@
+import { CrmClientePainel } from "@/components/crm/CrmClientePainel";
 import { useIdioma } from "@/lib/i18n";
 import { tx } from "@/lib/i18n-termos";
 import { nomeItemCompleto } from "@/lib/item-nome";
@@ -283,6 +284,8 @@ type Props = {
   unidades: Row[];
   marcas: Row[];
   vendedorPadraoId?: string | undefined;
+  /** Cliente pré-selecionado ao criar uma Oferta nova (ex.: a partir de um Lead no Kanban). */
+  clientePadraoId?: string | undefined;
   /** Abre a pré-visualização/PDF do orçamento em edição. */
   onPreview?: (() => void) | undefined;
   onSave: (input: { header: Row; linhas: LinhaPayload[]; manterAberto?: boolean }) => Promise<Row[]>;
@@ -313,6 +316,7 @@ export function OrcamentoSheet({
   unidades,
   marcas,
   vendedorPadraoId,
+  clientePadraoId,
   onPreview,
   onSave,
   duplicarDe,
@@ -373,7 +377,7 @@ export function OrcamentoSheet({
         setLinhas(copia.length ? copia : [novaLinha()]);
         dirty.current = true;
       } else {
-        setH(emptyHeader(vendedorPadraoId ?? ""));
+        setH({ ...emptyHeader(vendedorPadraoId ?? ""), ...(clientePadraoId ? { parceiro_id: clientePadraoId } : {}) });
         setLinhas([novaLinha()]);
       }
       return;
@@ -555,7 +559,7 @@ export function OrcamentoSheet({
   }, [calcs, linhasValidas, totais.total_itens, totais.desconto_valor]);
   const comissaoCfg = useComissaoConfig();
   const [totalComissoes, setTotalComissoes] = useState(0);
-  const [aba, setAba] = useState<"oferta" | "financeiro">("oferta");
+  const [aba, setAba] = useState<"oferta" | "financeiro" | "crm">("oferta");
   const verSecao = (k: string) => !secoes || Boolean(secoes[k]?.canRead);
   const ehGestor = useEhAprovadorOferta();
   // Custo, lucro e margem: só gestores (aprovadores/Master) ou quem tem a função "Estratégico".
@@ -843,7 +847,7 @@ export function OrcamentoSheet({
           className="min-w-0 space-y-6 px-6 disabled:opacity-70"
         >
           <div role="tablist" className="sticky top-0 z-10 -mx-6 flex gap-1 border-b border-border bg-background px-6 pt-2">
-            {([["oferta", "Oferta & Itens"], ["financeiro", "Financeiro & Comissões"]] as const).filter(([k]) => k === "oferta" || verSecao(k)).map(([k, l]) => (
+            {([["oferta", "Oferta & Itens"], ["financeiro", "Financeiro & Comissões"], ["crm", "CRM do Cliente"]] as const).filter(([k]) => k === "oferta" || (k === "crm" ? !!h.parceiro_id : verSecao(k))).map(([k, l]) => (
               <button key={k} type="button" role="tab" aria-selected={aba === k} onClick={() => setAba(k)}
                 className={cn("-mb-px border-b-2 px-3 py-2 text-sm font-medium transition-colors",
                   aba === k ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground")}>
@@ -1159,6 +1163,11 @@ export function OrcamentoSheet({
           )}
           </div>
         </fieldset>
+        {aba === "crm" && h.parceiro_id && (
+          <div className="px-6 pt-4">
+            <CrmClientePainel clienteId={h.parceiro_id} cliente={clientes.find((c) => String(rowId(c)) === h.parceiro_id) ?? { id: h.parceiro_id }} readOnly={Boolean(readOnly)} />
+          </div>
+        )}
 
         <div className="mt-6 flex flex-wrap justify-end gap-2 border-t px-6 py-4">
           {record && onPreview && (

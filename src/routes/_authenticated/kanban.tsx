@@ -26,6 +26,7 @@ import { AtivacaoOfertaDialog } from "@/components/orcamentos/AtivacaoOfertaDial
 import { situacaoAtivada } from "@/lib/oferta-ativacao";
 import { executarHandoff } from "@/lib/kanban-handoff";
 import { OfertaKanbanSheet } from "@/components/kanban/OfertaKanbanSheet";
+import { LeadKanbanSheet } from "@/components/kanban/LeadKanbanSheet";
 import { temperaturaEfetiva, opcoesQuadro, valorOferta } from "@/lib/temperatura";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -172,6 +173,8 @@ function KanbanPage() {
   const quadroOfertas = tabelaQuadro === "orcamentos";
   const quadroCotacoes = tabelaQuadro === "cotacoes";
   const [ofertaAberta, setOfertaAberta] = useState<Row | null>(null);
+  const [leadAberto, setLeadAberto] = useState<{ card: Row; etapa: string } | null>(null);
+  const [clienteNovaOferta, setClienteNovaOferta] = useState<string | undefined>(undefined);
   const kanbanAtual = kanbans.find((k) => String(k["id"]) === kanbanId) ?? null;
   const opc = opcoesQuadro(kanbanAtual, quadroOfertas);
   const cardsByEtapa = useMemo(() => {
@@ -775,7 +778,9 @@ function KanbanPage() {
                         onDragStart={() => setDragId(String(card["id"]))}
                         onDragEnd={() => setDragId(null)}
                         onClick={() =>
-                          navigate({ to: "/atendimentos", search: { id: String(card["id"]) } })
+                          quadroOfertas
+                            ? setLeadAberto({ card, etapa: String(pick(etapa, ["descricao", "nome"], "") ?? "") })
+                            : navigate({ to: "/atendimentos", search: { id: String(card["id"]) } })
                         }
                         className={cn(
                           "flex w-full items-start gap-2 rounded-md border border-border bg-card p-3 text-left shadow-sm transition hover:border-primary",
@@ -876,7 +881,16 @@ function KanbanPage() {
 
       {pesquisa.dialog}
       {checklist.dialog}
-      <OfertaKanbanSheet oferta={ofertaAberta} onClose={() => setOfertaAberta(null)} />
+      <OfertaKanbanSheet oferta={ofertaAberta} clientePadraoId={clienteNovaOferta}
+        onClose={() => { setOfertaAberta(null); setClienteNovaOferta(undefined); }} />
+      <LeadKanbanSheet
+        card={leadAberto?.card ?? null}
+        etapaNome={leadAberto?.etapa ?? ""}
+        pessoa={leadAberto ? pessoaById.get(String(pick(leadAberto.card, ["pessoas_id", "pessoa_id", "clientes_id", "cliente_id"]) ?? "")) : undefined}
+        parceiros={parceiros}
+        onClose={() => setLeadAberto(null)}
+        onCriarOferta={(id) => { setClienteNovaOferta(id); setOfertaAberta({}); }}
+      />
       <Sheet open={newEtapa} onOpenChange={setNewEtapa}>
         <SheetContent className="flex flex-col overflow-hidden">
           <SheetHeader>

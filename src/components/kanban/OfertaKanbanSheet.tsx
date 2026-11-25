@@ -9,7 +9,7 @@ import type { Row } from "@/lib/row";
 const mesma = (r: Row, emp: unknown) => emp === undefined || !r["empresa_id"] || String(r["empresa_id"]) === String(emp);
 
 /** Abre o formulário completo da Oferta dentro do Kanban, sem sair do funil. */
-export function OfertaKanbanSheet({ oferta, onClose }: { oferta: Row | null; onClose: () => void }) {
+export function OfertaKanbanSheet({ oferta, onClose, clientePadraoId }: { oferta: Row | null; onClose: () => void; clientePadraoId?: string | undefined }) {
   const perms = usePagePermissions("/orcamentos");
   const { empresaId, usuarioId } = useAudit();
   const { data: todos = [] } = useTableRows("orcamentos");
@@ -39,6 +39,7 @@ export function OfertaKanbanSheet({ oferta, onClose }: { oferta: Row | null; onC
       itens={itens.filter((i) => mesma(i, empresaId))}
       unidades={unidades}
       marcas={marcas}
+      clientePadraoId={clientePadraoId}
       vendedorPadraoId={usuarioId !== undefined ? String(usuarioId) : undefined}
       onSave={async ({ header, linhas: l, manterAberto }) => {
         const resultado = await save.mutateAsync({ header, linhas: l, original: record });
