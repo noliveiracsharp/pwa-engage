@@ -93,7 +93,7 @@ function ManutencoesPage() {
   ];
 
   return (
-    <div className="space-y-4 p-4 md:p-6">
+    <div className="space-y-4">
       <Tabs defaultValue="ordens">
         <TabsList className="h-auto flex-wrap"><TabsTrigger value="ordens">Ordens de serviço</TabsTrigger><TabsTrigger value="calendario">Calendário</TabsTrigger><TabsTrigger value="equipamentos">Equipamentos</TabsTrigger><TabsTrigger value="planos">Preventivas</TabsTrigger><TabsTrigger value="modelos">Modelos de checklist</TabsTrigger></TabsList>
         <TabsContent value="ordens">
