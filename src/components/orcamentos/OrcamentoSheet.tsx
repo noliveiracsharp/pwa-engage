@@ -2,13 +2,11 @@ import { useIdioma } from "@/lib/i18n";
 import { tx } from "@/lib/i18n-termos";
 import { nomeItemCompleto } from "@/lib/item-nome";
 import { PessoaCampos } from "@/components/pessoas/PessoaCampos";
-import { OfertaTimeline } from "@/components/orcamentos/OfertaTimeline";
-import { ConsultorComercial } from "@/components/orcamentos/ConsultorComercial";
 import { NovoParceiroRapido } from "@/components/parceiros/NovoParceiroRapido";
 import { VersoesOferta } from "@/components/orcamentos/VersoesOferta";
 import type { Snapshot } from "@/lib/oferta-versoes";
 import { TEMPERATURAS } from "@/lib/temperatura";
-import { MOTIVOS_PERDA, ORIGENS_LEAD, TIPOS_ACAO, negocioPerdido } from "@/lib/crm";
+import { MOTIVOS_PERDA, negocioPerdido } from "@/lib/crm";
 import { OrcamentoDespesas } from "@/components/orcamentos/OrcamentoDespesas";
 import { OrcamentoCompra } from "@/components/orcamentos/OrcamentoCompra";
 import { condicoesDoCronograma, cronogramaServicos, cronogramaTerceiro, condServicoVazia, servicoSeparado, sidsServicos, PROD_SID, ehBlocoProduto, terceirosAvulsos, type CondServico } from "@/lib/oferta-cronogramas";
@@ -557,7 +555,7 @@ export function OrcamentoSheet({
   }, [calcs, linhasValidas, totais.total_itens, totais.desconto_valor]);
   const comissaoCfg = useComissaoConfig();
   const [totalComissoes, setTotalComissoes] = useState(0);
-  const [aba, setAba] = useState<"oferta" | "crm" | "financeiro">("oferta");
+  const [aba, setAba] = useState<"oferta" | "financeiro">("oferta");
   const verSecao = (k: string) => !secoes || Boolean(secoes[k]?.canRead);
   const ehGestor = useEhAprovadorOferta();
   // Custo, lucro e margem: só gestores (aprovadores/Master) ou quem tem a função "Estratégico".
@@ -845,7 +843,7 @@ export function OrcamentoSheet({
           className="min-w-0 space-y-6 px-6 disabled:opacity-70"
         >
           <div role="tablist" className="sticky top-0 z-10 -mx-6 flex gap-1 border-b border-border bg-background px-6 pt-2">
-            {([["oferta", "Oferta & Itens"], ["crm", "CRM & Atendimento"], ["financeiro", "Financeiro & Comissões"]] as const).filter(([k]) => k === "oferta" || verSecao(k)).map(([k, l]) => (
+            {([["oferta", "Oferta & Itens"], ["financeiro", "Financeiro & Comissões"]] as const).filter(([k]) => k === "oferta" || verSecao(k)).map(([k, l]) => (
               <button key={k} type="button" role="tab" aria-selected={aba === k} onClick={() => setAba(k)}
                 className={cn("-mb-px border-b-2 px-3 py-2 text-sm font-medium transition-colors",
                   aba === k ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground")}>
@@ -1128,44 +1126,7 @@ export function OrcamentoSheet({
           />
           </fieldset>
 
-          <fieldset hidden={aba !== "crm" || !verSecao("crm")} disabled={roSecao("crm")} className="min-w-0 space-y-6">
-          <div className="grid gap-x-4 gap-y-5 sm:grid-cols-2">
-            <div className="min-w-0 space-y-1.5">
-              <Label className="block text-sm font-medium">{tx("Origem do lead")}</Label>
-              <SearchSelect
-                value={h.origem_lead}
-                onChange={(v) => patchHeader({ origem_lead: v })}
-                options={ORIGENS_LEAD.map((o) => ({ value: o, label: o }))}
-                placeholder={tx("Selecione")}
-                searchPlaceholder="Pesquisar…"
-                disabled={Boolean(readOnly)}
-              />
-            </div>
-            <div className="min-w-0 space-y-1.5">
-              <Label htmlFor="origem_lead_desc" className="block text-sm font-medium">{tx("Detalhes da origem")}</Label>
-              <Input id="origem_lead_desc" value={h.origem_lead_desc} disabled={Boolean(readOnly)}
-                placeholder={tx("Ex.: Feira Predial Expo 2026, indicação do Dr. Marcelo")}
-                onChange={(e) => patchHeader({ origem_lead_desc: e.target.value })} />
-            </div>
-
-            <div className="min-w-0 space-y-1.5 sm:col-span-2 rounded-md border border-border p-3">
-              <p className="text-sm font-medium">{tx("Próxima ação")}</p>
-              <div className="grid gap-2 sm:grid-cols-3">
-                <SearchSelect
-                  value={h.proxima_acao_tipo}
-                  onChange={(v) => patchHeader({ proxima_acao_tipo: v })}
-                  options={TIPOS_ACAO.map((t) => ({ value: t.value, label: t.label }))}
-                  placeholder="Tipo"
-                  searchPlaceholder="Pesquisar…"
-                  disabled={Boolean(readOnly)}
-                />
-                <Input type="datetime-local" value={h.proxima_acao_em} disabled={Boolean(readOnly)}
-                  onChange={(e) => patchHeader({ proxima_acao_em: e.target.value })} aria-label={tx("Data e hora da próxima ação")} />
-                <Input value={h.proxima_acao_obs} disabled={Boolean(readOnly)} placeholder={tx("O que fazer")}
-                  onChange={(e) => patchHeader({ proxima_acao_obs: e.target.value })} />
-              </div>
-            </div>
-
+          <div hidden={aba !== "oferta"} className="grid gap-x-4 gap-y-5 sm:grid-cols-2">
             {negocioPerdido(h.situacao) && (
               <div className="min-w-0 space-y-1.5 sm:col-span-2 rounded-md border border-destructive/40 p-3">
                 <p className="text-sm font-medium">{tx("Motivo da perda *")}</p>
@@ -1181,43 +1142,14 @@ export function OrcamentoSheet({
                   <Input value={h.motivo_perda_obs} disabled={Boolean(readOnly)} placeholder={tx("Detalhes (ex.: concorrente)")}
                     onChange={(e) => patchHeader({ motivo_perda_obs: e.target.value })} />
                 </div>
-              </div>
-            )}
-          </div>
-
-          {record && recordId && (
-            <ConsultorComercial
-              orcamentoId={String(recordId)}
-              contexto={{
-                numero: record["numero"], situacao: h.situacao, temperatura: h.temperatura,
-                origem: h.origem_lead, origem_detalhe: h.origem_lead_desc,
-                data_oferta: h.dt_orcamento, validade: h.validade_orcamento,
-                cliente: clienteOptions.find((c) => c.value === h.parceiro_id)?.label ?? null,
-                vendedor: vendedorOptions.find((v) => v.value === h.usuario_id)?.label ?? null,
-                descricao: h.descricao,
-                proxima_acao: { tipo: h.proxima_acao_tipo, em: h.proxima_acao_em, obs: h.proxima_acao_obs },
-                motivo_perda: h.motivo_perda || null,
-                totais: { liquido: totais.total_liquido, custo: totais.total_custo, mensal: totalRecorrente },
-                itens: linhas.map((l) => ({ ...(l as unknown as Record<string, unknown>) })).slice(0, 40),
-              }}
-              empresaId={record["empresa_id"]}
-              readOnly={Boolean(readOnly)}
-            />
-          )}
-
           {record && (
-            <div className="rounded-lg border p-4">
+            <div hidden={aba !== "oferta"} className="rounded-lg border p-4">
               <PessoaCampos pessoaId={recordId} templates={["ofertas"]} tabela="orcamentos_camposperson" fk="orcamento_id" titulo="Campos personalizados da Oferta" />
             </div>
           )}
-
-          {record && recordId && (
-            <div className="rounded-lg border p-4">
-              <OfertaTimeline orcamentoId={String(recordId)} empresaId={record["empresa_id"]} readOnly={Boolean(readOnly)} />
-            </div>
-          )}
-          {!record && <p className="text-sm text-muted-foreground">{tx("Salve a oferta para registrar a linha do tempo e usar o Consultor Comercial.")}</p>}
-          </fieldset>
+              </div>
+            )}
+          </div>
 
           <div hidden={aba !== "oferta"} className="space-y-6">
           {/* ------------- mensalidades (produtos e serviços ficam em cada ambiente) ------------- */}
