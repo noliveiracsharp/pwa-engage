@@ -1,3 +1,4 @@
+import { numeroComVersao } from "@/lib/oferta-versoes";
 import { useEffect, useState } from "react";
 import { instanciaParaAvisos, ordenarParaAvisos } from "@/lib/instancia-finalidade";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -334,7 +335,7 @@ export function EnviarPropostaDialog({ open, onOpenChange, orcamento, empresa, c
 
 /** Título padrão: "Oferta #yyyy-xxxx - Nome do cliente". */
 export function tituloOferta(o: Row | null | undefined, cliente: Row | undefined): string {
-  const n = text(o?.["numero"]);
+  const n = numeroComVersao(text(o?.["numero"]), o?.["versao_atual"]);
   const nome = text(pick(cliente ?? {}, ["nome_fantasia", "razao_social", "nome"]));
   return `Oferta ${n ? (n.startsWith("#") ? n : `#${n}`) : ""}${nome ? ` - ${nome}` : ""}`.trim();
 }

@@ -1,3 +1,4 @@
+import { numeroComVersao } from "@/lib/oferta-versoes";
 import DOMPurify from "dompurify";
 import { formatBRL, formatDate, modalidadeLabel, modalidadeOf, naturezaOf, num, textoDetalhe } from "@/lib/orcamentos";
 import { pick, type Row } from "@/lib/row";
@@ -171,7 +172,7 @@ export function aplicarTags(texto: string, c: Contexto): string {
     empresa_nome:
       txt(pick(c.empresa ?? {}, ["nome_fantasia", "nome", "razao_social", "titulo"])) || "Empresa",
     empresa_documento: txt(pick(c.empresa ?? {}, ["cnpj_cpf", "cnpj", "documento"])) || "—",
-    numero: txt(o["numero"]),
+    numero: numeroComVersao(txt(o["numero"]), o["versao_atual"]),
     valor_total: formatBRL(num(o["total_liquido"])),
     data: formatDate(o["dt_orcamento"]),
     validade: formatDate(o["validade_orcamento"]),

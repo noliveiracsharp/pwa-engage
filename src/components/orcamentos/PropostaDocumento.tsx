@@ -7,6 +7,7 @@ function Conteudo({ texto }: { texto: string }) {
   if (!ehHtml(texto)) return <div className="prop-texto">{texto}</div>;
   return <div className="prop-texto prop-rich" dangerouslySetInnerHTML={{ __html: htmlSeguro(texto) }} />;
 }
+import { numeroComVersao } from "@/lib/oferta-versoes";
 import { pick, type Row } from "@/lib/row";
 import { OrcamentoDocumento } from "./OrcamentoDocumento";
 
@@ -36,7 +37,7 @@ export function PropostaDocumento({ id, blocos, ...ctx }: Props) {
     txt(pick(empresa ?? {}, ["nome_fantasia", "nome", "razao_social", "titulo"])) || "Empresa";
   const logo = txt(pick(empresa ?? {}, ["logo", "logo_url", "logotipo", "imagem"]));
   const assinado = txt(orcamento["assinado_em"]);
-  const numero = txt(orcamento["numero"]);
+  const numero = numeroComVersao(txt(orcamento["numero"]), orcamento["versao_atual"]);
   const ativos = blocos.filter((b) => b.ativo);
   const capaEstilo = estiloCapa(blocos.find((b) => b.tipo === "CAPA")?.estilo);
   const varsDoc = { "--prop-destaque": capaEstilo.destaque } as React.CSSProperties;

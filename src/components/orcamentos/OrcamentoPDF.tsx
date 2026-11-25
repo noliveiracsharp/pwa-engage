@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { numeroComVersao } from "@/lib/oferta-versoes";
 import { type Row } from "@/lib/row";
 import { OrcamentoDocumento } from "./OrcamentoDocumento";
 
@@ -46,7 +47,7 @@ export function OrcamentoPDF({
   const token = orcamento["token_publico"];
   const link = token ? linkProposta(token) : "";
 
-  const numero = String(orcamento["numero"] ?? "") || "Oferta";
+  const numero = numeroComVersao(orcamento["numero"], orcamento["versao_atual"]) || "Oferta";
   const imprimir = () => {
     const src = document.getElementById("orcamento-print");
     if (!src) return;

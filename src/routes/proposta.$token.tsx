@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { PropostaDocumento } from "@/components/orcamentos/PropostaDocumento";
 import { blocosDe, imprimirElemento, sha256 } from "@/lib/propostas";
 import { formatCpfCnpj } from "@/lib/input-masks";
+import { numeroComVersao } from "@/lib/oferta-versoes";
 import type { Row } from "@/lib/row";
 
 export const Route = createFileRoute("/proposta/$token")({
@@ -103,7 +104,7 @@ function PropostaPublica() {
     <div className="min-h-screen bg-muted/50">
       <div className="sticky top-0 z-20 border-b bg-background/95 backdrop-blur print:hidden">
         <div className="mx-auto flex max-w-[900px] items-center justify-between gap-2 px-4 py-3">
-          <span className="truncate text-sm font-semibold">Proposta {String(o["numero"] ?? "")}</span>
+          <span className="truncate text-sm font-semibold">Proposta {numeroComVersao(o["numero"], o["versao_atual"])}</span>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => imprimirElemento("proposta-publica")}>
               <Printer className="mr-1 h-4 w-4" /> Baixar PDF

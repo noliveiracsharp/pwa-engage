@@ -39,5 +39,12 @@ export function compararVersoes(antes: Snapshot, depois: Snapshot, nomeItem: (id
   return { itens, campos, igual: itens.length === 0 && campos.length === 0 };
 }
 
+/** Número da Oferta sempre com sufixo da revisão (ex.: "#2026-0017 v1", "#2026-0017 v6"). */
+export function numeroComVersao(numero: unknown, versao: unknown): string {
+  const n = String(numero ?? "").trim();
+  const v = Math.max(1, Math.trunc(num(versao)) || 1);
+  return n ? `${n} v${v}` : n;
+}
+
 /** Rótulo exibido para a revisão (Rev. 1, Rev. 2...). */
 export const rotuloVersao = (v: unknown) => `Rev. ${Math.max(1, Math.trunc(num(v)) || 1)}`;

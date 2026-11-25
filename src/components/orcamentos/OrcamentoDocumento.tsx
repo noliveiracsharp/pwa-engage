@@ -3,6 +3,7 @@ import { formatCpfCnpj, formatPhoneDisplay } from "@/lib/input-masks";
 import { textoDetalhe, agruparPorBloco, formatBRL, formatDate, formatQtd, modalidadeLabel, modalidadeOf, naturezaOf, num, parcelasFromValue, situacaoOf } from "@/lib/orcamentos";
 import { pick, type Row } from "@/lib/row";
 import { agruparServicos, type ParcelaServico } from "@/lib/oferta-cronogramas";
+import { numeroComVersao } from "@/lib/oferta-versoes";
 import { ehHtml, htmlSeguro } from "@/lib/propostas";
 
 export type OrcamentoDocumentoProps = {
@@ -55,7 +56,7 @@ export function OrcamentoDocumento({ id, orcamento, linhas, empresa, cliente, ve
   const unidadeById = new Map(unidades.map((u) => [String(rowId(u) ?? ""), u]));
   const marcaById = new Map(marcas.map((m) => [String(rowId(m) ?? ""), m]));
 
-  const numero = txt(orcamento["numero"]) || "Oferta";
+  const numero = numeroComVersao(txt(orcamento["numero"]), orcamento["versao_atual"]) || "Oferta";
   const situacao = situacaoOf(orcamento["situacao"]);
   const parcelas = parcelasFromValue(orcamento["parcelas"]);
   const servicosSep = agruparServicos(

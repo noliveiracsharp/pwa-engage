@@ -29,3 +29,9 @@ describe("versões da Oferta", () => {
     expect(rotuloVersao(3)).toBe("Rev. 3");
   });
 });
+
+import { numeroComVersao } from "./oferta-versoes";
+describe("numeroComVersao", () => {
+  it("sem revisão mostra v1", () => expect(numeroComVersao("#2026-0017", null)).toBe("#2026-0017 v1"));
+  it("revisão 6 mostra v6", () => expect(numeroComVersao("#2026-0017", 6)).toBe("#2026-0017 v6"));
+});

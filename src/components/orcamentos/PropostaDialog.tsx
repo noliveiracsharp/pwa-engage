@@ -26,6 +26,7 @@ import {
   TAGS,
   type Bloco,
 } from "@/lib/propostas";
+import { numeroComVersao } from "@/lib/oferta-versoes";
 import type { Row } from "@/lib/row";
 import { TIPO_MODELO_PADRAO } from "@/lib/orcamento-totais-auto";
 import { PropostaDocumento } from "./PropostaDocumento";
@@ -180,7 +181,7 @@ export function PropostaDialog(props: Props) {
       <DialogContent className="flex h-[94vh] w-[98vw] max-w-[1400px] flex-col gap-0 p-0">
         <DialogHeader className="flex-row flex-wrap items-center justify-between gap-3 space-y-0 border-b px-5 py-3">
           <div className="flex flex-wrap items-center gap-2">
-            <DialogTitle>Oferta digital {String(orcamento["numero"] ?? "")}</DialogTitle>
+            <DialogTitle>Oferta digital {numeroComVersao(orcamento["numero"], orcamento["versao_atual"])}</DialogTitle>
             {orcamento["assinado_em"] ? (
               <Badge className="bg-success text-success-foreground">Assinada {dataHora(orcamento["assinado_em"])}</Badge>
             ) : orcamento["visualizado_em"] ? (
