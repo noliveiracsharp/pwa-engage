@@ -55,5 +55,4 @@
 - CRM do Cliente (Etapa 1): tabela crm_interacoes + fn_crm_timeline (SQL em supabase/sql/conectcon-crm-cliente.sql); aba CRM na ficha do cliente une interações, ofertas, histórico antigo das ofertas e laudos; o Consultor Comercial IA mora ali (analisarOferta com modo cliente) — o cliente é o centro do relacionamento, não a Oferta.
 - CRM Agente (Etapa 2): instâncias com empresas_instancias.agente_crm tratam mensagens de colaboradores no zapi-webhook antes do robô; IA extrai a ação (src/lib/crm-agente.ts, puro/testado) e crm_agente_executar (SQL em supabase/sql/conectcon-crm-agente-whatsapp.sql) grava Lead/interação/visita — o banco valida o remetente pelo token da instância.
 
-- Receipt OCR lives in src/lib/comprovante-ocr.server.ts, shared by the Reembolsos screen and the WhatsApp Agent (crm_agente_reembolso) — one reader, one prompt.
-- WhatsApp Agent resolves coworkers via crm_agente_equipe/usuarios before any client lookup; coworkers become reunioes participantes, never empresas rows.
+- Receipt OCR: one reader (comprovante-ocr.server.ts) for Reembolsos and the WhatsApp Agent.

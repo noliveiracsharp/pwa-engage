@@ -1,1 +1,2 @@
 - CRM Agent invites: dated items become `reunioes` (agente_pendente); sends reuse cobranca-regua `agente_reuniao_convite` (token+phone auth) — one mail engine.
+- CRM Agent: coworkers (crm_agente_equipe) become reunioes participantes, never empresas rows.
