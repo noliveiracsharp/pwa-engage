@@ -50,6 +50,7 @@ import { AvaliacaoSelo, usePesquisaSatisfacao } from "./Pesquisa";
 import { ChecklistEventoCard, dataChecklist, useChecklistsAtendimento } from "./ChecklistRespostas";
 import { BibliotecaDocumentos } from "@/components/documentos/BibliotecaDocumentos";
 import { urlAssinada } from "@/lib/arquivos-privados";
+import { abrirArquivo } from "@/components/layout/VisualizadorArquivo";
 
 const EMOJIS = "😀 😃 😄 😁 😅 😂 🙂 😉 😊 😍 😘 🤔 😐 😴 😢 😭 😡 👍 👎 👏 🙏 💪 👋 🤝 ✅ ❌ ⚠️ ❤️ 🔥 🎉 ⭐ 📦 📄 📞 💰 🕐 🚀 💬 📍 🙌".split(" ");
 
@@ -1004,16 +1005,27 @@ function Balao({ m, autores, onResponder, onEditarWhats }: { m: Row; autores: Ma
         {participante && <p className="mb-0.5 text-[11px] font-semibold text-primary">{participante}</p>}
 
         {url && tipo === "imagem" && (
-          <a href={url} target="_blank" rel="noreferrer"><img src={url} alt="Imagem" className="mb-1 max-h-72 rounded-md" /></a>
+          <Button
+            type="button" variant="ghost" aria-label="Visualizar imagem"
+            className="mb-1 block h-auto max-w-full overflow-hidden p-0 hover:bg-transparent"
+            onClick={() => abrirArquivo({ url, titulo: text(m["nome_arquivo"]) || "Imagem", nome: text(m["nome_arquivo"]), tipo: "image/*" })}
+          >
+            <img src={url} alt="Imagem" className="max-h-72 rounded-md" />
+          </Button>
         )}
         {url && tipo === "figurinha" && <img src={url} alt="Figurinha" className="h-32 w-32 object-contain" />}
         {url && tipo === "audio" && <audio controls src={url} className="mb-1 max-w-full" />}
         {url && tipo === "audio" && <TranscricaoAudio mensagemId={text(mid)} url={url} salva={text(m["transcricao"])} />}
         {url && tipo === "video" && <video controls src={url} className="mb-1 max-h-72 rounded-md" />}
         {url && tipo === "documento" && (
-          <a href={url} target="_blank" rel="noreferrer" className="mb-1 flex items-center gap-2 underline">
-            <FileText className="h-4 w-4" /> {text(m["nome_arquivo"]) || "Abrir documento"}
-          </a>
+          <Button
+            type="button" variant="link"
+            className="mb-1 h-auto max-w-full justify-start whitespace-normal p-0 text-left text-inherit"
+            onClick={() => abrirArquivo({ url, titulo: text(m["nome_arquivo"]) || "Documento", nome: text(m["nome_arquivo"]) })}
+          >
+            <FileText className="h-4 w-4 shrink-0" />
+            <span className="min-w-0 break-words [overflow-wrap:anywhere]">{text(m["nome_arquivo"]) || "Abrir documento"}</span>
+          </Button>
         )}
         {corpo.startsWith(REG_CHAMADA) ? <RegistroChamada corpo={corpo} /> : corpo && !(url && corpo === text(m["nome_arquivo"])) && <CorpoMsg corpo={corpo} />}
         <p className="mt-1 flex items-center justify-end gap-1 text-[10px]">
