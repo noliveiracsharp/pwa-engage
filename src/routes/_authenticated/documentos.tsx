@@ -58,7 +58,7 @@ function DocumentosPage() {
           <TabsTrigger value="contrato-oferta">Contrato da Oferta</TabsTrigger>
         </TabsList>
         <TabsContent value="docs"><Emitidos canEdit={perms.canUpdate} /></TabsContent>
-        <TabsContent value="biblioteca"><BibliotecaDocumentos canCreate={perms.canCreate} canDelete={perms.canDelete} /></TabsContent>
+        <TabsContent value="biblioteca"><BibliotecaDocumentos canCreate={perms.canCreate} canUpdate={perms.canUpdate} canDelete={perms.canDelete} /></TabsContent>
         <TabsContent value="contrato-oferta"><ContratoOfertaModelos canEdit={perms.canUpdate} /></TabsContent>
         <TabsContent value="modelos"><Modelos canCreate={perms.canCreate} canEdit={perms.canUpdate} canDelete={perms.canDelete} /></TabsContent>
       </Tabs>

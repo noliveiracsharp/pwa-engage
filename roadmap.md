@@ -1,5 +1,10 @@
 # Roadmap
 
+## Documentos oficiais — biblioteca completa
+- [x] Categorias laterais, seleção pesquisável, gerenciamento sem duplicidade por acentos e edição completa.
+- [x] Visualização no modal compartilhado e seleção múltipla preservada nos atendimentos.
+- [ ] Validar persistência real — aguarda execução do SQL complementar no banco próprio e sessão autenticada.
+
 ## Suporte — correções atuais
 - [x] Corrigir encerramento persistido, retirada da lista ativa e transferência para etapa humana.
 - [x] Corrigir continuidade de menus dinâmicos e impedir que opção de unidade seja consumida como avaliação; 26 testes aprovados.
