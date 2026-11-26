@@ -175,7 +175,7 @@ function AtendimentosChat({ comAbas = false }: { comAbas?: boolean }) {
           Array.isArray(old) ? old.map((a) => (text(rowId(a)) === nid ? { ...a, ...novo } : a)) : old);
       }
       clearTimeout(t);
-      t = setTimeout(() => { void qcLista.invalidateQueries({ queryKey: ["table", "atendimentos"], exact: false }); }, 400);
+      t = setTimeout(() => { void qcLista.invalidateQueries({ queryKey: ["table", "atendimentos", "painel"] }); }, 1500);
     }).subscribe();
     return () => { clearTimeout(t); void supabase.removeChannel(ch); };
   }, [qcLista]);
