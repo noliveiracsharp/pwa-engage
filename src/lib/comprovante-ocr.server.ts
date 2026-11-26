@@ -26,7 +26,7 @@ const SCHEMA = {
   },
 } as const;
 
-const PROMPT = "Este é um comprovante de despesa brasileiro (cupom fiscal, nota, recibo ou comprovante de cartão). Extraia o valor total pago, a data (AAAA-MM-DD), o nome do estabelecimento, o CNPJ (só dígitos) e a categoria mais provável entre: alimentacao, combustivel, pedagio, estacionamento, hospedagem, transporte, material, outros. Use null no que não for legível. Responda somente JSON com as chaves valor, data, estabelecimento, cnpj, categoria.";
+const PROMPT_BASE = "Este é um comprovante de despesa brasileiro (cupom fiscal, nota, recibo ou comprovante de cartão). Extraia o valor total pago, a data (AAAA-MM-DD), o nome do estabelecimento, o CNPJ (só dígitos) e a categoria mais provável entre: alimentacao, combustivel, pedagio, estacionamento, hospedagem, transporte, material, outros. Use null no que não for legível. Responda somente JSON com as chaves valor, data, estabelecimento, cnpj, categoria.";
 
 function normalizar(txt: string): LeituraComprovante {
   const limpo = txt.trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "");
@@ -42,7 +42,8 @@ function normalizar(txt: string): LeituraComprovante {
 }
 
 /** Lê com a chave própria da empresa (Gemini/OpenAI) baixando o arquivo e enviando inline. */
-export async function lerComChavePropria(provedor: string, chave: string, modelo: string | null | undefined, url: string, pdf: boolean): Promise<LeituraComprovante> {
+export async function lerComChavePropria(provedor: string, chave: string, modelo: string | null | undefined, url: string, pdf: boolean, contexto?: string): Promise<LeituraComprovante> {
+  const PROMPT = contexto ? `${PROMPT_BASE} Contexto informado pelo colaborador: "${contexto.slice(0, 300)}" — use para escolher a categoria.` : PROMPT_BASE;
   const a = await fetch(url);
   if (!a.ok) return { ...vazio, erro: "Não foi possível baixar o comprovante." };
   const mime = pdf ? "application/pdf" : (a.headers.get("content-type") || "image/jpeg").split(";")[0];
@@ -92,9 +93,9 @@ export async function lerComChavePropria(provedor: string, chave: string, modelo
 
 
 /** Lê o comprovante pela URL com a IA da empresa (se própria) ou da plataforma. */
-export async function lerComprovanteUrl(url: string, pdf: boolean, ia: { origem?: string; provedor?: string; chave?: string; modelo?: string | null } | null): Promise<LeituraComprovante> {
+export async function lerComprovanteUrl(url: string, pdf: boolean, ia: { origem?: string; provedor?: string; chave?: string; modelo?: string | null } | null, contexto?: string): Promise<LeituraComprovante> {
   if (ia?.origem === "propria" && ia.chave && ia.provedor) {
-    try { return await lerComChavePropria(ia.provedor, ia.chave, ia.modelo, url, pdf); }
+    try { return await lerComChavePropria(ia.provedor, ia.chave, ia.modelo, url, pdf, contexto); }
     catch (e) { console.error("lerComprovante propria", e); return { ...vazio, erro: "Não foi possível ler o comprovante." }; }
   }
   const data = { url, pdf };
@@ -116,7 +117,7 @@ export async function lerComprovanteUrl(url: string, pdf: boolean, ia: { origem?
         input: [{
           role: "user",
           content: [
-            { type: "input_text", text: "Este é um comprovante de despesa brasileiro (cupom fiscal, nota, recibo ou comprovante de cartão). Extraia o valor total pago, a data, o nome do estabelecimento, o CNPJ e a categoria mais provável. Use null no que não for legível." },
+            { type: "input_text", text: "Este é um comprovante de despesa brasileiro (cupom fiscal, nota, recibo ou comprovante de cartão). Extraia o valor total pago, a data, o nome do estabelecimento, o CNPJ e a categoria mais provável. Use null no que não for legível." + (contexto ? ` Contexto informado pelo colaborador: "${contexto.slice(0, 300)}" — use para escolher a categoria.` : "") },
             midia,
           ],
         }],

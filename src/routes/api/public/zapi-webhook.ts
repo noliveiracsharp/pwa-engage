@@ -136,7 +136,7 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
         if (lr?.selectedRowId) texto = String(lr.selectedRowId);
         let tipo = "texto";
         let midia: string | null = null;
-        if (body.image?.imageUrl) { tipo = "imagem"; midia = body.image.imageUrl; texto = body.image.caption ?? ""; }
+        if (body.image?.imageUrl) { tipo = "imagem"; midia = body.image.imageUrl; const b = body as Record<string, unknown>; texto = body.image.caption ?? (typeof b["caption"] === "string" ? b["caption"] : "") ?? body.text?.message ?? ""; if (!texto && body.text?.message) texto = body.text.message; }
         else if (body.audio?.audioUrl) { tipo = "audio"; midia = body.audio.audioUrl; }
         else if (body.video?.videoUrl) { tipo = "video"; midia = body.video.videoUrl; texto = body.video.caption ?? ""; }
         else if (body.document?.documentUrl) { tipo = "documento"; midia = body.document.documentUrl; texto = body.document.fileName ?? ""; }
@@ -193,11 +193,11 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
               // Foto (ou PDF) de nota fiscal: OCR e reembolso pendente para o Financeiro aprovar.
               const pdf = tipo === "documento" && /\.pdf$/i.test(texto);
               if (midia && (tipo === "imagem" || pdf)) {
-                const leitura = await lerComprovanteUrl(midia, pdf, ia);
-                if (!leitura.valor) { await responder(`🧾 Não consegui ler o valor da nota${leitura.erro ? ` (${leitura.erro})` : ""}. Tire outra foto mais nítida ou lance em Reembolsos no Hub.`); return ok({ agente: true }); }
                 const legenda = pdf ? "" : texto.trim();
+                const leitura = await lerComprovanteUrl(midia, pdf, ia, legenda || undefined);
+                if (!leitura.valor) { await responder(`🧾 Não consegui ler o valor da nota${leitura.erro ? ` (${leitura.erro})` : ""}. Tire outra foto mais nítida ou lance em Reembolsos no Hub.`); return ok({ agente: true }); }
                 const { error: eR } = await db.rpc("crm_agente_reembolso" as never, { p_token: k, p_telefone: body.phone, p_dados: { ...leitura, comprovante: midia, observacao: legenda || null } } as never);
-                if (eR) throw eR;
+                if (eR) { console.error("zapi-webhook reembolso", eR.message); await responder(`🧾 Li a nota, mas não consegui lançar (${eR.message}). Tente de novo ou lance em Reembolsos no Hub.`); return ok({ agente: true }); }
                 const cat: Record<string, string> = { alimentacao: "Alimentação", combustivel: "Combustível", pedagio: "Pedágio", estacionamento: "Estacionamento", hospedagem: "Hospedagem", transporte: "Transporte", material: "Material", outros: "Outros" };
                 const dataBr = leitura.data ? leitura.data.split("-").reverse().join("/") : "hoje";
                 await responder([
@@ -206,6 +206,7 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
                   `• Categoria: ${cat[leitura.categoria ?? "outros"] ?? "Outros"}${legenda ? ` (${legenda})` : ""}`,
                   `• Data: ${dataBr}`,
                   `• Valor: ${leitura.valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`,
+                  ...(legenda ? [] : ["", "✍️ Quer dizer do que se trata? Responda em até 15 min (texto ou áudio), ex.: \"almoço com cliente Reserva da Mata\"."]),
                   "", "📌 Enviado para aprovação do Financeiro em Reembolsos. Se algo estiver errado, corrija lá antes da aprovação.",
                 ].join("\n"));
                 return ok({ agente: true, reembolso: true });
@@ -213,6 +214,13 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
               const tr = tipo === "audio" && midia ? await transcreverAgente(midia, { clientToken: String(col.instancia["client_token"] ?? col.instancia["security_token"] ?? "") || undefined, mimeType: body.audio?.mimeType, ia }) : { texto };
               const relato = tr.texto;
               if (!relato.trim()) { await responder(tipo === "audio" ? `Não consegui ouvir o áudio agora${tr.motivo ? ` (motivo: ${tr.motivo})` : ""}. Tente de novo ou envie em texto.` : "Não consegui entender a mensagem. Envie em texto ou um áudio mais claro."); return ok({ agente: true }); }
+              // Complemento da última nota enviada sem legenda (até 15 min): vira a observação do reembolso.
+              {
+                const { data: obs, error: eO } = await db.rpc("crm_agente_reembolso_obs" as never, { p_token: k, p_telefone: body.phone, p_texto: relato.trim() } as never);
+                if (eO && !/function|schema cache/i.test(eO.message)) console.error("zapi-webhook reembolso obs", eO.message);
+                const o = obs as { id?: string; valor?: number } | null;
+                if (o?.id) { await responder(`✍️ Descrição adicionada ao reembolso${o.valor ? ` de ${Number(o.valor).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}` : ""}: "${relato.trim().slice(0, 300)}"`); return ok({ agente: true, reembolso_obs: true }); }
+              }
               const { data: eqRaw } = await db.rpc("crm_agente_equipe" as never, { p_token: k, p_telefone: body.phone } as never);
               const acao = await interpretarAgente(relato, ia, Array.isArray(eqRaw) ? (eqRaw as string[]) : []);
               if (!acao) { await responder("Não identifiquei o cliente nem o colega. Ex.: \"Visitei o Condomínio Aurora, síndico pediu proposta para sexta\"."); return ok({ agente: true }); }
