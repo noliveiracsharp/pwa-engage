@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 const BARRAS = 24;
 
 /** Grava voz pelo microfone e devolve um arquivo de áudio pronto para envio. */
-export function GravadorAudio({ disabled, onGravado }: { disabled?: boolean; onGravado: (f: File) => void }) {
+export function GravadorAudio({ disabled, onGravado, compacto = false }: { disabled?: boolean; onGravado: (f: File) => void; compacto?: boolean }) {
   const [gravando, setGravando] = useState(false);
   const [segundos, setSegundos] = useState(0);
   const [niveis, setNiveis] = useState<number[]>(() => Array(BARRAS).fill(0));
@@ -106,15 +106,15 @@ export function GravadorAudio({ disabled, onGravado }: { disabled?: boolean; onG
 
   if (!gravando) {
     return (
-      <Button variant="ghost" size="icon" onClick={iniciar} disabled={disabled} aria-label="Gravar áudio">
-        <Mic className="h-5 w-5" />
+      <Button variant={compacto ? "default" : "ghost"} className={compacto ? "h-8 w-8 shrink-0" : undefined} size="icon" onClick={iniciar} disabled={disabled} aria-label="Gravar áudio">
+        <Mic className={compacto ? "h-4 w-4" : "h-5 w-5"} />
       </Button>
     );
   }
   const mm = String(Math.floor(segundos / 60)).padStart(2, "0");
   const ss = String(segundos % 60).padStart(2, "0");
   return (
-    <div className="flex items-center gap-1 rounded-md bg-destructive/10 px-1">
+    <div className="flex max-w-full flex-wrap items-center gap-1 rounded-md bg-destructive/10 px-1">
       <Button variant="ghost" size="icon" onClick={() => parar(false)} aria-label="Cancelar gravação">
         <Trash2 className="h-4 w-4 text-destructive" />
       </Button>

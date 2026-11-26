@@ -737,41 +737,11 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
           </div>
         )}
         {respondendo && <FaixaResposta citacao={respondendo} onCancelar={() => setRespondendo(null)} />}
-        <div className={cn("flex items-end gap-2 rounded-lg p-1", interna && "bg-warning/15")}>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label="Emojis"><Smile className="h-5 w-5" /></Button>
-            </PopoverTrigger>
-            <PopoverContent className="grid w-72 grid-cols-8 gap-1 p-2" align="start">
-              {EMOJIS.map((e) => (
-                <button key={e} type="button" className="rounded p-1 text-xl hover:bg-accent" onClick={() => setTexto((t) => t + e)}>
-                  {e}
-                </button>
-              ))}
-            </PopoverContent>
-          </Popover>
-          <Button variant="ghost" size="icon" aria-label="Anexar" onClick={() => fileRef.current?.click()}>
-            <Paperclip className="h-5 w-5" />
-          </Button>
-          <Button variant="ghost" size="icon" aria-label="Anexar documentos do HUB" tooltip="Documentos do HUB" disabled={enviando || encerrado} onClick={() => setDocumentosAberto(true)}>
-            <Paperclip className="h-5 w-5 text-warning" />
-          </Button>
-          <UploadInfo perfil="chat" arquivos className="hidden h-10 w-6 sm:inline-flex" />
-          <input
-            ref={fileRef}
-            type="file"
-            multiple
-            hidden
-            accept="image/*,audio/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
-            onChange={(e) => {
-              const fs = Array.from(e.target.files ?? []);
-              if (fs.length) adicionarPendentes(fs);
-              e.target.value = "";
-            }}
-          />
+        <div className={cn("rounded-xl border border-input bg-background focus-within:ring-2 focus-within:ring-ring", interna && "bg-warning/15")}>
           <Textarea
             value={texto}
-            onChange={(e) => setTexto(e.target.value)}
+            ref={(el) => { if (el) { el.style.height = "auto"; el.style.height = `${Math.min(Math.max(el.scrollHeight, 64), 220)}px`; } }}
+            onChange={(e) => { setTexto(e.target.value); const el = e.currentTarget; el.style.height = "auto"; el.style.height = `${Math.min(Math.max(el.scrollHeight, 64), 220)}px`; }}
             onPaste={(e) => {
               const arquivos = Array.from(e.clipboardData.items)
                 .filter((it) => it.kind === "file" && it.type.startsWith("image/"))
@@ -787,15 +757,52 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
                 void enviarTudo();
               }
             }}
-            rows={2}
+            rows={3}
             onFocus={() => setTimeout(() => fimRef.current?.scrollIntoView({ block: "end" }), 300)}
             placeholder={interna ? "Nota interna (só a equipe vê)…" : "Digite uma mensagem ou / para respostas rápidas"}
-            className="max-h-80 min-h-16 flex-1 resize-y"
+            className="block max-h-56 min-h-16 w-full resize-none overflow-y-auto rounded-t-xl rounded-b-none border-0 bg-transparent px-3 py-2 text-sm leading-5 shadow-none focus-visible:ring-0"
           />
-          <GravadorAudio disabled={enviando} onGravado={(f) => void anexar(f)} />
-          <Button size="icon" onClick={() => void enviarTudo()} disabled={enviando || (!texto.trim() && !pendentes.length)} aria-label="Enviar">
-            {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+          <div className="flex flex-wrap items-center gap-1 px-1 pb-1">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" aria-label="Emojis"><Smile className="h-4 w-4" /></Button>
+            </PopoverTrigger>
+            <PopoverContent className="grid w-72 grid-cols-8 gap-1 p-2" align="start">
+              {EMOJIS.map((e) => (
+                <button key={e} type="button" className="rounded p-1 text-xl hover:bg-accent" onClick={() => setTexto((t) => t + e)}>
+                  {e}
+                </button>
+              ))}
+            </PopoverContent>
+          </Popover>
+          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" aria-label="Anexar" onClick={() => fileRef.current?.click()}>
+            <Paperclip className="h-4 w-4" />
           </Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" aria-label="Anexar documentos do HUB" tooltip="Documentos do HUB" disabled={enviando || encerrado} onClick={() => setDocumentosAberto(true)}>
+            <Paperclip className="h-4 w-4 text-warning" />
+          </Button>
+          <UploadInfo perfil="chat" arquivos className="h-8 w-8 shrink-0" />
+          <input
+            ref={fileRef}
+            type="file"
+            multiple
+            hidden
+            accept="image/*,audio/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+            onChange={(e) => {
+              const fs = Array.from(e.target.files ?? []);
+              if (fs.length) adicionarPendentes(fs);
+              e.target.value = "";
+            }}
+          />
+            <div className="ml-auto" />
+            {texto.trim() || pendentes.length ? (
+              <Button size="icon" className="h-8 w-8 shrink-0" onClick={() => void enviarTudo()} disabled={enviando} aria-label="Enviar">
+                {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              </Button>
+            ) : (
+              <GravadorAudio compacto disabled={enviando} onGravado={(f) => void anexar(f)} />
+            )}
+          </div>
         </div>
         <div className="mt-2 flex items-center gap-2">
           <Switch id="nota-interna" checked={interna} onCheckedChange={setInterna} />
