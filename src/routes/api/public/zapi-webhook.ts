@@ -261,7 +261,7 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
         // Resposta à pesquisa de satisfação: grava a nota no atendimento encerrado, agradece e NÃO abre novo atendimento.
         const notaCsat = tipo === "texto" ? (lr?.selectedRowId && /^[0-5]$/.test(texto) && /⭐/.test(String(lr.title ?? "")) ? notaDaLinha(texto) : detectarNota(texto)) : null;
         if (notaCsat !== null) {
-          const { data: av, error: eAv } = await db.rpc("csat_webhook_avaliar" as never, {
+          const { data: av, error: eAv } = await db.rpc("csat_webhook_avaliar_suporte" as never, {
             p_token: k, p_telefone: body.phone, p_nota: notaCsat, p_texto: lr?.title || texto, p_externo: body.messageId ?? null,
           } as never);
           if (eAv && !/function|schema cache/i.test(eAv.message)) console.error("zapi-webhook csat", eAv.message);
@@ -319,8 +319,9 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
         // Auto-resposta comercial (ex.: fornecedor) em conversa nova: registra, mas não aciona o robô.
         if (!r.execucao && tipo === "texto" && ehRespostaAutomatica(texto)) return ok({ robo: false, motivo: "auto_resposta" });
 
-        const acao = (nome: string, dados: Record<string, unknown>) =>
-          db.rpc("fluxo_webhook_acao", { p_token: k, p_atendimento: r.atendimento_id, p_acao: nome, p_dados: dados });
+        const acao = (nome: string, dados: Record<string, unknown>) => nome === "encerrar"
+          ? db.rpc("atendimento_webhook_encerrar" as never, { p_token: k, p_atendimento: r.atendimento_id } as never)
+          : db.rpc("fluxo_webhook_acao", { p_token: k, p_atendimento: r.atendimento_id, p_acao: nome, p_dados: dados });
 
         // Comandos globais (#atendente, #sair; #inicio reinicia abaixo): valem em qualquer etapa.
         const cfgCmd = (r.fluxo.nos ?? []).find((n) => (n.data?.tipo ?? n.type) === "gatilho")?.data ?? {};

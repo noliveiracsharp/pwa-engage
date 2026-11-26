@@ -1,5 +1,13 @@
 # Roadmap
 
+## Suporte — correções atuais
+- [x] Corrigir encerramento persistido, retirada da lista ativa e transferência para etapa humana.
+- [x] Corrigir continuidade de menus dinâmicos e impedir que opção de unidade seja consumida como avaliação; 26 testes aprovados.
+- [x] Exibir data e hora nas mensagens.
+- [x] Biblioteca de documentos oficiais por categoria e seleção múltipla pelo clips dourado.
+- [x] Entregar SQL reaplicável em Files; executado três vezes em PostgreSQL local sem alterar o histórico.
+- [ ] Validar fluxos reais de suporte e biblioteca — aguarda execução do SQL e publicação; /atendimentos e /documentos redirecionaram ao login externo.
+
 ## Produtos e Serviços — pesquisa
 - [x] Criar procedure com filtros, paginação, índices e autorização do catálogo compartilhado.
 - [x] Conectar listagem e relatórios, preservando edição e atualização após salvar.

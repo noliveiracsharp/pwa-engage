@@ -105,8 +105,9 @@ export function etapasDoKanban(etapas: Row[], kanbanId: string) {
 }
 /** Etapa marcada com is_default_humano no kanban (ou a primeira, como fallback). */
 export function etapaHumano(etapas: Row[], kanbanId: string) {
-  const lista = etapasDoKanban(etapas, kanbanId);
-  return lista.find((e) => e["is_default_humano"] === true) ?? lista[0];
+  const lista = etapasDoKanban(etapas, kanbanId).filter((e) => e["status"] !== false && !isEncerrado({ kanban_etapa_id: e["id"] }, etapas));
+  return lista.find((e) => e["is_default_humano"] === true)
+    ?? lista.find((e) => !/(^|\s)(ia|bot|rob[oô])(?=\s|$)/i.test(text(pick(e, ["descricao", "nome"]))));
 }
 /** Etapa de encerramento (is_default_encerrado) do kanban. */
 export function etapaEncerrado(etapas: Row[], kanbanId: string) {
@@ -121,8 +122,9 @@ export function etapaDe(a: Row | undefined, etapas: Row[]) {
   return id ? etapas.find((e) => text(e["id"]) === id) : undefined;
 }
 /** Encerrado = etapa atual com is_default_encerrado (fonte única da verdade). */
-const RE_ENCERRADO = /encerr|finaliz|fechad|conclu/i;
+const RE_ENCERRADO = /encerr|finaliz|fechad|conclu|resolvid/i;
 export function isEncerrado(a: Row | undefined, etapas: Row[]) {
+  if (a?.["encerrado_em"]) return true;
   const et = etapaDe(a, etapas);
   if (et?.["is_default_encerrado"] === true) return true;
   // Etapa ou status com nome de encerramento também contam (etapa sem a marcação).
@@ -150,4 +152,9 @@ export function etapaPayload(etapaId: unknown, etapas: Row[] = []) {
   // Etapa ativa (reabertura/movimento): zera a avaliação anterior.
   if (et && et["is_default_encerrado"] !== true) payload["nota"] = null;
   return payload;
+}
+
+export function transferenciaPayload(kanbanId: string, etapaId: unknown, etapas: Row[]) {
+  return { ...etapaPayload(etapaId, etapas), kanban_nome_id: kanbanId,
+    usuario_responsavel_id: null, modo: "Humano", modo_atendimento: "Humano", encerrado_em: null };
 }

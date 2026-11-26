@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DocumentoEditor, StatusDocBadge, useModelos, VencimentoInfo, type DocumentoRow } from "@/components/documentos/DocumentosPainel";
 import { ContratoOfertaModelos } from "@/components/documentos/ContratoOfertaModelos";
+import { BibliotecaDocumentos } from "@/components/documentos/BibliotecaDocumentos";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { useAudit } from "@/lib/audit";
 import { ENTIDADES, entidadeLabel, MODELOS_PADRAO, STATUS_DOC, VARIAVEIS, type EntidadeDoc } from "@/lib/documentos";
@@ -52,10 +53,12 @@ function DocumentosPage() {
       <Tabs defaultValue="docs">
         <TabsList>
           <TabsTrigger value="docs">Documentos emitidos</TabsTrigger>
+          <TabsTrigger value="biblioteca">Documentos oficiais</TabsTrigger>
           <TabsTrigger value="modelos">Modelos</TabsTrigger>
           <TabsTrigger value="contrato-oferta">Contrato da Oferta</TabsTrigger>
         </TabsList>
         <TabsContent value="docs"><Emitidos canEdit={perms.canUpdate} /></TabsContent>
+        <TabsContent value="biblioteca"><BibliotecaDocumentos canCreate={perms.canCreate} canDelete={perms.canDelete} /></TabsContent>
         <TabsContent value="contrato-oferta"><ContratoOfertaModelos canEdit={perms.canUpdate} /></TabsContent>
         <TabsContent value="modelos"><Modelos canCreate={perms.canCreate} canEdit={perms.canUpdate} canDelete={perms.canDelete} /></TabsContent>
       </Tabs>

@@ -48,6 +48,8 @@ import { perguntar } from "@/components/layout/DialogoGlobal";
 import { ManutencaoSheet } from "@/components/manutencoes/ManutencaoSheet";
 import { AvaliacaoSelo, usePesquisaSatisfacao } from "./Pesquisa";
 import { ChecklistEventoCard, dataChecklist, useChecklistsAtendimento } from "./ChecklistRespostas";
+import { BibliotecaDocumentos } from "@/components/documentos/BibliotecaDocumentos";
+import { urlAssinada } from "@/lib/arquivos-privados";
 
 const EMOJIS = "😀 😃 😄 😁 😅 😂 🙂 😉 😊 😍 😘 🤔 😐 😴 😢 😭 😡 👍 👎 👏 🙏 💪 👋 🤝 ✅ ❌ ⚠️ ❤️ 🔥 🎉 ⭐ 📦 📄 📞 💰 🕐 🚀 💬 📍 🙌".split(" ");
 
@@ -106,6 +108,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
     setTexto("");
   }
   const [moverAberto, setMoverAberto] = useState(false);
+  const [documentosAberto, setDocumentosAberto] = useState(false);
   const [chamada, setChamada] = useState<Chamada | null>(null);
   const participantesRef = useRef<Set<string>>(new Set());
   const [fimChamada, setFimChamada] = useState<{ c: Chamada; fim: number; participantes: string[] } | null>(null);
@@ -256,15 +259,15 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
   );
 
   async function atualizarAtendimento(values: Row, ok: string) {
-    const { error } = await supabase.from("atendimentos").update(filterPayload(values, colsAt)).eq("id", id);
-    if (error) {
+    const { data, error } = await supabase.from("atendimentos").update(filterPayload(values, colsAt)).eq("id", id).select().single();
+    if (error || !data) {
       console.error(error);
-      toast.error(error.message);
+      toast.error(error?.message ?? "Não foi possível confirmar a alteração do atendimento.");
       return false;
     }
     // Atualização imediata na lista (sem esperar recarregar do banco).
     qc.setQueriesData({ queryKey: ["table", "atendimentos"] }, (old: unknown) =>
-      Array.isArray(old) ? old.map((r: Row) => (text(rowId(r)) === text(id) ? { ...r, ...values } : r)) : old);
+      Array.isArray(old) ? old.map((r: Row) => (text(rowId(r)) === text(id) ? { ...r, ...(data as Row) } : r)) : old);
     qc.invalidateQueries({ queryKey: ["table", "atendimentos"] });
     toast.success(ok);
     return true;
@@ -463,13 +466,13 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
 
   async function encerrar() {
     const et = etapaEncerrado(etapas, text(pick(atendimento, A.kanban)));
-    if (!et) {
-      toast.error('Nenhuma etapa deste quadro está marcada como "Etapa de Encerramento". Marque uma nas configurações do Kanban.');
+    if (!et && !colsAt?.includes("encerrado_em")) {
+      toast.error("Aplique o script de correção dos atendimentos para encerrar sem etapa de encerramento.");
       return;
     }
     await pesquisa.pedir({
       atendimento, pessoa, instancia,
-      executar: () => atualizarAtendimento({ ...etapaPayload(rowId(et), etapas), ...(usuarioId ? { usuario_responsavel_id: usuarioId } : {}) }, "Atendimento encerrado."),
+      executar: () => atualizarAtendimento({ ...(et ? etapaPayload(rowId(et), etapas) : {}), ...(colsAt?.includes("encerrado_em") ? { encerrado_em: new Date().toISOString() } : {}), ...(usuarioId ? { usuario_responsavel_id: usuarioId } : {}) }, "Atendimento encerrado."),
     });
   }
 
@@ -482,7 +485,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
     if (!ok) return;
     void qc.invalidateQueries({ queryKey: ["atendimentos-bloqueios"] });
     const et = etapaEncerrado(etapas, text(pick(atendimento, A.kanban)));
-    if (et && !encerrado) await atualizarAtendimento(etapaPayload(rowId(et), etapas), "Contato bloqueado e atendimento encerrado.");
+    if (!encerrado && (et || colsAt?.includes("encerrado_em"))) await atualizarAtendimento({ ...(et ? etapaPayload(rowId(et), etapas) : {}), ...(colsAt?.includes("encerrado_em") ? { encerrado_em: new Date().toISOString() } : {}) }, "Contato bloqueado e atendimento encerrado.");
     else toast.success("Contato bloqueado.");
   }
 
@@ -490,7 +493,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
     const et = etapaHumano(etapas, text(pick(atendimento, A.kanban)));
     if (!et) { setMoverAberto(true); return; }
     await atualizarAtendimento(
-      { modo: "Humano", modo_atendimento: "Humano", usuario_responsavel_id: usuarioId, ...etapaPayload(rowId(et), etapas) },
+      { modo: "Humano", modo_atendimento: "Humano", usuario_responsavel_id: usuarioId, encerrado_em: null, ...etapaPayload(rowId(et), etapas) },
       "Atendimento reaberto no mesmo protocolo.",
     );
   }
@@ -750,6 +753,9 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
           <Button variant="ghost" size="icon" aria-label="Anexar" onClick={() => fileRef.current?.click()}>
             <Paperclip className="h-5 w-5" />
           </Button>
+          <Button variant="ghost" size="icon" aria-label="Anexar documentos do HUB" tooltip="Documentos do HUB" disabled={enviando || encerrado} onClick={() => setDocumentosAberto(true)}>
+            <Paperclip className="h-5 w-5 text-warning" />
+          </Button>
           <UploadInfo perfil="chat" arquivos className="hidden h-10 w-6 sm:inline-flex" />
           <input
             ref={fileRef}
@@ -833,7 +839,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
           const trocouDep = kanbanId !== text(pick(atendimento, A.kanban));
           const executar = async () => {
             const ok = await atualizarAtendimento(
-              { kanban_nome_id: kanbanId, ...etapaPayload(etapaId || null, etapas), ...(trocouDep ? { usuario_responsavel_id: null } : {}) },
+              { kanban_nome_id: kanbanId, ...etapaPayload(etapaId || null, etapas), ...(alvo?.["is_default_encerrado"] === true ? {} : { encerrado_em: null, modo: "Humano", modo_atendimento: "Humano" }), ...(trocouDep ? { usuario_responsavel_id: null } : {}) },
               trocouDep ? "Atendimento transferido de departamento." : "Atendimento movido.",
             );
             if (ok && trocouDep && usuarioId !== undefined) {
@@ -846,12 +852,24 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
             return ok;
           };
           const alvo = etapas.find((e) => text(rowId(e)) === etapaId);
-          const vaiEncerrar = alvo?.["is_default_encerrado"] === true && !encerrado;
+          const vaiEncerrar = !!alvo && isEncerrado({ kanban_etapa_id: rowId(alvo) }, etapas) && !encerrado;
           const mover = () => (vaiEncerrar ? pesquisa.pedir({ atendimento, pessoa, instancia, executar }) : executar());
           const acao = alvo && checklist.precisa(alvo) ? checklist.exigir({ atendimento, etapa: alvo, executar: mover }) : mover();
           return acao.then((ok) => ok && setMoverAberto(false));
         }}
       />
+      <Dialog open={documentosAberto} onOpenChange={setDocumentosAberto}><DialogContent className="max-w-2xl"><DialogHeader><DialogTitle>Documentos do HUB</DialogTitle></DialogHeader>
+        <BibliotecaDocumentos selecionar={async (docs) => {
+          if (docs.length + pendentes.length > 10) throw new Error("Selecione até 10 anexos por envio.");
+          // Todos os arquivos são obtidos antes de alterar a conversa; nada privado vira URL permanente.
+          const files = await Promise.all(docs.map(async (d) => {
+            const r = await fetch(await urlAssinada(d.arquivo_url));
+            if (!r.ok) throw new Error(`Não foi possível obter ${d.titulo}.`);
+            return new File([await r.blob()], d.nome_arquivo, { type: r.headers.get("content-type") ?? "application/octet-stream" });
+          }));
+          adicionarPendentes(files); setDocumentosAberto(false);
+        }} />
+      </DialogContent></Dialog>
       {pesquisa.dialog}
       {checklist.dialog}
     </section>
@@ -874,7 +892,7 @@ function Balao({ m, autores, onResponder, onEditarWhats }: { m: Row; autores: Ma
   const tipo = tipoMidia(m);
   const url = pick<string>(m, M.midia);
   const corpo = text(pick(m, M.texto));
-  const hora = dataDe(m, M.data)?.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  const hora = dataDe(m, M.data)?.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
   const uid = text(pick(m, M.usuario));
   const robo = /ia|bot|robo/.test(text(m["remetente_tipo"]).toLowerCase());
   const autor = cliente ? "" : (uid && autores.get(uid)) || (interna ? "" : robo ? "🤖 Robô" : "Sistema");

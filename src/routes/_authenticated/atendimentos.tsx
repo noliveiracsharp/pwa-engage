@@ -322,6 +322,11 @@ function AtendimentosChat({ comAbas = false }: { comAbas?: boolean }) {
 
   const ativo = atendimentos.find((a) => text(rowId(a)) === id);
   useEffect(() => {
+    if (ativo && isEncerrado(ativo, etapas) && !["encerrados", "historico", "todos"].includes(rapido)) {
+      void navigate({ to: "/atendimentos", search: {}, replace: true });
+    }
+  }, [ativo, etapas, rapido, navigate]);
+  useEffect(() => {
     if (typeof window !== "undefined" && window.innerWidth < 1024) setPainel(false);
   }, []);
   const abrir = (aid?: string) => navigate({ to: "/atendimentos", search: { id: aid }, replace: true });

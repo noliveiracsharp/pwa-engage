@@ -184,7 +184,12 @@ export function executarFluxo(p: {
         if (str(d["lista_origem"]).trim()) {
           const it = itensListaMenu(d, vars)[i];
           vars[str(d["guardar_em"]).trim() || "item_escolhido"] = paraTexto(it?.item);
-          atual = proximo(esperando.id, "selecionado");
+          // Menus antigos convertidos para lista mantêm a saída op-N ou saída comum.
+          atual = proximo(esperando.id, "selecionado") ?? proximo(esperando.id, `op-${i}`) ?? proximo(esperando.id, "saida");
+          if (!atual) {
+            acoes.push({ tipo: "mensagem", texto: "Recebemos sua escolha. Vou encaminhar seu atendimento à equipe." }, { tipo: "modo", modo: "Humano" });
+            return fim("transbordo");
+          }
         } else atual = proximo(esperando.id, `op-${i}`);
       }
     } else {

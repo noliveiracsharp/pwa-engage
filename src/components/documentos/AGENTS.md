@@ -1,0 +1,1 @@
+- Official shareable files use documentos_oficiais, distinct from personal issued documents; uploads stay in private storage and chat sends explicit copies through its existing attachment path.

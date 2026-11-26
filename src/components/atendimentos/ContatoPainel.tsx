@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PessoaCampos } from "@/components/pessoas/PessoaCampos";
 import { rowId, text } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
-import { A, corEtiqueta, etapaPayload, etapasDoKanban, fotoPessoa, iniciais, nomePessoa, telefonePessoa } from "@/lib/atendimentos";
+import { A, corEtiqueta, etapaPayload, etapaHumano, transferenciaPayload, isEncerrado, fotoPessoa, iniciais, nomePessoa, telefonePessoa } from "@/lib/atendimentos";
 import { filterPayload, useCols } from "@/lib/projetos";
 import { usePesquisaSatisfacao } from "./Pesquisa";
 import { ChecklistsPainel } from "./ChecklistRespostas";
@@ -91,8 +91,9 @@ export function ContatoPainel({ atendimento, pessoa, usuarios, participantes, et
   async function aplicarEtapa(etId: string, encerrando = false) {
     // Ao encerrar, quem encerra fica como responsável (a avaliação vai para ele).
     const body = { ...etapaPayload(etId, etapas), ...(encerrando && meuId ? { usuario_responsavel_id: meuId } : {}) };
-    const { error } = await supabase.from("atendimentos").update(filterPayload(body, colsAt)).eq("id", atId);
-    if (error) { toast.error(error.message); return false; }
+    const { data, error } = await supabase.from("atendimentos").update(filterPayload(body, colsAt)).eq("id", atId).select().single();
+    if (error || !data) { toast.error(error?.message ?? "Não foi possível confirmar a alteração."); return false; }
+    otimista(data as Row);
     qc.invalidateQueries({ queryKey: ["table", "atendimentos"] });
     toast.success("Etapa atualizada.");
     return true;
@@ -100,7 +101,7 @@ export function ContatoPainel({ atendimento, pessoa, usuarios, participantes, et
   async function mudarEtapa(etId: string) {
     const alvo = etapas.find((e) => text(rowId(e)) === etId);
     const mover = async (): Promise<boolean> => {
-      if (alvo?.["is_default_encerrado"] === true && etapa?.["is_default_encerrado"] !== true) {
+      if (alvo && isEncerrado({ kanban_etapa_id: etId }, etapas) && !isEncerrado(atendimento, etapas)) {
         return pesquisa.pedir({ atendimento, pessoa, executar: () => aplicarEtapa(etId, true) });
       }
       return aplicarEtapa(etId);
@@ -126,12 +127,15 @@ export function ContatoPainel({ atendimento, pessoa, usuarios, participantes, et
   async function atualizarAt(payload: Row) {
     let body = filterPayload(payload, colsAt);
     for (let i = 0; i < 6; i++) {
-      const { error } = await supabase.from("atendimentos").update(body as never).eq("id", atId);
+      const { data, error } = await supabase.from("atendimentos").update(body as never).eq("id", atId).select().single();
       const col = error?.code === "PGRST204" ? /'([^']+)' column/.exec(error.message)?.[1] : undefined;
-      if (!col || !(col in body)) return { error };
+      if (!col || !(col in body)) {
+        if (!error && data) otimista(data as Row);
+        return { error: error ?? (!data ? { message: "Não foi possível confirmar a alteração." } : null) };
+      }
       body = Object.fromEntries(Object.entries(body).filter(([k]) => k !== col));
     }
-    return { error: null };
+    return { error: { message: "Não foi possível atualizar o atendimento: estrutura de campos indisponível." } };
   }
   async function transferirAtendente(novoId: string) {
     if (!novoId || novoId === responsavel) return;
@@ -139,7 +143,6 @@ export function ContatoPainel({ atendimento, pessoa, usuarios, participantes, et
     const para = nomeUsuario(usuarios.find((u) => text(rowId(u)) === novoId));
     const { error } = await atualizarAt({ usuario_responsavel_id: novoId, modo: "Humano", modo_atendimento: "Humano" });
     if (error) { toast.error(error.message); return; }
-    otimista({ usuario_responsavel_id: novoId, modo: "Humano", modo_atendimento: "Humano" });
     if (responsavel && !meusPart.some((p) => text(p["usuario_id"]) === responsavel)) {
       await supabase.from("atendimentos_participantes").insert({ atendimento_id: atId, usuario_id: responsavel });
       void qc.invalidateQueries({ queryKey: ["table", "atendimentos_participantes"] });
@@ -152,13 +155,11 @@ export function ContatoPainel({ atendimento, pessoa, usuarios, participantes, et
     if (!kbId || kbId === text(pick(atendimento, A.kanban))) return;
     const destino = kanbansDestino.find((k) => text(rowId(k)) === kbId);
     // Primeira etapa HUMANA do departamento (pula etapas de IA/robô) para cair em "Aguardando".
-    const doKb = etapasDoKanban(etapas, kbId);
-    const primeira = doKb.find((e) => !/\b(ia|bot|rob[oô])\b/i.test(text(pick(e, ["nome", "descricao"])))) ?? doKb[0];
+    const primeira = etapaHumano(etapas, kbId);
     // Libera o responsável e marca modo humano: o chamado entra na fila "Aguardando" do novo departamento.
-    const payload: Row = { kanban_nome_id: kbId, usuario_responsavel_id: null, modo: "Humano", modo_atendimento: "Humano", ...etapaPayload(primeira ? rowId(primeira) : null, etapas) };
+    const payload: Row = transferenciaPayload(kbId, primeira ? rowId(primeira) : null, etapas);
     const { error } = await atualizarAt(payload);
     if (error) { toast.error(error.message); return; }
-    otimista(payload);
     if (responsavel && !meusPart.some((p) => text(p["usuario_id"]) === responsavel)) {
       await supabase.from("atendimentos_participantes").insert({ atendimento_id: atId, usuario_id: responsavel });
       void qc.invalidateQueries({ queryKey: ["table", "atendimentos_participantes"] });
