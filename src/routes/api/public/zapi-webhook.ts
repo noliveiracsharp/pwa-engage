@@ -9,6 +9,7 @@ import { dispararMensagem } from "@/lib/atendimentos-envio";
 import { executarExterno } from "@/lib/fluxos-externo";
 import { detectarNota, ehCortesia, notaDaLinha } from "@/lib/csat";
 import { interpretarAgente, transcreverAgente, type IaAgente } from "@/lib/crm-agente.server";
+import { lerComprovanteUrl } from "@/lib/comprovante-ocr.server";
 import { escolhaConvite, textoConviteAgente, type CanalConvite } from "@/lib/crm-agente";
 import { executarFluxo, proximoNoId, type ConexaoFluxo, type EstadoExec, type NoFluxo } from "@/lib/fluxos-motor";
 
@@ -189,25 +190,50 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
               const { data: iaRaw, error: eIa } = await db.rpc("crm_agente_ia" as never, { p_token: k, p_telefone: body.phone } as never);
               if (eIa) console.error("zapi-webhook agente ia", eIa.message);
               const ia = (iaRaw ?? null) as IaAgente;
+              // Foto (ou PDF) de nota fiscal: OCR e reembolso pendente para o Financeiro aprovar.
+              const pdf = tipo === "documento" && /\.pdf$/i.test(texto);
+              if (midia && (tipo === "imagem" || pdf)) {
+                const leitura = await lerComprovanteUrl(midia, pdf, ia);
+                if (!leitura.valor) { await responder(`🧾 Não consegui ler o valor da nota${leitura.erro ? ` (${leitura.erro})` : ""}. Tire outra foto mais nítida ou lance em Reembolsos no Hub.`); return ok({ agente: true }); }
+                const legenda = pdf ? "" : texto.trim();
+                const { error: eR } = await db.rpc("crm_agente_reembolso" as never, { p_token: k, p_telefone: body.phone, p_dados: { ...leitura, comprovante: midia, observacao: legenda || null } } as never);
+                if (eR) throw eR;
+                const cat: Record<string, string> = { alimentacao: "Alimentação", combustivel: "Combustível", pedagio: "Pedágio", estacionamento: "Estacionamento", hospedagem: "Hospedagem", transporte: "Transporte", material: "Material", outros: "Outros" };
+                const dataBr = leitura.data ? leitura.data.split("-").reverse().join("/") : "hoje";
+                await responder([
+                  "🧾 *Reembolso registrado!*",
+                  `• Estabelecimento: ${leitura.estabelecimento ?? "não identificado"}`,
+                  `• Categoria: ${cat[leitura.categoria ?? "outros"] ?? "Outros"}${legenda ? ` (${legenda})` : ""}`,
+                  `• Data: ${dataBr}`,
+                  `• Valor: ${leitura.valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`,
+                  "", "📌 Enviado para aprovação do Financeiro em Reembolsos. Se algo estiver errado, corrija lá antes da aprovação.",
+                ].join("\n"));
+                return ok({ agente: true, reembolso: true });
+              }
               const tr = tipo === "audio" && midia ? await transcreverAgente(midia, { clientToken: String(col.instancia["client_token"] ?? col.instancia["security_token"] ?? "") || undefined, mimeType: body.audio?.mimeType, ia }) : { texto };
               const relato = tr.texto;
               if (!relato.trim()) { await responder(tipo === "audio" ? `Não consegui ouvir o áudio agora${tr.motivo ? ` (motivo: ${tr.motivo})` : ""}. Tente de novo ou envie em texto.` : "Não consegui entender a mensagem. Envie em texto ou um áudio mais claro."); return ok({ agente: true }); }
-              const acao = await interpretarAgente(relato, ia);
-              if (!acao) { await responder("Não identifiquei o cliente. Ex.: \"Visitei o Condomínio Aurora, síndico pediu proposta para sexta\"."); return ok({ agente: true }); }
+              const { data: eqRaw } = await db.rpc("crm_agente_equipe" as never, { p_token: k, p_telefone: body.phone } as never);
+              const acao = await interpretarAgente(relato, ia, Array.isArray(eqRaw) ? (eqRaw as string[]) : []);
+              if (!acao) { await responder("Não identifiquei o cliente nem o colega. Ex.: \"Visitei o Condomínio Aurora, síndico pediu proposta para sexta\"."); return ok({ agente: true }); }
               const { data: rx, error: eX } = await db.rpc("crm_agente_executar" as never, { p_token: k, p_telefone: body.phone, p_dados: acao } as never);
               if (eX) throw eX;
-              const r0 = rx as { cliente: string; novo: boolean; reuniao_id?: string | null; sala?: string | null; inicio?: string | null; presencial?: boolean; emails?: string[]; telefones?: string[] };
+              const r0 = rx as { cliente: string | null; titulo?: string | null; equipe?: string[]; equipe_emails?: string[]; novo: boolean; reuniao_id?: string | null; sala?: string | null; inicio?: string | null; presencial?: boolean; emails?: string[]; telefones?: string[] };
               const fmt = (v: string) => new Date(v).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
-              const linhas = [`✅ Registrado no CRM de *${r0.cliente}*${r0.novo ? " (novo Lead cadastrado no Kanban — complete o CNPJ no Hub)" : ""}.`];
+              const interna = !r0.cliente;
+              const eq = r0.equipe ?? [];
+              const linhas = interna ? [`✅ Reunião com a equipe (${eq.join(", ")}) — nada foi cadastrado como cliente.`]
+                : [`✅ Registrado no CRM de *${r0.cliente}*${r0.novo ? " (novo Lead cadastrado no Kanban — complete o CNPJ no Hub)" : ""}.`];
+              if (!interna && eq.length) linhas.push(`👤 Equipe na agenda: ${eq.join(", ")}`);
               if (r0.reuniao_id && r0.inicio && r0.sala) {
-                const emails = r0.emails ?? [], fones = r0.telefones ?? [];
-                const pend: Pend = { id: r0.reuniao_id, titulo: `${r0.presencial ? "Visita" : "Reunião online"}: ${r0.cliente}`, inicio: r0.inicio, sala: r0.sala, video: true, modalidade: r0.presencial ? "presencial" : "online", local: r0.presencial ? r0.cliente : null, duracao_min: 60,
+                const emails = interna ? (r0.equipe_emails ?? []) : r0.emails ?? [], fones = interna ? [] : r0.telefones ?? [];
+                const pend: Pend = { id: r0.reuniao_id, titulo: r0.titulo ?? `${r0.presencial ? "Visita" : "Reunião online"}: ${r0.cliente}`, inicio: r0.inicio, sala: r0.sala, video: true, modalidade: r0.presencial ? "presencial" : "online", local: r0.presencial ? r0.cliente : null, duracao_min: 60,
                   convidados: [...emails.map((e, i) => ({ email: e, telefone: i === 0 ? fones[0] ?? "" : "" })), ...(emails.length ? [] : fones.slice(0, 1).map((f) => ({ email: "", telefone: f })))] };
-                linhas.push(`📅 *${r0.presencial ? "Visita" : "Reunião online"} agendada no Planner*: ${fmt(r0.inicio)} (60 min)`);
+                linhas.push(`📅 *${interna ? "Reunião interna" : r0.presencial ? "Visita" : "Reunião online"} agendada no Planner*: ${fmt(r0.inicio)} (60 min)${interna ? " — já está na agenda dos colegas" : ""}`);
                 if (acao.convidados_nome) linhas.push(`👥 Convidados: ${acao.convidados_nome}`);
                 if (!r0.presencial) linhas.push(`🔗 Sala: ${linkSala(r0.sala)}`);
                 if (acao.enviar_convite) linhas.push(await enviarConvite(pend, acao.enviar_convite));
-                else linhas.push("", "Quer enviar o convite ao cliente?", `1️⃣ Por e-mail${emails[0] ? ` (${emails.join(", ")})` : ""}`, `2️⃣ Por WhatsApp${fones[0] ? ` (${fones[0]})` : " (te mando o texto para repassar)"}`, "3️⃣ Não enviar agora");
+                else linhas.push("", interna ? "Quer enviar também o convite com o link?" : "Quer enviar o convite ao cliente?", `1️⃣ Por e-mail${emails[0] ? ` (${emails.join(", ")})` : ""}`, `2️⃣ Por WhatsApp${fones[0] ? ` (${fones[0]})` : " (te mando o texto para repassar)"}`, "3️⃣ Não enviar agora");
               } else if (acao.proxima_acao_em) {
                 linhas.push(`📌 Próxima ação: ${acao.proxima_acao_tipo ?? "Retorno"} em ${fmt(acao.proxima_acao_em)}`);
               }

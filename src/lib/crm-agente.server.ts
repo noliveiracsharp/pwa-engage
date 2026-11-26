@@ -84,7 +84,7 @@ export async function transcreverAgente(url: string, opts: { clientToken?: strin
 }
 
 /** Pede à IA (da empresa ou do servidor) a interpretação do relato do colaborador. */
-export async function interpretarAgente(texto: string, iaEmpresa: IaAgente = null): Promise<AcaoAgente | null> {
+export async function interpretarAgente(texto: string, iaEmpresa: IaAgente = null, equipe: string[] = []): Promise<AcaoAgente | null> {
   const { generateText } = await import("ai");
   const ia = propria(iaEmpresa);
   let model;
@@ -103,6 +103,6 @@ export async function interpretarAgente(texto: string, iaEmpresa: IaAgente = nul
     const { createOpenAI } = await import("@ai-sdk/openai");
     model = createOpenAI({ apiKey: process.env["OPENAI_API_KEY"] }).responses("gpt-5-mini");
   } else return null;
-  const r = await generateText({ model, maxRetries: 0, system: promptAgente(new Date()), prompt: texto.slice(0, 6000) });
+  const r = await generateText({ model, maxRetries: 0, system: promptAgente(new Date(), equipe), prompt: texto.slice(0, 6000) });
   return lerAcaoAgente(r.text);
 }

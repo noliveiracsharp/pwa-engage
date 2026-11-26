@@ -35,3 +35,14 @@ describe("convite pelo Agente", () => {
     expect(escolhaConvite("Visitei o Condomínio Aurora hoje")).toBeNull();
   });
 });
+
+describe("equipe no Agente", () => {
+  it("reunião só com colega da equipe é aceita sem cliente", () => {
+    const a = lerAcaoAgente('{"cliente":"","equipe":["Marcelo Canela"],"tipo":"reuniao","resumo":"Alinhamento","proxima_acao_em":"2026-11-26T11:00:00-03:00"}');
+    expect(a?.equipe).toEqual(["Marcelo Canela"]);
+    expect(a?.cliente).toBe("");
+  });
+  it("sem cliente e sem equipe continua sem executar", () => {
+    expect(lerAcaoAgente('{"cliente":"","equipe":[],"resumo":"r"}')).toBeNull();
+  });
+});
