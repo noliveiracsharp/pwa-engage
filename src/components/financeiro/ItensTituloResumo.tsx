@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ListTree } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { lerTabela } from "@/lib/procedures-lista";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { rowId, text, useTableRows } from "@/lib/crud";
 import { formatBRL, num, round2 } from "@/lib/orcamentos";
@@ -16,7 +17,7 @@ export function useItensPorTitulo(ids: string[]) {
     queryFn: async () => {
       const out: Row[] = [];
       for (let i = 0; i < lista.length; i += 150) {
-        const { data, error } = await supabase.from("financeiro_titulos_itens" as never).select("*").in("titulo_id", lista.slice(i, i + 150) as never).order("created_at");
+        const { data, error } = await lerTabela("financeiro_titulos_itens", (q) => q.in("titulo_id", lista.slice(i, i + 150)).order("created_at"));
         if (error) return [] as Row[];
         out.push(...((data ?? []) as Row[]));
       }

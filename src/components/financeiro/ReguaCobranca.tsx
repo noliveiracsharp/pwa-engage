@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Eye, Loader2, Mail, MessageCircle, Play, Plus, Send, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { lerTabela } from "@/lib/procedures-lista";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -73,7 +74,7 @@ export function ReguaCobranca({ canEdit }: { canEdit: boolean }) {
       const { data: emp, error } = await supabase.rpc("cobranca_minha_empresa" as never);
       if (error) { setSemScript(true); return; }
       setEmpresaId(emp as unknown as string);
-      const { data } = await supabase.from("cobranca_regua" as never).select("*").maybeSingle();
+      const { data } = await lerTabela("cobranca_regua", (q) => q.maybeSingle());
       setCfg({ ...PADRAO, ...((data as unknown as Partial<Cfg>) ?? {}) });
       const { data: s } = await supabase.rpc("cobranca_segredos_resumo" as never);
       if (s) setSegredos(s as never);
@@ -278,7 +279,7 @@ function Auditoria() {
 
   useEffect(() => {
     void (async () => {
-      const { data } = await supabase.from("cobranca_envios" as never).select("*").order("enviado_em", { ascending: false }).limit(300);
+      const { data } = await lerTabela("cobranca_envios", (q) => q.order("enviado_em", { ascending: false }).limit(300));
       const env = (data ?? []) as Envio[];
       setEnvios(env);
       const ids = [...new Set(env.map((e) => e.titulo_id))];

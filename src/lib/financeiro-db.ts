@@ -1,5 +1,6 @@
 import { textoDetalhe } from "@/lib/orcamentos";
 import { supabase } from "@/integrations/supabase/client";
+import { lerTabela } from "@/lib/procedures-lista";
 import type { NovoTitulo, OrigemTitulo } from "@/lib/financeiro";
 import type { Row } from "@/lib/row";
 import { linhasDoTitulo, valoresFiscaisDoTitulo, type FonteRateio } from "@/lib/rateio";
@@ -64,7 +65,7 @@ async function classificacaoDosItens(ids: string[]) {
   const m = new Map<string, { centro: string | null; conta: string | null; nome: string }>();
   const unicos = [...new Set(ids.filter(Boolean))];
   if (!unicos.length) return m;
-  const { data, error } = await supabase.from("itens").select("*").in("id", unicos);
+  const { data, error } = await lerTabela("itens", (q) => q.in("id", unicos));
   if (error) throw error;
   for (const r of (data ?? []) as Row[]) m.set(String(r["id"]), {
     centro: (r["centro_custo_id"] as string) || null, conta: (r["plano_contas_id"] as string) || null,
@@ -90,7 +91,7 @@ export async function fontesDaOferta(itens: Row[]): Promise<FonteRateio[]> {
 
 /** Fontes de rateio dos itens de um pedido de compra. */
 export async function fontesDoPedido(pedidoId: string): Promise<FonteRateio[]> {
-  const { data, error } = await supabase.from("pedidos_compra_itens").select("*").eq("pedido_id", pedidoId);
+  const { data, error } = await lerTabela("pedidos_compra_itens", (q) => q.eq("pedido_id", pedidoId));
   if (error) throw error;
   const itens = (data ?? []) as Row[];
   const cls = await classificacaoDosItens(itens.map((i) => String(i["item_id"] ?? "")));
@@ -106,7 +107,7 @@ export async function fontesDoPedido(pedidoId: string): Promise<FonteRateio[]> {
 
 /** Itens gravados de uma Oferta (natureza, total e pagador de cada um). */
 export async function itensDaOferta(orcamentoId: string) {
-  const { data, error } = await supabase.from("orcamento_itens").select("*").eq("orcamento_id", orcamentoId);
+  const { data, error } = await lerTabela("orcamento_itens", (q) => q.eq("orcamento_id", orcamentoId));
   if (error) throw error;
   return (data ?? []) as Row[];
 }

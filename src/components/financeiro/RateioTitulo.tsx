@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Pencil, Plus, Split, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { lerTabela } from "@/lib/procedures-lista";
 import { SearchSelect } from "@/components/data-table/SearchSelect";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,7 +48,7 @@ export function RateioTitulo({ tituloId, empresaId, valorTitulo, readOnly, tipoT
   const q = useQuery({
     queryKey: chave,
     queryFn: async () => {
-      const { data, error } = await supabase.from("financeiro_titulos_itens" as never).select("*").eq("titulo_id", tituloId).order("created_at");
+      const { data, error } = await lerTabela("financeiro_titulos_itens", (q) => q.eq("titulo_id", tituloId).order("created_at"));
       if (error) return { ok: false, rows: [] as Row[] };
       return { ok: true, rows: (data ?? []) as Row[] };
     },

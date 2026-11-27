@@ -48,13 +48,14 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UploadInfo } from "@/components/ui/upload-info";
 import { supabase } from "@/integrations/supabase/client";
+import { lerTabela } from "@/lib/procedures-lista";
 import { useFinanceiroRpc } from "@/lib/financeiro-rpc";
 
 /** Copia os itens (rateio) de um título para outros da mesma série, proporcional ao valor de cada um. */
 async function replicarItensTitulo(origemId: string, destinos: string[]) {
   const ids = [...new Set(destinos)].filter((id) => id && id !== origemId);
   if (!ids.length) return;
-  const { data: itens, error } = await supabase.from("financeiro_titulos_itens" as never).select("*").eq("titulo_id", origemId);
+  const { data: itens, error } = await lerTabela("financeiro_titulos_itens", (q) => q.eq("titulo_id", origemId));
   if (error || !itens?.length) return;
   const linhas = itens as Row[];
   const { data: tits, error: e1 } = await supabase.from("financeiro_titulos").select("id,valor").in("id", [origemId, ...ids] as never);
@@ -481,7 +482,7 @@ function Titulos({ tipo, perms }: { tipo: TipoTitulo; perms: Perms }) {
     if (alcance !== "atual") {
       const series = [...new Set(itens.map((t) => text(t["origem_id"])).filter(Boolean))];
       if (series.length) {
-        const { data, error } = await supabase.from("financeiro_titulos").select("*").eq("tipo", tipo).in("origem_id", series);
+        const { data, error } = await lerTabela("financeiro_titulos", (q) => q.eq("tipo", tipo).in("origem_id", series));
         if (error) return void toast.error(erroFinanceiro(error));
         for (const x of (data ?? []) as Row[]) {
           if (alcance === "seguintes" && (text(x["vencimento"]) < text(fat["vencimento"]) || x["status"] === "pago")) continue;
@@ -549,9 +550,10 @@ function Titulos({ tipo, perms }: { tipo: TipoTitulo; perms: Perms }) {
     const id = text(rowId(t));
     if (escopo === "atual" || !ehRecorrente(t)) return [id];
     const oferta = t["origem_tipo"] === "oferta";
-    let q = supabase.from("financeiro_titulos").select("*").eq("origem_tipo", oferta ? "oferta" : "manual").eq("tipo", tipo).eq("empresa_id", text(t["empresa_id"]));
-    q = t["origem_id"] ? q.eq("origem_id", text(t["origem_id"])) : q.is("origem_id", null);
-    const { data, error } = await q;
+    const { data, error } = await lerTabela("financeiro_titulos", (q) => {
+      const b = q.eq("origem_tipo", oferta ? "oferta" : "manual").eq("tipo", tipo).eq("empresa_id", text(t["empresa_id"]));
+      return t["origem_id"] ? b.eq("origem_id", text(t["origem_id"])) : b.is("origem_id", null);
+    });
     if (error) throw error;
     const todas = (data ?? []) as Row[];
     const irmas = oferta ? parcelasDaOferta(t, todas) : t["origem_id"] ? todas : parcelasLegadas(t, todas);
@@ -1217,8 +1219,8 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
   useEffect(() => {
     if (!registro || registro["origem_tipo"] !== "oferta" || !registro["origem_id"]) return;
     let vivo = true;
-    void supabase.from("financeiro_titulos").select("*").eq("origem_tipo", "oferta").eq("origem_id", text(registro["origem_id"]))
-      .eq("tipo", tipo).eq("empresa_id", text(registro["empresa_id"]))
+    void lerTabela("financeiro_titulos", (q) => q.eq("origem_tipo", "oferta").eq("origem_id", text(registro["origem_id"]))
+      .eq("tipo", tipo).eq("empresa_id", text(registro["empresa_id"])))
       .then(({ data }) => { if (vivo) setIrmasOferta(parcelasDaOferta(registro, (data ?? []) as Row[])); });
     return () => { vivo = false; };
   }, [registro, tipo]);
@@ -1311,9 +1313,10 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
     if (!temSerie || !registro) return;
     let vivo = true;
     (async () => {
-      let q = supabase.from("financeiro_titulos").select("*").eq("origem_tipo", "manual").eq("tipo", tipo).eq("empresa_id", text(registro["empresa_id"]));
-      q = registro["origem_id"] ? q.eq("origem_id", text(registro["origem_id"])) : q.is("origem_id", null);
-      const { data } = await q;
+      const { data } = await lerTabela("financeiro_titulos", (q) => {
+        const b = q.eq("origem_tipo", "manual").eq("tipo", tipo).eq("empresa_id", text(registro["empresa_id"]));
+        return registro["origem_id"] ? b.eq("origem_id", text(registro["origem_id"])) : b.is("origem_id", null);
+      });
       let l = (data ?? []) as Row[];
       if (!registro["origem_id"]) l = parcelasLegadas(registro, l);
       l.sort((a, b) => text(a["vencimento"]).localeCompare(text(b["vencimento"])));
@@ -1341,13 +1344,13 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
     const reg = registro!;
     const serieId = text(reg["origem_id"]);
     if (serieId) {
-      const { data, error } = await supabase.from("financeiro_titulos").select("*").eq("origem_tipo", "manual").eq("origem_id", serieId)
-        .eq("empresa_id", text(reg["empresa_id"])).eq("tipo", tipo);
+      const { data, error } = await lerTabela("financeiro_titulos", (q) => q.eq("origem_tipo", "manual").eq("origem_id", serieId)
+        .eq("empresa_id", text(reg["empresa_id"])).eq("tipo", tipo));
       if (error) throw error;
       return (data ?? []) as Row[];
     }
-    const { data, error } = await supabase.from("financeiro_titulos").select("*").eq("origem_tipo", "manual").is("origem_id", null)
-      .eq("empresa_id", text(reg["empresa_id"])).eq("tipo", tipo);
+    const { data, error } = await lerTabela("financeiro_titulos", (q) => q.eq("origem_tipo", "manual").is("origem_id", null)
+      .eq("empresa_id", text(reg["empresa_id"])).eq("tipo", tipo));
     if (error) throw error;
     const irmas = parcelasLegadas(reg, (data ?? []) as Row[]);
     const novoId = crypto.randomUUID();
@@ -1499,9 +1502,9 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
           let serieId = text(reg["origem_id"]);
           if (!serieId) {
             // Série antiga: vincula as parcelas irmãs a um identificador novo antes de editar.
-            const { data: irmas, error: e1 } = await supabase.from("financeiro_titulos").select("*")
+            const { data: irmas, error: e1 } = await lerTabela("financeiro_titulos", (q) => q
               .eq("origem_tipo", "manual").is("origem_id", null)
-              .eq("empresa_id", text(reg["empresa_id"])).eq("tipo", tipo);
+              .eq("empresa_id", text(reg["empresa_id"])).eq("tipo", tipo));
             if (e1) throw e1;
             const ids = parcelasLegadas(reg, (irmas ?? []) as Row[]).map((t) => text(t["id"]));
             serieId = crypto.randomUUID();
@@ -1509,9 +1512,9 @@ function TituloSheet({ tipo, registro, modelo, presetCartao, parceiros, cartoes,
             if (e2) throw e2;
             reg = { ...reg, origem_id: serieId };
           }
-          const { data, error: leituraError } = await supabase.from("financeiro_titulos").select("*")
+          const { data, error: leituraError } = await lerTabela("financeiro_titulos", (q) => q
             .eq("origem_tipo", "manual").eq("origem_id", serieId)
-            .eq("empresa_id", text(reg["empresa_id"])).eq("tipo", tipo);
+            .eq("empresa_id", text(reg["empresa_id"])).eq("tipo", tipo));
           if (leituraError) throw leituraError;
           const titulos = (data ?? []) as Row[];
           const atual = titulos.find((t) => t["id"] === reg["id"]);
