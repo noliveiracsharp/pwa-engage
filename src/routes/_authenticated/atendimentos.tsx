@@ -1,7 +1,7 @@
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { useKanbansPermitidos } from "@/hooks/useKanbansPermitidos";
 import { ProtocoloBadge } from "@/components/atendimentos/ProtocoloBadge";
-import { lazy, Suspense, type ComponentType, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, type ComponentType, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bot, MessageSquare, PanelLeftClose, PanelLeftOpen, Plus, Search, Users } from "lucide-react";
@@ -321,11 +321,17 @@ function AtendimentosChat({ comAbas = false }: { comAbas?: boolean }) {
   }, [atendimentos, etapas, kanbans, isMaster, usuarioId, instFiltro, depFiltro, rapido, sub, busca, pessoasMap, participantes, ultimas, visiveis, meuParticipa]);
 
   const ativo = atendimentos.find((a) => text(rowId(a)) === id);
+  // Só tira da tela quando o atendimento aberto ACABOU de ser encerrado; abrir um já encerrado (busca/Kanban) deve funcionar.
+  const estadoAnterior = useRef<{ id: string; encerrado: boolean } | null>(null);
   useEffect(() => {
-    if (ativo && isEncerrado(ativo, etapas) && !["encerrados", "historico", "todos"].includes(rapido)) {
+    if (!ativo) return;
+    const atual = { id: text(rowId(ativo)), encerrado: isEncerrado(ativo, etapas) };
+    const ant = estadoAnterior.current;
+    estadoAnterior.current = atual;
+    if (ant && ant.id === atual.id && !ant.encerrado && atual.encerrado) {
       void navigate({ to: "/atendimentos", search: {}, replace: true });
     }
-  }, [ativo, etapas, rapido, navigate]);
+  }, [ativo, etapas, navigate]);
   useEffect(() => {
     if (typeof window !== "undefined" && window.innerWidth < 1024) setPainel(false);
   }, []);
