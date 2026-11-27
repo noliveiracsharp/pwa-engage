@@ -507,7 +507,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
     );
     if (ok && usuarioId !== undefined) {
       await supabase.from("atendimentos_participantes").insert({ atendimento_id: id, usuario_id: usuarioId });
-      qc.invalidateQueries({ queryKey: ["table", "atendimentos_participantes"] });
+      qc.invalidateQueries({ queryKey: ["table", "atendimentos_participantes"] }); void qc.invalidateQueries({ queryKey: ["table", "atendimentos", "painel"] });
     }
   }
 
@@ -853,7 +853,7 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
             if (ok && trocouDep && usuarioId !== undefined) {
               // Quem transferiu continua acompanhando como participante; a nova equipe assume pela fila.
               await supabase.from("atendimentos_participantes").insert({ atendimento_id: id, usuario_id: usuarioId });
-              qc.invalidateQueries({ queryKey: ["table", "atendimentos_participantes"] });
+              qc.invalidateQueries({ queryKey: ["table", "atendimentos_participantes"] }); void qc.invalidateQueries({ queryKey: ["table", "atendimentos", "painel"] });
               const destino = text(pick(kanbans.find((k) => text(rowId(k)) === kanbanId), ["nome", "descricao"]));
               await registrarInterna(`↪️ ${autores.get(text(usuarioId)) || "Atendente"} transferiu o atendimento para ${destino}.`);
             }

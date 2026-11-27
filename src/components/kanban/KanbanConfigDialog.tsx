@@ -197,6 +197,7 @@ export function KanbanConfigDialog({
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["table", "kanban_nome"] });
     qc.invalidateQueries({ queryKey: ["table", "kanban_etapas"] });
+    qc.invalidateQueries({ queryKey: ["atendimentos-apoio"] });
     qc.invalidateQueries({ queryKey: ["kanban-vinculo"] });
     qc.invalidateQueries({ queryKey: ["kanban-vinculo-cfg"] });
   };

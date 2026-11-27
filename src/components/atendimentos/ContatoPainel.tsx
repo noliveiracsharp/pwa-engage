@@ -63,13 +63,13 @@ export function ContatoPainel({ atendimento, pessoa, usuarios, participantes, et
   async function convidar(usuarioId: string) {
     const { error } = await supabase.from("atendimentos_participantes").insert({ atendimento_id: atId, usuario_id: usuarioId });
     if (error) { toast.error(error.message); return; }
-    qc.invalidateQueries({ queryKey: ["table", "atendimentos_participantes"] });
+    qc.invalidateQueries({ queryKey: ["table", "atendimentos_participantes"] }); void qc.invalidateQueries({ queryKey: ["table", "atendimentos", "painel"] });
     toast.success("Atendente convidado.");
   }
   async function removerPart(usuarioId: string) {
     const { error } = await supabase.from("atendimentos_participantes").delete().eq("atendimento_id", atId).eq("usuario_id", usuarioId);
     if (error) { toast.error(error.message); return; }
-    qc.invalidateQueries({ queryKey: ["table", "atendimentos_participantes"] });
+    qc.invalidateQueries({ queryKey: ["table", "atendimentos_participantes"] }); void qc.invalidateQueries({ queryKey: ["table", "atendimentos", "painel"] });
   }
 
   const minhasEt = new Set(
@@ -81,7 +81,7 @@ export function ContatoPainel({ atendimento, pessoa, usuarios, participantes, et
       : supabase.from("atendimentos_etiqueta").insert({ atendimento_id: atId, etiqueta_id: etId });
     const { error } = await q;
     if (error) { toast.error(error.message); return; }
-    qc.invalidateQueries({ queryKey: ["table", "atendimentos_etiqueta"] });
+    qc.invalidateQueries({ queryKey: ["table", "atendimentos_etiqueta"] }); void qc.invalidateQueries({ queryKey: ["table", "atendimentos", "painel"] });
   }
 
   const kanban = kanbans.find((k) => text(rowId(k)) === text(pick(atendimento, A.kanban)));
@@ -145,7 +145,7 @@ export function ContatoPainel({ atendimento, pessoa, usuarios, participantes, et
     if (error) { toast.error(error.message); return; }
     if (responsavel && !meusPart.some((p) => text(p["usuario_id"]) === responsavel)) {
       await supabase.from("atendimentos_participantes").insert({ atendimento_id: atId, usuario_id: responsavel });
-      void qc.invalidateQueries({ queryKey: ["table", "atendimentos_participantes"] });
+      void qc.invalidateQueries({ queryKey: ["table", "atendimentos_participantes"] }); void qc.invalidateQueries({ queryKey: ["table", "atendimentos", "painel"] });
     }
     await notaInterna(`🔀 Atendimento transferido${responsavel ? ` de ${de}` : ""} para ${para}.`);
     void qc.invalidateQueries({ queryKey: ["table", "atendimentos"] });
@@ -162,7 +162,7 @@ export function ContatoPainel({ atendimento, pessoa, usuarios, participantes, et
     if (error) { toast.error(error.message); return; }
     if (responsavel && !meusPart.some((p) => text(p["usuario_id"]) === responsavel)) {
       await supabase.from("atendimentos_participantes").insert({ atendimento_id: atId, usuario_id: responsavel });
-      void qc.invalidateQueries({ queryKey: ["table", "atendimentos_participantes"] });
+      void qc.invalidateQueries({ queryKey: ["table", "atendimentos_participantes"] }); void qc.invalidateQueries({ queryKey: ["table", "atendimentos", "painel"] });
     }
     const nomeKb = text(pick(destino, ["nome", "descricao"]));
     await notaInterna(`🔀 Atendimento transferido de ${kanban ? text(pick(kanban, ["nome", "descricao"])) : "sem departamento"} para ${nomeKb}.`);

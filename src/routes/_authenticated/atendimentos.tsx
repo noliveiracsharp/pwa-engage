@@ -57,17 +57,6 @@ const SUBS: { key: Sub; label: string }[] = [
   { key: "naolidas", label: "Não lidas" },
   { key: "grupos", label: "Grupos" },
 ];
-const DIAS_LISTA = 90;
-/** Busca linhas cujo `col` está em `ids`, em lotes (evita URLs gigantes e downloads da tabela inteira). */
-async function porIds(table: string, col: string, ids: string[], select = "*"): Promise<Row[]> {
-  const out: Row[] = [];
-  const lotes: string[][] = [];
-  for (let i = 0; i < ids.length; i += 150) lotes.push(ids.slice(i, i + 150));
-  const res = await Promise.all(lotes.map((l) => supabase.from(table).select(select).in(col, l)));
-  for (const r of res) { if (r.error) throw r.error; out.push(...((r.data ?? []) as unknown as Row[])); }
-  return out;
-}
-const chaveIds = (ids: string[]) => { let h = 0; const s = [...ids].sort().join(","); for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return `${ids.length}:${h}`; };
 const naoLidasDe = (a: Row) => { const c = A.naoLidas.find((k) => k in a); return c ? Number(a[c]) || 0 : 0; };
 
 const byId = (rows: Row[]) => new Map(rows.map((r) => [text(rowId(r)), r]));
@@ -106,62 +95,45 @@ function AtendimentosChat({ comAbas = false }: { comAbas?: boolean }) {
   const usuarioId = usuario ? text(rowId(usuario)) : "";
   const empresaId = empresa ? text(rowId(empresa)) : "";
 
-  // Só conversas recentes (últimos dias) — o histórico inteiro deixava a entrada lenta.
-  const filtroRecentes = useMemo(() => {
-    const d = new Date(Date.now() - DIAS_LISTA * 864e5).toISOString();
-    return { key: `recentes-${d.slice(0, 10)}`, apply: (q: any) => q.gte("created_at", d) }; // eslint-disable-line @typescript-eslint/no-explicit-any
-  }, []);
-  // Painel em 1 chamada (função fn_atendimentos_painel): conversa + contato + última mensagem já juntos.
-  const { data: painelRpc, isLoading: carregandoRpc } = useQuery({
+  // Tela inteira por procedures (sem consultas diretas): conversas + cadastros de apoio.
+  const { data: painelRpc = [], isLoading, error: erroPainel } = useQuery({
     queryKey: ["table", "atendimentos", "painel", empresaId || "todas"],
     staleTime: 30_000,
-    queryFn: async (): Promise<Row[] | null> => {
-      // Só o que está em andamento (ativos, aguardando, IA); encerrados vêm pela busca.
-      const at = await supabase.rpc("fn_atendimentos_ativos" as never, { p_empresa_id: empresaId || null } as never);
-      if (!at.error) return (at.data ?? []) as unknown as Row[];
-      const { data, error } = await supabase.rpc("fn_atendimentos_painel" as never, { p_empresa_id: empresaId || null, p_dias: DIAS_LISTA } as never);
-      if (error) return null; // função ainda não criada: usa o caminho antigo
-      return (data ?? []) as unknown as Row[];
+    queryFn: async (): Promise<Row[]> => {
+      const { data, error } = await supabase.rpc("fn_atendimentos_painel_v2" as never, { p_empresa_id: empresaId || null } as never);
+      if (error) throw error;
+      return (Array.isArray(data) ? data : []) as unknown as Row[];
     },
   });
-  const usaRpc = Array.isArray(painelRpc);
-  const { data: atendLegado = [], isLoading: carregandoLeg } = useTableRows("atendimentos", painelRpc === null, undefined, filtroRecentes);
+  const { data: apoio, error: erroApoio } = useQuery({
+    queryKey: ["atendimentos-apoio", empresaId || "todas"],
+    staleTime: 60_000,
+    queryFn: async (): Promise<Record<string, Row[]>> => {
+      const { data, error } = await supabase.rpc("fn_atendimentos_apoio" as never, { p_empresa_id: empresaId || null } as never);
+      if (error) throw error;
+      return (data ?? {}) as Record<string, Row[]>;
+    },
+  });
+  const erroTela = erroPainel ?? erroApoio;
   const [escolhidos, setEscolhidos] = useState<Row[]>([]);
   const atendimentos = useMemo(() => {
-    const base = usaRpc ? painelRpc : atendLegado;
-    const ids = new Set(base.map((a) => text(rowId(a))));
-    return [...base, ...escolhidos.filter((e) => !ids.has(text(rowId(e))))];
-  }, [usaRpc, painelRpc, atendLegado, escolhidos]);
-  const isLoading = carregandoRpc || (!usaRpc && carregandoLeg);
-  const atIds = useMemo(() => atendimentos.map((a) => text(rowId(a))).filter(Boolean), [atendimentos]);
-  const pesIds = useMemo(() => [...new Set(atendimentos.map((a) => text(pick(a, A.pessoa))).filter(Boolean))], [atendimentos]);
+    const ids = new Set(painelRpc.map((a) => text(rowId(a))));
+    return [...painelRpc, ...escolhidos.filter((e) => !ids.has(text(rowId(e))))];
+  }, [painelRpc, escolhidos]);
   const [novoAberto, setNovoAberto] = useState(false);
-  // Contatos: só os das conversas carregadas; a tabela inteira só ao abrir "Iniciar Atendimento".
-  const { data: pessoasLista = [] } = useQuery({
-    queryKey: ["table", "pessoas", "ids", chaveIds(pesIds)],
-    enabled: !usaRpc && pesIds.length > 0,
-    staleTime: 60_000,
-    queryFn: () => porIds("pessoas", "id", pesIds),
-  });
   const { data: pessoasTodas = [] } = useTableRows("pessoas", novoAberto);
-  const pessoasRpc = useMemo(() => usaRpc ? atendimentos.map((a) => a["_pessoa"] as Row | null).filter((p): p is Row => !!p) : [], [usaRpc, atendimentos]);
-  const pessoas = novoAberto && pessoasTodas.length ? pessoasTodas : usaRpc ? pessoasRpc : pessoasLista;
-  const { data: instancias = [] } = useTableRows("empresas_instancias");
-  const { data: allKanbans = [] } = useTableRows("kanban_nome");
-  const { data: etapas = [] } = useTableRows("kanban_etapas");
-  const { data: etiquetas = [] } = useTableRows("etiquetas");
-  const { data: vincEt = [] } = useQuery({
-    queryKey: ["table", "atendimentos_etiqueta", "ids", chaveIds(atIds)],
-    enabled: atIds.length > 0,
-    queryFn: () => porIds("atendimentos_etiqueta", "atendimento_id", atIds),
-  });
-  const { data: participantes = [] } = useQuery({
-    queryKey: ["table", "atendimentos_participantes", "ids", chaveIds(atIds)],
-    enabled: atIds.length > 0,
-    queryFn: () => porIds("atendimentos_participantes", "atendimento_id", atIds),
-  });
-  const { data: usuarios = [] } = useTableRows("usuarios");
-  const { data: notas = [] } = useTableRows("empresas_notasrapidas");
+  const pessoasRpc = useMemo(() => atendimentos.map((a) => a["_pessoa"] as Row | null).filter((p): p is Row => !!p), [atendimentos]);
+  const pessoas = novoAberto && pessoasTodas.length ? pessoasTodas : pessoasRpc;
+  const instancias = useMemo(() => apoio?.["instancias"] ?? [], [apoio]);
+  const allKanbans = useMemo(() => apoio?.["kanbans"] ?? [], [apoio]);
+  const etapas = useMemo(() => apoio?.["etapas"] ?? [], [apoio]);
+  const etiquetas = useMemo(() => apoio?.["etiquetas"] ?? [], [apoio]);
+  const usuarios = useMemo(() => apoio?.["usuarios"] ?? [], [apoio]);
+  const notas = useMemo(() => apoio?.["notas"] ?? [], [apoio]);
+  const vinculos = (campo: "_etiquetas" | "_participantes", chave: string): Row[] =>
+    atendimentos.flatMap((a) => (Array.isArray(a[campo]) ? (a[campo] as unknown[]) : []).map((v) => ({ atendimento_id: rowId(a), [chave]: v })));
+  const vincEt = useMemo(() => vinculos("_etiquetas", "etiqueta_id"), [atendimentos]); // eslint-disable-line react-hooks/exhaustive-deps
+  const participantes = useMemo(() => vinculos("_participantes", "usuario_id"), [atendimentos]); // eslint-disable-line react-hooks/exhaustive-deps
   const qcLista = useQueryClient();
   // Lista ao vivo: novos chamados e transferências aparecem sem recarregar.
   useEffect(() => {
@@ -191,28 +163,11 @@ function AtendimentosChat({ comAbas = false }: { comAbas?: boolean }) {
     },
   });
 
-  // Última mensagem de cada conversa.
-  const { data: ultimasLeg = new Map<string, Row>() } = useQuery({
-    queryKey: ["table", "atendimentos_mensagem", "ultimas"],
-    enabled: painelRpc === null,
-    queryFn: async () => {
-      let { data, error } = await supabase.from("atendimentos_mensagem").select("atendimento_id, mensagem, msg_interna, usuario_id, remetente_tipo, created_at").eq("oculta_para_atendente", false).order("created_at", { ascending: false }).limit(800);
-      if (error) ({ data } = await supabase.from("atendimentos_mensagem").select("*").eq("oculta_para_atendente", false).order("created_at", { ascending: false }).limit(800));
-      const map = new Map<string, Row>();
-      for (const m of (data ?? []) as Row[]) {
-        const k = text(pick(m, M.atendimento));
-        if (!map.has(k)) map.set(k, m);
-      }
-      return map;
-    },
-  });
-
   const ultimas = useMemo(() => {
-    if (!usaRpc) return ultimasLeg;
     const map = new Map<string, Row>();
     for (const a of atendimentos) { const m = a["_ultima"] as Row | null; if (m) map.set(text(rowId(a)), m); }
     return map;
-  }, [usaRpc, atendimentos, ultimasLeg]);
+  }, [atendimentos]);
   const acessoKb = useKanbansPermitidos();
   const gerencial = usePagePermissions("/atendimentos/gerencial").canRead || isMaster;
   void meusKanbans;
@@ -430,8 +385,13 @@ function AtendimentosChat({ comAbas = false }: { comAbas?: boolean }) {
           </div>
         </div>
         <div className="flex-1 overflow-y-auto">
+          {erroTela && (
+            <p role="alert" className="m-3 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
+              Não foi possível carregar os atendimentos. Rode o script conectcon-atendimentos-tela-procedures.sql no SQL Editor e recarregue a página.
+            </p>
+          )}
           {isLoading && <p className="p-6 text-center text-sm text-muted-foreground">Carregando conversas…</p>}
-          {!isLoading && lista.length === 0 && <p className="p-6 text-center text-sm text-muted-foreground">Nenhuma conversa encontrada.</p>}
+          {!isLoading && !erroTela && lista.length === 0 && <p className="p-6 text-center text-sm text-muted-foreground">Nenhuma conversa encontrada.</p>}
           {lista.map(({ a, ult, quando }) => {
             const aid = text(rowId(a));
             const p = pessoasMap.get(text(pick(a, A.pessoa)));
