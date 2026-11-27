@@ -106,3 +106,8 @@
 - [x] Corrigir leitura de variáveis JSON e encaminhamento para quadro/etapa com gravação de campos em lote.
 - [x] Validar regressões (37 testes e build OK) e entregar SQL para ativação no banco próprio.
 - [ ] Validar no WhatsApp real — aguarda executar o SQL complementar e publicar a aplicação.
+
+## Atendimentos — tela só por procedures
+- [x] Lista e cadastros da tela em duas procedures (fn_atendimentos_painel_v2, fn_atendimentos_apoio); teste PGlite aprovado.
+- [ ] Validar velocidade real — aguarda rodar conectcon-atendimentos-tela-procedures.sql e publicar.
+- [ ] Eliminar `select *` no restante do sistema (≈117 arquivos + 94 telas via useTableRows) — aguarda o usuário definir a ordem dos módulos.
