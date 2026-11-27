@@ -58,3 +58,4 @@
 - Receipt OCR: one reader (comprovante-ocr.server.ts) for Reembolsos and the WhatsApp Agent.
 - Atomic flow RPCs prevent partial handoffs.
 - Table reads use `fn_lista_<tabela>`/`fn_kanban_*` INVOKER RPCs (src/lib/procedures-lista.ts), falling back to the table until the SQL runs.
+- Flow resume: fluxo_webhook_receber resumes an execution when its flow is active OR called as a subflow by another company flow (fluxo_pode_retomar), because subflows are usually kept inactive so they don't trigger alone.
