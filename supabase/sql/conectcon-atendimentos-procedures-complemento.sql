@@ -46,14 +46,14 @@ returns jsonb language sql stable security invoker set search_path = public as $
   select jsonb_build_object(
     'instancia', (select to_jsonb(i) from public.empresas_instancias i where i.id = a.instancia_id),
     'pessoa', (select to_jsonb(p) from public.pessoas p where p.id = a.pessoas_id),
-    'csat_msg_agradecimento', (select e.csat_msg_agradecimento from public.empresas e where e.id = a.empresa_id))
+    'csat_msg_agradecimento', (select to_jsonb(e)->>'csat_msg_agradecimento' from public.empresas e where e.id = a.empresa_id))
   from public.atendimentos a where a.id = p_atendimento_id;
 $$;
 grant execute on function public.fn_atendimentos_pesquisa_contexto(uuid) to authenticated;
 
 create or replace function public.fn_empresa_csat_agradecimento(p_empresa_id uuid)
 returns text language sql stable security invoker set search_path = public as $$
-  select e.csat_msg_agradecimento from public.empresas e where e.id = p_empresa_id;
+  select to_jsonb(e)->>'csat_msg_agradecimento' from public.empresas e where e.id = p_empresa_id;
 $$;
 grant execute on function public.fn_empresa_csat_agradecimento(uuid) to authenticated;
 
