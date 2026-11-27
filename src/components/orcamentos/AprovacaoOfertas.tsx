@@ -17,6 +17,7 @@ import { pick, type Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
 import { aprovadoresDe, REGRAS_QUORUM, type RegraQuorum, type VotoAprovacao } from "@/lib/aprovacao-compras";
 import { ehAprovadorOferta, situacaoOferta, type ConfigAprovacaoOferta, type DadosOferta, type SituacaoOferta } from "@/lib/aprovacao-ofertas";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 const SQL_MSG = "Rode o script atendeai-workflow-ofertas.sql no banco.";
 const faltaTabela = (m: string) => /ofertas_workflow|orcamento_aprovacoes|aprovacao_status|does not exist|schema cache/i.test(m);
@@ -42,7 +43,7 @@ export function useConfigAprovacaoOferta() {
     queryKey: ["ofertas-workflow", empresaId],
     enabled: empresaId != null,
     queryFn: async () => {
-      const { data, error } = await supabase.from("ofertas_workflow_config" as never).select("*").eq("empresa_id", empresaId as never).maybeSingle();
+      const { data, error } = await tabelaLeitura("ofertas_workflow_config").eq("empresa_id", empresaId as never).maybeSingle();
       if (error) return null;
       return paraConfig(data as Row | null);
     },
@@ -54,7 +55,7 @@ function useUsuarios() {
   return useQuery({
     queryKey: ["ofertas-workflow", "usuarios", empresaId],
     queryFn: async () => {
-      let q: any = supabase.from("usuarios").select("*");
+      let q: any = tabelaLeitura("usuarios");
       if (empresaId != null) q = q.eq("empresa_id", empresaId);
       const { data } = await q.limit(1000);
       return ((data ?? []) as Row[])
@@ -181,7 +182,7 @@ export function PainelAprovacaoOferta({ orcamentoId, dados, statusAtual }: { orc
     queryKey: ["ofertas-workflow", "votos", orcamentoId],
     enabled: Boolean(orcamentoId),
     queryFn: async () => {
-      const { data, error } = await supabase.from("orcamento_aprovacoes" as never).select("*").eq("orcamento_id", orcamentoId as never).order("created_at", { ascending: true });
+      const { data, error } = await tabelaLeitura("orcamento_aprovacoes").eq("orcamento_id", orcamentoId as never).order("created_at", { ascending: true });
       return error ? [] : ((data ?? []) as Row[]);
     },
   });

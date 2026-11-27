@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { pick, type Row } from "@/lib/row";
 import { tabelaDoKanban } from "@/lib/orcamento-kanban";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 export type OrigemHandoff = "orcamentos" | "atendimentos";
 
@@ -53,7 +54,7 @@ async function inserirTolerante(tabela: string, payload: Row) {
  */
 export async function executarHandoff(etapaId: string, origem: Row, tipo: OrigemHandoff): Promise<{ ok: boolean; msg: string } | null> {
   if (!etapaId) return null;
-  const { data: etapa } = await supabase.from("kanban_etapas").select("*").eq("id", etapaId).maybeSingle();
+  const { data: etapa } = await tabelaLeitura("kanban_etapas").eq("id", etapaId).maybeSingle();
   const destino = destinoDaEtapa(etapa as Row | null);
   if (!destino) return null;
   const tabela = (await tabelaDoKanban(destino.kanban)) ?? "atendimentos";

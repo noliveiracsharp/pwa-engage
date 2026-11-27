@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import type { Row } from "@/lib/row";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 export function KanbanPerfisAcesso({ kanbanId, empresaId }: { kanbanId: string; empresaId: unknown }) {
   const qc = useQueryClient();
@@ -16,7 +17,7 @@ export function KanbanPerfisAcesso({ kanbanId, empresaId }: { kanbanId: string; 
   const { data: perfis = [] } = useQuery({
     queryKey: ["perfis-kanban-lista", String(empresaId ?? "")],
     queryFn: async () => {
-      const { data, error } = await supabase.from("perfil").select("*");
+      const { data, error } = await tabelaLeitura("perfil");
       if (error) throw error;
       return ((data ?? []) as Row[])
         .filter((p) => Number(p["ordem"] ?? 1) !== 0)

@@ -4,6 +4,7 @@ import { pick, type Row } from "@/lib/row";
 import { useAuth } from "@/hooks/useAuth";
 import { useTableRows } from "@/lib/crud";
 import { SUBMENU_REGISTRY } from "@/lib/submenu-registry";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 // Só caminhos que são telas de verdade podem substituir a rota de um módulo sem rota (evita 404).
 const ROTAS_TELA = new Set(Object.keys(SUBMENU_REGISTRY).filter((p) => !/^\/(orcamentos|cotacoes)\//.test(p)));
@@ -86,9 +87,7 @@ export function useMenu() {
           .sort((a, b) => a.order - b.order);
         return all.length > 0 ? all : FALLBACK;
       }
-      const { data, error } = await supabase
-        .from("vw_menu_usuario_perfil")
-        .select("*")
+      const { data, error } = await tabelaLeitura("vw_menu_usuario_perfil")
         .eq("perfil_id", perfilId as string)
         .order("ordem_hierarquia");
       if (error || !data || data.length === 0) return DASHBOARD_ONLY;
@@ -178,7 +177,7 @@ export function useSubmenuAbas(pathPai: string) {
     queryKey: ["table", "menu", "submenu-abas", pathPai, String(perfilId ?? ""), isMaster],
     enabled: !isMaster && perfilId !== undefined && filhas.length > 0,
     queryFn: async () => {
-      const { data } = await supabase.from("vw_menu_usuario_perfil").select("*").eq("perfil_id", perfilId as string);
+      const { data } = await tabelaLeitura("vw_menu_usuario_perfil").eq("perfil_id", perfilId as string);
       return new Set(
         ((data ?? []) as Row[])
           .filter((r) => asBool(r["can_read"]))

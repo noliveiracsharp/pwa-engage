@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Row } from "@/lib/row";
 import { variaveisPersonalizadasAtivas } from "@/lib/variaveis";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 /** Modelos de mensagens automáticas de WhatsApp. Cada chave tem um texto padrão e variáveis {assim}. */
 export type ModeloDef = { chave: string; nome: string; variaveis: string[]; padrao: string };
@@ -51,7 +52,7 @@ export function useModelosMensagem(empresaId: string | number | undefined) {
     queryKey: ["mensagens_modelos", String(empresaId ?? "")],
     enabled: !!empresaId,
     queryFn: async () => {
-      const { data, error } = await supabase.from("mensagens_modelos" as never).select("*").eq("empresa_id", String(empresaId));
+      const { data, error } = await tabelaLeitura("mensagens_modelos").eq("empresa_id", String(empresaId));
       if (error) return [] as Row[];
       return (data ?? []) as Row[];
     },

@@ -23,6 +23,7 @@ import { pick, type Row } from "@/lib/row";
 import {
   FREQUENCIAS, checklistDaVisita, checklistDoModelo, type ItemRoteiro, linkAtivo, prazoSla, preventivasAGerar, proximoNumeroOs, type PlanoPreventiva,
 } from "@/lib/manutencoes";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 const fmtData = (v: unknown) => (v ? new Date(`${text(v).slice(0, 10)}T12:00:00`).toLocaleDateString("pt-BR") : "—");
 const useClientes = () => {
@@ -207,7 +208,7 @@ const VAZIO_PLANO = { nome: "", parceiro_id: "", ativo_id: "", modelo_id: "", te
 
 /** Cria as OS preventivas que já chegaram na antecedência e avança cada plano. */
 export async function gerarPreventivas(empresaId: unknown): Promise<number> {
-  const { data: planos, error } = await supabase.from("manutencao_planos" as never).select("*").eq("ativo", true);
+  const { data: planos, error } = await tabelaLeitura("manutencao_planos").eq("ativo", true);
   if (error) throw error;
   const lista = (planos ?? []) as Row[];
   const pendentes = preventivasAGerar(lista.map((p) => ({

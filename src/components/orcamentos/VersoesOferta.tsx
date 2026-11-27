@@ -15,6 +15,7 @@ import { OrcamentoDocumento } from "./OrcamentoDocumento";
 import { rowId, useTableRows } from "@/lib/crud";
 import { pick } from "@/lib/row";
 import { useAuth } from "@/hooks/useAuth";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 const brl = (v: unknown) => Number(v ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -56,7 +57,7 @@ export function VersoesOferta({ orcamentoId, versaoAtual, atual, itens, readOnly
     queryKey: key,
     enabled: open,
     queryFn: async () => {
-      const { data, error } = await supabase.from("orcamento_versoes" as never).select("*").eq("orcamento_id", orcamentoId).order("versao", { ascending: false });
+      const { data, error } = await tabelaLeitura("orcamento_versoes").eq("orcamento_id", orcamentoId).order("versao", { ascending: false });
       if (error) throw error;
       return (data ?? []) as Row[];
     },

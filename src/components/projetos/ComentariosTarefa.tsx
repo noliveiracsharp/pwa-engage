@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import type { Row } from "@/lib/row";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 const T = "projetos_tarefas_comentarios";
 
@@ -17,7 +18,7 @@ export function ComentariosTarefa({ tarefaId, autorNome, usuarioId, readOnly }: 
   const { data = [], error } = useQuery({
     queryKey: key,
     queryFn: async () => {
-      const { data, error } = await supabase.from(T as never).select("*").eq("tarefa_id", tarefaId as never).order("created_at", { ascending: true });
+      const { data, error } = await tabelaLeitura(T).eq("tarefa_id", tarefaId as never).order("created_at", { ascending: true });
       if (error) throw error;
       return (data ?? []) as Row[];
     },

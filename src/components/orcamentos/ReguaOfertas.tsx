@@ -18,6 +18,7 @@ import { verificarNumeroWhatsApp } from "@/lib/ofertas-acompanhamento.functions"
 import { telefoneConsulta } from "@/lib/whatsapp-verificacao";
 import { useAuth } from "@/hooks/useAuth";
 import { type Row } from "@/lib/row";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 const SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 export function ReguaOfertas({ open, onOpenChange, canEdit, situacoes }: { open: boolean; onOpenChange: (v:boolean)=>void; canEdit:boolean; situacoes:string[] }) {
@@ -39,11 +40,11 @@ export function ReguaOfertas({ open, onOpenChange, canEdit, situacoes }: { open:
       if (!ativo) return;
       if (error || !emp) { setErro("Instalação da régua pendente ou empresa indisponível."); return; }
       setEmpresaId(String(emp));
-      const r = await supabase.from("oferta_regua").select("*").eq("empresa_id",emp).maybeSingle();
+      const r = await tabelaLeitura("oferta_regua").eq("empresa_id",emp).maybeSingle();
       if (!ativo) return;
       if (r.error) { setErro("Não foi possível carregar a régua. Confira a instalação e as permissões."); return; }
       setErro(""); setCfg(r.data ? reguaOfertaSchema.parse(r.data) : { ...REGUA_OFERTA_PADRAO, situacoes: situacoes.length ? [situacoes[0] ?? "Em andamento"] : ["Em andamento"] });
-      const h = await supabase.from("oferta_envios").select("*").eq("empresa_id",emp).order("criado_em",{ascending:false}).limit(50);
+      const h = await tabelaLeitura("oferta_envios").eq("empresa_id",emp).order("criado_em",{ascending:false}).limit(50);
       if (ativo) setHistorico(h.data ?? []);
     })().catch(() => setErro("Não foi possível carregar a régua."));
     return () => { ativo = false; };

@@ -17,6 +17,7 @@ import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 const ESTADOS = [
   { value: "ativa", label: "Ativa", cls: "bg-success text-success-foreground" },
@@ -26,7 +27,7 @@ const ESTADOS = [
 ];
 
 async function all(table: string): Promise<Row[]> {
-  const { data, error } = await supabase.from(table).select("*");
+  const { data, error } = await tabelaLeitura(table);
   if (error) throw error;
   return (data ?? []) as Row[];
 }
@@ -160,7 +161,7 @@ function AssinaturaSheet({ empresa, onClose, planos, assinatura, usuariosAtivos:
     queryKey: ["admin-ass-modulos", assId],
     enabled: Boolean(assId),
     queryFn: async () => {
-      const { data, error } = await supabase.from("empresas_assinaturas_modulos").select("*").eq("assinatura_id", assId);
+      const { data, error } = await tabelaLeitura("empresas_assinaturas_modulos").eq("assinatura_id", assId);
       if (error) throw error;
       return (data ?? []) as Row[];
     },

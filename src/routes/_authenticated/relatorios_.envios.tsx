@@ -15,6 +15,7 @@ import { pick, type Row } from "@/lib/row";
 import { hojeISO } from "@/lib/financeiro";
 import { useAudit } from "@/lib/audit";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 export const Route = createFileRoute("/_authenticated/relatorios_/envios")({
   staticData: { sitemap: false },
@@ -48,7 +49,7 @@ const inicioMes = () => { const d = new Date(); d.setDate(1); return d.toISOStri
 /** Lê uma tabela no período; tabela ausente (script não rodado) vira lista vazia. */
 async function ler(tabela: string, campoData: string, empresaId: unknown, desde: string, ate: string, extra?: (q: any) => any): Promise<Row[]> {
   try {
-    let q = db.from(tabela).select("*").gte(campoData, `${desde}T00:00:00`).lte(campoData, `${ate}T23:59:59`).order(campoData, { ascending: false }).limit(3000);
+    let q = tabelaLeitura(tabela).gte(campoData, `${desde}T00:00:00`).lte(campoData, `${ate}T23:59:59`).order(campoData, { ascending: false }).limit(3000);
     if (empresaId) q = q.eq("empresa_id", empresaId);
     if (extra) q = extra(q);
     const { data, error } = await q;

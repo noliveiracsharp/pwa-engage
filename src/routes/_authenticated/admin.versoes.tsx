@@ -21,6 +21,7 @@ import {
   STATUS_SUGESTAO, TIPO_CLASS, TIPO_LABEL, fmtData, fmtVersao, proximaVersao,
 } from "@/lib/versoes";
 import { confirmar } from "@/components/layout/DialogoGlobal";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 const db = supabase as any;
 
@@ -72,7 +73,7 @@ function useVersoes() {
   return useQuery({
     queryKey: ["sistema_versoes", "todas"],
     queryFn: async () => {
-      const { data, error } = await db.from("sistema_versoes").select("*")
+      const { data, error } = await tabelaLeitura("sistema_versoes")
         .order("major", { ascending: false }).order("minor", { ascending: false }).order("patch", { ascending: false });
       if (error) throw error;
       return (data ?? []) as Versao[];
@@ -173,7 +174,7 @@ function ItensTab() {
   const { data: itens = [] } = useQuery({
     queryKey: ["sistema_atualizacoes", "todas"],
     queryFn: async () => {
-      const { data, error } = await db.from("sistema_atualizacoes").select("*").order("data_publicacao", { ascending: false }).order("ordem");
+      const { data, error } = await tabelaLeitura("sistema_atualizacoes").order("data_publicacao", { ascending: false }).order("ordem");
       if (error) throw error;
       return (data ?? []) as Atualizacao[];
     },
@@ -278,7 +279,7 @@ function SugestoesTab() {
   const { data: sugestoes = [] } = useQuery({
     queryKey: ["sistema_sugestoes", "todas"],
     queryFn: async () => {
-      const { data, error } = await db.from("sistema_sugestoes").select("*").order("created_at", { ascending: false });
+      const { data, error } = await tabelaLeitura("sistema_sugestoes").order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as Sugestao[];
     },

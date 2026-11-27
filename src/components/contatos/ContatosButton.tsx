@@ -15,6 +15,7 @@ import { confirmar } from "@/components/layout/DialogoGlobal";
 import { emailValido, FINALIDADES } from "@/lib/contatos";
 import { digitsOnly, formatPhoneDisplay, normalizePhone } from "@/lib/input-masks";
 import { validarEmailProvedor } from "@/lib/contatos.functions";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 type Contato = { id: string; tipo: "telefone" | "email"; valor: string; finalidade: string; nome: string | null; principal: boolean; ativo: boolean };
 type Props = { entidade: "parceiro" | "empresa"; entidadeId: string };
@@ -76,13 +77,13 @@ export function ContatosPainel({ entidade, entidadeId }: Props) {
 
   const carregar = async (migrar = true) => {
     setCarregando(true);
-    const { data, error } = await supabase.from("cadastro_contatos" as never).select("*").eq("entidade", entidade).eq("entidade_id", entidadeId).order("tipo").order("created_at");
+    const { data, error } = await tabelaLeitura("cadastro_contatos").eq("entidade", entidade).eq("entidade_id", entidadeId).order("tipo").order("created_at");
     if (error) { setCarregando(false); return void toast.error(/cadastro_contatos/.test(error.message) ? "Rode o script atendeai-contatos-reajuste.sql no banco." : error.message); }
     const l = (data ?? []) as Contato[];
     if (!l.length && migrar && entidadeId) {
       // Cadastro antigo: traz telefone/e-mail gravados no próprio cadastro para a lista.
       const tabela = entidade === "parceiro" ? "parceiros" : "empresas";
-      const { data: pai } = await supabase.from(tabela as never).select("*").eq("id", entidadeId).maybeSingle();
+      const { data: pai } = await tabelaLeitura(tabela).eq("id", entidadeId).maybeSingle();
       const p = (pai ?? {}) as Record<string, unknown>;
       const fones = [p["telefone"] ?? p["telefone1"], p["telefone2"]].map((v) => normalizePhone(String(v ?? ""))).filter((v) => digitsOnly(v).length >= 10);
       const email = String(p["email"] ?? "").trim().toLowerCase();

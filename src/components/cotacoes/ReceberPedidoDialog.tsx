@@ -15,6 +15,7 @@ import { titulosDoPedido } from "@/lib/financeiro";
 import { contarTitulosDaOrigem, erroFinanceiro, fontesDoPedido, inserirTitulos } from "@/lib/financeiro-db";
 import { formatBRL, num } from "@/lib/orcamentos";
 import type { Row } from "@/lib/row";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 const somaDias = (dias: number) => { const d = new Date(); d.setDate(d.getDate() + dias); return d.toISOString().slice(0, 10); };
 
@@ -52,9 +53,9 @@ export function ReceberPedidoDialog({ pedido, empresaId, onClose, onDone }: { pe
         if (ja.error) throw ja.error;
         if ((ja.count ?? 0) > 0) msgs.push("estoque já tinha recebido este pedido");
         else {
-          const itens = await supabase.from("pedidos_compra_itens").select("*").eq("pedido_id", id);
+          const itens = await tabelaLeitura("pedidos_compra_itens").eq("pedido_id", id);
           if (itens.error) throw itens.error;
-          const ids = [...new Set((itens.data ?? []).map((i) => String(i.item_id ?? "")).filter(Boolean))];
+          const ids = [...new Set((itens.data ?? []).map((i: { item_id?: unknown }) => String(i.item_id ?? "")).filter(Boolean))];
           const cad = ids.length ? await supabase.from("itens").select("id, controla_estoque").in("id", ids) : { data: [], error: null };
           if (cad.error) throw cad.error;
           const controla = new Set((cad.data ?? []).filter((c) => c.controla_estoque !== false).map((c) => String(c.id)));

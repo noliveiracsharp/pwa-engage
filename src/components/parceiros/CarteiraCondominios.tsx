@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { rowId, useTableRows } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
 import { diasParaFimMandato, papeisNaCarteira, type PapelCarteira } from "@/lib/cond-sindicatura";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 const ROTULO: Record<PapelCarteira, string> = { administradora: "Administradora", facilities: "Facilities / Portaria", sindicatura: "Síndico profissional" };
 const br = (iso: unknown) => (iso ? new Date(`${String(iso)}T12:00:00`).toLocaleDateString("pt-BR") : "");
@@ -17,7 +18,7 @@ export function CarteiraCondominios({ parceiroId }: { parceiroId: string }) {
     queryKey: ["cond", "cond_sindicatura", "empresa_id", parceiroId],
     queryFn: async (): Promise<Row[]> => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as any).from("cond_sindicatura").select("*").eq("empresa_id", parceiroId);
+      const { data, error } = await tabelaLeitura("cond_sindicatura").eq("empresa_id", parceiroId);
       if (error) return [];
       return (data ?? []) as Row[];
     },

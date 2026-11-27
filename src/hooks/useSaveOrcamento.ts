@@ -7,6 +7,7 @@ import { formatNumero, toISODate, yearOf } from "@/lib/orcamentos";
 import type { Row } from "@/lib/row";
 import { vincularKanban } from "@/lib/orcamento-kanban";
 import { TIPO_MODELO_PADRAO, totaisDasLinhas } from "@/lib/orcamento-totais-auto";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 export type LinhaPayload = {
   id?: string | undefined;
@@ -182,9 +183,7 @@ export function useSaveOrcamento() {
         if (error) throw error;
       }
 
-      const { data: gravadas, error: linhasErr } = await supabase
-        .from("orcamento_itens")
-        .select("*")
+      const { data: gravadas, error: linhasErr } = await tabelaLeitura("orcamento_itens")
         .eq("orcamento_id", id)
         .order("ordem", { ascending: true });
       if (linhasErr) throw linhasErr;

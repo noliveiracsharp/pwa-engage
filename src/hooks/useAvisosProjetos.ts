@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { adicionarAviso } from "@/lib/avisos";
 import { linkItemProjeto } from "@/lib/projetos-eventos";
 import type { Row } from "@/lib/row";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 const INTERVALO = 60 * 1000;
 
@@ -14,7 +15,7 @@ export function useAvisosProjetos(usuarioId: unknown) {
     let parado = false;
     const desde = new Date(Date.now() - 7 * 864e5).toISOString();
     const checar = async () => {
-      const { data, error } = await supabase.from("projetos_eventos" as never).select("*")
+      const { data, error } = await tabelaLeitura("projetos_eventos")
         .eq("usuario_id", uid as never).gte("created_at", desde as never)
         .order("created_at", { ascending: false }).limit(50);
       if (parado || error || !data) return;

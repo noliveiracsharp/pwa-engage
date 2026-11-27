@@ -18,6 +18,7 @@ import {
   aprovadoresDe, REGRAS_QUORUM, situacaoAprovacao,
   type ConfigAprovacao, type RegraQuorum, type SituacaoAprovacao, type VotoAprovacao,
 } from "@/lib/aprovacao-compras";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 const SQL_MSG = "Rode o script atendeai-workflow-compras.sql no banco.";
 const faltaTabela = (m: string) => /compras_workflow|cotacao_aprovacoes|does not exist|schema cache/i.test(m);
@@ -47,7 +48,7 @@ export function useConfigAprovacao() {
     queryKey: ["compras-workflow", empresaId],
     enabled: empresaId != null,
     queryFn: async () => {
-      const { data, error } = await supabase.from("compras_workflow_config" as never).select("*").eq("empresa_id", empresaId as never).maybeSingle();
+      const { data, error } = await tabelaLeitura("compras_workflow_config").eq("empresa_id", empresaId as never).maybeSingle();
       if (error) return null;
       return paraConfig(data as Row | null);
     },
@@ -59,7 +60,7 @@ function useUsuarios() {
   return useQuery({
     queryKey: ["compras-workflow", "usuarios", empresaId],
     queryFn: async () => {
-      let q: any = supabase.from("usuarios").select("*");
+      let q: any = tabelaLeitura("usuarios");
       if (empresaId != null) q = q.eq("empresa_id", empresaId);
       const { data } = await q.limit(1000);
       return ((data ?? []) as Row[]).filter((u) => u["status"] !== false);
@@ -190,7 +191,7 @@ export function PainelAprovacaoCotacao({ cotacaoId, valorTotal, onSituacao, chil
     queryKey: ["compras-workflow", "votos", cotacaoId],
     enabled: Boolean(cotacaoId),
     queryFn: async () => {
-      const { data, error } = await supabase.from("cotacao_aprovacoes" as never).select("*").eq("cotacao_id", cotacaoId as never).order("created_at", { ascending: true });
+      const { data, error } = await tabelaLeitura("cotacao_aprovacoes").eq("cotacao_id", cotacaoId as never).order("created_at", { ascending: true });
       return error ? [] : ((data ?? []) as Row[]);
     },
   });

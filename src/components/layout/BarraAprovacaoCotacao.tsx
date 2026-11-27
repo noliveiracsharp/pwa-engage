@@ -5,6 +5,7 @@ import { Bell, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAudit } from "@/lib/audit";
 import { type Row } from "@/lib/row";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 /** Faixa global: cotações aguardando o voto do usuário logado. Some quando ele vota. */
 export function BarraAprovacaoCotacao() {
@@ -26,7 +27,7 @@ export function BarraAprovacaoCotacao() {
     enabled: usuarioId != null && empresaId != null,
     refetchInterval: 60_000,
     queryFn: async () => {
-      const { data: cfg } = await supabase.from("compras_workflow_config" as never).select("*").eq("empresa_id", empresaId as never).maybeSingle();
+      const { data: cfg } = await tabelaLeitura("compras_workflow_config").eq("empresa_id", empresaId as never).maybeSingle();
       const c = cfg as Row | null;
       if (!c || c["ativo"] !== true) return [] as Row[];
       let ad = c["aprovadores_adicionais"];
@@ -34,7 +35,7 @@ export function BarraAprovacaoCotacao() {
       const lista = [String(c["aprovador_principal_id"] ?? ""), ...(Array.isArray(ad) ? ad.map(String) : [])];
       const uid = String(usuarioId);
       if (!lista.includes(uid)) return [] as Row[];
-      const { data: pend } = await supabase.from("cotacoes").select("*").eq("empresa_id", empresaId as never).eq("status", "aguardando_aprovacao" as never);
+      const { data: pend } = await tabelaLeitura("cotacoes").eq("empresa_id", empresaId as never).eq("status", "aguardando_aprovacao" as never);
       const rows = (pend ?? []) as Row[];
       if (!rows.length) return [] as Row[];
       const { data: votos } = await supabase.from("cotacao_aprovacoes" as never).select("cotacao_id").eq("usuario_id", uid as never).in("cotacao_id", rows.map((p) => String(p["id"])) as never);

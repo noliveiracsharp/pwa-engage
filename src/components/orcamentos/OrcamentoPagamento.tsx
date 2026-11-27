@@ -25,6 +25,7 @@ import {
   somaParcelas,
   type Parcela,
 } from "@/lib/orcamentos";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 const NONE = "__none__";
 
@@ -132,10 +133,8 @@ export function OrcamentoPagamento({ value, parcelas, parcelasServicos = [], tot
   const { empresaId } = useAudit();
   useEffect(() => {
     let ativo = true;
-    supabase
-      .from("empresas_configuracao")
-      .select("*")
-      .then(({ data }) => {
+    tabelaLeitura("empresas_configuracao")
+      .then(({ data }: { data: unknown }) => {
         if (!ativo || !data) return;
         const rows = (data as Record<string, unknown>[]).filter((r) => r["ativo"] !== false);
         const row =

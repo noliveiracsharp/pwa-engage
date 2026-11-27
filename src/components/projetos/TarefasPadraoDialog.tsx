@@ -16,6 +16,7 @@ import type { Row } from "@/lib/row";
 import type { Perms } from "@/hooks/usePagePermissions";
 import { SortableList, proximaOrdem, salvarOrdem, useSortableRow } from "@/lib/reorder";
 import { confirmar } from "@/components/layout/DialogoGlobal";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 export const TAREFAS_PADRAO = "projetos_tarefas_default";
 const VAZIO = { nome: "", descricao: "", prioridade: "Normal", estimativa: "1" };
@@ -41,7 +42,7 @@ export function TemplateTarefas({ templateId, perms }: { templateId: string; per
   const { data: rows = [] } = useQuery({
     queryKey: qKey,
     queryFn: async (): Promise<Row[]> => {
-      const { data, error } = await supabase.from(TAREFAS_PADRAO).select("*").eq("template_id", templateId as never).order("ordem", { ascending: true });
+      const { data, error } = await tabelaLeitura(TAREFAS_PADRAO).eq("template_id", templateId as never).order("ordem", { ascending: true });
       if (error) throw error;
       return (data ?? []) as Row[];
     },

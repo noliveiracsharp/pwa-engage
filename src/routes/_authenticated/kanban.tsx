@@ -73,6 +73,7 @@ import { cn } from "@/lib/utils";
 import { COTACAO_STATUS } from "@/lib/laudos";
 import { bloqueioMovimento } from "@/lib/cotacao-fluxo";
 import { formatPhoneDisplay } from "@/lib/input-masks";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 export const Route = createFileRoute("/_authenticated/kanban")({
   staticData: { sitemap: false },
@@ -104,7 +105,7 @@ function useRows(table: string, enabled = true) {
       const { fn, q } = consultaTabela(table);
       const { data, error } = await q;
       if (procedureAusente(fn, error)) {
-        const r = await supabase.from(table).select("*");
+        const r = await tabelaLeitura(table);
         if (r.error) throw r.error;
         return (r.data ?? []) as Row[];
       }
@@ -123,7 +124,7 @@ function useCartoes(table: string, kanbanId: string, enabled = true) {
       const rows = await lerProcedure<Row>(`fn_kanban_${table}`, { p_kanban_id: kanbanId });
       if (rows) return rows;
       // Script ainda não rodado: leitura antiga.
-      const { data, error } = await supabase.from(table).select("*");
+      const { data, error } = await tabelaLeitura(table);
       if (error) throw error;
       return (data ?? []) as Row[];
     },

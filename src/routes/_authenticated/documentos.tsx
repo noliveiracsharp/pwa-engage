@@ -23,6 +23,7 @@ import { formatDate } from "@/lib/orcamentos";
 import { normalizeSearch } from "@/lib/documentos-busca";
 import type { Row } from "@/lib/row";
 import { confirmar } from "@/components/layout/DialogoGlobal";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 const db = supabase as any;
 
@@ -74,7 +75,7 @@ function Emitidos({ canEdit }: { canEdit: boolean }) {
   const { data = [], isLoading } = useQuery({
     queryKey: ["documentos", "todos"],
     queryFn: async () => {
-      const { data, error } = await db.from("documentos").select("*").order("dt_emissao", { ascending: false }).limit(1000);
+      const { data, error } = await tabelaLeitura("documentos").order("dt_emissao", { ascending: false }).limit(1000);
       if (error) throw error;
       return (data ?? []) as DocumentoRow[];
     },

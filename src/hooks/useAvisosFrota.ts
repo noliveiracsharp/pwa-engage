@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { adicionarAviso } from "@/lib/avisos";
 import { statusManutencao } from "@/lib/frota";
 import type { Row } from "@/lib/row";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 const INTERVALO = 30 * 60 * 1000;
 
@@ -13,7 +14,7 @@ export function useAvisosFrota(ativo: boolean) {
     let parado = false;
     const checar = async () => {
       const [{ data: planos, error }, { data: veiculos }] = await Promise.all([
-        supabase.from("veiculos_manutencao_planos").select("*").neq("ativo", false),
+        tabelaLeitura("veiculos_manutencao_planos").neq("ativo", false),
         supabase.from("veiculos").select("id, placa, modelo, km_atual"),
       ]);
       if (parado || error || !planos?.length) return;

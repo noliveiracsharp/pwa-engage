@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { type Atualizacao, type Versao, TIPO_CLASS, TIPO_LABEL, fmtData } from "@/lib/versoes";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 const db = supabase as any;
 
@@ -18,7 +19,7 @@ export function useVersaoAtual() {
   return useQuery({
     queryKey: ["sistema_versoes", "atual"],
     queryFn: async () => {
-      const { data } = await db.from("sistema_versoes").select("*").eq("is_atual", true)
+      const { data } = await tabelaLeitura("sistema_versoes").eq("is_atual", true)
         .order("major", { ascending: false }).order("minor", { ascending: false }).order("patch", { ascending: false }).limit(1);
       return ((data ?? [])[0] ?? null) as Versao | null;
     },
@@ -54,7 +55,7 @@ export function NovidadesDialog({ open, onOpenChange }: { open: boolean; onOpenC
     queryKey: ["sistema_atualizacoes", "publicas"],
     enabled: open,
     queryFn: async () => {
-      const { data, error } = await db.from("sistema_atualizacoes").select("*").eq("ativo", true)
+      const { data, error } = await tabelaLeitura("sistema_atualizacoes").eq("ativo", true)
         .order("data_publicacao", { ascending: false }).order("ordem");
       if (error) throw error;
       return (data ?? []) as Atualizacao[];

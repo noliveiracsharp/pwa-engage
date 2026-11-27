@@ -2,7 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 /** Tabelas lidas pela procedure `fn_lista_<tabela>` (supabase/sql/conectcon-ofertas-kanban-procedures.sql).
  *  A procedure retorna as linhas da tabela; filtros, ordem e paginação seguem aplicados sobre ela. */
-const TABELAS_PROCEDURE = new Set(["parceiros", "usuarios", "itens", "unidade_medida", "itens_marcas", "empresas", "kanban_nome", "kanban_etapas", "cotacoes",
+export const TABELAS_PROCEDURE = new Set(["parceiros", "usuarios", "itens", "unidade_medida", "itens_marcas", "empresas", "kanban_nome", "kanban_etapas", "cotacoes",
   "financeiro_titulos", "financeiro_titulos_itens", "orcamento_itens", "pedidos_compra_itens", "cobranca_regua", "cobranca_envios"]);
 
 /** Procedures ainda não instaladas no banco: usa a leitura antiga até o script rodar. */
@@ -10,7 +10,7 @@ const indisponiveis = new Set<string>();
 
 export function procedureDaTabela(tabela: string): string | null {
   const fn = `fn_lista_${tabela}`;
-  return (TABELAS_PROCEDURE.has(tabela) || tabela.startsWith("cond_")) && !indisponiveis.has(fn) ? fn : null;
+  return !indisponiveis.has(fn) ? fn : null;
 }
 
 /** Erro de procedure inexistente: marca para não tentar de novo e indica que pode repetir pela tabela. */
@@ -51,7 +51,7 @@ export async function lerProcedure<T = Record<string, unknown>>(fn: string, args
 export async function lerTabela(tabela: string, montar: (q: any) => any): Promise<{ data: any; error: any }> {
   const { fn, q } = consultaTabela(tabela);
   let r = await montar(q);
-  if (r.error && procedureAusente(fn, r.error)) r = await montar(supabase.from(tabela as never).select("*"));
+  if (fn && r.error) { procedureAusente(fn, r.error); r = await montar(supabase.from(tabela as never).select("*")); }
   return r;
 }
 

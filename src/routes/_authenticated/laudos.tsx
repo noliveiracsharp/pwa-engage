@@ -24,6 +24,7 @@ import { formatDate } from "@/lib/orcamentos";
 import { pick, type Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
 import { STATUS_LEVANTAMENTO, statusLevantamento } from "@/lib/levantamento";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 export const Route = createFileRoute("/_authenticated/laudos")({
   staticData: { sitemap: false },
@@ -176,8 +177,8 @@ function LaudosPage() {
   const gerarOferta = useMutation({
     mutationFn: async (laudoId: string) => {
       const [{ data: laudo, error }, { data: lls, error: e2 }] = await Promise.all([
-        supabase.from("laudos_tecnicos").select("*").eq("id", laudoId).single(),
-        supabase.from("laudos_itens").select("*").eq("laudo_id", laudoId).order("ordem"),
+        tabelaLeitura("laudos_tecnicos").eq("id", laudoId).single(),
+        tabelaLeitura("laudos_itens").eq("laudo_id", laudoId).order("ordem"),
       ]);
       if (error) throw error;
       if (e2) throw e2;

@@ -16,6 +16,7 @@ import { pick, type Row } from "@/lib/row";
 import { SeletorCanalEmail } from "@/components/email/SeletorCanalEmail";
 import { TextoRico } from "@/components/ui/texto-rico";
 import { dispararMensagem, sanitizarTelefone } from "@/lib/atendimentos-envio";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 type Props = {
   open: boolean;
@@ -61,7 +62,7 @@ export function EnviarPropostaDialog({ open, onOpenChange, orcamento, empresa, c
     queryKey: ["proposta-contatos", clienteId],
     enabled: open && !!clienteId,
     queryFn: async () => {
-      const { data } = await supabase.from("cadastro_contatos" as never).select("*")
+      const { data } = await tabelaLeitura("cadastro_contatos")
         .eq("entidade", "parceiro").eq("entidade_id", clienteId);
       const lista = ((data ?? []) as Row[]).filter((c) => c["ativo"] !== false && text(c["valor"]));
       return lista.sort((a, b) => Number(!!b["principal"]) - Number(!!a["principal"]) || text(a["nome"]).localeCompare(text(b["nome"]), "pt-BR"));
@@ -105,7 +106,7 @@ export function EnviarPropostaDialog({ open, onOpenChange, orcamento, empresa, c
     queryKey: ["proposta-instancias", empresaId],
     enabled: open && !!empresaId,
     queryFn: async () => {
-      const { data } = await supabase.from("empresas_instancias").select("*").eq("empresa_id", empresaId as never);
+      const { data } = await tabelaLeitura("empresas_instancias").eq("empresa_id", empresaId as never);
       return ordenarParaAvisos(((data ?? []) as Row[]).filter((i) => i["status"] !== false && i["ativo"] !== false && text(i["tipo"]) !== "chat"));
     },
   });

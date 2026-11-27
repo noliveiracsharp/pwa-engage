@@ -6,6 +6,7 @@ import { useTableRows, rowId } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
 import { lerAmbiente, useAmbientes } from "@/hooks/useAmbientes";
 import { ehGestor, emModoUnidade } from "@/lib/ambientes";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 export type Perms = { canRead: boolean; canCreate: boolean; canUpdate: boolean; canDelete: boolean };
 export type SubTab = Perms & { id: string; descricao: string };
@@ -41,9 +42,7 @@ export function usePerfilMenuRows() {
     queryFn: async (): Promise<Row[] | null> => {
       // Master: null = sem restrição (leitura, criação, edição e exclusão em tudo).
       if (isMaster) return null;
-      const { data, error } = await supabase
-        .from("vw_menu_usuario_perfil")
-        .select("*")
+      const { data, error } = await tabelaLeitura("vw_menu_usuario_perfil")
         .eq("perfil_id", perfilId as string)
         .order("ordem_hierarquia");
       if (error) throw error; // tenta de novo e mantém as permissões anteriores

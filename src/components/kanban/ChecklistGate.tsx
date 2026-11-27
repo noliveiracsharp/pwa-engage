@@ -18,6 +18,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAudit } from "@/lib/audit";
 import { uploadFoto } from "@/lib/laudos";
 import { pick, type Row } from "@/lib/row";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 /** Perfis que podem pular o checklist (com justificativa registrada). */
 function usePodePular() {
@@ -27,7 +28,7 @@ function usePodePular() {
     queryKey: ["perfil-desc", perfilId],
     enabled: !!perfilId && !isMaster,
     queryFn: async () => {
-      const { data } = await supabase.from("perfil").select("*").eq("id", perfilId as never).maybeSingle();
+      const { data } = await tabelaLeitura("perfil").eq("id", perfilId as never).maybeSingle();
       return String((data as Row | null)?.["descricao"] ?? "");
     },
   });
@@ -65,7 +66,7 @@ export function useChecklistGate() {
   async function exigir(p: Pedido): Promise<boolean> {
     // Checklist de SAÍDA da etapa atual vem primeiro; ao concluir, segue para o de entrada.
     if (p.origem?.["id"]) {
-      const { data: of } = await supabase.from("kanban_etapas").select("*").eq("id", String(p.origem["id"])).maybeSingle();
+      const { data: of } = await tabelaLeitura("kanban_etapas").eq("id", String(p.origem["id"])).maybeSingle();
       const origem = { ...p.origem, ...((of as Row | null) ?? {}) };
       if (ativo(origem["exige_checklist_saida"])) {
         if (!origem["checklist_saida_template_id"]) {
@@ -80,7 +81,7 @@ export function useChecklistGate() {
 
   async function exigirEntrada(p: Pedido): Promise<boolean> {
     // Relê a etapa de destino para não depender de cache desatualizado.
-    const { data: fresca } = await supabase.from("kanban_etapas").select("*").eq("id", String(p.etapa["id"])).maybeSingle();
+    const { data: fresca } = await tabelaLeitura("kanban_etapas").eq("id", String(p.etapa["id"])).maybeSingle();
     const etapa = { ...p.etapa, ...((fresca as Row | null) ?? {}) };
     if (!ativo(etapa["exige_checklist"])) return p.executar();
     if (!etapa["checklist_template_id"]) {
@@ -92,7 +93,7 @@ export function useChecklistGate() {
 
   async function abrirGate(p: Pedido): Promise<boolean> {
     setPedido(p); setValores({}); setPular(false); setJustificativa(""); setCarregando(true);
-    const { data, error } = await supabase.from("checklists_itens").select("*")
+    const { data, error } = await tabelaLeitura("checklists_itens")
       .eq("template_id", String(p.template)).order("ordem");
     setCarregando(false);
     if (error) { toast.error(error.message); setPedido(null); return false; }

@@ -3,6 +3,7 @@ import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { pick, type Row } from "@/lib/row";
 import { preservarRecuperacao, RECUPERACAO_KEY } from "@/lib/recuperacao-senha";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 const CTX_KEY = "atendeai.empresaContexto";
 /** Mude este valor a cada atualização publicada: força novo login de todos. */
@@ -43,10 +44,10 @@ const AuthContext = createContext<AuthContextValue>({
 
 /** Busca o cadastro do usuário logado. Lança erro em falha de rede (para não "perder" o usuário). */
 export async function loadUsuario(user: User) {
-  const byId = await supabase.from("usuarios").select("*").eq("id", user.id).maybeSingle();
+  const byId = await tabelaLeitura("usuarios").eq("id", user.id).maybeSingle();
   if (byId.data) return byId.data as Row;
   if (user.email) {
-    const byEmail = await supabase.from("usuarios").select("*").eq("email", user.email).maybeSingle();
+    const byEmail = await tabelaLeitura("usuarios").eq("email", user.email).maybeSingle();
     if (byEmail.data) return byEmail.data as Row;
     if (byEmail.error && byId.error) throw byEmail.error;
   } else if (byId.error) throw byId.error;
@@ -60,7 +61,7 @@ const USUARIO_CACHE = "atendeai.usuarioCache";
 /** Master = perfil com ordem 0 (ou descrição contendo "Master"). */
 export async function isPerfilMaster(perfilId: unknown): Promise<boolean> {
   if (perfilId === undefined || perfilId === null || String(perfilId) === "") return false;
-  const { data } = await supabase.from("perfil").select("*").eq("id", perfilId as never).maybeSingle();
+  const { data } = await tabelaLeitura("perfil").eq("id", perfilId as never).maybeSingle();
   if (!data) return false;
   const p = data as Row;
   return Number(p["ordem"]) === 0 || /master/i.test(String(p["descricao"] ?? ""));
@@ -133,10 +134,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         const empresaId = pick<string | number>(u, ["empresa_id", "id_empresa", "empresaid"]);
         if (empresaId !== undefined) {
-          const { data } = await supabase.from("empresas").select("*").eq("id", empresaId).maybeSingle();
+          const { data } = await tabelaLeitura("empresas").eq("id", empresaId).maybeSingle();
           if (!cancelled) setEmpresaOriginal((data as Row) ?? null);
         } else {
-          const { data } = await supabase.from("empresas").select("*").limit(1).maybeSingle();
+          const { data } = await tabelaLeitura("empresas").limit(1).maybeSingle();
           if (!cancelled) setEmpresaOriginal((data as Row) ?? null);
         }
       } catch {

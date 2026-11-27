@@ -28,6 +28,7 @@ import { adicionarAviso, EVT_ABRIR_CHAT } from "@/lib/avisos";
 import { TarefasChat, NovaTarefa } from "@/components/chat-interno/TarefasChat";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { GerenciarGrupo } from "@/components/chat-interno/GerenciarGrupo";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 /** Chamada ativa fica fora dos componentes: fechar/reorganizar o chat não derruba a ligação. */
 type ChamadaAtiva = Chamada & { canalId: string; empresaId: string; me: string; nome: string; titulo: string };
@@ -160,7 +161,7 @@ export function ChatInterno({ sidebarOpen, onAbrir, condominioId }: { sidebarOpe
         if (error) throw error;
         return ((data ?? []) as Row[]).filter((u) => String(u["id"]) !== me);
       }
-      const { data, error } = await supabase.from("usuarios").select("*").eq("empresa_id", empresaId);
+      const { data, error } = await tabelaLeitura("usuarios").eq("empresa_id", empresaId);
       if (error) throw error;
       return ((data ?? []) as Row[]).filter((u) => String(u["id"]) !== me && u["status"] !== false);
     },
@@ -172,7 +173,7 @@ export function ChatInterno({ sidebarOpen, onAbrir, condominioId }: { sidebarOpe
     queryFn: async () => {
       const ids = await meusCanais(me);
       if (!ids.length) return [] as Row[];
-      const { data, error } = await supabase.from("chat_interno_canais").select("*").eq("tipo", "grupo").eq("empresa_id", empresaId).in("id", ids).order("nome");
+      const { data, error } = await tabelaLeitura("chat_interno_canais").eq("tipo", "grupo").eq("empresa_id", empresaId).in("id", ids).order("nome");
       if (error) throw error;
       return (data ?? []) as Row[];
     },
@@ -580,7 +581,7 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack, onModoMeet, 
       // Procedure rápida (índice canal_id+criado_em); consulta direta se ainda não existir.
       const rpc = await supabase.rpc("fn_chat_interno_mensagens" as never, { p_canal_id: canalId, p_limite: 300 } as never);
       if (!rpc.error && Array.isArray(rpc.data)) return rpc.data as Row[];
-      const { data, error } = await supabase.from(TABLE).select("*").eq("canal_id", canalId).order("criado_em", { ascending: true }).limit(300);
+      const { data, error } = await tabelaLeitura(TABLE).eq("canal_id", canalId).order("criado_em", { ascending: true }).limit(300);
       if (error) throw error;
       return (data ?? []) as Row[];
     },

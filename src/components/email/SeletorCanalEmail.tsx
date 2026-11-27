@@ -4,13 +4,14 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { canalSugerido, rotuloCanal, type CanalEmail, type FinalidadeEmail } from "@/lib/email-canais";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 export function useCanaisEmail(empresaId: string | null | undefined) {
   return useQuery({
     queryKey: ["email-canais", empresaId],
     enabled: !!empresaId,
     queryFn: async () => {
-      const { data, error } = await supabase.from("empresas_email_canais" as never).select("*").eq("empresa_id", empresaId!);
+      const { data, error } = await tabelaLeitura("empresas_email_canais").eq("empresa_id", empresaId!);
       if (error) return [] as CanalEmail[]; // script ainda não rodado: usa o e-mail geral
       return ((data ?? []) as CanalEmail[]).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
     },

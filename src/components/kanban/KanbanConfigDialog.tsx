@@ -34,6 +34,7 @@ import { pick, type Row } from "@/lib/row";
 import { labelAmigavel, parseCamposCardTipado, type CampoCardTipado } from "@/lib/orcamento-kanban";
 import { confirmar } from "@/components/layout/DialogoGlobal";
 import { KanbanPerfisAcesso } from "./KanbanPerfisAcesso";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 const errMsg = (e: unknown, f: string) => {
   const m = e && typeof e === "object" && "message" in e ? String((e as { message: unknown }).message) : "";
@@ -145,9 +146,7 @@ export function KanbanConfigDialog({
     queryKey: ["funcoes-com-tabela-base"],
     enabled: open,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("funcoes")
-        .select("*")
+      const { data, error } = await tabelaLeitura("funcoes")
         .not("tabela_base", "is", null);
       if (error) throw error;
       return ((data ?? []) as Row[]).filter((f) => String(f["tabela_base"] ?? "").trim());
@@ -159,9 +158,7 @@ export function KanbanConfigDialog({
     queryKey: ["kanban-vinculo-cfg", kanbanId],
     enabled: open && !!kanbanId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("funcoes_kanban" as never)
-        .select("*")
+      const { data, error } = await tabelaLeitura("funcoes_kanban")
         .eq("kanban_nome_id", kanbanId);
       if (error) return null;
       return ((data ?? []) as Row[])[0] ?? null;

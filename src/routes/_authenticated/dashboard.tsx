@@ -19,6 +19,7 @@ import { pick, type Row } from "@/lib/row";
 import { etapasDoKanban, kanbanDoModulo, type EtapaKanban } from "@/lib/orcamento-kanban";
 import { ChecklistImplantacao } from "@/components/dashboard/ChecklistImplantacao";
 import { useIdioma, type ChaveTraducao } from "@/lib/i18n";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 const normTxt = (v: unknown) => String(v ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 type GrupoEtapa = EtapaKanban & { n: number; v: number };
@@ -81,7 +82,7 @@ function periodStart(periodo: Periodo) {
 
 async function rowsOf(table: string, empId: unknown, build?: (q: any) => any): Promise<Row[]> {
   try {
-    let q: any = supabase.from(table as never).select("*");
+    let q: any = tabelaLeitura(table);
     if (Array.isArray(empId)) q = q.in("empresa_id", empId);
     else if (empId !== undefined) q = q.eq("empresa_id", empId);
     if (build) q = build(q);
@@ -266,7 +267,7 @@ function PainelCompras() {
     queryKey: ["dashboard", "cotacoes-minha-aprovacao", empresaId, usuarioId],
     enabled: usuarioId != null,
     queryFn: async () => {
-      const { data: cfg } = await supabase.from("compras_workflow_config" as never).select("*").eq("empresa_id", empresaId as never).maybeSingle();
+      const { data: cfg } = await tabelaLeitura("compras_workflow_config").eq("empresa_id", empresaId as never).maybeSingle();
       const c = cfg as Row | null;
       if (!c || c["ativo"] !== true) return [] as Row[];
       let ad = c["aprovadores_adicionais"];
@@ -414,7 +415,7 @@ function Dashboard() {
     queryKey: ["dashboard", "filiais", empresaId],
     enabled: empresaId != null,
     queryFn: async () => {
-      const { data } = await supabase.from("empresas").select("*").eq("empresa_pai_id", empresaId as never);
+      const { data } = await tabelaLeitura("empresas").eq("empresa_pai_id", empresaId as never);
       return ((data ?? []) as Row[]).filter((r) => r["is_tenant"] !== false);
     },
   });

@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { instanciaParaAvisos, ordenarParaAvisos } from "@/lib/instancia-finalidade";
 import { comprimirImagem } from "@/lib/image-compress";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 export type TipoResposta = "cnc" | "numero";
 export type ItemModelo = { texto: string; tipo: TipoResposta; unidade?: string | undefined };
@@ -163,7 +164,7 @@ export function mensagemOs(evento: "agendada" | "concluida", d: { cliente?: stri
 export async function enviarWhatsappEmpresa(empresaId: unknown, telefone: string, texto: string, midia?: { url: string; tipo: "imagem" | "video" | "documento"; nome?: string }): Promise<string | null> {
   const { dispararMensagem, sanitizarTelefone } = await import("@/lib/atendimentos-envio");
   if (!sanitizarTelefone(telefone)) return "Cliente sem telefone cadastrado.";
-  const { data } = await supabase.from("empresas_instancias").select("*").eq("empresa_id", String(empresaId) as never);
+  const { data } = await tabelaLeitura("empresas_instancias").eq("empresa_id", String(empresaId) as never);
   const inst = instanciaParaAvisos((data ?? []) as Record<string, unknown>[]);
   if (!inst) return "Nenhum WhatsApp da empresa conectado.";
   await dispararMensagem({ instancia: inst, mensagemId: null, atendimentoId: null, telefone, texto, ...(midia ? { midiaUrl: midia.url, tipo: midia.tipo, nomeArquivo: midia.nome } : {}) });

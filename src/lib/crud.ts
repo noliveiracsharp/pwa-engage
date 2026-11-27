@@ -5,6 +5,7 @@ import { pick, type Row } from "@/lib/row";
 import { useAuth } from "@/hooks/useAuth";
 import { empresaDaConsulta } from "@/lib/financeiro-contexto";
 import { consultaTabela, procedureAusente } from "@/lib/procedures-lista";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 /** Tabelas globais: nunca filtradas pelo contexto de empresa do Master. */
 // "perfil" NÃO é global: cada empresa tem seus perfis (só o Master fica sem empresa).
@@ -37,7 +38,7 @@ export function useTableRows(table: string, enabled = true, orderBy?: string, fi
       // Tabelas com procedure (fn_lista_<tabela>) leem por ela; as demais seguem pela tabela.
       let fonte = consultaTabela(table);
       const base = () => {
-        let q = fonte.fn ? consultaTabela(table).q : supabase.from(table).select("*");
+        let q = fonte.fn ? consultaTabela(table).q : tabelaLeitura(table);
         if (table === "perfil") q = q.gt("ordem", 0) as typeof q;
         if (filtro) q = filtro.apply(q) as typeof q;
         if (orderBy) q = q.order(orderBy, { ascending: true }) as typeof q;
@@ -80,7 +81,7 @@ export function useTableRows(table: string, enabled = true, orderBy?: string, fi
       if (!escopoFinanceiro && ctx && CATALOG_TABLES.has(table) && paiId) {
         const emp = consultaTabela("empresas");
         let { data: pai, error: ePai } = await emp.q.eq("id", paiId).maybeSingle();
-        if (procedureAusente(emp.fn, ePai)) ({ data: pai } = await supabase.from("empresas").select("*").eq("id", paiId).maybeSingle());
+        if (procedureAusente(emp.fn, ePai)) ({ data: pai } = await tabelaLeitura("empresas").eq("id", paiId).maybeSingle());
         if (pai && (pai as Row)["compartilhar_catalogo_filiais"] === true) paiCatalogo = paiId;
       }
       let res: Res;

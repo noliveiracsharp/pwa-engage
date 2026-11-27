@@ -12,6 +12,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { SearchSelect } from "@/components/data-table/SearchSelect";
 import { confirmar } from "@/components/layout/DialogoGlobal";
 import { bannerEmailHtml, type BannerEmail } from "@/lib/regua-cobranca";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 const SCRIPT = "Rode o script atendeai-cotacao-versoes-e-banners.sql no SQL Editor.";
 const TIPOS = [
@@ -31,7 +32,7 @@ export function useBannersEmail(empresaId: string | null | undefined) {
     queryKey: ["email_banners", empresaId],
     enabled: !!empresaId,
     queryFn: async () => {
-      const { data, error } = await supabase.from("email_banners" as never).select("*").eq("empresa_id", empresaId as never).order("prioridade", { ascending: true });
+      const { data, error } = await tabelaLeitura("email_banners").eq("empresa_id", empresaId as never).order("prioridade", { ascending: true });
       if (error) return { faltaScript: true, rows: [] as BannerEmail[] };
       return { faltaScript: false, rows: (data ?? []) as BannerEmail[] };
     },

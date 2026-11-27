@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { atividadePct, C, fmtDate, isDone, periodo, prioridadeClass, progressoCor, tarefaPct } from "@/lib/projetos";
 import { pick, type Row } from "@/lib/row";
 import { LegendaBlocos } from "@/components/projetos/LegendaCores";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 export const Route = createFileRoute("/compartilhado/$token")({
   staticData: { sitemap: false },
@@ -71,7 +72,7 @@ function Compartilhado() {
       if (!proj) { setEstado("erro"); return; }
       let emp = one(proj["empresas"]);
       if (!emp && proj["empresa_id"]) {
-        const { data } = await supabase.from("empresas").select("*").eq("id", proj["empresa_id"] as never).maybeSingle();
+        const { data } = await tabelaLeitura("empresas").eq("id", proj["empresa_id"] as never).maybeSingle();
         emp = (data as Row) ?? undefined;
       }
       const pid = pick(proj, ["id", "projeto_id"]);

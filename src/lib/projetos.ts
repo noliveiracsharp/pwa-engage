@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { normalizarColunas } from "@/lib/orcamento-kanban";
 import { pick, type Row } from "@/lib/row";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 /** Colunas reais da tabela (via RPC listar_colunas_tabela). */
 export function useCols(table: string) {
@@ -187,7 +188,7 @@ export async function duplicarAtividade(a: Row, tarefaId: string, sufixo = " (CÃ
     .insert({ ...limpar(a), tarefa_id: tarefaId, nome: `${String(a["nome"] ?? "")}${sufixo}`, ordem } as never).select("id").single();
   if (error) throw error;
   const novoId = String((data as Row)["id"]);
-  const { data: itens } = await supabase.from(CHECKLISTS).select("*").eq("atividade_id", String(a["id"]) as never);
+  const { data: itens } = await tabelaLeitura(CHECKLISTS).eq("atividade_id", String(a["id"]) as never);
   if (itens?.length) {
     const novos = (itens as Row[]).map((i) => {
       const c = limpar(i);
@@ -226,6 +227,6 @@ export async function duplicarTarefa(t: Row, nomeCol: string, ordem: number): Pr
     .insert({ ...limpar(t), [nomeCol]: `${String(t[nomeCol] ?? "")} (CÃ³pia)`, ordem } as never).select("id").single();
   if (error) throw error;
   const novoId = String((data as Row)["id"]);
-  const { data: ativs } = await supabase.from(ATIVIDADES as never).select("*").eq("tarefa_id", String(t["id"]) as never).order("ordem");
+  const { data: ativs } = await tabelaLeitura(ATIVIDADES).eq("tarefa_id", String(t["id"]) as never).order("ordem");
   for (const a of (ativs ?? []) as Row[]) await duplicarAtividade(a, novoId, "");
 }

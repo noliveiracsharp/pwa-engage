@@ -60,3 +60,4 @@
 - Table reads use `fn_lista_<tabela>`/`fn_kanban_*` INVOKER RPCs (src/lib/procedures-lista.ts), falling back to the table until the SQL runs.
 - Flow resume: fluxo_webhook_receber resumes executions of active flows or flows called as subflows (fluxo_pode_retomar), since subflows stay inactive.
 - Chained reads use tabelaLeitura(tabela) (src/lib/procedures-lista.ts): records filters, runs fn_lista_<tabela>, falls back to the table until the SQL runs; every cond_* table has a procedure.
+- tabelaLeitura tries fn_lista_<tabela> for any table and retries the table on any RPC error (RLS still applies either way); browser-only — server functions keep their own clients.

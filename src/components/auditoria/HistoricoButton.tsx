@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { type AuditoriaLog, resumoLog } from "@/lib/auditoria";
 import { AuditoriaDetalhe, OperacaoBadge } from "./AuditoriaDetalhe";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 const db = supabase as any;
 
@@ -18,7 +19,7 @@ export function HistoricoButton({ tabela, registroId }: { tabela: string; regist
     queryKey: ["auditoria", tabela, id],
     enabled: open && !!id,
     queryFn: async () => {
-      const { data, error } = await db.from("auditoria_logs").select("*")
+      const { data, error } = await tabelaLeitura("auditoria_logs")
         .eq("tabela", tabela).eq("registro_id", id).order("criado_em", { ascending: false }).limit(200);
       if (error) throw error;
       return (data ?? []) as AuditoriaLog[];

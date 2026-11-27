@@ -18,6 +18,7 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 type FieldDef = { key: string; label: string; type: "text" | "textarea" | "money" | "int" };
 
@@ -202,7 +203,7 @@ function CatalogoSheet({ open, onOpenChange, config, record }: { open: boolean; 
     queryKey: ["table", "modulos_funcoes", moduloId],
     enabled: Boolean(config.funcoesLiberadas && open && moduloId),
     queryFn: async () => {
-      const { data, error } = await supabase.from("modulos_funcoes").select("*").eq("modulo_id", moduloId);
+      const { data, error } = await tabelaLeitura("modulos_funcoes").eq("modulo_id", moduloId);
       if (error) throw error;
       return (data ?? []) as Row[];
     },

@@ -29,6 +29,7 @@ import { InterfoneTocando } from "@/components/condominios/InterfoneTocando";
 import { CardAviso, LeituraAvisoDialog } from "@/components/condominios/LeituraAvisoDialog";
 import { FiltroAvisosMorador } from "@/components/condominios/FiltroAvisosMorador";
 import { FILTRO_AVISOS_VAZIO, filtrarAvisos } from "@/lib/avisos-filtro";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 export const Route = createFileRoute("/_authenticated/minha-unidade")({
   staticData: { sitemap: false },
@@ -66,7 +67,7 @@ function MinhaUnidade() {
     queryKey: ["portal", "unidade", v?.unidade_id],
     enabled: !!v?.unidade_id,
     queryFn: async () => {
-      const { data } = await db.from("cond_unidades").select("*").eq("id", v!.unidade_id).maybeSingle();
+      const { data } = await tabelaLeitura("cond_unidades").eq("id", v!.unidade_id).maybeSingle();
       return (data ?? null) as Row | null;
     },
   });
@@ -76,7 +77,7 @@ function MinhaUnidade() {
     queryKey: ["portal", "avisos", condId],
     enabled: !!condId,
     queryFn: async () => {
-      const { data } = await db.from("cond_avisos").select("*").eq("condominio_id", condId).order("created_at", { ascending: false }).limit(100);
+      const { data } = await tabelaLeitura("cond_avisos").eq("condominio_id", condId).order("created_at", { ascending: false }).limit(100);
       const agora = Date.now();
       return ((data ?? []) as Row[]).filter((a) => ["enviado", "enviando"].includes(s(a["status"])) && !a["arquivado_em"] && (!a["expira_em"] || new Date(s(a["expira_em"])).getTime() > agora));
     },
@@ -85,7 +86,7 @@ function MinhaUnidade() {
     queryKey: ["portal", "docs", condId, v?.papel],
     enabled: !!condId,
     queryFn: async () => {
-      const { data } = await db.from("cond_documentos").select("*").eq("condominio_id", condId).order("created_at", { ascending: false });
+      const { data } = await tabelaLeitura("cond_documentos").eq("condominio_id", condId).order("created_at", { ascending: false });
       const vis = visibilidadesDocumento(v?.papel);
       return ((data ?? []) as Row[]).filter((d) => vis.includes(s(d["visibilidade"])));
     },
@@ -94,7 +95,7 @@ function MinhaUnidade() {
     queryKey: ["portal", "chamados", condId, user?.id],
     enabled: !!condId && !!user,
     queryFn: async () => {
-      const { data } = await db.from("cond_atendimentos").select("*").eq("condominio_id", condId).order("created_at", { ascending: false }).limit(50);
+      const { data } = await tabelaLeitura("cond_atendimentos").eq("condominio_id", condId).order("created_at", { ascending: false }).limit(50);
       return ((data ?? []) as Row[]).filter((a) => (s(a["aberto_por"]) === user!.id || s(a["aberto_para"]) === user!.id) && chamadoAberto(a["status"]));
     },
   });

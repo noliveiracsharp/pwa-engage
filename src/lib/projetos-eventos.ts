@@ -3,6 +3,7 @@ import { instanciaParaAvisos, ordenarParaAvisos } from "@/lib/instancia-finalida
 import { dispararMensagem } from "@/lib/atendimentos-envio";
 import { text } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 export const EVENTOS = "projetos_eventos";
 
@@ -53,10 +54,10 @@ export async function registrarEventoProjeto(e: Evento) {
 
   if (novos.size === 0) return;
   try {
-    const { data: insts } = await supabase.from("empresas_instancias").select("*").eq("empresa_id", e.empresaId as never);
+    const { data: insts } = await tabelaLeitura("empresas_instancias").eq("empresa_id", e.empresaId as never);
     const inst = instanciaParaAvisos((insts ?? []) as Row[]) ?? (insts as Row[] | null)?.[0];
     if (!inst) return;
-    const { data: users } = await supabase.from("usuarios").select("*").in("id", [...novos] as never);
+    const { data: users } = await tabelaLeitura("usuarios").in("id", [...novos] as never);
     const prazo = e.prazo ? String(e.prazo).slice(0, 10).split("-").reverse().join("/") : "";
     const link = typeof window !== "undefined" ? `${window.location.origin}${linkItemProjeto(e.projetoId, e.tarefaId)}` : "";
     for (const u of (users ?? []) as Row[]) {

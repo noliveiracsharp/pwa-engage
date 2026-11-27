@@ -15,6 +15,7 @@ import { secoesComPermissao } from "@/lib/secoes-permissao";
 import { passaClassificacao, SEM_CLASSIFICACAO } from "@/lib/filtro-classificacao";
 import { caminhoClassificacao, useClassificacoes } from "@/components/parceiros/ClassificacaoField";
 import { formatCpfCnpj, formatPhoneDisplay, matchesAny } from "@/lib/input-masks";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 export const Route = createFileRoute("/_authenticated/empresas")({
   staticData: { sitemap: false },
@@ -48,7 +49,7 @@ function EmpresasPage() {
     queryFn: async (): Promise<Row[]> => {
       const out: Row[] = [];
       for (let from = 0; ; from += 1000) {
-        const { data, error } = await supabase.from("empresas").select("*").order("id").range(from, from + 999);
+        const { data, error } = await tabelaLeitura("empresas").order("id").range(from, from + 999);
         if (error) throw error;
         out.push(...((data ?? []) as Row[]));
         if ((data ?? []).length < 1000) break;

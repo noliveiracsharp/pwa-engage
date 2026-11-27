@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { rowId, text } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
 import { dispararMensagem, sanitizarTelefone } from "@/lib/atendimentos-envio";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 export type Credenciais = {
   motivo: "novo" | "senha" | "email" | "senha_email";
@@ -59,7 +60,7 @@ export function CredenciaisDialog({ dados, onClose }: { dados: Credenciais | nul
     queryKey: ["credenciais-instancias", dados?.empresaId],
     enabled: !!dados?.empresaId,
     queryFn: async () => {
-      const { data } = await supabase.from("empresas_instancias").select("*").eq("empresa_id", dados!.empresaId as never);
+      const { data } = await tabelaLeitura("empresas_instancias").eq("empresa_id", dados!.empresaId as never);
       return ((data ?? []) as Row[]).filter((i) => i["status"] !== false && i["ativo"] !== false);
     },
   });
@@ -72,7 +73,7 @@ export function CredenciaisDialog({ dados, onClose }: { dados: Credenciais | nul
     queryKey: ["credenciais-slug", dados?.empresaId],
     enabled: !!dados?.empresaId,
     queryFn: async () => {
-      const { data } = await supabase.from("empresas").select("*").eq("id", dados!.empresaId as never).maybeSingle();
+      const { data } = await tabelaLeitura("empresas").eq("id", dados!.empresaId as never).maybeSingle();
       return text((data as Row | null)?.["slug"] ?? "").trim();
     },
   });

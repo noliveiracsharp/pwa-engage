@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { formatBRL, formatQtd } from "@/lib/orcamentos";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 type Linha = { id: string; data: string; numero: string; fornecedor: string; quantidade: number; preco: number; status: string };
 
@@ -11,15 +12,15 @@ export function HistoricoCompras({ itemId }: { itemId: string }) {
   const { data = [], isLoading, error } = useQuery({
     queryKey: ["historico-compras", itemId],
     queryFn: async (): Promise<Linha[]> => {
-      const { data: itens, error: e1 } = await supabase.from("pedidos_compra_itens").select("*").eq("item_id", itemId);
+      const { data: itens, error: e1 } = await tabelaLeitura("pedidos_compra_itens").eq("item_id", itemId);
       if (e1) throw e1;
       const linhas = (itens ?? []) as Array<Record<string, unknown>>;
       const pids = [...new Set(linhas.map((l) => String(l["pedido_id"])))];
       if (!pids.length) return [];
-      const { data: peds } = await supabase.from("pedidos_compra").select("*").in("id", pids);
+      const { data: peds } = await tabelaLeitura("pedidos_compra").in("id", pids);
       const pedidos = new Map(((peds ?? []) as Array<Record<string, unknown>>).filter((p) => p["status"] !== "cancelado").map((p) => [String(p["id"]), p]));
       const fids = [...new Set([...pedidos.values()].map((p) => String(p["fornecedor_id"])))];
-      const { data: fs } = fids.length ? await supabase.from("parceiros").select("*").in("id", fids) : { data: [] };
+      const { data: fs } = fids.length ? await tabelaLeitura("parceiros").in("id", fids) : { data: [] };
       const forn = new Map(((fs ?? []) as Array<Record<string, unknown>>).map((f) => [String(f["id"]), String(f["nome_fantasia"] ?? f["razao_social"] ?? f["nome"] ?? "—")]));
       return linhas
         .filter((l) => pedidos.has(String(l["pedido_id"])))

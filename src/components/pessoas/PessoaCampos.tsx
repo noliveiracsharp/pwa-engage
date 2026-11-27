@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { text } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 type Props = {
   pessoaId?: string | number | undefined;
@@ -61,7 +62,7 @@ export function PessoaCampos({ pessoaId, templates = ["pessoas", "atendimento"],
   const { data: definicoes = [], isError } = useQuery({
     queryKey: ["table", "empresas_camposperson"],
     queryFn: async (): Promise<Row[]> => {
-      const { data, error } = await supabase.from("empresas_camposperson").select("*");
+      const { data, error } = await tabelaLeitura("empresas_camposperson");
       if (error) throw error;
       return (data ?? []) as Row[];
     },

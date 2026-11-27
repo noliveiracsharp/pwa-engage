@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { pick, type Row } from "@/lib/row";
 import { SITUACOES } from "@/lib/orcamentos";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 const ETAPA_KANBAN_KEYS = ["kanban_nome_id", "kanban_id", "id_kanban"];
 
@@ -31,7 +32,7 @@ export function kanbanDoModuloOrcamentos(): Promise<string | null> {
 
 /** Kanban vinculado à função cujo path é `/<modulo>` (ou cuja descrição começa por `prefixoDesc`). */
 export async function kanbanDoModulo(modulo: string, prefixoDesc?: string): Promise<string | null> {
-  const { data: funcoes } = await supabase.from("funcoes").select("*");
+  const { data: funcoes } = await tabelaLeitura("funcoes");
   const ids = ((funcoes ?? []) as Row[])
     .filter((f) => {
       const path = norm(f["path"]).replace(/^\/+|\/+$/g, "");
@@ -49,7 +50,7 @@ export async function kanbanDoModulo(modulo: string, prefixoDesc?: string): Prom
   // A tabela de vínculo pode se chamar `kanban_funcoes` ou `funcoes_kanban`.
   let linhas: Row[] = [];
   for (const tabela of ["kanban_funcoes", "funcoes_kanban"]) {
-    const { data, error } = await supabase.from(tabela as never).select("*");
+    const { data, error } = await tabelaLeitura(tabela);
     if (!error && data?.length) {
       linhas = data as Row[];
       break;
@@ -98,7 +99,7 @@ export async function tabelaDoKanban(kanbanNomeId: string): Promise<string | nul
   const funcaoId = pick(v.row, ["funcao_id", "funcoes_id", "id_funcao"]) ?? colunaCom(v.row, ["func"]);
   if (funcaoId === undefined || funcaoId === null) return null;
   for (const k of ["funcao_id", "id"]) {
-    const { data, error } = await supabase.from("funcoes").select("*").eq(k, funcaoId as never).maybeSingle();
+    const { data, error } = await tabelaLeitura("funcoes").eq(k, funcaoId as never).maybeSingle();
     if (!error && data) {
       const t = (data as Row)["tabela_base"];
       return t ? String(t).trim() : null;
@@ -112,9 +113,7 @@ export type EtapaKanban = { id: string; descricao: string; cor: string; ganha?: 
 /** Etapas do kanban (ordem ascendente) — opções dinâmicas da Situação. */
 export async function etapasDoKanban(kanbanNomeId: string | null): Promise<EtapaKanban[]> {
   if (!kanbanNomeId) return [];
-  const { data, error } = await supabase
-    .from("kanban_etapas")
-    .select("*")
+  const { data, error } = await tabelaLeitura("kanban_etapas")
     .eq("kanban_nome_id", kanbanNomeId)
     .order("ordem", { ascending: true });
   if (error) return [];
@@ -147,7 +146,7 @@ export type VinculoKanban = { tabela: string; row: Row };
 /** Linha de vínculo Função↔Kanban para o kanban informado. */
 export async function vinculoDoKanban(kanbanNomeId: string): Promise<VinculoKanban | null> {
   for (const tabela of ["funcoes_kanban", "kanban_funcoes"]) {
-    const { data, error } = await supabase.from(tabela as never).select("*");
+    const { data, error } = await tabelaLeitura(tabela);
     if (error || !data) continue;
     const row = (data as Row[]).find(
       (r) =>
@@ -238,7 +237,7 @@ export async function camposDisponiveisDoVinculo(
   if (funcaoId === undefined || funcaoId === null) return { tabela: null, campos: [] };
   let funcao: Row | null = null;
   for (const k of ["funcao_id", "id"]) {
-    const { data, error } = await supabase.from("funcoes").select("*").eq(k, funcaoId as never).maybeSingle();
+    const { data, error } = await tabelaLeitura("funcoes").eq(k, funcaoId as never).maybeSingle();
     if (!error && data) { funcao = data as Row; break; }
   }
   const tabela = funcao?.["tabela_base"] ? String(funcao["tabela_base"]).trim() : null;

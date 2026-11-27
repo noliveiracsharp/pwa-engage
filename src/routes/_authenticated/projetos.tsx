@@ -50,6 +50,7 @@ import { LegendaCores } from "@/components/projetos/LegendaCores";
 import { ArrowDown, ArrowUp, Copy } from "lucide-react";
 import type { Row } from "@/lib/row";
 import { confirmar, perguntar } from "@/components/layout/DialogoGlobal";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 export const Route = createFileRoute("/_authenticated/projetos")({
   staticData: { sitemap: false },
@@ -921,7 +922,7 @@ function SortRow({ id, disabled, onClick, children }: { id: string; disabled: bo
 
 /** Cria no projeto as tarefas do template, na ordem do template. Retorna quantas foram criadas. */
 async function aplicarTemplate(d: D, templateId: string, projetoId: unknown, base: number, stamp: (v: Row, isNew: boolean) => Row): Promise<number> {
-  const { data, error } = await supabase.from(TAREFAS_PADRAO).select("*").eq("template_id", templateId as never).order("ordem", { ascending: true });
+  const { data, error } = await tabelaLeitura(TAREFAS_PADRAO).eq("template_id", templateId as never).order("ordem", { ascending: true });
   if (error) { console.error(error); toast.error(error.message); return 0; }
   const modelos = (data ?? []) as Row[];
   if (!modelos.length) { toast.error("Este template não tem tarefas."); return 0; }

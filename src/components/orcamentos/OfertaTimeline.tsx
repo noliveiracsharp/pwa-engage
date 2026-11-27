@@ -9,6 +9,7 @@ import { SearchSelect } from "@/components/data-table/SearchSelect";
 import { confirmar } from "@/components/layout/DialogoGlobal";
 import { useAudit } from "@/lib/audit";
 import type { Row } from "@/lib/row";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 const TIPOS = [
   { value: "email", label: "E-mail", icon: Send },
@@ -34,7 +35,7 @@ export function OfertaTimeline({ orcamentoId, empresaId, readOnly }: { orcamento
   const { data = [], error } = useQuery({
     queryKey: key,
     queryFn: async () => {
-      const { data, error } = await supabase.from("orcamento_interacoes" as never).select("*")
+      const { data, error } = await tabelaLeitura("orcamento_interacoes")
         .eq("orcamento_id", orcamentoId).order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as Row[];

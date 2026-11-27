@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { PlannerPainel } from "@/components/chat-interno/PlannerPainel";
 import { TarefasChat, NovaTarefa } from "@/components/chat-interno/TarefasChat";
 import { canalDireto } from "@/components/chat-interno/ChatInterno";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 export const Route = createFileRoute("/_authenticated/planner")({
   staticData: { sitemap: false },
@@ -49,7 +50,7 @@ function PlannerPagina() {
     queryKey: ["chat-interno-usuarios", empresaId],
     enabled: !!empresaId,
     queryFn: async () => {
-      const { data, error } = await supabase.from("usuarios").select("*").eq("empresa_id", empresaId);
+      const { data, error } = await tabelaLeitura("usuarios").eq("empresa_id", empresaId);
       if (error) throw error;
       return ((data ?? []) as Row[]).filter((u) => String(u["id"]) !== me && u["status"] !== false);
     },

@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Row } from "@/lib/row";
 import { confirmar } from "@/components/layout/DialogoGlobal";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 export const TIPOS_ITEM = [
   { v: "checkbox", l: "Marcar (check)" },
@@ -22,7 +23,7 @@ export function useChecklistTemplates(empresaId: unknown) {
     queryKey: ["table", "checklists_templates", String(empresaId ?? "")],
     enabled: !!empresaId,
     queryFn: async (): Promise<Row[]> => {
-      const { data, error } = await supabase.from("checklists_templates").select("*")
+      const { data, error } = await tabelaLeitura("checklists_templates")
         .eq("empresa_id", empresaId as string).order("nome");
       if (error) throw error;
       return (data ?? []) as Row[];
@@ -44,7 +45,7 @@ export function ChecklistTemplates({ empresaId }: { empresaId: unknown }) {
 
   useEffect(() => {
     if (!editId || editId === "novo") return;
-    void supabase.from("checklists_itens").select("*").eq("template_id", editId).order("ordem").then(({ data }) =>
+    void tabelaLeitura("checklists_itens").eq("template_id", editId).order("ordem").then(({ data }: { data: unknown }) =>
       setItens(((data ?? []) as Row[]).map((r) => ({
         id: String(r["id"]), descricao: String(r["descricao"] ?? ""), tipo: String(r["tipo"] ?? "checkbox"), obrigatorio: r["obrigatorio"] !== false,
       }))));

@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AuditoriaDetalhe, OperacaoBadge } from "@/components/auditoria/AuditoriaDetalhe";
 import { type AuditoriaLog, auditoriaCsv, nomeTabela, resumoLog } from "@/lib/auditoria";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 const db = supabase as any;
 
@@ -46,7 +47,7 @@ function AuditoriaPage() {
     queryKey: ["auditoria", "lista", de, ate, tabela, operacao],
     retry: 1,
     queryFn: async () => {
-      let q = db.from("auditoria_logs").select("*")
+      let q = tabelaLeitura("auditoria_logs")
         .gte("criado_em", `${de}T00:00:00`).lte("criado_em", `${ate}T23:59:59.999`)
         .order("criado_em", { ascending: false }).limit(2000);
       if (tabela !== "todas") q = q.eq("tabela", tabela);

@@ -11,6 +11,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { formatBRL } from "@/lib/orcamentos";
 import { etapaDaOferta, type EtapaRef } from "@/lib/oferta-ativacao";
 import { marcadaPorPadrao, reajustarOferta, vendaTravada, type ModoReajuste, type NovoPreco } from "@/lib/reajuste-itens";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 const db = supabase as any;
 
@@ -37,8 +38,8 @@ export function ReajusteOfertasDialog({ open, onOpenChange, itemId, itemNome, no
       const ids = [...new Set((li ?? []).map((r: any) => String(r.orcamento_id)))];
       if (!ids.length) return { ofertas: [] as any[], etapas: [] as EtapaRef[] };
       const [{ data: ofertas }, { data: et }] = await Promise.all([
-        db.from("orcamentos").select("*").in("id", ids),
-        db.from("kanban_etapas").select("*"),
+        tabelaLeitura("orcamentos").in("id", ids),
+        tabelaLeitura("kanban_etapas"),
       ]);
       const etapas: EtapaRef[] = (et ?? []).map((e: any) => ({ id: String(e.id), descricao: String(e.descricao ?? ""), ganha: !!e.etapa_ganha }));
       return { ofertas: ofertas ?? [], etapas };
@@ -69,7 +70,7 @@ export function ReajusteOfertasDialog({ open, onOpenChange, itemId, itemNome, no
     try {
       for (const g of alvo) {
         for (const o of g.ofertas) {
-          const { data: linhas, error } = await db.from("orcamento_itens").select("*").eq("orcamento_id", o.id);
+          const { data: linhas, error } = await tabelaLeitura("orcamento_itens").eq("orcamento_id", o.id);
           if (error) throw error;
           // Serviço terceirizado mantém o custo negociado com o prestador: não é alvo do reajuste.
           const r = reajustarOferta(o, (linhas ?? []).map((l: any) => ({ ...l, id: String(l.id), item_id: l.execucao === "terceiro" ? null : l.item_id })), itemId, novo, modo, g.travada);

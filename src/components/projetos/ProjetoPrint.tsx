@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { pick, type Row } from "@/lib/row";
 import { atividadePct, fmtDate, tarefaPct } from "@/lib/projetos";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 const PRIO: Record<string, string> = { urg: "#dc2626", alt: "#eab308", baix: "#94a3b8" };
 const prioHex = (p: unknown) => {
@@ -41,8 +42,8 @@ export function ProjetoPrint({ projeto, cliente, periodo, tarefas, atividades = 
   useEffect(() => {
     const id = projeto["empresa_id"] ?? empresaId;
     if (!id) return;
-    supabase.from("empresas").select("*").eq("id", id as never).maybeSingle()
-      .then(({ data }) => setEmpresa((data as Row) ?? null));
+    tabelaLeitura("empresas").eq("id", id as never).maybeSingle()
+      .then(({ data }: { data: unknown }) => setEmpresa((data as Row) ?? null));
   }, [projeto, empresaId]);
 
   if (!host) return null;

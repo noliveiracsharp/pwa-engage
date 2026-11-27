@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { EmpresaEmailCanais } from "./EmpresaEmailCanais";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 type Cfg = {
   email_modo: "proprio" | "sistema";
@@ -29,7 +30,7 @@ export function EmpresaEmailPainel({ empresaId, readOnly }: { empresaId: string;
   useEffect(() => {
     let vivo = true;
     void (async () => {
-      const { data, error } = await supabase.from("empresas_email_config" as never).select("*").eq("empresa_id", empresaId).maybeSingle();
+      const { data, error } = await tabelaLeitura("empresas_email_config").eq("empresa_id", empresaId).maybeSingle();
       if (!vivo) return;
       if (error) { setSemScript(true); return; }
       setCfg({ ...PADRAO, ...((data as Partial<Cfg> | null) ?? {}) });

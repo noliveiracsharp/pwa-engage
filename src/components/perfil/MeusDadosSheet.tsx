@@ -14,6 +14,7 @@ import { pick } from "@/lib/row";
 import { PhoneInput } from "@/components/data-table/PhoneInput";
 import { DocumentInput } from "@/components/data-table/DocumentInput";
 import { PasswordFields } from "@/components/usuarios/PasswordFields";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 
 export function MeusDadosSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
@@ -24,7 +25,7 @@ export function MeusDadosSheet({ open, onOpenChange }: { open: boolean; onOpenCh
   const { data: perfisAll = [] } = useQuery({
     queryKey: ["perfil-todos"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("perfil").select("*");
+      const { data, error } = await tabelaLeitura("perfil");
       if (error) throw error;
       return (data ?? []) as Record<string, unknown>[];
     },

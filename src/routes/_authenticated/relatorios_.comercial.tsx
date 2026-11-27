@@ -15,6 +15,7 @@ import { formatBRL } from "@/lib/orcamentos";
 import { valorOferta } from "@/lib/temperatura";
 import { forecastPonderado, negocioEncerrado, negocioPerdido, percentualMeta, probabilidadeEtapa, resumoPerdas } from "@/lib/crm";
 import type { Row } from "@/lib/row";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 export const Route = createFileRoute("/_authenticated/relatorios_/comercial")({
   staticData: { sitemap: false },
@@ -46,7 +47,7 @@ function PainelComercial() {
     queryFn: async () => {
       const k = await kanbanDoModuloOrcamentos();
       if (!k) return [] as Row[];
-      const { data } = await supabase.from("kanban_etapas").select("*").eq("kanban_nome_id", k).order("ordem");
+      const { data } = await tabelaLeitura("kanban_etapas").eq("kanban_nome_id", k).order("ordem");
       return (data ?? []) as Row[];
     },
   });

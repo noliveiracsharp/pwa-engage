@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Row } from "@/lib/row";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 /** Variável disponível no autocomplete `{{`. */
 export type VariavelDef = { chave: string; descricao?: string; personalizada?: boolean };
@@ -52,9 +53,7 @@ export function useVariaveisPersonalizadas(empresaId: string | number | undefine
     queryKey: ["variaveis_personalizadas", String(empresaId ?? "")],
     enabled: !!empresaId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("variaveis_personalizadas" as never)
-        .select("*")
+      const { data, error } = await tabelaLeitura("variaveis_personalizadas")
         .eq("empresa_id", String(empresaId))
         .order("chave");
       if (error) return [] as Row[];

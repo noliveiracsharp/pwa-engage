@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 export type ModuloPublico = { id: string; nome: string; descricao: string; valor: number };
 
@@ -8,7 +9,7 @@ export function useModulosPublicos() {
   return useQuery({
     queryKey: ["modulos-publicos"],
     queryFn: async (): Promise<ModuloPublico[]> => {
-      const { data, error } = await supabase.from("modulos_adicionais" as never).select("*");
+      const { data, error } = await tabelaLeitura("modulos_adicionais");
       if (error) throw error;
       return ((data ?? []) as Record<string, unknown>[])
         .filter((m) => m["status"] !== false && m["ativo"] !== false)

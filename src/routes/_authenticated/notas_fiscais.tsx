@@ -21,6 +21,7 @@ import { notasDaOferta, pendenciasNota, statusNota, STATUS_NOTA, type RascunhoNo
 import { formatBRL, formatDate } from "@/lib/orcamentos";
 import { pick, type Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 export const Route = createFileRoute("/_authenticated/notas_fiscais")({
   staticData: { sitemap: false },
@@ -78,7 +79,7 @@ function NotasFiscaisPage() {
   const calcularPrevia = async (id: string, rec: boolean) => {
     setOfertaId(id);
     if (!id) { setPrevia([]); return; }
-    const { data, error } = await supabase.from("orcamento_itens").select("*").eq("orcamento_id", id);
+    const { data, error } = await tabelaLeitura("orcamento_itens").eq("orcamento_id", id);
     if (error) { toast.error(error.message); return; }
     const cat = new Map(catalogo.map((i) => [String(rowId(i)), i]));
     setPrevia(notasDaOferta(ofById.get(id) ?? {}, (data ?? []) as Row[], cat, rec));

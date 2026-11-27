@@ -35,6 +35,7 @@ import { ReceberPedidoDialog } from "@/components/cotacoes/ReceberPedidoDialog";
 import { CotacaoVersoes } from "@/components/cotacoes/CotacaoVersoes";
 import { ParceiroSheet } from "@/components/parceiros/ParceiroSheet";
 import { useAudit } from "@/lib/audit";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 type Props = {
   open: boolean;
@@ -66,7 +67,7 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
     queryKey: ["cotacao-instancias", String(empresaId ?? "")],
     enabled: open && !!empresaId,
     queryFn: async () => {
-      const { data } = await supabase.from("empresas_instancias").select("*").eq("empresa_id", String(empresaId) as never);
+      const { data } = await tabelaLeitura("empresas_instancias").eq("empresa_id", String(empresaId) as never);
       return ((data ?? []) as Row[]).filter((i) => i["status"] !== false && i["ativo"] !== false && String(i["tipo"] ?? "") !== "chat");
     },
   });
@@ -238,14 +239,14 @@ export function CotacaoSheet({ open, onOpenChange, cotacao, itensCot, fornCot, p
         const { error } = await supabase.from("itens").update({ preco_custo: novo, ...(venda != null ? { preco_venda: venda } : {}) } as never).eq("id", itemId);
         if (error) continue;
         nItens++;
-        const { data: linhas } = await supabase.from("orcamento_itens").select("*").eq("item_id", itemId);
+        const { data: linhas } = await tabelaLeitura("orcamento_itens").eq("item_id", itemId);
         const ids = [...new Set(((linhas ?? []) as Row[]).map((l) => String(l["orcamento_id"])))];
         if (!ids.length) continue;
-        const { data: ofs } = await supabase.from("orcamentos").select("*").in("id", ids).eq("empresa_id", String(empresaId) as never);
+        const { data: ofs } = await tabelaLeitura("orcamentos").in("id", ids).eq("empresa_id", String(empresaId) as never);
         const abertas = ((ofs ?? []) as Row[]).filter((o) => ofertaAceitaNovoCusto(o["situacao"]));
         for (const o of abertas) {
           const oid = String(o["id"]);
-          const { data: todas } = await supabase.from("orcamento_itens").select("*").eq("orcamento_id", oid);
+          const { data: todas } = await tabelaLeitura("orcamento_itens").eq("orcamento_id", oid);
           let totalCusto = 0, totalLucro = 0;
           for (const l of (todas ?? []) as Row[]) {
             // Serviço terceirizado: custo negociado com o prestador nunca é sobrescrito pela cotação.

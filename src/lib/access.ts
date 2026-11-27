@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { pick, type Row } from "@/lib/row";
 import { isPerfilMaster } from "@/hooks/useAuth";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 /** Paths that every authenticated user may open, regardless of menu grants. */
 const ALWAYS_ALLOWED = ["/meus-dados", "/sem-acesso", "/acesso", "/minha-unidade"];
@@ -55,11 +56,11 @@ export function getAllowedPathsCached(userId: string, email?: string): Promise<s
 export async function getAllowedPaths(userId: string, email?: string): Promise<string[] | null> {
   try {
     let usuario: Row | null = null;
-    const byId = await supabase.from("usuarios").select("*").eq("id", userId).maybeSingle();
+    const byId = await tabelaLeitura("usuarios").eq("id", userId).maybeSingle();
     usuario = (byId.data as Row) ?? null;
     if (byId.error && !email) throw byId.error;
     if (!usuario && email) {
-      const byEmail = await supabase.from("usuarios").select("*").eq("email", email).maybeSingle();
+      const byEmail = await tabelaLeitura("usuarios").eq("email", email).maybeSingle();
       usuario = (byEmail.data as Row) ?? null;
       if (!usuario && byEmail.error) throw byEmail.error;
     }

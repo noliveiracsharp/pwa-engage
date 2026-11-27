@@ -33,6 +33,7 @@ import { PropostaDocumento } from "./PropostaDocumento";
 import { CapaEstiloEditor } from "./CapaEstiloEditor";
 import { EnviarPropostaDialog, tituloOferta } from "./EnviarPropostaDialog";
 import { confirmar, perguntar } from "@/components/layout/DialogoGlobal";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 type Props = {
   open: boolean;
@@ -84,9 +85,7 @@ export function PropostaDialog(props: Props) {
     queryKey: ["orcamentos_templates", empresaId],
     enabled: open && !!empresaId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("orcamentos_templates" as never)
-        .select("*")
+      const { data, error } = await tabelaLeitura("orcamentos_templates")
         .eq("empresa_id", empresaId)
         .order("nome");
       if (error) throw error;

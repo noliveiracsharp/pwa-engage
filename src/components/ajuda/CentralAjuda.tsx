@@ -13,6 +13,7 @@ import { ARTIGOS_PADRAO, MODULOS_AJUDA, artigoTexto, buscarArtigos, mesclarArtig
 import { perguntarCopiloto } from "@/lib/ajuda.functions";
 import { useAuth } from "@/hooks/useAuth";
 import { EditorArtigoAjuda } from "./EditorArtigoAjuda";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 /** Guias do banco (ajuda_artigos): personalizam os oficiais (chave) ou criam guias novos. */
 function useArtigos() {
@@ -20,7 +21,7 @@ function useArtigos() {
     queryKey: ["ajuda-artigos"],
     staleTime: 5 * 60_000,
     queryFn: async () => {
-      const { data, error } = await supabase.from("ajuda_artigos" as never).select("*").eq("publicado", true).order("ordem");
+      const { data, error } = await tabelaLeitura("ajuda_artigos").eq("publicado", true).order("ordem");
       if (error) return [];
       return (data as Record<string, unknown>[]).map((r): ArtigoBanco => ({
         id: `db-${r["id"]}`, dbId: String(r["id"]), chave: (r["chave"] as string) || undefined,

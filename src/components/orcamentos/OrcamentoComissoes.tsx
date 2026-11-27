@@ -15,6 +15,7 @@ import { formatBRL, formatPct } from "@/lib/orcamentos";
 import { rowId, text } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 type Props = {
   linhas: LinhaComissao[];
@@ -43,9 +44,7 @@ export function OrcamentoComissoes({ linhas, orcamentoId, vendedorId, usuarios, 
     queryKey: ["table", "orcamento_comissoes", orcamentoId],
     enabled: !!orcamentoId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("orcamento_comissoes")
-        .select("*")
+      const { data, error } = await tabelaLeitura("orcamento_comissoes")
         .eq("orcamento_id", orcamentoId as string);
       if (error) throw error;
       return (data ?? []) as unknown as Array<{ papel_id: string; beneficiario_id: string | null }>;

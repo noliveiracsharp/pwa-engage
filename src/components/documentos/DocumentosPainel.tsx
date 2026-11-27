@@ -31,6 +31,7 @@ import {
   type EntidadeDoc,
 } from "@/lib/documentos";
 import { confirmar } from "@/components/layout/DialogoGlobal";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 const db = supabase as any;
 
@@ -61,7 +62,7 @@ export function useModelos() {
   return useQuery({
     queryKey: ["documento_modelos"],
     queryFn: async () => {
-      const { data, error } = await db.from("documento_modelos").select("*").order("titulo");
+      const { data, error } = await tabelaLeitura("documento_modelos").order("titulo");
       if (error) throw error;
       return (data ?? []) as Row[];
     },
@@ -278,7 +279,7 @@ export function DocumentosPainel({ entidadeTipo, entidadeId, entidadeNome, regis
     queryKey: ["documentos", entidadeTipo, entidadeId],
     enabled: !!entidadeId,
     queryFn: async () => {
-      const { data, error } = await db.from("documentos").select("*")
+      const { data, error } = await tabelaLeitura("documentos")
         .eq("entidade_tipo", entidadeTipo).eq("entidade_id", entidadeId).order("dt_emissao", { ascending: false });
       if (error) throw error;
       return (data ?? []) as DocumentoRow[];

@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 const TITLE = "Checkout — ConectCon HUB";
 const DESC = "Cadastre sua empresa e escolha a forma de pagamento para assinar o ConectCon HUB.";
@@ -90,7 +91,7 @@ function CheckoutPage() {
     queryKey: ["checkout-plano", planoId],
     enabled: !!planoId,
     queryFn: async () => {
-      const { data } = await supabase.from("planos_base" as never).select("*").eq("id", planoId).maybeSingle();
+      const { data } = await tabelaLeitura("planos_base").eq("id", planoId).maybeSingle();
       return (data as unknown as Plano) ?? null;
     },
   });

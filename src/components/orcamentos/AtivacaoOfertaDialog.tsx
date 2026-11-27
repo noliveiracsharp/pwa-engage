@@ -20,6 +20,7 @@ import { aplicarFornecedorAoGrupo, pedidosPorFornecedor, vencedoresPorItem, type
 import { notificarEquipe } from "@/lib/avisos-equipe";
 import { proximoNumero } from "@/lib/laudos";
 import { COMPRA_MODOS, condicaoCompraFromValue, formatBRL, formatDate, num, parcelasFromValue, round2 } from "@/lib/orcamentos";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 type Props = {
   open: boolean;
@@ -90,8 +91,8 @@ export function AtivacaoOfertaDialog({ open, onOpenChange, oferta, cliente, empr
         const grupoPorItem = new Map<string, string>();
         if (cotIds.length) {
           const [ic, pr] = await Promise.all([
-            supabase.from("cotacoes_itens").select("*").in("cotacao_id", cotIds),
-            supabase.from("cotacoes_precos").select("*").in("cotacao_id", cotIds),
+            tabelaLeitura("cotacoes_itens").in("cotacao_id", cotIds),
+            tabelaLeitura("cotacoes_precos").in("cotacao_id", cotIds),
           ]);
           const itensCot = (ic.data ?? []) as Row[];
           vencedores = vencedoresPorItem(itensCot, (pr.data ?? []) as Row[]);

@@ -11,6 +11,7 @@ import { snapshotCotacao, compararCotacoes, type SnapCotacao } from "@/lib/cotac
 import { rotuloVersao } from "@/lib/oferta-versoes";
 import { formatQtd } from "@/lib/orcamentos";
 import { pick, type Row } from "@/lib/row";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 type Props = { cotacao: Row; itensCot: Row[]; precos: Row[]; itens: Row[]; canUpdate: boolean; usuarioNome: string };
 
@@ -26,7 +27,7 @@ export function CotacaoVersoes({ cotacao, itensCot, precos, itens, canUpdate, us
   const q = useQuery({
     queryKey: ["cotacoes_versoes", cid],
     queryFn: async () => {
-      const { data, error } = await supabase.from("cotacoes_versoes" as never).select("*").eq("cotacao_id", cid).order("versao", { ascending: false });
+      const { data, error } = await tabelaLeitura("cotacoes_versoes").eq("cotacao_id", cid).order("versao", { ascending: false });
       if (error) return { faltaScript: true, rows: [] as Row[] };
       return { faltaScript: false, rows: (data ?? []) as Row[] };
     },

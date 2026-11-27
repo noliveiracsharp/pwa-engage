@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { rowId, useTableRows } from "@/lib/crud";
 import { confirmar } from "@/components/layout/DialogoGlobal";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 const isProduto = (t: unknown) => String(t ?? "") === "Produto";
 const calcVenda = (custo: number, margem: number, imposto: number) => {
@@ -37,7 +38,7 @@ export function usePrecificacao() {
   return useQuery({
     queryKey: ["precificacao", empresaId ?? null],
     queryFn: async (): Promise<Precificacao> => {
-      let q = supabase.from("empresas_configuracao").select("*");
+      let q = tabelaLeitura("empresas_configuracao");
       if (empresaId) q = q.eq("empresa_id", empresaId);
       const { data } = await q.limit(1);
       const r = (data?.[0] ?? {}) as Record<string, unknown>;

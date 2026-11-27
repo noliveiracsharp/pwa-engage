@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { pick, type Row } from "@/lib/row";
 import { useAuth } from "@/hooks/useAuth";
 import { empresaDaConsulta } from "@/lib/financeiro-contexto";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 /** Tarefas de Projetos pela procedure fn_projetos_tarefas_lista (abertas + concluídas recentes + a tarefa do link).
  *  Mantém o prefixo ["table","projetos_tarefas"] para as invalidações existentes. Sem o script, cai na leitura direta. */
@@ -35,7 +36,7 @@ export function useTarefasProjetos(incluirConcluidas: boolean, tarefaId?: string
 async function leituraDireta(ctx: string): Promise<Row[]> {
   const out: Row[] = [];
   for (let de = 0; ; de += 1000) {
-    let q = supabase.from("projetos_tarefas").select("*");
+    let q = tabelaLeitura("projetos_tarefas");
     if (ctx) q = q.eq("empresa_id", ctx as never);
     const { data, error } = await q.range(de, de + 999);
     if (error) throw new Error(error.message);

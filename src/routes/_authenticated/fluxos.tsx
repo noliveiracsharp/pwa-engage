@@ -41,6 +41,7 @@ import { createContext, useContext } from "react";
 import { CampoVariaveis } from "@/components/ui/campo-variaveis";
 import type { VariavelDef } from "@/lib/variaveis";
 import { tagDoKanban } from "@/lib/qr-direto";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 const VARS_CONTATO: VariavelDef[] = [
   { chave: "nome", descricao: "Nome do contato" },
@@ -254,7 +255,7 @@ function useRows(table: string) {
   return useQuery({
     queryKey: ["table", table],
     queryFn: async (): Promise<Row[]> => {
-      const { data, error } = await supabase.from(table).select("*");
+      const { data, error } = await tabelaLeitura(table);
       if (error) throw error;
       return (data ?? []) as Row[];
     },
@@ -270,7 +271,7 @@ function FluxosPage() {
   const fluxosQ = useQuery({
     queryKey: ["fluxos_atendimento", empresaId],
     queryFn: async (): Promise<Row[]> => {
-      let q = supabase.from("fluxos_atendimento").select("*").order("created_at");
+      let q = tabelaLeitura("fluxos_atendimento").order("created_at");
       if (empresaId) q = q.eq("empresa_id", empresaId);
       const { data, error } = await q;
       if (error) throw error;

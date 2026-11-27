@@ -8,6 +8,7 @@ import { text } from "@/lib/crud";
 import { pick, type Row } from "@/lib/row";
 import { situacaoAtivada } from "@/lib/oferta-ativacao";
 import { dispararPush } from "@/lib/push";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 export const AVISOS_EQUIPE = "avisos_equipe";
 const INTERVALO = 30 * 1000;
@@ -39,10 +40,10 @@ export async function notificarEquipe(n: Notificacao): Promise<{ avisos: number;
     if (!error) { avisos = ids.length; dispararPush(); }
   } catch { /* sininho opcional */ }
   try {
-    const { data: insts } = await supabase.from("empresas_instancias").select("*").eq("empresa_id", n.empresaId as never);
+    const { data: insts } = await tabelaLeitura("empresas_instancias").eq("empresa_id", n.empresaId as never);
     const inst = instanciaParaAvisos((insts ?? []) as Row[]) ?? (insts as Row[] | null)?.[0];
     if (!inst) return { avisos, whatsapp };
-    const { data: users } = await supabase.from("usuarios").select("*").in("id", ids as never);
+    const { data: users } = await tabelaLeitura("usuarios").in("id", ids as never);
     const url = typeof window !== "undefined" && n.link ? `${window.location.origin}${n.link}` : "";
     for (const u of (users ?? []) as Row[]) {
       const tel = text(pick(u, ["telefone", "celular", "whatsapp"]));
@@ -68,7 +69,7 @@ export function useAvisosEquipe(usuarioId: unknown) {
     let parado = false;
     const checar = async () => {
       const desde = new Date(Date.now() - 7 * 864e5).toISOString();
-      const { data, error } = await supabase.from(AVISOS_EQUIPE as never).select("*")
+      const { data, error } = await tabelaLeitura(AVISOS_EQUIPE)
         .eq("usuario_id", uid as never).eq("lido", false as never).gte("created_at", desde as never)
         .order("created_at", { ascending: true }).limit(30);
       if (parado || error || !data) return;
