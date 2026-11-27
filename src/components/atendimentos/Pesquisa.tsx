@@ -79,8 +79,8 @@ export function usePesquisaSatisfacao() {
   function pedir(p: Pedido): Promise<boolean> {
     setPedido(p);
     if (empresaId) {
-      void supabase.from("empresas").select("*").eq("id", empresaId).maybeSingle().then(({ data }) => {
-        const v = String((data as Row | null)?.["csat_msg_agradecimento"] ?? "");
+      void supabase.rpc("fn_empresa_csat_agradecimento" as never, { p_empresa_id: empresaId } as never).then(({ data }) => {
+        const v = String((data as unknown as string | null) ?? "");
         agradOriginal.current = v;
         setAgradecimento(v || CSAT_AGRADECIMENTO_PADRAO);
       });
@@ -92,15 +92,13 @@ export function usePesquisaSatisfacao() {
     const atId = text(pick(p.atendimento, ["id"]));
     const instId = pick(p.atendimento, A.instancia);
     let instancia = p.instancia;
-    if (!instancia && instId != null) {
-      const { data } = await supabase.from("empresas_instancias").select("*").eq("id", instId as string).maybeSingle();
-      instancia = (data ?? undefined) as Row | undefined;
-    }
     let pessoa = p.pessoa;
     const pesId = pick(p.atendimento, A.pessoa);
-    if (!pessoa && pesId != null) {
-      const { data } = await supabase.from("pessoas").select("*").eq("id", pesId as string).maybeSingle();
-      pessoa = (data ?? undefined) as Row | undefined;
+    if ((!instancia && instId != null) || (!pessoa && pesId != null)) {
+      const { data } = await supabase.rpc("fn_atendimentos_pesquisa_contexto" as never, { p_atendimento_id: atId } as never);
+      const c = (data ?? {}) as unknown as { instancia?: Row | null; pessoa?: Row | null };
+      instancia = instancia ?? c.instancia ?? undefined;
+      pessoa = pessoa ?? c.pessoa ?? undefined;
     }
     const TEXTO = textoEncerramento(pick(p.atendimento, ["protocolo"]), telefonePessoa(pessoa), typeof window !== "undefined" ? window.location.origin : "");
     const payload: Row = {

@@ -37,9 +37,9 @@ export function useBloqueados(empresaId: unknown) {
   const q = useQuery({
     queryKey: ["atendimentos-bloqueios", empresaId, "mapa"], enabled: !!empresaId, staleTime: 60_000,
     queryFn: async () => {
-      const r = await tb("atendimentos_bloqueios").select("*").eq("empresa_id", empresaId).limit(5000);
+      const r = await supabase.rpc("fn_atendimentos_bloqueios" as never, { p_empresa_id: empresaId, p_limite: 5000 } as never);
       if (r.error) return [] as Bloq[];
-      return r.data as Bloq[];
+      return (r.data ?? []) as unknown as Bloq[];
     },
   });
   return useMemo(() => {
@@ -71,9 +71,9 @@ export function BloqueiosDialog({ open, onOpenChange, empresaId }: { open: boole
   const q = useQuery({
     queryKey: ["atendimentos-bloqueios", empresaId], enabled: open && !!empresaId,
     queryFn: async () => {
-      const r = await tb("atendimentos_bloqueios").select("*").eq("empresa_id", empresaId).order("created_at", { ascending: false }).limit(2000);
+      const r = await supabase.rpc("fn_atendimentos_bloqueios" as never, { p_empresa_id: empresaId, p_limite: 2000 } as never);
       if (r.error) throw new Error(faltaTabela(r.error.message) ? SCRIPT : r.error.message);
-      return r.data as Bloq[];
+      return (r.data ?? []) as unknown as Bloq[];
     },
   });
   const lista = useMemo(() => {

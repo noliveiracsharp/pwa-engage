@@ -16,9 +16,9 @@ export function useChecklistsAtendimento(atId: string) {
     queryKey: checklistsKey(atId),
     enabled: !!atId,
     queryFn: async (): Promise<Row[]> => {
-      const { data, error } = await supabase.from("atendimentos_checklists").select("*").eq("atendimento_id", atId);
+      const { data, error } = await supabase.rpc("fn_atendimentos_checklists" as never, { p_atendimento_id: atId } as never);
       if (error) return [];
-      return ((data ?? []) as Row[]).sort((a, b) => dataChecklist(b).getTime() - dataChecklist(a).getTime());
+      return ((Array.isArray(data) ? data : []) as Row[]).sort((a, b) => dataChecklist(b).getTime() - dataChecklist(a).getTime());
     },
   });
 }

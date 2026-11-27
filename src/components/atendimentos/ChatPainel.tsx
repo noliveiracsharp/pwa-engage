@@ -149,19 +149,10 @@ export function ChatPainel({ atendimento, pessoa, instancia, kanbans, etapas, no
     // Realtime entrega na hora; o polling lento fica só como rede de segurança.
     refetchInterval: 20000,
     queryFn: async (): Promise<Row[]> => {
-      // Procedure rápida (índice atendimento_id+created_at); cai na consulta direta se ainda não existir.
-      let linhas: Row[] | null = null;
+      // Procedure rápida (índice atendimento_id+created_at).
       const rpc = await supabase.rpc("fn_atendimentos_mensagens" as never, { p_atendimento_id: id, p_limite: 600 } as never);
-      if (!rpc.error && Array.isArray(rpc.data)) linhas = rpc.data as Row[];
-      if (!linhas) {
-        const { data, error } = await supabase
-          .from("atendimentos_mensagem")
-          .select("*")
-          .eq("atendimento_id", id)
-          .eq("oculta_para_atendente", false);
-        if (error) throw error;
-        linhas = (data ?? []) as Row[];
-      }
+      if (rpc.error) throw rpc.error;
+      const linhas = (Array.isArray(rpc.data) ? rpc.data : []) as Row[];
       return linhas
         .filter((m) => m["apagada_para_todos"] !== true && !APAGADAS.has(text(rowId(m))))
         .map((m) => { const e = EDITADAS.get(text(rowId(m))); return e === undefined ? m : { ...m, mensagem: e, conteudo: e, texto: e }; })

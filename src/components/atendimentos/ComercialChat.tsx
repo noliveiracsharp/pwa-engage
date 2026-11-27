@@ -97,8 +97,8 @@ export function ComercialChat({ atendimento, pessoa, instancia, usuarios, orcame
   }
 
   async function enviarOferta(o: Row) {
-    const { data } = await supabase.from("orcamentos").select("*").eq("id", String(rowId(o))).single();
-    const of = (data ?? o) as Row;
+    const { data } = await supabase.rpc("fn_atendimentos_oferta_envio" as never, { p_orcamento_id: String(rowId(o)) } as never);
+    const of = { ...o, ...((data ?? {}) as Row) };
     const link = of["token_publico"] ? linkProposta(of["token_publico"]) : "";
     await enviarCliente(mensagemOfertaChat({ nome: nomeCliente, numero: text(of["numero"]), total: Number(of["total_liquido"] ?? 0), link }));
     await supabase.from("orcamentos").update({ enviada_em: new Date().toISOString(), enviada_via: "whatsapp" } as never).eq("id", String(rowId(of)));

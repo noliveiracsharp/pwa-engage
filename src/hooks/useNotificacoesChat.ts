@@ -30,7 +30,7 @@ export function useNotificacoesChat() {
         const atId = pick(m, M.atendimento);
         if (!atId) return;
         {
-          const { data: at } = await supabase.from("atendimentos").select("*").eq("id", atId).maybeSingle();
+          const { data: at } = await supabase.rpc("fn_atendimentos_aviso" as never, { p_atendimento_id: atId } as never);
           if (!at) return; // sem acesso a esse atendimento (outra empresa/equipe)
           // Conversa ainda com o robô/IA: ninguém da equipe precisa ser avisado.
           if (String(pick(at as Row, A.modo) ?? "").toUpperCase() === "IA") return;
@@ -48,11 +48,8 @@ export function useNotificacoesChat() {
             vinculos: vinculos.current ?? [],
             isMaster: master,
           })) return;
-          const pid = pick(at as Row, ["pessoas_id", "pessoa_id"]);
-          if (pid) {
-            const { data: p } = await supabase.from("pessoas").select("*").eq("id", pid).maybeSingle();
-            if (p) nome = nomePessoa(p as Row);
-          }
+          const p = (at as Row)["_pessoa"];
+          if (p) nome = nomePessoa(p as Row);
         }
         const corpo = String(pick(m, M.texto) ?? "") || "Nova mensagem";
         const curto = corpo.length > 120 ? `${corpo.slice(0, 117)}…` : corpo;

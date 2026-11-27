@@ -110,4 +110,5 @@
 ## Atendimentos — tela só por procedures
 - [x] Lista e cadastros da tela em duas procedures (fn_atendimentos_painel_v2, fn_atendimentos_apoio); teste PGlite aprovado.
 - [ ] Validar velocidade real — aguarda rodar conectcon-atendimentos-tela-procedures.sql e publicar.
-- [ ] Eliminar `select *` no restante do sistema (≈117 arquivos + 94 telas via useTableRows) — aguarda o usuário definir a ordem dos módulos.
+- [x] Resto dos Atendimentos (conversa, avisos, bloqueios, pesquisa, checklists, oferta no chat, relatório) por procedures.
+- [ ] Eliminar `select *` nos demais módulos — aguarda o usuário escolher o próximo.

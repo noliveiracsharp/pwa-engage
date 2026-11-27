@@ -201,9 +201,9 @@ function ConversaDialog({ linha, usuNome, onClose }: { linha: Linha; usuNome: Ma
   const { data = [], isLoading } = useQuery({
     queryKey: ["relatorio-conversa", linha.id],
     queryFn: async () => {
-      const { data, error } = await db.from("atendimentos_mensagem").select("*").eq("atendimento_id", linha.id).order("id", { ascending: true }).limit(2000);
+      const { data, error } = await supabase.rpc("fn_atendimentos_conversa" as never, { p_atendimento_id: linha.id } as never);
       if (error) throw error;
-      return (data ?? []) as Row[];
+      return (Array.isArray(data) ? data : []) as Row[];
     },
   });
   return (
