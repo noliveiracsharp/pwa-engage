@@ -319,7 +319,29 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
         // Auto-resposta comercial (ex.: fornecedor) em conversa nova: registra, mas não aciona o robô.
         if (!r.execucao && tipo === "texto" && ehRespostaAutomatica(texto)) return ok({ robo: false, motivo: "auto_resposta" });
 
-        const acao = async (nome: string, dados: Record<string, unknown>) => {
+        const faltaFuncao = (e: { message?: string } | null | undefined) => !!e && /function|schema cache|does not exist/i.test(e.message ?? "");
+        const acao = async (nome: string, dados: Record<string, unknown>): Promise<{ data: unknown }> => {
+          try {
+            return await acaoBruta(nome, dados);
+          } catch (e) {
+            // Banco sem as funções novas (script não executado): usa as ações antigas para o fluxo não parar.
+            if (!faltaFuncao(e as { message?: string })) throw e;
+            if (nome === "campos") {
+              for (const [chave, valor] of Object.entries((dados["campos"] ?? {}) as Record<string, string>)) {
+                await acaoBruta("campo", { chave, valor });
+              }
+              return { data: null };
+            }
+            if (nome === "fila" || nome === "modo") {
+              if (dados["etapa_id"]) await acaoBruta("etapa", { etapa_id: dados["etapa_id"], prioridade: dados["prioridade"] ?? null }).catch((x: unknown) => console.error("zapi-webhook etapa legado", x));
+              const { data: d2, error: e2 } = await db.rpc("fluxo_webhook_acao", { p_token: k, p_atendimento: r.atendimento_id, p_acao: "modo", p_dados: { modo: "Humano" } });
+              if (e2) throw e2;
+              return { data: d2 };
+            }
+            throw e;
+          }
+        };
+        const acaoBruta = async (nome: string, dados: Record<string, unknown>) => {
           const resposta = nome === "fila" || (nome === "modo" && dados["modo"] === "Humano")
           ? await db.rpc("fluxo_webhook_fila" as never, { p_token: k, p_atendimento: r.atendimento_id, p_dados: dados } as never)
           : nome === "campos"
@@ -478,8 +500,12 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
             }
           } catch (e) {
             console.error("zapi-webhook ação", a.tipo, e);
-            // Não marque como concluído um fluxo cuja gravação/transferência falhou.
-            return new Response("Erro ao aplicar ação do atendimento", { status: 500 });
+            // Uma ação que falha não pode congelar a conversa: segue com as demais
+            // e, se era a transferência, garante ao menos o atendimento humano.
+            if (a.tipo === "fila" || a.tipo === "modo" || a.tipo === "etapa") {
+              await db.rpc("fluxo_webhook_acao", { p_token: k, p_atendimento: r.atendimento_id, p_acao: "modo", p_dados: { modo: "Humano" } })
+                .then(({ error: eH }) => { if (eH) console.error("zapi-webhook humano", eH.message); });
+            }
           }
         }
 
