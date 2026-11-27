@@ -1,3 +1,4 @@
+import { abrirArquivo } from "@/components/layout/VisualizadorArquivo";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -295,7 +296,7 @@ export function ManutencaoSheet({ open, onOpenChange, record, inicial, onSaved }
                         {/\.(jpe?g|png|webp|gif)(\?|$)/i.test(a.url) ? (
                           <img src={a.url} alt={a.nome} data-zoom className="h-20 w-20 rounded-md object-cover" />
                         ) : (
-                          <a href={a.url} target="_blank" rel="noreferrer" className="flex h-20 w-32 items-center gap-1 rounded-md border p-2 text-xs">
+                          <a href={a.url} onClick={(e) => { e.preventDefault(); abrirArquivo({ url: a.url, titulo: a.nome, nome: a.nome }); }} className="flex h-20 w-32 items-center gap-1 rounded-md border p-2 text-xs">
                             <FileText className="h-4 w-4 shrink-0" /><span className="line-clamp-3">{a.nome}</span>
                           </a>
                         )}

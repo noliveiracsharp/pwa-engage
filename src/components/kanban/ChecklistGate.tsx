@@ -1,3 +1,4 @@
+import { abrirArquivo } from "@/components/layout/VisualizadorArquivo";
 import { UploadInfo } from "@/components/ui/upload-info";
 import { useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -186,7 +187,7 @@ export function useChecklistGate() {
                     {url ? (
                       <div className="flex items-center gap-2 rounded-md border border-border p-2 text-sm">
                         <Paperclip className="h-4 w-4 shrink-0" />
-                        <a href={url} target="_blank" rel="noreferrer" className="flex-1 truncate text-primary underline">Anexo enviado</a>
+                        <button type="button" onClick={() => abrirArquivo({ url, titulo: "Anexo enviado" })} className="flex-1 truncate text-left text-primary underline">Anexo enviado</button>
                         <Button size="icon" variant="ghost" aria-label="Remover anexo" onClick={() => setValores((v) => ({ ...v, [id]: "" }))}><X className="h-4 w-4" /></Button>
                       </div>
                     ) : (

@@ -1,3 +1,4 @@
+import { abrirArquivo } from "@/components/layout/VisualizadorArquivo";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -169,13 +170,13 @@ function Historico({ chamado, telefone, onClose }: { chamado: Chamado | null; te
             return (
               <div key={m.id} className={cn("flex", cli ? "justify-end" : "justify-start")}>
                 <div className={cn("max-w-[80%] rounded-lg px-3 py-2 text-sm", cli ? "bg-primary text-primary-foreground" : "bg-muted text-foreground")}>
-                  {url && m.tipo_midia === "imagem" && <img src={url} alt={m.nome_arquivo ? `Imagem enviada: ${m.nome_arquivo}` : "Imagem enviada na conversa do chamado"} className="mb-1 max-h-60 rounded" />}
+                  {url && m.tipo_midia === "imagem" && <img onClick={() => abrirArquivo({ url, titulo: m.nome_arquivo || "Imagem", tipo: "image/*" })} src={url} alt={m.nome_arquivo ? `Imagem enviada: ${m.nome_arquivo}` : "Imagem enviada na conversa do chamado"} className="mb-1 max-h-60 rounded" />}
                   {url && m.tipo_midia === "audio" && <audio controls src={url} className="mb-1 max-w-full" />}
                   {url && m.tipo_midia === "video" && <video controls src={url} className="mb-1 max-h-60 rounded" />}
                   {url && m.tipo_midia === "documento" && (
-                    <a href={url} target="_blank" rel="noreferrer" className="mb-1 flex items-center gap-1 underline">
+                    <button type="button" onClick={() => abrirArquivo({ url, titulo: m.nome_arquivo || "Documento", nome: m.nome_arquivo || undefined })} className="mb-1 flex items-center gap-1 text-left underline">
                       <FileText className="h-4 w-4" /> {m.nome_arquivo || "Documento"}
-                    </a>
+                    </button>
                   )}
                   {m.mensagem && !(url && m.mensagem === m.nome_arquivo) && <p className="whitespace-pre-wrap break-words">{m.mensagem}</p>}
                   <p className="mt-1 text-right text-[10px] opacity-70">{dataHora(m.created_at)}</p>

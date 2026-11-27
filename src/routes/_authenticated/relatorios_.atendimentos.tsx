@@ -1,3 +1,4 @@
+import { abrirArquivo } from "@/components/layout/VisualizadorArquivo";
 import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
@@ -223,7 +224,7 @@ function ConversaDialog({ linha, usuNome, onClose }: { linha: Linha; usuNome: Ma
                     {cli ? linha.cliente : usuNome.get(text(pick(m, M.usuario))) || "Atendimento"}{interna ? " • nota interna" : ""} • {fmt(dataDe(m, M.data))}
                   </p>
                   {text(pick(m, M.texto)) && <p className="whitespace-pre-wrap text-foreground">{text(pick(m, M.texto))}</p>}
-                  {midia && <a href={midia} target="_blank" rel="noreferrer" className="text-xs text-primary underline">Abrir anexo</a>}
+                  {midia && <button type="button" onClick={() => abrirArquivo({ url: midia, titulo: "Anexo" })} className="text-xs text-primary underline">Abrir anexo</button>}
                 </div>
               </div>
             );

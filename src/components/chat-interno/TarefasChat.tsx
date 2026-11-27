@@ -1,3 +1,4 @@
+import { abrirArquivo } from "@/components/layout/VisualizadorArquivo";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trash2, Check, CheckCircle2, Download, FileText, HelpCircle, Loader2, Maximize2, MessageSquare, Paperclip, Plus, X } from "lucide-react";
@@ -195,8 +196,8 @@ function CardTarefa({ t, me, nome, onAtualizar, onApagar, onPerguntar, onAbrir }
       {anexos.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-2">
           {anexos.map((a, i) => a.tipo === "imagem"
-            ? <button key={i} type="button" aria-label={`Ver imagem ${a.nome}`} onClick={() => setImagem(a)}><img src={a.url} alt={a.nome} className="h-12 w-12 rounded object-cover" /></button>
-            : <a key={i} href={a.url} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-xs underline"><FileText className="h-3 w-3" />{a.nome}</a>)}
+            ? <button key={i} type="button" aria-label={`Ver imagem ${a.nome}`} onClick={() => abrirArquivo({ url: a.url, titulo: a.nome || "Imagem", nome: a.nome, tipo: "image/*" })}><img src={a.url} alt={a.nome} className="h-12 w-12 rounded object-cover" /></button>
+            : <button key={i} type="button" onClick={() => abrirArquivo({ url: a.url, titulo: a.nome || "Arquivo", nome: a.nome })} className="flex items-center gap-1 text-xs underline"><FileText className="h-3 w-3" />{a.nome}</button>)}
         </div>
       )}
       {(() => {
@@ -269,7 +270,7 @@ function CardTarefa({ t, me, nome, onAtualizar, onApagar, onPerguntar, onAbrir }
         <DialogContent className="max-w-4xl">
           <DialogHeader><DialogTitle className="truncate pr-6">{imagem?.nome}</DialogTitle></DialogHeader>
           {imagem && <img src={imagem.url} alt={imagem.nome} className="max-h-[75vh] w-full rounded object-contain" />}
-          {imagem && <a href={imagem.url} download={imagem.nome} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 self-end text-sm text-primary underline"><Download className="h-4 w-4" /> Baixar</a>}
+          {imagem && <a href={imagem.url} download={imagem.nome} className="inline-flex items-center gap-1 self-end text-sm text-primary underline"><Download className="h-4 w-4" /> Baixar</a>}
         </DialogContent>
       </Dialog>
     </div>

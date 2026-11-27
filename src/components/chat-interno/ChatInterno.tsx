@@ -1,3 +1,4 @@
+import { abrirArquivo } from "@/components/layout/VisualizadorArquivo";
 import { comprimirImagem } from "@/lib/image-compress";
 import { CitacaoNoBalao, FaixaResposta, lerCitacao, type Citacao } from "@/components/chat/Citacao";
 import { UploadInfo } from "@/components/ui/upload-info";
@@ -831,7 +832,7 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack, onModoMeet, 
                   {(() => { const c = lerCitacao(m["citacao"]); return c ? <CitacaoNoBalao citacao={c} claro={mine} /> : null; })()}
                   {anexos.map((a, i) =>
                     a.tipo === "imagem" ? (
-                      <button key={i} type="button" onClick={() => setImagemAberta(a)} className="block cursor-zoom-in" aria-label="Ampliar imagem">
+                      <button key={i} type="button" onClick={() => abrirArquivo({ url: a.url, titulo: a.nome || "Imagem", nome: a.nome, tipo: "image/*" })} className="block cursor-zoom-in" aria-label="Ampliar imagem">
                         <img src={a.url} alt={a.nome || "Imagem"} className="mb-1 max-h-48 rounded-lg" />
                       </button>
                     ) : a.tipo === "audio" ? (
@@ -839,9 +840,9 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack, onModoMeet, 
                     ) : a.tipo === "video" ? (
                       <video key={i} src={a.url} controls preload="metadata" className="mb-1 max-h-60 max-w-full rounded-lg" />
                     ) : (
-                      <a key={i} href={a.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 underline">
+                      <button key={i} type="button" onClick={() => abrirArquivo({ url: a.url, titulo: a.nome || "Arquivo", nome: a.nome })} className="flex items-center gap-2 text-left underline">
                         <FileText className="h-4 w-4" /> {a.nome || "Arquivo"}
-                      </a>
+                      </button>
                     ),
                   )}
                   {anexos.length === 0 && <p className="break-words whitespace-pre-wrap"><Linkify text={String(m["mensagem"] ?? "")} /></p>}
@@ -939,7 +940,7 @@ function Conversa({ me, empresaId, sel, usuarios, isOnline, onBack, onModoMeet, 
           {imagemAberta && (
             <div className="flex flex-col items-center gap-2">
               <img src={imagemAberta.url} alt={imagemAberta.nome || "Imagem"} className="max-h-[80vh] w-auto rounded-md object-contain" />
-              <a href={imagemAberta.url} download={imagemAberta.nome || true} target="_blank" rel="noreferrer" className="text-xs text-primary underline">Baixar imagem</a>
+              <a href={imagemAberta.url} download={imagemAberta.nome || true} className="text-xs text-primary underline">Baixar imagem</a>
             </div>
           )}
         </DialogContent>
