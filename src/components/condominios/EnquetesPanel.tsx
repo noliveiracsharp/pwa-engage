@@ -28,6 +28,7 @@ import { comprimirImagem } from "@/lib/image-compress";
 import { AcaoIcone } from "./AcaoIcone";
 import { CampoData } from "./CampoData";
 import { s, useCondRows } from "./cond-data";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 type Perms = { canCreate: boolean; canUpdate: boolean; canDelete: boolean };
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -84,7 +85,7 @@ function Gestao({ condominioId, blocos, perms }: { condominioId: string; blocos:
 
   async function mudarStatus(e: Row, status: StatusEnquete) {
     if (status === "ativa") {
-      const { data: qs } = await db.from("cond_enquetes_perguntas").select("*").eq("enquete_id", e["id"]);
+      const { data: qs } = await tabelaLeitura("cond_enquetes_perguntas").eq("enquete_id", e["id"]);
       const erros = errosPublicacao(s(e["titulo"]), normPerguntas(qs ?? []));
       if (erros.length) { toast.error(erros[0]); return; }
       if (!(await confirmar({ title: "Publicar enquete?", description: "Os moradores do público escolhido já poderão responder. Depois de publicada, as perguntas não podem mais ser alteradas.", confirmText: "Publicar" }))) return;
@@ -104,7 +105,7 @@ function Gestao({ condominioId, blocos, perms }: { condominioId: string; blocos:
     toast.success("Enquete excluída."); void recarregar();
   }
   async function duplicar(e: Row) {
-    const { data: qs } = await db.from("cond_enquetes_perguntas").select("*").eq("enquete_id", e["id"]);
+    const { data: qs } = await tabelaLeitura("cond_enquetes_perguntas").eq("enquete_id", e["id"]);
     const { data: nova, error } = await db.from("cond_enquetes").insert({
       condominio_id: condominioId, titulo: `${s(e["titulo"])} (cópia)`, descricao: e["descricao"], status: "rascunho",
       voto_secreto: e["voto_secreto"], voto_por: e["voto_por"], mostrar_resultado: e["mostrar_resultado"], publico: e["publico"],
@@ -268,7 +269,7 @@ function EnqueteEditor({ condominioId, blocos, enquete, onClose, onSalvo }: { co
   const { data: qsSalvas, isFetched } = useQuery({
     queryKey: ["cond", "cond_enquetes_perguntas", s(enquete?.["id"])],
     enabled: !!enquete,
-    queryFn: async () => normPerguntas(((await db.from("cond_enquetes_perguntas").select("*").eq("enquete_id", enquete!["id"])).data ?? []) as Row[]),
+    queryFn: async () => normPerguntas(((await tabelaLeitura("cond_enquetes_perguntas").eq("enquete_id", enquete!["id"])).data ?? []) as Row[]),
   });
   const pub0 = (enquete?.["publico"] ?? {}) as Publico;
   const [titulo, setTitulo] = useState(s(enquete?.["titulo"]));
@@ -420,7 +421,7 @@ function ResultadoDialog({ enquete, perguntas: qsProp, gestor, onClose }: { enqu
   const { data: qsDb } = useQuery({
     queryKey: ["cond", "cond_enquetes_perguntas", id],
     enabled: !qsProp,
-    queryFn: async () => normPerguntas(((await db.from("cond_enquetes_perguntas").select("*").eq("enquete_id", id)).data ?? []) as Row[]),
+    queryFn: async () => normPerguntas(((await tabelaLeitura("cond_enquetes_perguntas").eq("enquete_id", id)).data ?? []) as Row[]),
   });
   const perguntas = qsProp ?? qsDb ?? [];
   const { data: res, isLoading } = useQuery({

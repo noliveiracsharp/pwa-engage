@@ -20,6 +20,7 @@ import { AcaoIcone } from "./AcaoIcone";
 import { enviarWhatsappEmpresa } from "@/lib/manutencoes";
 import { destinatariosAviso } from "@/lib/cond-manutencoes";
 import { s, useCondRows } from "./cond-data";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabase as any;
@@ -400,7 +401,7 @@ export function MateriaisOs({ condominioId, osId, editavel, nomeCondominio = "",
 /** Envia o aviso ao responsável configurado; sem configuração (ou com a chave ligada) avisa também a diretoria. */
 export async function avisarCompra(condominioId: string, texto: string) {
   const [{ data: cfg }, { data: equipe }] = await Promise.all([
-    db.from("cond_estoque_config").select("*").eq("condominio_id", condominioId).maybeSingle(),
+    tabelaLeitura("cond_estoque_config").eq("condominio_id", condominioId).maybeSingle(),
     db.from("cond_equipe").select("nome,cargo,celular,fim").eq("condominio_id", condominioId),
   ]);
   const tel = new Set<string>();

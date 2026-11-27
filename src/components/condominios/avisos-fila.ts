@@ -9,6 +9,7 @@ import { htmlParaTexto } from "@/lib/html-texto";
 import { enviarWhatsappEmpresa } from "@/lib/manutencoes";
 import { TIPOS_AVISO, imagensDoHtml, preencherAviso } from "@/lib/cond-avisos";
 import type { Row } from "@/lib/row";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabase as any;
@@ -69,7 +70,7 @@ export function enfileirarAviso(o: { avisoId: string; titulo: string; empresaId:
 
 async function processar({ avisoId, empresaId, nomeCondominio }: { avisoId: string; empresaId: string; nomeCondominio: string }) {
   try {
-    const { data: av, error } = await db.from("cond_avisos").select("*").eq("id", avisoId).single();
+    const { data: av, error } = await tabelaLeitura("cond_avisos").eq("id", avisoId).single();
     if (error) throw new Error(error.message);
     const envios = await buscarTodos("cond_avisos_envios", (q) => q.eq("aviso_id", avisoId).eq("status", "pendente"));
     atualizar(avisoId, { estado: "enviando", total: envios.length, feito: 0, falhas: 0 });

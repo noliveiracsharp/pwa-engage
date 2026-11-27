@@ -17,6 +17,7 @@ import { s } from "./cond-data";
 import { gerarFolhaA4Placas, gerarPlacaInterfone } from "./placa-interfone";
 import { InterfoneRamais } from "./InterfoneRamais";
 import { InterfonePontos } from "./InterfonePontos";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabase as any;
@@ -39,7 +40,7 @@ export function InterfonePanel({ condominioId, nomeCondominio, blocos, unidades,
   const qc = useQueryClient();
   const cfgQ = useQuery({
     queryKey: ["cond", "interfone_config", condominioId],
-    queryFn: async () => { const r = await db.from("cond_interfone_config").select("*").eq("condominio_id", condominioId).maybeSingle(); if (r.error) throw r.error; return r.data as Row | null; },
+    queryFn: async () => { const r = await tabelaLeitura("cond_interfone_config").eq("condominio_id", condominioId).maybeSingle(); if (r.error) throw r.error; return r.data as Row | null; },
   });
   const histQ = useQuery({
     queryKey: ["cond", "interfone_hist", condominioId],

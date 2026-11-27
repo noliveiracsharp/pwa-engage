@@ -37,6 +37,7 @@ import { AcaoIcone } from "./AcaoIcone";
 import { DebatePauta } from "./DebatePauta";
 import { CampoData } from "./CampoData";
 import { ordemNatural, s, useCondRows } from "./cond-data";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 type Perms = { canCreate: boolean; canUpdate: boolean; canDelete: boolean };
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -912,7 +913,7 @@ function Ata({ assembleia: a, unidades, blocos, pode, onAtualizar }: { assemblei
   const { data: opcoes = [] } = useQuery({
     queryKey: ["cond", "cond_assembleia_opcoes_voto", "assembleia", id, pautas.length],
     enabled: pautas.length > 0,
-    queryFn: async (): Promise<Row[]> => { const { data } = await db.from("cond_assembleia_opcoes_voto").select("*").in("pauta_id", pautas.map((p) => s(p["id"]))); return (data ?? []) as Row[]; },
+    queryFn: async (): Promise<Row[]> => { const { data } = await tabelaLeitura("cond_assembleia_opcoes_voto").in("pauta_id", pautas.map((p) => s(p["id"]))); return (data ?? []) as Row[]; },
   });
   const [html, setHtml] = useState(s(a["ata_html"]));
   const [salvando, setSalvando] = useState(false);

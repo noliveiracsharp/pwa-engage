@@ -18,6 +18,7 @@ import type { Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
 import { AcaoIcone } from "./AcaoIcone";
 import { s } from "./cond-data";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabase as any;
@@ -46,7 +47,7 @@ export function ChavesPanel({ condominioId, blocos, unidades, perms }: { condomi
   const chavesQ = useQuery({
     queryKey: ["cond", "chaves", condominioId],
     queryFn: async (): Promise<Row[]> => {
-      const r = await db.from("cond_chaves").select("*").eq("condominio_id", condominioId).order("nome");
+      const r = await tabelaLeitura("cond_chaves").eq("condominio_id", condominioId).order("nome");
       if (r.error) throw r.error;
       return r.data ?? [];
     },
@@ -54,7 +55,7 @@ export function ChavesPanel({ condominioId, blocos, unidades, perms }: { condomi
   const movQ = useQuery({
     queryKey: ["cond", "chaves-mov", condominioId],
     queryFn: async (): Promise<Row[]> => {
-      const r = await db.from("cond_chaves_movimentos").select("*").eq("condominio_id", condominioId).order("retirada_em", { ascending: false }).limit(500);
+      const r = await tabelaLeitura("cond_chaves_movimentos").eq("condominio_id", condominioId).order("retirada_em", { ascending: false }).limit(500);
       if (r.error) throw r.error;
       return r.data ?? [];
     },

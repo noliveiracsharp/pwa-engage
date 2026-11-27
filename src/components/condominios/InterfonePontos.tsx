@@ -16,6 +16,7 @@ import type { Row } from "@/lib/row";
 import { s } from "./cond-data";
 import { AcaoIcone } from "./AcaoIcone";
 import { gerarFolhaA4Placas, gerarPlacaInterfone, imprimirFolhaPlacas } from "./placa-interfone";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabase as any;
@@ -34,7 +35,7 @@ const VAZIO = { id: "", nome: "", tipo: "espaco", slug: "", mostrar_unidades: fa
 export function InterfonePontos({ condominioId, nomeCondominio, canUpdate }: { condominioId: string; nomeCondominio: string; canUpdate: boolean }) {
   const qc = useQueryClient();
   const chave = ["cond", "interfone_pontos", condominioId];
-  const q = useQuery({ queryKey: chave, queryFn: async () => { const r = await db.from("cond_interfone_pontos").select("*").eq("condominio_id", condominioId).order("nome"); if (r.error) throw r.error; return (r.data ?? []) as Row[]; } });
+  const q = useQuery({ queryKey: chave, queryFn: async () => { const r = await tabelaLeitura("cond_interfone_pontos").eq("condominio_id", condominioId).order("nome"); if (r.error) throw r.error; return (r.data ?? []) as Row[]; } });
   const [f, setF] = useState<typeof VAZIO | null>(null);
   const [salvando, setSalvando] = useState(false);
   const link = (slug: string) => `${window.location.origin}/interfone/${slug}`;

@@ -26,6 +26,7 @@ import { cn } from "@/lib/utils";
 import { AcaoIcone } from "./AcaoIcone";
 import { CampoData } from "./CampoData";
 import { s } from "./cond-data";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabase as any;
@@ -80,7 +81,7 @@ function useObrasGestao(condominioId: string) {
   return useQuery({
     queryKey: ["cond", "obras", condominioId],
     queryFn: async (): Promise<Obra[] | "sem_script"> => {
-      const [o, f, a, p] = await Promise.all(["cond_obras", "cond_obras_fases", "cond_obras_atividades", "cond_obras_fotos"].map((t) => db.from(t).select("*").eq("condominio_id", condominioId)));
+      const [o, f, a, p] = await Promise.all(["cond_obras", "cond_obras_fases", "cond_obras_atividades", "cond_obras_fotos"].map((t) => tabelaLeitura(t).eq("condominio_id", condominioId)));
       const erro = [o, f, a, p].find((r) => r.error)?.error;
       if (erro) { if (/does not exist|schema cache|42P01|PGRST205/i.test(`${erro.message} ${erro.code}`)) return "sem_script"; throw erro; }
       return montar(o.data ?? [], f.data ?? [], a.data ?? [], p.data ?? []).sort((x, y) => (y.data_inicio || "").localeCompare(x.data_inicio || ""));

@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { Row } from "@/lib/row";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 /** Lê linhas de uma tabela condominial filtrando por uma coluna (ex.: condominio_id). */
 export function useCondRows(table: string, coluna: string, valor: string | undefined, ordem?: string) {
@@ -10,7 +11,7 @@ export function useCondRows(table: string, coluna: string, valor: string | undef
     enabled: !!valor,
     queryFn: async (): Promise<Row[]> => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let q: any = (supabase as any).from(table).select("*").eq(coluna, valor);
+      let q: any = tabelaLeitura(table).eq(coluna, valor);
       if (ordem) q = q.order(ordem, { ascending: true });
       const { data, error } = await q;
       if (error) throw error;
@@ -25,7 +26,7 @@ export function useCatalogo(table: string) {
     queryKey: ["cond", "catalogo", table],
     queryFn: async (): Promise<Row[]> => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as any).from(table).select("*").eq("status", true).order("descricao");
+      const { data, error } = await tabelaLeitura(table).eq("status", true).order("descricao");
       if (error) throw error;
       return (data ?? []) as Row[];
     },

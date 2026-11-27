@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { AcaoIcone } from "./AcaoIcone";
 import { CampoData } from "./CampoData";
 import { s } from "./cond-data";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabase as any;
@@ -254,7 +255,7 @@ function Lightbox({ fotos, indice, setIndice, album, gestor, onMudou }: { fotos:
   const com = useQuery({
     queryKey: chaveCom,
     queryFn: async (): Promise<Row[]> => {
-      const r = await db.from("cond_foto_comentarios").select("*").eq("foto_id", fotoId).order("created_at");
+      const r = await tabelaLeitura("cond_foto_comentarios").eq("foto_id", fotoId).order("created_at");
       if (r.error) throw r.error;
       return (r.data ?? []) as Row[];
     },

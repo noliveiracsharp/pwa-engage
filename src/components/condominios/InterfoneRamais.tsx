@@ -15,6 +15,7 @@ import { normalizarRamal, ramaisDuplicados } from "@/lib/interfone";
 import type { Row } from "@/lib/row";
 import { s } from "./cond-data";
 import { AcaoIcone } from "./AcaoIcone";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabase as any;
@@ -26,7 +27,7 @@ const VAZIO = { id: "", nome: "", ramal: "", categoria: "operacional", cond_espa
 export function InterfoneRamais({ condominioId, canUpdate }: { condominioId: string; canUpdate: boolean }) {
   const qc = useQueryClient();
   const chave = ["cond", "interfone_ramais", condominioId];
-  const q = useQuery({ queryKey: chave, queryFn: async () => { const r = await db.from("cond_interfone_ramais").select("*").eq("condominio_id", condominioId).order("nome"); if (r.error) throw r.error; return (r.data ?? []) as Row[]; } });
+  const q = useQuery({ queryKey: chave, queryFn: async () => { const r = await tabelaLeitura("cond_interfone_ramais").eq("condominio_id", condominioId).order("nome"); if (r.error) throw r.error; return (r.data ?? []) as Row[]; } });
   const espQ = useQuery({ queryKey: ["cond", "espacos_sel", condominioId], queryFn: async () => { const r = await db.from("cond_espacos").select("id,nome").eq("condominio_id", condominioId); return (r.data ?? []) as Row[]; } });
   const [busca, setBusca] = useState("");
   const [f, setF] = useState<typeof VAZIO | null>(null);

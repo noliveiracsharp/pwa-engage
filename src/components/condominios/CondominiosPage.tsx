@@ -57,6 +57,7 @@ import { TransferenciaDialog } from "./TransferenciaDialog";
 import { X } from "lucide-react";
 import { Tabs as AbasRaiz, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 const ABA_PAI: Record<string, string> = { sorteio: "vagas", galeria: "meu", pets: "meu", achados: "meu" };
 
@@ -106,7 +107,7 @@ export function CondominiosPage() {
     enabled: !!empresaCarteira,
     staleTime: 60_000,
     queryFn: async () => {
-      const { data, error } = await supabase.from("empresas").select("*").eq("administradora_id" as never, empresaCarteira as never);
+      const { data, error } = await tabelaLeitura("empresas").eq("administradora_id" as never, empresaCarteira as never);
       if (error) return [] as Row[];
       return (data ?? []) as Row[];
     },

@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { lerDocumentoIA, perguntarRegimento } from "@/lib/cond-documentos-ia.functions";
 import type { Row } from "@/lib/row";
 import { s } from "./cond-data";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 const ORIGEM: Record<string, string> = { convencao: "Convenção", regimento: "Regimento", outro: "Outro" };
 const norm = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -36,7 +37,7 @@ export function DocumentoIADialog({ doc, gestao, onClose }: { doc: Row; gestao: 
     queryKey: ["cond", "cond_documentos_artigos", docId],
     retry: false,
     queryFn: async () => {
-      const { data, error } = await db.from("cond_documentos_artigos").select("*").eq("documento_id", docId).order("ordem");
+      const { data, error } = await tabelaLeitura("cond_documentos_artigos").eq("documento_id", docId).order("ordem");
       if (error) throw error;
       return (data ?? []) as Row[];
     },

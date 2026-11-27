@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils";
 import { CampoData } from "./CampoData";
 import { s } from "./cond-data";
 import { SlaBadge, StatusBadge } from "./AtendimentosPanel";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabase as any;
@@ -207,7 +208,7 @@ export function AtendimentoSheet({ ctx, atendimento: a, onClose }: { ctx: CtxAte
   const id = s(a["id"]);
   const { data: msgs = [] } = useQuery({
     queryKey: ["cond", "atend-msgs", id],
-    queryFn: async (): Promise<Row[]> => ((await db.from("cond_atend_mensagens").select("*").eq("atendimento_id", id).order("created_at")).data ?? []) as Row[],
+    queryFn: async (): Promise<Row[]> => ((await tabelaLeitura("cond_atend_mensagens").eq("atendimento_id", id).order("created_at")).data ?? []) as Row[],
     // Rede de segurança: mesmo sem tempo real, a conversa se atualiza a cada 4s enquanto aberta.
     refetchInterval: 4000, refetchIntervalInBackground: false, refetchOnWindowFocus: true,
   });

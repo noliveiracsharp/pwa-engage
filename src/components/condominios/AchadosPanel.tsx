@@ -20,6 +20,7 @@ import type { Row } from "@/lib/row";
 import { cn } from "@/lib/utils";
 import { AcaoIcone } from "./AcaoIcone";
 import { s } from "./cond-data";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabase as any;
@@ -79,7 +80,7 @@ function Gestao({ condominioId, perms }: { condominioId: string; perms: Perms })
   const q = useQuery({
     queryKey: ["cond", "achados", condominioId],
     queryFn: async (): Promise<Row[]> => {
-      const r = await db.from("cond_achados").select("*").eq("condominio_id", condominioId).order("encontrado_em", { ascending: false });
+      const r = await tabelaLeitura("cond_achados").eq("condominio_id", condominioId).order("encontrado_em", { ascending: false });
       if (r.error) throw r.error;
       return (r.data ?? []) as Row[];
     },

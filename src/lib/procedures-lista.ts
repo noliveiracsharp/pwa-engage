@@ -10,7 +10,7 @@ const indisponiveis = new Set<string>();
 
 export function procedureDaTabela(tabela: string): string | null {
   const fn = `fn_lista_${tabela}`;
-  return TABELAS_PROCEDURE.has(tabela) && !indisponiveis.has(fn) ? fn : null;
+  return (TABELAS_PROCEDURE.has(tabela) || tabela.startsWith("cond_")) && !indisponiveis.has(fn) ? fn : null;
 }
 
 /** Erro de procedure inexistente: marca para não tentar de novo e indica que pode repetir pela tabela. */
@@ -53,4 +53,21 @@ export async function lerTabela(tabela: string, montar: (q: any) => any): Promis
   let r = await montar(q);
   if (r.error && procedureAusente(fn, r.error)) r = await montar(supabase.from(tabela as never).select("*"));
   return r;
+}
+
+/** Leitura encadeável pela procedure da tabela (mesma API de filtros do supabase-js: .eq/.in/.order/.maybeSingle...).
+ *  Os filtros são gravados e aplicados ao executar; sem a procedure no banco, repete pela tabela. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function tabelaLeitura(tabela: string): any {
+  const ops: [PropertyKey, unknown[]][] = [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const montar = (base: any) => ops.reduce((q, [m, a]) => q[m](...a), base);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const proxy: any = new Proxy({}, {
+    get(_, prop) {
+      if (prop === "then") return (ok: (v: unknown) => unknown, falha?: (e: unknown) => unknown) => lerTabela(tabela, montar).then(ok, falha);
+      return (...args: unknown[]) => { ops.push([prop, args]); return proxy; };
+    },
+  });
+  return proxy;
 }

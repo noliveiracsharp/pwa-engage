@@ -24,6 +24,7 @@ import { rowId } from "@/lib/crud";
 import { DocumentoIADialog } from "./DocumentoIADialog";
 import { Sparkles } from "lucide-react";
 import { STATUS_AVISO, statusDoAviso } from "@/lib/cond-avisos-ciclo";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 type Opt = { value: string; label: string };
 const UM_ANO = 60 * 60 * 24 * 365;
@@ -245,7 +246,7 @@ function DocumentoDialog({ categorias, condominioId, doc, categoriaInicial, onCl
       toast.success(doc ? "Documento atualizado." : "Documento enviado.");
       let criado: Row | null = null;
       if (!doc && avisar && valores["arquivo_path"]) {
-        const { data } = await supabase.from("cond_documentos" as never).select("*").eq("arquivo_path", s(valores["arquivo_path"])).maybeSingle();
+        const { data } = await tabelaLeitura("cond_documentos").eq("arquivo_path", s(valores["arquivo_path"])).maybeSingle();
         criado = (data as Row | null) ?? null;
       }
       onClose();

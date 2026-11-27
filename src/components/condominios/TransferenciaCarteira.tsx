@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { supabase } from "@/integrations/supabase/client";
 import { confirmar, perguntar } from "@/components/layout/DialogoGlobal";
 import { acaoParaCnpj, acoesPermitidas, soDigitos, type SituacaoCnpj } from "@/lib/cond-transf-gestao";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = () => supabase as any;
@@ -27,7 +28,7 @@ export function TransferenciaCarteira() {
     const r = await db().rpc("cond_minha_empresa"); if (r.error) throw r.error; return String(r.data ?? "");
   } });
   const lista = useQuery({ queryKey: ["cond", "transferencias"], retry: false, enabled: !!minha.data, queryFn: async () => {
-    const r = await db().from("cond_transferencias").select("*").order("created_at", { ascending: false }).limit(50);
+    const r = await tabelaLeitura("cond_transferencias").order("created_at", { ascending: false }).limit(50);
     if (r.error) throw r.error; return (r.data ?? []) as Transf[];
   } });
   const pendentesParaMim = (lista.data ?? []).filter((t) => t.status === "pendente" && t.empresa_origem_id === minha.data).length;

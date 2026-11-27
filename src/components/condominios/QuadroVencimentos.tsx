@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { quadroVencimentos } from "@/lib/cond-documentos";
 import { cn } from "@/lib/utils";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 type Cond = { value: string; label: string };
 type Filtro = "todos" | "vencido" | "a_vencer";
@@ -20,7 +21,7 @@ export function QuadroVencimentos({ condominios, onAbrir }: { condominios: Cond[
     enabled: ids.length > 0,
     queryFn: async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as any).from("cond_documentos").select("*").in("condominio_id", ids).not("data_vencimento", "is", null);
+      const { data, error } = await tabelaLeitura("cond_documentos").in("condominio_id", ids).not("data_vencimento", "is", null);
       if (error) return [];
       return data ?? [];
     },

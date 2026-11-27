@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 import { CampoData } from "./CampoData";
 import { s } from "./cond-data";
 import { AtendimentoSheet, NovoAtendimentoSheet, type CtxAtend } from "./AtendimentoChat";
+import { tabelaLeitura } from "@/lib/procedures-lista";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabase as any;
@@ -54,7 +55,7 @@ export function AtendimentosPanel({ condominioId, nomeCondominio, blocos, unidad
   const { data: todosAtend = [], isLoading } = useQuery({
     queryKey: chave, enabled: !!condominioId,
     queryFn: async (): Promise<Row[]> => {
-      const { data, error } = await db.from("cond_atendimentos").select("*").eq("condominio_id", condominioId).order("created_at", { ascending: false }).limit(2000);
+      const { data, error } = await tabelaLeitura("cond_atendimentos").eq("condominio_id", condominioId).order("created_at", { ascending: false }).limit(2000);
       if (error) throw error;
       return (data ?? []) as Row[];
     },
@@ -63,11 +64,11 @@ export function AtendimentosPanel({ condominioId, nomeCondominio, blocos, unidad
   const atendimentos = useMemo(() => (gestao ? todosAtend : me ? todosAtend.filter((a) => s(a["aberto_por"]) === me || s(a["aberto_para"]) === me) : []), [gestao, todosAtend, me]);
   const { data: assuntos = [] } = useQuery({
     queryKey: ["cond", "atend-assuntos", condominioId], enabled: !!condominioId,
-    queryFn: async (): Promise<Row[]> => ((await db.from("cond_atend_assuntos").select("*").eq("condominio_id", condominioId)).data ?? []) as Row[],
+    queryFn: async (): Promise<Row[]> => ((await tabelaLeitura("cond_atend_assuntos").eq("condominio_id", condominioId)).data ?? []) as Row[],
   });
   const { data: config } = useQuery({
     queryKey: ["cond", "atend-config", condominioId], enabled: !!condominioId,
-    queryFn: async (): Promise<Row | null> => ((await db.from("cond_atend_config").select("*").eq("condominio_id", condominioId).maybeSingle()).data ?? null) as Row | null,
+    queryFn: async (): Promise<Row | null> => ((await tabelaLeitura("cond_atend_config").eq("condominio_id", condominioId).maybeSingle()).data ?? null) as Row | null,
   });
   const horarios = normalizarHorarios(config?.["horarios"]);
   const { data: espacos = [] } = useQuery({
@@ -529,7 +530,7 @@ function Assuntos({ condominioId, assuntos, canEdit }: { condominioId: string; a
   const recarregar = () => qc.invalidateQueries({ queryKey: ["cond", "atend-assuntos", condominioId] });
   const { data: catalogo = [] } = useQuery({
     queryKey: ["cond", "atend-catalogo"],
-    queryFn: async (): Promise<Row[]> => ((await db.from("cond_atend_catalogo").select("*").eq("status", true).order("nome")).data ?? []) as Row[],
+    queryFn: async (): Promise<Row[]> => ((await tabelaLeitura("cond_atend_catalogo").eq("status", true).order("nome")).data ?? []) as Row[],
   });
   const { data: equipe = [] } = useQuery({
     queryKey: ["cond", "cond_equipe", "condominio_id", condominioId],
