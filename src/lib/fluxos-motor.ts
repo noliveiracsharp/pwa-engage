@@ -10,6 +10,7 @@ export type EstadoExec = { no_atual: string | null; status: "ativo" | "aguardand
 
 export type Acao =
   | { tipo: "mensagem"; texto: string; midiaUrl?: string; midiaTipo?: "imagem" | "video" | "documento"; nomeArquivo?: string; lista?: { titulo: string; botao: string; opcoes: string[] } }
+  | { tipo: "fila"; quadro_id: string; etapa_id: string; prioridade: string }
   | { tipo: "etapa"; etapa_id: string; prioridade?: string | undefined }
   | { tipo: "modo"; modo: "Humano" | "IA" }
   | { tipo: "campo"; chave: string; valor: string }
@@ -21,8 +22,9 @@ const str = (v: unknown) => (v == null ? "" : String(v));
 const norm = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 
 /** Converte valores guardados como texto JSON ("{...}" ou "[...]") de volta em objeto/lista. */
-export function valorVar(v: string | undefined): unknown {
+export function valorVar(v: unknown): unknown {
   if (v == null) return undefined;
+  if (typeof v !== "string") return v;
   const t = v.trim();
   if ((t.startsWith("{") && t.endsWith("}")) || (t.startsWith("[") && t.endsWith("]"))) {
     try { return JSON.parse(t); } catch { return v; }
@@ -31,7 +33,7 @@ export function valorVar(v: string | undefined): unknown {
 }
 
 /** Lê "resposta.itens.0.nome" percorrendo o JSON guardado na variável. */
-export function lerCaminho(vars: Record<string, string>, caminho: string): unknown {
+export function lerCaminho(vars: Record<string, unknown>, caminho: string): unknown {
   if (caminho in vars) return valorVar(vars[caminho]);
   const [raiz, ...resto] = caminho.split(".");
   let atual: unknown = valorVar(vars[raiz ?? ""]);
@@ -43,6 +45,23 @@ export function lerCaminho(vars: Record<string, string>, caminho: string): unkno
 }
 
 export const paraTexto = (v: unknown) => (v == null ? "" : typeof v === "object" ? JSON.stringify(v) : String(v));
+
+/** JSONB pode devolver objetos nativos; os blocos externos continuam recebendo texto JSON. */
+export function normalizarVariaveis(vars: Record<string, unknown>): Record<string, string> {
+  return Object.fromEntries(Object.entries(vars).map(([k, v]) => [k, paraTexto(v)]));
+}
+
+/** Agrupa somente campos consecutivos, sem mudar a ordem de mensagens ou transferências. */
+export function agruparCampos(acoes: Acao[]): (Acao | { tipo: "campos"; campos: Record<string, string> })[] {
+  const out: (Acao | { tipo: "campos"; campos: Record<string, string> })[] = [];
+  for (const a of acoes) {
+    const ultimo = out.at(-1);
+    if (a.tipo !== "campo") out.push(a);
+    else if (ultimo?.tipo === "campos") ultimo.campos[a.chave] = a.valor;
+    else out.push({ tipo: "campos", campos: { [a.chave]: a.valor } });
+  }
+  return out;
+}
 
 export function interpolar(texto: string, vars: Record<string, string>) {
   // "\\n" literal (vindo de JSON/JavaScript) vira quebra de linha real no WhatsApp.
@@ -141,13 +160,13 @@ export const MSG_INVALIDA_PADRAO = "Desculpe, não conseguimos entender. Por fav
 export function executarFluxo(p: {
   nos: NoFluxo[];
   conexoes: ConexaoFluxo[];
-  estado: EstadoExec | null;
+  estado: (Omit<EstadoExec, "variaveis"> & { variaveis: Record<string, unknown> }) | null;
   texto: string;
   agora?: Date;
 }): { acoes: Acao[]; estado: EstadoExec; subfluxo?: string; externo?: { no: NoFluxo }; trilha?: string[] } {
   const agora = p.agora ?? new Date();
   const acoes: Acao[] = [];
-  const vars: Record<string, string> = { ...(p.estado?.variaveis ?? {}), ultima_mensagem: p.texto };
+  const vars: Record<string, string> = { ...normalizarVariaveis(p.estado?.variaveis ?? {}), ultima_mensagem: p.texto };
   const porId = new Map(p.nos.map((n) => [n.id, n]));
   const proximo = (de: string, handle?: string) => {
     const c = p.conexoes.find((e) => e.source === de && (!handle || (e.sourceHandle ?? "saida") === handle))
@@ -256,8 +275,7 @@ export function executarFluxo(p: {
         atual = proximo(atual.id);
         break;
       case "atribuir":
-        if (str(d["etapa_id"])) acoes.push({ tipo: "etapa", etapa_id: str(d["etapa_id"]), prioridade: str(d["prioridade"]) || undefined });
-        acoes.push({ tipo: "modo", modo: "Humano" });
+        acoes.push({ tipo: "fila", quadro_id: str(d["quadro_id"]), etapa_id: str(d["etapa_id"]), prioridade: str(d["prioridade"]) });
         atual = proximo(atual.id);
         break;
       case "campo":

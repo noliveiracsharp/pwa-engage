@@ -56,3 +56,4 @@
 - CRM Agente (Etapa 2): instâncias com empresas_instancias.agente_crm tratam mensagens de colaboradores no zapi-webhook antes do robô; IA extrai a ação (src/lib/crm-agente.ts, puro/testado) e crm_agente_executar (SQL em supabase/sql/conectcon-crm-agente-whatsapp.sql) grava Lead/interação/visita — o banco valida o remetente pelo token da instância.
 
 - Receipt OCR: one reader (comprovante-ocr.server.ts) for Reembolsos and the WhatsApp Agent.
+- Atomic flow RPCs prevent partial handoffs.

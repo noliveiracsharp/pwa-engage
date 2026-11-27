@@ -11,7 +11,7 @@ import { detectarNota, ehCortesia, notaDaLinha } from "@/lib/csat";
 import { interpretarAgente, transcreverAgente, type IaAgente } from "@/lib/crm-agente.server";
 import { lerComprovanteUrl } from "@/lib/comprovante-ocr.server";
 import { escolhaConvite, textoConviteAgente, type CanalConvite } from "@/lib/crm-agente";
-import { executarFluxo, proximoNoId, type ConexaoFluxo, type EstadoExec, type NoFluxo } from "@/lib/fluxos-motor";
+import { executarFluxo, agruparCampos, proximoNoId, type ConexaoFluxo, type EstadoExec, type NoFluxo } from "@/lib/fluxos-motor";
 
 // Recebe as mensagens da Z-API ("Ao receber"). A chave ?k= identifica a instância.
 const Payload = z
@@ -319,9 +319,19 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
         // Auto-resposta comercial (ex.: fornecedor) em conversa nova: registra, mas não aciona o robô.
         if (!r.execucao && tipo === "texto" && ehRespostaAutomatica(texto)) return ok({ robo: false, motivo: "auto_resposta" });
 
-        const acao = (nome: string, dados: Record<string, unknown>) => nome === "encerrar"
+        const acao = async (nome: string, dados: Record<string, unknown>) => {
+          const resposta = nome === "fila" || (nome === "modo" && dados["modo"] === "Humano")
+          ? await db.rpc("fluxo_webhook_fila" as never, { p_token: k, p_atendimento: r.atendimento_id, p_dados: dados } as never)
+          : nome === "campos"
+          ? await db.rpc("fluxo_webhook_campos" as never, { p_token: k, p_atendimento: r.atendimento_id, p_campos: dados["campos"] } as never)
+          : nome === "encerrar"
           ? db.rpc("atendimento_webhook_encerrar" as never, { p_token: k, p_atendimento: r.atendimento_id } as never)
           : db.rpc("fluxo_webhook_acao", { p_token: k, p_atendimento: r.atendimento_id, p_acao: nome, p_dados: dados });
+          const resultado = await resposta;
+          if (resultado.error) throw resultado.error;
+          if ((resultado.data as { ok?: boolean } | null)?.ok === false) throw new Error(`Ação ${nome} não aplicada`);
+          return resultado;
+        };
 
         // Comandos globais (#atendente, #sair; #inicio reinicia abaixo): valem em qualquer etapa.
         const cfgCmd = (r.fluxo.nos ?? []).find((n) => (n.data?.tipo ?? n.type) === "gatilho")?.data ?? {};
@@ -339,8 +349,7 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
           }
           if (comando === "atendente") {
             const etapa = String(cfgCmd["atendente_etapa_id"] ?? "");
-            if (etapa) await acao("etapa", { etapa_id: etapa });
-            await acao("modo", { modo: "Humano" });
+            await acao("fila", { etapa_id: etapa, quadro_id: String(cfgCmd["atendente_quadro_id"] ?? "") });
           } else {
             await acao("encerrar", {});
           }
@@ -370,8 +379,7 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
           }
           if (entradaAtalho) r.execucao = r.execucao ? { ...r.execucao, no_atual: null, status: "ativo" } : null;
           if (!entradaAtalho && etapaId) {
-            await acao("etapa", { etapa_id: etapaId });
-            await acao("modo", { modo: "Humano" });
+            await acao("fila", { etapa_id: etapaId });
             return ok({ robo: false, motivo: "atalho_kanban", tag });
           }
         }
@@ -389,7 +397,14 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
           : r.execucao
           ? { ...r.execucao, variaveis: { ...contato, ...(r.execucao.variaveis ?? {}), protocolo: contato.protocolo, telefone: contato.telefone } }
           : { no_atual: entradaAtalho, status: "ativo" as const, variaveis: tag ? { ...contato, atalho: tag } : contato };
-        let res = executarFluxo({ nos: fluxoAtual.nos ?? [], conexoes: fluxoAtual.conexoes ?? [], estado: estadoIni, texto: textoMotor });
+        const executarSeguro = (p: Parameters<typeof executarFluxo>[0]): ReturnType<typeof executarFluxo> => {
+          try { return executarFluxo(p); }
+          catch (e) {
+            console.error("zapi-webhook motor", e);
+            return { acoes: [{ tipo: "modo", modo: "Humano" }], estado: { no_atual: null, status: "transbordo", variaveis: { ...contato } } };
+          }
+        };
+        let res = executarSeguro({ nos: fluxoAtual.nos ?? [], conexoes: fluxoAtual.conexoes ?? [], estado: estadoIni, texto: textoMotor });
         const acoes = [...res.acoes];
         // Blocos externos (HTTP/JavaScript) e "Executar outro fluxo" (limite evita laço).
         for (let passos = 0; (res.subfluxo || res.externo) && passos < 20; passos++) {
@@ -406,7 +421,7 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
               res = { acoes: [], estado: { no_atual: continua ? no.id : null, status: continua ? "aguardando" : "finalizado", variaveis: ext.variaveis } };
               break;
             }
-            res = executarFluxo({
+            res = executarSeguro({
               nos: fluxoAtual.nos ?? [], conexoes: fluxoAtual.conexoes ?? [],
               estado: { no_atual: prox, status: "ativo", variaveis: ext.variaveis }, texto: textoMotor,
             });
@@ -417,7 +432,7 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
           const f = sub as Recebido["fluxo"];
           if (!f) break;
           fluxoAtual = f;
-          res = executarFluxo({
+          res = executarSeguro({
             nos: f.nos ?? [], conexoes: f.conexoes ?? [],
             estado: { no_atual: null, status: "ativo", variaveis: res.estado.variaveis }, texto: textoMotor,
           });
@@ -428,7 +443,7 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
         // Fluxo começando agora: a conversa passa a ser do robô até um transbordo.
         if (!r.execucao) await acao("modo", { modo: "IA" });
 
-        for (const a of acoes) {
+        for (const a of agruparCampos(acoes)) {
           try {
             if (a.tipo === "mensagem") {
               if (!a.texto.trim() && a.lista?.opcoes?.length) a.texto = a.lista.titulo || "Escolha uma opção:";
@@ -450,15 +465,21 @@ export const Route = createFileRoute("/api/public/zapi-webhook")({
               await new Promise((res) => setTimeout(res, a.segundos * 1000));
             } else if (a.tipo === "etapa") {
               await acao("etapa", { etapa_id: a.etapa_id, prioridade: a.prioridade ?? null });
+            } else if (a.tipo === "fila") {
+              await acao("fila", { quadro_id: a.quadro_id, etapa_id: a.etapa_id, prioridade: a.prioridade });
             } else if (a.tipo === "modo") {
               await acao("modo", { modo: a.modo });
             } else if (a.tipo === "campo") {
               await acao("campo", { chave: a.chave, valor: a.valor });
+            } else if (a.tipo === "campos") {
+              await acao("campos", { campos: a.campos });
             } else if (a.tipo === "encerrar") {
               await acao("encerrar", {});
             }
           } catch (e) {
             console.error("zapi-webhook ação", a.tipo, e);
+            // Não marque como concluído um fluxo cuja gravação/transferência falhou.
+            return new Response("Erro ao aplicar ação do atendimento", { status: 500 });
           }
         }
 

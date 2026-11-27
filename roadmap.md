@@ -101,3 +101,8 @@
 - [x] Etapa 3a: Regras de agendamento (horários, unidades, outros espaços, feriados, trava amarela)
 - [ ] Etapa 3b: Gerenciar agendamentos (aprovação, reservar por terceiro) e Meus agendamentos — aguarda script rodado
 - [ ] Etapa 4: fluxo do morador (calendário, aceite, convidados, lista de espera)
+
+## Suporte — seleção de unidade e fila humana
+- [x] Corrigir leitura de variáveis JSON e encaminhamento para quadro/etapa com gravação de campos em lote.
+- [x] Validar regressões (37 testes e build OK) e entregar SQL para ativação no banco próprio.
+- [ ] Validar no WhatsApp real — aguarda executar o SQL complementar e publicar a aplicação.
