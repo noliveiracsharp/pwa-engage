@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { pick, type Row } from "@/lib/row";
 import { useAuth } from "@/hooks/useAuth";
 import { empresaDaConsulta } from "@/lib/financeiro-contexto";
+import { consultaTabela, procedureAusente } from "@/lib/procedures-lista";
 
 /** Tabelas globais: nunca filtradas pelo contexto de empresa do Master. */
 // "perfil" NÃO é global: cada empresa tem seus perfis (só o Master fica sem empresa).
@@ -33,8 +34,10 @@ export function useTableRows(table: string, enabled = true, orderBy?: string, fi
     queryFn: async (): Promise<Row[]> => {
       // Busca em lotes de 1000 até trazer tudo (o banco corta cada resposta em 1000 linhas).
       type Res = { data: unknown; error: { code?: string } | null };
+      // Tabelas com procedure (fn_lista_<tabela>) leem por ela; as demais seguem pela tabela.
+      let fonte = consultaTabela(table);
       const base = () => {
-        let q = supabase.from(table).select("*");
+        let q = fonte.fn ? consultaTabela(table).q : supabase.from(table).select("*");
         if (table === "perfil") q = q.gt("ordem", 0) as typeof q;
         if (filtro) q = filtro.apply(q) as typeof q;
         if (orderBy) q = q.order(orderBy, { ascending: true }) as typeof q;
@@ -59,7 +62,12 @@ export function useTableRows(table: string, enabled = true, orderBy?: string, fi
         return qq.range(from, to) as unknown as PromiseLike<Res>;
       };
       const run = async (filtro?: (q: ReturnType<typeof base>) => ReturnType<typeof base>): Promise<Res> => {
-        const r = await todos((f, t) => paged(filtro ? filtro(base()) : base(), f, t));
+        let r = await todos((f, t) => paged(filtro ? filtro(base()) : base(), f, t));
+        // Procedure ainda não instalada no banco: repete pela tabela.
+        if (procedureAusente(fonte.fn, r.error)) {
+          fonte = { fn: null, q: null };
+          r = await todos((f, t) => paged(filtro ? filtro(base()) : base(), f, t));
+        }
         // Tabela sem coluna "id": tenta sem a ordenação extra.
         if (r.error && !orderBy) {
           return todos((f, t) => ((filtro ? filtro(base()) : base()).range(f, t) as unknown as PromiseLike<Res>));
@@ -70,7 +78,9 @@ export function useTableRows(table: string, enabled = true, orderBy?: string, fi
       let paiCatalogo = "";
       const paiId = empresa ? text(empresa["empresa_pai_id"]) : "";
       if (!escopoFinanceiro && ctx && CATALOG_TABLES.has(table) && paiId) {
-        const { data: pai } = await supabase.from("empresas").select("*").eq("id", paiId).maybeSingle();
+        const emp = consultaTabela("empresas");
+        let { data: pai, error: ePai } = await emp.q.eq("id", paiId).maybeSingle();
+        if (procedureAusente(emp.fn, ePai)) ({ data: pai } = await supabase.from("empresas").select("*").eq("id", paiId).maybeSingle());
         if (pai && (pai as Row)["compartilhar_catalogo_filiais"] === true) paiCatalogo = paiId;
       }
       let res: Res;

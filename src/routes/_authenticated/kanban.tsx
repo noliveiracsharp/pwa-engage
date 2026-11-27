@@ -45,6 +45,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, GripVertical, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { consultaTabela, lerProcedure, procedureAusente } from "@/lib/procedures-lista";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -94,10 +95,34 @@ export const Route = createFileRoute("/_authenticated/kanban")({
 const ETAPA_FIELDS = ["descricao", "nome", "titulo"];
 const KANBAN_NAME_FIELDS = ["nome", "descricao", "titulo"];
 
-function useRows(table: string) {
+function useRows(table: string, enabled = true) {
   return useQuery({
     queryKey: ["table", table],
+    enabled,
     queryFn: async (): Promise<Row[]> => {
+      // Lê pela procedure fn_lista_<tabela>; sem ela instalada, pela tabela.
+      const { fn, q } = consultaTabela(table);
+      const { data, error } = await q;
+      if (procedureAusente(fn, error)) {
+        const r = await supabase.from(table).select("*");
+        if (r.error) throw r.error;
+        return (r.data ?? []) as Row[];
+      }
+      if (error) throw error;
+      return (data ?? []) as Row[];
+    },
+  });
+}
+
+/** Cartões do quadro: só o que está nas etapas dele, por procedure (fn_kanban_<tabela>). */
+function useCartoes(table: string, kanbanId: string, enabled = true) {
+  return useQuery({
+    queryKey: ["table", table, "kanban", kanbanId],
+    enabled: enabled && !!kanbanId,
+    queryFn: async (): Promise<Row[]> => {
+      const rows = await lerProcedure<Row>(`fn_kanban_${table}`, { p_kanban_id: kanbanId });
+      if (rows) return rows;
+      // Script ainda não rodado: leitura antiga.
       const { data, error } = await supabase.from(table).select("*");
       if (error) throw error;
       return (data ?? []) as Row[];
@@ -129,10 +154,6 @@ function KanbanPage() {
   const loadingKanbans = loadingAll || acesso.isLoading;
   void usuarioId;
   const { data: etapas = [] } = useRows("kanban_etapas");
-  const { data: atendimentos = [] } = useRows("atendimentos");
-  const { data: pessoas = [] } = useRows("pessoas");
-  const { data: orcamentos = [] } = useRows("orcamentos");
-  const { data: cotacoesQ = [] } = useRows("cotacoes");
 
   const [kanbanId, setKanbanId] = useState<string>("");
   const [newKanban, setNewKanban] = useState(false);
@@ -159,11 +180,6 @@ function KanbanPage() {
     [etapas, kanbanId],
   );
 
-  const pessoaById = useMemo(() => {
-    const map = new Map<string, Row>();
-    for (const c of pessoas) map.set(String(c["id"]), c);
-    return map;
-  }, [pessoas]);
 
   const { data: tabelaQuadro = null } = useQuery({
     queryKey: ["kanban-tabela", kanbanId],
@@ -172,6 +188,15 @@ function KanbanPage() {
   });
   const quadroOfertas = tabelaQuadro === "orcamentos";
   const quadroCotacoes = tabelaQuadro === "cotacoes";
+  const { data: atendimentos = [] } = useCartoes("atendimentos", kanbanId);
+  const { data: pessoas = [] } = useCartoes("pessoas", kanbanId);
+  const { data: orcamentos = [] } = useCartoes("orcamentos", kanbanId, quadroOfertas);
+  const { data: cotacoesQ = [] } = useRows("cotacoes", quadroCotacoes);
+  const pessoaById = useMemo(() => {
+    const map = new Map<string, Row>();
+    for (const c of pessoas) map.set(String(c["id"]), c);
+    return map;
+  }, [pessoas]);
   const [ofertaAberta, setOfertaAberta] = useState<Row | null>(null);
   const [leadAberto, setLeadAberto] = useState<{ card: Row; etapa: string } | null>(null);
   const [clienteNovaOferta, setClienteNovaOferta] = useState<string | undefined>(undefined);

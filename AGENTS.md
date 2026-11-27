@@ -57,3 +57,4 @@
 
 - Receipt OCR: one reader (comprovante-ocr.server.ts) for Reembolsos and the WhatsApp Agent.
 - Atomic flow RPCs prevent partial handoffs.
+- Table reads use `fn_lista_<tabela>`/`fn_kanban_*` INVOKER RPCs (src/lib/procedures-lista.ts), falling back to the table until the SQL runs.

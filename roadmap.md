@@ -1,5 +1,12 @@
 # Roadmap
 
+## Sem select * — Ofertas e Kanban
+- [x] Cadastros da tela de Ofertas (clientes, usuários, itens, unidades, marcas, empresas) e quadros/etapas do Kanban lidos por procedures.
+- [x] Kanban carrega só os cartões das etapas do quadro aberto.
+- [ ] Rodar supabase/sql/conectcon-ofertas-kanban-procedures.sql e publicar — aguarda o usuário.
+- [ ] Componentes internos das Ofertas (editor, PDF, aprovação, ativação, régua) e do Kanban (configuração, checklists) ainda leem tabelas direto.
+- [ ] Próximos módulos: Financeiro, Condomínios, Cadastros gerais.
+
 ## Documentos oficiais — biblioteca completa
 - [x] Categorias laterais, seleção pesquisável, gerenciamento sem duplicidade por acentos e edição completa.
 - [x] Visualização no modal compartilhado e seleção múltipla preservada nos atendimentos.
